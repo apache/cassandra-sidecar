@@ -38,6 +38,11 @@ public class Configuration
     /* Healthcheck frequency in miilis */
     private final Integer healthCheckFrequencyMillis;
 
+    /* SSL related settings */
+    private final String keyStorePath;
+    private final String keyStorePassword;
+    private final boolean isSslEnabled;
+
     /**
      * Constructor
      *
@@ -47,13 +52,18 @@ public class Configuration
      * @param healthCheckFrequencyMillis
      */
     public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
-                         Integer healthCheckFrequencyMillis)
+                         Integer healthCheckFrequencyMillis, String keyStorePath, String keyStorePassword,
+                         boolean isSslEnabled)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
         this.host = host;
         this.port = port;
         this.healthCheckFrequencyMillis = healthCheckFrequencyMillis;
+
+        this.keyStorePath = keyStorePath;
+        this.keyStorePassword = keyStorePassword;
+        this.isSslEnabled = isSslEnabled;
     }
 
     /**
@@ -104,5 +114,35 @@ public class Configuration
     public Integer getHealthCheckFrequencyMillis()
     {
         return healthCheckFrequencyMillis;
+    }
+
+    /**
+     * Get the SSL status
+     *
+     * @return
+     */
+    public boolean isSslEnabled()
+    {
+        return isSslEnabled;
+    }
+
+    /**
+     * Get the Keystore Path
+     *
+     * @return
+     */
+    public String getKeyStorePath()
+    {
+        return keyStorePath;
+    }
+
+    /**
+     * Get the Keystore password
+     *
+     * @return
+     */
+    public String getKeystorePassword()
+    {
+        return keyStorePassword;
     }
 }

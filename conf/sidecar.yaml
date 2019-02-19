@@ -9,6 +9,15 @@ cassandra:
 sidecar:
   - host: 0.0.0.0
   - port: 9043
+#
+# Enable SSL configuration (Disabled by default)
+#
+#  - ssl:
+#      - enabled: true
+#      - keystore:
+#          - path: "path/to/keystore.p12"
+#          - password: password
+
 
 healthcheck:
   - poll_freq_millis: 30000

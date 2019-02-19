@@ -93,6 +93,9 @@ public class TestModule extends AbstractModule
         0,
         "127.0.0.1",
         6475,
-        1000);
+        1000,
+        "<UNSET>",
+        "<UNSET>",
+        false);
     }
 }

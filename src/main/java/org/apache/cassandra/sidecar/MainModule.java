@@ -25,6 +25,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.net.JksOptions;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
@@ -67,9 +68,19 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public HttpServer vertxServer(Vertx vertx, Router router)
+    public HttpServer vertxServer(Vertx vertx, Router router, Configuration conf)
     {
-        HttpServer server = vertx.createHttpServer(new HttpServerOptions().setLogActivity(true));
+        HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
+
+        if (conf.isSslEnabled())
+        {
+            options.setKeyStoreOptions(new JksOptions()
+                                       .setPath(conf.getKeyStorePath())
+                                       .setPassword(conf.getKeystorePassword()))
+                   .setSsl(conf.isSslEnabled());
+        }
+
+        HttpServer server = vertx.createHttpServer(options);
         server.requestHandler(router);
         return server;
     }
@@ -105,6 +116,9 @@ public class MainModule extends AbstractModule
                 yamlConf.get(Integer.class, "cassandra.port"),
                 yamlConf.get(String.class, "sidecar.host"),
                 yamlConf.get(Integer.class, "sidecar.port"),
-                yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"));
+                yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"),
+                yamlConf.get(String.class, "sidecar.ssl.keystore.path", "<VALUE UNSET>"),
+                yamlConf.get(String.class, "sidecar.ssl.keystore.password", "<VALUE UNSET>"),
+                yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false));
     }
 }
