@@ -1,0 +1,13 @@
+#
+# Cassandra SideCar configuration file
+#
+
+cassandra:
+  - host: localhost
+  - port: 9042
+
+sidecar:
+  - port: 9043
+
+healthcheck:
+  - poll_freq_millis: 30000

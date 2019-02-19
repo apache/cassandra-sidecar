@@ -1,0 +1,117 @@
+group 'org.apache.cassandra'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'idea'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+// Take the application out once we're running via Cassandra
+mainClassName = "org.apache.cassandra.sidecar.CassandraSidecarDaemon"
+applicationName = 'CassandraSidecarDaemon'
+
+// Config file location should be in file:/// format for local files,
+// when we have the fix for adding /conf directory to classpaht, we can get away with below default JvmArg
+def confFile = "file:" + File.separator + File.separator + "APP_HOME_TO_REPLACE/conf/sidecar.yaml"
+
+applicationDefaultJvmArgs = ["-Dsidecar.logdir=./logs",
+                             "-Dsidecar.config=" + confFile,
+                             "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
+                             "-javaagent:APP_HOME_TO_REPLACE/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
+startScripts {
+    doLast {
+        unixScript.text = unixScript.text.replace("APP_HOME_TO_REPLACE", "\${APP_HOME}")
+    }
+}
+
+run {
+    confFile = "file:" + File.separator + File.separator + "$projectDir/conf/sidecar.yaml"
+    jvmArgs = ["-Dsidecar.logdir=./logs",
+                                 "-Dsidecar.config=" + confFile,
+                                 "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
+                                 "-javaagent:$projectDir/src/dist/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
+}
+
+sourceSets {
+    // This is needed as gradle considers `src/main/resources` as the default resources folder
+    main {
+        resources {
+            srcDirs = ['conf', 'setup']
+        }
+    }
+    test {
+        resources {
+            srcDirs = [main.resources]
+        }
+    }
+}
+
+configurations {
+    jolokia
+}
+
+dependencies {
+    compile 'io.vertx:vertx-web:3.6.3'
+    compile 'io.vertx:vertx-dropwizard-metrics:3.6.3'
+    compile 'io.vertx:vertx-web-client:3.6.3'
+
+    // Trying to be exactly compatible with Cassandra's deps
+    compile 'org.slf4j:slf4j-api:1.7.25'
+    compile 'ch.qos.logback:logback-core:1.2.3'
+    compile 'ch.qos.logback:logback-classic:1.2.3'
+    compile 'com.datastax.cassandra:cassandra-driver-core:3.6+'
+    compile group: 'com.google.inject', name: 'guice', version: '4.2.2'
+    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.4'
+
+    runtime group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
+    runtime group: 'org.yaml', name: 'snakeyaml', version: '1.23'
+    jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
+
+    testCompile group: 'org.cassandraunit', name: 'cassandra-unit-shaded', version: '3.3.0.2'
+    testCompile 'com.datastax.cassandra:cassandra-driver-core:3.6+:tests'
+    testCompile 'org.apache.commons:commons-exec:1.3+'
+    testCompile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
+    testCompile group: 'io.vertx', name: 'vertx-junit5', version: '3.6.3'
+}
+
+task copyCodeStyle(type: Copy) {
+    from "ide/idea/codeStyleSettings.xml"
+    into ".idea"
+}
+
+// Lets copy the distributions from build/install directory to /bin and /lib
+// directories to be aligned with C* distribution format
+task copyDist(type: Copy) {
+    from "$buildDir/install/$applicationName"
+    into "$projectDir"
+}
+
+task copyJolokia(type: Copy) {
+    from configurations.jolokia
+    into "$projectDir/src/dist/agents"
+}
+
+// Lets clean /bin and /lib directories along with default build directories.
+clean {
+    println "Deleting directory $projectDir/bin"
+    delete "$projectDir/bin"
+    println "Deleting directory $projectDir/lib"
+    delete "$projectDir/lib"
+    println "Deleting agents $projectDir/src/dist/agents"
+    delete "$projectDir/src/dist/agents"
+
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// copyDist gets called on every build
+copyDist.dependsOn installDist
+build.dependsOn copyDist
+build.dependsOn copyJolokia
