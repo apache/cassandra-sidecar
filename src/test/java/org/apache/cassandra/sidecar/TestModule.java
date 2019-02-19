@@ -67,11 +67,9 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public HttpServer vertxServer(Vertx vertx, Configuration config, Router router)
+    public HttpServer vertxServer(Vertx vertx, Router router)
     {
-        HttpServer server = vertx.createHttpServer(new HttpServerOptions()
-                                                   .setPort(config.getPort())
-                                                   .setLogActivity(true));
+        HttpServer server = vertx.createHttpServer(new HttpServerOptions().setLogActivity(true));
         server.requestHandler(router);
         return server;
     }
@@ -93,6 +91,7 @@ public class TestModule extends AbstractModule
         return new Configuration(
         "INVALID_FOR_TEST",
         0,
+        "127.0.0.1",
         6475,
         1000);
     }

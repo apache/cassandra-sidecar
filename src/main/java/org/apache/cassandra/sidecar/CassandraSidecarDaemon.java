@@ -47,7 +47,7 @@ public class CassandraSidecarDaemon
         banner();
         logger.info("Starting Cassandra Sidecar on port {}", config.getPort());
         healthService.start();
-        server.listen();
+        server.listen(config.getPort(), config.getHost());
     }
 
     public void stop()

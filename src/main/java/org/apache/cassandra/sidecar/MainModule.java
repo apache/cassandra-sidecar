@@ -67,11 +67,9 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public HttpServer vertxServer(Vertx vertx, Configuration config, Router router)
+    public HttpServer vertxServer(Vertx vertx, Router router)
     {
-        HttpServer server = vertx.createHttpServer(new HttpServerOptions()
-                .setPort(config.getPort())
-                .setLogActivity(true));
+        HttpServer server = vertx.createHttpServer(new HttpServerOptions().setLogActivity(true));
         server.requestHandler(router);
         return server;
     }
@@ -105,6 +103,7 @@ public class MainModule extends AbstractModule
         return new Configuration(
                 yamlConf.get(String.class, "cassandra.host"),
                 yamlConf.get(Integer.class, "cassandra.port"),
+                yamlConf.get(String.class, "sidecar.host"),
                 yamlConf.get(Integer.class, "sidecar.port"),
                 yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"));
     }

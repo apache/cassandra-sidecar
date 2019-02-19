@@ -32,6 +32,9 @@ public class Configuration
     /* Sidecar's HTTP REST API port */
     private final Integer port;
 
+    /* Sidecar's listen address */
+    private String host;
+
     /* Healthcheck frequency in miilis */
     private final Integer healthCheckFrequencyMillis;
 
@@ -43,11 +46,12 @@ public class Configuration
      * @param port
      * @param healthCheckFrequencyMillis
      */
-    public Configuration(String cassandraHost, Integer cassandraPort, Integer port,
+    public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
                          Integer healthCheckFrequencyMillis)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
+        this.host = host;
         this.port = port;
         this.healthCheckFrequencyMillis = healthCheckFrequencyMillis;
     }
@@ -70,6 +74,16 @@ public class Configuration
     public Integer getCassandraPort()
     {
         return cassandraPort;
+    }
+
+    /**
+     *  Sidecar's listen address
+     *
+     * @return
+     */
+    public String getHost()
+    {
+        return host;
     }
 
     /**
