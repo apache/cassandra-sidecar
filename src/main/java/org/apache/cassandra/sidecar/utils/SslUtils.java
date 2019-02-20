@@ -25,8 +25,21 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
+/**
+ * Utility class for SSL related operations
+ */
 public class SslUtils
 {
+    /**
+     * Given the parameters, validate the keystore can be loaded and is usable
+     *
+     * @param keyStorePath
+     * @param keystorePassword
+     * @throws KeyStoreException
+     * @throws NoSuchAlgorithmException
+     * @throws IOException
+     * @throws CertificateException
+     */
     public static void validateSslOpts(String keyStorePath, String keystorePassword) throws KeyStoreException,
                                                                                             NoSuchAlgorithmException,
                                                                                             IOException, CertificateException
