@@ -24,6 +24,7 @@ import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.net.JksOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
 import org.apache.cassandra.sidecar.mocks.MockHealthCheck;
@@ -67,9 +68,14 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public HttpServer vertxServer(Vertx vertx, Router router)
+    public HttpServer vertxServer(Vertx vertx, Router router, Configuration conf)
     {
-        HttpServer server = vertx.createHttpServer(new HttpServerOptions().setLogActivity(true));
+        HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
+        options.setKeyStoreOptions(new JksOptions()
+                                       .setPath(conf.getKeyStorePath())
+                                       .setPassword(conf.getKeystorePassword()))
+                   .setSsl(conf.isSslEnabled());
+        HttpServer server = vertx.createHttpServer(options);
         server.requestHandler(router);
         return server;
     }
@@ -88,14 +94,12 @@ public class TestModule extends AbstractModule
     @Singleton
     public Configuration configuration()
     {
-        return new Configuration(
-        "INVALID_FOR_TEST",
-        0,
-        "127.0.0.1",
-        6475,
-        1000,
-        "<UNSET>",
-        "<UNSET>",
-        false);
+        return abstractConfig();
+    }
+
+    protected Configuration abstractConfig()
+    {
+        return new Configuration("INVALID_FOR_TEST", 0, "127.0.0.1", 6475, 1000,
+                                 "<UNSET>", "<UNSET>", false);
     }
 }

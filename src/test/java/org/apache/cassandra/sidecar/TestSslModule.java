@@ -18,25 +18,22 @@
 
 package org.apache.cassandra.sidecar;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import com.google.inject.AbstractModule;
 import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxExtension;
 
-@DisplayName("Health Service Test")
-@ExtendWith(VertxExtension.class)
-public class HealthServiceTest extends AbstractHealthServiceTest
+public class TestSslModule extends TestModule
 {
-
-    public AbstractModule getTestModule()
+    public TestSslModule(Vertx vertx)
     {
-        return new TestModule(Vertx.vertx());
+        super(vertx);
     }
 
-    public boolean isSslEnabled()
+    @Override
+    public Configuration abstractConfig()
     {
-        return false;
+        final String keyStorePath = TestSslModule.class.getClassLoader().getResource("certs/test.p12").getPath();
+        final String keyStorePassword = "password";
+
+        return new Configuration("INVALID_FOR_TEST", 0, "127.0.0.1", 6475, 1000,
+                                 keyStorePath, keyStorePassword, true);
     }
 }
