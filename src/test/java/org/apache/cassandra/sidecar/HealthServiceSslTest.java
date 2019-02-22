@@ -25,18 +25,18 @@ import com.google.inject.AbstractModule;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 
-@DisplayName("Health Service Test")
+@DisplayName("Health Service SSL Test")
 @ExtendWith(VertxExtension.class)
-public class HealthServiceTest extends AbstractHealthServiceTest
+public class HealthServiceSslTest extends AbstractHealthServiceTest
 {
 
     public AbstractModule getTestModule()
     {
-        return new TestModule(Vertx.vertx());
+        return new TestSslModule(Vertx.vertx());
     }
 
     public boolean isSslEnabled()
     {
-        return false;
+        return true;
     }
 }

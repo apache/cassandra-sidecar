@@ -24,6 +24,7 @@ import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.net.JksOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
 import org.apache.cassandra.sidecar.mocks.MockHealthCheck;
@@ -36,12 +37,6 @@ public class TestModule extends AbstractModule
     public TestModule(Vertx vertx)
     {
         this.vertx = vertx;
-    }
-
-    @Override
-    protected void configure()
-    {
-        bind(CassandraSidecarDaemon.class).in(Singleton.class);
     }
 
     @Provides
@@ -67,11 +62,14 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public HttpServer vertxServer(Vertx vertx, Configuration config, Router router)
+    public HttpServer vertxServer(Vertx vertx, Router router, Configuration conf)
     {
-        HttpServer server = vertx.createHttpServer(new HttpServerOptions()
-                                                   .setPort(config.getPort())
-                                                   .setLogActivity(true));
+        HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
+        options.setKeyStoreOptions(new JksOptions()
+                                       .setPath(conf.getKeyStorePath())
+                                       .setPassword(conf.getKeystorePassword()))
+                   .setSsl(conf.isSslEnabled());
+        HttpServer server = vertx.createHttpServer(options);
         server.requestHandler(router);
         return server;
     }
@@ -90,10 +88,18 @@ public class TestModule extends AbstractModule
     @Singleton
     public Configuration configuration()
     {
-        return new Configuration(
-        "INVALID_FOR_TEST",
-        0,
-        6475,
-        1000);
+        return abstractConfig();
+    }
+
+    protected Configuration abstractConfig()
+    {
+        return new Configuration.Builder()
+                           .setCassandraHost("INVALID_FOR_TEST")
+                           .setCassandraPort(0)
+                           .setHost("127.0.0.1")
+                           .setPort(6475)
+                           .setHealthCheckFrequency(1000)
+                           .setSslEnabled(false)
+                           .build();
     }
 }

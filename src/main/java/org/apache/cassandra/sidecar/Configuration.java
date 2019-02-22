@@ -32,8 +32,20 @@ public class Configuration
     /* Sidecar's HTTP REST API port */
     private final Integer port;
 
+    /* Sidecar's listen address */
+    private String host;
+
     /* Healthcheck frequency in miilis */
     private final Integer healthCheckFrequencyMillis;
+
+    /* SSL related settings */
+    private final String keyStorePath;
+    private final String keyStorePassword;
+
+    private final String trustStorePath;
+    private final String trustStorePassword;
+
+    private final boolean isSslEnabled;
 
     /**
      * Constructor
@@ -42,14 +54,24 @@ public class Configuration
      * @param cassandraPort
      * @param port
      * @param healthCheckFrequencyMillis
+     * @param trustStorePath
+     * @param trustStorePassword
      */
-    public Configuration(String cassandraHost, Integer cassandraPort, Integer port,
-                         Integer healthCheckFrequencyMillis)
+    public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
+                         Integer healthCheckFrequencyMillis, String keyStorePath, String keyStorePassword,
+                         String trustStorePath, String trustStorePassword, boolean isSslEnabled)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
+        this.host = host;
         this.port = port;
         this.healthCheckFrequencyMillis = healthCheckFrequencyMillis;
+
+        this.keyStorePath = keyStorePath;
+        this.keyStorePassword = keyStorePassword;
+        this.trustStorePath = trustStorePath;
+        this.trustStorePassword = trustStorePassword;
+        this.isSslEnabled = isSslEnabled;
     }
 
     /**
@@ -73,6 +95,16 @@ public class Configuration
     }
 
     /**
+     *  Sidecar's listen address
+     *
+     * @return
+     */
+    public String getHost()
+    {
+        return host;
+    }
+
+    /**
      * Get the Sidecar's REST HTTP API port
      *
      * @return
@@ -90,5 +122,138 @@ public class Configuration
     public Integer getHealthCheckFrequencyMillis()
     {
         return healthCheckFrequencyMillis;
+    }
+
+    /**
+     * Get the SSL status
+     *
+     * @return
+     */
+    public boolean isSslEnabled()
+    {
+        return isSslEnabled;
+    }
+
+    /**
+     * Get the Keystore Path
+     *
+     * @return
+     */
+    public String getKeyStorePath()
+    {
+        return keyStorePath;
+    }
+
+    /**
+     * Get the Keystore password
+     *
+     * @return
+     */
+    public String getKeystorePassword()
+    {
+        return keyStorePassword;
+    }
+
+    /**
+     * Get the Truststore Path
+     *
+     * @return
+     */
+    public String getTrustStorePath()
+    {
+        return trustStorePath;
+    }
+
+    /**
+     * Get the Truststore password
+     *
+     * @return
+     */
+    public String getTruststorePassword()
+    {
+        return trustStorePassword;
+    }
+
+    /**
+     * Configuration Builder
+     */
+    public static class Builder
+    {
+        private String cassandraHost;
+        private Integer cassandraPort;
+        private String host;
+        private Integer port;
+        private Integer healthCheckFrequencyMillis;
+        private String keyStorePath;
+        private String keyStorePassword;
+        private String trustStorePath;
+        private String trustStorePassword;
+        private boolean isSslEnabled;
+
+        public Builder setCassandraHost(String host)
+        {
+            this.cassandraHost = host;
+            return this;
+        }
+
+        public Builder setCassandraPort(Integer port)
+        {
+            this.cassandraPort = port;
+            return this;
+        }
+
+        public Builder setHost(String host)
+        {
+            this.host = host;
+            return this;
+        }
+
+        public Builder setPort(Integer port)
+        {
+            this.port = port;
+            return this;
+        }
+
+        public Builder setHealthCheckFrequency(Integer freqMillis)
+        {
+            this.healthCheckFrequencyMillis = freqMillis;
+            return this;
+        }
+
+        public Builder setKeyStorePath(String path)
+        {
+            this.keyStorePath = path;
+            return this;
+        }
+
+        public Builder setKeyStorePassword(String password)
+        {
+            this.keyStorePassword = password;
+            return this;
+        }
+
+        public Builder setTrustStorePath(String path)
+        {
+            this.trustStorePath = path;
+            return this;
+        }
+
+        public Builder setTrustStorePassword(String password)
+        {
+            this.trustStorePassword = password;
+            return this;
+        }
+
+        public Builder setSslEnabled(boolean enabled)
+        {
+            this.isSslEnabled = enabled;
+            return this;
+        }
+
+        public Configuration build()
+        {
+            return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis,
+                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword, isSslEnabled);
+        }
     }
 }

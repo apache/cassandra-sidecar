@@ -20,13 +20,15 @@ package org.apache.cassandra.sidecar;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServer;
 import org.apache.cassandra.sidecar.routes.HealthService;
+import org.apache.cassandra.sidecar.utils.SslUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+@Singleton
 public class CassandraSidecarDaemon
 {
     private static final Logger logger = LoggerFactory.getLogger(CassandraSidecarDaemon.class);
@@ -45,9 +47,10 @@ public class CassandraSidecarDaemon
     public void start()
     {
         banner();
+        validate();
         logger.info("Starting Cassandra Sidecar on port {}", config.getPort());
         healthService.start();
-        server.listen();
+        server.listen(config.getPort(), config.getHost());
     }
 
     public void stop()
@@ -68,6 +71,25 @@ public class CassandraSidecarDaemon
                            "                                                                                      \n" +
                            "                                                                                      ");
     }
+
+    private void validate()
+    {
+        if (config.isSslEnabled())
+        {
+            try
+            {
+                SslUtils.validateSslOpts(config.getKeyStorePath(), config.getKeystorePassword());
+
+                if (config.getTrustStorePath() != null && config.getTruststorePassword() != null)
+                    SslUtils.validateSslOpts(config.getTrustStorePath(), config.getTruststorePassword());
+            } catch (Exception e)
+            {
+                throw new RuntimeException("Invalid keystore parameters for SSL", e);
+            }
+        }
+
+    }
+
 
     public static void main(String[] args)
     {

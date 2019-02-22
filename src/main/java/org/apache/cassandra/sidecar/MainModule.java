@@ -25,6 +25,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.net.JksOptions;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
@@ -39,12 +40,6 @@ import java.io.File;
 
 public class MainModule extends AbstractModule
 {
-    @Override
-    protected void configure()
-    {
-        bind(CassandraSidecarDaemon.class).in(Singleton.class);
-    }
-
     @Provides
     @Singleton
     public Vertx getVertx()
@@ -67,11 +62,26 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public HttpServer vertxServer(Vertx vertx, Configuration config, Router router)
+    public HttpServer vertxServer(Vertx vertx, Router router, Configuration conf)
     {
-        HttpServer server = vertx.createHttpServer(new HttpServerOptions()
-                .setPort(config.getPort())
-                .setLogActivity(true));
+        HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
+
+        if (conf.isSslEnabled())
+        {
+            options.setKeyStoreOptions(new JksOptions()
+                                       .setPath(conf.getKeyStorePath())
+                                       .setPassword(conf.getKeystorePassword()))
+                   .setSsl(conf.isSslEnabled());
+
+            if (conf.getTrustStorePath() != null && conf.getTruststorePassword() != null)
+            {
+                options.setTrustStoreOptions(new JksOptions()
+                                             .setPath(conf.getTrustStorePath())
+                                             .setPassword(conf.getTruststorePassword()));
+            }
+        }
+
+        HttpServer server = vertx.createHttpServer(options);
         server.requestHandler(router);
         return server;
     }
@@ -102,10 +112,17 @@ public class MainModule extends AbstractModule
         File propFile = new File("sidecar.yaml");
         YAMLConfiguration yamlConf = confs.fileBased(YAMLConfiguration.class, propFile);
 
-        return new Configuration(
-                yamlConf.get(String.class, "cassandra.host"),
-                yamlConf.get(Integer.class, "cassandra.port"),
-                yamlConf.get(Integer.class, "sidecar.port"),
-                yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"));
+        return new Configuration.Builder()
+                           .setCassandraHost(yamlConf.get(String.class, "cassandra.host"))
+                           .setCassandraPort(yamlConf.get(Integer.class, "cassandra.port"))
+                           .setHost(yamlConf.get(String.class, "sidecar.host"))
+                           .setPort(yamlConf.get(Integer.class, "sidecar.port"))
+                           .setHealthCheckFrequency(yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"))
+                           .setKeyStorePath(yamlConf.get(String.class, "sidecar.ssl.keystore.path", null))
+                           .setKeyStorePassword(yamlConf.get(String.class, "sidecar.ssl.keystore.password", null))
+                           .setTrustStorePath(yamlConf.get(String.class, "sidecar.ssl.truststore.path", null))
+                           .setTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
+                           .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
+                           .build();
     }
 }

@@ -49,7 +49,7 @@ sourceSets {
     }
     test {
         resources {
-            srcDirs = [main.resources]
+            srcDirs = [main.resources, "src/test/resources"]
         }
     }
 }
@@ -129,6 +129,8 @@ clean {
 
 test {
     useJUnitPlatform()
+    systemProperty "javax.net.ssl.trustStore", "$projectDir/src/test/resources/certs/ca.p12"
+    systemProperty "javax.net.ssl.trustStorePassword", "password"
 }
 
 // copyDist gets called on every build
