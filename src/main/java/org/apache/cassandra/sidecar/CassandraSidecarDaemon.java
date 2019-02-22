@@ -79,7 +79,9 @@ public class CassandraSidecarDaemon
             try
             {
                 SslUtils.validateSslOpts(config.getKeyStorePath(), config.getKeystorePassword());
-                SslUtils.validateSslOpts(config.getTrustStorePath(), config.getTruststorePassword());
+
+                if (config.getTrustStorePath() != null && config.getTruststorePassword() != null)
+                    SslUtils.validateSslOpts(config.getTrustStorePath(), config.getTruststorePassword());
             } catch (Exception e)
             {
                 throw new RuntimeException("Invalid keystore parameters for SSL", e);
