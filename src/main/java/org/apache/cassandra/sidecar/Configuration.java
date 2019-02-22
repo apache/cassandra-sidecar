@@ -145,4 +145,74 @@ public class Configuration
     {
         return keyStorePassword;
     }
+
+
+    /**
+     * Configuration Builder
+     */
+    public static class Builder
+    {
+        private String cassandraHost;
+        private Integer cassandraPort;
+        private String host;
+        private Integer port;
+        private Integer healthCheckFrequencyMillis;
+        private String keyStorePath;
+        private String keyStorePassword;
+        private boolean isSslEnabled;
+
+        public Builder setCassandraHost(String host)
+        {
+            this.cassandraHost = host;
+            return this;
+        }
+
+        public Builder setCassandraPort(Integer port)
+        {
+            this.cassandraPort = port;
+            return this;
+        }
+
+        public Builder setHost(String host)
+        {
+            this.host = host;
+            return this;
+        }
+
+        public Builder setPort(Integer port)
+        {
+            this.port = port;
+            return this;
+        }
+
+        public Builder setHealthCheckFrequency(Integer freqMillis)
+        {
+            this.healthCheckFrequencyMillis = freqMillis;
+            return this;
+        }
+
+        public Builder setKeyStorePath(String path)
+        {
+            this.keyStorePath = path;
+            return this;
+        }
+
+        public Builder setKeyStorePassword(String password)
+        {
+            this.keyStorePassword = password;
+            return this;
+        }
+
+        public Builder setSslEnabled(boolean enabled)
+        {
+            this.isSslEnabled = enabled;
+            return this;
+        }
+
+        public Configuration build()
+        {
+            return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis,
+                                     keyStorePath, keyStorePassword, isSslEnabled);
+        }
+    }
 }

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServer;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.utils.SslUtils;
@@ -27,7 +28,7 @@ import org.apache.cassandra.sidecar.utils.SslUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+@Singleton
 public class CassandraSidecarDaemon
 {
     private static final Logger logger = LoggerFactory.getLogger(CassandraSidecarDaemon.class);

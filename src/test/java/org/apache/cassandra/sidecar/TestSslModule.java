@@ -33,7 +33,15 @@ public class TestSslModule extends TestModule
         final String keyStorePath = TestSslModule.class.getClassLoader().getResource("certs/test.p12").getPath();
         final String keyStorePassword = "password";
 
-        return new Configuration("INVALID_FOR_TEST", 0, "127.0.0.1", 6475, 1000,
-                                 keyStorePath, keyStorePassword, true);
+        return new Configuration.Builder()
+                           .setCassandraHost("INVALID_FOR_TEST")
+                           .setCassandraPort(0)
+                           .setHost("127.0.0.1")
+                           .setPort(6475)
+                           .setHealthCheckFrequency(1000)
+                           .setKeyStorePath(keyStorePath)
+                           .setKeyStorePassword(keyStorePassword)
+                           .setSslEnabled(true)
+                           .build();
     }
 }

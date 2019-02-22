@@ -23,17 +23,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
-import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
-import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.mocks.MockHealthCheck;
 import org.apache.cassandra.sidecar.routes.HealthService;
@@ -53,7 +50,6 @@ abstract public class AbstractHealthServiceTest
     {
         Injector injector = Guice.createInjector(getTestModule());
         HttpServer server = injector.getInstance(HttpServer.class);
-        Router router = injector.getInstance(Router.class);
 
         check = injector.getInstance(MockHealthCheck.class);
         service = injector.getInstance(HealthService.class);
@@ -82,7 +78,6 @@ abstract public class AbstractHealthServiceTest
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() -> {
-                  System.out.println(response.statusCode());
                   Assert.assertEquals(200, response.statusCode());
                   testContext.completeNow();
               })));
@@ -101,7 +96,6 @@ abstract public class AbstractHealthServiceTest
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() -> {
-                  System.out.println(response.statusCode());
                   Assert.assertEquals(503, response.statusCode());
                   testContext.completeNow();
               })));

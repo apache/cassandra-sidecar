@@ -39,12 +39,6 @@ public class TestModule extends AbstractModule
         this.vertx = vertx;
     }
 
-    @Override
-    protected void configure()
-    {
-        bind(CassandraSidecarDaemon.class).in(Singleton.class);
-    }
-
     @Provides
     @Singleton
     public Vertx getVertx()
@@ -99,7 +93,15 @@ public class TestModule extends AbstractModule
 
     protected Configuration abstractConfig()
     {
-        return new Configuration("INVALID_FOR_TEST", 0, "127.0.0.1", 6475, 1000,
-                                 "<UNSET>", "<UNSET>", false);
+        return new Configuration.Builder()
+                           .setCassandraHost("INVALID_FOR_TEST")
+                           .setCassandraPort(0)
+                           .setHost("127.0.0.1")
+                           .setPort(6475)
+                           .setHealthCheckFrequency(1000)
+                           .setKeyStorePath("<UNSET>")
+                           .setKeyStorePassword("<UNSET>")
+                           .setSslEnabled(false)
+                           .build();
     }
 }

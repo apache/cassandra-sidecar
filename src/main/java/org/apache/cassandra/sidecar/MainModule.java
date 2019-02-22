@@ -40,12 +40,6 @@ import java.io.File;
 
 public class MainModule extends AbstractModule
 {
-    @Override
-    protected void configure()
-    {
-        bind(CassandraSidecarDaemon.class).in(Singleton.class);
-    }
-
     @Provides
     @Singleton
     public Vertx getVertx()
@@ -111,14 +105,15 @@ public class MainModule extends AbstractModule
         File propFile = new File("sidecar.yaml");
         YAMLConfiguration yamlConf = confs.fileBased(YAMLConfiguration.class, propFile);
 
-        return new Configuration(
-                yamlConf.get(String.class, "cassandra.host"),
-                yamlConf.get(Integer.class, "cassandra.port"),
-                yamlConf.get(String.class, "sidecar.host"),
-                yamlConf.get(Integer.class, "sidecar.port"),
-                yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"),
-                yamlConf.get(String.class, "sidecar.ssl.keystore.path", "<VALUE UNSET>"),
-                yamlConf.get(String.class, "sidecar.ssl.keystore.password", "<VALUE UNSET>"),
-                yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false));
+        return new Configuration.Builder()
+                           .setCassandraHost(yamlConf.get(String.class, "cassandra.host"))
+                           .setCassandraPort(yamlConf.get(Integer.class, "cassandra.port"))
+                           .setHost(yamlConf.get(String.class, "sidecar.host"))
+                           .setPort(yamlConf.get(Integer.class, "sidecar.port"))
+                           .setHealthCheckFrequency(yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"))
+                           .setKeyStorePath(yamlConf.get(String.class, "sidecar.ssl.keystore.path", "<VALUE UNSET>"))
+                           .setKeyStorePassword(yamlConf.get(String.class, "sidecar.ssl.keystore.password", "<VALUE UNSET>"))
+                           .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
+                           .build();
     }
 }
