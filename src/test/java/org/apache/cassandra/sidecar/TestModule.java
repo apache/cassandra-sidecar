@@ -99,8 +99,6 @@ public class TestModule extends AbstractModule
                            .setHost("127.0.0.1")
                            .setPort(6475)
                            .setHealthCheckFrequency(1000)
-                           .setKeyStorePath("<UNSET>")
-                           .setKeyStorePassword("<UNSET>")
                            .setSslEnabled(false)
                            .build();
     }

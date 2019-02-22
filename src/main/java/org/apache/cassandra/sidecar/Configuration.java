@@ -41,6 +41,10 @@ public class Configuration
     /* SSL related settings */
     private final String keyStorePath;
     private final String keyStorePassword;
+
+    private final String trustStorePath;
+    private final String trustStorePassword;
+
     private final boolean isSslEnabled;
 
     /**
@@ -50,10 +54,12 @@ public class Configuration
      * @param cassandraPort
      * @param port
      * @param healthCheckFrequencyMillis
+     * @param trustStorePath
+     * @param trustStorePassword
      */
     public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
                          Integer healthCheckFrequencyMillis, String keyStorePath, String keyStorePassword,
-                         boolean isSslEnabled)
+                         String trustStorePath, String trustStorePassword, boolean isSslEnabled)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
@@ -63,6 +69,8 @@ public class Configuration
 
         this.keyStorePath = keyStorePath;
         this.keyStorePassword = keyStorePassword;
+        this.trustStorePath = trustStorePath;
+        this.trustStorePassword = trustStorePassword;
         this.isSslEnabled = isSslEnabled;
     }
 
@@ -146,6 +154,25 @@ public class Configuration
         return keyStorePassword;
     }
 
+    /**
+     * Get the Truststore Path
+     *
+     * @return
+     */
+    public String getTrustStorePath()
+    {
+        return trustStorePath;
+    }
+
+    /**
+     * Get the Truststore password
+     *
+     * @return
+     */
+    public String getTruststorePassword()
+    {
+        return trustStorePassword;
+    }
 
     /**
      * Configuration Builder
@@ -159,6 +186,8 @@ public class Configuration
         private Integer healthCheckFrequencyMillis;
         private String keyStorePath;
         private String keyStorePassword;
+        private String trustStorePath;
+        private String trustStorePassword;
         private boolean isSslEnabled;
 
         public Builder setCassandraHost(String host)
@@ -203,6 +232,18 @@ public class Configuration
             return this;
         }
 
+        public Builder setTrustStorePath(String path)
+        {
+            this.trustStorePath = path;
+            return this;
+        }
+
+        public Builder setTrustStorePassword(String password)
+        {
+            this.trustStorePassword = password;
+            return this;
+        }
+
         public Builder setSslEnabled(boolean enabled)
         {
             this.isSslEnabled = enabled;
@@ -212,7 +253,7 @@ public class Configuration
         public Configuration build()
         {
             return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis,
-                                     keyStorePath, keyStorePassword, isSslEnabled);
+                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword, isSslEnabled);
         }
     }
 }

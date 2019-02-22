@@ -33,6 +33,9 @@ public class TestSslModule extends TestModule
         final String keyStorePath = TestSslModule.class.getClassLoader().getResource("certs/test.p12").getPath();
         final String keyStorePassword = "password";
 
+        final String trustStorePath = TestSslModule.class.getClassLoader().getResource("certs/ca.p12").getPath();
+        final String trustStorePassword = "password";
+
         return new Configuration.Builder()
                            .setCassandraHost("INVALID_FOR_TEST")
                            .setCassandraPort(0)
@@ -41,6 +44,8 @@ public class TestSslModule extends TestModule
                            .setHealthCheckFrequency(1000)
                            .setKeyStorePath(keyStorePath)
                            .setKeyStorePassword(keyStorePassword)
+                           .setTrustStorePath(trustStorePath)
+                           .setTrustStorePassword(trustStorePassword)
                            .setSslEnabled(true)
                            .build();
     }

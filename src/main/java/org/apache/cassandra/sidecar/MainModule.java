@@ -72,6 +72,13 @@ public class MainModule extends AbstractModule
                                        .setPath(conf.getKeyStorePath())
                                        .setPassword(conf.getKeystorePassword()))
                    .setSsl(conf.isSslEnabled());
+
+            if (conf.getTrustStorePath() != null && conf.getTruststorePassword() != null)
+            {
+                options.setTrustStoreOptions(new JksOptions()
+                                             .setPath(conf.getTrustStorePath())
+                                             .setPassword(conf.getTruststorePassword()));
+            }
         }
 
         HttpServer server = vertx.createHttpServer(options);
@@ -111,8 +118,10 @@ public class MainModule extends AbstractModule
                            .setHost(yamlConf.get(String.class, "sidecar.host"))
                            .setPort(yamlConf.get(Integer.class, "sidecar.port"))
                            .setHealthCheckFrequency(yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"))
-                           .setKeyStorePath(yamlConf.get(String.class, "sidecar.ssl.keystore.path", "<VALUE UNSET>"))
-                           .setKeyStorePassword(yamlConf.get(String.class, "sidecar.ssl.keystore.password", "<VALUE UNSET>"))
+                           .setKeyStorePath(yamlConf.get(String.class, "sidecar.ssl.keystore.path", null))
+                           .setKeyStorePassword(yamlConf.get(String.class, "sidecar.ssl.keystore.password", null))
+                           .setTrustStorePath(yamlConf.get(String.class, "sidecar.ssl.truststore.path", null))
+                           .setTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
                            .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
                            .build();
     }

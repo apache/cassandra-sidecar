@@ -17,6 +17,9 @@ sidecar:
 #      - keystore:
 #          - path: "path/to/keystore.p12"
 #          - password: password
+#      - truststore:
+#          - path: "path/to/truststore.p12"
+#          - password: password
 
 
 healthcheck:
