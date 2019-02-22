@@ -1,0 +1,57 @@
+openapi: 3.0.0
+
+info:
+  description: Apache Cassandra sidecar
+  version: "1.0.0"
+  title: Apache Cassandra Sidecar API
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+
+tags:
+  - name: visibility
+    description: See status of Cassandra
+  - name: management
+    description: Execute, coordinate, or schedule operations
+
+paths:
+  /api/v1/__health:
+    get:
+      tags:
+        - visibility
+      summary: Check Cassandra Health
+      operationId: health
+      description: |
+        Lists status of Cassandra Daemon and its services
+      responses:
+        '200':
+          description: Current status if Cassandra is up and returning OK status
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Health check failed and returning NOT_OK
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/HealthStatus'
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - 'OK'
+            - 'NOT_OK'
+          description: if reads are able to run through binary interface. 'OK' or 'NOT_OK'
+          example: 'OK'

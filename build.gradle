@@ -1,9 +1,12 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'idea'
+    id 'org.hidetake.swagger.generator' version '2.16.0'
+}
+
 group 'org.apache.cassandra'
 version '1.0-SNAPSHOT'
-
-apply plugin: 'java'
-apply plugin: 'application'
-apply plugin: 'idea'
 
 sourceCompatibility = 1.8
 
@@ -41,7 +44,7 @@ sourceSets {
     // This is needed as gradle considers `src/main/resources` as the default resources folder
     main {
         resources {
-            srcDirs = ['conf', 'setup']
+            srcDirs = ['conf', 'setup', 'src/main/resources']
         }
     }
     test {
@@ -70,13 +73,28 @@ dependencies {
 
     runtime group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
     runtime group: 'org.yaml', name: 'snakeyaml', version: '1.23'
+
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
+    swaggerUI 'org.webjars:swagger-ui:3.10.0'
 
     testCompile group: 'org.cassandraunit', name: 'cassandra-unit-shaded', version: '3.3.0.2'
     testCompile 'com.datastax.cassandra:cassandra-driver-core:3.6+:tests'
     testCompile 'org.apache.commons:commons-exec:1.3+'
     testCompile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
     testCompile group: 'io.vertx', name: 'vertx-junit5', version: '3.6.3'
+}
+
+swaggerSources {
+    apidoc {
+        inputFile = file('api.yaml')
+        reDoc {
+            outputDir = file('src/main/resources/docs')
+            title = 'Cassandra Sidecar API Documentation'
+        }
+        ui {
+            outputDir = file('src/main/resources/docs/swagger')
+        }
+    }
 }
 
 task copyCodeStyle(type: Copy) {
@@ -104,6 +122,8 @@ clean {
     delete "$projectDir/lib"
     println "Deleting agents $projectDir/src/dist/agents"
     delete "$projectDir/src/dist/agents"
+    println "Deleting generated docs $projectDir/src/main/resources/docs"
+    delete "$projectDir/src/main/resources/docs"
 
 }
 
@@ -113,5 +133,4 @@ test {
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist
-build.dependsOn copyDist
-build.dependsOn copyJolokia
+build.dependsOn copyDist, generateReDoc, generateSwaggerUI, copyJolokia
