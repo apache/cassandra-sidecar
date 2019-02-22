@@ -28,6 +28,7 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
+import io.vertx.ext.web.handler.StaticHandler;
 import org.apache.cassandra.sidecar.routes.HealthCheck;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.commons.configuration2.YAMLConfiguration;
@@ -81,6 +82,14 @@ public class MainModule extends AbstractModule
     {
         Router router = Router.router(vertx);
         router.route().handler(LoggerHandler.create());
+
+        // include docs generated into src/main/resources/docs
+        StaticHandler swagger = StaticHandler.create()
+                                             .setWebRoot("docs")
+                                             .setCachingEnabled(false);
+        router.route().path("/docs/*").handler(swagger);
+
+        // API paths
         router.route().path("/api/v1/__health").handler(healthService::handleHealth);
         return router;
     }
