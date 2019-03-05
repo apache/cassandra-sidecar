@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add integration tests task (CASSANDRA-15031)
  * Add support for SSL and bindable address (CASSANDRA-15030)
  * Autogenerate API docs for sidecar (CASSANDRA-15028)
  * C* Management process (CASSANDRA-14395)
