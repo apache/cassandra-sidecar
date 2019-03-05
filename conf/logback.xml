@@ -72,5 +72,7 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-  <logger name="org.apache.cassandra" level="DEBUG"/>
+
+  <logger name="com.datastax.driver.core" level="ERROR" />
+  <logger name="com.datastax.driver.core.ControlConnection" level="OFF" />
 </configuration>

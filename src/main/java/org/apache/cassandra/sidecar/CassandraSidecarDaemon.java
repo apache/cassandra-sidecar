@@ -18,6 +18,11 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.io.PrintStream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -25,9 +30,9 @@ import io.vertx.core.http.HttpServer;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.utils.SslUtils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+/**
+ * Main class for initiating the Cassandra sidecar
+ */
 @Singleton
 public class CassandraSidecarDaemon
 {
@@ -46,7 +51,7 @@ public class CassandraSidecarDaemon
 
     public void start()
     {
-        banner();
+        banner(System.out);
         validate();
         logger.info("Starting Cassandra Sidecar on port {}", config.getPort());
         healthService.start();
@@ -60,16 +65,16 @@ public class CassandraSidecarDaemon
         server.close();
     }
 
-    private void banner()
+    private void banner(PrintStream out)
     {
-        System.out.println(" _____                               _              _____ _     _                     \n" +
-                           "/  __ \\                             | |            /  ___(_)   | |                    \n" +
-                           "| /  \\/ __ _ ___ ___  __ _ _ __   __| |_ __ __ _   \\ `--. _  __| | ___  ___ __ _ _ __ \n" +
-                           "| |    / _` / __/ __|/ _` | '_ \\ / _` | '__/ _` |   `--. \\ |/ _` |/ _ \\/ __/ _` | '__|\n" +
-                           "| \\__/\\ (_| \\__ \\__ \\ (_| | | | | (_| | | | (_| |  /\\__/ / | (_| |  __/ (_| (_| | |   \n" +
-                           " \\____/\\__,_|___/___/\\__,_|_| |_|\\__,_|_|  \\__,_|  \\____/|_|\\__,_|\\___|\\___\\__,_|_|   \n" +
-                           "                                                                                      \n" +
-                           "                                                                                      ");
+        out.println(" _____                               _              _____ _     _                     \n" +
+                    "/  __ \\                             | |            /  ___(_)   | |                    \n" +
+                    "| /  \\/ __ _ ___ ___  __ _ _ __   __| |_ __ __ _   \\ `--. _  __| | ___  ___ __ _ _ __ \n" +
+                    "| |    / _` / __/ __|/ _` | '_ \\ / _` | '__/ _` |   `--. \\ |/ _` |/ _ \\/ __/ _` | '__|\n" +
+                    "| \\__/\\ (_| \\__ \\__ \\ (_| | | | | (_| | | | (_| |  /\\__/ / | (_| |  __/ (_| (_| | |   \n" +
+                    " \\____/\\__,_|___/___/\\__,_|_| |_|\\__,_|_|  \\__,_|  \\____/|_|\\__,_|\\___|\\___\\__,_|_|\n" +
+                    "                                                                                      \n" +
+                    "                                                                                      ");
     }
 
     private void validate()
@@ -78,11 +83,15 @@ public class CassandraSidecarDaemon
         {
             try
             {
+                if (config.getKeyStorePath() == null || config.getKeystorePassword() == null)
+                    throw new IllegalArgumentException("keyStorePath and keyStorePassword must be set if ssl enabled");
+
                 SslUtils.validateSslOpts(config.getKeyStorePath(), config.getKeystorePassword());
 
                 if (config.getTrustStorePath() != null && config.getTruststorePassword() != null)
                     SslUtils.validateSslOpts(config.getTrustStorePath(), config.getTruststorePassword());
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 throw new RuntimeException("Invalid keystore parameters for SSL", e);
             }

@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar;
 
+import javax.annotation.Nullable;
+
 /**
  * Sidecar configuration
  */
@@ -39,27 +41,24 @@ public class Configuration
     private final Integer healthCheckFrequencyMillis;
 
     /* SSL related settings */
+    @Nullable
     private final String keyStorePath;
+    @Nullable
     private final String keyStorePassword;
 
+    @Nullable
     private final String trustStorePath;
+    @Nullable
     private final String trustStorePassword;
 
     private final boolean isSslEnabled;
 
-    /**
-     * Constructor
-     *
-     * @param cassandraHost
-     * @param cassandraPort
-     * @param port
-     * @param healthCheckFrequencyMillis
-     * @param trustStorePath
-     * @param trustStorePassword
-     */
     public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
-                         Integer healthCheckFrequencyMillis, String keyStorePath, String keyStorePassword,
-                         String trustStorePath, String trustStorePassword, boolean isSslEnabled)
+                         Integer healthCheckFrequencyMillis, boolean isSslEnabled,
+                         @Nullable String keyStorePath,
+                         @Nullable String keyStorePassword,
+                         @Nullable String trustStorePath,
+                         @Nullable String trustStorePassword)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
@@ -139,6 +138,7 @@ public class Configuration
      *
      * @return
      */
+    @Nullable
     public String getKeyStorePath()
     {
         return keyStorePath;
@@ -149,6 +149,7 @@ public class Configuration
      *
      * @return
      */
+    @Nullable
     public String getKeystorePassword()
     {
         return keyStorePassword;
@@ -159,6 +160,7 @@ public class Configuration
      *
      * @return
      */
+    @Nullable
     public String getTrustStorePath()
     {
         return trustStorePath;
@@ -169,6 +171,7 @@ public class Configuration
      *
      * @return
      */
+    @Nullable
     public String getTruststorePassword()
     {
         return trustStorePassword;
@@ -252,8 +255,8 @@ public class Configuration
 
         public Configuration build()
         {
-            return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis,
-                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword, isSslEnabled);
+            return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis, isSslEnabled,
+                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword);
         }
     }
 }

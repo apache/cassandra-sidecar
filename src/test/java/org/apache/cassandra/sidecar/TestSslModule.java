@@ -20,6 +20,9 @@ package org.apache.cassandra.sidecar;
 
 import io.vertx.core.Vertx;
 
+/**
+ * Changes to the TestModule to define SSL dependencies
+ */
 public class TestSslModule extends TestModule
 {
     public TestSslModule(Vertx vertx)

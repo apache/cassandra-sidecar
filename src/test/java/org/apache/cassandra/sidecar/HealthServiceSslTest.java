@@ -25,6 +25,9 @@ import com.google.inject.AbstractModule;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 
+/**
+ * Health Service SSL Tests
+ */
 @DisplayName("Health Service SSL Test")
 @ExtendWith(VertxExtension.class)
 public class HealthServiceSslTest extends AbstractHealthServiceTest
