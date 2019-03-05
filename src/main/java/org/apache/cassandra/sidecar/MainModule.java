@@ -18,6 +18,12 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.io.File;
+
+import org.apache.commons.configuration2.YAMLConfiguration;
+import org.apache.commons.configuration2.builder.fluent.Configurations;
+import org.apache.commons.configuration2.ex.ConfigurationException;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -30,14 +36,11 @@ import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
-import org.apache.cassandra.sidecar.routes.HealthCheck;
 import org.apache.cassandra.sidecar.routes.HealthService;
-import org.apache.commons.configuration2.YAMLConfiguration;
-import org.apache.commons.configuration2.builder.fluent.Configurations;
-import org.apache.commons.configuration2.ex.ConfigurationException;
 
-import java.io.File;
-
+/**
+ * Provides main binding for more complex Guice dependencies
+ */
 public class MainModule extends AbstractModule
 {
     @Provides
@@ -54,15 +57,7 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public HealthService healthService(Configuration config)
-    {
-        return new HealthService(config.getHealthCheckFrequencyMillis(),
-                new HealthCheck(config.getCassandraHost(), config.getCassandraPort()));
-    }
-
-    @Provides
-    @Singleton
-    public HttpServer vertxServer(Vertx vertx, Router router, Configuration conf)
+    public HttpServer vertxServer(Vertx vertx, Configuration conf, Router router)
     {
         HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
 

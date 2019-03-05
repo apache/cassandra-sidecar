@@ -35,7 +35,10 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.mocks.MockHealthCheck;
 import org.apache.cassandra.sidecar.routes.HealthService;
 
-abstract public class AbstractHealthServiceTest
+/**
+ * Provides basic tests shared between SSL and normal http health services
+ */
+public abstract class AbstractHealthServiceTest
 {
     private MockHealthCheck check;
     private HealthService service;
@@ -77,7 +80,8 @@ abstract public class AbstractHealthServiceTest
         client.get(config.getPort(), "localhost", "/api/v1/__health")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
-              .send(testContext.succeeding(response -> testContext.verify(() -> {
+              .send(testContext.succeeding(response -> testContext.verify(() ->
+              {
                   Assert.assertEquals(200, response.statusCode());
                   testContext.completeNow();
               })));
@@ -95,7 +99,8 @@ abstract public class AbstractHealthServiceTest
         client.get(config.getPort(), "localhost", "/api/v1/__health")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
-              .send(testContext.succeeding(response -> testContext.verify(() -> {
+              .send(testContext.succeeding(response -> testContext.verify(() ->
+              {
                   Assert.assertEquals(503, response.statusCode());
                   testContext.completeNow();
               })));

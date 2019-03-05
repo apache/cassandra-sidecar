@@ -18,13 +18,20 @@
 
 package org.apache.cassandra.sidecar.mocks;
 
-import java.util.function.Supplier;
+import org.apache.cassandra.sidecar.routes.HealthCheck;
 
-public class MockHealthCheck implements Supplier<Boolean>
+/**
+ * Settable HealthCheck
+ */
+public class MockHealthCheck extends HealthCheck
 {
     private volatile boolean status;
 
-    @Override
+    public MockHealthCheck()
+    {
+        super(null);
+    }
+
     public Boolean get()
     {
         return status;

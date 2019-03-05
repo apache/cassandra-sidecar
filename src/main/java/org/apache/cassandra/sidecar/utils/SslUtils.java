@@ -42,7 +42,8 @@ public class SslUtils
      */
     public static void validateSslOpts(String keyStorePath, String keystorePassword) throws KeyStoreException,
                                                                                             NoSuchAlgorithmException,
-                                                                                            IOException, CertificateException
+                                                                                            IOException,
+                                                                                            CertificateException
     {
         final KeyStore ks;
 
@@ -53,7 +54,9 @@ public class SslUtils
         else
             throw new IllegalArgumentException("Unrecognized keystore format extension: "
                                                + keyStorePath.substring(keyStorePath.length() - 3));
-
-        ks.load(new FileInputStream(keyStorePath), keystorePassword.toCharArray());
+        try (FileInputStream keystore = new FileInputStream(keyStorePath))
+        {
+            ks.load(keystore, keystorePassword.toCharArray());
+        }
     }
 }

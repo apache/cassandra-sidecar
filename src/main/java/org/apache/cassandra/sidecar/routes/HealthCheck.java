@@ -18,38 +18,33 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.policies.RoundRobinPolicy;
-import com.datastax.driver.core.policies.WhiteListPolicy;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-
-import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.List;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import org.apache.cassandra.sidecar.CQLSession;
+
+/**
+ * Basic health check to verify that a CQL connection can be established with a basic SELECT query.
+ */
+@Singleton
 public class HealthCheck implements Supplier<Boolean>
 {
     private static final Logger logger = LoggerFactory.getLogger(HealthCheck.class);
-    private final String cassandraHost;
-    private final int cassandraPort;
-    private Cluster cluster;
-    private Session session;
 
-    /**
-     * Constructor
-     *
-     * @param cassandraHost
-     * @param cassandraPort
-     */
-    public HealthCheck(String cassandraHost, int cassandraPort)
+    @Nullable
+    private final CQLSession session;
+
+    @Inject
+    public HealthCheck(@Nullable CQLSession session)
     {
-        this.cassandraHost = cassandraHost;
-        this.cassandraPort = cassandraPort;
-        this.cluster = createCluster(cassandraHost, cassandraPort);
+        this.session = session;
     }
 
     /**
@@ -59,28 +54,25 @@ public class HealthCheck implements Supplier<Boolean>
      */
     private boolean check()
     {
-
         try
         {
-            if (cluster == null)
-                cluster = createCluster(cassandraHost, cassandraPort);
-
-            if (cluster == null)
-                return false;
-
-            if (session == null)
-                session = cluster.connect();
-
-            ResultSet rs = session.execute("SELECT release_version FROM system.local");
-            return (rs.one() != null);
+            if (session != null && session.getLocalCql() != null)
+            {
+                ResultSet rs = session.getLocalCql().execute("SELECT release_version FROM system.local");
+                boolean result = (rs.one() != null);
+                logger.debug("HealthCheck status: {}", result);
+                return result;
+            }
+        }
+        catch (NoHostAvailableException nha)
+        {
+            logger.trace("NoHostAvailableException in HealthCheck - Cassandra Down");
         }
         catch (Exception e)
         {
-            logger.debug("Failed to reach Cassandra.", e);
-            session = null;
-            cluster = null;
-            return false;
+            logger.error("Failed to reach Cassandra.", e);
         }
+        return false;
     }
 
     /**
@@ -94,29 +86,4 @@ public class HealthCheck implements Supplier<Boolean>
         return check();
     }
 
-    /**
-     * Creates a cluster object which ensures that the requests go only to the specified C* node
-     *
-     * @param cassandraHost
-     * @param cassandraPort
-     * @return
-     */
-    final private synchronized Cluster createCluster(String cassandraHost, int cassandraPort)
-    {
-        try
-        {
-            List<InetSocketAddress> wl = Collections.singletonList(InetSocketAddress.createUnresolved(cassandraHost, cassandraPort));
-            cluster = Cluster.builder()
-                             .addContactPointsWithPorts(InetSocketAddress.createUnresolved(cassandraHost, cassandraPort))
-                             .withoutMetrics()
-                             .withLoadBalancingPolicy(new WhiteListPolicy(new RoundRobinPolicy(), wl))
-                             .build();
-        }
-        catch (Exception e)
-        {
-            logger.error("Failed to create Cluster object", e);
-        }
-
-        return cluster;
-    }
 }

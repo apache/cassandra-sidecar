@@ -30,6 +30,9 @@ import io.vertx.ext.web.handler.LoggerHandler;
 import org.apache.cassandra.sidecar.mocks.MockHealthCheck;
 import org.apache.cassandra.sidecar.routes.HealthService;
 
+/**
+ * Provides the basic dependencies for unit tests.
+ */
 public class TestModule extends AbstractModule
 {
     private Vertx vertx;
@@ -50,7 +53,7 @@ public class TestModule extends AbstractModule
     @Singleton
     public HealthService healthService(Configuration config, MockHealthCheck check)
     {
-        return new HealthService(config.getHealthCheckFrequencyMillis(), check);
+        return new HealthService(config, check, null);
     }
 
     @Provides
