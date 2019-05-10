@@ -40,38 +40,51 @@ public class Configuration
     /* Healthcheck frequency in miilis */
     private final Integer healthCheckFrequencyMillis;
 
+    @Nullable
+    private final String cassandraUsername;
+
+    @Nullable
+    private final String cassandraPassword;
+
     /* SSL related settings */
+    private final boolean isSslEnabled;
     @Nullable
     private final String keyStorePath;
     @Nullable
     private final String keyStorePassword;
-
     @Nullable
     private final String trustStorePath;
     @Nullable
     private final String trustStorePassword;
 
-    private final boolean isSslEnabled;
+    private final boolean isCassandraSslEnabled;
+    @Nullable
+    private final String cassandraTrustStorePath;
+    @Nullable
+    private final String cassandraTrustStorePassword;
 
-    public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
-                         Integer healthCheckFrequencyMillis, boolean isSslEnabled,
-                         @Nullable String keyStorePath,
-                         @Nullable String keyStorePassword,
-                         @Nullable String trustStorePath,
-                         @Nullable String trustStorePassword)
+    // auto generated constructor and builder, disable checkstyle for wide rows
+
+    //CHECKSTYLE:OFF
+    private Configuration(String cassandraHost, Integer cassandraPort, Integer port, String host, Integer healthCheckFrequencyMillis, @Nullable String cassandraUsername, @Nullable String cassandraPassword, boolean isSslEnabled, @Nullable String keyStorePath, @Nullable String keyStorePassword, @Nullable String trustStorePath, @Nullable String trustStorePassword, boolean isCassandraSslEnabled, @Nullable String cassandraTrustStorePath, @Nullable String cassandraTrustStorePassword)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
-        this.host = host;
         this.port = port;
+        this.host = host;
         this.healthCheckFrequencyMillis = healthCheckFrequencyMillis;
-
+        this.cassandraUsername = cassandraUsername;
+        this.cassandraPassword = cassandraPassword;
+        this.isSslEnabled = isSslEnabled;
         this.keyStorePath = keyStorePath;
         this.keyStorePassword = keyStorePassword;
         this.trustStorePath = trustStorePath;
         this.trustStorePassword = trustStorePassword;
-        this.isSslEnabled = isSslEnabled;
+        this.isCassandraSslEnabled = isCassandraSslEnabled;
+        this.cassandraTrustStorePath = cassandraTrustStorePath;
+        this.cassandraTrustStorePassword = cassandraTrustStorePassword;
     }
+    //CHECKSTYLE:ON
 
     /**
      * Get the Cassandra host
@@ -150,7 +163,7 @@ public class Configuration
      * @return
      */
     @Nullable
-    public String getKeystorePassword()
+    public String getKeyStorePassword()
     {
         return keyStorePassword;
     }
@@ -172,91 +185,173 @@ public class Configuration
      * @return
      */
     @Nullable
-    public String getTruststorePassword()
+    public String getTrustStorePassword()
     {
         return trustStorePassword;
     }
 
     /**
-     * Configuration Builder
+     * username for cql auth if necessary
      */
-    public static class Builder
+    @Nullable
+    public String getCassandraUsername()
+    {
+        return cassandraUsername;
+    }
+
+    /**
+     * password for cql auth if necessary
+     */
+    @Nullable
+    public String getCassandraPassword()
+    {
+        return cassandraPassword;
+    }
+
+    /**
+     * Use SSL for CQL
+     */
+    public boolean isCassandraSslEnabled()
+    {
+        return isCassandraSslEnabled;
+    }
+
+    /**
+     * Truststore location for cql connection
+     */
+    @Nullable
+    public String getCassandraTrustStorePath()
+    {
+        return cassandraTrustStorePath;
+    }
+
+    /**
+     * CQL truststore password
+     */
+    @Nullable
+    public String getCassandraTrustStorePassword()
+    {
+        return cassandraTrustStorePassword;
+    }
+
+    //CHECKSTYLE:OFF
+    public static final class Builder
     {
         private String cassandraHost;
         private Integer cassandraPort;
-        private String host;
         private Integer port;
+        private String host;
         private Integer healthCheckFrequencyMillis;
+        private String cassandraUsername;
+        private String cassandraPassword;
+        private boolean isSslEnabled;
         private String keyStorePath;
         private String keyStorePassword;
         private String trustStorePath;
         private String trustStorePassword;
-        private boolean isSslEnabled;
+        private boolean isCassandraSslEnabled;
+        private String cassandraTrustStorePath;
+        private String cassandraTrustStorePassword;
 
-        public Builder setCassandraHost(String host)
+        public Builder()
         {
-            this.cassandraHost = host;
+        }
+
+        public Builder withCassandraHost(String cassandraHost)
+        {
+            this.cassandraHost = cassandraHost;
             return this;
         }
 
-        public Builder setCassandraPort(Integer port)
+        public Builder withCassandraPort(Integer cassandraPort)
         {
-            this.cassandraPort = port;
+            this.cassandraPort = cassandraPort;
             return this;
         }
 
-        public Builder setHost(String host)
-        {
-            this.host = host;
-            return this;
-        }
-
-        public Builder setPort(Integer port)
+        public Builder withPort(Integer port)
         {
             this.port = port;
             return this;
         }
 
-        public Builder setHealthCheckFrequency(Integer freqMillis)
+        public Builder withHost(String host)
         {
-            this.healthCheckFrequencyMillis = freqMillis;
+            this.host = host;
             return this;
         }
 
-        public Builder setKeyStorePath(String path)
+        public Builder withHealthCheckFrequencyMillis(Integer healthCheckFrequencyMillis)
         {
-            this.keyStorePath = path;
+            this.healthCheckFrequencyMillis = healthCheckFrequencyMillis;
             return this;
         }
 
-        public Builder setKeyStorePassword(String password)
+        public Builder withCassandraUsername(String cassandraUsername)
         {
-            this.keyStorePassword = password;
+            this.cassandraUsername = cassandraUsername;
             return this;
         }
 
-        public Builder setTrustStorePath(String path)
+        public Builder withCassandraPassword(String cassandraPassword)
         {
-            this.trustStorePath = path;
+            this.cassandraPassword = cassandraPassword;
             return this;
         }
 
-        public Builder setTrustStorePassword(String password)
+        public Builder withSslEnabled(boolean isSslEnabled)
         {
-            this.trustStorePassword = password;
+            this.isSslEnabled = isSslEnabled;
             return this;
         }
 
-        public Builder setSslEnabled(boolean enabled)
+        public Builder withKeyStorePath(String keyStorePath)
         {
-            this.isSslEnabled = enabled;
+            this.keyStorePath = keyStorePath;
+            return this;
+        }
+
+        public Builder withKeyStorePassword(String keyStorePassword)
+        {
+            this.keyStorePassword = keyStorePassword;
+            return this;
+        }
+
+        public Builder withTrustStorePath(String trustStorePath)
+        {
+            this.trustStorePath = trustStorePath;
+            return this;
+        }
+
+        public Builder withTrustStorePassword(String trustStorePassword)
+        {
+            this.trustStorePassword = trustStorePassword;
+            return this;
+        }
+
+        public Builder withCassandraSslEnabled(boolean isCassandraSslEnabled)
+        {
+            this.isCassandraSslEnabled = isCassandraSslEnabled;
+            return this;
+        }
+
+        public Builder withCassandraTrustStorePath(String cassandraTrustStorePath)
+        {
+            this.cassandraTrustStorePath = cassandraTrustStorePath;
+            return this;
+        }
+
+        public Builder withCassandraTrustStorePassword(String cassandraTrustStorePassword)
+        {
+            this.cassandraTrustStorePassword = cassandraTrustStorePassword;
             return this;
         }
 
         public Configuration build()
         {
-            return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis, isSslEnabled,
-                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword);
+            return new Configuration(cassandraHost, cassandraPort, port, host, healthCheckFrequencyMillis, cassandraUsername, cassandraPassword, isSslEnabled, keyStorePath, keyStorePassword, trustStorePath, trustStorePassword, isCassandraSslEnabled, cassandraTrustStorePath, cassandraTrustStorePassword);
         }
+        //CHECKSTYLE:ON
     }
+
 }

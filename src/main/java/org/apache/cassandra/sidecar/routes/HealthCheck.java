@@ -19,10 +19,10 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.util.function.Supplier;
-
 import javax.annotation.Nullable;
 
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.exceptions.ConnectionException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -64,7 +64,7 @@ public class HealthCheck implements Supplier<Boolean>
                 return result;
             }
         }
-        catch (NoHostAvailableException nha)
+        catch (NoHostAvailableException | ConnectionException nha)
         {
             logger.trace("NoHostAvailableException in HealthCheck - Cassandra Down");
         }

@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar;
 
 import java.io.PrintStream;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,24 +79,43 @@ public class CassandraSidecarDaemon
                     "                                                                                      ");
     }
 
-    private void validate()
+    @VisibleForTesting
+    void validate()
     {
-        if (config.isSslEnabled())
+        try
         {
-            try
+            // validate https
+            if (config.isSslEnabled())
             {
-                if (config.getKeyStorePath() == null || config.getKeystorePassword() == null)
-                    throw new IllegalArgumentException("keyStorePath and keyStorePassword must be set if ssl enabled");
+                if (config.getKeyStorePath() == null || config.getKeyStorePassword() == null)
+                    throw new IllegalArgumentException("sidecar.ssl.keystore.path and sidecar.ssl.keystore.password " +
+                                                       "must be set if ssl enabled");
 
-                SslUtils.validateSslOpts(config.getKeyStorePath(), config.getKeystorePassword());
+                SslUtils.validateSslOpts(config.getKeyStorePath(), config.getKeyStorePassword());
 
-                if (config.getTrustStorePath() != null && config.getTruststorePassword() != null)
-                    SslUtils.validateSslOpts(config.getTrustStorePath(), config.getTruststorePassword());
+                if (config.getTrustStorePath() != null && config.getTrustStorePassword() != null)
+                    SslUtils.validateSslOpts(config.getTrustStorePath(), config.getTrustStorePassword());
             }
-            catch (Exception e)
+
+            // validate client ssl
+            if (config.isCassandraSslEnabled())
             {
-                throw new RuntimeException("Invalid keystore parameters for SSL", e);
+                if (config.getCassandraTrustStorePath() != null && config.getCassandraTrustStorePassword() != null)
+                    SslUtils.validateSslOpts(config.getCassandraTrustStorePath(),
+                                             config.getCassandraTrustStorePassword());
             }
+
+            // if username set password must be set or possible NPEs in driver
+            if (!Strings.isNullOrEmpty(config.getCassandraUsername()) &&
+                Strings.isNullOrEmpty(config.getCassandraPassword()))
+            {
+                throw new IllegalArgumentException("cassandra.username and cassandra.password must both be set");
+            }
+        }
+        catch (Exception e)
+        {
+            logger.error("Unable to configure SSL", e);
+            throw new RuntimeException("Invalid keystore parameters for SSL", e);
         }
 
     }

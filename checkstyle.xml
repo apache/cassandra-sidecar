@@ -383,11 +383,6 @@ page at http://checkstyle.sourceforge.net/config.html -->
         <property name="file" value="suppressions.xml"/>
     </module-->
 
-    <module name="SuppressionCommentFilter">
-        <property name="offCommentFormat" value="CHECKSTYLE OFF: (.+)" />
-        <property name="onCommentFormat" value="CHECKSTYLE ON" />
-        <property name="checkFormat" value="Javadoc.*" />
-        <property name="messageFormat" value="$1" />
-    </module>
+    <module name="SuppressionCommentFilter"/>
 
 </module>

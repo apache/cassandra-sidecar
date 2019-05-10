@@ -1,43 +1,43 @@
-# Java Gradle CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-java/ for more details
-#
-version: 2
-jobs:
-  build:
-    docker:
-      - image: circleci/openjdk:8-jdk
+version: 2.1
 
+# Common job details
+shared: &shared
     working_directory: ~/repo
-
     environment:
       TERM: dumb
-
     steps:
       - checkout
-
-      # Download and cache dependencies
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "build.gradle" }}
-            # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
-
       - run: ./gradlew dependencies
-
       - save_cache:
           paths:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "build.gradle" }}
-
-      # make sure it builds with build steps like swagger docs and dist
       - run: ./gradlew build
-
-      # run tests!
       - run: ./gradlew check
-
       - store_artifacts:
           path: build/reports
           destination: test-reports
       - store_test_results:
           path: build/reports
+
+jobs:
+  java-8:
+    <<: *shared
+    docker:
+      - image: circleci/openjdk:8-jdk
+
+  java-11:
+    <<: *shared
+    docker:
+      - image: circleci/openjdk:11-jdk
+
+workflows:
+  version: 2
+  build-all:
+    jobs:
+      - java-11
+      - java-8

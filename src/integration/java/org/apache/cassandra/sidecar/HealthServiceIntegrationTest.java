@@ -26,10 +26,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,12 +38,7 @@ import com.datastax.driver.core.NettyOptions;
 import com.datastax.oss.simulacron.common.cluster.ClusterSpec;
 import com.datastax.oss.simulacron.server.BoundCluster;
 import com.datastax.oss.simulacron.server.BoundNode;
-import com.datastax.oss.simulacron.server.NodePerPortResolver;
 import com.datastax.oss.simulacron.server.Server;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timer;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
@@ -59,6 +52,7 @@ import org.apache.cassandra.sidecar.routes.HealthService;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.apache.cassandra.sidecar.IntegrationTestUtils.SHARED;
 
 /**
  * Longer run and more intensive tests for the HealthService and HealthCheck
@@ -66,33 +60,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("Health Service Integration Tests")
 public class HealthServiceIntegrationTest
 {
-    private static final ThreadFactory threadFactory = new ThreadFactoryBuilder()
-                                                       .setDaemon(true)
-                                                       .setNameFormat("HealthServiceTest-%d")
-                                                       .build();
-    private static final HashedWheelTimer sharedHWT = new HashedWheelTimer(threadFactory);
-    private static final EventLoopGroup sharedEventLoopGroup = new NioEventLoopGroup(0, threadFactory);
-    private static final NettyOptions shared = new NettyOptions()
-    {
-        public EventLoopGroup eventLoopGroup(ThreadFactory threadFactory)
-        {
-            return sharedEventLoopGroup;
-        }
-
-        public void onClusterClose(EventLoopGroup eventLoopGroup)
-        {
-        }
-
-        public Timer timer(ThreadFactory threadFactory)
-        {
-            return sharedHWT;
-        }
-
-        public void onClusterClose(Timer timer)
-        {
-        }
-    };
-
     private Vertx vertx;
     private Router router;
     private HttpServer httpServer;
@@ -106,6 +73,7 @@ public class HealthServiceIntegrationTest
         router = Router.router(vertx);
         ServerSocket socket = new ServerSocket(0);
         port = socket.getLocalPort();
+        socket.close();
         httpServer = vertx.createHttpServer(new HttpServerOptions()
                                             .setPort(port)
                                             .setLogActivity(true));
@@ -114,6 +82,7 @@ public class HealthServiceIntegrationTest
     @AfterEach
     void tearDown()
     {
+        httpServer.close();
         vertx.close();
     }
 
@@ -125,14 +94,13 @@ public class HealthServiceIntegrationTest
         sessions.clear();
     }
 
-    @DisplayName("100 node cluster stopping, then starting")
+    @DisplayName("10 node cluster stopping, then starting")
     @Test
     public void testDownHost() throws InterruptedException
     {
-        int nodeCount = 100;
+        int nodeCount = 10;
         try (Server server = Server.builder()
                                    .withMultipleNodesPerIp(true)
-                                   .withAddressResolver(new NodePerPortResolver(new byte[]{ 127, 0, 0, 1 }, 49152))
                                    .build())
         {
             ClusterSpec cluster = ClusterSpec.builder()
@@ -145,7 +113,7 @@ public class HealthServiceIntegrationTest
 
             // Create a HealthCheck per node
             for (BoundNode node : bCluster.getNodes())
-                checks.put(node, healthCheckFor(node, shared));
+                checks.put(node, healthCheckFor(node, SHARED));
 
             // verify all nodes marked as up
             for (BoundNode node : bCluster.getNodes())
@@ -189,7 +157,6 @@ public class HealthServiceIntegrationTest
         VertxTestContext testContext = new VertxTestContext();
         try (Server server = Server.builder()
                                    .withMultipleNodesPerIp(true)
-                                   .withAddressResolver(new NodePerPortResolver(new byte[]{ 127, 0, 0, 1 }, 49152))
                                    .build())
         {
             ClusterSpec cluster = ClusterSpec.builder()
@@ -199,11 +166,11 @@ public class HealthServiceIntegrationTest
 
             BoundNode node = bCluster.node(0);
             node.stop();
-            CQLSession session = new CQLSession(node.inetSocketAddress(), shared);
+            CQLSession session = new CQLSession(node.inetSocketAddress(), SHARED);
             sessions.add(session);
             HealthCheck check = new HealthCheck(session);
             HealthService service = new HealthService(new Configuration.Builder()
-                                                      .setHealthCheckFrequency(1000)
+                                                      .withHealthCheckFrequencyMillis(1000)
                                                       .build(),
                                                       check, session);
             service.start();

@@ -47,9 +47,9 @@ public class SslUtils
     {
         final KeyStore ks;
 
-        if (keyStorePath.endsWith("p12"))
+        if (keyStorePath.toLowerCase().endsWith("p12"))
             ks = KeyStore.getInstance("PKCS12");
-        else if (keyStorePath.endsWith("jks"))
+        else if (keyStorePath.toLowerCase().endsWith("jks"))
             ks = KeyStore.getInstance("JKS");
         else
             throw new IllegalArgumentException("Unrecognized keystore format extension: "

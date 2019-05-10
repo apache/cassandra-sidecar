@@ -37,6 +37,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import org.apache.cassandra.sidecar.routes.HealthService;
+import org.apache.cassandra.sidecar.routes.InfoService;
 
 /**
  * Provides main binding for more complex Guice dependencies
@@ -65,14 +66,14 @@ public class MainModule extends AbstractModule
         {
             options.setKeyStoreOptions(new JksOptions()
                                        .setPath(conf.getKeyStorePath())
-                                       .setPassword(conf.getKeystorePassword()))
+                                       .setPassword(conf.getKeyStorePassword()))
                    .setSsl(conf.isSslEnabled());
 
-            if (conf.getTrustStorePath() != null && conf.getTruststorePassword() != null)
+            if (conf.getTrustStorePath() != null && conf.getTrustStorePassword() != null)
             {
                 options.setTrustStoreOptions(new JksOptions()
                                              .setPath(conf.getTrustStorePath())
-                                             .setPassword(conf.getTruststorePassword()));
+                                             .setPassword(conf.getTrustStorePassword()));
             }
         }
 
@@ -83,7 +84,7 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Router vertxRouter(Vertx vertx, HealthService healthService)
+    public Router vertxRouter(Vertx vertx, HealthService healthService, InfoService infoService)
     {
         Router router = Router.router(vertx);
         router.route().handler(LoggerHandler.create());
@@ -96,6 +97,12 @@ public class MainModule extends AbstractModule
 
         // API paths
         router.route().path("/api/v1/__health").handler(healthService::handleHealth);
+
+        router.route().path("/api/v1/compactions").handler(infoService::handleCompactions);
+        router.route().path("/api/v1/clients").handler(infoService::handleClients);
+        router.route().path("/api/v1/settings").handler(infoService::handleSettings);
+        router.route().path("/api/v1/threadpools").handler(infoService::handleThreadPools);
+
         return router;
     }
 
@@ -107,17 +114,24 @@ public class MainModule extends AbstractModule
         File propFile = new File("sidecar.yaml");
         YAMLConfiguration yamlConf = confs.fileBased(YAMLConfiguration.class, propFile);
 
+        //CHECKSTYLE:OFF
         return new Configuration.Builder()
-                           .setCassandraHost(yamlConf.get(String.class, "cassandra.host"))
-                           .setCassandraPort(yamlConf.get(Integer.class, "cassandra.port"))
-                           .setHost(yamlConf.get(String.class, "sidecar.host"))
-                           .setPort(yamlConf.get(Integer.class, "sidecar.port"))
-                           .setHealthCheckFrequency(yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"))
-                           .setKeyStorePath(yamlConf.get(String.class, "sidecar.ssl.keystore.path", null))
-                           .setKeyStorePassword(yamlConf.get(String.class, "sidecar.ssl.keystore.password", null))
-                           .setTrustStorePath(yamlConf.get(String.class, "sidecar.ssl.truststore.path", null))
-                           .setTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
-                           .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
+                           .withCassandraHost(yamlConf.get(String.class, "cassandra.host"))
+                           .withCassandraPort(yamlConf.get(Integer.class, "cassandra.port"))
+                           .withCassandraUsername(yamlConf.get(String.class, "cassandra.username", null))
+                           .withCassandraPassword(yamlConf.get(String.class, "cassandra.password", null))
+                           .withCassandraSslEnabled(yamlConf.get(Boolean.class, "cassandra.ssl.enabled", false))
+                           .withCassandraTrustStorePath(yamlConf.get(String.class, "cassandra.ssl.truststore.path", null))
+                           .withCassandraTrustStorePassword(yamlConf.get(String.class, "cassandra.ssl.truststore.password", null))
+                           .withHost(yamlConf.get(String.class, "sidecar.host"))
+                           .withPort(yamlConf.get(Integer.class, "sidecar.port"))
+                           .withHealthCheckFrequencyMillis(yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"))
+                           .withKeyStorePath(yamlConf.get(String.class, "sidecar.ssl.keystore.path", null))
+                           .withKeyStorePassword(yamlConf.get(String.class, "sidecar.ssl.keystore.password", null))
+                           .withTrustStorePath(yamlConf.get(String.class, "sidecar.ssl.truststore.path", null))
+                           .withTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
+                           .withSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
                            .build();
+        //CHECKSTYLE:ON
     }
 }

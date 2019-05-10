@@ -70,7 +70,7 @@ public class TestModule extends AbstractModule
         HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
         options.setKeyStoreOptions(new JksOptions()
                                        .setPath(conf.getKeyStorePath())
-                                       .setPassword(conf.getKeystorePassword()))
+                                       .setPassword(conf.getKeyStorePassword()))
                    .setSsl(conf.isSslEnabled());
         HttpServer server = vertx.createHttpServer(options);
         server.requestHandler(router);
@@ -97,12 +97,12 @@ public class TestModule extends AbstractModule
     protected Configuration abstractConfig()
     {
         return new Configuration.Builder()
-                           .setCassandraHost("INVALID_FOR_TEST")
-                           .setCassandraPort(0)
-                           .setHost("127.0.0.1")
-                           .setPort(6475)
-                           .setHealthCheckFrequency(1000)
-                           .setSslEnabled(false)
+                           .withCassandraHost("INVALID_FOR_TEST")
+                           .withCassandraPort(0)
+                           .withHost("127.0.0.1")
+                           .withPort(6475)
+                           .withHealthCheckFrequencyMillis(1000)
+                           .withSslEnabled(false)
                            .build();
     }
 }

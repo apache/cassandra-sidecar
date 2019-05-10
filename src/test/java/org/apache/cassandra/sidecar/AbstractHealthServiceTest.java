@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar;
 
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +33,8 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.mocks.MockHealthCheck;
 import org.apache.cassandra.sidecar.routes.HealthService;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Provides basic tests shared between SSL and normal http health services
@@ -82,7 +83,7 @@ public abstract class AbstractHealthServiceTest
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
               {
-                  Assert.assertEquals(200, response.statusCode());
+                  assertEquals(200, response.statusCode());
                   testContext.completeNow();
               })));
     }
@@ -101,7 +102,7 @@ public abstract class AbstractHealthServiceTest
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
               {
-                  Assert.assertEquals(503, response.statusCode());
+                  assertEquals(503, response.statusCode());
                   testContext.completeNow();
               })));
     }

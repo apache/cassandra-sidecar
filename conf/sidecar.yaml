@@ -5,6 +5,18 @@
 cassandra:
   - host: localhost
   - port: 9042
+#
+# Configuration to enable SSL and authentication for the CQL connection
+#
+#  - ssl:
+#      - enabled: true
+#      - truststore:
+#          - path: path/to/truststore.p12
+#          - password: password
+#
+#  - username: cassandra
+#  - password: cassandra
+
 
 sidecar:
   - host: 0.0.0.0

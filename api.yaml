@@ -15,6 +15,110 @@ tags:
     description: Execute, coordinate, or schedule operations
 
 paths:
+  /api/v1/threadpools:
+    get:
+      tags:
+        - visibility
+      summary: Thread stats
+      operationId: threadstats
+      description: |
+        List of many of the thread pools in Cassandra and their state
+      responses:
+        '200':
+          description: Thread stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ThreadStats'
+        '503':
+          description: Resource not available due to version conflict or connectivity to cluster
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Error'
+
+  /api/v1/settings:
+    get:
+      tags:
+        - visibility
+      summary: Current running configuration
+      operationId: settings
+      description: |
+        List of all configuration settings as would be seen in cassandra.yaml
+      responses:
+        '200':
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Setting'
+        '503':
+          description: Resource not available due to version conflict or connectivity to cluster
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Error'
+
+  /api/v1/clients:
+    get:
+      tags:
+        - visibility
+      summary: List of CQL connections
+      operationId: clients
+      description: |
+        List of all connections to cassandra using the binary protocol.
+      responses:
+        '200':
+          description: List of CQL connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+        '503':
+          description: Resource not available due to version conflict or connectivity to cluster
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Error'
+
+  /api/v1/compactions:
+    get:
+      tags:
+        - visibility
+      summary: List of sstable background tasks
+      operationId: compactions
+      description: |
+        List of sstable background tasks
+      responses:
+        '200':
+          description: List of sstable background tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SSTableTask'
+        '503':
+          description: Resource not available due to version conflict or connectivity to cluster
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Error'
+
   /api/v1/__health:
     get:
       tags:
@@ -43,6 +147,16 @@ paths:
 
 components:
   schemas:
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: details on what why not getting expected results
+          example: 'All host(s) tried for query failed (no host was tried)'
+
     HealthStatus:
       type: object
       required:
@@ -55,3 +169,145 @@ components:
             - 'NOT_OK'
           description: if reads are able to run through binary interface. 'OK' or 'NOT_OK'
           example: 'OK'
+
+    Client:
+      type: object
+      required:
+        - address
+        - port
+      properties:
+        address:
+          type: string
+          example: '127.0.0.1'
+        port:
+          type: integer
+          example: 54918
+        hostname:
+          type: string
+          example: 'localhost'
+        username:
+          type: string
+          example: 'anonymous'
+        connectionStage:
+          type: string
+          enum:
+            - 'established'
+            - 'authenticating'
+            - 'ready'
+          example: 'ready'
+        protocolVersion:
+          type: integer
+          example: 4
+        driverName:
+          type: string
+          example: 'DataStax Java Driver'
+        driverVersion:
+          type: string
+          example: '3.7.1'
+        requestCount:
+          type: integer
+          example: 20
+        sslEnabled:
+          type: boolean
+          example: True
+        sslProtocol:
+          type: string
+          example: 'TLSv1'
+        sslCipherSuite:
+          type: string
+          example: 'TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA'
+
+    Setting:
+      type: object
+      required:
+        - name
+        - value
+      properties:
+        name:
+          type: string
+          example: 'rpc_address'
+        value:
+          type: string
+          example: '127.0.0.1'
+
+    ThreadStats:
+      type: object
+      required:
+        - name
+        - activeTasks
+        - pendingTasks
+        - completedTasks
+      properties:
+        name:
+          type: string
+          example: 'MutationStage'
+        activeTasks:
+          type: integer
+          example: 0
+        activeTasksLimit:
+          type: integer
+          example: 32
+        pendingTasks:
+          type: integer
+          example: 0
+        completedTasks:
+          type: integer
+          example: 0
+        blockedTasks:
+          type: integer
+          example: 0
+        blockedTasksAllTime:
+          type: integer
+          example: 0
+
+    SSTableTask:
+      type: object
+      required:
+        - taskId
+      properties:
+        keyspaceName:
+          type: string
+          example: 'system'
+        tableName:
+          type: string
+          example: 'peers'
+        taskId:
+          type: string
+          example: 'd7ef1b5f-b6d6-4187-923b-a1fbad74909d'
+        kind:
+          type: string
+          enum:
+            - 'compaction'
+            - 'validation'
+            - 'key cache save'
+            - 'row cache save'
+            - 'counter cache save'
+            - 'cleanup'
+            - 'scrub'
+            - 'upgrade sstables'
+            - 'secondary index build'
+            - 'tombstone Compaction'
+            - 'unknown compaction type'
+            - 'anticompaction after repair'
+            - 'verify'
+            - 'flush'
+            - 'stream'
+            - 'write'
+            - 'view build'
+            - 'index summary redistribution'
+            - 'relocate sstables to correct disk'
+            - 'remove deleted data'
+          example: 'compaction'
+        progress:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 100
+        unit:
+          type: string
+          enum:
+            - 'bytes'
+            - 'token range parts'
+            - 'keys'
+          example: 'bytes'

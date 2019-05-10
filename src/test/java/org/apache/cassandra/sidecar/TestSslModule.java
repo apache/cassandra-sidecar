@@ -40,16 +40,16 @@ public class TestSslModule extends TestModule
         final String trustStorePassword = "password";
 
         return new Configuration.Builder()
-                           .setCassandraHost("INVALID_FOR_TEST")
-                           .setCassandraPort(0)
-                           .setHost("127.0.0.1")
-                           .setPort(6475)
-                           .setHealthCheckFrequency(1000)
-                           .setKeyStorePath(keyStorePath)
-                           .setKeyStorePassword(keyStorePassword)
-                           .setTrustStorePath(trustStorePath)
-                           .setTrustStorePassword(trustStorePassword)
-                           .setSslEnabled(true)
+                           .withCassandraHost("INVALID_FOR_TEST")
+                           .withCassandraPort(0)
+                           .withHost("127.0.0.1")
+                           .withPort(6475)
+                           .withHealthCheckFrequencyMillis(1000)
+                           .withKeyStorePath(keyStorePath)
+                           .withKeyStorePassword(keyStorePassword)
+                           .withTrustStorePath(trustStorePath)
+                           .withTrustStorePassword(trustStorePassword)
+                           .withSslEnabled(true)
                            .build();
     }
 }
