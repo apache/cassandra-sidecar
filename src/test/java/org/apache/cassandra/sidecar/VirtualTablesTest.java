@@ -46,7 +46,7 @@ public class VirtualTablesTest
         VirtualTables tables = new VirtualTables(session);
         assertThrows(NoHostAvailableException.class, tables::settings);
         assertThrows(NoHostAvailableException.class, tables::sstableTasks);
-        assertThrows(NoHostAvailableException.class, tables::threadStats);
+        assertThrows(NoHostAvailableException.class, tables::threadPools);
     }
 
     @Table(keyspace = "system", name = "clients")

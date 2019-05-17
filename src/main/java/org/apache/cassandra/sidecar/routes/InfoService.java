@@ -17,11 +17,12 @@
  */
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javax.annotation.Nullable;
+import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
@@ -64,16 +65,16 @@ public class InfoService
         this.vtables = vtables;
     }
 
-    private <T> void resultFutureToJson(RoutingContext rc, final ListenableFuture<Result<T>> future)
+    private <T> void resultFutureToJson(RoutingContext rc,
+                                        final ListenableFuture<Result<T>> future,
+                                        Consumer<List<T>> render)
     {
         Futures.addCallback(future, new FutureCallback<Result<T>>()
         {
             public void onSuccess(@NullableDecl Result<T> results)
             {
                 List<T> all = results.all();
-                rc.response()
-                  .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-                  .end(Json.encode(all));
+                render.accept(all);
             }
 
             public void onFailure(Throwable throwable)
@@ -90,14 +91,23 @@ public class InfoService
         }, infoExecutor);
     }
 
-    @Nullable
     <T> void virtualTable(RoutingContext rc, Class<T> pojo)
+    {
+        virtualTable(rc, pojo, all ->
+        {
+            rc.response()
+              .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+              .end(Json.encode(all));
+        });
+    }
+
+    <T> void virtualTable(RoutingContext rc, Class<T> pojo, Consumer<List<T>> render)
     {
         try
         {
             // there are two layers that can error here, one the ORM failing to initialize or identifying the version
             // doesnt support the table and then resultFutureToJson's check if the actual query to fetch fails
-            resultFutureToJson(rc, vtables.getTableResults(pojo));
+            resultFutureToJson(rc, vtables.getTableResults(pojo), render);
         }
         catch (Exception e)
         {
@@ -124,11 +134,31 @@ public class InfoService
 
     public void handleSettings(RoutingContext rc)
     {
-        virtualTable(rc, VirtualTables.Setting.class);
+        virtualTable(rc, VirtualTables.Setting.class, all ->
+        {
+            Map<String, String> view = new HashMap<>();
+            for (VirtualTables.Setting setting : all)
+                view.put(setting.getName(), setting.getValue());
+
+            rc.response()
+              .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+              .end(Json.encode(view));
+        });
     }
 
     public void handleThreadPools(RoutingContext rc)
     {
-        virtualTable(rc, VirtualTables.ThreadStats.class);
+        virtualTable(rc, VirtualTables.ThreadPool.class, all ->
+        {
+            Map<String, VirtualTables.ThreadPool> view = new HashMap<>();
+            for (VirtualTables.ThreadPool pool : all)
+            {
+                view.put(pool.getName(), pool);
+            }
+
+            rc.response()
+              .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+              .end(Json.encode(view));
+        });
     }
 }

@@ -39,8 +39,10 @@ import com.datastax.driver.mapping.NamingConventions;
 import com.datastax.driver.mapping.PropertyAccessStrategy;
 import com.datastax.driver.mapping.Result;
 import com.datastax.driver.mapping.annotations.Table;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Exposee virtual tables contents as pojos
@@ -109,8 +111,9 @@ public class VirtualTables
      * Represents state of a thread pool from the thread_pools virtual table
      */
     @Table(keyspace = "system_views", name = "thread_pools")
-    public static class ThreadStats
+    public static class ThreadPool
     {
+        @JsonIgnore
         private String name;
         private int activeTasks;
         private int activeTasksLimit;
@@ -153,11 +156,23 @@ public class VirtualTables
         {
             return blockedTasksAllTime;
         }
+
+        public JsonObject json()
+        {
+            JsonObject json = new JsonObject();
+            json.put("activeTasks", activeTasks);
+            json.put("activeTasksLimit", activeTasksLimit);
+            json.put("pendingTasks", pendingTasks);
+            json.put("completedTasks", completedTasks);
+            json.put("blockedTasks", blockedTasks);
+            json.put("blockedTasksAllTime", blockedTasksAllTime);
+            return json;
+        }
     }
 
-    public ListenableFuture<Result<ThreadStats>> threadStats()
+    public ListenableFuture<Result<ThreadPool>> threadPools()
     {
-        return getTableResults(ThreadStats.class);
+        return getTableResults(ThreadPool.class);
     }
 
     /**

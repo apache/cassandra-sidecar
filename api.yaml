@@ -19,19 +19,36 @@ paths:
     get:
       tags:
         - visibility
-      summary: Thread stats
-      operationId: threadstats
+      summary: Thread pools
+      operationId: threadpools
       description: |
-        List of many of the thread pools in Cassandra and their state
+        Provides usage statistics of thread pools
       responses:
         '200':
-          description: Thread stats
+          description: Thread pool statistics
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ThreadStats'
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/ThreadPool'
+                example:
+                  "ReadStage": {
+                    "activeTasks": 0,
+                    "activeTasksLimit": 32,
+                    "pendingTasks": 0,
+                    "completedTasks": 75,
+                    "blockedTasks": 0,
+                    "blockedTasksAllTime": 0
+                  }
+                  "MutationStage": {
+                    "activeTasks": 32,
+                    "activeTasksLimit": 32,
+                    "pendingTasks": 1023,
+                    "completedTasks": 0,
+                    "blockedTasks": 0,
+                    "blockedTasksAllTime": 0
+                  }
         '503':
           description: Resource not available due to version conflict or connectivity to cluster
           content:
@@ -55,9 +72,12 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Setting'
+                type: object
+                additionalProperties:
+                  type: string
+                example:
+                  rpc_address: "127.0.0.1"
+                  key_cache_size_in_mb: "512"
         '503':
           description: Resource not available due to version conflict or connectivity to cluster
           content:
@@ -217,30 +237,13 @@ components:
           type: string
           example: 'TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA'
 
-    Setting:
+    ThreadPool:
       type: object
       required:
-        - name
-        - value
-      properties:
-        name:
-          type: string
-          example: 'rpc_address'
-        value:
-          type: string
-          example: '127.0.0.1'
-
-    ThreadStats:
-      type: object
-      required:
-        - name
         - activeTasks
         - pendingTasks
         - completedTasks
       properties:
-        name:
-          type: string
-          example: 'MutationStage'
         activeTasks:
           type: integer
           example: 0

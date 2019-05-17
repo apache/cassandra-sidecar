@@ -39,15 +39,15 @@ public class CQLSession
     private static final Logger logger = LoggerFactory.getLogger(CQLSession.class);
     @Nullable
     private Session localSession;
-    public final InetSocketAddress address;
+    private final InetSocketAddress address;
     private final WhiteListPolicy wlp;
-    private NettyOptions nettyOptions;
-    private QueryOptions queryOptions;
+    private final NettyOptions nettyOptions;
+    private final QueryOptions queryOptions;
+    private final ReconnectionPolicy reconnectionPolicy;
     @Nullable
     private String username;
     @Nullable
     private String password;
-    private ReconnectionPolicy reconnectionPolicy;
     @Nullable
     private boolean useSSL;
     @Nullable
@@ -156,7 +156,7 @@ public class CQLSession
         }
         catch (AuthenticationException auth)
         {
-            logger.error("Cassandra configuration is incorrect. " + auth.getMessage());
+            logger.error("Cassandra configuration is incorrect.", auth);
         }
         catch (Exception e)
         {

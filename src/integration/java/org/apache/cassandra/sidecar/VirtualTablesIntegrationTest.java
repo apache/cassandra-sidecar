@@ -140,7 +140,7 @@ public class VirtualTablesIntegrationTest
 
             assertThrows(NotImplementedException.class, tables::settings);
             assertThrows(NotImplementedException.class, tables::sstableTasks);
-            assertThrows(NotImplementedException.class, tables::threadStats);
+            assertThrows(NotImplementedException.class, tables::threadPools);
         }
     }
 
@@ -160,7 +160,7 @@ public class VirtualTablesIntegrationTest
 
             assertThrows(NoHostAvailableException.class, tables::settings);
             assertThrows(NoHostAvailableException.class, tables::sstableTasks);
-            assertThrows(NoHostAvailableException.class, tables::threadStats);
+            assertThrows(NoHostAvailableException.class, tables::threadPools);
             node.start();
             long start = System.currentTimeMillis();
             while ((session.getLocalCql() == null || session.getLocalCql().getState().getConnectedHosts().isEmpty())
