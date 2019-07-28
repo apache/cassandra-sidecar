@@ -22,11 +22,11 @@ mainClassName = "org.apache.cassandra.sidecar.CassandraSidecarDaemon"
 applicationName = 'CassandraSidecarDaemon'
 
 // Config file location should be in file:/// format for local files,
-// when we have the fix for adding /conf directory to classpaht, we can get away with below default JvmArg
 def confFile = "file:" + File.separator + File.separator + "APP_HOME_TO_REPLACE/conf/sidecar.yaml"
 
 applicationDefaultJvmArgs = ["-Dsidecar.logdir=./logs",
                              "-Dsidecar.config=" + confFile,
+                             "-Dlogback.configurationFile=./conf/logback.xml",
                              "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
                              "-javaagent:APP_HOME_TO_REPLACE/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
 startScripts {
@@ -39,22 +39,12 @@ run {
     confFile = "file:" + File.separator + File.separator + "$projectDir/conf/sidecar.yaml"
     jvmArgs = ["-Dsidecar.logdir=./logs",
                                  "-Dsidecar.config=" + confFile,
+                                 "-Dlogback.configurationFile=./conf/logback.xml",
                                  "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
-                                 "-javaagent:$projectDir/src/dist/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
+                                 "-javaagent:$projectDir/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
 }
 
 sourceSets {
-    // This is needed as gradle considers `src/main/resources` as the default resources folder
-    main {
-        resources {
-            srcDirs = ['conf', 'setup', 'src/main/resources']
-        }
-    }
-    test {
-        resources {
-            srcDirs = [main.resources, "src/test/resources"]
-        }
-    }
     integrationTest {
         java {
             compileClasspath += main.output + test.output
@@ -129,17 +119,15 @@ task copyDist(type: Copy) {
 
 task copyJolokia(type: Copy) {
     from configurations.jolokia
-    into "$projectDir/src/dist/agents"
+    into "$projectDir/src/main/dist/agents"
 }
 
-// Lets clean /bin and /lib directories along with default build directories.
-clean {
-    println "Deleting directory $projectDir/bin"
-    delete "$projectDir/bin"
-    println "Deleting directory $projectDir/lib"
-    delete "$projectDir/lib"
-    println "Deleting agents $projectDir/src/dist/agents"
-    delete "$projectDir/src/dist/agents"
+// Lets clean distribution directories along with default build directories.
+clean.doLast {
+    ["agents", "bin", "conf", "lib"].each {
+        println "Deleting directory $projectDir/$it"
+        delete "$projectDir/$it"
+    }
     println "Deleting generated docs $projectDir/src/main/resources/docs"
     delete "$projectDir/src/main/resources/docs"
 }
@@ -173,6 +161,7 @@ tasks.withType(FindBugs) {
 }
 
 // copyDist gets called on every build
-copyDist.dependsOn installDist
+copyDist.dependsOn installDist, copyJolokia
 check.dependsOn checkstyleMain, checkstyleTest, integrationTest, jacocoTestReport
 build.dependsOn copyDist, generateReDoc, generateSwaggerUI, copyJolokia
+run.dependsOn build
