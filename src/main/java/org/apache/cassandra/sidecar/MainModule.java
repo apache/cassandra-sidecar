@@ -18,11 +18,14 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 import org.apache.commons.configuration2.YAMLConfiguration;
 import org.apache.commons.configuration2.builder.fluent.Configurations;
 import org.apache.commons.configuration2.ex.ConfigurationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -43,6 +46,8 @@ import org.apache.cassandra.sidecar.routes.HealthService;
  */
 public class MainModule extends AbstractModule
 {
+    private static final Logger logger = LoggerFactory.getLogger(MainModule.class);
+
     @Provides
     @Singleton
     public Vertx getVertx()
@@ -103,21 +108,29 @@ public class MainModule extends AbstractModule
     @Singleton
     public Configuration configuration() throws ConfigurationException
     {
-        Configurations confs = new Configurations();
-        File propFile = new File("sidecar.yaml");
-        YAMLConfiguration yamlConf = confs.fileBased(YAMLConfiguration.class, propFile);
-
-        return new Configuration.Builder()
-                           .setCassandraHost(yamlConf.get(String.class, "cassandra.host"))
-                           .setCassandraPort(yamlConf.get(Integer.class, "cassandra.port"))
-                           .setHost(yamlConf.get(String.class, "sidecar.host"))
-                           .setPort(yamlConf.get(Integer.class, "sidecar.port"))
-                           .setHealthCheckFrequency(yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"))
-                           .setKeyStorePath(yamlConf.get(String.class, "sidecar.ssl.keystore.path", null))
-                           .setKeyStorePassword(yamlConf.get(String.class, "sidecar.ssl.keystore.password", null))
-                           .setTrustStorePath(yamlConf.get(String.class, "sidecar.ssl.truststore.path", null))
-                           .setTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
-                           .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
-                           .build();
+        String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
+        logger.info("Reading configuration from {}", confPath);
+        try
+        {
+            Configurations confs = new Configurations();
+            URL url = new URL(confPath);
+            YAMLConfiguration yamlConf = confs.fileBased(YAMLConfiguration.class, url);
+            return new Configuration.Builder()
+                    .setCassandraHost(yamlConf.get(String.class, "cassandra.host"))
+                    .setCassandraPort(yamlConf.get(Integer.class, "cassandra.port"))
+                    .setHost(yamlConf.get(String.class, "sidecar.host"))
+                    .setPort(yamlConf.get(Integer.class, "sidecar.port"))
+                    .setHealthCheckFrequency(yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"))
+                    .setKeyStorePath(yamlConf.get(String.class, "sidecar.ssl.keystore.path", null))
+                    .setKeyStorePassword(yamlConf.get(String.class, "sidecar.ssl.keystore.password", null))
+                    .setTrustStorePath(yamlConf.get(String.class, "sidecar.ssl.truststore.path", null))
+                    .setTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
+                    .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
+                    .build();
+        }
+        catch (MalformedURLException e)
+        {
+            throw new ConfigurationException("Failed reading from sidebar.config path: " + confPath, e);
+        }
     }
 }

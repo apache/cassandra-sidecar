@@ -78,3 +78,12 @@ src/main/resources/docs/*
 
 src/dist/*
 *.logdir_IS_UNDEFINED
+
+# Sidecar copyDist files copied to root directory
+agents
+bin
+conf
+lib
+
+# Local gradle cache
+.gradle
