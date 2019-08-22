@@ -108,7 +108,7 @@ public class MainModule extends AbstractModule
     @Singleton
     public Configuration configuration() throws ConfigurationException
     {
-        String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
+        final String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
         logger.info("Reading configuration from {}", confPath);
         try
         {
