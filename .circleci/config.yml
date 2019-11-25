@@ -40,6 +40,21 @@ commands:
       - run: sudo apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
 
 jobs:
+  java8_docker:
+    docker:
+     - image: circleci/openjdk:8-jdk-stretch
+    steps:
+     - checkout
+
+     - run: ./gradlew -i clean build --stacktrace
+
+     - store_artifacts:
+         path: build/reports
+         destination: test-reports
+
+     - store_test_results:
+         path: ~/repo/build/test-results/
+
   java8:
     <<: *base_job
 
@@ -53,7 +68,22 @@ jobs:
       - run: sudo update-java-alternatives -s adoptopenjdk-8-hotspot-amd64 && java -version
 
       # make sure it builds with build steps like swagger docs and dist
-      - run: ./gradlew build --stacktrace
+      - run: ./gradlew -i clean build --stacktrace
+
+      - store_artifacts:
+          path: build/reports
+          destination: test-reports
+
+      - store_test_results:
+          path: ~/repo/build/test-results/
+
+  java11_docker:
+    docker:
+      - image: circleci/openjdk:11-jdk-stretch
+    steps:
+      - checkout
+
+      - run: ./gradlew -i clean build --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -73,7 +103,7 @@ jobs:
 
       - run: sudo update-java-alternatives -s adoptopenjdk-11-hotspot-amd64 && java -version
 
-      - run: ./gradlew build --stacktrace
+      - run: ./gradlew -i clean build --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -84,13 +114,11 @@ jobs:
 
   # ensures we can build and install deb packages
   deb_build_install:
-    <<: *base_job
+    docker:
+      - image: circleci/openjdk:11-jdk-stretch
     steps:
       - checkout
-      - install_common
-      - install_java:
-          version: adoptopenjdk-11-hotspot
-      - run: ./gradlew buildDeb
+      - run: ./gradlew -i clean buildDeb
       - run: DEBIAN_FRONTEND=noninteractive sudo apt install -y ./build/distributions/cassandra-sidecar*.deb
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
 
@@ -100,7 +128,7 @@ jobs:
     steps:
       - checkout
       - run: yum install -y java-11-openjdk-devel  # the image uses root by default, no need for sudo
-      - run: JAVA_HOME=/usr/lib/jvm/java-11-openjdk ./gradlew buildRpm
+      - run: JAVA_HOME=/usr/lib/jvm/java-11-openjdk ./gradlew -i buildRpm
       - run: yum install -y ./build/distributions/cassandra-sidecar*.rpm
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
 
@@ -108,32 +136,51 @@ jobs:
     <<: *base_job
     steps:
       - checkout
-      - run: ./gradlew jibDockerBuild
+      - run: ./gradlew -i clean jibDockerBuild
 
   docs_build:
-    <<: *base_job
+    docker:
+      - image: circleci/openjdk:11-jdk-stretch
     steps:
       - checkout
-      - install_common
-      - install_java:
-          version: adoptopenjdk-11-hotspot
-      - run: ./gradlew build
+      - run: ./gradlew -i clean build --stacktrace
       - run: test -f build/docs/html5/user.html
 
 workflows:
   version: 2
-
-  test_java_8:
+  build-and-test:
     jobs:
       - java8
-
-  test_java_11:
-    jobs:
+      - java8_docker
       - java11
-
-  test_packaging:
-    jobs:
-      - deb_build_install
-      - rpm_build_install
-      - docker_build
-      - docs_build
+      - java11_docker
+      - docs_build:
+          requires:
+            - java8
+            - java8_docker
+            - java11
+            - java11_docker
+      - docker_build:
+          requires:
+            - java8
+            - java8_docker
+            - java11
+            - java11_docker
+      - rpm_build_install:
+          requires:
+            - java8
+            - java8_docker
+            - java11
+            - java11_docker
+      - deb_build_install:
+          requires:
+            - java8
+            - java8_docker
+            - java11
+            - java11_docker
+      - docker_build:
+          requires:
+            - java8
+            - java8_docker
+            - java11
+            - java11_docker

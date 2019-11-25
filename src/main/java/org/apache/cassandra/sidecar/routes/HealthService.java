@@ -22,8 +22,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-
 import javax.annotation.Nullable;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -31,13 +35,12 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.http.HttpHeaders;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.CQLSession;
 import org.apache.cassandra.sidecar.Configuration;
 
@@ -45,6 +48,7 @@ import org.apache.cassandra.sidecar.Configuration;
  * Tracks health check[s] and provides a REST response that should match that defined by api.yaml
  */
 @Singleton
+@Path("/api/v1/__health")
 public class HealthService implements Host.StateListener
 {
     private static final Logger logger = LoggerFactory.getLogger(HealthService.class);
@@ -104,21 +108,19 @@ public class HealthService implements Host.StateListener
         executor.shutdown();
     }
 
-    public void handleHealth(RoutingContext rc)
+    @Operation(summary = "Health Check for Cassandra's status",
+    description = "Returns HTTP 200 if Cassandra is available, 503 otherwise",
+    responses = {
+    @ApiResponse(responseCode = "200", description = "Cassandra is available"),
+    @ApiResponse(responseCode = "503", description = "Cassandra is not available")
+    })
+    @Produces(MediaType.APPLICATION_JSON)
+    @GET
+    public Response doGet()
     {
-        try
-        {
-            int status = lastKnownStatus ? HttpResponseStatus.OK.code() : HttpResponseStatus.SERVICE_UNAVAILABLE.code();
-            rc.response()
-              .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-              .setStatusCode(status)
-              .end(Json.encode(ImmutableMap.of("status", lastKnownStatus ? "OK" : "NOT_OK")));
-        }
-        catch (Exception e)
-        {
-            logger.error("Caught exception", e);
-            rc.response().setStatusCode(400).end();
-        }
+        int status = lastKnownStatus ? HttpResponseStatus.OK.code() : HttpResponseStatus.SERVICE_UNAVAILABLE.code();
+        return Response.status(status).entity(Json.encode(ImmutableMap.of("status", lastKnownStatus ?
+                                                                                    "OK" : "NOT_OK"))).build();
     }
 
     public void onAdd(Host host)

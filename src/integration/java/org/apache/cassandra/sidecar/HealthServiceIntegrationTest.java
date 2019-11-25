@@ -26,8 +26,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -42,20 +44,23 @@ import com.datastax.oss.simulacron.server.BoundCluster;
 import com.datastax.oss.simulacron.server.BoundNode;
 import com.datastax.oss.simulacron.server.NodePerPortResolver;
 import com.datastax.oss.simulacron.server.Server;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
+import com.google.inject.util.Modules;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
-
 import org.apache.cassandra.sidecar.routes.HealthCheck;
 import org.apache.cassandra.sidecar.routes.HealthService;
 
@@ -100,27 +105,59 @@ public class HealthServiceIntegrationTest
     };
 
     private Vertx vertx;
-    private Router router;
-    private HttpServer httpServer;
     private int port;
     private List<CQLSession> sessions = new LinkedList<>();
+    private Injector injector;
 
     @BeforeEach
-    void setUp() throws IOException
+    void setUp() throws InterruptedException
     {
-        vertx = Vertx.vertx();
-        router = Router.router(vertx);
-        ServerSocket socket = new ServerSocket(0);
-        port = socket.getLocalPort();
-        httpServer = vertx.createHttpServer(new HttpServerOptions()
-                                            .setPort(port)
-                                            .setLogActivity(true));
+        AtomicBoolean failedToListen = new AtomicBoolean(false);
+
+        do
+        {
+            injector = Guice.createInjector(Modules.override(new MainModule())
+                                                   .with(new IntegrationTestModule(1, sessions)));
+            vertx = injector.getInstance(Vertx.class);
+            HttpServer httpServer = injector.getInstance(HttpServer.class);
+            Configuration config = injector.getInstance(Configuration.class);
+            port = config.getPort();
+
+            CountDownLatch waitLatch = new CountDownLatch(1);
+            httpServer.listen(port, res ->
+            {
+                if (res.succeeded())
+                {
+                    logger.info("Succeeded to listen on port " + port);
+                }
+                else
+                {
+                    logger.error("Failed to listen on port " + port + " " + res.cause());
+                    failedToListen.set(true);
+                }
+                waitLatch.countDown();
+            });
+
+            if (waitLatch.await(60, TimeUnit.SECONDS))
+                logger.info("Listen complete before timeout.");
+            else
+                logger.error("Listen complete timed out.");
+
+            if (failedToListen.get())
+                closeClusters();
+        } while(failedToListen.get());
     }
 
     @AfterEach
-    void tearDown()
+    void tearDown() throws InterruptedException
     {
-        vertx.close();
+        CountDownLatch waitLatch = new CountDownLatch(1);
+        vertx.close(res -> waitLatch.countDown());
+        if (waitLatch.await(60, TimeUnit.SECONDS))
+            logger.info("Close complete before timeout.");
+        else
+            logger.error("Close timed out.");
+
     }
 
     @AfterEach
@@ -208,62 +245,44 @@ public class HealthServiceIntegrationTest
     public void testDownHostTurnsOn() throws Throwable
     {
         VertxTestContext testContext = new VertxTestContext();
-        try (Server server = Server.builder()
-                                   .withMultipleNodesPerIp(true)
-                                   .withAddressResolver(new NodePerPortResolver(new byte[]{ 127, 0, 0, 1 }, 49152))
-                                   .build())
+        BoundCluster bc = injector.getInstance(BoundCluster.class);
+        BoundNode node = bc.node(0);
+        HealthCheck check = injector.getInstance(HealthCheck.class);
+        HealthService service = injector.getInstance(HealthService.class);
+        Server server = injector.getInstance(Server.class);
+
+        try
         {
-            ClusterSpec cluster = ClusterSpec.builder()
-                                             .withNodes(1)
-                                             .build();
-            BoundCluster bCluster = server.register(cluster);
+            WebClient client = WebClient.create(vertx);
+            long start = System.currentTimeMillis();
+            client.get(port, "localhost", "/api/v1/__health")
+                  .as(BodyCodec.string())
+                  .send(testContext.succeeding(response -> testContext.verify(() ->
+                  {
+                      assertEquals(503, response.statusCode());
 
-            BoundNode node = bCluster.node(0);
-            node.stop();
-            CQLSession session = new CQLSession(node.inetSocketAddress(), shared);
-            sessions.add(session);
-            HealthCheck check = new HealthCheck(session);
-            HealthService service = new HealthService(new Configuration.Builder()
-                                                      .setHealthCheckFrequency(1000)
-                                                      .build(),
-                                                      check, session);
-            service.start();
-            try
+                      node.start();
+                      while ((System.currentTimeMillis() - start) < (1000 * 60 * 2) && !check.get())
+                          Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+                      service.refreshNow();
+                      client.get(port, "localhost", "/api/v1/__health")
+                            .as(BodyCodec.string())
+                            .send(testContext.succeeding(upResponse -> testContext.verify(() ->
+                            {
+                                assertEquals(200, upResponse.statusCode());
+                                testContext.completeNow();
+                            })));
+                  })));
+            assertTrue(testContext.awaitCompletion(125, TimeUnit.SECONDS));
+            if (testContext.failed())
             {
-                router.route("/health").handler(service::handleHealth);
-                httpServer.requestHandler(router);
-                httpServer.listen();
-
-                WebClient client = WebClient.create(vertx);
-                long start = System.currentTimeMillis();
-                client.get(port, "localhost", "/health")
-                      .as(BodyCodec.string())
-                      .send(testContext.succeeding(response -> testContext.verify(() ->
-                      {
-                          assertEquals(503, response.statusCode());
-
-                          node.start();
-                          while ((System.currentTimeMillis() - start) < (1000 * 60 * 2) && !check.get())
-                              Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
-                          service.refreshNow();
-                          client.get(port, "localhost", "/health")
-                                .as(BodyCodec.string())
-                                .send(testContext.succeeding(upResponse -> testContext.verify(() ->
-                                {
-                                    assertEquals(200, upResponse.statusCode());
-                                    testContext.completeNow();
-                                })));
-                      })));
-                assertTrue(testContext.awaitCompletion(125, TimeUnit.SECONDS));
-                if (testContext.failed())
-                {
-                    throw testContext.causeOfFailure();
-                }
+                throw testContext.causeOfFailure();
             }
-            finally
-            {
-                service.stop();
-            }
+        }
+        finally
+        {
+            service.stop();
+            server.close();
         }
     }
 
@@ -272,5 +291,76 @@ public class HealthServiceIntegrationTest
         CQLSession session = new CQLSession(node.inetSocketAddress(), shared);
         sessions.add(session);
         return new HealthCheck(session);
+    }
+
+    private static class IntegrationTestModule extends AbstractModule
+    {
+        private final int nodeCount;
+        private final List<CQLSession> sessions;
+
+        private IntegrationTestModule(int count, List<CQLSession> sessions)
+        {
+            this.nodeCount = count;
+            this.sessions = sessions;
+        }
+
+        @Provides
+        @Singleton
+        BoundCluster cluster(Server server)
+        {
+            ClusterSpec cluster = ClusterSpec.builder()
+                                             .withNodes(nodeCount)
+                                             .build();
+            BoundCluster bc = server.register(cluster);
+            for (BoundNode n : bc.getNodes())
+                n.stop();
+
+            return bc;
+        }
+
+        @Provides
+        @Singleton
+        BoundNode node(BoundCluster bc)
+        {
+            return bc.node(0);
+        }
+
+        @Provides
+        @Singleton
+        Server server()
+        {
+            return Server.builder()
+                         .withMultipleNodesPerIp(true)
+                         .withAddressResolver(new NodePerPortResolver(new byte[]{ 127, 0, 0, 1 }, 49152))
+                         .build();
+        }
+
+        @Provides
+        @Singleton
+        HealthCheck healthCheck(BoundNode node)
+        {
+            CQLSession session = new CQLSession(node.inetSocketAddress(), shared);
+            sessions.add(session);
+            HealthCheck check = new HealthCheck(session);
+            return check;
+        }
+
+        @Provides
+        @Singleton
+        public Configuration configuration() throws IOException
+        {
+            ServerSocket socket = new ServerSocket(0);
+            int randomPort = socket.getLocalPort();
+            socket.close();
+
+            return new Configuration.Builder()
+                   .setCassandraHost("INVALID_FOR_TEST")
+                   .setCassandraPort(0)
+                   .setHost("127.0.0.1")
+                   .setPort(randomPort)
+                   .setHealthCheckFrequency(1000)
+                   .setSslEnabled(false)
+                   .build();
+        }
     }
 }

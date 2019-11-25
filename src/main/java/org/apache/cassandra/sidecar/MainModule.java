@@ -41,6 +41,10 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import org.apache.cassandra.sidecar.routes.HealthService;
+import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
+import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
+import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
+import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
 
 /**
  * Provides main binding for more complex Guice dependencies
@@ -53,17 +57,15 @@ public class MainModule extends AbstractModule
     @Singleton
     public Vertx getVertx()
     {
-        return Vertx.vertx(new VertxOptions().setMetricsOptions(
-                new DropwizardMetricsOptions()
-                        .setEnabled(true)
-                        .setJmxEnabled(true)
-                        .setJmxDomain("cassandra-sidecar-metrics")
-        ));
+        return Vertx.vertx(new VertxOptions().setMetricsOptions(new DropwizardMetricsOptions()
+                                                                .setEnabled(true)
+                                                                .setJmxEnabled(true)
+                                                                .setJmxDomain("cassandra-sidecar-metrics")));
     }
 
     @Provides
     @Singleton
-    public HttpServer vertxServer(Vertx vertx, Configuration conf, Router router)
+    public HttpServer vertxServer(Vertx vertx, Configuration conf, Router router, VertxRequestHandler restHandler)
     {
         HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
 
@@ -82,26 +84,41 @@ public class MainModule extends AbstractModule
             }
         }
 
-        HttpServer server = vertx.createHttpServer(options);
-        server.requestHandler(router);
-        return server;
+        router.route().pathRegex(".*").handler(rc -> restHandler.handle(rc.request()));
+
+        return vertx.createHttpServer(options)
+                    .requestHandler(router);
     }
 
     @Provides
     @Singleton
-    public Router vertxRouter(Vertx vertx, HealthService healthService)
+    private VertxRequestHandler configureServices(Vertx vertx, HealthService healthService)
+    {
+        VertxResteasyDeployment deployment = new VertxResteasyDeployment();
+        deployment.start();
+        VertxRegistry r = deployment.getRegistry();
+
+        r.addPerInstanceResource(SwaggerOpenApiResource.class);
+        r.addSingletonResource(healthService);
+
+        return new VertxRequestHandler(vertx, deployment);
+    }
+
+    @Provides
+    @Singleton
+    public Router vertxRouter(Vertx vertx)
     {
         Router router = Router.router(vertx);
         router.route().handler(LoggerHandler.create());
 
-        // include docs generated into src/main/resources/docs
-        StaticHandler swagger = StaticHandler.create()
-                                             .setWebRoot("docs")
-                                             .setCachingEnabled(false);
-        router.route().path("/docs/*").handler(swagger);
+        // Static web assets for Swagger
+        StaticHandler swaggerStatic = StaticHandler.create("META-INF/resources/webjars/swagger-ui");
+        router.route().path("/static/swagger-ui/*").handler(swaggerStatic);
 
-        // API paths
-        router.route().path("/api/v1/__health").handler(healthService::handleHealth);
+        // Docs index.html page
+        StaticHandler docs = StaticHandler.create("docs");
+        router.route().path("/docs/*").handler(docs);
+
         return router;
     }
 
