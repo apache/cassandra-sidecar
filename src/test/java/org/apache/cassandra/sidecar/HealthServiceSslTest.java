@@ -21,8 +21,6 @@ package org.apache.cassandra.sidecar;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.google.inject.AbstractModule;
-import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 
 /**
@@ -32,12 +30,6 @@ import io.vertx.junit5.VertxExtension;
 @ExtendWith(VertxExtension.class)
 public class HealthServiceSslTest extends AbstractHealthServiceTest
 {
-
-    public AbstractModule getTestModule()
-    {
-        return new TestSslModule(Vertx.vertx());
-    }
-
     public boolean isSslEnabled()
     {
         return true;

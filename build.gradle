@@ -83,6 +83,10 @@ dependencies {
     compile 'io.vertx:vertx-dropwizard-metrics:3.8.5'
     compile 'io.vertx:vertx-web-client:3.8.5'
 
+compile 'io.swagger.core.v3:swagger-jaxrs2:2.1.0'
+    compile 'org.jboss.resteasy:resteasy-vertx:3.1.0.Final'
+    compile group: 'org.jboss.spec.javax.servlet', name: 'jboss-servlet-api_4.0_spec', version: '2.0.0.Final'
+
     // Trying to be exactly compatible with Cassandra's deps
     compile 'org.slf4j:slf4j-api:1.7.25'
     compile 'ch.qos.logback:logback-core:1.2.3'
@@ -90,13 +94,14 @@ dependencies {
 
     compile 'com.datastax.cassandra:cassandra-driver-core:3.6+'
     compile group: 'com.google.inject', name: 'guice', version: '4.2.2'
+
     compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.7'
+    compile 'org.webjars:swagger-ui:3.10.0'
 
     runtime group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
     runtime group: 'org.yaml', name: 'snakeyaml', version: '1.26'
 
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
-    swaggerUI 'org.webjars:swagger-ui:3.10.0'
 
     testCompile group: 'org.cassandraunit', name: 'cassandra-unit-shaded', version: '3.3.0.2'
     testCompile 'com.datastax.cassandra:cassandra-driver-core:3.6.+:tests'
@@ -105,19 +110,6 @@ dependencies {
     testCompile group: 'io.vertx', name: 'vertx-junit5', version: '3.8.5'
 
     integrationTestCompile group: 'com.datastax.oss.simulacron', name: 'simulacron-driver-3x', version: '0.8.10'
-}
-
-swaggerSources {
-    apidoc {
-        inputFile = file('api.yaml')
-        reDoc {
-            outputDir = file('src/main/resources/docs')
-            title = 'Cassandra Sidecar API Documentation'
-        }
-        ui {
-            outputDir = file('src/main/resources/docs/swagger')
-        }
-    }
 }
 
 task copyCodeStyle(type: Copy) {

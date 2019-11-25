@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
@@ -48,13 +49,20 @@ public abstract class AbstractHealthServiceTest
     private Vertx vertx;
     private Configuration config;
 
-    public abstract AbstractModule getTestModule();
     public abstract boolean isSslEnabled();
+
+    public AbstractModule getTestModule()
+    {
+        if (isSslEnabled())
+            return new TestSslModule();
+
+        return new TestModule();
+    }
 
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        Injector injector = Guice.createInjector(getTestModule());
+        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(getTestModule()));
         HttpServer server = injector.getInstance(HttpServer.class);
 
         check = injector.getInstance(MockHealthCheck.class);

@@ -73,8 +73,6 @@ lib/jsr223/scala/*.jar
 
 /.ant-targets-build.xml
 
-# Generated files from the documentation
-src/main/resources/docs/*
 
 src/dist/*
 *.logdir_IS_UNDEFINED
