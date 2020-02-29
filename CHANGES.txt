@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Improving local HealthCheckTest reliability (CASSANDRA-15615)
  * Read sidecar.yaml from sidecar.config System Property instead of classpath (CASSANDRA-15288)
  * Add integration tests task (CASSANDRA-15031)
  * Add support for SSL and bindable address (CASSANDRA-15030)
