@@ -49,10 +49,13 @@ import io.netty.util.Timer;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
+
 import org.apache.cassandra.sidecar.routes.HealthCheck;
 import org.apache.cassandra.sidecar.routes.HealthService;
 
@@ -72,6 +75,9 @@ public class HealthServiceIntegrationTest
                                                        .build();
     private static final HashedWheelTimer sharedHWT = new HashedWheelTimer(threadFactory);
     private static final EventLoopGroup sharedEventLoopGroup = new NioEventLoopGroup(0, threadFactory);
+
+    private static final Logger logger = LoggerFactory.getLogger(HealthServiceIntegrationTest.class);
+
     private static final NettyOptions shared = new NettyOptions()
     {
         public EventLoopGroup eventLoopGroup(ThreadFactory threadFactory)
@@ -125,6 +131,11 @@ public class HealthServiceIntegrationTest
         sessions.clear();
     }
 
+    /**
+     * This test has a race condition that can result in test failure.  Be sure to wait long enough for the server
+     * to register as up.
+     * See CASSANDRA-15615
+     */
     @DisplayName("100 node cluster stopping, then starting")
     @Test
     public void testDownHost() throws InterruptedException
@@ -143,15 +154,15 @@ public class HealthServiceIntegrationTest
             Set<BoundNode> downNodes = new HashSet<>();
             Map<BoundNode, HealthCheck> checks = new HashMap<>();
 
-            // Create a HealthCheck per node
+            logger.info("Create a health check per node");
             for (BoundNode node : bCluster.getNodes())
                 checks.put(node, healthCheckFor(node, shared));
 
-            // verify all nodes marked as up
+            logger.info("verify all nodes marked as up");
             for (BoundNode node : bCluster.getNodes())
                 assertTrue(checks.get(node).get());
 
-            // shut down nodes one at a time, and verify we get correct response on all HealthChecks every iteration
+            logger.info("shut down nodes one at a time, and verify we get correct response on all HealthChecks");
             for (int i = 0; downNodes.size() < nodeCount; i++)
             {
                 for (BoundNode node : bCluster.getNodes())
@@ -160,23 +171,32 @@ public class HealthServiceIntegrationTest
                 downNodes.add(bCluster.node(i));
             }
 
-            // all hosts should be down
+            logger.info("all hosts should be down");
             for (BoundNode node : bCluster.getNodes())
                 assertFalse(checks.get(node).get());
 
-            for (int i = 0; downNodes.size() > 0; i++)
+            logger.info("Starting nodes back up");
+
+            int i;
+            for (i = 0; downNodes.size() > 0; i++)
             {
                 bCluster.node(i).start();
                 downNodes.remove(bCluster.node(i));
             }
+            logger.info("Nodes started back up: " + i);
 
-            // verify all nodes marked as up
+            logger.info("verify all nodes marked as up");
+
             long start = System.currentTimeMillis();
+
+            int checkNumber = 0;
             for (BoundNode node : bCluster.getNodes())
             {
-                while ((System.currentTimeMillis() - start) < 10000 && !checks.get(node).get())
-                    Thread.sleep(100);
-                assertTrue(checks.get(node).get());
+                while ((System.currentTimeMillis() - start) < 20000 && !checks.get(node).get())
+                    Thread.sleep(250);
+                logger.info("Started node " + checkNumber);
+                assertTrue(checks.get(node).get(), "Failed on node " + checkNumber);
+                checkNumber++;
             }
         }
     }
