@@ -22,7 +22,7 @@ You can use `build`, `test` to build & test the project.
 
 Wondering where to go from here?
 --------------------------------
-  * Join us in #cassandra on irc.freenode.net and ask questions
+  * Join us in #cassandra on [ASF Slack](https://s.apache.org/slack-invite) and ask questions 
   * Subscribe to the Users mailing list by sending a mail to
     user-subscribe@cassandra.apache.org
   * Visit the [community section](http://cassandra.apache.org/community/) of the Cassandra website for more information on getting involved.
