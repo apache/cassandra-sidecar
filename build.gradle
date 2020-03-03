@@ -1,10 +1,19 @@
+
+buildscript {
+    dependencies {
+        // findBugs needs a newer version of Guava in the buildscript.
+        // otherwise it throws an exception
+        classpath "com.google.guava:guava:28.2-jre"
+    }
+}
+
 plugins {
     id 'java'
     id 'application'
     id 'idea'
     id 'checkstyle'
     id 'jacoco'
-    id 'findbugs'
+    id "com.github.spotbugs" version "3.0.0"
     id 'org.hidetake.swagger.generator' version '2.16.0'
 }
 
@@ -73,6 +82,7 @@ dependencies {
     compile 'org.slf4j:slf4j-api:1.7.25'
     compile 'ch.qos.logback:logback-core:1.2.3'
     compile 'ch.qos.logback:logback-classic:1.2.3'
+
     compile 'com.datastax.cassandra:cassandra-driver-core:3.6+'
     compile group: 'com.google.inject', name: 'guice', version: '4.2.2'
     compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.4'
@@ -153,11 +163,13 @@ checkstyle {
     configFile file("checkstyle.xml")
 }
 
-tasks.withType(FindBugs) {
-    reports {
-        xml.enabled false
-        html.enabled true
-    }
+spotbugs {
+    toolVersion = '4.0.0'
+}
+
+tasks.withType(com.github.spotbugs.SpotBugsTask) {
+    reports.xml.enabled = false
+    reports.html.enabled = true
 }
 
 // copyDist gets called on every build
