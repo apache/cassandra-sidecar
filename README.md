@@ -7,8 +7,8 @@ For more information, see [the Apache Cassandra web site](http://cassandra.apach
 
 Requirements
 ------------
-  1. Java >= 1.8 (OpenJDK or Oracle)
-  2. Apache Cassandra 4.0
+  1. Java >= 1.8 (OpenJDK or Oracle), or Java 11
+  2. Apache Cassandra 4.0.  We depend on virtual tables which is a 4.0 only feature.
 
 Getting started
 ---------------
@@ -19,6 +19,13 @@ Apache Cassandra running on the host & port specified in `conf/sidecar.yaml`.
     $ ./gradlew run
   
 You can use `build`, `test` to build & test the project.
+
+CircleCI Testing
+-----------------
+
+You will need to use the "Add Projects" function of CircleCI to set up CircleCI on your fork.  When promoted to create a branch, 
+do not replace the CircleCI config, choose the option to do it manually.  CircleCI will pick up the in project configuration.
+
 
 Wondering where to go from here?
 --------------------------------

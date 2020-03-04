@@ -2,42 +2,87 @@
 #
 # Check https://circleci.com/docs/2.0/language-java/ for more details
 #
-version: 2
-jobs:
-  build:
-    docker:
-      - image: circleci/openjdk:8-jdk
+version: 2.1
 
+# need to reuse the same base environment for several tests
+aliases:
+  base_job: &base_job
+    machine:
+      image: ubuntu-1604:201903-01
     working_directory: ~/repo
-
     environment:
       TERM: dumb
 
+# we might modify this in the future to accept a parameter for the java package to install
+commands:
+  install_java:
+    description: "Installs Java 8 using AdoptOpenJDK"
+    parameters:
+      version:
+        type: string
+
+    steps:
+      - run: wget -qO - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
+      - run: sudo add-apt-repository --yes https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y << parameters.version>>
+
+  install_common:
+    description: "Installs common software and certificates"
+    steps:
+      - run: sudo apt-get update
+      - run: sudo apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+
+jobs:
+  java8:
+    <<: *base_job
+
     steps:
       - checkout
+      - install_common
+      
+      - install_java:
+          version: adoptopenjdk-8-hotspot
 
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "build.gradle" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
-
-      - run: ./gradlew dependencies
-
-      - save_cache:
-          paths:
-            - ~/.gradle
-          key: v1-dependencies-{{ checksum "build.gradle" }}
+      - run: sudo update-java-alternatives -s adoptopenjdk-8-hotspot-amd64 && java -version
 
       # make sure it builds with build steps like swagger docs and dist
-      - run: ./gradlew build
-
-      # run tests!
-      - run: ./gradlew check
+      - run: ./gradlew build --stacktrace
 
       - store_artifacts:
           path: build/reports
           destination: test-reports
+
       - store_test_results:
+          path: ~/repo/build/test-results/
+
+  java11:
+    <<: *base_job
+    steps:
+      - checkout
+      - install_common
+
+      - install_java:
+          version: adoptopenjdk-11-hotspot
+
+      - run: sudo update-java-alternatives -s adoptopenjdk-11-hotspot-amd64 && java -version
+
+      - run: ./gradlew build --stacktrace
+
+      - store_artifacts:
           path: build/reports
+          destination: test-reports
+
+      - store_test_results:
+          path: ~/repo/build/test-results/
+
+workflows:
+  version: 2
+
+  test_java_8:
+    jobs:
+      - java8
+
+  test_java_11:
+    jobs:
+      - java11
