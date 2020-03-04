@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter
+        xmlns="https://spotbugs.readthedocs.io/en/stable/filter.html"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://github.com/spotbugs/filter/4.0.0 https://raw.githubusercontent.com/spotbugs/spotbugs/4.0.0/spotbugs/etc/findbugsfilter.xsd">
+
+
+    <!--  SpotBugs erroneously flags this error for try-with-resources in JDK11 (possibly limited to OpenJDK): -->
+    <!-- https://github.com/spotbugs/spotbugs/issues/756 -->
+    <Match>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
+    </Match>
+
+</FindBugsFilter>

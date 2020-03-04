@@ -194,6 +194,7 @@ public class HealthServiceIntegrationTest
             {
                 while ((System.currentTimeMillis() - start) < 20000 && !checks.get(node).get())
                     Thread.sleep(250);
+
                 logger.info("Started node " + checkNumber);
                 assertTrue(checks.get(node).get(), "Failed on node " + checkNumber);
                 checkNumber++;

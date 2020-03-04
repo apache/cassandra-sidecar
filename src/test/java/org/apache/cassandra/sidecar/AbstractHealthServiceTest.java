@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.util.concurrent.TimeUnit;
+
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +37,7 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.mocks.MockHealthCheck;
 import org.apache.cassandra.sidecar.routes.HealthService;
 
+
 /**
  * Provides basic tests shared between SSL and normal http health services
  */
@@ -49,7 +52,7 @@ public abstract class AbstractHealthServiceTest
     public abstract boolean isSslEnabled();
 
     @BeforeEach
-    void setUp()
+    void setUp() throws InterruptedException
     {
         Injector injector = Guice.createInjector(getTestModule());
         HttpServer server = injector.getInstance(HttpServer.class);
@@ -59,7 +62,10 @@ public abstract class AbstractHealthServiceTest
         vertx = injector.getInstance(Vertx.class);
         config = injector.getInstance(Configuration.class);
 
-        server.listen(config.getPort());
+        VertxTestContext context = new VertxTestContext();
+        server.listen(config.getPort(), context.completing());
+
+        context.awaitCompletion(5, TimeUnit.SECONDS);
     }
 
     @AfterEach
