@@ -85,10 +85,10 @@ dependencies {
 
     compile 'com.datastax.cassandra:cassandra-driver-core:3.6+'
     compile group: 'com.google.inject', name: 'guice', version: '4.2.2'
-    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.4'
+    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.7'
 
     runtime group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
-    runtime group: 'org.yaml', name: 'snakeyaml', version: '1.23'
+    runtime group: 'org.yaml', name: 'snakeyaml', version: '1.26'
 
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
     swaggerUI 'org.webjars:swagger-ui:3.10.0'
