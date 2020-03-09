@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Build and Test with both Java 8 & 11 in Circle CI (CASSANDRA-15611)
  * Upgraded Gradle and replaced FindBugs with SpotBugs (CASSANDRA-15610)
  * Improving local HealthCheckTest reliability (CASSANDRA-15615)
  * Read sidecar.yaml from sidecar.config System Property instead of classpath (CASSANDRA-15288)
