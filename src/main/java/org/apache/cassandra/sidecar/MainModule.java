@@ -18,11 +18,12 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 
 import org.apache.commons.configuration2.YAMLConfiguration;
-import org.apache.commons.configuration2.builder.fluent.Configurations;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,15 +107,18 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Configuration configuration() throws ConfigurationException
+    public Configuration configuration() throws ConfigurationException, IOException
     {
         final String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
         logger.info("Reading configuration from {}", confPath);
         try
         {
-            Configurations confs = new Configurations();
             URL url = new URL(confPath);
-            YAMLConfiguration yamlConf = confs.fileBased(YAMLConfiguration.class, url);
+
+            YAMLConfiguration yamlConf = new YAMLConfiguration();
+            InputStream stream = url.openStream();
+            yamlConf.read(stream);
+
             return new Configuration.Builder()
                     .setCassandraHost(yamlConf.get(String.class, "cassandra.host"))
                     .setCassandraPort(yamlConf.get(Integer.class, "cassandra.port"))
