@@ -34,3 +34,4 @@ Wondering where to go from here?
     user-subscribe@cassandra.apache.org
   * Visit the [community section](http://cassandra.apache.org/community/) of the Cassandra website for more information on getting involved.
   * Visit the [development section](http://cassandra.apache.org/doc/latest/development/index.html) of the Cassandra website for more information on how to contribute.
+  * File issues with our [Sidecar JIRA](https://issues.apache.org/jira/projects/CASSANDRASC/issues/)
