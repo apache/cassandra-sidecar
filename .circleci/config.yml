@@ -12,6 +12,12 @@ aliases:
     working_directory: ~/repo
     environment:
       TERM: dumb
+  centos: &centos
+    docker:
+      - image: centos:centos8
+    working_directory: ~/repo
+    environment:
+      TERM: dumb
 
 # we might modify this in the future to accept a parameter for the java package to install
 commands:
@@ -76,6 +82,35 @@ jobs:
       - store_test_results:
           path: ~/repo/build/test-results/
 
+  # ensures we can build and install deb packages
+  deb_build_install:
+    <<: *base_job
+    steps:
+      - checkout
+      - install_common
+      - install_java:
+          version: adoptopenjdk-11-hotspot
+      - run: ./gradlew buildDeb
+      - run: DEBIAN_FRONTEND=noninteractive sudo apt install -y ./build/distributions/cassandra-sidecar*.deb
+      - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
+
+  # ensures we can build and install rpm packages
+  rpm_build_install:
+    <<: *centos
+    steps:
+      - checkout
+      - run: yum install -y java-11-openjdk-devel  # the image uses root by default, no need for sudo
+      - run: JAVA_HOME=/usr/lib/jvm/java-11-openjdk ./gradlew buildRpm
+      - run: yum install -y ./build/distributions/cassandra-sidecar*.rpm
+      - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
+
+  docker_build:
+    <<: *base_job
+    steps:
+      - checkout
+      - run: ./gradlew jibDockerBuild
+
+
 workflows:
   version: 2
 
@@ -86,3 +121,9 @@ workflows:
   test_java_11:
     jobs:
       - java11
+
+  test_packaging:
+    jobs:
+      - deb_build_install
+      - rpm_build_install
+      - docker_build
