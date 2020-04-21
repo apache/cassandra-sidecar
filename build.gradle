@@ -182,25 +182,30 @@ tasks.withType(com.github.spotbugs.SpotBugsTask) {
     reports.html.enabled = true
 }
 
+/**
+ * General configuration for linux packages.
+ * Can be overridden in the buildRpm and buildDeb configuration
+ * We can put dependencies here, such as java, but unfortunately since java is distributed
+ * in an inconsistent manner depending on the version you want (8 vs 11) we can't include Java
+ * as a requirement without the install breaking if you want to use a different version
+ */
 ospackage {
     packageName = "cassandra-sidecar"
     version = project.version
     // ospackage puts packages into /opt/[package] by default
-    // which is _technicall_ the right spot for packages
+    // which is _technically_ the right spot for packages
     link("/usr/local/bin/cassandra-sidecar", "/opt/cassandra-sidecar/bin/cassandra-sidecar")
     license "Apache License 2.0"
     description "Sidecar Management Tool for Apache Cassandra"
     os = LINUX
+    user "root"
 }
 
 buildRpm {
-    //requires("java-1.8.0-openjdk")
-    user "root"
     group = "build"
 }
 
 buildDeb {
-    //requires("openjdk-8-jre")
     group = "build"
 }
 
