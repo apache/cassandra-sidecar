@@ -82,7 +82,8 @@ jobs:
       - store_test_results:
           path: ~/repo/build/test-results/
 
-  deb:
+  # ensures we can build and install deb packages
+  deb_build_install:
     <<: *base_job
     steps:
       - checkout
@@ -93,7 +94,8 @@ jobs:
       - run: DEBIAN_FRONTEND=noninteractive sudo apt install -y ./build/distributions/cassandra-sidecar*.deb
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
 
-  rpm:
+  # ensures we can build and install rpm packages
+  rpm_build_install:
     <<: *centos
     steps:
       - checkout
@@ -102,7 +104,7 @@ jobs:
       - run: yum install -y ./build/distributions/cassandra-sidecar*.rpm
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
 
-  docker:
+  docker_build:
     <<: *base_job
     steps:
       - checkout
@@ -122,6 +124,6 @@ workflows:
 
   test_packaging:
     jobs:
-      - deb
-      - rpm
-      - docker
+      - deb_build_install
+      - rpm_build_install
+      - docker_build
