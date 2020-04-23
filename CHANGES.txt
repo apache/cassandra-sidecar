@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Gradle can now generate Deb packages, RPMs and Docker containers (CASSANDRASC-14)
  * Security patch to fix incorrect usage of yaml configuration (CASSANDRASC-12)
  * Build and Test with both Java 8 & 11 in Circle CI (CASSANDRA-15611)
  * Upgraded Gradle and replaced FindBugs with SpotBugs (CASSANDRA-15610)
