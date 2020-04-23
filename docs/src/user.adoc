@@ -1,0 +1,15 @@
+# Overview
+
+This is the documentation for the official Sidecar project for Apache Cassandra.
+
+NOTE: This documentation is only a placeholder at the moment and requires some love.
+
+## Installation
+
+You will probably find it easiest to install the sidecar by using one of the system packages we have available.
+
+## Setup
+
+If you've installed the sidecar via a DEB or RPM package you will be able to use systemd to start, stop etc.
+
+

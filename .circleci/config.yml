@@ -110,6 +110,15 @@ jobs:
       - checkout
       - run: ./gradlew jibDockerBuild
 
+  docs_build:
+    <<: *base_job
+    steps:
+      - checkout
+      - install_common
+      - install_java:
+          version: adoptopenjdk-11-hotspot
+      - run: ./gradlew build
+      - run: test -f build/docs/html5/user.html
 
 workflows:
   version: 2
@@ -127,3 +136,4 @@ workflows:
       - deb_build_install
       - rpm_build_install
       - docker_build
+      - docs_build
