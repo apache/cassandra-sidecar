@@ -167,6 +167,15 @@ task integrationTest(type: Test) {
     shouldRunAfter test
 }
 
+// copy the user documentation to the final build
+task copyDocs(type: Copy, dependsOn: ':docs:asciidoctor') {
+    from(tasks.getByPath(":docs:asciidoctor").outputs) {
+        include "**/*.html"
+    }
+    into "build/docs/"
+    exclude "tmp"
+}
+
 checkstyle {
     toolVersion '7.8.1'
     configFile file("checkstyle.xml")
@@ -216,5 +225,5 @@ applicationDistribution.from("LICENSE.txt") {
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia
 check.dependsOn checkstyleMain, checkstyleTest, integrationTest, jacocoTestReport
-build.dependsOn copyDist, generateReDoc, generateSwaggerUI, copyJolokia
+build.dependsOn copyDist, generateReDoc, generateSwaggerUI, copyJolokia, copyDocs
 run.dependsOn build

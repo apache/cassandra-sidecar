@@ -1,0 +1,30 @@
+# Sidecar Development Guide
+
+If you're reading this document then you've decided to contribute to the Sidecar for Apache Cassandra.
+
+## Building
+
+    ./gradlew build
+
+Packages can be built using the following Gradle commands:
+
+    ./gradlew buildDeb
+    ./gradlew buildRpm
+
+
+## Testing
+
+Our official CI for this project is CircleCI.
+
+We strive for high quality, thoroughly tested code.
+
+## Issue Tracker
+
+File bugs or look for issues to work on in our project JIRA: https://issues.apache.org/jira/browse/CASSANDRASC
+
+## Submitting Patches
+
+You may open a PR against our project: http://github.com/apache/cassandra-sidecar
+
+Please link to the PR from the JIRA ticket.  All work *must* have a corresponding JIRA ticket.  Please put the JIRA ID in the body of the pull request.
+

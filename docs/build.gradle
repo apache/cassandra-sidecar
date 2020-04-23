@@ -1,0 +1,16 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'org.asciidoctor:asciidoctor-gradle-plugin:1.5.9.2'
+    }
+}
+
+apply plugin: 'org.asciidoctor.convert'
+
+asciidoctor {
+    sourceDir = file("src")
+    outputDir = file("build")
+}
