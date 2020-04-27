@@ -54,15 +54,11 @@ import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.Router;
-
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
-
 import org.apache.cassandra.sidecar.routes.HealthCheck;
 import org.apache.cassandra.sidecar.routes.HealthService;
 
