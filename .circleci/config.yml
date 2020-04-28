@@ -40,6 +40,21 @@ commands:
       - run: sudo apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
 
 jobs:
+  java8_docker:
+    docker:
+     - image: circleci/openjdk:8-jdk-stretch
+    steps:
+     - checkout
+
+     - run: ./gradlew clean build --stacktrace
+
+     - store_artifacts:
+         path: build/reports
+         destination: test-reports
+
+     - store_test_results:
+         path: ~/repo/build/test-results/
+
   java8:
     <<: *base_job
 
