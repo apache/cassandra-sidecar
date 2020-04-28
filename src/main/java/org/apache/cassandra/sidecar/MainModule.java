@@ -111,11 +111,14 @@ public class MainModule extends AbstractModule
         Router router = Router.router(vertx);
         router.route().handler(LoggerHandler.create());
 
-        // include docs generated into src/main/resources/docs
-        StaticHandler swagger = StaticHandler.create()
-                                             .setWebRoot("docs")
-                                             .setCachingEnabled(false);
-        router.route().path("/docs/*").handler(swagger);
+        // Static web assets for Swagger
+        StaticHandler swaggerStatic = StaticHandler.create("META-INF/resources/webjars/swagger-ui");
+        router.route().path("/static/swagger-ui/*").handler(swaggerStatic);
+
+        // Docs index.html page
+        StaticHandler docs = StaticHandler.create("docs");
+        router.route().path("/docs/*").handler(docs);
+
         return router;
     }
 
