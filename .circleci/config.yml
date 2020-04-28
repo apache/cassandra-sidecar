@@ -53,7 +53,7 @@ jobs:
       - run: sudo update-java-alternatives -s adoptopenjdk-8-hotspot-amd64 && java -version
 
       # make sure it builds with build steps like swagger docs and dist
-      - run: ./gradlew build --stacktrace
+      - run: ./gradlew clean build --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -73,7 +73,7 @@ jobs:
 
       - run: sudo update-java-alternatives -s adoptopenjdk-11-hotspot-amd64 && java -version
 
-      - run: ./gradlew build --stacktrace
+      - run: ./gradlew clean build --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -117,7 +117,8 @@ jobs:
       - install_common
       - install_java:
           version: adoptopenjdk-11-hotspot
-      - run: ./gradlew build
+      - run: sudo update-java-alternatives -s adoptopenjdk-11-hotspot-amd64 && java -version
+      - run: ./gradlew build --stacktrace
       - run: test -f build/docs/html5/user.html
 
 workflows:
