@@ -142,6 +142,7 @@ workflows:
   test_java_8:
     jobs:
       - java8
+      - java8_docker
 
   test_java_11:
     jobs:
