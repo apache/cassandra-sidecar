@@ -136,17 +136,31 @@ jobs:
       - run: ./gradlew build --stacktrace
       - run: test -f build/docs/html5/user.html
 
+  docs_build_docker:
+    docker:
+      - image: circleci/openjdk:8-jdk-stretch
+    steps:
+      - checkout
+      - run: ./gradlew build --stacktrace
+      - run: test -f build/docs/html5/user.html
+
 workflows:
   version: 2
 
-  test_java_8:
+  java_8_11:
     jobs:
       - java8
       - java8_docker
-
-  test_java_11:
-    jobs:
       - java11
+
+#  test_java_8:
+#    jobs:
+#      - java8
+#      - java8_docker
+#
+#  test_java_11:
+#    jobs:
+#      - java11
 
   test_packaging:
     jobs:
