@@ -86,10 +86,14 @@ public abstract class AbstractHealthServiceTest
     void tearDown() throws InterruptedException
     {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> {
-            if (res.succeeded()) {
+        server.close(res ->
+         {
+            if (res.succeeded())
+            {
                 LOGGER.info("Closed HTTP Server in Vert.x");
-            } else {
+            }
+            else
+            {
                 LOGGER.error("Failed to close HTTP Server in Vert.x", res.cause());
             }
             closeLatch.countDown();
