@@ -77,6 +77,21 @@ jobs:
       - store_test_results:
           path: ~/repo/build/test-results/
 
+  java11_docker:
+    docker:
+      - image: circleci/openjdk:11-jdk-stretch
+    steps:
+      - checkout
+
+      - run: ./gradlew -i clean build --stacktrace
+
+      - store_artifacts:
+          path: build/reports
+          destination: test-reports
+
+      - store_test_results:
+          path: ~/repo/build/test-results/
+
   java11:
     <<: *base_job
     steps:
@@ -151,28 +166,34 @@ workflows:
       - java8
       - java8_docker
       - java11
+      - java11_docker
       - docs_build:
           requires:
             - java8
             - java8_docker
             - java11
+            - java11_docker
       - docker_build:
           requires:
             - java8
             - java8_docker
             - java11
+            - java11_docker
       - rpm_build_install:
           requires:
             - java8
             - java8_docker
             - java11
+            - java11_docker
       - deb_build_install:
           requires:
             - java8
             - java8_docker
             - java11
+            - java11_docker
       - docker_build:
           requires:
             - java8
             - java8_docker
             - java11
+            - java11_docker
