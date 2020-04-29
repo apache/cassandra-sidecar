@@ -124,8 +124,7 @@ jobs:
 
   # ensures we can build and install rpm packages
   rpm_build_install:
-    docker:
-        - image: circleci/openjdk:11.0.1-jdk-oraclelinux7
+    <<: *base_job
     steps:
       - checkout
       - run: yum install -y java-11-openjdk-devel  # the image uses root by default, no need for sudo
@@ -143,6 +142,7 @@ jobs:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
     steps:
+      - checkout
       - run: ./gradlew -i clean build --stacktrace
       - run: test -f build/docs/html5/user.html
 
