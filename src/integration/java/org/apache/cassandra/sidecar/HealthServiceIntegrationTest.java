@@ -132,7 +132,10 @@ public class HealthServiceIntegrationTest
             waitLatch.countDown();
         });
 
-        waitLatch.await(60, TimeUnit.SECONDS);
+        if (waitLatch.await(60, TimeUnit.SECONDS))
+            logger.info("Close event received before timeout.");
+        else
+            logger.error("Close event timed out.");
     }
 
     @AfterEach
@@ -327,7 +330,6 @@ public class HealthServiceIntegrationTest
         }
 
         @Provides
-        @Singleton
         public Configuration configuration() throws IOException
         {
             ServerSocket socket = new ServerSocket(0);
