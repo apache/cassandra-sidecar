@@ -124,7 +124,7 @@ jobs:
 
   # ensures we can build and install rpm packages
   rpm_build_install:
-    <<: *base_job
+    <<: *centos
     steps:
       - checkout
       - run: yum install -y java-11-openjdk-devel  # the image uses root by default, no need for sudo
