@@ -105,7 +105,7 @@ jobs:
       - install_common
       - install_java:
           version: adoptopenjdk-11-hotspot
-      - run: ./gradlew buildDeb
+      - run: ./gradlew clean buildDeb
       - run: DEBIAN_FRONTEND=noninteractive sudo apt install -y ./build/distributions/cassandra-sidecar*.deb
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
 
@@ -123,7 +123,7 @@ jobs:
     <<: *base_job
     steps:
       - checkout
-      - run: ./gradlew jibDockerBuild
+      - run: ./gradlew clean jibDockerBuild
 
   docs_build:
     <<: *base_job
@@ -133,7 +133,7 @@ jobs:
       - install_java:
           version: adoptopenjdk-11-hotspot
       - run: sudo update-java-alternatives -s adoptopenjdk-11-hotspot-amd64 && java -version
-      - run: ./gradlew build --stacktrace
+      - run: ./gradlew clean build --stacktrace
       - run: test -f build/docs/html5/user.html
 
   docs_build_docker:
@@ -141,31 +141,18 @@ jobs:
       - image: circleci/openjdk:8-jdk-stretch
     steps:
       - checkout
-      - run: ./gradlew build --stacktrace
+      - run: ./gradlew clean build --stacktrace
       - run: test -f build/docs/html5/user.html
 
 workflows:
   version: 2
-
-  java_8_11:
+  build-and-test:
     jobs:
       - java8
       - java8_docker
       - java11
-
-#  test_java_8:
-#    jobs:
-#      - java8
-#      - java8_docker
-#
-#  test_java_11:
-#    jobs:
-#      - java11
-
-  test_packaging:
-    jobs:
+      - docs_build
+      - docker_build
       - deb_build_install
       - rpm_build_install
       - docker_build
-      - docs_build
-      - docs_build_docker
