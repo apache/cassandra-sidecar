@@ -16,29 +16,38 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.mocks;
+package org.apache.cassandra.sidecar.common.testing;
 
-import org.apache.cassandra.sidecar.routes.HealthCheck;
+import org.apache.cassandra.sidecar.common.ICassandraFactory;
 
 /**
- * Settable HealthCheck
+ * Works with {@link TestVersionSupplier}
  */
-public class MockHealthCheck extends HealthCheck
+public class TestVersion
 {
-    private volatile boolean status;
+    private final String version;
+    private final ICassandraFactory factory;
+    private final String image;
 
-    public MockHealthCheck()
+    public TestVersion(String version, ICassandraFactory factory, String image)
     {
-        super(null);
+        this.version = version;
+        this.factory = factory;
+        this.image = image;
     }
 
-    public Boolean get()
+    public String getVersion()
     {
-        return status;
+        return version;
     }
 
-    public void setStatus(boolean status)
+    public ICassandraFactory getFactory()
     {
-        this.status = status;
+        return factory;
+    }
+
+    public String getImage()
+    {
+        return image;
     }
 }

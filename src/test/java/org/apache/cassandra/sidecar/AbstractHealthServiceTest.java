@@ -36,12 +36,14 @@ import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.net.JksOptions;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.mocks.MockHealthCheck;
+import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.routes.HealthService;
-
+import static org.mockito.Mockito.when;
 
 /**
  * Provides basic tests shared between SSL and normal http health services
@@ -49,11 +51,11 @@ import org.apache.cassandra.sidecar.routes.HealthService;
 public abstract class AbstractHealthServiceTest
 {
     private static final Logger logger = LoggerFactory.getLogger(AbstractHealthServiceTest.class);
-    private MockHealthCheck check;
     private HealthService service;
     private Vertx vertx;
     private Configuration config;
     private HttpServer server;
+    private CassandraAdapterDelegate cassandra;
 
     public abstract boolean isSslEnabled();
 
@@ -70,8 +72,8 @@ public abstract class AbstractHealthServiceTest
     {
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(getTestModule()));
         server = injector.getInstance(HttpServer.class);
+        cassandra = injector.getInstance(CassandraAdapterDelegate.class);
 
-        check = injector.getInstance(MockHealthCheck.class);
         service = injector.getInstance(HealthService.class);
         vertx = injector.getInstance(Vertx.class);
         config = injector.getInstance(Configuration.class);
@@ -98,10 +100,8 @@ public abstract class AbstractHealthServiceTest
     @Test
     public void testHealthCheckReturns200OK(VertxTestContext testContext)
     {
-        check.setStatus(true);
-        service.refreshNow();
-
-        WebClient client = WebClient.create(vertx);
+        when(cassandra.isUp()).thenReturn(true);
+        WebClient client = getClient();
 
         client.get(config.getPort(), "localhost", "/api/v1/__health")
               .as(BodyCodec.string())
@@ -113,14 +113,29 @@ public abstract class AbstractHealthServiceTest
               })));
     }
 
+    private WebClient getClient()
+    {
+        return WebClient.create(vertx, getWebClientOptions());
+    }
+
+    private WebClientOptions getWebClientOptions()
+    {
+        WebClientOptions options = new WebClientOptions();
+        if (isSslEnabled())
+        {
+            options.setTrustStoreOptions(new JksOptions().setPath("src/test/resources/certs/ca.p12")
+                                                         .setPassword("password"));
+        }
+        return options;
+    }
+
     @DisplayName("Should return HTTP 503 Failure when check=False")
     @Test
     public void testHealthCheckReturns503Failure(VertxTestContext testContext)
     {
-        check.setStatus(false);
-        service.refreshNow();
 
-        WebClient client = WebClient.create(vertx);
+        when(cassandra.isUp()).thenReturn(false);
+        WebClient client = getClient();
 
         client.get(config.getPort(), "localhost", "/api/v1/__health")
               .as(BodyCodec.string())

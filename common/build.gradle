@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+    id 'idea'
+
+    // todo move to all projects or subprojects.  possibly only include with java projects
+    id 'jacoco'
+    id "com.github.spotbugs"
+}
+
+group 'org.apache.cassandra'
+version project.version
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+test {
+    useJUnitPlatform()
+}
+
+dependencies {
+    compile 'org.slf4j:slf4j-api:1.7.25'
+    compile 'ch.qos.logback:logback-core:1.2.3'
+    compile 'ch.qos.logback:logback-classic:1.2.3'
+    compile 'com.datastax.cassandra:cassandra-driver-core:3.9.0+'
+    compile group: 'com.google.inject', name: 'guice', version: '4.2.2'
+    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.7'
+
+    implementation 'org.apache.commons:commons-lang3:3.10'
+
+    testCompile "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
+    testCompile "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
+    testImplementation("org.assertj:assertj-core:3.16.0")
+}

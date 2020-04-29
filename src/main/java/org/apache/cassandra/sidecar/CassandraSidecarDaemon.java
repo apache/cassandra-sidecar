@@ -27,7 +27,6 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServer;
-import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.utils.SslUtils;
 
 /**
@@ -37,14 +36,12 @@ import org.apache.cassandra.sidecar.utils.SslUtils;
 public class CassandraSidecarDaemon
 {
     private static final Logger logger = LoggerFactory.getLogger(CassandraSidecarDaemon.class);
-    private final HealthService healthService;
     private final HttpServer server;
     private final Configuration config;
 
     @Inject
-    public CassandraSidecarDaemon(HealthService healthService, HttpServer server, Configuration config)
+    public CassandraSidecarDaemon(HttpServer server, Configuration config)
     {
-        this.healthService = healthService;
         this.server = server;
         this.config = config;
     }
@@ -54,14 +51,12 @@ public class CassandraSidecarDaemon
         banner(System.out);
         validate();
         logger.info("Starting Cassandra Sidecar on {}:{}", config.getHost(), config.getPort());
-        healthService.start();
         server.listen(config.getPort(), config.getHost());
     }
 
     public void stop()
     {
         logger.info("Stopping Cassandra Sidecar");
-        healthService.stop();
         server.close();
     }
 

@@ -18,11 +18,19 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.io.File;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Changes to the TestModule to define SSL dependencies
  */
 public class TestSslModule extends TestModule
 {
+    private static final Logger logger = LoggerFactory.getLogger(TestSslModule.class);
+
+
     @Override
     public Configuration abstractConfig()
     {
@@ -31,6 +39,15 @@ public class TestSslModule extends TestModule
 
         final String trustStorePath = TestSslModule.class.getClassLoader().getResource("certs/ca.p12").getPath();
         final String trustStorePassword = "password";
+
+        if (!new File(keyStorePath).exists())
+        {
+            logger.error("JMX password file not found");
+        }
+        if (!new File(trustStorePath).exists())
+        {
+            logger.error("Trust Store file not found");
+        }
 
         return new Configuration.Builder()
                            .setCassandraHost("INVALID_FOR_TEST")

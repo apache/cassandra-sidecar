@@ -18,30 +18,41 @@
 
 package org.apache.cassandra.sidecar;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.mocks.MockHealthCheck;
+
+import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.routes.HealthService;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * Provides the basic dependencies for unit tests.
  */
 public class TestModule extends AbstractModule
 {
-    @Provides
+    private static final Logger logger = LoggerFactory.getLogger(TestModule.class);
+
     @Singleton
-    public HealthService healthService(Configuration config, MockHealthCheck check)
+    @Provides
+    public CassandraAdapterDelegate delegate()
     {
-        return new HealthService(config, check, null);
+        return mock(CassandraAdapterDelegate.class);
     }
 
-    @Provides
     @Singleton
-    public MockHealthCheck healthCheck()
+    @Provides
+    public HealthService healthService(CassandraAdapterDelegate delegate)
     {
-        return new MockHealthCheck();
+        return new HealthService(delegate);
     }
+
 
     @Provides
     @Singleton
@@ -61,4 +72,18 @@ public class TestModule extends AbstractModule
                            .setSslEnabled(false)
                            .build();
     }
+
+    /**
+     * The Mock factory is used for testing purposes, enabling us to test all failures and possible results
+     * @return
+     */
+    @Provides
+    @Singleton
+    public CassandraVersionProvider cassandraVersionProvider()
+    {
+        CassandraVersionProvider.Builder builder = new CassandraVersionProvider.Builder();
+        builder.add(new MockCassandraFactory());
+        return builder.build();
+    }
+
 }

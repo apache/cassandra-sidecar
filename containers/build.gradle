@@ -1,0 +1,76 @@
+import com.bmuschko.gradle.docker.tasks.image.*
+
+plugins {
+    id 'com.bmuschko.docker-remote-api'
+    id "de.undercouch.download" version "4.1.0"
+}
+
+docker {
+    registryCredentials {
+        url = "${-> configureKubernetes.ext.dockerRegistry.toString()}/v2/"
+    }
+}
+
+class BuildDockerConfig extends Copy {
+
+}
+
+tasks.register("download40", Download) {
+    //src 'http://apache.mirrors.hoobly.com/cassandra/4.0-alpha4/apache-cassandra-4.0-alpha4-bin.tar.gz'
+    src 'https://downloads.apache.org/cassandra/4.0-beta1/apache-cassandra-4.0-beta1-bin.tar.gz'
+    dest "$buildDir/cassandra40/apache-cassandra-4.0-beta1-bin.tar.gz"
+    overwrite false
+}
+
+tasks.register("cassandra40", BuildDockerConfig) {
+    from("src/Cassandra40") {
+    }
+
+    from("src") {
+        include "docker-entrypoint.sh"
+        include "optimize-memory.sh"
+    }
+
+    into "$buildDir/cassandra40/"
+    dependsOn download40
+
+}
+
+tasks.register("generateDockerConfigs") {
+    doFirst {
+        mkdir "build"
+    }
+    dependsOn tasks.withType(BuildDockerConfig)
+}
+
+def getRemoteTag(name) {
+    return "${configureKubernetes.ext.dockerRegistryWithoutProtocol}/${configureKubernetes.ext.dockerGroup}/${name}:${configureKubernetes.ext.dockerTag}".toString()
+}
+
+tasks.register("buildImageCassandra40", DockerBuildImage) {
+    // the toString is required here, otherwise we get org.codehaus.groovy.runtime.GStringImpl cannot be cast to java.lang.String
+    def name = "cassandra40"
+    def localTag = "${name}:${configureKubernetes.ext.dockerTag}".toString()
+
+    // there might not be a group
+    def remoteTag = getRemoteTag(name)
+    // tag the private repo
+    tags = [localTag, remoteTag]
+    inputDir = file("$buildDir/${name}")
+    dependsOn "cassandra40"
+}
+
+tasks.register("publishCassandra40", DockerPushImage) {
+    def name = "cassandra40"
+    imageName = "${configureKubernetes.ext.dockerRegistryWithoutProtocol}/${configureKubernetes.ext.dockerGroup}/${name}"
+
+    dependsOn buildImageCassandra40
+}
+
+tasks.register("buildAll") {
+    dependsOn tasks.withType(DockerBuildImage)
+}
+tasks.register("pushAll") {
+    dependsOn tasks.withType(DockerPushImage)
+    dependsOn "buildAll"
+}

@@ -18,11 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
-import javax.annotation.Nullable;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -31,8 +26,6 @@ import javax.ws.rs.core.Response;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Host;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -41,71 +34,22 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.apache.cassandra.sidecar.CQLSession;
-import org.apache.cassandra.sidecar.Configuration;
+import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 
 /**
- * Tracks health check[s] and provides a REST response that should match that defined by api.yaml
+ * Provides a simple REST endpoint to determine if a node is available
  */
 @Singleton
 @Path("/api/v1/__health")
-public class HealthService implements Host.StateListener
+public class HealthService
 {
     private static final Logger logger = LoggerFactory.getLogger(HealthService.class);
-    private final int checkPeriodMs;
-    private final Supplier<Boolean> check;
-    private volatile boolean registered = false;
-
-    @Nullable
-    private final CQLSession session;
-
-    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    private volatile boolean lastKnownStatus = false;
+    private final CassandraAdapterDelegate cassandra;
 
     @Inject
-    public HealthService(Configuration config, HealthCheck check, @Nullable CQLSession session)
+    public HealthService(CassandraAdapterDelegate cassandra)
     {
-        this.checkPeriodMs = config.getHealthCheckFrequencyMillis();
-        this.session = session;
-        this.check = check;
-    }
-
-    public synchronized void start()
-    {
-        logger.info("Starting health check");
-        maybeRegisterHostListener();
-        executor.scheduleWithFixedDelay(this::refreshNow, 0, checkPeriodMs, TimeUnit.MILLISECONDS);
-    }
-
-    public synchronized void refreshNow()
-    {
-        try
-        {
-            lastKnownStatus = this.check.get();
-            maybeRegisterHostListener();
-        }
-        catch (Exception e)
-        {
-            logger.error("Error while performing health check", e);
-        }
-    }
-
-    private synchronized void maybeRegisterHostListener()
-    {
-        if (!registered)
-        {
-            if (session != null && session.getLocalCql() != null)
-            {
-                session.getLocalCql().getCluster().register(this);
-                registered = true;
-            }
-        }
-    }
-
-    public synchronized void stop()
-    {
-        logger.info("Stopping health check");
-        executor.shutdown();
+        this.cassandra = cassandra;
     }
 
     @Operation(summary = "Health Check for Cassandra's status",
@@ -118,36 +62,9 @@ public class HealthService implements Host.StateListener
     @GET
     public Response doGet()
     {
-        int status = lastKnownStatus ? HttpResponseStatus.OK.code() : HttpResponseStatus.SERVICE_UNAVAILABLE.code();
-        return Response.status(status).entity(Json.encode(ImmutableMap.of("status", lastKnownStatus ?
+        Boolean up = cassandra.isUp();
+        int status = up ? HttpResponseStatus.OK.code() : HttpResponseStatus.SERVICE_UNAVAILABLE.code();
+        return Response.status(status).entity(Json.encode(ImmutableMap.of("status", up ?
                                                                                     "OK" : "NOT_OK"))).build();
-    }
-
-    public void onAdd(Host host)
-    {
-        refreshNow();
-    }
-
-    public void onUp(Host host)
-    {
-        refreshNow();
-    }
-
-    public void onDown(Host host)
-    {
-        refreshNow();
-    }
-
-    public void onRemove(Host host)
-    {
-        refreshNow();
-    }
-
-    public void onRegister(Cluster cluster)
-    {
-    }
-
-    public void onUnregister(Cluster cluster)
-    {
     }
 }

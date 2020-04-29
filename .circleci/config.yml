@@ -8,7 +8,7 @@ version: 2.1
 aliases:
   base_job: &base_job
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-1604:202007-01
     working_directory: ~/repo
     environment:
       TERM: dumb
@@ -26,12 +26,16 @@ commands:
     parameters:
       version:
         type: string
-
     steps:
       - run: wget -qO - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
       - run: sudo add-apt-repository --yes https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/
       - run: sudo apt-get update
       - run: sudo apt-get install -y << parameters.version>>
+
+  install_kube:
+    description: "Installs kubernetes"
+    steps:
+      - run: .circleci/setup-microk8.sh
 
   install_common:
     description: "Installs common software and certificates"
@@ -46,7 +50,8 @@ jobs:
     steps:
      - checkout
 
-     - run: ./gradlew -i clean build --stacktrace
+     # setting the docker registry here skips the internal minikube setup
+     - run: SIDECAR_DOCKER_REGISTRY="127.0.0.1" ./gradlew -i clean test  --stacktrace
 
      - store_artifacts:
          path: build/reports
@@ -58,17 +63,20 @@ jobs:
   java8:
     <<: *base_job
 
+    # todo move to common command for integration tests
+    environment:
+      SIDECAR_DOCKER_REGISTRY: "http://localhost:32000"
+
     steps:
       - checkout
       - install_common
+      - install_kube
       
       - install_java:
           version: adoptopenjdk-8-hotspot
-
       - run: sudo update-java-alternatives -s adoptopenjdk-8-hotspot-amd64 && java -version
-
-      # make sure it builds with build steps like swagger docs and dist
-      - run: ./gradlew -i clean build --stacktrace
+      - run: ./gradlew :containers:pushAll
+      - run: ./gradlew -i test integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -77,13 +85,16 @@ jobs:
       - store_test_results:
           path: ~/repo/build/test-results/
 
+      - store_test_results:
+          path: ~/repo/cassandra-integration-tests/build/test-results/
+
   java11_docker:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
     steps:
       - checkout
 
-      - run: ./gradlew -i clean build --stacktrace
+      - run: SIDECAR_DOCKER_REGISTRY="127.0.0.1" ./gradlew -i clean test --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -94,16 +105,20 @@ jobs:
 
   java11:
     <<: *base_job
+    environment:
+      SIDECAR_DOCKER_REGISTRY: "http://localhost:32000"
+
     steps:
       - checkout
       - install_common
+      - install_kube
 
       - install_java:
           version: adoptopenjdk-11-hotspot
-
       - run: sudo update-java-alternatives -s adoptopenjdk-11-hotspot-amd64 && java -version
-
-      - run: ./gradlew -i clean build --stacktrace
+      - run: export
+      - run: ./gradlew :containers:pushAll
+      - run: ./gradlew -i test integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -143,17 +158,21 @@ jobs:
       - image: circleci/openjdk:11-jdk-stretch
     steps:
       - checkout
-      - run: ./gradlew -i clean build --stacktrace
-      - run: test -f build/docs/html5/user.html
+      - run: ./gradlew docs:asciidoctor
+      - run: test -f docs/build/html5/user.html
 
 workflows:
   version: 2
   build-and-test:
     jobs:
-      - java8
       - java8_docker
-      - java11
       - java11_docker
+      - java8:
+          requires:
+            - java8_docker
+      - java11:
+          requires:
+            - java11_docker
       - docs_build:
           requires:
             - java8

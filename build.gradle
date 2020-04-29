@@ -10,10 +10,9 @@ buildscript {
 plugins {
     id 'java'
     id 'application'
-    id 'idea'
-    id 'checkstyle'
-    id 'jacoco'
-    id "com.github.spotbugs" version "3.0.0"
+
+    // since we're using a specific version here, we delay applying the plugin till the all projects
+    id "com.github.spotbugs" version "3.0.0" apply false
     id 'org.hidetake.swagger.generator' version '2.16.0'
     id "io.swagger.core.v3.swagger-gradle-plugin" version "2.1.2"
 
@@ -23,14 +22,82 @@ plugins {
     id 'com.google.cloud.tools.jib' version '2.2.0'
 }
 
+
+
+allprojects {
+    apply plugin: 'idea'
+    apply plugin: 'jacoco'
+    apply plugin: 'checkstyle'
+    apply plugin: "com.github.spotbugs"
+
+    tasks.register("configureKubernetes") {
+        // figure out the docker registry, make this as easy as possible for new folks
+        def dockerRegistryString = System.getenv("SIDECAR_DOCKER_REGISTRY")
+        if(dockerRegistryString != null) {
+            logger.info("Using ENV SIDECAR_DOCKER_REGISTRY ${dockerRegistryString}")
+        }
+        else {
+            // SIDECAR_DOCKER_REGISTRY not set (likely a local environment), let's try minikube
+            logger.info("Looking for minikube ip")
+            new ByteArrayOutputStream().withStream { os ->
+                try {
+
+                def result = exec {
+                    executable = "minikube"
+                    args = ["ip"]
+                    standardOutput = os
+                }
+                def output = os.toString()
+                if(output != "") {
+                    dockerRegistryString = "http://${output.trim()}:5000" // minikube uses port 5000
+                    logger.info("Env variable SIDECAR_DOCKER_REGISTRY not defined, using output of minikube ip ${dockerRegistryString}")
+                } else {
+                    logger.warn("SIDECAR_DOCKER_REGISTRY not set and minikube ip failed")
+                }
+                if(result.exitValue != 0) {
+                    logger.error("Could not find minikube ip: exit code ${result.exitValue}")
+                }
+                }
+                catch (GradleException e) {
+                    // microk8s use this
+                    dockerRegistryString = "http://localhost:5000"
+                    logger.error("Could not auto configure docker registry, please set your SIDECAR_DOCKER_REGISTRY environment variable.  Using $dockerRegistryString")
+                }
+            }
+        }
+
+        ext.dockerTag = "latest"
+        ext.dockerGroup = System.getenv("SIDECAR_DOCKER_GROUP") ?: "cassandra_sidecar"
+        ext.kubernetesNamespace = System.getenv("SIDECAR_KUBERNETES_NAMESPACE") ?: "default"
+        ext.dockerRegistry = new URI(dockerRegistryString)
+        ext.dockerRegistryWithoutProtocol = dockerRegistry.getHost() + ":" + dockerRegistry.getPort()
+    }
+
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+
+    checkstyle {
+        toolVersion '7.8.1'
+        configFile file("${project.rootDir}/checkstyle.xml")
+    }
+    spotbugs {
+        toolVersion = '4.0.0'
+        excludeFilter = file("${project.rootDir}/spotbugs-exclude.xml")
+    }
+
+    tasks.withType(com.github.spotbugs.SpotBugsTask) {
+        reports.xml.enabled = false
+        reports.html.enabled = true
+    }
+
+}
+
 group 'org.apache.cassandra'
 version project.version
 
 sourceCompatibility = 1.8
-
-repositories {
-    mavenCentral()
-}
 
 // Take the application out once we're running via Cassandra
 mainClassName = "org.apache.cassandra.sidecar.CassandraSidecarDaemon"
@@ -93,9 +160,6 @@ dependencies {
     compile 'ch.qos.logback:logback-core:1.2.3'
     compile 'ch.qos.logback:logback-classic:1.2.3'
 
-    compile 'com.datastax.cassandra:cassandra-driver-core:3.6+'
-    compile group: 'com.google.inject', name: 'guice', version: '4.2.2'
-
     compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.7'
     compile 'org.webjars:swagger-ui:3.10.0'
 
@@ -104,13 +168,17 @@ dependencies {
 
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 
-    testCompile group: 'org.cassandraunit', name: 'cassandra-unit-shaded', version: '3.3.0.2'
-    testCompile 'com.datastax.cassandra:cassandra-driver-core:3.6.+:tests'
-    testCompile 'org.apache.commons:commons-exec:1.3+'
+    testCompile "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
+    testCompile "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
+
+    testCompile group: 'org.cassandraunit', name: 'cassandra-unit-shaded', version: '3.11.2.0'
+    testCompile 'com.datastax.cassandra:cassandra-driver-core:3.9.0:tests'
     testCompile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
     testCompile group: 'io.vertx', name: 'vertx-junit5', version: '3.8.5'
 
-    integrationTestCompile group: 'com.datastax.oss.simulacron', name: 'simulacron-driver-3x', version: '0.8.10'
+    compile project(":common")
+    compile project(":cassandra40")
 }
 
 task copyCodeStyle(type: Copy) {
@@ -141,20 +209,22 @@ clean.doLast {
 }
 
 test {
+    // ordinarily we don't need integration tests
+    // see the integrationTest task
     useJUnitPlatform()
-    systemProperty "javax.net.ssl.trustStore", "$projectDir/src/test/resources/certs/ca.p12"
-    systemProperty "javax.net.ssl.trustStorePassword", "password"
     reports {
         junitXml.enabled = true
         html.enabled = true
     }
 }
 
-task integrationTest(type: Test) {
+tasks.register("integrationTest", Test) {
     jacoco {
         enabled = false
     }
-    useJUnitPlatform()
+    useJUnitPlatform() {
+        includeTags "integrationTest"
+    }
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     shouldRunAfter test
@@ -167,21 +237,6 @@ task copyDocs(type: Copy, dependsOn: ':docs:asciidoctor') {
     }
     into "build/docs/"
     exclude "tmp"
-}
-
-checkstyle {
-    toolVersion '7.8.1'
-    configFile file("checkstyle.xml")
-}
-
-spotbugs {
-    toolVersion = '4.0.0'
-    excludeFilter = file("src/main/resources/spotbugs-exclude.xml")
-}
-
-tasks.withType(com.github.spotbugs.SpotBugsTask) {
-    reports.xml.enabled = false
-    reports.html.enabled = true
 }
 
 /**
@@ -226,6 +281,8 @@ resolve {
     resourcePackages = ['org.apache.cassandra.sidecar']
     outputDir = file('build/generated/swagger')
 }
+
+
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia

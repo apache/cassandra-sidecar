@@ -40,6 +40,10 @@ import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
+import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
+import org.apache.cassandra.sidecar.common.CQLSession;
+import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
@@ -153,5 +157,31 @@ public class MainModule extends AbstractModule
         {
             throw new ConfigurationException("Failed reading from sidebar.config path: " + confPath, e);
         }
+    }
+
+    @Provides
+    public CQLSession session(Configuration config)
+    {
+        String host = config.getCassandraHost();
+        Integer port = config.getPort();
+        Integer healthCheckFrequencyMillis = config.getHealthCheckFrequencyMillis();
+
+        return new CQLSession(host, port, healthCheckFrequencyMillis);
+    }
+
+    @Provides
+    @Singleton
+    public CassandraVersionProvider cassandraVersionProvider()
+    {
+        CassandraVersionProvider.Builder builder = new CassandraVersionProvider.Builder();
+        builder.add(new Cassandra40Factory());
+        return builder.build();
+    }
+
+    @Provides
+    public CassandraAdapterDelegate cassandraAdapterDelegate(CassandraVersionProvider provider, CQLSession session,
+                                                             Configuration config)
+    {
+        return new CassandraAdapterDelegate(provider, session, config.getHealthCheckFrequencyMillis());
     }
 }

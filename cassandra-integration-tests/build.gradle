@@ -1,0 +1,44 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    testCompile project(":cassandra40")
+
+    testCompile "io.kubernetes:client-java:${project.kubernetesClientVersion}"
+    testCompile "io.kubernetes:client-java-extended:${project.kubernetesClientVersion}"
+
+    testCompile "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
+    testCompile "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
+
+    testImplementation("org.assertj:assertj-core:3.16.0")
+}
+
+// we don't want to run the integration tests by default - they're heavy weight and won't run correctly
+// if kubernetes isn't present
+// we don't want the lack of local k8 to impede development
+// for the most part, the C* integrations should be simple, and non-integration tests should use mocks
+test {
+    useJUnitPlatform() {
+        excludeTags "integrationTest"
+    }
+}
+
+tasks.register("integrationTest", Test) {
+    jacoco {
+        enabled = false
+    }
+    useJUnitPlatform() {
+        includeTags "integrationTest"
+    }
+    systemProperty "sidecar.dockerRegistry", configureKubernetes.ext.dockerRegistry.toString()
+    systemProperty "sidecar.kubernetesNamespace", configureKubernetes.ext.kubernetesNamespace.toString()
+    systemProperty "sidecar.dockerGroup", configureKubernetes.ext.dockerGroup.toString()
+    group = "verification"
+}
