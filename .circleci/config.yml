@@ -151,8 +151,28 @@ workflows:
       - java8
       - java8_docker
       - java11
-      - docs_build
-      - docker_build
-      - deb_build_install
-      - rpm_build_install
-      - docker_build
+      - docs_build:
+          requires:
+            - java8
+            - java8_docker
+            - java11
+      - docker_build:
+          requires:
+            - java8
+            - java8_docker
+            - java11
+      - rpm_build_install:
+          requires:
+            - java8
+            - java8_docker
+            - java11
+      - deb_build_install:
+          requires:
+            - java8
+            - java8_docker
+            - java11
+      - docker_build:
+          requires:
+            - java8
+            - java8_docker
+            - java11
