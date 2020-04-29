@@ -48,7 +48,7 @@ import org.apache.cassandra.sidecar.routes.HealthService;
  */
 public abstract class AbstractHealthServiceTest
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractHealthServiceTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractHealthServiceTest.class);
     private MockHealthCheck check;
     private HealthService service;
     private Vertx vertx;
@@ -86,23 +86,12 @@ public abstract class AbstractHealthServiceTest
     void tearDown() throws InterruptedException
     {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res ->
-         {
-            if (res.succeeded())
-            {
-                LOGGER.info("Closed HTTP Server in Vert.x");
-            }
-            else
-            {
-                LOGGER.error("Failed to close HTTP Server in Vert.x", res.cause());
-            }
-            closeLatch.countDown();
-        });
+        server.close(res -> closeLatch.countDown());
         vertx.close();
         if (closeLatch.await(60, TimeUnit.SECONDS))
-            LOGGER.info("Close event received before timeout.");
+            logger.info("Close event received before timeout.");
         else
-            LOGGER.error("Close event timed out.");
+            logger.error("Close event timed out.");
     }
 
     @DisplayName("Should return HTTP 200 OK when check=True")

@@ -152,16 +152,7 @@ public class HealthServiceIntegrationTest
     void tearDown() throws InterruptedException
     {
         CountDownLatch waitLatch = new CountDownLatch(1);
-        vertx.close(res ->
-                    {
-                        if (res.succeeded())
-                            logger.info("Vert.x close succeeded");
-                        else
-                        {
-                            logger.info("Vert.x close failed");
-                        }
-                        waitLatch.countDown();
-                    });
+        vertx.close(res -> waitLatch.countDown());
         if (waitLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close complete before timeout.");
         else
