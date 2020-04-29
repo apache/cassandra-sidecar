@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
@@ -25,6 +26,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -44,10 +48,12 @@ import org.apache.cassandra.sidecar.routes.HealthService;
  */
 public abstract class AbstractHealthServiceTest
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractHealthServiceTest.class);
     private MockHealthCheck check;
     private HealthService service;
     private Vertx vertx;
     private Configuration config;
+    private HttpServer server;
 
     public abstract boolean isSslEnabled();
 
@@ -63,7 +69,7 @@ public abstract class AbstractHealthServiceTest
     void setUp() throws InterruptedException
     {
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(getTestModule()));
-        HttpServer server = injector.getInstance(HttpServer.class);
+        server = injector.getInstance(HttpServer.class);
 
         check = injector.getInstance(MockHealthCheck.class);
         service = injector.getInstance(HealthService.class);
@@ -77,9 +83,22 @@ public abstract class AbstractHealthServiceTest
     }
 
     @AfterEach
-    void tearDown()
+    void tearDown() throws InterruptedException
     {
+        final CountDownLatch closeLatch = new CountDownLatch(1);
+        server.close(res -> {
+            if (res.succeeded()) {
+                LOGGER.info("Closed HTTP Server in Vert.x");
+            } else {
+                LOGGER.error("Failed to close HTTP Server in Vert.x", res.cause());
+            }
+            closeLatch.countDown();
+        });
         vertx.close();
+        if (closeLatch.await(60, TimeUnit.SECONDS))
+            LOGGER.info("Close event received before timeout.");
+        else
+            LOGGER.error("Close event timed out.");
     }
 
     @DisplayName("Should return HTTP 200 OK when check=True")
