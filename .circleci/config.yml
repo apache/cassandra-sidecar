@@ -114,19 +114,18 @@ jobs:
 
   # ensures we can build and install deb packages
   deb_build_install:
-    <<: *base_job
+    docker:
+      - image: circleci/openjdk:11-jdk-stretch
     steps:
       - checkout
-      - install_common
-      - install_java:
-          version: adoptopenjdk-11-hotspot
       - run: ./gradlew -i clean buildDeb
       - run: DEBIAN_FRONTEND=noninteractive sudo apt install -y ./build/distributions/cassandra-sidecar*.deb
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
 
   # ensures we can build and install rpm packages
   rpm_build_install:
-    <<: *centos
+    docker:
+        - image: circleci/openjdk:11.0.1-jdk-oraclelinux7
     steps:
       - checkout
       - run: yum install -y java-11-openjdk-devel  # the image uses root by default, no need for sudo
@@ -141,21 +140,9 @@ jobs:
       - run: ./gradlew -i clean jibDockerBuild
 
   docs_build:
-    <<: *base_job
-    steps:
-      - checkout
-      - install_common
-      - install_java:
-          version: adoptopenjdk-11-hotspot
-      - run: sudo update-java-alternatives -s adoptopenjdk-11-hotspot-amd64 && java -version
-      - run: ./gradlew -i clean build --stacktrace
-      - run: test -f build/docs/html5/user.html
-
-  docs_build_docker:
     docker:
-      - image: circleci/openjdk:8-jdk-stretch
+      - image: circleci/openjdk:11-jdk-stretch
     steps:
-      - checkout
       - run: ./gradlew -i clean build --stacktrace
       - run: test -f build/docs/html5/user.html
 
