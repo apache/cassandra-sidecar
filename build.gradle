@@ -15,6 +15,7 @@ plugins {
     id 'jacoco'
     id "com.github.spotbugs" version "3.0.0"
     id 'org.hidetake.swagger.generator' version '2.16.0'
+    id "io.swagger.core.v3.swagger-gradle-plugin" version "2.1.2"
 
     // https://github.com/nebula-plugins/gradle-ospackage-plugin/wiki
     id "nebula.ospackage" version "8.3.0"
@@ -212,6 +213,15 @@ buildDeb {
 
 applicationDistribution.from("LICENSE.txt") {
     into ""
+}
+
+resolve {
+    outputFileName = 'api'
+    outputFormat = 'JSON'
+    prettyPrint = 'TRUE'
+    classpath = sourceSets.main.runtimeClasspath
+    resourcePackages = ['org.apache.cassandra.sidecar']
+    outputDir = file('build/generated/swagger')
 }
 
 // copyDist gets called on every build
