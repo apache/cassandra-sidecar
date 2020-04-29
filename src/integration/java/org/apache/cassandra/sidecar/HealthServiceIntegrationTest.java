@@ -106,6 +106,7 @@ public class HealthServiceIntegrationTest
     private int port;
     private List<CQLSession> sessions = new LinkedList<>();
     private Injector injector;
+    private static final Logger LOGGER = LoggerFactory.getLogger(HealthServiceIntegrationTest.class);
 
     @BeforeEach
     void setUp()
@@ -116,7 +117,18 @@ public class HealthServiceIntegrationTest
         HttpServer httpServer = injector.getInstance(HttpServer.class);
         Configuration config = injector.getInstance(Configuration.class);
         port = config.getPort();
-        httpServer.listen(port);
+
+        httpServer.listen(port, res ->
+        {
+            if (res.succeeded())
+            {
+                LOGGER.info("Succeeded to listen on port {}", port);
+            }
+            else
+            {
+                LOGGER.error("Failed to listen on port {}", port, res.cause());
+            }
+        });
     }
 
     @AfterEach
