@@ -168,3 +168,4 @@ workflows:
       - rpm_build_install
       - docker_build
       - docs_build
+      - docs_build_docker
