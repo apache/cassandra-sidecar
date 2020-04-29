@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -106,10 +107,9 @@ public class HealthServiceIntegrationTest
     private int port;
     private List<CQLSession> sessions = new LinkedList<>();
     private Injector injector;
-    private static final Logger LOGGER = LoggerFactory.getLogger(HealthServiceIntegrationTest.class);
 
     @BeforeEach
-    void setUp()
+    void setUp() throws InterruptedException
     {
         injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(new IntegrationTestModule(1, sessions)));
@@ -118,17 +118,21 @@ public class HealthServiceIntegrationTest
         Configuration config = injector.getInstance(Configuration.class);
         port = config.getPort();
 
+        CountDownLatch waitLatch = new CountDownLatch(1);
         httpServer.listen(port, res ->
         {
             if (res.succeeded())
             {
-                LOGGER.info("Succeeded to listen on port {}", port);
+                logger.info("Succeeded to listen on port " + port);
             }
             else
             {
-                LOGGER.error("Failed to listen on port {}", port, res.cause());
+                logger.error("Failed to listen on port " + port + " " + res.cause());
             }
+            waitLatch.countDown();
         });
+
+        waitLatch.await(60, TimeUnit.SECONDS);
     }
 
     @AfterEach
