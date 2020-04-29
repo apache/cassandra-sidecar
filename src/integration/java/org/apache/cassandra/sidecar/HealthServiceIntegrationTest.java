@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -111,37 +112,61 @@ public class HealthServiceIntegrationTest
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        injector = Guice.createInjector(Modules.override(new MainModule())
-                                                        .with(new IntegrationTestModule(1, sessions)));
-        vertx = injector.getInstance(Vertx.class);
-        HttpServer httpServer = injector.getInstance(HttpServer.class);
-        Configuration config = injector.getInstance(Configuration.class);
-        port = config.getPort();
+        AtomicBoolean failedToListen = new AtomicBoolean(false);
 
-        CountDownLatch waitLatch = new CountDownLatch(1);
-        httpServer.listen(port, res ->
+        do
         {
-            if (res.succeeded())
-            {
-                logger.info("Succeeded to listen on port " + port);
-            }
-            else
-            {
-                logger.error("Failed to listen on port " + port + " " + res.cause());
-            }
-            waitLatch.countDown();
-        });
+            injector = Guice.createInjector(Modules.override(new MainModule())
+                                                   .with(new IntegrationTestModule(1, sessions)));
+            vertx = injector.getInstance(Vertx.class);
+            HttpServer httpServer = injector.getInstance(HttpServer.class);
+            Configuration config = injector.getInstance(Configuration.class);
+            port = config.getPort();
 
-        if (waitLatch.await(60, TimeUnit.SECONDS))
-            logger.info("Close event received before timeout.");
-        else
-            logger.error("Close event timed out.");
+            CountDownLatch waitLatch = new CountDownLatch(1);
+            httpServer.listen(port, res ->
+            {
+                if (res.succeeded())
+                {
+                    logger.info("Succeeded to listen on port " + port);
+                }
+                else
+                {
+                    logger.error("Failed to listen on port " + port + " " + res.cause());
+                    failedToListen.set(true);
+                }
+                waitLatch.countDown();
+            });
+
+            if (waitLatch.await(60, TimeUnit.SECONDS))
+                logger.info("Listen complete before timeout.");
+            else
+                logger.error("Listen complete timed out.");
+
+            if (failedToListen.get())
+                closeClusters();
+        } while(failedToListen.get());
     }
 
     @AfterEach
-    void tearDown()
+    void tearDown() throws InterruptedException
     {
-        vertx.close();
+        CountDownLatch waitLatch = new CountDownLatch(1);
+        vertx.close(res ->
+                    {
+                        if (res.succeeded())
+                            logger.info("Vert.x close succeeded");
+                        else
+                        {
+                            logger.info("Vert.x close failed");
+                        }
+                        waitLatch.countDown();
+                    });
+        if (waitLatch.await(60, TimeUnit.SECONDS))
+            logger.info("Close complete before timeout.");
+        else
+            logger.error("Close timed out.");
+
     }
 
     @AfterEach
@@ -330,15 +355,18 @@ public class HealthServiceIntegrationTest
         }
 
         @Provides
+        @Singleton
         public Configuration configuration() throws IOException
         {
             ServerSocket socket = new ServerSocket(0);
+            int randomPort = socket.getLocalPort();
+            socket.close();
 
             return new Configuration.Builder()
                    .setCassandraHost("INVALID_FOR_TEST")
                    .setCassandraPort(0)
                    .setHost("127.0.0.1")
-                   .setPort(socket.getLocalPort())
+                   .setPort(randomPort)
                    .setHealthCheckFrequency(1000)
                    .setSslEnabled(false)
                    .build();

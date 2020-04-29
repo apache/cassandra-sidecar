@@ -43,11 +43,13 @@ public class Configuration
     /* SSL related settings */
     @Nullable
     private final String keyStorePath;
+
     @Nullable
     private final String keyStorePassword;
 
     @Nullable
     private final String trustStorePath;
+
     @Nullable
     private final String trustStorePassword;
 
