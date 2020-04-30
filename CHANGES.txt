@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * RESTEasy integration with dynamically generated Swagger OpenAPI, Swagger UI and JAX-RS (CASSANDRASC-22)
  * Set up asciidoc based documentation (CASSANDRASC-15)
  * Gradle can now generate Deb packages, RPMs and Docker containers (CASSANDRASC-14)
  * Security patch to fix incorrect usage of yaml configuration (CASSANDRASC-12)
