@@ -179,6 +179,7 @@ dependencies {
 
     compile project(":common")
     compile project(":cassandra40")
+    compile 'org.apache.cassandra:cassandra-all:4.0-beta2'
 }
 
 task copyCodeStyle(type: Copy) {

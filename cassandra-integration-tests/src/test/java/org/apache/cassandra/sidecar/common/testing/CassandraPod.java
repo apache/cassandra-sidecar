@@ -193,7 +193,8 @@ class CassandraPod
             }
 
             started = namespacedPod.getStatus().getContainerStatuses().get(0).getStarted();
-            if (namespacedPod.getStatus().getContainerStatuses().get(0).getReady() && started) {
+            if (namespacedPod.getStatus().getContainerStatuses().get(0).getReady() && started)
+            {
                 logger.info("Pod startup OK");
                 break;
             }

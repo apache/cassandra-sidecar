@@ -27,8 +27,8 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServer;
+import org.apache.cassandra.sidecar.cdc.CDCReaderService;
 import org.apache.cassandra.sidecar.utils.SslUtils;
-
 /**
  * Main class for initiating the Cassandra sidecar
  */
@@ -38,12 +38,14 @@ public class CassandraSidecarDaemon
     private static final Logger logger = LoggerFactory.getLogger(CassandraSidecarDaemon.class);
     private final HttpServer server;
     private final Configuration config;
+    private final CDCReaderService cdcReaderService;
 
     @Inject
-    public CassandraSidecarDaemon(HttpServer server, Configuration config)
+    public CassandraSidecarDaemon(HttpServer server, Configuration config, CDCReaderService cdcReaderService)
     {
         this.server = server;
         this.config = config;
+        this.cdcReaderService = cdcReaderService;
     }
 
     public void start()
@@ -51,6 +53,7 @@ public class CassandraSidecarDaemon
         banner(System.out);
         validate();
         logger.info("Starting Cassandra Sidecar on {}:{}", config.getHost(), config.getPort());
+        cdcReaderService.start();
         server.listen(config.getPort(), config.getHost());
     }
 
