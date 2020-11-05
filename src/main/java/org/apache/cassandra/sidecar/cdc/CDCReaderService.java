@@ -23,15 +23,17 @@ public class CDCReaderService implements Host.StateListener
     private final CDCRawDirectoryMonitor cdcRawDirectoryMonitor;
     private final CQLSession session;
     private final CassandraConfig cassandraConfig;
+    private final CDCSchemaChangeListener cdcSchemaChangeListener;
 
     @Inject
     public CDCReaderService(CDCIndexWatcher cdcIndexWatcher, CDCRawDirectoryMonitor monitor, CQLSession session,
-                            CassandraConfig cassandraConfig)
+                            CassandraConfig cassandraConfig, CDCSchemaChangeListener cdcSchemaChangeListener)
     {
         this.cdcRawDirectoryMonitor = monitor;
         this.cdcIndexWatcher = cdcIndexWatcher;
         this.session = session;
         this.cassandraConfig = cassandraConfig;
+        this.cdcSchemaChangeListener = cdcSchemaChangeListener;
     }
 
     public synchronized void start()
@@ -53,7 +55,9 @@ public class CDCReaderService implements Host.StateListener
             // TODO : Load metadata from the CQLSession.
             Schema.instance.loadFromDisk(false);
             this.cassandraConfig.muteConfigs();
-
+            // Register a schema change listener. In the future, this allows us to update metadata upon
+            // schema changes without restarting the side car
+            cluster.register(this.cdcSchemaChangeListener);
             for (String keySpace : Schema.instance.getKeyspaces())
             {
                 logger.info("Keyspace : {}", keySpace);
