@@ -28,7 +28,7 @@ import io.vertx.core.logging.LoggerFactory;
 import org.apache.cassandra.schema.KeyspaceMetadata;
 import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.schema.TableMetadata;
-import org.apache.cassandra.sidecar.CQLSession;
+import org.apache.cassandra.sidecar.common.CQLSession;
 
 /**
  * Cassandra's real-time change data capture service.
