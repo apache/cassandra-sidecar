@@ -41,9 +41,13 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
+import org.apache.cassandra.sidecar.cdc.output.ConsoleOutput;
+import org.apache.cassandra.sidecar.cdc.output.Output;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.metrics.cdc.CDCReaderMonitor;
+import org.apache.cassandra.sidecar.metrics.cdc.CDCReaderMonitorLogger;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
@@ -126,6 +130,14 @@ public class MainModule extends AbstractModule
         return router;
     }
 
+    @Override
+    protected void  configure()
+    {
+        // TODO: Make the output type configurable
+        bind(CDCReaderMonitor.class).to(CDCReaderMonitorLogger.class);
+        bind(Output.class).to(ConsoleOutput.class);
+    }
+
     @Provides
     @Singleton
     public Configuration configuration() throws ConfigurationException, IOException
@@ -151,6 +163,7 @@ public class MainModule extends AbstractModule
                     .setTrustStorePath(yamlConf.get(String.class, "sidecar.ssl.truststore.path", null))
                     .setTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
                     .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
+                    .setCassandraConfigPath(yamlConf.get(String.class, "cdc.configPath"))
                     .build();
         }
         catch (MalformedURLException e)

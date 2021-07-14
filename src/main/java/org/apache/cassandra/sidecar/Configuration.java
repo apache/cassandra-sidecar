@@ -55,12 +55,17 @@ public class Configuration
 
     private final boolean isSslEnabled;
 
+    /* Cassandra server conf path */
+    @Nullable
+    private String cassandraConfigPath;
+
     public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
                          Integer healthCheckFrequencyMillis, boolean isSslEnabled,
                          @Nullable String keyStorePath,
                          @Nullable String keyStorePassword,
                          @Nullable String trustStorePath,
-                         @Nullable String trustStorePassword)
+                         @Nullable String trustStorePassword,
+                         @Nullable String cassandraConfigPath)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
@@ -73,6 +78,8 @@ public class Configuration
         this.trustStorePath = trustStorePath;
         this.trustStorePassword = trustStorePassword;
         this.isSslEnabled = isSslEnabled;
+
+        this.cassandraConfigPath = cassandraConfigPath;
     }
 
     /**
@@ -180,6 +187,15 @@ public class Configuration
     }
 
     /**
+     * Get path of the Cassandra configuration file
+     */
+    @Nullable
+    public String getCassandraConfigPath()
+    {
+        return cassandraConfigPath;
+    }
+
+    /**
      * Configuration Builder
      */
     public static class Builder
@@ -194,6 +210,7 @@ public class Configuration
         private String trustStorePath;
         private String trustStorePassword;
         private boolean isSslEnabled;
+        private String cassandraConfigPath;
 
         public Builder setCassandraHost(String host)
         {
@@ -255,10 +272,17 @@ public class Configuration
             return this;
         }
 
+        public Builder setCassandraConfigPath(String configPath)
+        {
+            this.cassandraConfigPath = configPath;
+            return  this;
+        }
+
         public Configuration build()
         {
             return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis, isSslEnabled,
-                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword);
+                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword,
+                                     cassandraConfigPath);
         }
     }
 }

@@ -24,3 +24,6 @@ sidecar:
 
 healthcheck:
   - poll_freq_millis: 30000
+
+cdc:
+  - configPath: file:////etc/cassandra/conf/cassandra.yaml
