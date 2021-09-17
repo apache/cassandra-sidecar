@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.util.Collection;
+import java.util.List;
 import javax.annotation.Nullable;
 
 /**
@@ -30,6 +32,9 @@ public class Configuration
 
     /* Cassandra Port */
     private final Integer cassandraPort;
+
+    /* Cassandra Data Dirs */
+    private Collection<String> cassandraDataDirs;
 
     /* Sidecar's HTTP REST API port */
     private final Integer port;
@@ -55,15 +60,17 @@ public class Configuration
 
     private final boolean isSslEnabled;
 
-    public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
-                         Integer healthCheckFrequencyMillis, boolean isSslEnabled,
-                         @Nullable String keyStorePath,
-                         @Nullable String keyStorePassword,
-                         @Nullable String trustStorePath,
-                         @Nullable String trustStorePassword)
+    private final long rateLimitStreamRequestsPerSecond;
+
+    public Configuration(String cassandraHost, Integer cassandraPort, List<String> cassandraDataDirs, String host,
+                         Integer port, Integer healthCheckFrequencyMillis, boolean isSslEnabled,
+                         @Nullable String keyStorePath, @Nullable String keyStorePassword,
+                         @Nullable String trustStorePath, @Nullable String trustStorePassword,
+                         long rateLimitStreamRequestsPerSecond)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
+        this.cassandraDataDirs = cassandraDataDirs;
         this.host = host;
         this.port = port;
         this.healthCheckFrequencyMillis = healthCheckFrequencyMillis;
@@ -73,6 +80,7 @@ public class Configuration
         this.trustStorePath = trustStorePath;
         this.trustStorePassword = trustStorePassword;
         this.isSslEnabled = isSslEnabled;
+        this.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond;
     }
 
     /**
@@ -93,6 +101,16 @@ public class Configuration
     public Integer getCassandraPort()
     {
         return cassandraPort;
+    }
+
+    /**
+     * Get Cassandra data dirs
+     *
+     * @return
+     */
+    public Collection<String> getCassandraDataDirs()
+    {
+        return cassandraDataDirs;
     }
 
     /**
@@ -180,12 +198,23 @@ public class Configuration
     }
 
     /**
+     * Get number of stream requests accepted per second
+     *
+     * @return
+     */
+    public long getRateLimitStreamRequestsPerSecond()
+    {
+        return rateLimitStreamRequestsPerSecond;
+    }
+
+    /**
      * Configuration Builder
      */
     public static class Builder
     {
         private String cassandraHost;
         private Integer cassandraPort;
+        private List<String> cassandraDataDirs;
         private String host;
         private Integer port;
         private Integer healthCheckFrequencyMillis;
@@ -194,6 +223,7 @@ public class Configuration
         private String trustStorePath;
         private String trustStorePassword;
         private boolean isSslEnabled;
+        private long rateLimitStreamRequestsPerSecond;
 
         public Builder setCassandraHost(String host)
         {
@@ -204,6 +234,12 @@ public class Configuration
         public Builder setCassandraPort(Integer port)
         {
             this.cassandraPort = port;
+            return this;
+        }
+
+        public Builder setCassandraDataDirs(List<String> dataDirs)
+        {
+            this.cassandraDataDirs = dataDirs;
             return this;
         }
 
@@ -255,10 +291,17 @@ public class Configuration
             return this;
         }
 
+        public Builder setRateLimitStreamRequestsPerSecond(long rateLimitStreamRequestsPerSecond)
+        {
+            this.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond;
+            return this;
+        }
+
         public Configuration build()
         {
-            return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis, isSslEnabled,
-                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword);
+            return new Configuration(cassandraHost, cassandraPort, cassandraDataDirs, host, port,
+                    healthCheckFrequencyMillis, isSslEnabled, keyStorePath, keyStorePassword, trustStorePath,
+                    trustStorePassword, rateLimitStreamRequestsPerSecond);
         }
     }
 }

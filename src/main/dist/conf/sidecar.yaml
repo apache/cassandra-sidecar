@@ -5,10 +5,13 @@
 cassandra:
   - host: localhost
   - port: 9042
+  - data_dirs: /cassandra/d1/data, /cassandra/d2/data
 
 sidecar:
   - host: 0.0.0.0
   - port: 9043
+  - throttle:
+    - stream_requests_per_sec: 5000
 #
 # Enable SSL configuration (Disabled by default)
 #

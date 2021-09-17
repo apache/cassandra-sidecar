@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.apache.commons.configuration2.YAMLConfiguration;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.slf4j.Logger;
@@ -45,7 +46,10 @@ import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.routes.HealthService;
+import org.apache.cassandra.sidecar.routes.StreamSSTableComponent;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
+import org.apache.cassandra.sidecar.utils.CachedFilePathBuilder;
+import org.apache.cassandra.sidecar.utils.FilePathBuilder;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
 import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
 import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
@@ -96,7 +100,9 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    private VertxRequestHandler configureServices(Vertx vertx, HealthService healthService)
+    private VertxRequestHandler configureServices(Vertx vertx,
+                                                  HealthService healthService,
+                                                  StreamSSTableComponent ssTableComponent)
     {
         VertxResteasyDeployment deployment = new VertxResteasyDeployment();
         deployment.start();
@@ -104,6 +110,7 @@ public class MainModule extends AbstractModule
 
         r.addPerInstanceResource(SwaggerOpenApiResource.class);
         r.addSingletonResource(healthService);
+        r.addSingletonResource(ssTableComponent);
 
         return new VertxRequestHandler(vertx, deployment);
     }
@@ -122,7 +129,6 @@ public class MainModule extends AbstractModule
         // Docs index.html page
         StaticHandler docs = StaticHandler.create("docs");
         router.route().path("/docs/*").handler(docs);
-
         return router;
     }
 
@@ -143,6 +149,7 @@ public class MainModule extends AbstractModule
             return new Configuration.Builder()
                     .setCassandraHost(yamlConf.get(String.class, "cassandra.host"))
                     .setCassandraPort(yamlConf.get(Integer.class, "cassandra.port"))
+                    .setCassandraDataDirs(yamlConf.getList(String.class, "cassandra.data_dirs"))
                     .setHost(yamlConf.get(String.class, "sidecar.host"))
                     .setPort(yamlConf.get(Integer.class, "sidecar.port"))
                     .setHealthCheckFrequency(yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"))
@@ -151,6 +158,7 @@ public class MainModule extends AbstractModule
                     .setTrustStorePath(yamlConf.get(String.class, "sidecar.ssl.truststore.path", null))
                     .setTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
                     .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
+                    .setRateLimitStreamRequestsPerSecond(yamlConf.getLong("sidecar.throttle.stream_requests_per_sec"))
                     .build();
         }
         catch (MalformedURLException e)
@@ -183,5 +191,18 @@ public class MainModule extends AbstractModule
                                                              Configuration config)
     {
         return new CassandraAdapterDelegate(provider, session, config.getHealthCheckFrequencyMillis());
+    }
+
+    @Provides
+    public SidecarRateLimiter rateLimiter(Configuration config)
+    {
+        return SidecarRateLimiter.create(config.getRateLimitStreamRequestsPerSecond());
+    }
+
+    @Provides
+    @Singleton
+    public FilePathBuilder filePathBuilder(Configuration config)
+    {
+        return new CachedFilePathBuilder(config.getCassandraDataDirs());
     }
 }
