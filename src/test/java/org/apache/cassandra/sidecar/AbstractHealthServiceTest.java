@@ -98,7 +98,7 @@ public abstract class AbstractHealthServiceTest
 
     @DisplayName("Should return HTTP 200 OK when check=True")
     @Test
-    public void testHealthCheckReturns200OK(VertxTestContext testContext)
+    public void testHealthCheckReturnsCassandraOK(VertxTestContext testContext)
     {
         when(cassandra.isUp()).thenReturn(true);
         WebClient client = getClient();
@@ -109,6 +109,7 @@ public abstract class AbstractHealthServiceTest
               .send(testContext.succeeding(response -> testContext.verify(() ->
               {
                   Assert.assertEquals(200, response.statusCode());
+                  Assert.assertEquals("{\"status\":{\"cassandra\":\"OK\"}}", response.body());
                   testContext.completeNow();
               })));
     }
@@ -129,9 +130,9 @@ public abstract class AbstractHealthServiceTest
         return options;
     }
 
-    @DisplayName("Should return HTTP 503 Failure when check=False")
+    @DisplayName("Should return HTTP 200 NOT OK when check=False")
     @Test
-    public void testHealthCheckReturns503Failure(VertxTestContext testContext)
+    public void testHealthCheckReturnsCassandraNOTOK(VertxTestContext testContext)
     {
 
         when(cassandra.isUp()).thenReturn(false);
@@ -142,7 +143,8 @@ public abstract class AbstractHealthServiceTest
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
               {
-                  Assert.assertEquals(503, response.statusCode());
+                  Assert.assertEquals(200, response.statusCode());
+                  Assert.assertEquals("{\"status\":{\"cassandra\":\"NOT_OK\"}}", response.body());
                   testContext.completeNow();
               })));
     }

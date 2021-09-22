@@ -30,7 +30,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -53,18 +52,13 @@ public class HealthService
     }
 
     @Operation(summary = "Health Check for Cassandra's status",
-    description = "Returns HTTP 200 if Cassandra is available, 503 otherwise",
-    responses = {
-    @ApiResponse(responseCode = "200", description = "Cassandra is available"),
-    @ApiResponse(responseCode = "503", description = "Cassandra is not available")
-    })
+    description = "Returns HTTP 200 if Sidecar is available")
     @Produces(MediaType.APPLICATION_JSON)
     @GET
     public Response doGet()
     {
         Boolean up = cassandra.isUp();
-        int status = up ? HttpResponseStatus.OK.code() : HttpResponseStatus.SERVICE_UNAVAILABLE.code();
-        return Response.status(status).entity(Json.encode(ImmutableMap.of("status", up ?
-                                                                                    "OK" : "NOT_OK"))).build();
+        return Response.status(HttpResponseStatus.OK.code()).entity(Json.encode(ImmutableMap.of("status",
+                    ImmutableMap.of("cassandra", up ? "OK" : "NOT_OK")))).build();
     }
 }
