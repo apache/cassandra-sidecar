@@ -300,8 +300,8 @@ public class Configuration
         public Configuration build()
         {
             return new Configuration(cassandraHost, cassandraPort, cassandraDataDirs, host, port,
-                    healthCheckFrequencyMillis, isSslEnabled, keyStorePath, keyStorePassword, trustStorePath,
-                    trustStorePassword, rateLimitStreamRequestsPerSecond);
+                                     healthCheckFrequencyMillis, isSslEnabled, keyStorePath, keyStorePassword, trustStorePath,
+                                     trustStorePassword, rateLimitStreamRequestsPerSecond);
         }
     }
 }
