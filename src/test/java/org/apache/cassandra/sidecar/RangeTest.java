@@ -40,7 +40,8 @@ public class RangeTest
     public void testInvalidRangeFormat()
     {
         final String rangeVal = "2344--3432";
-        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () -> {
+        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
+        {
             Range.parse(rangeVal);
         });
         String msg = "Supported Range formats are <start>-<end>, <start>-, -<suffix-length>";
@@ -51,7 +52,8 @@ public class RangeTest
     public void testInvalidSuffixLength()
     {
         final String rangeVal = "-0";
-        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () -> {
+        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
+        {
             Range.parse(rangeVal, Long.MAX_VALUE);
         });
         String msg = "Suffix length in -0 cannot be less than or equal to 0";
@@ -62,7 +64,8 @@ public class RangeTest
     public void testInvalidRangeBoundary()
     {
         final String rangeVal = "9-2";
-        RangeException thrownException = assertThrows(RangeException.class, () -> {
+        RangeException thrownException = assertThrows(RangeException.class, () ->
+        {
             Range.parse(rangeVal);
         });
         String msg = "Range does not satisfy boundary requirements";
@@ -73,7 +76,8 @@ public class RangeTest
     public void testWrongRangeUnitUsed()
     {
         final String rangeVal = "bits=0-";
-        UnsupportedOperationException thrownException = assertThrows(UnsupportedOperationException.class, () -> {
+        UnsupportedOperationException thrownException = assertThrows(UnsupportedOperationException.class, () ->
+        {
             Range.parseHeader(rangeVal, 5);
         });
         String msg = "Unsupported range unit only bytes are allowed";

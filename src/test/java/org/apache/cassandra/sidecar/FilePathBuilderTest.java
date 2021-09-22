@@ -53,7 +53,8 @@ public class FilePathBuilderTest
         final String table = "TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b";
         final String snapshot = "TestSnapshot";
         final String component = "TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        FileNotFoundException thrownException = assertThrows(FileNotFoundException.class, () -> {
+        FileNotFoundException thrownException = assertThrows(FileNotFoundException.class, () ->
+        {
             pathBuilder.build(keyspace, table, snapshot, component);
         });
         String msg = "Keyspace random does not exist";
@@ -67,7 +68,8 @@ public class FilePathBuilderTest
         final String table = "random";
         final String snapshot = "TestSnapshot";
         final String component = "TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        FileNotFoundException thrownException = assertThrows(FileNotFoundException.class, () -> {
+        FileNotFoundException thrownException = assertThrows(FileNotFoundException.class, () ->
+        {
             pathBuilder.build(keyspace, table, snapshot, component);
         });
         String msg = "Table random not found, path searched: src/test/resources/data/TestKeyspace";
@@ -81,7 +83,8 @@ public class FilePathBuilderTest
         final String table = "TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b";
         final String snapshot = "random";
         final String component = "TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        FileNotFoundException thrownException = assertThrows(FileNotFoundException.class, () -> {
+        FileNotFoundException thrownException = assertThrows(FileNotFoundException.class, () ->
+        {
             pathBuilder.build(keyspace, table, snapshot, component);
         });
         String msg = "Snapshot random not found, path searched: src/test/resources/data/TestKeyspace" +
@@ -111,7 +114,8 @@ public class FilePathBuilderTest
         final String component = "TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
 
         FilePathBuilder pathBuilder = new CachedFilePathBuilder(Collections.singletonList(dataDir));
-        FileNotFoundException thrownException = assertThrows(FileNotFoundException.class, () -> {
+        FileNotFoundException thrownException = assertThrows(FileNotFoundException.class, () ->
+        {
             pathBuilder.build(keyspace, table, snapshot, component);
         });
         String msg = "/Users/saranyakrishnakumar/Desktop/cassandra-sidecar/src/test/resources" +
