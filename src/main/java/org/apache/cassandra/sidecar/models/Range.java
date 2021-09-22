@@ -82,16 +82,12 @@ public class Range
      * Accepted string formats "start-end", both ends of the range required to be parsed
      * Sample accepted formats "1-2", "232-2355"
      */
-    public static Range parseAbsolute(@NotNull String range)
+    private static Range parseAbsolute(@NotNull String range)
     {
         Matcher m = START_END.matcher(range);
 
         if (!m.matches())
         {
-            if (range.matches(PARTIAL.pattern()))
-            {
-                throw new RuntimeException("Wrong method used to parse partial range, use parse method!");
-            }
             throw new IllegalArgumentException("Supported Range formats are <start>-<end>, <start>-, -<suffix-length>");
         }
 
@@ -106,6 +102,12 @@ public class Range
         return new Range(start, end);
     }
 
+    public static Range parse(@NotNull String range)
+    {
+        // since file size is not passed, we set it to 0
+        return parse(range, 0);
+    }
+
     /**
      * Accepted string formats "1453-3563", "-22344", "5346-"
      * Sample invalid string formats "8-3", "-", "-0", "a-b"
@@ -114,14 +116,13 @@ public class Range
      */
     public static Range parse(@NotNull String range, final long fileSize)
     {
-        Preconditions.checkArgument(fileSize > 0, "Reference file size invalid");
         Matcher m = PARTIAL.matcher(range);
-
         if (!m.matches())
         {
             return parseAbsolute(range);
         }
 
+        Preconditions.checkArgument(fileSize > 0, "Reference file size invalid");
         if (range.startsWith("-"))
         {
             final long length = Long.parseLong(m.group(4));

@@ -159,6 +159,8 @@ public class MainModule extends AbstractModule
                     .setTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
                     .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
                     .setRateLimitStreamRequestsPerSecond(yamlConf.getLong("sidecar.throttle.stream_requests_per_sec"))
+                    .setThrottleTimeoutInSeconds(yamlConf.getLong("sidecar.throttle.timeout_sec"))
+                    .setThrottleDelayInSeconds(yamlConf.getLong("sidecar.throttle.delay_sec"))
                     .build();
         }
         catch (MalformedURLException e)

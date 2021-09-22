@@ -1,7 +1,8 @@
 package com.google.common.util.concurrent;
 
 /**
- * Custom guava Rate Limiter, uses SmoothBursty Ratelimiter
+ * Wrapper class over guava Rate Limiter, uses SmoothBursty Ratelimiter. This class mainly exists to expose
+ * package protected method queryEarliestAvailable of guava RateLimiter
  */
 public class SidecarRateLimiter
 {
@@ -15,16 +16,6 @@ public class SidecarRateLimiter
     public static SidecarRateLimiter create(final double permitsPerSecond)
     {
         return new SidecarRateLimiter(permitsPerSecond);
-    }
-
-    public void setRate(final double permitsPerSecond)
-    {
-        this.rateLimiter.setRate(permitsPerSecond);
-    }
-
-    public double getRate()
-    {
-        return this.rateLimiter.getRate();
     }
 
     /**

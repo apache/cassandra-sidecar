@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.models.HttpResponse;
 import org.apache.cassandra.sidecar.models.Range;
 
@@ -28,15 +29,17 @@ public class FileStreamer
     private static final Logger LOGGER = LoggerFactory.getLogger(FileStreamer.class);
     private static final ScheduledExecutorService SCHEDULER = Executors.newScheduledThreadPool(1,
             new ThreadFactoryBuilder().setNameFormat("acquirePermit").setDaemon(true).build());
-    private static final Duration DELAY = Duration.ofSeconds(5);
-    private static final Duration TIMEOUT = Duration.ofSeconds(10);
+    private final Duration delay;
+    private final Duration timeout;
 
     private final SidecarRateLimiter rateLimiter;
 
     @Inject
-    public FileStreamer(SidecarRateLimiter rateLimiter)
+    public FileStreamer(Configuration config, SidecarRateLimiter rateLimiter)
     {
         this.rateLimiter = rateLimiter;
+        this.delay = Duration.ofSeconds(config.getThrottleDelayInSeconds());
+        this.timeout = Duration.ofSeconds(config.getThrottleTimeoutInSeconds());
     }
 
     public void stream(final HttpResponse resp, final File file)
@@ -84,7 +87,7 @@ public class FileStreamer
                 continue;
             }
 
-            if (TimeUnit.MICROSECONDS.toNanos(microsToWait) >= DELAY.getNano())
+            if (TimeUnit.MICROSECONDS.toNanos(microsToWait) >= delay.getNano())
             {
                 response.setRetryAfterHeader(microsToWait);
             }
@@ -100,7 +103,7 @@ public class FileStreamer
 
     private boolean checkRetriesExhausted(Instant startTime)
     {
-        return startTime.plus(TIMEOUT).isBefore(Instant.now());
+        return startTime.plus(timeout).isBefore(Instant.now());
     }
 
     private void retryStreaming(HttpResponse response, File file, Range range, Instant startTime, long microsToSleep)

@@ -14,7 +14,7 @@ public class RangeTest
     public void testInvalidRangeFormat()
     {
         final String rangeVal = "2344--3432";
-        Range.parseAbsolute(rangeVal);
+        Range.parse(rangeVal);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -28,7 +28,7 @@ public class RangeTest
     public void testInvalidRangeBoundary()
     {
         final String rangeVal = "9-2";
-        Range.parseAbsolute(rangeVal);
+        Range.parse(rangeVal);
     }
 
     @Test(expected = UnsupportedOperationException.class)

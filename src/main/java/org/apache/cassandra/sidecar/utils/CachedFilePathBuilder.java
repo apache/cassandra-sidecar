@@ -73,18 +73,18 @@ public class CachedFilePathBuilder extends FilePathBuilder
         @Override
         public String load(Key key) throws FileNotFoundException, KeyException, ExecutionException
         {
-            switch (key.length())
+            switch (key.type())
             {
-                case FOUR:
+                case KEYSPACE_TABLE_SNAPSHOT_COMPONENT:
                     return addSSTableComponentToPath(key.component(), snapshotCache.get(new Key.Builder()
                             .setKeyspace(key.keyspace()).setTable(key.table()).setSnapshot(key.snapshot()).build()));
-                case THREE:
+                case KEYSPACE_TABLE_SNAPSHOT:
                     return addSnapshotToPath(key.snapshot(), tableCache.get(new Key.Builder()
                             .setKeyspace(key.keyspace()).setTable(key.table()).build()));
-                case TWO:
+                case KEYSPACE_TABLE:
                     return addTableToPath(key.table(), keyspaceCache.get(new Key.Builder().setKeyspace(key.keyspace())
                             .build()));
-                case ONE:
+                case JUST_KEYSPACE:
                     return addKeyspaceToPath(key.keyspace());
                 default:
                     throw new KeyException();
@@ -101,15 +101,15 @@ public class CachedFilePathBuilder extends FilePathBuilder
         private final String table;
         private final String snapshot;
         private final String component;
-        private final KeyLength length;
+        private final KeyType type;
 
-        private Key(String keyspace, String table, String snapshot, String component, KeyLength length)
+        private Key(String keyspace, String table, String snapshot, String component, KeyType type)
         {
             this.keyspace = keyspace;
             this.table = table;
             this.snapshot = snapshot;
             this.component = component;
-            this.length = length;
+            this.type = type;
         }
 
         public String keyspace() throws KeyException
@@ -132,9 +132,9 @@ public class CachedFilePathBuilder extends FilePathBuilder
             return Optional.ofNullable(component).orElseThrow(KeyException::new);
         }
 
-        public KeyLength length()
+        public KeyType type()
         {
-            return length;
+            return type;
         }
 
         @Override
@@ -149,7 +149,7 @@ public class CachedFilePathBuilder extends FilePathBuilder
                 return false;
             }
             Key key = (Key) o;
-            return length == key.length &&
+            return type == key.type &&
                    Objects.equals(keyspace, key.keyspace) &&
                    Objects.equals(table, key.table) &&
                    Objects.equals(snapshot, key.snapshot) &&
@@ -159,7 +159,7 @@ public class CachedFilePathBuilder extends FilePathBuilder
         @Override
         public int hashCode()
         {
-            return Objects.hash(keyspace, table, snapshot, component, length);
+            return Objects.hash(keyspace, table, snapshot, component, type);
         }
 
         /**
@@ -204,16 +204,16 @@ public class CachedFilePathBuilder extends FilePathBuilder
             public CachedFilePathBuilder.Key build()
             {
                 return new CachedFilePathBuilder.Key(keyspace, table, snapshot, component,
-                        KeyLength.values()[length - 1]);
+                        KeyType.values()[length - 1]);
             }
         }
     }
 
     /**
-     * Enum to hold key length values
+     * Enum to hold types of keys created
      */
-    public enum KeyLength
+    public enum KeyType
     {
-        ONE, TWO, THREE, FOUR
+        JUST_KEYSPACE, KEYSPACE_TABLE, KEYSPACE_TABLE_SNAPSHOT, KEYSPACE_TABLE_SNAPSHOT_COMPONENT
     }
 }

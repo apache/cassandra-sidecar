@@ -130,7 +130,7 @@ public abstract class AbstractHealthServiceTest
         return options;
     }
 
-    @DisplayName("Should return HTTP 200 OK when check=False")
+    @DisplayName("Should return HTTP 200 NOT OK when check=False")
     @Test
     public void testHealthCheckReturnsCassandraNOTOK(VertxTestContext testContext)
     {

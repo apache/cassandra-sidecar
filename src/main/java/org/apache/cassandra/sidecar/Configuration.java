@@ -62,11 +62,16 @@ public class Configuration
 
     private final long rateLimitStreamRequestsPerSecond;
 
+    private final long throttleTimeoutInSeconds;
+
+    private final long throttleDelayInSeconds;
+
     public Configuration(String cassandraHost, Integer cassandraPort, List<String> cassandraDataDirs, String host,
                          Integer port, Integer healthCheckFrequencyMillis, boolean isSslEnabled,
                          @Nullable String keyStorePath, @Nullable String keyStorePassword,
                          @Nullable String trustStorePath, @Nullable String trustStorePassword,
-                         long rateLimitStreamRequestsPerSecond)
+                         long rateLimitStreamRequestsPerSecond, long throttleTimeoutInSeconds,
+                         long throttleDelayInSeconds)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
@@ -81,6 +86,8 @@ public class Configuration
         this.trustStorePassword = trustStorePassword;
         this.isSslEnabled = isSslEnabled;
         this.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond;
+        this.throttleTimeoutInSeconds = throttleTimeoutInSeconds;
+        this.throttleDelayInSeconds = throttleDelayInSeconds;
     }
 
     /**
@@ -207,6 +214,16 @@ public class Configuration
         return rateLimitStreamRequestsPerSecond;
     }
 
+    public long getThrottleTimeoutInSeconds()
+    {
+        return throttleTimeoutInSeconds;
+    }
+
+    public long getThrottleDelayInSeconds()
+    {
+        return throttleDelayInSeconds;
+    }
+
     /**
      * Configuration Builder
      */
@@ -224,6 +241,8 @@ public class Configuration
         private String trustStorePassword;
         private boolean isSslEnabled;
         private long rateLimitStreamRequestsPerSecond;
+        private long throttleTimeoutInSeconds;
+        private long throttleDelayInSeconds;
 
         public Builder setCassandraHost(String host)
         {
@@ -297,11 +316,24 @@ public class Configuration
             return this;
         }
 
+        public Builder setThrottleTimeoutInSeconds(long throttleTimeoutInSeconds)
+        {
+            this.throttleTimeoutInSeconds = throttleTimeoutInSeconds;
+            return this;
+        }
+
+        public Builder setThrottleDelayInSeconds(long throttleDelayInSeconds)
+        {
+            this.throttleDelayInSeconds = throttleDelayInSeconds;
+            return this;
+        }
+
         public Configuration build()
         {
             return new Configuration(cassandraHost, cassandraPort, cassandraDataDirs, host, port,
-                                     healthCheckFrequencyMillis, isSslEnabled, keyStorePath, keyStorePassword, trustStorePath,
-                                     trustStorePassword, rateLimitStreamRequestsPerSecond);
+                                     healthCheckFrequencyMillis, isSslEnabled, keyStorePath, keyStorePassword,
+                                     trustStorePath, trustStorePassword, rateLimitStreamRequestsPerSecond,
+                                     throttleTimeoutInSeconds, throttleDelayInSeconds);
         }
     }
 }
