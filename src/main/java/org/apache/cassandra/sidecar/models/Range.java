@@ -18,7 +18,7 @@ import org.apache.cassandra.sidecar.exceptions.RangeException;
 public class Range
 {
     private static final Pattern START_END = Pattern.compile("^(\\d+)-(\\d+)$");
-    private static final Pattern PARTIAL = Pattern.compile("^((\\d+)-)|(-(\\d+))$");
+    private static final Pattern PARTIAL = Pattern.compile("^((\\d+)-)$|^(-(\\d+))$");
     private static final String RANGE_UNIT = "bytes";
     private final long start;
     private final long end;
