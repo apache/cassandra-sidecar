@@ -17,6 +17,7 @@ import org.apache.cassandra.sidecar.utils.FilePathBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * FilePathBuilderTest
@@ -118,8 +119,7 @@ public class FilePathBuilderTest
         {
             pathBuilder.build(keyspace, table, snapshot, component);
         });
-        String msg = "/Users/saranyakrishnakumar/Desktop/cassandra-sidecar/src/test/resources" +
-                     "/instance directory empty or does not exist!";
-        assertEquals(msg, thrownException.getMessage());
+        String msg = "directory empty or does not exist!";
+        assertTrue(thrownException.getMessage().contains(msg));
     }
 }
