@@ -29,7 +29,6 @@ import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
-import org.apache.cassandra.sidecar.routes.HealthService;
 
 import static org.mockito.Mockito.mock;
 
@@ -46,14 +45,6 @@ public class TestModule extends AbstractModule
     {
         return mock(CassandraAdapterDelegate.class);
     }
-
-    @Singleton
-    @Provides
-    public HealthService healthService(CassandraAdapterDelegate delegate)
-    {
-        return new HealthService(delegate);
-    }
-
 
     @Provides
     @Singleton
