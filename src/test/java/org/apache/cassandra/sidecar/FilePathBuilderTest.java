@@ -14,6 +14,7 @@ import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import org.apache.cassandra.sidecar.utils.CachedFilePathBuilder;
 import org.apache.cassandra.sidecar.utils.FilePathBuilder;
+import org.assertj.core.api.Assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -120,6 +121,6 @@ public class FilePathBuilderTest
             pathBuilder.build(keyspace, table, snapshot, component);
         });
         String msg = "directory empty or does not exist!";
-        assertTrue(thrownException.getMessage().contains(msg));
+        Assertions.assertThat(thrownException.getMessage()).contains(msg);
     }
 }

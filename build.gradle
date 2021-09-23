@@ -170,6 +170,7 @@ dependencies {
 
     testCompile "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     testCompile "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
+    testCompile "org.assertj:assertj-core:3.14.0"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
 
     testCompile group: 'org.cassandraunit', name: 'cassandra-unit-shaded', version: '3.11.2.0'
