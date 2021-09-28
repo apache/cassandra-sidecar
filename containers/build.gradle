@@ -56,6 +56,7 @@ tasks.register("buildImageCassandra40", DockerBuildImage) {
     // tag the private repo
     tags = [localTag, remoteTag]
     inputDir = file("$buildDir/${name}")
+    buildArgs = ["CASSANDRA_40_VERSION" : "$project.cassandra40Version"]
     dependsOn "cassandra40"
 }
 
