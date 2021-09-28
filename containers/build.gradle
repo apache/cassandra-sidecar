@@ -16,9 +16,8 @@ class BuildDockerConfig extends Copy {
 }
 
 tasks.register("download40", Download) {
-    //src 'http://apache.mirrors.hoobly.com/cassandra/4.0-alpha4/apache-cassandra-4.0-alpha4-bin.tar.gz'
-    src 'https://downloads.apache.org/cassandra/4.0-beta1/apache-cassandra-4.0-beta1-bin.tar.gz'
-    dest "$buildDir/cassandra40/apache-cassandra-4.0-beta1-bin.tar.gz"
+    src "https://downloads.apache.org/cassandra/${project.cassandra40Version}/apache-cassandra-${project.cassandra40Version}-bin.tar.gz"
+    dest "$buildDir/cassandra40/apache-cassandra-${project.cassandra40Version}-bin.tar.gz"
     overwrite false
 }
 
@@ -57,6 +56,7 @@ tasks.register("buildImageCassandra40", DockerBuildImage) {
     // tag the private repo
     tags = [localTag, remoteTag]
     inputDir = file("$buildDir/${name}")
+    buildArgs = ["CASSANDRA_40_VERSION" : "$project.cassandra40Version"]
     dependsOn "cassandra40"
 }
 
