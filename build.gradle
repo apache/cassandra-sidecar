@@ -152,7 +152,7 @@ dependencies {
     compile 'io.vertx:vertx-web-client:3.8.5'
 
     compile 'io.swagger.core.v3:swagger-jaxrs2:2.1.0'
-    compile 'org.jboss.resteasy:resteasy-vertx:3.1.0.Final'
+    compile 'org.jboss.resteasy:resteasy-vertx:3.1.2.Final'
     compile group: 'org.jboss.spec.javax.servlet', name: 'jboss-servlet-api_4.0_spec', version: '2.0.0.Final'
 
     // Trying to be exactly compatible with Cassandra's deps
@@ -170,6 +170,7 @@ dependencies {
 
     testCompile "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     testCompile "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
+    testCompile "org.assertj:assertj-core:3.14.0"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
 
     testCompile group: 'org.cassandraunit', name: 'cassandra-unit-shaded', version: '3.11.2.0'
