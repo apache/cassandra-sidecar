@@ -18,13 +18,14 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.util.Collections;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
@@ -66,10 +67,14 @@ public class TestModule extends AbstractModule
         return new Configuration.Builder()
                            .setCassandraHost("INVALID_FOR_TEST")
                            .setCassandraPort(0)
+                           .setCassandraDataDirs(Collections.singletonList("src/test/resources/data"))
                            .setHost("127.0.0.1")
                            .setPort(6475)
                            .setHealthCheckFrequency(1000)
                            .setSslEnabled(false)
+                           .setRateLimitStreamRequestsPerSecond(1)
+                           .setThrottleDelayInSeconds(5)
+                           .setThrottleTimeoutInSeconds(10)
                            .build();
     }
 
@@ -85,5 +90,4 @@ public class TestModule extends AbstractModule
         builder.add(new MockCassandraFactory());
         return builder.build();
     }
-
 }

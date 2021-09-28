@@ -19,6 +19,11 @@ Apache Cassandra running on the host & port specified in `conf/sidecar.yaml`.
 
     $ ./gradlew run
   
+Configuring Cassandra Instance
+------------------------------
+
+While setting up cassandra instance, make sure the data directories of cassandra are in the path stored in sidecar.yaml file, else modify data directories path to point to the correct directories for stream APIs to work.
+
 Testing
 ---------
 
