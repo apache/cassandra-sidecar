@@ -96,11 +96,10 @@ public abstract class AbstractHealthServiceTest
             logger.error("Close event timed out.");
     }
 
-    @DisplayName("Should return HTTP 200 OK when check=True")
+    @DisplayName("Should return HTTP 200 OK if sidecar server is running")
     @Test
-    public void testHealthCheckReturnsCassandraOK(VertxTestContext testContext)
+    public void testSidecarHealthCheckReturnsOK(VertxTestContext testContext)
     {
-        when(cassandra.isUp()).thenReturn(true);
         WebClient client = getClient();
 
         client.get(config.getPort(), "localhost", "/api/v1/__health")
@@ -109,7 +108,7 @@ public abstract class AbstractHealthServiceTest
               .send(testContext.succeeding(response -> testContext.verify(() ->
               {
                   Assert.assertEquals(200, response.statusCode());
-                  Assert.assertEquals("{\"status\":{\"cassandra\":\"OK\"}}", response.body());
+                  Assert.assertEquals("{\"status\":\"OK\"}", response.body());
                   testContext.completeNow();
               })));
     }
@@ -130,21 +129,38 @@ public abstract class AbstractHealthServiceTest
         return options;
     }
 
-    @DisplayName("Should return HTTP 200 NOT OK when check=False")
+    @DisplayName("Should return HTTP 200 OK when check=True")
     @Test
-    public void testHealthCheckReturnsCassandraNOTOK(VertxTestContext testContext)
+    public void testHealthCheckReturns200OK(VertxTestContext testContext)
     {
-
-        when(cassandra.isUp()).thenReturn(false);
+        when(cassandra.isUp()).thenReturn(true);
         WebClient client = getClient();
 
-        client.get(config.getPort(), "localhost", "/api/v1/__health")
+        client.get(config.getPort(), "localhost", "/api/v1/cassandra/__health")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
               {
                   Assert.assertEquals(200, response.statusCode());
-                  Assert.assertEquals("{\"status\":{\"cassandra\":\"NOT_OK\"}}", response.body());
+                  Assert.assertEquals("{\"status\":\"OK\"}", response.body());
+                  testContext.completeNow();
+              })));
+    }
+
+    @DisplayName("Should return HTTP 503 Failure when check=False")
+    @Test
+    public void testHealthCheckReturns503Failure(VertxTestContext testContext)
+    {
+        when(cassandra.isUp()).thenReturn(false);
+        WebClient client = getClient();
+
+        client.get(config.getPort(), "localhost", "/api/v1/cassandra/__health")
+              .as(BodyCodec.string())
+              .ssl(isSslEnabled())
+              .send(testContext.succeeding(response -> testContext.verify(() ->
+              {
+                  Assert.assertEquals(503, response.statusCode());
+                  Assert.assertEquals("{\"status\":\"NOT_OK\"}", response.body());
                   testContext.completeNow();
               })));
     }

@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.routes.CassandraHealthService;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponent;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
@@ -102,7 +103,8 @@ public class MainModule extends AbstractModule
     @Singleton
     private VertxRequestHandler configureServices(Vertx vertx,
                                                   HealthService healthService,
-                                                  StreamSSTableComponent ssTableComponent)
+                                                  StreamSSTableComponent ssTableComponent,
+                                                  CassandraHealthService cassandraHealthService)
     {
         VertxResteasyDeployment deployment = new VertxResteasyDeployment();
         deployment.start();
@@ -111,6 +113,7 @@ public class MainModule extends AbstractModule
         r.addPerInstanceResource(SwaggerOpenApiResource.class);
         r.addSingletonResource(healthService);
         r.addSingletonResource(ssTableComponent);
+        r.addSingletonResource(cassandraHealthService);
 
         return new VertxRequestHandler(vertx, deployment);
     }
