@@ -176,7 +176,7 @@ public class MainModule extends AbstractModule
     public CQLSession session(Configuration config)
     {
         String host = config.getCassandraHost();
-        Integer port = config.getPort();
+        Integer port = config.getCassandraPort();
         Integer healthCheckFrequencyMillis = config.getHealthCheckFrequencyMillis();
 
         return new CQLSession(host, port, healthCheckFrequencyMillis);
