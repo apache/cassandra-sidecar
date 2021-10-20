@@ -58,6 +58,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private static final Logger logger = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private boolean registered = false;
+    private boolean delegateStarted = false;
 
     public CassandraAdapterDelegate(CassandraVersionProvider provider, CQLSession cqlSession)
     {
@@ -74,6 +75,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     public synchronized void start()
     {
         logger.info("Starting health check");
+        delegateStarted = true;
         executor.scheduleWithFixedDelay(this::healthCheck, 0, refreshRate, TimeUnit.MILLISECONDS);
         maybeRegisterHostListener();
     }
@@ -86,6 +88,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             if (session != null)
             {
                 session.getCluster().register(this);
+                registered = true;
             }
         }
     }
@@ -105,7 +108,12 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         if (session == null)
         {
             session = cqlSession.getLocalCql();
-            start();
+            // Without this check there is a cyclic dependency between these methods,
+            // start->maybeRegisterHostListener->checkSession->start
+            if (!delegateStarted)
+            {
+                start();
+            }
         }
     }
 
@@ -117,7 +125,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      */
     public synchronized void healthCheck()
     {
-        Preconditions.checkNotNull(session);
+        Preconditions.checkNotNull(session, "Session is null");
         try
         {
             String version = session.execute("select release_version from system.local")
@@ -136,6 +144,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
         catch (NoHostAvailableException e)
         {
+            logger.error("Unexpected error connecting to Cassandra instance, ", e);
             isUp = false;
         }
     }
