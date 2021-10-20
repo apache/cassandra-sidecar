@@ -101,11 +101,12 @@ public class CQLSession
                                  .withNettyOptions(nettyOptions)
                                  .build();
                 localSession = cluster.connect();
+                logger.info("Successfully connected to Casssandra instance!");
             }
         }
         catch (Exception e)
         {
-            logger.debug("Failed to reach Cassandra", e);
+            logger.error("Failed to reach Cassandra", e);
             if (cluster != null)
             {
                 try
@@ -114,7 +115,7 @@ public class CQLSession
                 }
                 catch (Exception ex)
                 {
-                    logger.debug("Failed to close cluster in cleanup", ex);
+                    logger.error("Failed to close cluster in cleanup", ex);
                 }
             }
         }
