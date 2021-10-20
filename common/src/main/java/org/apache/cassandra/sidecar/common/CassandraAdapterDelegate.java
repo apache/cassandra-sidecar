@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.common;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
@@ -32,6 +33,7 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.sun.istack.internal.NotNull;
 
 
 /**
@@ -57,8 +59,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     private static final Logger logger = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> healthCheckRoutine;
     private boolean registered = false;
-    private boolean delegateStarted = false;
 
     public CassandraAdapterDelegate(CassandraVersionProvider provider, CQLSession cqlSession)
     {
@@ -75,21 +77,31 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     public synchronized void start()
     {
         logger.info("Starting health check");
-        delegateStarted = true;
-        executor.scheduleWithFixedDelay(this::healthCheck, 0, refreshRate, TimeUnit.MILLISECONDS);
-        maybeRegisterHostListener();
+        // only schedule the health check once.
+        if (healthCheckRoutine == null)
+        {
+            healthCheckRoutine = executor.scheduleWithFixedDelay(this::healthCheck,
+                                                                 0,
+                                                                 refreshRate,
+                                                                 TimeUnit.MILLISECONDS);
+        }
     }
 
-    private synchronized void maybeRegisterHostListener()
+    private synchronized void maybeRegisterHostListener(@NotNull Session session)
     {
         if (!registered)
         {
-            checkSession();
-            if (session != null)
-            {
-                session.getCluster().register(this);
-                registered = true;
-            }
+            session.getCluster().register(this);
+            registered = true;
+        }
+    }
+
+    private synchronized void maybeUnregisterHostListener(@NotNull Session session)
+    {
+        if (registered)
+        {
+            session.getCluster().unregister(this);
+            registered = false;
         }
     }
 
@@ -100,7 +112,9 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     /**
-     * Need to be called before routing the request to the adapter
+     * Make an attempt to obtain the session object.
+     *
+     * It needs to be called before routing the request to the adapter
      * We might end up swapping the adapter out because of a server upgrade
      */
     public synchronized void checkSession()
@@ -108,12 +122,6 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         if (session == null)
         {
             session = cqlSession.getLocalCql();
-            // Without this check there is a cyclic dependency between these methods,
-            // start->maybeRegisterHostListener->checkSession->start
-            if (!delegateStarted)
-            {
-                start();
-            }
         }
     }
 
@@ -125,7 +133,17 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      */
     public synchronized void healthCheck()
     {
-        Preconditions.checkNotNull(session, "Session is null");
+        checkSession();
+
+        if (session == null)
+        {
+            logger.info("No local CQL session is available. Cassandra is down presumably.");
+            isUp = false;
+            return;
+        }
+
+        maybeRegisterHostListener(session);
+
         try
         {
             String version = session.execute("select release_version from system.local")
@@ -136,16 +154,20 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             SimpleCassandraVersion newVersion = SimpleCassandraVersion.create(version);
             if (!newVersion.equals(currentVersion))
             {
-                currentVersion = SimpleCassandraVersion.create(version);
+                currentVersion = newVersion;
                 adapter = versionProvider.getCassandra(version).create(cqlSession);
-                logger.info("Cassandra version change detected.  New adapter loaded: {}", adapter);
+                logger.info("Cassandra version change detected. New adapter loaded: {}", adapter);
             }
-            logger.info("Cassandra version {}");
+            logger.info("Cassandra version {}", version);
         }
         catch (NoHostAvailableException e)
         {
-            logger.error("Unexpected error connecting to Cassandra instance, ", e);
+            logger.error("Unexpected error connecting to Cassandra instance.", e);
+            // The cassandra node is down.
+            // Unregister the host listener and nullify the session in order to get a new object.
             isUp = false;
+            maybeUnregisterHostListener(session);
+            session = null;
         }
     }
 

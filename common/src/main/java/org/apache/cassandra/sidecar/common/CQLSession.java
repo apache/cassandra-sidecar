@@ -115,7 +115,7 @@ public class CQLSession
                 }
                 catch (Exception ex)
                 {
-                    logger.debug("Failed to close cluster in cleanup", ex);
+                    logger.error("Failed to close cluster in cleanup", ex);
                 }
             }
         }
