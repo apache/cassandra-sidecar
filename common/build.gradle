@@ -28,6 +28,7 @@ dependencies {
     compile 'com.datastax.cassandra:cassandra-driver-core:3.9.0+'
     compile group: 'com.google.inject', name: 'guice', version: '4.2.2'
     compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.7'
+    compile group: 'org.jetbrains', name: 'annotations', version: '20.1.0'
 
     implementation 'org.apache.commons:commons-lang3:3.10'
 

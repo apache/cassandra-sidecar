@@ -24,8 +24,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Preconditions;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +31,7 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
-import com.sun.istack.internal.NotNull;
+import org.jetbrains.annotations.NotNull;
 
 
 /**
@@ -54,7 +52,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private Session session;
     private SimpleCassandraVersion currentVersion;
     private ICassandraAdapter adapter;
-    private Boolean isUp = false;
+    private volatile boolean isUp = false;
     private final int refreshRate;
 
     private static final Logger logger = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
