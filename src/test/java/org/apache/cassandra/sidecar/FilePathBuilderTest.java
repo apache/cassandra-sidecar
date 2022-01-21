@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.utils.CachedFilePathBuilder;
 import org.apache.cassandra.sidecar.utils.FilePathBuilder;
 import org.assertj.core.api.Assertions;
@@ -24,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 public class FilePathBuilderTest
 {
-    private static final String expectedFilePath = "src/test/resources/data/TestKeyspace" +
+    private static final String expectedFilePath = "src/test/resources/instance1/data/TestKeyspace" +
             "/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots/TestSnapshot" +
             "/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
     private static FilePathBuilder pathBuilder;
@@ -33,7 +34,7 @@ public class FilePathBuilderTest
     public static void setUp()
     {
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
-        pathBuilder = injector.getInstance(FilePathBuilder.class);
+        pathBuilder = injector.getInstance(InstancesConfig.class).instances().get(0).pathBuilder();
     }
 
     @Test
@@ -73,7 +74,7 @@ public class FilePathBuilderTest
         {
             pathBuilder.build(keyspace, table, snapshot, component);
         });
-        String msg = "Table random not found, path searched: src/test/resources/data/TestKeyspace";
+        String msg = "Table random not found, path searched: src/test/resources/instance1/data/TestKeyspace";
         assertEquals(msg, thrownException.getMessage());
     }
 
@@ -88,7 +89,7 @@ public class FilePathBuilderTest
         {
             pathBuilder.build(keyspace, table, snapshot, component);
         });
-        String msg = "Snapshot random not found, path searched: src/test/resources/data/TestKeyspace" +
+        String msg = "Snapshot random not found, path searched: src/test/resources/instance1/data/TestKeyspace" +
                      "/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b";
         assertEquals(msg, thrownException.getMessage());
     }

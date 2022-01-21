@@ -1,15 +1,10 @@
 #
 # Cassandra SideCar configuration file
 #
-cassandra_instances:
-  - id: 1
-    host: localhost1
-    port: 9042
-    data_dirs: /cassandra/d1/data, /cassandra/d2/data
-  - id: 2
-    host: localhost2
-    port: 9042
-    data_dirs: /cassandra/d3/data, /cassandra/d4/data
+cassandra:
+  - host: localhost
+  - port: 9042
+  - data_dirs: /cassandra/d1/data, /cassandra/d2/data
 
 sidecar:
   - host: 0.0.0.0

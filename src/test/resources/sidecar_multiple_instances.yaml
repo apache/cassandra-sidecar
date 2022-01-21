@@ -15,9 +15,9 @@ sidecar:
   - host: 0.0.0.0
   - port: 9043
   - throttle:
-    - stream_requests_per_sec: 5000
-    - delay_sec: 5
-    - timeout_sec: 10
+      - stream_requests_per_sec: 5000
+      - delay_sec: 5
+      - timeout_sec: 10
 #
 # Enable SSL configuration (Disabled by default)
 #

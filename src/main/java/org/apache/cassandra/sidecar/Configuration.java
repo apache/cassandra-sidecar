@@ -18,23 +18,17 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.util.Collection;
-import java.util.List;
 import javax.annotation.Nullable;
+
+import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 
 /**
  * Sidecar configuration
  */
 public class Configuration
 {
-    /* Cassandra Host */
-    private final String cassandraHost;
-
-    /* Cassandra Port */
-    private final Integer cassandraPort;
-
-    /* Cassandra Data Dirs */
-    private Collection<String> cassandraDataDirs;
+    /* Cassandra Instances Config */
+    private final InstancesConfig instancesConfig;
 
     /* Sidecar's HTTP REST API port */
     private final Integer port;
@@ -66,16 +60,13 @@ public class Configuration
 
     private final long throttleDelayInSeconds;
 
-    public Configuration(String cassandraHost, Integer cassandraPort, List<String> cassandraDataDirs, String host,
-                         Integer port, Integer healthCheckFrequencyMillis, boolean isSslEnabled,
-                         @Nullable String keyStorePath, @Nullable String keyStorePassword,
+    public Configuration(InstancesConfig instancesConfig, String host, Integer port, Integer healthCheckFrequencyMillis,
+                         boolean isSslEnabled, @Nullable String keyStorePath, @Nullable String keyStorePassword,
                          @Nullable String trustStorePath, @Nullable String trustStorePassword,
                          long rateLimitStreamRequestsPerSecond, long throttleTimeoutInSeconds,
                          long throttleDelayInSeconds)
     {
-        this.cassandraHost = cassandraHost;
-        this.cassandraPort = cassandraPort;
-        this.cassandraDataDirs = cassandraDataDirs;
+        this.instancesConfig = instancesConfig;
         this.host = host;
         this.port = port;
         this.healthCheckFrequencyMillis = healthCheckFrequencyMillis;
@@ -91,33 +82,13 @@ public class Configuration
     }
 
     /**
-     * Get the Cassandra host
+     * Get Cassandra Instances config
      *
      * @return
      */
-    public String getCassandraHost()
+    public InstancesConfig getInstancesConfig()
     {
-        return cassandraHost;
-    }
-
-    /**
-     * Get the Cassandra port
-     *
-     * @return
-     */
-    public Integer getCassandraPort()
-    {
-        return cassandraPort;
-    }
-
-    /**
-     * Get Cassandra data dirs
-     *
-     * @return
-     */
-    public Collection<String> getCassandraDataDirs()
-    {
-        return cassandraDataDirs;
+        return instancesConfig;
     }
 
     /**
@@ -229,9 +200,7 @@ public class Configuration
      */
     public static class Builder
     {
-        private String cassandraHost;
-        private Integer cassandraPort;
-        private List<String> cassandraDataDirs;
+        private InstancesConfig instancesConfig;
         private String host;
         private Integer port;
         private Integer healthCheckFrequencyMillis;
@@ -244,21 +213,9 @@ public class Configuration
         private long throttleTimeoutInSeconds;
         private long throttleDelayInSeconds;
 
-        public Builder setCassandraHost(String host)
+        public Builder setInstancesConfig(InstancesConfig instancesConfig)
         {
-            this.cassandraHost = host;
-            return this;
-        }
-
-        public Builder setCassandraPort(Integer port)
-        {
-            this.cassandraPort = port;
-            return this;
-        }
-
-        public Builder setCassandraDataDirs(List<String> dataDirs)
-        {
-            this.cassandraDataDirs = dataDirs;
+            this.instancesConfig = instancesConfig;
             return this;
         }
 
@@ -330,10 +287,10 @@ public class Configuration
 
         public Configuration build()
         {
-            return new Configuration(cassandraHost, cassandraPort, cassandraDataDirs, host, port,
-                                     healthCheckFrequencyMillis, isSslEnabled, keyStorePath, keyStorePassword,
-                                     trustStorePath, trustStorePassword, rateLimitStreamRequestsPerSecond,
-                                     throttleTimeoutInSeconds, throttleDelayInSeconds);
+            return new Configuration(instancesConfig, host, port, healthCheckFrequencyMillis, isSslEnabled,
+                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword,
+                                     rateLimitStreamRequestsPerSecond, throttleTimeoutInSeconds,
+                                     throttleDelayInSeconds);
         }
     }
 }

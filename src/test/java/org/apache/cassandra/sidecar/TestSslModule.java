@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar;
 
 import java.io.File;
-import java.util.Collections;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,9 +50,7 @@ public class TestSslModule extends TestModule
         }
 
         return new Configuration.Builder()
-                           .setCassandraHost("INVALID_FOR_TEST")
-                           .setCassandraPort(0)
-                           .setCassandraDataDirs(Collections.singletonList("src/test/resources/data"))
+                           .setInstancesConfig(getInstancesConfig())
                            .setHost("127.0.0.1")
                            .setPort(6475)
                            .setHealthCheckFrequency(1000)

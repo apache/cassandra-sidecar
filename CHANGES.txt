@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Optionally support multiple cassandra instances in Sidecar (CASSANDRASC-33)
  * Call the start method of CassandraAdaptorDelegate to start periodic health check (CASSANDRASC-32)
  * Avoid having sidecar's health response code depend on Cassandra's health information (CASSANDRASC-29)
  * Add Stream SSTable API to Sidecar to stream SSTable components through zero copy streaming (CASSANDRASC-28)

@@ -41,9 +41,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.routes.HealthService;
-import static org.mockito.Mockito.when;
 
 /**
  * Provides basic tests shared between SSL and normal http health services
@@ -55,7 +53,6 @@ public abstract class AbstractHealthServiceTest
     private Vertx vertx;
     private Configuration config;
     private HttpServer server;
-    private CassandraAdapterDelegate cassandra;
 
     public abstract boolean isSslEnabled();
 
@@ -72,8 +69,6 @@ public abstract class AbstractHealthServiceTest
     {
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(getTestModule()));
         server = injector.getInstance(HttpServer.class);
-        cassandra = injector.getInstance(CassandraAdapterDelegate.class);
-
         service = injector.getInstance(HealthService.class);
         vertx = injector.getInstance(Vertx.class);
         config = injector.getInstance(Configuration.class);
@@ -129,11 +124,10 @@ public abstract class AbstractHealthServiceTest
         return options;
     }
 
-    @DisplayName("Should return HTTP 200 OK when check=True")
+    @DisplayName("Should return HTTP 200 OK when cassandra instance is up")
     @Test
     public void testHealthCheckReturns200OK(VertxTestContext testContext)
     {
-        when(cassandra.isUp()).thenReturn(true);
         WebClient client = getClient();
 
         client.get(config.getPort(), "localhost", "/api/v1/cassandra/__health")
@@ -147,14 +141,13 @@ public abstract class AbstractHealthServiceTest
               })));
     }
 
-    @DisplayName("Should return HTTP 503 Failure when check=False")
+    @DisplayName("Should return HTTP 503 Failure when instance is down")
     @Test
     public void testHealthCheckReturns503Failure(VertxTestContext testContext)
     {
-        when(cassandra.isUp()).thenReturn(false);
         WebClient client = getClient();
 
-        client.get(config.getPort(), "localhost", "/api/v1/cassandra/__health")
+        client.get(config.getPort(), "localhost", "/api/v1/cassandra/instance/2/__health")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
