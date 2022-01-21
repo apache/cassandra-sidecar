@@ -18,7 +18,9 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,11 +28,17 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
+import org.apache.cassandra.sidecar.utils.CachedFilePathBuilder;
 
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Provides the basic dependencies for unit tests.
@@ -56,9 +64,7 @@ public class TestModule extends AbstractModule
     protected Configuration abstractConfig()
     {
         return new Configuration.Builder()
-                           .setCassandraHost("INVALID_FOR_TEST")
-                           .setCassandraPort(0)
-                           .setCassandraDataDirs(Collections.singletonList("src/test/resources/data"))
+                           .setInstancesConfig(getInstancesConfig())
                            .setHost("127.0.0.1")
                            .setPort(6475)
                            .setHealthCheckFrequency(1000)
@@ -67,6 +73,41 @@ public class TestModule extends AbstractModule
                            .setThrottleDelayInSeconds(5)
                            .setThrottleTimeoutInSeconds(10)
                            .build();
+    }
+
+    @Provides
+    @Singleton
+    public InstancesConfig getInstancesConfig()
+    {
+        return new InstancesConfigImpl(getInstanceMetas());
+    }
+
+    public List<InstanceMetadata> getInstanceMetas()
+    {
+        InstanceMetadata instance1 = getMockInstance("localhost", 1, "src/test/resources/instance1/data", true);
+        InstanceMetadata instance2 = getMockInstance("localhost2", 2, "src/test/resources/instance2/data", false);
+        InstanceMetadata instance3 = getMockInstance("localhost3", 3, "src/test/resources/instance3/data", true);
+        final List<InstanceMetadata> instanceMetas = new ArrayList<>();
+        instanceMetas.add(instance1);
+        instanceMetas.add(instance2);
+        instanceMetas.add(instance3);
+        return instanceMetas;
+    }
+
+    private InstanceMetadata getMockInstance(String host, int id, String dataDir, boolean isUp)
+    {
+        InstanceMetadata instanceMeta = mock(InstanceMetadata.class);
+        when(instanceMeta.id()).thenReturn(id);
+        when(instanceMeta.host()).thenReturn(host);
+        when(instanceMeta.port()).thenReturn(6475);
+        when(instanceMeta.pathBuilder()).thenReturn(new CachedFilePathBuilder(Collections.singletonList(dataDir)));
+        when(instanceMeta.dataDirs()).thenReturn(Collections.singletonList(dataDir));
+
+        CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
+        when(delegate.isUp()).thenReturn(isUp);
+        doNothing().when(delegate).start();
+        when(instanceMeta.delegate()).thenReturn(delegate);
+        return instanceMeta;
     }
 
     /**

@@ -1,6 +1,11 @@
 #
 # Cassandra SideCar configuration file
 #
+cassandra:
+  - host: localhost
+  - port: 9042
+  - data_dirs: /cassandra/d1/data, /cassandra/d2/data
+
 cassandra_instances:
   - id: 1
     host: localhost1
@@ -15,9 +20,9 @@ sidecar:
   - host: 0.0.0.0
   - port: 9043
   - throttle:
-    - stream_requests_per_sec: 5000
-    - delay_sec: 5
-    - timeout_sec: 10
+      - stream_requests_per_sec: 5000
+      - delay_sec: 5
+      - timeout_sec: 10
 #
 # Enable SSL configuration (Disabled by default)
 #

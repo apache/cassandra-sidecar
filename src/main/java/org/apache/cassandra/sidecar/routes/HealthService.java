@@ -30,8 +30,6 @@ import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.vertx.core.json.Json;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 /**
  * Provides a simple REST endpoint to determine if Sidecar is available
@@ -40,8 +38,6 @@ import io.vertx.core.logging.LoggerFactory;
 @Path("/api/v1/__health")
 public class HealthService
 {
-    private static final Logger logger = LoggerFactory.getLogger(HealthService.class);
-
     @Operation(summary = "Health Check for Sidecar's status",
     description = "Returns HTTP 200 if Sidecar is available")
     @Produces(MediaType.APPLICATION_JSON)

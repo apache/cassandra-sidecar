@@ -22,10 +22,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SidecarRateLimiter;
+import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.configuration2.YAMLConfiguration;
 import org.apache.commons.configuration2.ex.ConfigurationException;
+import org.apache.commons.configuration2.tree.ImmutableNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,15 +49,17 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
+import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.CQLSession;
-import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.routes.CassandraHealthService;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponent;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
-import org.apache.cassandra.sidecar.utils.CachedFilePathBuilder;
-import org.apache.cassandra.sidecar.utils.FilePathBuilder;
+import org.apache.cassandra.sidecar.utils.YAMLKeyConstants;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
 import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
 import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
@@ -137,7 +146,7 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Configuration configuration() throws ConfigurationException, IOException
+    public Configuration configuration(InstancesConfig instancesConfig) throws ConfigurationException, IOException
     {
         final String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
         logger.info("Reading configuration from {}", confPath);
@@ -150,20 +159,18 @@ public class MainModule extends AbstractModule
             yamlConf.read(stream);
 
             return new Configuration.Builder()
-                    .setCassandraHost(yamlConf.get(String.class, "cassandra.host"))
-                    .setCassandraPort(yamlConf.get(Integer.class, "cassandra.port"))
-                    .setCassandraDataDirs(yamlConf.getList(String.class, "cassandra.data_dirs"))
-                    .setHost(yamlConf.get(String.class, "sidecar.host"))
-                    .setPort(yamlConf.get(Integer.class, "sidecar.port"))
-                    .setHealthCheckFrequency(yamlConf.get(Integer.class, "healthcheck.poll_freq_millis"))
-                    .setKeyStorePath(yamlConf.get(String.class, "sidecar.ssl.keystore.path", null))
-                    .setKeyStorePassword(yamlConf.get(String.class, "sidecar.ssl.keystore.password", null))
-                    .setTrustStorePath(yamlConf.get(String.class, "sidecar.ssl.truststore.path", null))
-                    .setTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
-                    .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
-                    .setRateLimitStreamRequestsPerSecond(yamlConf.getLong("sidecar.throttle.stream_requests_per_sec"))
-                    .setThrottleTimeoutInSeconds(yamlConf.getLong("sidecar.throttle.timeout_sec"))
-                    .setThrottleDelayInSeconds(yamlConf.getLong("sidecar.throttle.delay_sec"))
+                    .setInstancesConfig(instancesConfig)
+                    .setHost(yamlConf.get(String.class, YAMLKeyConstants.HOST))
+                    .setPort(yamlConf.get(Integer.class, YAMLKeyConstants.PORT))
+                    .setHealthCheckFrequency(yamlConf.get(Integer.class, YAMLKeyConstants.HEALTH_CHECK_FREQ))
+                    .setKeyStorePath(yamlConf.get(String.class, YAMLKeyConstants.KEYSTORE_PATH, null))
+                    .setKeyStorePassword(yamlConf.get(String.class, YAMLKeyConstants.KEYSTORE_PASSWORD, null))
+                    .setTrustStorePath(yamlConf.get(String.class, YAMLKeyConstants.TRUSTSTORE_PATH, null))
+                    .setTrustStorePassword(yamlConf.get(String.class, YAMLKeyConstants.TRUSTSTORE_PASSWORD, null))
+                    .setSslEnabled(yamlConf.get(Boolean.class, YAMLKeyConstants.SSL_ENABLED, false))
+                    .setRateLimitStreamRequestsPerSecond(yamlConf.getLong(YAMLKeyConstants.STREAM_REQUESTS_PER_SEC))
+                    .setThrottleTimeoutInSeconds(yamlConf.getLong(YAMLKeyConstants.THROTTLE_TIMEOUT_SEC))
+                    .setThrottleDelayInSeconds(yamlConf.getLong(YAMLKeyConstants.THROTTLE_DELAY_SEC))
                     .build();
         }
         catch (MalformedURLException e)
@@ -173,13 +180,62 @@ public class MainModule extends AbstractModule
     }
 
     @Provides
-    public CQLSession session(Configuration config)
+    @Singleton
+    public InstancesConfig getInstancesConfig(CassandraVersionProvider versionProvider)
+        throws ConfigurationException, IOException
     {
-        String host = config.getCassandraHost();
-        Integer port = config.getPort();
-        Integer healthCheckFrequencyMillis = config.getHealthCheckFrequencyMillis();
+        final String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
+        URL url = new URL(confPath);
 
-        return new CQLSession(host, port, healthCheckFrequencyMillis);
+        try
+        {
+            YAMLConfiguration yamlConf = new YAMLConfiguration();
+            InputStream stream = url.openStream();
+            yamlConf.read(stream);
+            return readInstancesConfig(yamlConf, versionProvider);
+        }
+        catch (MalformedURLException e)
+        {
+            throw new ConfigurationException(String.format("Unable to parse cluster information from '%s'", url));
+        }
+    }
+
+    @VisibleForTesting
+    public InstancesConfigImpl readInstancesConfig(YAMLConfiguration yamlConf, CassandraVersionProvider versionProvider)
+    {
+        final int healthCheckFrequencyMillis = yamlConf.get(Integer.class, YAMLKeyConstants.HEALTH_CHECK_FREQ);
+
+        /* Since we are supporting handling multiple instances in Sidecar optionally, we prefer reading single instance
+         * data over reading multiple instances section
+         */
+        org.apache.commons.configuration2.Configuration singleInstanceConf = yamlConf.subset(YAMLKeyConstants.CASSANDRA_INSTANCE);
+        if (singleInstanceConf != null && !singleInstanceConf.isEmpty())
+        {
+            String host = singleInstanceConf.get(String.class, YAMLKeyConstants.CASSANDRA_INSTANCE_HOST);
+            int port = singleInstanceConf.get(Integer.class, YAMLKeyConstants.CASSANDRA_INSTANCE_PORT);
+            String dataDirs = singleInstanceConf.get(String.class, YAMLKeyConstants.CASSANDRA_INSTANCE_DATA_DIRS);
+            CQLSession session = new CQLSession(host, port, healthCheckFrequencyMillis);
+            return new InstancesConfigImpl(Collections.singletonList(new InstanceMetadataImpl(1, host, port,
+                Collections.unmodifiableList(Arrays.asList(dataDirs.split(","))), session,
+                versionProvider, healthCheckFrequencyMillis)));
+        }
+
+        List<HierarchicalConfiguration<ImmutableNode>> instances = yamlConf.configurationsAt(
+        YAMLKeyConstants.CASSANDRA_INSTANCES);
+        final List<InstanceMetadata> instanceMetas = new LinkedList<>();
+        for (HierarchicalConfiguration<ImmutableNode> instance : instances)
+        {
+            int id = instance.get(Integer.class, YAMLKeyConstants.CASSANDRA_INSTANCE_ID);
+            String host = instance.get(String.class, YAMLKeyConstants.CASSANDRA_INSTANCE_HOST);
+            int port = instance.get(Integer.class, YAMLKeyConstants.CASSANDRA_INSTANCE_PORT);
+            String dataDirs = instance.get(String.class, YAMLKeyConstants.CASSANDRA_INSTANCE_DATA_DIRS);
+
+            CQLSession session = new CQLSession(host, port, healthCheckFrequencyMillis);
+            instanceMetas.add(new InstanceMetadataImpl(id, host, port,
+                Collections.unmodifiableList(Arrays.asList(dataDirs.split(","))), session, versionProvider,
+                healthCheckFrequencyMillis));
+        }
+        return new InstancesConfigImpl(instanceMetas);
     }
 
     @Provides
@@ -192,22 +248,9 @@ public class MainModule extends AbstractModule
     }
 
     @Provides
-    public CassandraAdapterDelegate cassandraAdapterDelegate(CassandraVersionProvider provider, CQLSession session,
-                                                             Configuration config)
-    {
-        return new CassandraAdapterDelegate(provider, session, config.getHealthCheckFrequencyMillis());
-    }
-
-    @Provides
+    @Singleton
     public SidecarRateLimiter rateLimiter(Configuration config)
     {
         return SidecarRateLimiter.create(config.getRateLimitStreamRequestsPerSecond());
-    }
-
-    @Provides
-    @Singleton
-    public FilePathBuilder filePathBuilder(Configuration config)
-    {
-        return new CachedFilePathBuilder(config.getCassandraDataDirs());
     }
 }

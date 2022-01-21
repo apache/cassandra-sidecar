@@ -27,24 +27,22 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServer;
-import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.utils.SslUtils;
 
 /**
  * Main class for initiating the Cassandra sidecar
+ * Note: remember to start and stop all delegates of instances
  */
 @Singleton
 public class CassandraSidecarDaemon
 {
     private static final Logger logger = LoggerFactory.getLogger(CassandraSidecarDaemon.class);
-    private final CassandraAdapterDelegate delegate;
     private final HttpServer server;
     private final Configuration config;
 
     @Inject
-    public CassandraSidecarDaemon(CassandraAdapterDelegate delegate, HttpServer server, Configuration config)
+    public CassandraSidecarDaemon(HttpServer server, Configuration config)
     {
-        this.delegate = delegate;
         this.server = server;
         this.config = config;
     }
@@ -53,16 +51,16 @@ public class CassandraSidecarDaemon
     {
         banner(System.out);
         validate();
-        delegate.start();
         logger.info("Starting Cassandra Sidecar on {}:{}", config.getHost(), config.getPort());
         server.listen(config.getPort(), config.getHost());
+        this.config.getInstancesConfig().instances().forEach(instanceMetadata -> instanceMetadata.delegate().start());
     }
 
     public void stop()
     {
         logger.info("Stopping Cassandra Sidecar");
-        delegate.stop();
         server.close();
+        this.config.getInstancesConfig().instances().forEach(instanceMetadata -> instanceMetadata.delegate().stop());
     }
 
     private void banner(PrintStream out)

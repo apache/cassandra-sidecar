@@ -83,7 +83,7 @@ allprojects {
         configFile file("${project.rootDir}/checkstyle.xml")
     }
     spotbugs {
-        toolVersion = '4.0.0'
+        toolVersion = '4.2.3'
         excludeFilter = file("${project.rootDir}/spotbugs-exclude.xml")
     }
 
@@ -147,12 +147,12 @@ configurations {
 }
 
 dependencies {
-    compile 'io.vertx:vertx-web:3.8.5'
-    compile 'io.vertx:vertx-dropwizard-metrics:3.8.5'
-    compile 'io.vertx:vertx-web-client:3.8.5'
+    compile "io.vertx:vertx-web:${project.vertxVersion}"
+    compile "io.vertx:vertx-dropwizard-metrics:${project.vertxVersion}"
+    compile "io.vertx:vertx-web-client:${project.vertxVersion}"
 
     compile 'io.swagger.core.v3:swagger-jaxrs2:2.1.0'
-    compile 'org.jboss.resteasy:resteasy-vertx:3.1.2.Final'
+    compile "org.jboss.resteasy:resteasy-vertx:4.7.4.Final"
     compile group: 'org.jboss.spec.javax.servlet', name: 'jboss-servlet-api_4.0_spec', version: '2.0.0.Final'
 
     // Trying to be exactly compatible with Cassandra's deps
@@ -176,8 +176,8 @@ dependencies {
     testCompile group: 'org.cassandraunit', name: 'cassandra-unit-shaded', version: '3.11.2.0'
     testCompile 'com.datastax.cassandra:cassandra-driver-core:3.9.0:tests'
     testCompile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
-    testCompile group: 'io.vertx', name: 'vertx-junit5', version: '3.8.5'
-
+    testCompile group: 'io.vertx', name: 'vertx-junit5', version: "${project.vertxVersion}"
+    
     compile project(":common")
     compile project(":cassandra40")
 }
