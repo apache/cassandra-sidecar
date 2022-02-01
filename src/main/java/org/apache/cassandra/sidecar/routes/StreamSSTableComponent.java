@@ -23,6 +23,8 @@ import org.apache.cassandra.sidecar.utils.FilePathBuilder;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
+import static org.apache.cassandra.sidecar.utils.RequestUtils.extractHostAddressWithoutPort;
+
 /**
  * Handler for serving SSTable components from snapshot folders
  */
@@ -52,9 +54,7 @@ public class StreamSSTableComponent
                                         @PathParam("component") String component, @HeaderParam("Range") String range,
                                         @Context HttpServerResponse resp, @Context HttpServerRequest req)
     {
-        final String host = req.host().contains(":")
-                            ? req.host().substring(0, req.host().indexOf(":"))
-                            : req.host();
+        final String host = extractHostAddressWithoutPort(req.host());
         stream(new ComponentInfo(keyspace, table, snapshot, component), range, null, host, resp);
     }
 

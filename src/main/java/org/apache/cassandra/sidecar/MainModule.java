@@ -208,7 +208,8 @@ public class MainModule extends AbstractModule
         /* Since we are supporting handling multiple instances in Sidecar optionally, we prefer reading single instance
          * data over reading multiple instances section
          */
-        org.apache.commons.configuration2.Configuration singleInstanceConf = yamlConf.subset(YAMLKeyConstants.CASSANDRA_INSTANCE);
+        org.apache.commons.configuration2.Configuration singleInstanceConf = yamlConf.subset(
+            YAMLKeyConstants.CASSANDRA_INSTANCE);
         if (singleInstanceConf != null && !singleInstanceConf.isEmpty())
         {
             String host = singleInstanceConf.get(String.class, YAMLKeyConstants.CASSANDRA_INSTANCE_HOST);
@@ -249,7 +250,7 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarRateLimiter rateLimiter(Configuration config)
+    public SidecarRateLimiter streamRequestRateLimiter(Configuration config)
     {
         return SidecarRateLimiter.create(config.getRateLimitStreamRequestsPerSecond());
     }
