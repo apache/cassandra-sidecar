@@ -129,10 +129,10 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Router vertxRouter(Vertx vertx)
+    public Router vertxRouter(Vertx vertx, LoggerHandler loggerHandler)
     {
         Router router = Router.router(vertx);
-        router.route().handler(LoggerHandler.create());
+        router.route().handler(loggerHandler);
 
         // Static web assets for Swagger
         StaticHandler swaggerStatic = StaticHandler.create("META-INF/resources/webjars/swagger-ui");
@@ -253,5 +253,12 @@ public class MainModule extends AbstractModule
     public SidecarRateLimiter streamRequestRateLimiter(Configuration config)
     {
         return SidecarRateLimiter.create(config.getRateLimitStreamRequestsPerSecond());
+    }
+
+    @Provides
+    @Singleton
+    public LoggerHandler loggerHandler()
+    {
+        return LoggerHandler.create();
     }
 }
