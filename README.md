@@ -34,8 +34,8 @@ The easiest way to get started locally is by installing [Minikube](https://kuber
 Start minikube with a command similar to the following.  Use a netmask appropriate for your local network, and allow minikube to use as much RAM as you can afford to:
 
     minikube start --insecure-registry "192.168.0.0/16" --addons registry --memory 8G --cpus=4
-    
-This will create a MiniKub cluster using the default driver.  On OSX, this is hyperkit.  
+
+This will create a MiniKube cluster using the default driver.  On OSX, this is hyperkit.
 
 Enabling the tunnel is required in certain environments for tests to connect to the instances.
 
@@ -72,6 +72,11 @@ CircleCI Testing
 You will need to use the "Add Projects" function of CircleCI to set up CircleCI on your fork.  When promoted to create a branch, 
 do not replace the CircleCI config, choose the option to do it manually.  CircleCI will pick up the in project configuration.
 
+Contributing
+------------
+
+We warmly welcome and appreciate contributions from the community. Please see [CONTRIBUTING.md](CONTRIBUTING.md)
+if you wish to submit pull requests.
 
 Wondering where to go from here?
 --------------------------------
