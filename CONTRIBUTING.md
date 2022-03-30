@@ -165,7 +165,7 @@ public class MD5ChecksumVerifier implements ChecksumVerifier {
   }
 ```
 
-A new implementation of `CheksumVerifier` that uses a different hashing algorithm can be injected later.
+A new implementation of `ChecksumVerifier` that uses a different hashing algorithm can be injected later.
 
 ### <a name="chaining-handlers"></a>Handler Chaining
 
