@@ -12,11 +12,13 @@ import org.slf4j.Logger;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.ext.web.handler.HttpException;
@@ -93,24 +95,24 @@ public class LoggerHandlerInjectionTest
     private void helper(String requestURI, VertxTestContext testContext, int expectedStatusCode, String expectedBody)
     {
         WebClient client = WebClient.create(vertx);
+        Handler<HttpResponse<String>> responseVerifier = response -> testContext.verify(
+        () -> {
+            assertThat(response.statusCode()).isEqualTo(expectedStatusCode);
+            if (expectedBody == null)
+            {
+                assertThat(response.body()).isNull();
+            }
+            else
+            {
+                assertThat(response.body()).isEqualTo(expectedBody);
+            }
+            testContext.completeNow();
+            verify(logger, times(1)).info("{}", expectedStatusCode);
+        });
         client.get(config.getPort(), "localhost", requestURI)
               .as(BodyCodec.string())
               .ssl(false)
-              .send(testContext.succeeding(response ->
-                                           testContext.verify(() ->
-                                                              {
-                                                                  assertThat(response.statusCode()).isEqualTo(expectedStatusCode);
-                                                                  if (expectedBody == null)
-                                                                  {
-                                                                      assertThat(response.body()).isNull();
-                                                                  }
-                                                                  else
-                                                                  {
-                                                                      assertThat(response.body()).isEqualTo(expectedBody);
-                                                                  }
-                                                                  testContext.completeNow();
-                                                                  verify(logger, times(1)).info("{}", expectedStatusCode);
-                                                              })));
+              .send(testContext.succeeding(responseVerifier));
     }
 
     private static class FakeLoggerHandler implements LoggerHandler
