@@ -135,8 +135,8 @@ public class MainModule extends AbstractModule
     {
         Router router = Router.router(vertx);
         router.route()
-              .handler(loggerHandler)
-              .failureHandler(errorHandler);
+              .failureHandler(errorHandler)
+              .handler(loggerHandler);
 
         // Static web assets for Swagger
         StaticHandler swaggerStatic = StaticHandler.create("META-INF/resources/webjars/swagger-ui");

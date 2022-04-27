@@ -35,6 +35,9 @@ import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Tests for the {@link JsonErrorHandler} class
+ */
 @ExtendWith(VertxExtension.class)
 class JsonErrorHandlerTest
 {
@@ -76,7 +79,8 @@ class JsonErrorHandlerTest
     @Test
     public void testHttpExceptionHandling() throws InterruptedException
     {
-        testHelper("/http-exception", result -> {
+        testHelper("/http-exception", result ->
+        {
             assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
             JsonObject response = result.bodyAsJsonObject();
             assertThat(response.getString("status")).isEqualTo("Fail");
@@ -87,7 +91,8 @@ class JsonErrorHandlerTest
     @Test
     public void testRequestTimeoutHandling() throws InterruptedException
     {
-        testHelper("/timeout", result -> {
+        testHelper("/timeout", result ->
+        {
             assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.REQUEST_TIMEOUT.code());
             assertThat(result.bodyAsJsonObject().getString("status")).isEqualTo("Request Timeout");
         }, true);
@@ -96,7 +101,8 @@ class JsonErrorHandlerTest
     @Test
     public void testUnhandledThrowable() throws InterruptedException
     {
-        testHelper("/RuntimeException", result -> {
+        testHelper("/RuntimeException", result ->
+        {
             assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
             assertThat(result.bodyAsString()).isEqualTo("Internal Server Error");
         }, false);
@@ -105,10 +111,13 @@ class JsonErrorHandlerTest
     @Test
     public void testUnhandledNotFound() throws InterruptedException
     {
-        testHelper("/does-not-exist", result -> assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code()), false);
+        testHelper("/does-not-exist", result ->
+                                      assertThat(result.statusCode())
+                                      .isEqualTo(HttpResponseStatus.NOT_FOUND.code()), false);
     }
 
-    private void testHelper(String requestURI, Consumer<HttpResponse<Buffer>> consumer, boolean expectJsonContentType) throws InterruptedException
+    private void testHelper(String requestURI, Consumer<HttpResponse<Buffer>> consumer, boolean expectJsonContentType)
+    throws InterruptedException
     {
         VertxTestContext testContext = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
@@ -119,7 +128,8 @@ class JsonErrorHandlerTest
                         client.close();
                         if (expectJsonContentType)
                         {
-                            assertThat(resp.result().getHeader(HttpHeaders.CONTENT_TYPE.toString())).isEqualTo("application/json");
+                            assertThat(resp.result().getHeader(HttpHeaders.CONTENT_TYPE.toString()))
+                            .isEqualTo("application/json");
                         }
                         consumer.accept(resp.result());
                         testContext.completeNow();
@@ -132,15 +142,19 @@ class JsonErrorHandlerTest
         Router router = Router.router(vertx);
         router.route().failureHandler(new JsonErrorHandler())
               .handler(TimeoutHandler.create(250, HttpResponseStatus.REQUEST_TIMEOUT.code()));
-        router.get("/http-exception").handler(ctx -> {
-            throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(), "Payload is written to JSON");
-        });
-        router.get("/timeout").handler(ctx -> {
-            // wait for the timeout
-        });
-        router.get("/RuntimeException").handler(ctx -> {
-            throw new RuntimeException("oops");
-        });
+        router.get("/http-exception").handler(ctx ->
+                                              {
+                                                  throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
+                                                                          "Payload is written to JSON");
+                                              });
+        router.get("/timeout").handler(ctx ->
+                                       {
+                                           // wait for the timeout
+                                       });
+        router.get("/RuntimeException").handler(ctx ->
+                                                {
+                                                    throw new RuntimeException("oops");
+                                                });
         return router;
     }
 }

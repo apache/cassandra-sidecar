@@ -36,6 +36,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+/**
+ * Tests for the {@link LoggerHandler} injection tests
+ */
 @DisplayName("LoggerHandler Injection Test")
 @ExtendWith(VertxExtension.class)
 public class LoggerHandlerInjectionTest
@@ -49,23 +52,28 @@ public class LoggerHandlerInjectionTest
     void setUp() throws InterruptedException
     {
         FakeLoggerHandler loggerHandler = new FakeLoggerHandler(logger);
-        Injector injector = Guice.createInjector(Modules.override(Modules.override(new MainModule()).with(new TestModule()))
-                                                        .with(binder -> binder.bind(LoggerHandler.class).toInstance(loggerHandler)));
+        Injector injector = Guice.createInjector(Modules.override(Modules.override(new MainModule())
+                                                                         .with(new TestModule()))
+                                                        .with(binder -> binder.bind(LoggerHandler.class)
+                                                                              .toInstance(loggerHandler)));
         vertx = injector.getInstance(Vertx.class);
         config = injector.getInstance(Configuration.class);
         Router router = injector.getInstance(Router.class);
 
-        router.get("/500-route").handler(p -> {
-            throw new RuntimeException("Fails with 500");
-        });
+        router.get("/500-route").handler(p ->
+                                         {
+                                             throw new RuntimeException("Fails with 500");
+                                         });
 
-        router.get("/404-route").handler(p -> {
-            throw new HttpException(NOT_FOUND.code(), "Sorry, it's not here");
-        });
+        router.get("/404-route").handler(p ->
+                                         {
+                                             throw new HttpException(NOT_FOUND.code(), "Sorry, it's not here");
+                                         });
 
-        router.get("/204-route").handler(p -> {
-            throw new HttpException(NO_CONTENT.code(), "Sorry, no content");
-        });
+        router.get("/204-route").handler(p ->
+                                         {
+                                             throw new HttpException(NO_CONTENT.code(), "Sorry, no content");
+                                         });
 
         VertxTestContext context = new VertxTestContext();
         server = injector.getInstance(HttpServer.class);
@@ -80,10 +88,8 @@ public class LoggerHandlerInjectionTest
         final CountDownLatch closeLatch = new CountDownLatch(1);
         server.close(res -> closeLatch.countDown());
         vertx.close();
-        if (closeLatch.await(60, TimeUnit.SECONDS))
-            logger.info("Close event received before timeout.");
-        else
-            logger.error("Close event timed out.");
+        if (closeLatch.await(60, TimeUnit.SECONDS)) logger.info("Close event received before timeout.");
+        else logger.error("Close event timed out.");
     }
 
     @DisplayName("Should log at error level when the request fails with a 500 code")
@@ -110,8 +116,8 @@ public class LoggerHandlerInjectionTest
     private void helper(String requestURI, VertxTestContext testContext, int expectedStatusCode, String expectedBody)
     {
         WebClient client = WebClient.create(vertx);
-        Handler<HttpResponse<String>> responseVerifier = response -> testContext.verify(
-        () -> {
+        Handler<HttpResponse<String>> responseVerifier = response -> testContext.verify(() ->
+        {
             assertThat(response.statusCode()).isEqualTo(expectedStatusCode);
             if (expectedBody == null)
             {
@@ -125,8 +131,7 @@ public class LoggerHandlerInjectionTest
             verify(logger, times(1)).info("{}", expectedStatusCode);
         });
         client.get(config.getPort(), "localhost", requestURI)
-              .as(BodyCodec.string())
-              .ssl(false)
+              .as(BodyCodec.string()).ssl(false)
               .send(testContext.succeeding(responseVerifier));
     }
 
