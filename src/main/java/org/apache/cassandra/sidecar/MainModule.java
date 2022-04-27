@@ -46,6 +46,7 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.JksOptions;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
@@ -129,10 +130,12 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Router vertxRouter(Vertx vertx, LoggerHandler loggerHandler)
+    public Router vertxRouter(Vertx vertx, LoggerHandler loggerHandler, ErrorHandler errorHandler)
     {
         Router router = Router.router(vertx);
-        router.route().handler(loggerHandler);
+        router.route()
+              .failureHandler(errorHandler)
+              .handler(loggerHandler);
 
         // Static web assets for Swagger
         StaticHandler swaggerStatic = StaticHandler.create("META-INF/resources/webjars/swagger-ui");
@@ -260,5 +263,12 @@ public class MainModule extends AbstractModule
     public LoggerHandler loggerHandler()
     {
         return LoggerHandler.create();
+    }
+
+    @Provides
+    @Singleton
+    public ErrorHandler errorHandler(Vertx vertx)
+    {
+        return ErrorHandler.create(vertx);
     }
 }
