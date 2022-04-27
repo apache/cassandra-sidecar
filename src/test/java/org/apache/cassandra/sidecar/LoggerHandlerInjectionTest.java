@@ -1,8 +1,10 @@
 package org.apache.cassandra.sidecar;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,7 @@ public class LoggerHandlerInjectionTest
     private Vertx vertx;
     private Configuration config;
     private final Logger logger = mock(Logger.class);
+    private HttpServer server;
 
     @BeforeEach
     void setUp() throws InterruptedException
@@ -65,10 +68,22 @@ public class LoggerHandlerInjectionTest
         });
 
         VertxTestContext context = new VertxTestContext();
-        HttpServer server = injector.getInstance(HttpServer.class);
+        server = injector.getInstance(HttpServer.class);
         server.listen(config.getPort(), context.succeedingThenComplete());
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
+    }
+
+    @AfterEach
+    void tearDown() throws InterruptedException
+    {
+        final CountDownLatch closeLatch = new CountDownLatch(1);
+        server.close(res -> closeLatch.countDown());
+        vertx.close();
+        if (closeLatch.await(60, TimeUnit.SECONDS))
+            logger.info("Close event received before timeout.");
+        else
+            logger.error("Close event timed out.");
     }
 
     @DisplayName("Should log at error level when the request fails with a 500 code")
@@ -82,7 +97,7 @@ public class LoggerHandlerInjectionTest
     @Test
     public void testInjectedLoggerHandlerLogsAtWarnLevel(VertxTestContext testContext)
     {
-        helper("/404-route", testContext, 404, "Not Found");
+        helper("/404-route", testContext, 404, "{\"status\":\"Fail\",\"message\":\"Sorry, it's not here\"}");
     }
 
     @DisplayName("Should log at info level when the request returns with a 500 error")

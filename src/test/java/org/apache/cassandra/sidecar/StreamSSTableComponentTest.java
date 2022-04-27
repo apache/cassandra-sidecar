@@ -20,7 +20,7 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test for StreamSSTableComponent
@@ -42,7 +42,7 @@ public class StreamSSTableComponentTest
         config = injector.getInstance(Configuration.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), context.completing());
+        server.listen(config.getPort(), context.succeedingThenComplete());
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
@@ -69,8 +69,8 @@ public class StreamSSTableComponentTest
                 .as(BodyCodec.buffer())
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(200, response.statusCode());
-                    assertEquals("data", response.bodyAsString());
+                    assertThat(response.statusCode()).isEqualTo(200);
+                    assertThat(response.bodyAsString()).isEqualTo("data");
                     context.completeNow();
                 })));
     }
@@ -84,7 +84,7 @@ public class StreamSSTableComponentTest
         client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(404, response.statusCode());
+                    assertThat(response.statusCode()).isEqualTo(404);
                     context.completeNow();
                 })));
     }
@@ -98,7 +98,7 @@ public class StreamSSTableComponentTest
         client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(404, response.statusCode());
+                    assertThat(response.statusCode()).isEqualTo(404);
                     context.completeNow();
                 })));
     }
@@ -112,8 +112,8 @@ public class StreamSSTableComponentTest
         client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(403, response.statusCode());
-                    assertEquals("system keyspace is forbidden", response.statusMessage());
+                    assertThat(response.statusCode()).isEqualTo(403);
+                    assertThat(response.statusMessage()).isEqualTo("system keyspace is forbidden");
                     context.completeNow();
                 })));
     }
@@ -127,8 +127,8 @@ public class StreamSSTableComponentTest
         client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(400, response.statusCode());
-                    assertEquals("Invalid path params found", response.statusMessage());
+                    assertThat(response.statusCode()).isEqualTo(400);
+                    assertThat(response.statusMessage()).isEqualTo("Invalid path params found");
                     context.completeNow();
                 })));
     }
@@ -142,8 +142,8 @@ public class StreamSSTableComponentTest
         client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(400, response.statusCode());
-                    assertEquals("Invalid path params found", response.statusMessage());
+                    assertThat(response.statusCode()).isEqualTo(400);
+                    assertThat(response.statusMessage()).isEqualTo("Invalid path params found");
                     context.completeNow();
                 })));
     }
@@ -157,8 +157,8 @@ public class StreamSSTableComponentTest
         client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(400, response.statusCode());
-                    assertEquals("Invalid path params found", response.statusMessage());
+                    assertThat(response.statusCode()).isEqualTo(400);
+                    assertThat(response.statusMessage()).isEqualTo("Invalid path params found");
                     context.completeNow();
                 })));
     }
@@ -174,8 +174,8 @@ public class StreamSSTableComponentTest
                 .as(BodyCodec.buffer())
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(200, response.statusCode());
-                    assertEquals("data", response.bodyAsString());
+                    assertThat(response.statusCode()).isEqualTo(200);
+                    assertThat(response.bodyAsString()).isEqualTo("data");
                     context.completeNow();
                 })));
     }
@@ -190,7 +190,7 @@ public class StreamSSTableComponentTest
                 .putHeader("Range", "bytes=4-3")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(416, response.statusCode());
+                    assertThat(response.statusCode()).isEqualTo(416);
                     context.completeNow();
                 })));
     }
@@ -205,7 +205,7 @@ public class StreamSSTableComponentTest
                 .putHeader("Range", "bytes=5-9")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(416, response.statusCode());
+                    assertThat(response.statusCode()).isEqualTo(416);
                     context.completeNow();
                 })));
     }
@@ -220,7 +220,7 @@ public class StreamSSTableComponentTest
                 .putHeader("Range", "bytes=5-")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(416, response.statusCode());
+                    assertThat(response.statusCode()).isEqualTo(416);
                     context.completeNow();
                 })));
     }
@@ -236,8 +236,8 @@ public class StreamSSTableComponentTest
                 .as(BodyCodec.buffer())
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(200, response.statusCode());
-                    assertEquals("data", response.bodyAsString());
+                    assertThat(response.statusCode()).isEqualTo(200);
+                    assertThat(response.bodyAsString()).isEqualTo("data");
                     context.completeNow();
                 })));
     }
@@ -253,8 +253,8 @@ public class StreamSSTableComponentTest
                 .as(BodyCodec.buffer())
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(206, response.statusCode());
-                    assertEquals("dat", response.bodyAsString());
+                    assertThat(response.statusCode()).isEqualTo(206);
+                    assertThat(response.bodyAsString()).isEqualTo("dat");
                     context.completeNow();
                 })));
     }
@@ -270,8 +270,8 @@ public class StreamSSTableComponentTest
                 .as(BodyCodec.buffer())
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(206, response.statusCode());
-                    assertEquals("ta", response.bodyAsString());
+                    assertThat(response.statusCode()).isEqualTo(206);
+                    assertThat(response.bodyAsString()).isEqualTo("ta");
                     context.completeNow();
                 })));
     }
@@ -286,7 +286,7 @@ public class StreamSSTableComponentTest
                 .putHeader("Range", "bytes=-5")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(416, response.statusCode());
+                    assertThat(response.statusCode()).isEqualTo(416);
                     context.completeNow();
                 })));
     }
@@ -301,7 +301,7 @@ public class StreamSSTableComponentTest
                 .putHeader("Range", "bits=0-2")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertEquals(416, response.statusCode());
+                    assertThat(response.statusCode()).isEqualTo(416);
                     context.completeNow();
                 })));
     }
@@ -317,8 +317,8 @@ public class StreamSSTableComponentTest
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() ->
               {
-                  assertEquals(200, response.statusCode());
-                  assertEquals("data", response.bodyAsString());
+                  assertThat(response.statusCode()).isEqualTo(200);
+                  assertThat(response.bodyAsString()).isEqualTo("data");
                   context.completeNow();
               })));
     }

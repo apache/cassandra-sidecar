@@ -46,6 +46,7 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.JksOptions;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
@@ -59,6 +60,7 @@ import org.apache.cassandra.sidecar.routes.CassandraHealthService;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponent;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
+import org.apache.cassandra.sidecar.utils.JsonErrorHandler;
 import org.apache.cassandra.sidecar.utils.YAMLKeyConstants;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
 import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
@@ -129,10 +131,12 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Router vertxRouter(Vertx vertx, LoggerHandler loggerHandler)
+    public Router vertxRouter(Vertx vertx, LoggerHandler loggerHandler, ErrorHandler errorHandler)
     {
         Router router = Router.router(vertx);
-        router.route().handler(loggerHandler);
+        router.route()
+              .handler(loggerHandler)
+              .failureHandler(errorHandler);
 
         // Static web assets for Swagger
         StaticHandler swaggerStatic = StaticHandler.create("META-INF/resources/webjars/swagger-ui");
@@ -260,5 +264,12 @@ public class MainModule extends AbstractModule
     public LoggerHandler loggerHandler()
     {
         return LoggerHandler.create();
+    }
+
+    @Provides
+    @Singleton
+    public ErrorHandler errorHandler()
+    {
+        return new JsonErrorHandler();
     }
 }
