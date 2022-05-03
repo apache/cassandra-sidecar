@@ -339,9 +339,9 @@ class CassandraPod
             coreV1Api.deleteNamespacedService(podName, namespace, null, null, null, null, null, null);
 
         }
-        catch (Exception ignored)
+        catch (Exception ex)
         {
-            logger.info("Could not delete service {}", podName);
+            logger.info(String.format("Could not delete service %s", podName), ex);
         }
     }
 
@@ -356,9 +356,9 @@ class CassandraPod
             logger.info("Deleting pod {}", podName);
             coreV1Api.deleteNamespacedPod(podName, namespace, null, null, null, null, null, null);
         }
-        catch (Exception ignored)
+        catch (Exception ex)
         {
-            logger.error("Exception when stopping pod: {}", ignored.getMessage());
+            logger.error(String.format("Unable to delete pod %s", podName), ex);
         }
     }
 }
