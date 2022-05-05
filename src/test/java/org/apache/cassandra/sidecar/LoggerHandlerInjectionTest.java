@@ -96,14 +96,15 @@ public class LoggerHandlerInjectionTest
     @Test
     public void testInjectedLoggerHandlerLogsAtErrorLevel(VertxTestContext testContext)
     {
-        helper("/500-route", testContext, 500, "Internal Server Error");
+        helper("/500-route", testContext, 500,
+               "Error 500: Internal Server Error");
     }
 
     @DisplayName("Should log at warn level when the request fails with a 404 error")
     @Test
     public void testInjectedLoggerHandlerLogsAtWarnLevel(VertxTestContext testContext)
     {
-        helper("/404-route", testContext, 404, "{\"status\":\"Fail\",\"message\":\"Sorry, it's not here\"}");
+        helper("/404-route", testContext, 404, "Error 404: Not Found");
     }
 
     @DisplayName("Should log at info level when the request returns with a 500 error")
