@@ -60,7 +60,6 @@ import org.apache.cassandra.sidecar.routes.CassandraHealthService;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponent;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
-import org.apache.cassandra.sidecar.utils.JsonErrorHandler;
 import org.apache.cassandra.sidecar.utils.YAMLKeyConstants;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
 import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
@@ -268,8 +267,8 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public ErrorHandler errorHandler()
+    public ErrorHandler errorHandler(Vertx vertx)
     {
-        return new JsonErrorHandler();
+        return ErrorHandler.create(vertx);
     }
 }
