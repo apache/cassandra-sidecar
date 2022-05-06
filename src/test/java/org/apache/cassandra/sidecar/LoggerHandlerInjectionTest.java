@@ -29,6 +29,7 @@ import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -99,7 +100,7 @@ public class LoggerHandlerInjectionTest
     @Test
     public void testInjectedLoggerHandlerLogsAtErrorLevel(VertxTestContext testContext)
     {
-        helper("/500-route", testContext, 500,
+        helper("/500-route", testContext, INTERNAL_SERVER_ERROR.code(),
                "Error 500: Internal Server Error");
     }
 
@@ -107,14 +108,14 @@ public class LoggerHandlerInjectionTest
     @Test
     public void testInjectedLoggerHandlerLogsAtWarnLevel(VertxTestContext testContext)
     {
-        helper("/404-route", testContext, 404, "Error 404: Not Found");
+        helper("/404-route", testContext, NOT_FOUND.code(), "Error 404: Not Found");
     }
 
-    @DisplayName("Should log at info level when the request returns with a 500 error")
+    @DisplayName("Should log at info level when the request returns with a 204 status code")
     @Test
     public void testInjectedLoggerHandlerLogsAtInfoLevel(VertxTestContext testContext)
     {
-        helper("/204-route", testContext, 204, null);
+        helper("/204-route", testContext, NO_CONTENT.code(), null);
     }
 
     private void helper(String requestURI, VertxTestContext testContext, int expectedStatusCode, String expectedBody)
