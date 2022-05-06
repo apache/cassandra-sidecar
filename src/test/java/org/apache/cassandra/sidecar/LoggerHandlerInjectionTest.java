@@ -88,8 +88,11 @@ public class LoggerHandlerInjectionTest
         final CountDownLatch closeLatch = new CountDownLatch(1);
         server.close(res -> closeLatch.countDown());
         vertx.close();
-        if (closeLatch.await(60, TimeUnit.SECONDS)) logger.info("Close event received before timeout.");
-        else logger.error("Close event timed out.");
+        if (closeLatch.await(60, TimeUnit.SECONDS)) {
+            logger.info("Close event received before timeout.");
+        } else {
+            logger.error("Close event timed out.");
+        }
     }
 
     @DisplayName("Should log at error level when the request fails with a 500 code")
