@@ -35,20 +35,6 @@ public class InstanceMetadataFetcher
                : instancesConfig.instanceFromId(instanceId).delegate();
     }
 
-    public FilePathBuilder getPathBuilder(String host)
-    {
-        return host == null
-               ? getFirstInstance().pathBuilder()
-               : instancesConfig.instanceFromHost(host).pathBuilder();
-    }
-
-    public FilePathBuilder getPathBuilder(Integer instanceId)
-    {
-        return instanceId == null
-               ? getFirstInstance().pathBuilder()
-               : instancesConfig.instanceFromId(instanceId).pathBuilder();
-    }
-
     private InstanceMetadata getFirstInstance()
     {
         if (instancesConfig.instances().isEmpty())

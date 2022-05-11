@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.utils.FilePathBuilder;
 
 /**
  * Metadata of an instance
@@ -40,9 +39,4 @@ public interface InstanceMetadata
      * Delegate specific for the instance.
      */
     CassandraAdapterDelegate delegate();
-
-    /**
-     * Maintain one path builder for one instance.
-     */
-    FilePathBuilder pathBuilder();
 }

@@ -8,7 +8,7 @@ version: 2.1
 aliases:
   base_job: &base_job
     machine:
-      image: ubuntu-1604:202007-01
+      image: ubuntu-2004:202010-01
     working_directory: ~/repo
     environment:
       TERM: dumb
@@ -18,6 +18,7 @@ aliases:
     working_directory: ~/repo
     environment:
       TERM: dumb
+      TZ: "America/Los_Angeles"
 
 # we might modify this in the future to accept a parameter for the java package to install
 commands:
@@ -71,7 +72,7 @@ jobs:
       - checkout
       - install_common
       - install_kube
-      
+
       - install_java:
           version: adoptopenjdk-8-hotspot
       - run: sudo update-java-alternatives -s adoptopenjdk-8-hotspot-amd64 && java -version
@@ -141,9 +142,12 @@ jobs:
   rpm_build_install:
     <<: *centos
     steps:
+      - run: sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+      - run: sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+      - run: dnf -qy distro-sync
+      - run: dnf -qy install java-11-openjdk git
       - checkout
-      - run: yum install -y java-11-openjdk-devel  # the image uses root by default, no need for sudo
-      - run: JAVA_HOME=/usr/lib/jvm/java-11-openjdk ./gradlew -i buildRpm
+      - run: JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.13.0.8-4.el8_5.x86_64 ${PWD}/gradlew -i buildRpm
       - run: yum install -y ./build/distributions/cassandra-sidecar*.rpm
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
 

@@ -1,24 +1,31 @@
 package org.apache.cassandra.sidecar.models;
 
-import java.io.File;
-
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.net.SocketAddress;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static org.apache.cassandra.sidecar.utils.RequestUtils.extractHostAddressWithoutPort;
 
 /**
  * Wrapper around HttpServerResponse
  */
 public class HttpResponse
 {
+    private final String host;
+    private final HttpServerRequest request;
     private final HttpServerResponse response;
 
-    public HttpResponse(HttpServerResponse response)
+    public HttpResponse(HttpServerRequest request, HttpServerResponse response)
     {
+        this.request = request;
         this.response = response;
+        this.host = extractHostAddressWithoutPort(request.host());
     }
 
     public void setRetryAfterHeader(long microsToWait)
@@ -63,26 +70,42 @@ public class HttpResponse
         response.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()).setStatusMessage(msg).end();
     }
 
-    public void sendFile(File file)
+    /**
+     * Send a range in a file asynchronously
+     *
+     * @param fileName   file to send
+     * @param fileLength the size of the file to send
+     * @param range      range to send
+     * @return a future completed with the body result
+     */
+    public Future<Void> sendFile(String fileName, long fileLength, Range range)
     {
-        response.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-                .putHeader(HttpHeaderNames.CONTENT_LENGTH, Long.toString(file.length()))
-                .sendFile(file.getAbsolutePath());
-    }
+        // notify client we support range requests
+        response.putHeader(HttpHeaders.ACCEPT_RANGES, "bytes");
 
-    public void sendFile(File file, Range range)
-    {
-        if (range.length() != file.length())
+        if (range.length() != fileLength)
         {
             setPartialContentStatus(range);
         }
-        response.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-                .putHeader(HttpHeaderNames.CONTENT_LENGTH, Long.toString(range.length()))
-                .sendFile(file.getAbsolutePath(), range.start(), range.length());
+
+        return response.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+                       .putHeader(HttpHeaderNames.CONTENT_LENGTH, Long.toString(range.length()))
+                       .sendFile(fileName, range.start(), range.length());
     }
 
-    public void setForbiddenStatus(String msg)
+    /**
+     * @return the remote address for this connection, possibly {@code null} (e.g a server bound on a domain socket).
+     */
+    public SocketAddress remoteAddress()
     {
-        response.setStatusCode(HttpResponseStatus.FORBIDDEN.code()).setStatusMessage(msg).end();
+        return request.remoteAddress();
+    }
+
+    /**
+     * @return the request host without the port
+     */
+    public String host()
+    {
+        return host;
     }
 }

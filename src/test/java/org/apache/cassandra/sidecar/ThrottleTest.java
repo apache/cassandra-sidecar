@@ -67,7 +67,7 @@ public class ThrottleTest
     @Test
     void testStreamRequestsThrottled() throws Exception
     {
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
 
         for (int i = 0; i < 20; i++)
@@ -89,7 +89,7 @@ public class ThrottleTest
     private void unblockingClientRequest(String route)
     {
         WebClient client = WebClient.create(vertx);
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + route)
+        client.get(config.getPort(), "localhost", "/api/v1" + route)
                 .as(BodyCodec.buffer())
                 .send(resp ->
                 {
@@ -101,7 +101,7 @@ public class ThrottleTest
     {
         WebClient client = WebClient.create(vertx);
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + route)
+        client.get(config.getPort(), "localhost", "/api/v1" + route)
                 .as(BodyCodec.buffer())
                 .send(resp -> future.complete(resp.result()));
         return future.get();

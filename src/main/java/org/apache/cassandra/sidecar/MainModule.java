@@ -41,6 +41,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.JksOptions;
@@ -57,8 +58,9 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.routes.CassandraHealthService;
+import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.HealthService;
-import org.apache.cassandra.sidecar.routes.StreamSSTableComponent;
+import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
 import org.apache.cassandra.sidecar.utils.YAMLKeyConstants;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
@@ -71,6 +73,7 @@ import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
 public class MainModule extends AbstractModule
 {
     private static final Logger logger = LoggerFactory.getLogger(MainModule.class);
+    private static final String V1_API_VERSION = "/api/v1";
 
     @Provides
     @Singleton
@@ -113,7 +116,6 @@ public class MainModule extends AbstractModule
     @Singleton
     private VertxRequestHandler configureServices(Vertx vertx,
                                                   HealthService healthService,
-                                                  StreamSSTableComponent ssTableComponent,
                                                   CassandraHealthService cassandraHealthService)
     {
         VertxResteasyDeployment deployment = new VertxResteasyDeployment();
@@ -122,7 +124,6 @@ public class MainModule extends AbstractModule
 
         r.addPerInstanceResource(SwaggerOpenApiResource.class);
         r.addSingletonResource(healthService);
-        r.addSingletonResource(ssTableComponent);
         r.addSingletonResource(cassandraHealthService);
 
         return new VertxRequestHandler(vertx, deployment);
@@ -130,7 +131,11 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Router vertxRouter(Vertx vertx, LoggerHandler loggerHandler, ErrorHandler errorHandler)
+    public Router vertxRouter(Vertx vertx,
+                              StreamSSTableComponentHandler streamSSTableComponentHandler,
+                              FileStreamHandler fileStreamHandler,
+                              LoggerHandler loggerHandler,
+                              ErrorHandler errorHandler)
     {
         Router router = Router.router(vertx);
         router.route()
@@ -144,6 +149,21 @@ public class MainModule extends AbstractModule
         // Docs index.html page
         StaticHandler docs = StaticHandler.create("docs");
         router.route().path("/docs/*").handler(docs);
+
+        // add custom routers
+        final String componentRoute = "/keyspace/:keyspace/table/:table/snapshots/:snapshot/component/:component";
+        final String defaultStreamRoute = V1_API_VERSION + componentRoute;
+        final String instanceSpecificStreamRoute = V1_API_VERSION + "/instance/:instanceId" + componentRoute;
+        router.route().method(HttpMethod.GET)
+              .path(defaultStreamRoute)
+              .handler(streamSSTableComponentHandler::handleAllRequests)
+              .handler(fileStreamHandler);
+
+        router.route().method(HttpMethod.GET)
+              .path(instanceSpecificStreamRoute)
+              .handler(streamSSTableComponentHandler::handlePerInstanceRequests)
+              .handler(fileStreamHandler);
+
         return router;
     }
 

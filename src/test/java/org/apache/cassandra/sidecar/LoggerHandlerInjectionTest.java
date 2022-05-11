@@ -89,9 +89,12 @@ public class LoggerHandlerInjectionTest
         final CountDownLatch closeLatch = new CountDownLatch(1);
         server.close(res -> closeLatch.countDown());
         vertx.close();
-        if (closeLatch.await(60, TimeUnit.SECONDS)) {
+        if (closeLatch.await(60, TimeUnit.SECONDS))
+        {
             logger.info("Close event received before timeout.");
-        } else {
+        }
+        else
+        {
             logger.error("Close event timed out.");
         }
     }
