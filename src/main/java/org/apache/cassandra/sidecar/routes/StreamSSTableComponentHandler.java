@@ -14,7 +14,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.data.StreamSSTableComponentRequest;
-import org.apache.cassandra.sidecar.utils.SnapshotPathBuilder;
+import org.apache.cassandra.sidecar.snapshots.PathBuilder;
 
 import static org.apache.cassandra.sidecar.utils.RequestUtils.extractHostAddressWithoutPort;
 
@@ -27,13 +27,13 @@ public class StreamSSTableComponentHandler
 {
     private static final Logger logger = LoggerFactory.getLogger(StreamSSTableComponentHandler.class);
 
-    private final SnapshotPathBuilder builder;
+    private final PathBuilder snapshotPathBuilder;
     private final InstancesConfig instancesConfig;
 
     @Inject
-    public StreamSSTableComponentHandler(SnapshotPathBuilder builder, InstancesConfig instancesConfig)
+    public StreamSSTableComponentHandler(PathBuilder snapshotPathBuilder, InstancesConfig instancesConfig)
     {
-        this.builder = builder;
+        this.snapshotPathBuilder = snapshotPathBuilder;
         this.instancesConfig = instancesConfig;
     }
 
@@ -66,15 +66,15 @@ public class StreamSSTableComponentHandler
         logger.info("StreamSSTableComponentHandler received request: {} from: {}. Instance: {}", requestParams,
                     remoteAddress, host);
 
-        builder.build(host, requestParams)
-               .onSuccess(path ->
+        snapshotPathBuilder.build(host, requestParams)
+                           .onSuccess(path ->
                {
                    logger.debug("StreamSSTableComponentHandler handled {} for client {}. Instance: {}", path,
                                 remoteAddress, host);
                    context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
                           .next();
                })
-               .onFailure(cause ->
+                           .onFailure(cause ->
                {
                    if (cause instanceof FileNotFoundException)
                    {
