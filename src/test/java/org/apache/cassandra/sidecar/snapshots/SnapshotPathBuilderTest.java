@@ -7,10 +7,10 @@ import io.vertx.junit5.VertxExtension;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 
 @ExtendWith(VertxExtension.class)
-class SnapshotPathBuilderTest extends AbstractPathBuilderTest
+class SnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
 {
-    PathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig)
+    SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig)
     {
-        return new PathBuilder(vertx.fileSystem(), instancesConfig);
+        return new SnapshotPathBuilder(vertx.fileSystem(), instancesConfig);
     }
 }

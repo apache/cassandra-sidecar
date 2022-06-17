@@ -14,7 +14,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.data.StreamSSTableComponentRequest;
-import org.apache.cassandra.sidecar.snapshots.PathBuilder;
+import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 
 import static org.apache.cassandra.sidecar.utils.RequestUtils.extractHostAddressWithoutPort;
 
@@ -27,11 +27,11 @@ public class StreamSSTableComponentHandler
 {
     private static final Logger logger = LoggerFactory.getLogger(StreamSSTableComponentHandler.class);
 
-    private final PathBuilder snapshotPathBuilder;
+    private final SnapshotPathBuilder snapshotPathBuilder;
     private final InstancesConfig instancesConfig;
 
     @Inject
-    public StreamSSTableComponentHandler(PathBuilder snapshotPathBuilder, InstancesConfig instancesConfig)
+    public StreamSSTableComponentHandler(SnapshotPathBuilder snapshotPathBuilder, InstancesConfig instancesConfig)
     {
         this.snapshotPathBuilder = snapshotPathBuilder;
         this.instancesConfig = instancesConfig;

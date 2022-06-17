@@ -29,23 +29,23 @@ import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
  * This class builds the snapshot path on a given host validating that it exists
  */
 @Singleton
-public class PathBuilder
+public class SnapshotPathBuilder
 {
-    private static final Logger logger = LoggerFactory.getLogger(PathBuilder.class);
+    private static final Logger logger = LoggerFactory.getLogger(SnapshotPathBuilder.class);
     private static final String DATA_SUB_DIR = "/data";
     public static final String SNAPSHOTS_DIR_NAME = "snapshots";
     protected final FileSystem fs;
     protected final InstancesConfig instancesConfig;
 
     /**
-     * Creates a new PathBuilder for snapshots of an instance with the given {@code fs filesystem} and
+     * Creates a new SnapshotPathBuilder for snapshots of an instance with the given {@code fs filesystem} and
      * {@code instancesConfig Cassandra configuration}.
      *
      * @param fs              the underlying filesystem
      * @param instancesConfig the configuration for Cassandra
      */
     @Inject
-    public PathBuilder(FileSystem fs, InstancesConfig instancesConfig)
+    public SnapshotPathBuilder(FileSystem fs, InstancesConfig instancesConfig)
     {
         this.fs = fs;
         this.instancesConfig = instancesConfig;

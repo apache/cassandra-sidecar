@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.from;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-abstract class AbstractPathBuilderTest
+abstract class AbstractSnapshotPathBuilderTest
 {
     @TempDir
     File dataDir0;
@@ -37,7 +37,7 @@ abstract class AbstractPathBuilderTest
     @TempDir
     File dataDir1;
 
-    PathBuilder instance;
+    SnapshotPathBuilder instance;
     Vertx vertx = Vertx.vertx();
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -116,7 +116,7 @@ abstract class AbstractPathBuilderTest
         assertThat(dataDir1.delete());
     }
 
-    abstract PathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig);
+    abstract SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig);
 
     @Test
     void failsWhenKeyspaceIsNull()
@@ -538,7 +538,7 @@ abstract class AbstractPathBuilderTest
 
         String expectedPath;
         // a_table and a_table-<TABLE_UUID> - the latter should be picked
-        PathBuilder newBuilder = new PathBuilder(vertx.fileSystem(), mockInstancesConfig);
+        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx.fileSystem(), mockInstancesConfig);
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot/data.db";
         succeedsWhenComponentExists(newBuilder
                                     .build("localhost",
@@ -603,7 +603,7 @@ abstract class AbstractPathBuilderTest
         assertThat(table4New.setLastModified(System.currentTimeMillis() + 2000000));
 
         String expectedPath;
-        PathBuilder newBuilder = new PathBuilder(vertx.fileSystem(), mockInstancesConfig);
+        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx.fileSystem(), mockInstancesConfig);
         // table4-a72c8740a57611ec935db766a70c44a1 is the last modified, so it is the correct directory
         expectedPath = table4New.getAbsolutePath()
                        + "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/data.db";
