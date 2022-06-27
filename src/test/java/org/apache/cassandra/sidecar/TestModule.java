@@ -28,13 +28,14 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import io.vertx.core.Vertx;
+import io.vertx.core.file.FileSystem;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
-import org.apache.cassandra.sidecar.utils.CachedFilePathBuilder;
 
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -100,7 +101,6 @@ public class TestModule extends AbstractModule
         when(instanceMeta.id()).thenReturn(id);
         when(instanceMeta.host()).thenReturn(host);
         when(instanceMeta.port()).thenReturn(6475);
-        when(instanceMeta.pathBuilder()).thenReturn(new CachedFilePathBuilder(Collections.singletonList(dataDir)));
         when(instanceMeta.dataDirs()).thenReturn(Collections.singletonList(dataDir));
 
         CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
@@ -108,6 +108,13 @@ public class TestModule extends AbstractModule
         doNothing().when(delegate).start();
         when(instanceMeta.delegate()).thenReturn(delegate);
         return instanceMeta;
+    }
+
+    @Provides
+    @Singleton
+    public FileSystem fileSystem(Vertx vertx)
+    {
+        return vertx.fileSystem();
     }
 
     /**

@@ -69,9 +69,9 @@ public class StreamSSTableComponentTest
     void testRoute(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .as(BodyCodec.buffer())
                 .send(context.succeeding(response -> context.verify(() ->
                 {
@@ -85,9 +85,9 @@ public class StreamSSTableComponentTest
     void testKeyspaceNotFound(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/random/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/random/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
                     assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
@@ -99,9 +99,9 @@ public class StreamSSTableComponentTest
     void testSnapshotNotFound(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/random/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
                     assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
@@ -113,13 +113,13 @@ public class StreamSSTableComponentTest
     void testForbiddenKeyspace(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/system/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/system/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
                     assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
-                    assertThat(response.statusMessage()).isEqualTo("system keyspace is forbidden");
+                    assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
                     context.completeNow();
                 })));
     }
@@ -128,13 +128,13 @@ public class StreamSSTableComponentTest
     void testIncorrectKeyspaceFormat(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/k*s/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/k*s/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
                     assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                    assertThat(response.statusMessage()).isEqualTo("Invalid path params found");
+                    assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
                     context.completeNow();
                 })));
     }
@@ -143,13 +143,13 @@ public class StreamSSTableComponentTest
     void testIncorrectComponentFormat(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data...db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
                     assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                    assertThat(response.statusMessage()).isEqualTo("Invalid path params found");
+                    assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
                     context.completeNow();
                 })));
     }
@@ -158,13 +158,13 @@ public class StreamSSTableComponentTest
     void testAccessDeniedToCertainComponents(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Digest.crc32d";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .send(context.succeeding(response -> context.verify(() ->
                 {
                     assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                    assertThat(response.statusMessage()).isEqualTo("Invalid path params found");
+                    assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
                     context.completeNow();
                 })));
     }
@@ -173,9 +173,9 @@ public class StreamSSTableComponentTest
     void testPartialTableName(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable/snapshot/TestSnapshot/component" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable/snapshots/TestSnapshot/component" +
                 "/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .putHeader("Range", "bytes=0-")
                 .as(BodyCodec.buffer())
                 .send(context.succeeding(response -> context.verify(() ->
@@ -190,9 +190,9 @@ public class StreamSSTableComponentTest
     void testInvalidRange(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .putHeader("Range", "bytes=4-3")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
@@ -205,9 +205,9 @@ public class StreamSSTableComponentTest
     void testRangeExceeds(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .putHeader("Range", "bytes=5-9")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
@@ -220,9 +220,9 @@ public class StreamSSTableComponentTest
     void testPartialRangeExceeds(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .putHeader("Range", "bytes=5-")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
@@ -235,9 +235,9 @@ public class StreamSSTableComponentTest
     void testRangeBoundaryExceeds(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .putHeader("Range", "bytes=0-999999")
                 .as(BodyCodec.buffer())
                 .send(context.succeeding(response -> context.verify(() ->
@@ -252,9 +252,9 @@ public class StreamSSTableComponentTest
     void testPartialRangeStreamed(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .putHeader("Range", "bytes=0-2") // 3 bytes streamed
                 .as(BodyCodec.buffer())
                 .send(context.succeeding(response -> context.verify(() ->
@@ -269,9 +269,9 @@ public class StreamSSTableComponentTest
     void testSuffixRange(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .putHeader("Range", "bytes=-2") // last 2 bytes streamed
                 .as(BodyCodec.buffer())
                 .send(context.succeeding(response -> context.verify(() ->
@@ -286,9 +286,9 @@ public class StreamSSTableComponentTest
     void testSuffixRangeExceeds(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .putHeader("Range", "bytes=-5")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
@@ -301,9 +301,9 @@ public class StreamSSTableComponentTest
     void testInvalidRangeUnit(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshot" +
+        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
                 "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
                 .putHeader("Range", "bits=0-2")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
@@ -317,9 +317,9 @@ public class StreamSSTableComponentTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/" +
-                           "snapshot/TestSnapshot/component/" +
+                           "snapshots/TestSnapshot/component/" +
                            "TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/stream/instance/2" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1/instance/2" + testRoute)
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() ->
               {
