@@ -119,7 +119,8 @@ public class TestModule extends AbstractModule
 
     /**
      * The Mock factory is used for testing purposes, enabling us to test all failures and possible results
-     * @return
+     *
+     * @return the {@link CassandraVersionProvider}
      */
     @Provides
     @Singleton
