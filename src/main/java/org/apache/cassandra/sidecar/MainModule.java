@@ -41,7 +41,6 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.JksOptions;
@@ -60,6 +59,7 @@ import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.routes.CassandraHealthService;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.HealthService;
+import org.apache.cassandra.sidecar.routes.ListSnapshotFilesHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
 import org.apache.cassandra.sidecar.utils.YAMLKeyConstants;
@@ -73,7 +73,7 @@ import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
 public class MainModule extends AbstractModule
 {
     private static final Logger logger = LoggerFactory.getLogger(MainModule.class);
-    private static final String V1_API_VERSION = "/api/v1";
+    private static final String API_V1_VERSION = "/api/v1";
 
     @Provides
     @Singleton
@@ -134,6 +134,7 @@ public class MainModule extends AbstractModule
     public Router vertxRouter(Vertx vertx,
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
                               FileStreamHandler fileStreamHandler,
+                              ListSnapshotFilesHandler listSnapshotFilesHandler,
                               LoggerHandler loggerHandler,
                               ErrorHandler errorHandler)
     {
@@ -152,17 +153,19 @@ public class MainModule extends AbstractModule
 
         // add custom routers
         final String componentRoute = "/keyspace/:keyspace/table/:table/snapshots/:snapshot/component/:component";
-        final String defaultStreamRoute = V1_API_VERSION + componentRoute;
-        final String instanceSpecificStreamRoute = V1_API_VERSION + "/instance/:instanceId" + componentRoute;
-        router.route().method(HttpMethod.GET)
-              .path(defaultStreamRoute)
-              .handler(streamSSTableComponentHandler::handleAllRequests)
+        final String defaultStreamRoute = API_V1_VERSION + componentRoute;
+        router.get(defaultStreamRoute)
+              .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
-        router.route().method(HttpMethod.GET)
-              .path(instanceSpecificStreamRoute)
-              .handler(streamSSTableComponentHandler::handlePerInstanceRequests)
-              .handler(fileStreamHandler);
+        final String listSnapshotFilesRoute1 = "/keyspace/:keyspace/table/:table/snapshots/:snapshot";
+        final String listSnapshotFilesRoute2 = "/snapshots/:snapshot";
+
+        router.get(API_V1_VERSION + listSnapshotFilesRoute1)
+              .handler(listSnapshotFilesHandler);
+
+        router.get(API_V1_VERSION + listSnapshotFilesRoute2)
+              .handler(listSnapshotFilesHandler);
 
         return router;
     }

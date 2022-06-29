@@ -1,4 +1,4 @@
-package org.apache.cassandra.sidecar;
+package org.apache.cassandra.sidecar.routes;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -19,6 +19,9 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.Configuration;
+import org.apache.cassandra.sidecar.MainModule;
+import org.apache.cassandra.sidecar.TestModule;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
@@ -319,7 +322,7 @@ public class StreamSSTableComponentTest
         String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/" +
                            "snapshots/TestSnapshot/component/" +
                            "TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1/instance/2" + testRoute)
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute + "?instanceId=2")
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() ->
               {
