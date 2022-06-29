@@ -11,4 +11,10 @@
         <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
     </Match>
 
+    <!-- Ignore RV_RETURN_VALUE_IGNORED_BAD_PRACTICE for directory/file creation during test setup -->
+    <Match>
+        <Class name="org.apache.cassandra.sidecar.snapshots.AbstractSnapshotPathBuilderTest" />
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
+    </Match>
+
 </FindBugsFilter>

@@ -156,7 +156,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 adapter = versionProvider.getCassandra(version).create(cqlSession);
                 logger.info("Cassandra version change detected. New adapter loaded: {}", adapter);
             }
-            logger.info("Cassandra version {}", version);
+            logger.debug("Cassandra version {}", version);
         }
         catch (NoHostAvailableException e)
         {

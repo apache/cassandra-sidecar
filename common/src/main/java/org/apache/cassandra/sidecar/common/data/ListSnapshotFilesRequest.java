@@ -15,31 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.cassandra.sidecar.common.data;
 
 import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
 
 /**
- * Holder class for the {@code org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler}
+ * Holder class for the {@link org.apache.cassandra.sidecar.routes.ListSnapshotFilesHandler}
  * request parameters
  */
-public class StreamSSTableComponentRequest extends SSTableComponent
+public class ListSnapshotFilesRequest extends QualifiedTableName
 {
     private final String snapshotName;
+    private final boolean includeSecondaryIndexFiles;
 
     /**
      * Constructor for the holder class
      *
-     * @param keyspace      the keyspace in Cassandra
-     * @param tableName     the table name in Cassandra
-     * @param snapshotName  the name of the snapshot
-     * @param componentName the name of the SSTable component
+     * @param keyspace                   the keyspace in Cassandra
+     * @param tableName                  the table name in Cassandra
+     * @param snapshotName               the name of the snapshot
+     * @param includeSecondaryIndexFiles true if secondary index files are allowed, false otherwise
      */
-    public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName, String componentName)
+    public ListSnapshotFilesRequest(String keyspace,
+                                    String tableName,
+                                    String snapshotName,
+                                    boolean includeSecondaryIndexFiles)
     {
-        super(keyspace, tableName, componentName);
+        super(keyspace, tableName, true);
         this.snapshotName = ValidationUtils.validateSnapshotName(snapshotName);
+        this.includeSecondaryIndexFiles = includeSecondaryIndexFiles;
     }
 
     /**
@@ -51,15 +55,23 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     }
 
     /**
+     * @return true if secondary index files should be included, false otherwise
+     */
+    public boolean includeSecondaryIndexFiles()
+    {
+        return includeSecondaryIndexFiles;
+    }
+
+    /**
      * {@inheritDoc}
      */
     public String toString()
     {
-        return "StreamSSTableComponentRequest{" +
+        return "ListSnapshotFilesRequest{" +
                "keyspace='" + getKeyspace() + '\'' +
                ", tableName='" + getTableName() + '\'' +
-               ", snapshot='" + snapshotName + '\'' +
-               ", componentName='" + getComponentName() + '\'' +
+               ", snapshotName='" + snapshotName + '\'' +
+               ", includeSecondaryIndexFiles=" + includeSecondaryIndexFiles +
                '}';
     }
 }
