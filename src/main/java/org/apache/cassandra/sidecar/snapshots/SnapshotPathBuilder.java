@@ -65,6 +65,7 @@ public class SnapshotPathBuilder
     protected final Vertx vertx;
     protected final FileSystem fs;
     protected final InstancesConfig instancesConfig;
+    protected final ValidationUtils validationUtils;
 
     /**
      * Creates a new SnapshotPathBuilder for snapshots of an instance with the given {@code vertx} instance and
@@ -74,11 +75,12 @@ public class SnapshotPathBuilder
      * @param instancesConfig the configuration for Cassandra
      */
     @Inject
-    public SnapshotPathBuilder(Vertx vertx, InstancesConfig instancesConfig)
+    public SnapshotPathBuilder(Vertx vertx, InstancesConfig instancesConfig, ValidationUtils validationUtils)
     {
         this.vertx = vertx;
         this.fs = vertx.fileSystem();
         this.instancesConfig = instancesConfig;
+        this.validationUtils = validationUtils;
     }
 
     /**
@@ -284,7 +286,7 @@ public class SnapshotPathBuilder
     protected void validate(StreamSSTableComponentRequest request)
     {
         // Only allow .db and TOC.txt components here
-        ValidationUtils.validateDbOrTOCComponentName(request.getComponentName());
+        validationUtils.validateDbOrTOCComponentName(request.getComponentName());
     }
 
     /**

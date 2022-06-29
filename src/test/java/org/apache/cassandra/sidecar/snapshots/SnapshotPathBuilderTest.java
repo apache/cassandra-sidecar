@@ -30,6 +30,8 @@ import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.common.utils.ValidationConfigurationImpl;
+import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,7 +40,7 @@ class SnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
 {
     SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig)
     {
-        return new SnapshotPathBuilder(vertx, instancesConfig);
+        return new SnapshotPathBuilder(vertx, instancesConfig, new ValidationUtils(new ValidationConfigurationImpl()));
     }
 
     @Test

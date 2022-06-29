@@ -18,19 +18,37 @@
 
 package org.apache.cassandra.sidecar.common.data;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
  import org.junit.jupiter.params.ParameterizedTest;
  import org.junit.jupiter.params.provider.ValueSource;
 
- import io.netty.handler.codec.http.HttpResponseStatus;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import io.netty.handler.codec.http.HttpResponseStatus;
  import io.vertx.ext.web.handler.HttpException;
+import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
+import org.apache.cassandra.sidecar.common.utils.ValidationConfigurationImpl;
 
- import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
  import static org.assertj.core.api.Assertions.assertThatThrownBy;
  import static org.assertj.core.api.Assertions.from;
 
  class StreamSSTableComponentRequestTest
  {
+     @BeforeEach
+     void setup()
+     {
+         Guice.createInjector(new AbstractModule()
+         {
+             protected void configure()
+             {
+                 bind(ValidationConfiguration.class).to(ValidationConfigurationImpl.class);
+                 requestStaticInjection(QualifiedTableName.class);
+             }
+         });
+     }
+
      @Test
      void failsWhenKeyspaceIsNull()
      {

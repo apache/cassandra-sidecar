@@ -1,7 +1,5 @@
 package org.apache.cassandra.sidecar.common.data;
 
-import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
-
 /**
  * Represents an SSTable component that includes a keyspace, table name and component name
  */
@@ -19,7 +17,7 @@ public class SSTableComponent extends QualifiedTableName
     public SSTableComponent(String keyspace, String tableName, String componentName)
     {
         super(keyspace, tableName);
-        this.componentName = ValidationUtils.validateComponentName(componentName);
+        this.componentName = validationUtils.validateComponentName(componentName);
     }
 
     /**
