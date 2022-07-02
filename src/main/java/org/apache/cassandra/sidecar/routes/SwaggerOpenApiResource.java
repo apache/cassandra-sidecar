@@ -1,6 +1,6 @@
 package org.apache.cassandra.sidecar.routes;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import javax.servlet.ServletConfig;
 import javax.ws.rs.GET;
@@ -31,7 +31,7 @@ public class SwaggerOpenApiResource
     static
     {
         Reader reader = new Reader(new SwaggerConfiguration());
-        OAS = reader.read(new HashSet(Arrays.asList(HealthService.class)));
+        OAS = reader.read(new HashSet<>(Collections.singletonList(HealthService.class)));
     }
 
     @Context
@@ -41,7 +41,7 @@ public class SwaggerOpenApiResource
     Application app;
 
     @GET
-    @Produces({ MediaType.APPLICATION_JSON})
+    @Produces({ MediaType.APPLICATION_JSON })
     @Operation(hidden = true)
     public Response getOpenApi(@Context HttpHeaders headers,
                                @Context UriInfo uriInfo,

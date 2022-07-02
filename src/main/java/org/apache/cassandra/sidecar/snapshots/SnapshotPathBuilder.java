@@ -206,7 +206,6 @@ public class SnapshotPathBuilder
                                                 .onFailure(promise::fail)
                                                 .onSuccess(idx ->
                                                 {
-
                                                     //noinspection unchecked
                                                     List<Pair<String, FileProps>> idxPropList =
                                                     idx.list()
