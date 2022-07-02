@@ -53,13 +53,16 @@ import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstances
 import static org.assertj.core.api.Assertions.assertThat;
 
 
+/**
+ * Tests for the {@link ListSnapshotFilesHandler}
+ */
 @ExtendWith(VertxExtension.class)
 public class ListSnapshotFilesHandlerTest
 {
     private static final Logger logger = LoggerFactory.getLogger(ListSnapshotFilesHandlerTest.class);
-    private static Vertx vertx;
-    private static HttpServer server;
-    private static Configuration config;
+    private Vertx vertx;
+    private HttpServer server;
+    private Configuration config;
     @TempDir
     File temporaryFolder;
 

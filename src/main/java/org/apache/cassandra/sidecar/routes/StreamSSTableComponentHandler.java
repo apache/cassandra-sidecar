@@ -64,24 +64,28 @@ public class StreamSSTableComponentHandler extends AbstractHandler
 
         snapshotPathBuilder.build(host, requestParams)
                            .onSuccess(path ->
-                                      {
-                                          logger.debug("StreamSSTableComponentHandler handled {} for client {}. Instance: {}", path,
-                                                       remoteAddress, host);
-                                          context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
-                                                 .next();
-                                      })
+                           {
+                               logger.debug("StreamSSTableComponentHandler handled {} for client {}. Instance: {}",
+                                            path, remoteAddress, host);
+                               context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
+                                      .next();
+                           })
                            .onFailure(cause ->
-                                      {
-                                          if (cause instanceof FileNotFoundException)
-                                          {
-                                              context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), cause.getMessage()));
-                                          }
-                                          else
-                                          {
-                                              context.fail(new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
-                                                                             "Invalid request for " + requestParams));
-                                          }
-                                      });
+                           {
+                               String errMsg =
+                               "StreamSSTableComponentHandler failed for request: {} from: {}. Instance: {}";
+                               logger.error(errMsg, requestParams, remoteAddress, host);
+                               if (cause instanceof FileNotFoundException)
+                               {
+                                   context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(),
+                                                                  cause.getMessage()));
+                               }
+                               else
+                               {
+                                   context.fail(new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
+                                                                  "Invalid request for " + requestParams));
+                               }
+                           });
     }
 
     private StreamSSTableComponentRequest extractParamsOrThrow(final RoutingContext rc)

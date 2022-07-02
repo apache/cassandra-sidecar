@@ -37,7 +37,7 @@ public class ListSnapshotFilesRequest extends QualifiedTableName
     public ListSnapshotFilesRequest(String keyspace, String tableName, String snapshotName, boolean includeSecondaryIndexFiles)
     {
         super(keyspace, tableName, false);
-        this.snapshotName = validationUtils.validateSnapshotName(snapshotName);
+        this.snapshotName = validator.validateSnapshotName(snapshotName);
         this.includeSecondaryIndexFiles = includeSecondaryIndexFiles;
     }
 

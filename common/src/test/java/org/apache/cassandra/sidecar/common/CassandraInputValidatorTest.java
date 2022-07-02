@@ -7,21 +7,21 @@ import org.junit.jupiter.api.Test;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfigurationImpl;
-import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
+import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test validation methods.
  */
-public class ValidationUtilsTest
+public class CassandraInputValidatorTest
 {
-    ValidationUtils instance;
+    CassandraInputValidator instance;
 
     @BeforeEach
     void setup()
     {
-        instance = new ValidationUtils(new ValidationConfigurationImpl());
+        instance = new CassandraInputValidator(new ValidationConfigurationImpl());
     }
 
     private void testCommon_invalidCharacters(String testName)

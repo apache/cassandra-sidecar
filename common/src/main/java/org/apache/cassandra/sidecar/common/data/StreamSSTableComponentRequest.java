@@ -19,7 +19,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName, String componentName)
     {
         super(keyspace, tableName, componentName);
-        this.snapshotName = validationUtils.validateSnapshotName(snapshotName);
+        this.snapshotName = validator.validateSnapshotName(snapshotName);
     }
 
     /**

@@ -50,7 +50,7 @@ import io.vertx.core.file.FileSystem;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.data.StreamSSTableComponentRequest;
-import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
+import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 
 /**
  * This class builds the snapshot path on a given host validating that it exists
@@ -65,22 +65,25 @@ public class SnapshotPathBuilder
     protected final Vertx vertx;
     protected final FileSystem fs;
     protected final InstancesConfig instancesConfig;
-    protected final ValidationUtils validationUtils;
+    protected final CassandraInputValidator cassandraInputValidator;
 
     /**
      * Creates a new SnapshotPathBuilder for snapshots of an instance with the given {@code vertx} instance and
      * {@code instancesConfig Cassandra configuration}.
      *
-     * @param vertx           the vertx instance
-     * @param instancesConfig the configuration for Cassandra
+     * @param vertx                   the vertx instance
+     * @param instancesConfig         the configuration for Cassandra
+     * @param cassandraInputValidator a validator for Cassandra related inputs
      */
     @Inject
-    public SnapshotPathBuilder(Vertx vertx, InstancesConfig instancesConfig, ValidationUtils validationUtils)
+    public SnapshotPathBuilder(Vertx vertx,
+                               InstancesConfig instancesConfig,
+                               CassandraInputValidator cassandraInputValidator)
     {
         this.vertx = vertx;
         this.fs = vertx.fileSystem();
         this.instancesConfig = instancesConfig;
-        this.validationUtils = validationUtils;
+        this.cassandraInputValidator = cassandraInputValidator;
     }
 
     /**
@@ -153,7 +156,8 @@ public class SnapshotPathBuilder
                                  logger.debug("Failed to get FileProps", cause);
                                  promise.fail(cause);
                              })
-                             .onSuccess(ar -> {
+                             .onSuccess(ar ->
+                             {
 
                                  // Create a pair of path/fileProps for every regular file
                                  List<Pair<String, FileProps>> snapshotList =
@@ -200,7 +204,8 @@ public class SnapshotPathBuilder
                                  // if we have index directories, list them all
                                  CompositeFuture.all(idxListFutures)
                                                 .onFailure(promise::fail)
-                                                .onSuccess(idx -> {
+                                                .onSuccess(idx ->
+                                                {
 
                                                     //noinspection unchecked
                                                     List<Pair<String, FileProps>> idxPropList =
@@ -245,10 +250,12 @@ public class SnapshotPathBuilder
         Path snapshotsDirPath = Paths.get(SNAPSHOTS_DIR_NAME);
         Path snapshotNamePath = Paths.get(snapshotName);
 
-        return vertx.executeBlocking(promise -> {
+        return vertx.executeBlocking(promise ->
+        {
 
             // a filter to keep directories ending in "/snapshots/<snapshotName>"
-            BiPredicate<Path, BasicFileAttributes> filter = (path, basicFileAttributes) -> {
+            BiPredicate<Path, BasicFileAttributes> filter = (path, basicFileAttributes) ->
+            {
                 int nameCount;
                 return basicFileAttributes.isDirectory() &&
                        (nameCount = path.getNameCount()) >= 2 &&
@@ -286,7 +293,7 @@ public class SnapshotPathBuilder
     protected void validate(StreamSSTableComponentRequest request)
     {
         // Only allow .db and TOC.txt components here
-        validationUtils.validateDbOrTOCComponentName(request.getComponentName());
+        cassandraInputValidator.validateDbOrTOCComponentName(request.getComponentName());
     }
 
     /**
@@ -326,7 +333,8 @@ public class SnapshotPathBuilder
             Future<String> f = candidates.get(i);
             root = root.recover(v -> f);
         }
-        return root.recover(t -> {
+        return root.recover(t ->
+        {
             String errorMessage = String.format("Keyspace '%s' does not exist", keyspace);
             logger.debug(errorMessage, t);
             return Future.failedFuture(new FileNotFoundException(errorMessage));
@@ -382,7 +390,8 @@ public class SnapshotPathBuilder
                                    File.separator + SNAPSHOTS_DIR_NAME + File.separator + snapshotName;
 
         return isValidDirectory(snapshotDirectory)
-               .recover(t -> {
+               .recover(t ->
+               {
                    String errorMessage = String.format("Snapshot directory '%s' does not exist", snapshotName);
                    logger.warn("Snapshot directory {} does not exist in {}", snapshotName, snapshotDirectory);
                    return Future.failedFuture(new FileNotFoundException(errorMessage));

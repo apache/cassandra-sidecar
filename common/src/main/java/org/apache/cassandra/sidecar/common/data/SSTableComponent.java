@@ -17,7 +17,7 @@ public class SSTableComponent extends QualifiedTableName
     public SSTableComponent(String keyspace, String tableName, String componentName)
     {
         super(keyspace, tableName);
-        this.componentName = validationUtils.validateComponentName(componentName);
+        this.componentName = validator.validateComponentName(componentName);
     }
 
     /**

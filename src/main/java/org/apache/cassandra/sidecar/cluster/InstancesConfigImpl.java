@@ -33,19 +33,21 @@ public class InstancesConfigImpl implements InstancesConfig
 
     public InstanceMetadata instanceFromId(int id)
     {
-        if (!idToInstanceMetas.containsKey(id))
+        InstanceMetadata instanceMetadata = idToInstanceMetas.get(id);
+        if (instanceMetadata == null)
         {
             throw new IllegalArgumentException("Instance id " + id + " not found");
         }
-        return idToInstanceMetas.get(id);
+        return instanceMetadata;
     }
 
     public InstanceMetadata instanceFromHost(String host)
     {
-        if (!hostToInstanceMetas.containsKey(host))
+        InstanceMetadata instanceMetadata = hostToInstanceMetas.get(host);
+        if (instanceMetadata == null)
         {
             throw new IllegalArgumentException("Instance with host address " + host + " not found");
         }
-        return hostToInstanceMetas.get(host);
+        return instanceMetadata;
     }
 }

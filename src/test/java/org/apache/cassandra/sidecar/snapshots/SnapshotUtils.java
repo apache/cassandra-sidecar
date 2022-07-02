@@ -35,6 +35,11 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Utilities for testing snapshot related features
+ */
 public class SnapshotUtils
 {
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -42,11 +47,11 @@ public class SnapshotUtils
     {
         for (final String[] folderPath : getMockSnapshotDirectories())
         {
-            new File(temporaryFolder, String.join("/", folderPath)).mkdirs();
+            assertThat(new File(temporaryFolder, String.join("/", folderPath)).mkdirs()).isTrue();
         }
         for (final String[] folderPath : getMockNonSnapshotDirectories())
         {
-            new File(temporaryFolder, String.join("/", folderPath)).mkdirs();
+            assertThat(new File(temporaryFolder, String.join("/", folderPath)).mkdirs()).isTrue();
         }
         for (final String fileName : getMockSnapshotFiles())
         {
@@ -59,12 +64,13 @@ public class SnapshotUtils
             FileUtils.touch(nonSnapshotFile);
         }
         // adding secondary index files
-        new File(temporaryFolder, "d1/data/keyspace1/table1-1234/snapshots/snapshot1/.index/").mkdirs();
+        assertThat(new File(temporaryFolder, "d1/data/keyspace1/table1-1234/snapshots/snapshot1/.index/")
+                   .mkdirs()).isTrue();
         FileUtils.touch(new File(temporaryFolder,
                                  "d1/data/keyspace1/table1-1234/snapshots/snapshot1/.index/secondary.db"));
 
-        new File(temporaryFolder, "d1/data/keyspace1/table1-1234")
-        .setLastModified(System.currentTimeMillis() + 2_000_000);
+        assertThat(new File(temporaryFolder, "d1/data/keyspace1/table1-1234")
+                   .setLastModified(System.currentTimeMillis() + 2_000_000)).isTrue();
     }
 
     public static InstancesConfig mockInstancesConfig(String rootPath)

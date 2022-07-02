@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.io.FileNotFoundException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -42,8 +43,6 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
-
-import static org.apache.cassandra.sidecar.utils.RequestUtils.extractHostAddressWithoutPort;
 
 /**
  * ListSnapshotFilesHandler class lists paths of all the snapshot files of a given snapshot name.
@@ -86,7 +85,7 @@ public class ListSnapshotFilesHandler extends AbstractHandler
     public void handle(RoutingContext context)
     {
         final HttpServerRequest request = context.request();
-        final String host = extractHostAddressWithoutPort(request.host());
+        final String host = getHost(context);
         final SocketAddress remoteAddress = request.remoteAddress();
         final ListSnapshotFilesRequest requestParams = extractParamsOrThrow(context);
         logger.debug("ListSnapshotFilesHandler received request: {} from: {}. Instance: {}",
@@ -103,7 +102,8 @@ public class ListSnapshotFilesHandler extends AbstractHandler
         {
             //noinspection unchecked
             future = builder.findSnapshotDirectories(host, requestParams.getSnapshotName())
-                            .compose(snapshotDirectoryList -> {
+                            .compose(snapshotDirectoryList ->
+                            {
                                 //noinspection rawtypes
                                 List<Future> futures =
                                 snapshotDirectoryList.stream()
@@ -128,6 +128,8 @@ public class ListSnapshotFilesHandler extends AbstractHandler
                   }
                   else
                   {
+                      logger.debug("ListSnapshotFilesHandler handled {} for {}. Instance: {}",
+                                   requestParams, remoteAddress, host);
                       context.json(buildResponse(host, requestParams, fileList));
                   }
               })
@@ -135,7 +137,8 @@ public class ListSnapshotFilesHandler extends AbstractHandler
               {
                   logger.error("ListSnapshotFilesHandler failed for request: {} from: {}. Instance: {}",
                                requestParams, remoteAddress, host);
-                  if (cause instanceof FileNotFoundException)
+                  if (cause instanceof FileNotFoundException ||
+                      cause instanceof NoSuchFileException)
                   {
                       context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), cause.getMessage()));
                   }

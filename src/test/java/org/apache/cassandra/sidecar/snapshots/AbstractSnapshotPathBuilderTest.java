@@ -45,9 +45,9 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.StreamSSTableComponentRequest;
+import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfigurationImpl;
-import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -65,7 +65,7 @@ abstract class AbstractSnapshotPathBuilderTest
 
     SnapshotPathBuilder instance;
     Vertx vertx = Vertx.vertx();
-    ValidationUtils validationUtils = new ValidationUtils(new ValidationConfigurationImpl());
+    CassandraInputValidator cassandraInputValidator = new CassandraInputValidator(new ValidationConfigurationImpl());
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @BeforeEach
@@ -97,49 +97,46 @@ abstract class AbstractSnapshotPathBuilderTest
         when(mockEmptyDataDirInstanceMeta.dataDirs()).thenReturn(Collections.emptyList());
 
         // Create some files and directories
-        assertThat(new File(dataDir0, "not_a_keyspace_dir").createNewFile());
-        assertThat(new File(dataDir0, "ks1/table1/snapshots/backup.2022-03-17-04-PDT/not_a_file.db").mkdirs());
-        assertThat(new File(dataDir0, "ks1/not_a_table_dir").createNewFile());
-        assertThat(new File(dataDir0, "ks1/table1/snapshots/not_a_snapshot_dir").createNewFile());
-        assertThat(new File(dataDir0, "data/ks2/table2/snapshots/ea823202-a62c-4603-bb6a-4e15d79091cd").mkdirs());
+        new File(dataDir0, "not_a_keyspace_dir").createNewFile();
+        new File(dataDir0, "ks1/table1/snapshots/backup.2022-03-17-04-PDT/not_a_file.db").mkdirs();
+        new File(dataDir0, "ks1/not_a_table_dir").createNewFile();
+        new File(dataDir0, "ks1/table1/snapshots/not_a_snapshot_dir").createNewFile();
+        new File(dataDir0, "data/ks2/table2/snapshots/ea823202-a62c-4603-bb6a-4e15d79091cd").mkdirs();
 
-        assertThat(new File(dataDir1, "ks3/table3/snapshots/snapshot1").mkdirs());
+        new File(dataDir1, "ks3/table3/snapshots/snapshot1").mkdirs();
 
         // this is a different table with the same "table4" prefix
-        assertThat(new File(dataDir1, "data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1" +
-                                      "/snapshots/this_is_a_valid_snapshot_name_i_❤_u").mkdirs());
+        new File(dataDir1, "data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1" +
+                           "/snapshots/this_is_a_valid_snapshot_name_i_❤_u").mkdirs();
 
         // table && table-<TABLE_UUID>
-        assertThat(new File(dataDir0, "ks1/a_table/snapshots/a_snapshot/").mkdirs());
-        assertThat(new File(dataDir0, "ks1/a_table-a72c8740a57611ec935db766a70c44a1/snapshots/a_snapshot/").mkdirs());
+        new File(dataDir0, "ks1/a_table/snapshots/a_snapshot/").mkdirs();
+        new File(dataDir0, "ks1/a_table-a72c8740a57611ec935db766a70c44a1/snapshots/a_snapshot/").mkdirs();
 
         // create some files inside snapshot backup.2022-03-17-04-PDT
-        assertThat(new File(dataDir0, "ks1/table1/snapshots/backup.2022-03-17-04-PDT/data.db").createNewFile());
-        assertThat(new File(dataDir0, "ks1/table1/snapshots/backup.2022-03-17-04-PDT/index.db").createNewFile());
-        assertThat(new File(dataDir0, "ks1/table1/snapshots/backup.2022-03-17-04-PDT/nb-203-big-TOC.txt")
-                   .createNewFile());
+        new File(dataDir0, "ks1/table1/snapshots/backup.2022-03-17-04-PDT/data.db").createNewFile();
+        new File(dataDir0, "ks1/table1/snapshots/backup.2022-03-17-04-PDT/index.db").createNewFile();
+        new File(dataDir0, "ks1/table1/snapshots/backup.2022-03-17-04-PDT/nb-203-big-TOC.txt").createNewFile();
 
         // create some files inside snapshot ea823202-a62c-4603-bb6a-4e15d79091cd
-        assertThat(new File(dataDir0, "data/ks2/table2/snapshots/ea823202-a62c-4603-bb6a-4e15d79091cd/data.db")
-                   .createNewFile());
-        assertThat(new File(dataDir0, "data/ks2/table2/snapshots/ea823202-a62c-4603-bb6a-4e15d79091cd/index.db")
-                   .createNewFile());
-        assertThat(
+        new File(dataDir0, "data/ks2/table2/snapshots/ea823202-a62c-4603-bb6a-4e15d79091cd/data.db")
+        .createNewFile();
+        new File(dataDir0, "data/ks2/table2/snapshots/ea823202-a62c-4603-bb6a-4e15d79091cd/index.db")
+        .createNewFile();
         new File(dataDir0, "data/ks2/table2/snapshots/ea823202-a62c-4603-bb6a-4e15d79091cd/nb-203-big-TOC.txt")
-        .createNewFile());
+        .createNewFile();
 
         // create some files inside snapshot snapshot1 in dataDir1
-        assertThat(new File(dataDir1, "ks3/table3/snapshots/snapshot1/data.db").createNewFile());
-        assertThat(new File(dataDir1, "ks3/table3/snapshots/snapshot1/index.db").createNewFile());
-        assertThat(new File(dataDir1, "ks3/table3/snapshots/snapshot1/nb-203-big-TOC.txt").createNewFile());
+        new File(dataDir1, "ks3/table3/snapshots/snapshot1/data.db").createNewFile();
+        new File(dataDir1, "ks3/table3/snapshots/snapshot1/index.db").createNewFile();
+        new File(dataDir1, "ks3/table3/snapshots/snapshot1/nb-203-big-TOC.txt").createNewFile();
 
-        assertThat(new File(dataDir1, "data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1" +
-                                      "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/data.db").createNewFile());
-        assertThat(new File(dataDir1, "data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1" +
-                                      "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/index.db").createNewFile());
-        assertThat(new File(dataDir1, "data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1" +
-                                      "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/nb-203-big-TOC.txt")
-                   .createNewFile());
+        new File(dataDir1, "data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1" +
+                           "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/data.db").createNewFile();
+        new File(dataDir1, "data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1" +
+                           "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/index.db").createNewFile();
+        new File(dataDir1, "data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1" +
+                           "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/nb-203-big-TOC.txt").createNewFile();
 
         vertx = Vertx.vertx();
         instance = initialize(vertx, mockInstancesConfig);
@@ -532,7 +529,7 @@ abstract class AbstractSnapshotPathBuilderTest
 
         String expectedPath;
         // a_table and a_table-<TABLE_UUID> - the latter should be picked
-        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig, validationUtils);
+        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig, cassandraInputValidator);
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot/data.db";
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
@@ -546,9 +543,9 @@ abstract class AbstractSnapshotPathBuilderTest
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
                                       new ListSnapshotFilesRequest("ks1",
-                                                                        "a_table",
-                                                                        "a_snapshot",
-                                                                        false)),
+                                                                   "a_table",
+                                                                   "a_snapshot",
+                                                                   false)),
                                expectedPath);
 
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot/index.db";
@@ -564,9 +561,9 @@ abstract class AbstractSnapshotPathBuilderTest
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
                                       new ListSnapshotFilesRequest("ks1",
-                                                                        "a_table",
-                                                                        "a_snapshot",
-                                                                        false)),
+                                                                   "a_table",
+                                                                   "a_snapshot",
+                                                                   false)),
                                expectedPath);
 
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot/nb-203-big-TOC.txt";
@@ -582,9 +579,9 @@ abstract class AbstractSnapshotPathBuilderTest
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
                                       new ListSnapshotFilesRequest("ks1",
-                                                                        "a_table",
-                                                                        "a_snapshot",
-                                                                        false)),
+                                                                   "a_table",
+                                                                   "a_snapshot",
+                                                                   false)),
                                expectedPath);
     }
 
@@ -625,7 +622,7 @@ abstract class AbstractSnapshotPathBuilderTest
         table4New.setLastModified(System.currentTimeMillis() + 2000000);
 
         String expectedPath;
-        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig, validationUtils);
+        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig, cassandraInputValidator);
         // table4-a72c8740a57611ec935db766a70c44a1 is the last modified, so it is the correct directory
         expectedPath = table4New.getAbsolutePath()
                        + "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/data.db";
@@ -642,9 +639,9 @@ abstract class AbstractSnapshotPathBuilderTest
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
                                       new ListSnapshotFilesRequest("ks4",
-                                                                        "table4",
-                                                                        "this_is_a_valid_snapshot_name_i_❤_u",
-                                                                        false)),
+                                                                   "table4",
+                                                                   "this_is_a_valid_snapshot_name_i_❤_u",
+                                                                   false)),
                                expectedPath);
 
         expectedPath = table4New.getAbsolutePath()
@@ -662,9 +659,9 @@ abstract class AbstractSnapshotPathBuilderTest
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
                                       new ListSnapshotFilesRequest("ks4",
-                                                                        "table4",
-                                                                        "this_is_a_valid_snapshot_name_i_❤_u",
-                                                                        false)),
+                                                                   "table4",
+                                                                   "this_is_a_valid_snapshot_name_i_❤_u",
+                                                                   false)),
                                expectedPath);
 
         expectedPath = table4New.getAbsolutePath()
@@ -682,9 +679,9 @@ abstract class AbstractSnapshotPathBuilderTest
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
                                       new ListSnapshotFilesRequest("ks4",
-                                                                        "table4",
-                                                                        "this_is_a_valid_snapshot_name_i_❤_u",
-                                                                        false)),
+                                                                   "table4",
+                                                                   "this_is_a_valid_snapshot_name_i_❤_u",
+                                                                   false)),
                                expectedPath);
     }
 

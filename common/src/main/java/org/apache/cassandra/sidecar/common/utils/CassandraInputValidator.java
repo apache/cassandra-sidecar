@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
  * Miscellaneous methods used for validation.
  */
 @Singleton
-public class ValidationUtils
+public class CassandraInputValidator
 {
     private final Set<String> forbiddenDirs;
     private final Pattern patternWordChars;
@@ -24,7 +24,7 @@ public class ValidationUtils
     private final String dbTocComponentRegex;
 
     @Inject
-    public ValidationUtils(ValidationConfiguration validationConfiguration)
+    public CassandraInputValidator(ValidationConfiguration validationConfiguration)
     {
         forbiddenDirs = validationConfiguration.getForbiddenDirs();
         patternWordChars = Pattern.compile(validationConfiguration.getCharsAllowedPattern());

@@ -18,7 +18,7 @@
 package org.apache.cassandra.sidecar.common.data;
 
 import com.google.inject.Inject;
-import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
+import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 
 /**
  * Contains the keyspace and table name in Cassandra
@@ -26,7 +26,7 @@ import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
 public class QualifiedTableName
 {
     @Inject
-    static ValidationUtils validationUtils;
+    static CassandraInputValidator validator;
 
     private final String keyspace;
     private final String tableName;
@@ -52,8 +52,8 @@ public class QualifiedTableName
      */
     QualifiedTableName(String keyspace, String tableName, boolean required)
     {
-        this.keyspace = !required && keyspace == null ? null : validationUtils.validateKeyspaceName(keyspace);
-        this.tableName = !required && tableName == null ? null : validationUtils.validateTableName(tableName);
+        this.keyspace = !required && keyspace == null ? null : validator.validateKeyspaceName(keyspace);
+        this.tableName = !required && tableName == null ? null : validator.validateTableName(tableName);
     }
 
 

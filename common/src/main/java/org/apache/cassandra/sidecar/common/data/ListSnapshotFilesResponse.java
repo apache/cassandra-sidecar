@@ -30,7 +30,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class ListSnapshotFilesResponse
 {
-    public final List<FileInfo> snapshotFilesInfo;
+    private final List<FileInfo> snapshotFilesInfo;
 
     public ListSnapshotFilesResponse()
     {
