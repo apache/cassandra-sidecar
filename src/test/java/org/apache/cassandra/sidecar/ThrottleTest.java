@@ -47,7 +47,7 @@ public class ThrottleTest
         config = injector.getInstance(Configuration.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), context.completing());
+        server.listen(config.getPort(), context.succeedingThenComplete());
 
         context.awaitCompletion(5, SECONDS);
     }

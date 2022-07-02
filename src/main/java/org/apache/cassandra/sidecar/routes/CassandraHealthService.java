@@ -22,6 +22,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -64,10 +65,17 @@ public class CassandraHealthService
     })
     @GET
     @Path("/v1/cassandra/__health")
-    public Response getCassandraHealth(@Context HttpServerRequest req)
+    public Response getCassandraHealth(@Context HttpServerRequest req, @QueryParam("instanceId") Integer instanceId)
     {
-        final String host = req.host();
-        final CassandraAdapterDelegate cassandra = metadataFetcher.getDelegate(extractHostAddressWithoutPort(host));
+        CassandraAdapterDelegate cassandra;
+        if (instanceId != null)
+        {
+            cassandra = metadataFetcher.getDelegate(instanceId);
+        }
+        else
+        {
+            cassandra = metadataFetcher.getDelegate(extractHostAddressWithoutPort(req.host()));
+        }
         return getHealthResponse(cassandra);
     }
 

@@ -21,12 +21,10 @@ package org.apache.cassandra.sidecar;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +40,10 @@ import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.routes.HealthService;
+
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Provides basic tests shared between SSL and normal http health services
@@ -74,7 +76,7 @@ public abstract class AbstractHealthServiceTest
         config = injector.getInstance(Configuration.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), context.completing());
+        server.listen(config.getPort(), context.succeedingThenComplete());
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
@@ -102,8 +104,8 @@ public abstract class AbstractHealthServiceTest
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
               {
-                  Assert.assertEquals(200, response.statusCode());
-                  Assert.assertEquals("{\"status\":\"OK\"}", response.body());
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
                   testContext.completeNow();
               })));
     }
@@ -135,8 +137,8 @@ public abstract class AbstractHealthServiceTest
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
               {
-                  Assert.assertEquals(200, response.statusCode());
-                  Assert.assertEquals("{\"status\":\"OK\"}", response.body());
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
                   testContext.completeNow();
               })));
     }
@@ -152,8 +154,25 @@ public abstract class AbstractHealthServiceTest
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
               {
-                  Assert.assertEquals(503, response.statusCode());
-                  Assert.assertEquals("{\"status\":\"NOT_OK\"}", response.body());
+                  assertThat(response.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
+                  assertThat(response.body()).isEqualTo("{\"status\":\"NOT_OK\"}");
+                  testContext.completeNow();
+              })));
+    }
+
+    @DisplayName("Should return HTTP 503 Failure when instance is down with query param")
+    @Test
+    public void testHealthCheckReturns503FailureWithQueryParam(VertxTestContext testContext)
+    {
+        WebClient client = getClient();
+
+        client.get(config.getPort(), "localhost", "/api/v1/cassandra/__health?instanceId=2")
+              .as(BodyCodec.string())
+              .ssl(isSslEnabled())
+              .send(testContext.succeeding(response -> testContext.verify(() ->
+              {
+                  assertThat(response.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
+                  assertThat(response.body()).isEqualTo("{\"status\":\"NOT_OK\"}");
                   testContext.completeNow();
               })));
     }
