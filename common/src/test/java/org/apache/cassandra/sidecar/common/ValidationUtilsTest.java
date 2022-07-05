@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.common;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -33,19 +32,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 public class ValidationUtilsTest
 {
-    ValidationUtils instance;
-
-    @BeforeEach
-    void setup()
-    {
-        instance = new ValidationUtils(new ValidationConfigurationImpl());
-    }
 
     private void testCommon_invalidCharacters(String testName)
     {
         HttpException httpEx = Assertions.assertThrows(HttpException.class, () ->
         {
-            instance.validateTableName(testName);
+            ValidationUtils.validateTableName(testName);
         });
         assertEquals(HttpResponseStatus.BAD_REQUEST.code(), httpEx.getStatusCode());
         assertEquals("Invalid characters in table name: " + testName, httpEx.getPayload());
@@ -54,9 +46,9 @@ public class ValidationUtilsTest
     @Test
     public void testValidateCharacters_validParams_expectNoException()
     {
-        instance.validateTableName("test_table_name");
-        instance.validateTableName("test-table-name");
-        instance.validateTableName("testTableName");
+        ValidationUtils.validateTableName("test_table_name");
+        ValidationUtils.validateTableName("test-table-name");
+        ValidationUtils.validateTableName("testTableName");
     }
 
     @Test
@@ -81,9 +73,9 @@ public class ValidationUtilsTest
     @Test
     public void testValidateKeyspaceName_validKeyspaceNames_expectNoException()
     {
-        instance.validateKeyspaceName("system-views");
-        instance.validateKeyspaceName("SystemViews");
-        instance.validateKeyspaceName("system_views_test");
+        ValidationUtils.validateKeyspaceName("system-views");
+        ValidationUtils.validateKeyspaceName("SystemViews");
+        ValidationUtils.validateKeyspaceName("system_views_test");
     }
 
     @Test
@@ -92,7 +84,7 @@ public class ValidationUtilsTest
         String testKS = "system_views";
         HttpException httpEx = Assertions.assertThrows(HttpException.class, () ->
         {
-            instance.validateKeyspaceName(testKS);
+            ValidationUtils.validateKeyspaceName(testKS);
         });
         assertEquals(HttpResponseStatus.FORBIDDEN.code(), httpEx.getStatusCode());
         assertEquals("Forbidden keyspace: " + testKS, httpEx.getPayload());
@@ -104,7 +96,7 @@ public class ValidationUtilsTest
         String testKS = "test keyspace";
         HttpException httpEx = Assertions.assertThrows(HttpException.class, () ->
         {
-            instance.validateKeyspaceName(testKS);
+            ValidationUtils.validateKeyspaceName(testKS);
         });
         assertEquals(HttpResponseStatus.BAD_REQUEST.code(), httpEx.getStatusCode());
         assertEquals("Invalid characters in keyspace: " + testKS, httpEx.getPayload());
@@ -114,18 +106,18 @@ public class ValidationUtilsTest
     @Test
     public void testValidateFileName_validFileNames_expectNoException()
     {
-        instance.validateComponentName("test-file-name.db");
-        instance.validateComponentName("test_file_name.json");
-        instance.validateComponentName("testFileName.cql");
-        instance.validateComponentName("t_TOC.txt");
-        instance.validateComponentName("crcfile.crc32");
+        ValidationUtils.validateComponentName("test-file-name.db");
+        ValidationUtils.validateComponentName("test_file_name.json");
+        ValidationUtils.validateComponentName("testFileName.cql");
+        ValidationUtils.validateComponentName("t_TOC.txt");
+        ValidationUtils.validateComponentName("crcfile.crc32");
     }
 
     private void testCommon_testInvalidFileName(String testFileName)
     {
         HttpException httpEx = Assertions.assertThrows(HttpException.class, () ->
         {
-            instance.validateComponentName(testFileName);
+            ValidationUtils.validateComponentName(testFileName);
         });
         assertEquals(HttpResponseStatus.BAD_REQUEST.code(), httpEx.getStatusCode());
         assertEquals("Invalid component name: " + testFileName, httpEx.getPayload());
@@ -159,11 +151,11 @@ public class ValidationUtilsTest
     @Test
     public void testValidateSnapshotName_validSnapshotNames_expectNoException()
     {
-        instance.validateSnapshotName("valid-snapshot-name");
-        instance.validateSnapshotName("valid\\snapshot\\name");
-        instance.validateSnapshotName("valid:snapshot:name");
-        instance.validateSnapshotName("valid$snapshot$name");
-        instance.validateSnapshotName("valid snapshot name");
+        ValidationUtils.validateSnapshotName("valid-snapshot-name");
+        ValidationUtils.validateSnapshotName("valid\\snapshot\\name");
+        ValidationUtils.validateSnapshotName("valid:snapshot:name");
+        ValidationUtils.validateSnapshotName("valid$snapshot$name");
+        ValidationUtils.validateSnapshotName("valid snapshot name");
     }
 
     @Test
@@ -172,7 +164,7 @@ public class ValidationUtilsTest
         String testSnapName = "valid" + '/' + "snapshotname";
         HttpException httpEx = Assertions.assertThrows(HttpException.class, () ->
         {
-            instance.validateSnapshotName(testSnapName);
+            ValidationUtils.validateSnapshotName(testSnapName);
         });
         assertEquals(HttpResponseStatus.BAD_REQUEST.code(), httpEx.getStatusCode());
         assertEquals("Invalid characters in snapshot name: " + testSnapName, httpEx.getPayload());
@@ -184,7 +176,7 @@ public class ValidationUtilsTest
         String testSnapName = "valid" + '\0' + "snapshotname";
         HttpException httpEx = Assertions.assertThrows(HttpException.class, () ->
         {
-            instance.validateSnapshotName(testSnapName);
+            ValidationUtils.validateSnapshotName(testSnapName);
         });
         assertEquals(HttpResponseStatus.BAD_REQUEST.code(), httpEx.getStatusCode());
         assertEquals("Invalid characters in snapshot name: " + testSnapName, httpEx.getPayload());
