@@ -56,9 +56,6 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
-import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
-import org.apache.cassandra.sidecar.common.utils.ValidationConfigurationImpl;
 import org.apache.cassandra.sidecar.routes.CassandraHealthService;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.HealthService;
@@ -77,12 +74,6 @@ public class MainModule extends AbstractModule
 {
     private static final Logger logger = LoggerFactory.getLogger(MainModule.class);
     private static final String API_V1_VERSION = "/api/v1";
-
-    @Override
-    protected void configure()
-    {
-        requestStaticInjection(QualifiedTableName.class);
-    }
 
     @Provides
     @Singleton
@@ -298,12 +289,5 @@ public class MainModule extends AbstractModule
     public ErrorHandler errorHandler(Vertx vertx)
     {
         return ErrorHandler.create(vertx);
-    }
-
-    @Provides
-    @Singleton
-    public ValidationConfiguration validationConfiguration()
-    {
-        return new ValidationConfigurationImpl();
     }
 }

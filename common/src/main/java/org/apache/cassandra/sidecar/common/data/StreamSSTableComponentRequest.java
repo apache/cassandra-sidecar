@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.common.data;
 
+import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
+
 /**
  * Holder class for the {@code org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler}
  * request parameters
@@ -37,7 +39,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName, String componentName)
     {
         super(keyspace, tableName, componentName);
-        this.snapshotName = validator.validateSnapshotName(snapshotName);
+        this.snapshotName = ValidationUtils.validateSnapshotName(snapshotName);
     }
 
     /**

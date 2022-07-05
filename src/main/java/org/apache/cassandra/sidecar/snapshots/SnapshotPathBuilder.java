@@ -50,7 +50,7 @@ import io.vertx.core.file.FileSystem;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.data.StreamSSTableComponentRequest;
-import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
 
 /**
  * This class builds the snapshot path on a given host validating that it exists
@@ -65,7 +65,6 @@ public class SnapshotPathBuilder
     protected final Vertx vertx;
     protected final FileSystem fs;
     protected final InstancesConfig instancesConfig;
-    protected final CassandraInputValidator cassandraInputValidator;
 
     /**
      * Creates a new SnapshotPathBuilder for snapshots of an instance with the given {@code vertx} instance and
@@ -73,17 +72,13 @@ public class SnapshotPathBuilder
      *
      * @param vertx                   the vertx instance
      * @param instancesConfig         the configuration for Cassandra
-     * @param cassandraInputValidator a validator for Cassandra related inputs
      */
     @Inject
-    public SnapshotPathBuilder(Vertx vertx,
-                               InstancesConfig instancesConfig,
-                               CassandraInputValidator cassandraInputValidator)
+    public SnapshotPathBuilder(Vertx vertx, InstancesConfig instancesConfig)
     {
         this.vertx = vertx;
         this.fs = vertx.fileSystem();
         this.instancesConfig = instancesConfig;
-        this.cassandraInputValidator = cassandraInputValidator;
     }
 
     /**
@@ -292,7 +287,7 @@ public class SnapshotPathBuilder
     protected void validate(StreamSSTableComponentRequest request)
     {
         // Only allow .db and TOC.txt components here
-        cassandraInputValidator.validateDbOrTOCComponentName(request.getComponentName());
+        ValidationUtils.validateDbOrTOCComponentName(request.getComponentName());
     }
 
     /**

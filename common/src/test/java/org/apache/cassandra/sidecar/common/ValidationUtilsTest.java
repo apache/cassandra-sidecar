@@ -24,22 +24,21 @@ import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.common.utils.ValidationConfigurationImpl;
-import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test validation methods.
  */
-public class CassandraInputValidatorTest
+public class ValidationUtilsTest
 {
-    CassandraInputValidator instance;
+    ValidationUtils instance;
 
     @BeforeEach
     void setup()
     {
-        instance = new CassandraInputValidator(new ValidationConfigurationImpl());
+        instance = new ValidationUtils(new ValidationConfigurationImpl());
     }
 
     private void testCommon_invalidCharacters(String testName)
