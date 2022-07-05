@@ -69,6 +69,8 @@ public class ListSnapshotFilesHandler extends AbstractHandler
     private static final Logger logger = LoggerFactory.getLogger(ListSnapshotFilesHandler.class);
     private static final String INCLUDE_SECONDARY_INDEX_FILES = "includeSecondaryIndexFiles";
     private static final int DATA_DIR_INDEX = 0;
+    private static final int TABLE_NAME_SUBPATH_INDEX = 1;
+    private static final int FILE_NAME_SUBPATH_INDEX = 4;
     private final SnapshotPathBuilder builder;
 
     @Inject
@@ -138,12 +140,10 @@ public class ListSnapshotFilesHandler extends AbstractHandler
         {
             Path pathFromDataDir = dataDirPath.relativize(Paths.get(file.getLeft()));
 
-            String keyspace = request.getKeyspace() != null
-                              ? request.getKeyspace()
-                              : pathFromDataDir.getName(0).toString();
+            String keyspace = request.getKeyspace();
             // table name might include a dash (-) with the table UUID so we always use it as part of the response
-            String tableName = pathFromDataDir.getName(1).toString();
-            String fileName = pathFromDataDir.subpath(4, pathFromDataDir.getNameCount()).toString();
+            String tableName = pathFromDataDir.getName(TABLE_NAME_SUBPATH_INDEX).toString();
+            String fileName = pathFromDataDir.getName(FILE_NAME_SUBPATH_INDEX).toString();
 
             response.addSnapshotFile(new ListSnapshotFilesResponse.FileInfo(file.getRight().size(),
                                                                             host,
