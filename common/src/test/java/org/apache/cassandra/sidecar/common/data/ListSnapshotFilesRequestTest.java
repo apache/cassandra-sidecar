@@ -50,15 +50,11 @@ class ListSnapshotFilesRequestTest
     }
 
     @Test
-    void testNullKeyspaceIsAllowed()
+    void failsWhenKeyspaceIsNull()
     {
-        ListSnapshotFilesRequest request = new ListSnapshotFilesRequest(null, "table", "snapshot", false);
-
-        assertThat(request.getKeyspace()).isNull();
-        assertThat(request.getTableName()).isEqualTo("table");
-        assertThat(request.getSnapshotName()).isEqualTo("snapshot");
-        assertThat(request.includeSecondaryIndexFiles()).isFalse();
-        assertThat(request.toString()).isEqualTo("ListSnapshotFilesRequest{keyspace='null', tableName='table', snapshotName='snapshot', includeSecondaryIndexFiles=false}");
+        assertThatThrownBy(() -> new ListSnapshotFilesRequest(null, "table", "snapshot", false))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("keyspace must not be null");
     }
 
     @Test
@@ -94,15 +90,11 @@ class ListSnapshotFilesRequestTest
     }
 
     @Test
-    void testNullTableNameIsAllowed()
+    void failsWhenTableNameIsNull()
     {
-        ListSnapshotFilesRequest request = new ListSnapshotFilesRequest("ks", null, "snapshot", true);
-
-        assertThat(request.getKeyspace()).isEqualTo("ks");
-        assertThat(request.getTableName()).isNull();
-        assertThat(request.getSnapshotName()).isEqualTo("snapshot");
-        assertThat(request.includeSecondaryIndexFiles()).isTrue();
-        assertThat(request.toString()).isEqualTo("ListSnapshotFilesRequest{keyspace='ks', tableName='null', snapshotName='snapshot', includeSecondaryIndexFiles=true}");
+        assertThatThrownBy(() -> new ListSnapshotFilesRequest("ks", null, "snapshot", true))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("tableName must not be null");
     }
 
     @Test
