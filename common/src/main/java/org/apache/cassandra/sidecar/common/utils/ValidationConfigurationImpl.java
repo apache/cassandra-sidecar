@@ -51,12 +51,12 @@ public class ValidationConfigurationImpl implements ValidationConfiguration
         return CHARS_ALLOWED_PATTERN;
     }
 
-    public String getComponentRegex()
+    public String getCharsAllowedPatternForComponentName()
     {
         return REGEX_COMPONENT;
     }
 
-    public String getDbTocComponentRegex()
+    public String getCharsAllowedPatternForRestrictedComponentName()
     {
         return REGEX_DB_TOC_COMPONENT;
     }

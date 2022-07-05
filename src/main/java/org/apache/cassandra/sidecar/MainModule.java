@@ -168,12 +168,8 @@ public class MainModule extends AbstractModule
               .handler(fileStreamHandler);
 
         final String listSnapshotFilesRoute1 = "/keyspace/:keyspace/table/:table/snapshots/:snapshot";
-        final String listSnapshotFilesRoute2 = "/snapshots/:snapshot";
 
         router.get(API_V1_VERSION + listSnapshotFilesRoute1)
-              .handler(listSnapshotFilesHandler);
-
-        router.get(API_V1_VERSION + listSnapshotFilesRoute2)
               .handler(listSnapshotFilesHandler);
 
         return router;

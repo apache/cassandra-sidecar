@@ -65,7 +65,8 @@ public class CassandraHealthService
     })
     @GET
     @Path("/v1/cassandra/__health")
-    public Response getCassandraHealth(@Context HttpServerRequest req, @QueryParam("instanceId") Integer instanceId)
+    public Response getCassandraHealth(@Context HttpServerRequest req,
+                                       @QueryParam(AbstractHandler.INSTANCE_ID) Integer instanceId)
     {
         CassandraAdapterDelegate cassandra;
         if (instanceId != null)

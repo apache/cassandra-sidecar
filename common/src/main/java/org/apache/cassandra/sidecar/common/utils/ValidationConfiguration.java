@@ -31,17 +31,17 @@ public interface ValidationConfiguration
     Set<String> getForbiddenDirs();
 
     /**
-     * @return a patter for allowed characters
+     * @return a pattern for allowed characters
      */
     String getCharsAllowedPattern();
 
     /**
      * @return a regular expression to validate component names
      */
-    String getComponentRegex();
+    String getCharsAllowedPatternForComponentName();
 
     /**
-     * @return a regular expression to validate .db and TOC.txt component names
+     * @return a regular expression to validate a restricted set of component names
      */
-    String getDbTocComponentRegex();
+    String getCharsAllowedPatternForRestrictedComponentName();
 }

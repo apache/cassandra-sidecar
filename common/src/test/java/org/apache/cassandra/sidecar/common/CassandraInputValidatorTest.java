@@ -161,7 +161,7 @@ public class CassandraInputValidatorTest
     public void testValidateSnapshotName_validSnapshotNames_expectNoException()
     {
         instance.validateSnapshotName("valid-snapshot-name");
-        instance.validateSnapshotName("valid\\snapshot\\name"); // Is this really valid ??
+        instance.validateSnapshotName("valid\\snapshot\\name");
         instance.validateSnapshotName("valid:snapshot:name");
         instance.validateSnapshotName("valid$snapshot$name");
         instance.validateSnapshotName("valid snapshot name");

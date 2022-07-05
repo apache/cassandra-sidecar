@@ -96,41 +96,6 @@ public class ListSnapshotFilesHandlerTest
     }
 
     @Test
-    void testRouteSucceeds(VertxTestContext context)
-    {
-        WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/snapshots/snapshot1";
-        ListSnapshotFilesResponse.FileInfo fileInfoExpected =
-        new ListSnapshotFilesResponse.FileInfo(11,
-                                               "localhost",
-                                               9043,
-                                               0,
-                                               "snapshot1",
-                                               "keyspace1",
-                                               "table1-1234",
-                                               "1.db");
-        ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
-        new ListSnapshotFilesResponse.FileInfo(11,
-                                               "localhost",
-                                               9043,
-                                               0,
-                                               "snapshot1",
-                                               "keyspace1",
-                                               "table1-1234",
-                                               "2.db");
-
-        client.get(config.getPort(), "localhost", testRoute)
-              .send(context.succeeding(response -> context.verify(() ->
-              {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  ListSnapshotFilesResponse resp = response.bodyAsJson(ListSnapshotFilesResponse.class);
-                  assertThat(resp.getSnapshotFilesInfo()).contains(fileInfoExpected);
-                  assertThat(resp.getSnapshotFilesInfo()).doesNotContain(fileInfoNotExpected);
-                  context.completeNow();
-              })));
-    }
-
-    @Test
     public void testRouteSucceedsWithKeyspaceAndTableName(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
@@ -170,7 +135,7 @@ public class ListSnapshotFilesHandlerTest
     public void testRouteInvalidSnapshot(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/snapshots/snapshotInvalid";
+        String testRoute = "/api/v1/keyspace/keyspace1/table/table1-1234/snapshots/snapshotInvalid";
         client.get(config.getPort(), "localhost", testRoute)
               .send(context.succeeding(response -> context.verify(() ->
               {

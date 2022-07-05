@@ -23,7 +23,6 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -31,8 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
 import io.vertx.core.file.FileProps;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -91,63 +88,40 @@ public class ListSnapshotFilesHandler extends AbstractHandler
         logger.debug("ListSnapshotFilesHandler received request: {} from: {}. Instance: {}",
                      requestParams, remoteAddress, host);
 
-        Future<List<Pair<String, FileProps>>> future;
         boolean secondaryIndexFiles = requestParams.includeSecondaryIndexFiles();
-        if (requestParams.getKeyspace() != null && requestParams.getTableName() != null)
-        {
-            future = builder.build(host, requestParams)
-                            .compose(directory -> builder.listSnapshotDirectory(directory, secondaryIndexFiles));
-        }
-        else
-        {
-            //noinspection unchecked
-            future = builder.findSnapshotDirectories(host, requestParams.getSnapshotName())
-                            .compose(snapshotDirectoryList ->
-                            {
-                                //noinspection rawtypes
-                                List<Future> futures =
-                                snapshotDirectoryList.stream()
-                                                     .map(directory ->
-                                                          builder.listSnapshotDirectory(directory, secondaryIndexFiles))
-                                                     .collect(Collectors.toList());
 
-                                return CompositeFuture.all(futures);
-                            })
-                            .map(ar -> ar.list()
-                                         .stream()
-                                         .flatMap(l -> ((List<Pair<String, FileProps>>) l).stream())
-                                         .collect(Collectors.toList()));
-        }
-
-        future.onSuccess(fileList ->
-               {
-                  if (fileList.isEmpty())
-                  {
-                      context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(),
-                                                     "Snapshot '" + requestParams.getSnapshotName() + "' not found"));
-                  }
-                  else
-                  {
-                      logger.debug("ListSnapshotFilesHandler handled {} for {}. Instance: {}",
-                                   requestParams, remoteAddress, host);
-                      context.json(buildResponse(host, requestParams, fileList));
-                  }
-              })
-              .onFailure(cause ->
-              {
-                  logger.error("ListSnapshotFilesHandler failed for request: {} from: {}. Instance: {}",
-                               requestParams, remoteAddress, host);
-                  if (cause instanceof FileNotFoundException ||
-                      cause instanceof NoSuchFileException)
-                  {
-                      context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), cause.getMessage()));
-                  }
-                  else
-                  {
-                      context.fail(new HttpException(HttpResponseStatus.BAD_REQUEST.code(), "Invalid request for "
-                                                                                            + requestParams));
-                  }
-              });
+        builder.build(host, requestParams)
+               .compose(directory -> builder.listSnapshotDirectory(directory, secondaryIndexFiles))
+               .onSuccess(fileList ->
+                          {
+                              if (fileList.isEmpty())
+                              {
+                                  String payload = "Snapshot '" + requestParams.getSnapshotName() + "' not found";
+                                  context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), payload));
+                              }
+                              else
+                              {
+                                  logger.debug("ListSnapshotFilesHandler handled {} for {}. Instance: {}",
+                                               requestParams, remoteAddress, host);
+                                  context.json(buildResponse(host, requestParams, fileList));
+                              }
+                          })
+               .onFailure(cause ->
+                          {
+                              logger.error("ListSnapshotFilesHandler failed for request: {} from: {}. Instance: {}",
+                                           requestParams, remoteAddress, host);
+                              if (cause instanceof FileNotFoundException ||
+                                  cause instanceof NoSuchFileException)
+                              {
+                                  context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(),
+                                                                 cause.getMessage()));
+                              }
+                              else
+                              {
+                                  context.fail(new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
+                                                                 "Invalid request for " + requestParams));
+                              }
+                          });
     }
 
     private ListSnapshotFilesResponse buildResponse(String host,

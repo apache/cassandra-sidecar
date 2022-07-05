@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import org.apache.commons.lang3.StringUtils;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
@@ -67,14 +65,16 @@ public abstract class AbstractHandler implements Handler<RoutingContext>
                                         "InstanceId query parameter must be provided");
             }
 
-            if (!StringUtils.isNumeric(instanceIdParam))
+            try
+            {
+                int instanceId = Integer.parseInt(instanceIdParam);
+                return instancesConfig.instanceFromId(instanceId).host();
+            }
+            catch (NumberFormatException ex)
             {
                 throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
                                         "InstanceId query parameter must be a valid integer");
             }
-
-            int instanceId = Integer.parseInt(instanceIdParam);
-            return instancesConfig.instanceFromId(instanceId).host();
         }
         else
         {

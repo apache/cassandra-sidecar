@@ -46,8 +46,8 @@ public class CassandraInputValidator
     {
         forbiddenKeyspaceSet = validationConfiguration.getForbiddenDirs();
         patternWordChars = Pattern.compile(validationConfiguration.getCharsAllowedPattern());
-        componentRegex = validationConfiguration.getComponentRegex();
-        dbTocComponentRegex = validationConfiguration.getDbTocComponentRegex();
+        componentRegex = validationConfiguration.getCharsAllowedPatternForComponentName();
+        dbTocComponentRegex = validationConfiguration.getCharsAllowedPatternForRestrictedComponentName();
     }
 
     /**
