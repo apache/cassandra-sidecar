@@ -153,14 +153,12 @@ public class MainModule extends AbstractModule
 
         // add custom routers
         final String componentRoute = "/keyspace/:keyspace/table/:table/snapshots/:snapshot/component/:component";
-        final String defaultStreamRoute = API_V1_VERSION + componentRoute;
-        router.get(defaultStreamRoute)
+        router.get(API_V1_VERSION + componentRoute)
               .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
-        final String listSnapshotFilesRoute1 = "/keyspace/:keyspace/table/:table/snapshots/:snapshot";
-
-        router.get(API_V1_VERSION + listSnapshotFilesRoute1)
+        final String listSnapshotFilesRoute = "/keyspace/:keyspace/table/:table/snapshots/:snapshot";
+        router.get(API_V1_VERSION + listSnapshotFilesRoute)
               .handler(listSnapshotFilesHandler);
 
         return router;
