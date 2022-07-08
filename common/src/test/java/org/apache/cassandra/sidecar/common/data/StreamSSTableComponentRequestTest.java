@@ -18,13 +18,10 @@
 
 package org.apache.cassandra.sidecar.common.data;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.handler.HttpException;
 
@@ -55,7 +52,10 @@ class StreamSSTableComponentRequestTest
     @Test
     void failsWhenKeyspaceContainsPathTraversalAttack()
     {
-        assertThatThrownBy(() -> new StreamSSTableComponentRequest("../../../etc/passwd", "table", "snapshot", "component"))
+        assertThatThrownBy(() -> new StreamSSTableComponentRequest("../../../etc/passwd",
+                                                                   "table",
+                                                                   "snapshot",
+                                                                   "component"))
         .isInstanceOf(HttpException.class)
         .hasMessageContaining("Bad Request")
         .returns(HttpResponseStatus.BAD_REQUEST.code(), from(t -> ((HttpException) t).getStatusCode()))
@@ -95,7 +95,10 @@ class StreamSSTableComponentRequestTest
     @Test
     void failsWhenTableNameContainsPathTraversalAttack()
     {
-        assertThatThrownBy(() -> new StreamSSTableComponentRequest("ks", "../../../etc/passwd", "snapshot", "component"))
+        assertThatThrownBy(() -> new StreamSSTableComponentRequest("ks",
+                                                                   "../../../etc/passwd",
+                                                                   "snapshot",
+                                                                   "component"))
         .isInstanceOf(HttpException.class)
         .hasMessageContaining("Bad Request")
         .returns(HttpResponseStatus.BAD_REQUEST.code(), from(t -> ((HttpException) t).getStatusCode()))
@@ -118,7 +121,8 @@ class StreamSSTableComponentRequestTest
         .isInstanceOf(HttpException.class)
         .hasMessageContaining("Bad Request")
         .returns(HttpResponseStatus.BAD_REQUEST.code(), from(t -> ((HttpException) t).getStatusCode()))
-        .returns("Invalid characters in snapshot name: " + invalidFileName, from(t -> ((HttpException) t).getPayload()));
+        .returns("Invalid characters in snapshot name: " + invalidFileName,
+                 from(t -> ((HttpException) t).getPayload()));
     }
 
     @Test
@@ -150,6 +154,8 @@ class StreamSSTableComponentRequestTest
         assertThat(req.getTableName()).isEqualTo("table");
         assertThat(req.getSnapshotName()).isEqualTo("snapshot");
         assertThat(req.getComponentName()).isEqualTo("data.db");
-        assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', snapshot='snapshot', componentName='data.db'}");
+        String expected = "StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
+                          "snapshot='snapshot', componentName='data.db'}";
+        assertThat(req.toString()).isEqualTo(expected);
     }
 }

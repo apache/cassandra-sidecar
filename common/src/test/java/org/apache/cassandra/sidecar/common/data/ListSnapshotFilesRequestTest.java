@@ -115,7 +115,8 @@ class ListSnapshotFilesRequestTest
         .isInstanceOf(HttpException.class)
         .hasMessageContaining("Bad Request")
         .returns(HttpResponseStatus.BAD_REQUEST.code(), from(t -> ((HttpException) t).getStatusCode()))
-        .returns("Invalid characters in snapshot name: " + invalidFileName, from(t -> ((HttpException) t).getPayload()));
+        .returns("Invalid characters in snapshot name: " + invalidFileName,
+                 from(t -> ((HttpException) t).getPayload()));
     }
 
     @Test
@@ -127,6 +128,8 @@ class ListSnapshotFilesRequestTest
         assertThat(request.getTableName()).isEqualTo("table");
         assertThat(request.getSnapshotName()).isEqualTo("snapshot");
         assertThat(request.includeSecondaryIndexFiles()).isFalse();
-        assertThat(request.toString()).isEqualTo("ListSnapshotFilesRequest{keyspace='ks', tableName='table', snapshotName='snapshot', includeSecondaryIndexFiles=false}");
+        String expected = "ListSnapshotFilesRequest{keyspace='ks', tableName='table', " +
+                          "snapshotName='snapshot', includeSecondaryIndexFiles=false}";
+        assertThat(request.toString()).isEqualTo(expected);
     }
 }

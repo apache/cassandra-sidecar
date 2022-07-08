@@ -36,7 +36,8 @@ public class ListSnapshotFilesRequest extends QualifiedTableName
      * @param snapshotName               the name of the snapshot
      * @param includeSecondaryIndexFiles true if secondary index files are allowed, false otherwise
      */
-    public ListSnapshotFilesRequest(String keyspace, String tableName, String snapshotName, boolean includeSecondaryIndexFiles)
+    public ListSnapshotFilesRequest(String keyspace, String tableName, String snapshotName,
+                                    boolean includeSecondaryIndexFiles)
     {
         super(keyspace, tableName, true);
         this.snapshotName = ValidationUtils.validateSnapshotName(snapshotName);

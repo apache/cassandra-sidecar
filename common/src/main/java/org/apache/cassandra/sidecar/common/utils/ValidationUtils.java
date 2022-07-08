@@ -122,8 +122,8 @@ public class ValidationUtils
      * @param componentName the name of the SSTable component to validate
      * @return the validated {@code componentName}
      * @throws NullPointerException when the {@code componentName} is null
-     * @throws HttpException        when the {@code componentName} is not a valid {@code *.db} or {@code *TOC.txt} SSTable
-     *                              component
+     * @throws HttpException        when the {@code componentName} is not a valid {@code *.db} or
+     *                              {@code *TOC.txt} SSTable component
      */
     public static String validateDbOrTOCComponentName(@NotNull String componentName)
     {

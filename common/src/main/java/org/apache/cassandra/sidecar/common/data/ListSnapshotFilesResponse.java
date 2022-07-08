@@ -47,6 +47,9 @@ public class ListSnapshotFilesResponse
         return snapshotFilesInfo;
     }
 
+    /**
+     * An object describing a SSTable component file
+     */
     public static class FileInfo
     {
         public final long size;
