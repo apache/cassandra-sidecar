@@ -50,7 +50,7 @@ import io.vertx.core.file.FileSystem;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.data.StreamSSTableComponentRequest;
-import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
+import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 
 /**
  * This class builds the snapshot path on a given host validating that it exists
@@ -65,20 +65,23 @@ public class SnapshotPathBuilder
     protected final Vertx vertx;
     protected final FileSystem fs;
     protected final InstancesConfig instancesConfig;
+    protected final CassandraInputValidator validator;
 
     /**
      * Creates a new SnapshotPathBuilder for snapshots of an instance with the given {@code vertx} instance and
      * {@code instancesConfig Cassandra configuration}.
      *
-     * @param vertx                   the vertx instance
-     * @param instancesConfig         the configuration for Cassandra
+     * @param vertx           the vertx instance
+     * @param instancesConfig the configuration for Cassandra
+     * @param validator       a validator instance to validate Cassandra-specific input
      */
     @Inject
-    public SnapshotPathBuilder(Vertx vertx, InstancesConfig instancesConfig)
+    public SnapshotPathBuilder(Vertx vertx, InstancesConfig instancesConfig, CassandraInputValidator validator)
     {
         this.vertx = vertx;
         this.fs = vertx.fileSystem();
         this.instancesConfig = instancesConfig;
+        this.validator = validator;
     }
 
     /**
@@ -287,7 +290,7 @@ public class SnapshotPathBuilder
     protected void validate(StreamSSTableComponentRequest request)
     {
         // Only allow .db and TOC.txt components here
-        ValidationUtils.validateDbOrTOCComponentName(request.getComponentName());
+        validator.validateRestrictedComponentName(request.getComponentName());
     }
 
     /**
@@ -328,11 +331,11 @@ public class SnapshotPathBuilder
             root = root.recover(v -> f);
         }
         return root.recover(t ->
-        {
-            String errorMessage = String.format("Keyspace '%s' does not exist", keyspace);
-            logger.debug(errorMessage, t);
-            return Future.failedFuture(new FileNotFoundException(errorMessage));
-        });
+                            {
+                                String errorMessage = String.format("Keyspace '%s' does not exist", keyspace);
+                                logger.debug(errorMessage, t);
+                                return Future.failedFuture(new FileNotFoundException(errorMessage));
+                            });
     }
 
     /**
@@ -385,11 +388,11 @@ public class SnapshotPathBuilder
 
         return isValidDirectory(snapshotDirectory)
                .recover(t ->
-               {
-                   String errorMessage = String.format("Snapshot directory '%s' does not exist", snapshotName);
-                   logger.warn("Snapshot directory {} does not exist in {}", snapshotName, snapshotDirectory);
-                   return Future.failedFuture(new FileNotFoundException(errorMessage));
-               });
+                        {
+                            String errMsg = String.format("Snapshot directory '%s' does not exist", snapshotName);
+                            logger.warn("Snapshot directory {} does not exist in {}", snapshotName, snapshotDirectory);
+                            return Future.failedFuture(new FileNotFoundException(errMsg));
+                        });
     }
 
     /**
@@ -409,13 +412,13 @@ public class SnapshotPathBuilder
 
         return isValidFilename(componentFilename)
                .recover(t ->
-               {
-                   logger.warn("Snapshot directory {} or component {} does not exist in {}", snapshotName,
-                               componentName, componentFilename);
-                   String errMsg = String.format("Component '%s' does not exist for snapshot '%s'",
-                                                 componentName, snapshotName);
-                   return Future.failedFuture(new FileNotFoundException(errMsg));
-               });
+                        {
+                            logger.warn("Snapshot directory {} or component {} does not exist in {}", snapshotName,
+                                        componentName, componentFilename);
+                            String errMsg = String.format("Component '%s' does not exist for snapshot '%s'",
+                                                          componentName, snapshotName);
+                            return Future.failedFuture(new FileNotFoundException(errMsg));
+                        });
     }
 
     /**
@@ -446,23 +449,23 @@ public class SnapshotPathBuilder
     {
         return fs.exists(filename)
                  .compose(exists ->
-                 {
-                     if (!exists)
-                     {
-                         String errMsg = "File '" + filename + "' does not exist";
-                         return Future.failedFuture(new FileNotFoundException(errMsg));
-                     }
-                     return fs.props(filename)
-                              .compose(fileProps ->
+                          {
+                              if (!exists)
                               {
-                                  if (fileProps == null || !predicate.test(fileProps))
-                                  {
-                                      String errMsg = "File '" + filename + "' does not exist";
-                                      return Future.failedFuture(new FileNotFoundException(errMsg));
-                                  }
-                                  return Future.succeededFuture(filename);
-                              });
-                 });
+                                  String errMsg = "File '" + filename + "' does not exist";
+                                  return Future.failedFuture(new FileNotFoundException(errMsg));
+                              }
+                              return fs.props(filename)
+                                       .compose(fileProps ->
+                                                {
+                                                    if (fileProps == null || !predicate.test(fileProps))
+                                                    {
+                                                        String errMsg = "File '" + filename + "' does not exist";
+                                                        return Future.failedFuture(new FileNotFoundException(errMsg));
+                                                    }
+                                                    return Future.succeededFuture(filename);
+                                                });
+                          });
     }
 
     /**

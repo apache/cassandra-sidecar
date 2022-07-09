@@ -31,8 +31,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.rules.TemporaryFolder;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -40,8 +41,12 @@ import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
+import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.StreamSSTableComponentRequest;
+import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,21 +54,36 @@ import static org.assertj.core.api.Assertions.from;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-abstract class AbstractSnapshotPathBuilderTest
+/**
+ * An abstract class for SnapshotPathBuilder tests
+ */
+public abstract class AbstractSnapshotPathBuilderTest
 {
     @TempDir
-    File dataDir0;
+    protected File dataDir0;
 
     @TempDir
-    File dataDir1;
+    protected File dataDir1;
 
-    SnapshotPathBuilder instance;
-    Vertx vertx = Vertx.vertx();
+    protected SnapshotPathBuilder instance;
+    protected Vertx vertx = Vertx.vertx();
+    protected CassandraInputValidator validator;
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @BeforeEach
-    void setup() throws IOException
+    protected void setup() throws IOException
     {
+        ValidationConfiguration validationConfiguration = new TestValidationConfiguration();
+        validator = new CassandraInputValidator(validationConfiguration);
+        Guice.createInjector(new AbstractModule()
+        {
+            protected void configure()
+            {
+                bind(ValidationConfiguration.class).toInstance(validationConfiguration);
+                requestStaticInjection(QualifiedTableName.class);
+            }
+        });
+
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         InstanceMetadata mockInstanceMeta = mock(InstanceMetadata.class);
         InstanceMetadata mockInvalidDataDirInstanceMeta = mock(InstanceMetadata.class);
@@ -128,13 +148,13 @@ abstract class AbstractSnapshotPathBuilderTest
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @AfterEach
-    void clear()
+    protected void clear()
     {
         dataDir0.delete();
         dataDir1.delete();
     }
 
-    abstract SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig);
+    protected abstract SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig);
 
     @ParameterizedTest
     @ValueSource(strings = { "i_❤_u.db", "this-is-not-allowed.jar", "cql-is-not-allowed-here.cql",
@@ -481,11 +501,10 @@ abstract class AbstractSnapshotPathBuilderTest
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Test
-    void testTableWithUUIDPicked() throws IOException
+    void testTableWithUUIDPicked(@TempDir File tempDir) throws IOException
     {
-        TemporaryFolder tempFolder = new TemporaryFolder();
-        tempFolder.create();
-        File dataDir = tempFolder.newFolder("data");
+        File dataDir = new File(tempDir, "data");
+        dataDir.mkdirs();
 
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         InstanceMetadata mockInstanceMeta = mock(InstanceMetadata.class);
@@ -513,7 +532,7 @@ abstract class AbstractSnapshotPathBuilderTest
 
         String expectedPath;
         // a_table and a_table-<TABLE_UUID> - the latter should be picked
-        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig);
+        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig, validator);
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot/data.db";
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
@@ -571,11 +590,10 @@ abstract class AbstractSnapshotPathBuilderTest
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Test
-    void testLastModifiedTablePicked() throws IOException
+    void testLastModifiedTablePicked(@TempDir File tempDir) throws IOException
     {
-        TemporaryFolder tempFolder = new TemporaryFolder();
-        tempFolder.create();
-        File dataDir = tempFolder.newFolder("data");
+        File dataDir = new File(tempDir, "data");
+        dataDir.mkdirs();
 
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         InstanceMetadata mockInstanceMeta = mock(InstanceMetadata.class);
@@ -606,7 +624,7 @@ abstract class AbstractSnapshotPathBuilderTest
         table4New.setLastModified(System.currentTimeMillis() + 2000000);
 
         String expectedPath;
-        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig);
+        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig, validator);
         // table4-a72c8740a57611ec935db766a70c44a1 is the last modified, so it is the correct directory
         expectedPath = table4New.getAbsolutePath()
                        + "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/data.db";

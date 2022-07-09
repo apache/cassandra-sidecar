@@ -33,3 +33,16 @@ sidecar:
 
 healthcheck:
   - poll_freq_millis: 30000
+
+cassandra_input_validation:
+  - forbidden_keyspaces:
+      - system_schema
+      - system_traces
+      - system_distributed
+      - system
+      - system_auth
+      - system_views
+      - system_virtual_schema
+  - allowed_chars_for_directory: "[a-zA-Z0-9_-]+"
+  - allowed_chars_for_component_name: "[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)"
+  - allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(.db|TOC.txt)"

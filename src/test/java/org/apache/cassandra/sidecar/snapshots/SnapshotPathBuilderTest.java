@@ -36,9 +36,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 class SnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
 {
-    SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig)
+    @Override
+    public SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig)
     {
-        return new SnapshotPathBuilder(vertx, instancesConfig);
+        return new SnapshotPathBuilder(vertx, instancesConfig, validator);
     }
 
     @Test
