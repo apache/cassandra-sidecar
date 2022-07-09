@@ -18,8 +18,9 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.commons.configuration2.YAMLConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,8 +31,10 @@ import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+
 
 /**
  * Test changes related to sidecar.yaml file.
@@ -52,13 +55,14 @@ public class ConfigurationTest
     {
         MainModule mainModule = new MainModule();
         YAMLConfiguration yamlConf = new YAMLConfiguration();
-        try (InputStream stream = new FileInputStream("src/test/resources/sidecar_single_instance.yaml"))
+        try (InputStream stream =
+             Files.newInputStream(Paths.get("src/test/resources/sidecar_single_instance.yaml")))
         {
             yamlConf.read(stream);
             InstancesConfig instancesConfig = mainModule.readInstancesConfig(yamlConf, versionProvider);
-            assertEquals(1, instancesConfig.instances().size());
-            assertEquals("localhost", instancesConfig.instances().get(0).host());
-            assertEquals(9042, instancesConfig.instances().get(0).port());
+            assertThat(instancesConfig.instances().size()).isEqualTo(1);
+            assertThat(instancesConfig.instances().get(0).host()).isEqualTo("localhost");
+            assertThat(instancesConfig.instances().get(0).port()).isEqualTo(9042);
         }
     }
 
@@ -67,13 +71,14 @@ public class ConfigurationTest
     {
         MainModule mainModule = new MainModule();
         YAMLConfiguration yamlConf = new YAMLConfiguration();
-        try (InputStream stream = new FileInputStream("src/test/resources/sidecar_with_single_multiple_instances.yaml"))
+        try (InputStream stream =
+             Files.newInputStream(Paths.get("src/test/resources/sidecar_with_single_multiple_instances.yaml")))
         {
             yamlConf.read(stream);
             InstancesConfig instancesConfig = mainModule.readInstancesConfig(yamlConf, versionProvider);
-            assertEquals(1, instancesConfig.instances().size());
-            assertEquals("localhost", instancesConfig.instances().get(0).host());
-            assertEquals(9042, instancesConfig.instances().get(0).port());
+            assertThat(instancesConfig.instances().size()).isEqualTo(1);
+            assertThat(instancesConfig.instances().get(0).host()).isEqualTo("localhost");
+            assertThat(instancesConfig.instances().get(0).port()).isEqualTo(9042);
         }
     }
 
@@ -82,11 +87,32 @@ public class ConfigurationTest
     {
         MainModule mainModule = new MainModule();
         YAMLConfiguration yamlConf = new YAMLConfiguration();
-        try (InputStream stream = new FileInputStream("src/test/resources/sidecar_multiple_instances.yaml"))
+        try (InputStream stream =
+             Files.newInputStream(Paths.get("src/test/resources/sidecar_multiple_instances.yaml")))
         {
             yamlConf.read(stream);
             InstancesConfig instancesConfig = mainModule.readInstancesConfig(yamlConf, versionProvider);
-            assertEquals(2, instancesConfig.instances().size());
+            assertThat(instancesConfig.instances().size()).isEqualTo(2);
+        }
+    }
+
+    @Test
+    public void testReadingCassandraInputValidation() throws Exception
+    {
+        MainModule mainModule = new MainModule();
+        YAMLConfiguration yamlConf = new YAMLConfiguration();
+        try (InputStream stream =
+             Files.newInputStream(Paths.get("src/test/resources/sidecar_validation_configuration.yaml")))
+        {
+            yamlConf.read(stream);
+            ValidationConfiguration validationConfiguration = mainModule.validationConfiguration(yamlConf);
+
+            assertThat(validationConfiguration.getForbiddenKeyspaces()).contains("a", "b", "c");
+            assertThat(validationConfiguration.getAllowedPatternForDirectory()).isEqualTo("[a-z]+");
+            assertThat(validationConfiguration.getAllowedPatternForComponentName())
+            .isEqualTo("(.db|.cql|.json|.crc32|TOC.txt)");
+            assertThat(validationConfiguration.getAllowedPatternForRestrictedComponentName())
+            .isEqualTo("(.db|TOC.txt)");
         }
     }
 }

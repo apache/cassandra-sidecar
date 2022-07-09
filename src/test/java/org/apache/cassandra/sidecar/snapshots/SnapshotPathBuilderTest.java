@@ -38,7 +38,7 @@ class SnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
 {
     SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig)
     {
-        return new SnapshotPathBuilder(vertx, instancesConfig);
+        return new SnapshotPathBuilder(vertx, instancesConfig, validator);
     }
 
     @Test

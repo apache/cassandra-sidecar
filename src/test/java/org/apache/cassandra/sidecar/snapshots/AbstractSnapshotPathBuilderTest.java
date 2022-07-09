@@ -33,6 +33,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.rules.TemporaryFolder;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -40,8 +42,12 @@ import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
+import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.StreamSSTableComponentRequest;
+import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,11 +65,23 @@ abstract class AbstractSnapshotPathBuilderTest
 
     SnapshotPathBuilder instance;
     Vertx vertx = Vertx.vertx();
+    CassandraInputValidator validator;
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @BeforeEach
     void setup() throws IOException
     {
+        ValidationConfiguration validationConfiguration = new TestValidationConfiguration();
+        validator = new CassandraInputValidator(validationConfiguration);
+        Guice.createInjector(new AbstractModule()
+        {
+            protected void configure()
+            {
+                bind(ValidationConfiguration.class).toInstance(validationConfiguration);
+                requestStaticInjection(QualifiedTableName.class);
+            }
+        });
+
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         InstanceMetadata mockInstanceMeta = mock(InstanceMetadata.class);
         InstanceMetadata mockInvalidDataDirInstanceMeta = mock(InstanceMetadata.class);
@@ -513,7 +531,7 @@ abstract class AbstractSnapshotPathBuilderTest
 
         String expectedPath;
         // a_table and a_table-<TABLE_UUID> - the latter should be picked
-        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig);
+        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig, validator);
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot/data.db";
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
@@ -606,7 +624,7 @@ abstract class AbstractSnapshotPathBuilderTest
         table4New.setLastModified(System.currentTimeMillis() + 2000000);
 
         String expectedPath;
-        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig);
+        SnapshotPathBuilder newBuilder = new SnapshotPathBuilder(vertx, mockInstancesConfig, validator);
         // table4-a72c8740a57611ec935db766a70c44a1 is the last modified, so it is the correct directory
         expectedPath = table4New.getAbsolutePath()
                        + "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/data.db";

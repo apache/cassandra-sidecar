@@ -17,8 +17,6 @@
  */
 package org.apache.cassandra.sidecar.common.data;
 
-import org.apache.cassandra.sidecar.common.utils.ValidationUtils;
-
 /**
  * Holder class for the {@link org.apache.cassandra.sidecar.routes.ListSnapshotFilesHandler}
  * request parameters
@@ -42,7 +40,7 @@ public class ListSnapshotFilesRequest extends QualifiedTableName
                                     boolean includeSecondaryIndexFiles)
     {
         super(keyspace, tableName, true);
-        this.snapshotName = ValidationUtils.validateSnapshotName(snapshotName);
+        this.snapshotName = validator.validateSnapshotName(snapshotName);
         this.includeSecondaryIndexFiles = includeSecondaryIndexFiles;
     }
 

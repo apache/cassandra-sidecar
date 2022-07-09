@@ -44,4 +44,10 @@ public class YAMLKeyConstants
     public static final String CASSANDRA_INSTANCE_HOST = "host";
     public static final String CASSANDRA_INSTANCE_PORT = "port";
     public static final String CASSANDRA_INSTANCE_DATA_DIRS = "data_dirs";
+    public static final String CASSANDRA_INPUT_VALIDATION = "cassandra_input_validation";
+    public static final String CASSANDRA_FORBIDDEN_KEYSPACES = "forbidden_keyspaces";
+    public static final String CASSANDRA_ALLOWED_CHARS_FOR_DIRECTORY = "allowed_chars_for_directory";
+    public static final String CASSANDRA_ALLOWED_CHARS_FOR_COMPONENT_NAME = "allowed_chars_for_component_name";
+    public static final String CASSANDRA_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME =
+    "allowed_chars_for_restricted_component_name";
 }

@@ -10,6 +10,10 @@ repositories {
 dependencies {
     testCompile project(":cassandra40")
 
+    compile 'ch.qos.logback:logback-core:1.2.3'
+    compile 'ch.qos.logback:logback-classic:1.2.3'
+    implementation('com.datastax.cassandra:cassandra-driver-core:3.9.0+')
+
     testCompile "io.kubernetes:client-java:${project.kubernetesClientVersion}"
     testCompile "io.kubernetes:client-java-extended:${project.kubernetesClientVersion}"
 

@@ -39,6 +39,9 @@ import io.vertx.core.file.FileProps;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
+import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.getSnapshot1Instance1Files;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.getSnapshot1Instance2Files;
@@ -64,7 +67,10 @@ public class SnapshotSearchTest
         rootDir = temporaryFolder.getCanonicalPath();
         SnapshotUtils.initializeTmpDirectory(temporaryFolder);
         InstancesConfig mockInstancesConfig = mockInstancesConfig(rootDir);
-        instance = new SnapshotPathBuilder(vertx, mockInstancesConfig);
+
+        ValidationConfiguration validationConfiguration = new TestValidationConfiguration();
+        CassandraInputValidator validator = new CassandraInputValidator(validationConfiguration);
+        instance = new SnapshotPathBuilder(vertx, mockInstancesConfig, validator);
     }
 
     @Test

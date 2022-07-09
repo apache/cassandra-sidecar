@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar;
 import javax.annotation.Nullable;
 
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 
 /**
  * Sidecar configuration
@@ -60,11 +61,13 @@ public class Configuration
 
     private final long throttleDelayInSeconds;
 
+    private final ValidationConfiguration validationConfiguration;
+
     public Configuration(InstancesConfig instancesConfig, String host, Integer port, Integer healthCheckFrequencyMillis,
                          boolean isSslEnabled, @Nullable String keyStorePath, @Nullable String keyStorePassword,
                          @Nullable String trustStorePath, @Nullable String trustStorePassword,
                          long rateLimitStreamRequestsPerSecond, long throttleTimeoutInSeconds,
-                         long throttleDelayInSeconds)
+                         long throttleDelayInSeconds, ValidationConfiguration validationConfiguration)
     {
         this.instancesConfig = instancesConfig;
         this.host = host;
@@ -79,6 +82,7 @@ public class Configuration
         this.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond;
         this.throttleTimeoutInSeconds = throttleTimeoutInSeconds;
         this.throttleDelayInSeconds = throttleDelayInSeconds;
+        this.validationConfiguration = validationConfiguration;
     }
 
     /**
@@ -213,6 +217,8 @@ public class Configuration
         private long throttleTimeoutInSeconds;
         private long throttleDelayInSeconds;
 
+        private ValidationConfiguration validationConfiguration;
+
         public Builder setInstancesConfig(InstancesConfig instancesConfig)
         {
             this.instancesConfig = instancesConfig;
@@ -285,12 +291,18 @@ public class Configuration
             return this;
         }
 
+        public Builder setValidationConfiguration(ValidationConfiguration validationConfiguration)
+        {
+            this.validationConfiguration = validationConfiguration;
+            return this;
+        }
+
         public Configuration build()
         {
             return new Configuration(instancesConfig, host, port, healthCheckFrequencyMillis, isSslEnabled,
                                      keyStorePath, keyStorePassword, trustStorePath, trustStorePassword,
                                      rateLimitStreamRequestsPerSecond, throttleTimeoutInSeconds,
-                                     throttleDelayInSeconds);
+                                     throttleDelayInSeconds, validationConfiguration);
         }
     }
 }

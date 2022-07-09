@@ -36,6 +36,8 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
+import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
+import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -65,15 +67,15 @@ public class TestModule extends AbstractModule
     protected Configuration abstractConfig()
     {
         return new Configuration.Builder()
-                           .setInstancesConfig(getInstancesConfig())
-                           .setHost("127.0.0.1")
-                           .setPort(6475)
-                           .setHealthCheckFrequency(1000)
-                           .setSslEnabled(false)
-                           .setRateLimitStreamRequestsPerSecond(1)
-                           .setThrottleDelayInSeconds(5)
-                           .setThrottleTimeoutInSeconds(10)
-                           .build();
+               .setInstancesConfig(getInstancesConfig())
+               .setHost("127.0.0.1")
+               .setPort(6475)
+               .setHealthCheckFrequency(1000)
+               .setSslEnabled(false)
+               .setRateLimitStreamRequestsPerSecond(1)
+               .setThrottleDelayInSeconds(5)
+               .setThrottleTimeoutInSeconds(10)
+               .build();
     }
 
     @Provides
@@ -129,5 +131,12 @@ public class TestModule extends AbstractModule
         CassandraVersionProvider.Builder builder = new CassandraVersionProvider.Builder();
         builder.add(new MockCassandraFactory());
         return builder.build();
+    }
+
+    @Provides
+    @Singleton
+    public ValidationConfiguration validationConfiguration()
+    {
+        return new TestValidationConfiguration();
     }
 }
