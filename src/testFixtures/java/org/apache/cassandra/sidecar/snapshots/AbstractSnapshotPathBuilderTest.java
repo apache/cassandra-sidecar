@@ -54,6 +54,9 @@ import static org.assertj.core.api.Assertions.from;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * An abstract class for SnapshotPathBuilder tests
+ */
 public abstract class AbstractSnapshotPathBuilderTest
 {
     @TempDir

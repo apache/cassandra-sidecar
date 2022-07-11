@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SidecarRateLimiter;
@@ -230,17 +231,15 @@ public class MainModule extends AbstractModule
     @Singleton
     public ValidationConfiguration validationConfiguration(YAMLConfiguration yamlConf)
     {
-        org.apache.commons.configuration2.Configuration validationConfiguration
-        = yamlConf.subset(CASSANDRA_INPUT_VALIDATION);
-        Set<String> forbiddenKeyspaces
-        = new HashSet<>(validationConfiguration.getCollection(String.class, CASSANDRA_FORBIDDEN_KEYSPACES, null));
-        String allowedPatternForDirectory
-        = validationConfiguration.get(String.class,
-                                                                        CASSANDRA_ALLOWED_CHARS_FOR_DIRECTORY);
-        String allowedPatternForComponentName
-        = validationConfiguration.get(String.class, CASSANDRA_ALLOWED_CHARS_FOR_COMPONENT_NAME);
-        String allowedPatternForRestrictedComponentName
-        = validationConfiguration.get(String.class, CASSANDRA_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME);
+        org.apache.commons.configuration2.Configuration validation = yamlConf.subset(CASSANDRA_INPUT_VALIDATION);
+        Set<String> forbiddenKeyspaces = new HashSet<>(validation.getList(String.class,
+                                                                          CASSANDRA_FORBIDDEN_KEYSPACES,
+                                                                          Collections.emptyList()));
+        UnaryOperator<String> readString = key -> validation.get(String.class, key);
+        String allowedPatternForDirectory = readString.apply(CASSANDRA_ALLOWED_CHARS_FOR_DIRECTORY);
+        String allowedPatternForComponentName = readString.apply(CASSANDRA_ALLOWED_CHARS_FOR_COMPONENT_NAME);
+        String allowedPatternForRestrictedComponentName = readString
+                                                          .apply(CASSANDRA_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME);
 
         return new YAMLValidationConfiguration(forbiddenKeyspaces,
                                                allowedPatternForDirectory,
