@@ -9,6 +9,7 @@ buildscript {
 
 plugins {
     id 'java'
+    id 'java-test-fixtures'
     id 'application'
 
     // since we're using a specific version here, we delay applying the plugin till the all projects
@@ -183,6 +184,15 @@ dependencies {
     
     implementation(project(":common"))
     implementation(project(":cassandra40"))
+
+    testFixturesApi(testFixtures(project(":common")))
+    testFixturesImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
+    testFixturesImplementation('com.google.inject:guice:4.2.2')
+    testFixturesImplementation('org.mockito:mockito-all:1.10.19')
+    testFixturesImplementation("org.junit.jupiter:junit-jupiter-api:${project.junitVersion}")
+    testFixturesImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")
+    testFixturesImplementation("org.assertj:assertj-core:3.14.0")
+    testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}")
 }
 
 task copyCodeStyle(type: Copy) {

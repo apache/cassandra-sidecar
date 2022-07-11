@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.rules.TemporaryFolder;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -55,21 +54,21 @@ import static org.assertj.core.api.Assertions.from;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-abstract class AbstractSnapshotPathBuilderTest
+public abstract class AbstractSnapshotPathBuilderTest
 {
     @TempDir
-    File dataDir0;
+    protected File dataDir0;
 
     @TempDir
-    File dataDir1;
+    protected File dataDir1;
 
-    SnapshotPathBuilder instance;
-    Vertx vertx = Vertx.vertx();
-    CassandraInputValidator validator;
+    protected SnapshotPathBuilder instance;
+    protected Vertx vertx = Vertx.vertx();
+    protected CassandraInputValidator validator;
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @BeforeEach
-    void setup() throws IOException
+    protected void setup() throws IOException
     {
         ValidationConfiguration validationConfiguration = new TestValidationConfiguration();
         validator = new CassandraInputValidator(validationConfiguration);
@@ -146,13 +145,13 @@ abstract class AbstractSnapshotPathBuilderTest
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @AfterEach
-    void clear()
+    protected void clear()
     {
         dataDir0.delete();
         dataDir1.delete();
     }
 
-    abstract SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig);
+    protected abstract SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig);
 
     @ParameterizedTest
     @ValueSource(strings = { "i_❤_u.db", "this-is-not-allowed.jar", "cql-is-not-allowed-here.cql",
@@ -499,11 +498,10 @@ abstract class AbstractSnapshotPathBuilderTest
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Test
-    void testTableWithUUIDPicked() throws IOException
+    void testTableWithUUIDPicked(@TempDir File tempDir) throws IOException
     {
-        TemporaryFolder tempFolder = new TemporaryFolder();
-        tempFolder.create();
-        File dataDir = tempFolder.newFolder("data");
+        File dataDir = new File(tempDir, "data");
+        dataDir.mkdirs();
 
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         InstanceMetadata mockInstanceMeta = mock(InstanceMetadata.class);
@@ -589,11 +587,10 @@ abstract class AbstractSnapshotPathBuilderTest
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Test
-    void testLastModifiedTablePicked() throws IOException
+    void testLastModifiedTablePicked(@TempDir File tempDir) throws IOException
     {
-        TemporaryFolder tempFolder = new TemporaryFolder();
-        tempFolder.create();
-        File dataDir = tempFolder.newFolder("data");
+        File dataDir = new File(tempDir, "data");
+        dataDir.mkdirs();
 
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         InstanceMetadata mockInstanceMeta = mock(InstanceMetadata.class);
