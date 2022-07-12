@@ -50,12 +50,11 @@ public class QualifiedTableName
      * @param tableName the table name in Cassandra
      * @param required  true if keyspace and table name are required, false if {@code null} is allowed
      */
-    QualifiedTableName(String keyspace, String tableName, boolean required)
+    protected QualifiedTableName(String keyspace, String tableName, boolean required)
     {
         this.keyspace = !required && keyspace == null ? null : validator.validateKeyspaceName(keyspace);
         this.tableName = !required && tableName == null ? null : validator.validateTableName(tableName);
     }
-
 
     /**
      * @return the keyspace in Cassandra
