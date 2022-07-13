@@ -59,15 +59,15 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Configuration configuration()
+    public Configuration configuration(InstancesConfig instancesConfig)
     {
-        return abstractConfig();
+        return abstractConfig(instancesConfig);
     }
 
-    protected Configuration abstractConfig()
+    protected Configuration abstractConfig(InstancesConfig instancesConfig)
     {
         return new Configuration.Builder()
-               .setInstancesConfig(getInstancesConfig())
+               .setInstancesConfig(instancesConfig)
                .setHost("127.0.0.1")
                .setPort(6475)
                .setHealthCheckFrequency(1000)

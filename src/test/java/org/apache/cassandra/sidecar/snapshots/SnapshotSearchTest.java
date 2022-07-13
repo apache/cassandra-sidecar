@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +34,6 @@ import org.junit.jupiter.api.io.TempDir;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.file.FileProps;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
@@ -145,8 +143,8 @@ public class SnapshotSearchTest
         //noinspection unchecked
         List<String> snapshotFiles = ar.list()
                                        .stream()
-                                       .flatMap(l -> ((List<Pair<String, FileProps>>) l).stream())
-                                       .map(Pair::getLeft)
+                                       .flatMap(l -> ((List<SnapshotPathBuilder.SnapshotFile>) l).stream())
+                                       .map(snapshotFile -> snapshotFile.path)
                                        .sorted()
                                        .collect(Collectors.toList());
 

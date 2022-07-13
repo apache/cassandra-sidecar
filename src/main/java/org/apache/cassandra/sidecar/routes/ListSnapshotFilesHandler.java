@@ -20,25 +20,22 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.io.FileNotFoundException;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
-import org.apache.commons.lang3.tuple.Pair;
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.file.FileProps;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.snapshots.SnapshotDirectory;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 
 /**
@@ -47,37 +44,26 @@ import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
  * For example:
  *
  * <p>
- * /api/v1/snapshots/testSnapshot                                    lists all SSTable component files for all the
- * "testSnapshot" snapshots
- * <p>
- * /api/v1/snapshots/testSnapshot?includeSecondaryIndexFiles=true    lists all SSTable component files including
- * secondary index files for all the "testSnapshot"
- * snapshots
- * <p>
- * /api/v1/keyspace/ks/table/tbl/snapshots/testSnapshot              lists all SSTable component files for the
- * "testSnapshot" snapshot for the "ks" keyspace
- * and the "tbl" table
+ * /api/v1/keyspace/ks/table/tbl/snapshots/testSnapshot
+ * lists all SSTable component files for the "testSnapshot" snapshot for the "ks" keyspace and the "tbl" table
  * <p>
  * /api/v1/keyspace/ks/table/tbl/snapshots/testSnapshot?includeSecondaryIndexFiles=true
- * lists all SSTable component files including
- * secondary index files for the "testSnapshot"
- * snapshot for the "ks" keyspace and the "tbl"
- * table
+ * lists all SSTable component files including secondary index files for the "testSnapshot" snapshot for the "ks"
+ * keyspace and the "tbl" table
  */
 public class ListSnapshotFilesHandler extends AbstractHandler
 {
     private static final Logger logger = LoggerFactory.getLogger(ListSnapshotFilesHandler.class);
     private static final String INCLUDE_SECONDARY_INDEX_FILES = "includeSecondaryIndexFiles";
-    private static final int DATA_DIR_INDEX = 0;
-    private static final int TABLE_NAME_SUBPATH_INDEX = 1;
-    private static final int FILE_NAME_SUBPATH_INDEX = 4;
     private final SnapshotPathBuilder builder;
+    private final Configuration configuration;
 
     @Inject
-    public ListSnapshotFilesHandler(SnapshotPathBuilder builder, InstancesConfig instancesConfig)
+    public ListSnapshotFilesHandler(SnapshotPathBuilder builder, Configuration configuration)
     {
-        super(instancesConfig);
+        super(configuration.getInstancesConfig());
         this.builder = builder;
+        this.configuration = configuration;
     }
 
     @Override
@@ -93,68 +79,85 @@ public class ListSnapshotFilesHandler extends AbstractHandler
         boolean secondaryIndexFiles = requestParams.includeSecondaryIndexFiles();
 
         builder.build(host, requestParams)
-               .compose(directory -> builder.listSnapshotDirectory(directory, secondaryIndexFiles))
-               .onSuccess(fileList ->
-                          {
-                              if (fileList.isEmpty())
-                              {
-                                  String payload = "Snapshot '" + requestParams.getSnapshotName() + "' not found";
-                                  context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), payload));
-                              }
-                              else
-                              {
-                                  logger.debug("ListSnapshotFilesHandler handled {} for {}. Instance: {}",
-                                               requestParams, remoteAddress, host);
-                                  context.json(buildResponse(host, requestParams, fileList));
-                              }
-                          })
-               .onFailure(cause ->
-                          {
-                              logger.error("ListSnapshotFilesHandler failed for request: {} from: {}. Instance: {}",
-                                           requestParams, remoteAddress, host);
-                              if (cause instanceof FileNotFoundException ||
-                                  cause instanceof NoSuchFileException)
-                              {
-                                  context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(),
-                                                                 cause.getMessage()));
-                              }
-                              else
-                              {
-                                  context.fail(new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
-                                                                 "Invalid request for " + requestParams));
-                              }
-                          });
+               .onSuccess(snapshotDirectory ->
+                          builder.listSnapshotDirectory(snapshotDirectory, secondaryIndexFiles)
+                                 .onSuccess(fileList ->
+                                 {
+                                     if (fileList.isEmpty())
+                                     {
+                                         String payload = "Snapshot '" + requestParams.getSnapshotName() +
+                                                          "' not found";
+                                         context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), payload));
+                                     }
+                                     else
+                                     {
+                                         logger.debug("ListSnapshotFilesHandler handled {} for {}. Instance: {}",
+                                                      requestParams, remoteAddress, host);
+                                         context.json(buildResponse(host, snapshotDirectory, fileList));
+                                     }
+                                 })
+                                 .onFailure(cause -> processFailure(cause, context, requestParams, remoteAddress, host))
+               )
+               .onFailure(cause -> processFailure(cause, context, requestParams, remoteAddress, host));
+    }
+
+    private void processFailure(Throwable cause, RoutingContext context, ListSnapshotFilesRequest requestParams,
+                                SocketAddress remoteAddress, String host)
+    {
+        logger.error("ListSnapshotFilesHandler failed for request: {} from: {}. Instance: {}",
+                     requestParams, remoteAddress, host);
+        if (cause instanceof FileNotFoundException ||
+            cause instanceof NoSuchFileException)
+        {
+            context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(),
+                                           cause.getMessage()));
+        }
+        else
+        {
+            context.fail(new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
+                                           "Invalid request for " + requestParams));
+        }
     }
 
     private ListSnapshotFilesResponse buildResponse(String host,
-                                                    ListSnapshotFilesRequest request,
-                                                    List<Pair<String, FileProps>> fileList)
+                                                    String snapshotDirectory,
+                                                    List<SnapshotPathBuilder.SnapshotFile> fileList)
     {
-        InstanceMetadata instanceMetadata = instancesConfig.instanceFromHost(host);
-        int sidecarPort = instanceMetadata.port();
-        Path dataDirPath = Paths.get(instanceMetadata.dataDirs().get(DATA_DIR_INDEX));
         ListSnapshotFilesResponse response = new ListSnapshotFilesResponse();
-        String snapshotName = request.getSnapshotName();
+        int sidecarPort = configuration.getPort();
+        SnapshotDirectory directory = SnapshotDirectory.of(snapshotDirectory);
+        int dataDirectoryIndex = dataDirectoryIndex(host, directory.dataDirectory);
+        int offset = snapshotDirectory.length() + 1;
 
-        for (Pair<String, FileProps> file : fileList)
+        for (SnapshotPathBuilder.SnapshotFile snapshotFile : fileList)
         {
-            Path pathFromDataDir = dataDirPath.relativize(Paths.get(file.getLeft()));
-
-            String keyspace = request.getKeyspace();
-            // table name might include a dash (-) with the table UUID so we always use it as part of the response
-            String tableName = pathFromDataDir.getName(TABLE_NAME_SUBPATH_INDEX).toString();
-            String fileName = pathFromDataDir.getName(FILE_NAME_SUBPATH_INDEX).toString();
-
-            response.addSnapshotFile(new ListSnapshotFilesResponse.FileInfo(file.getRight().size(),
-                                                                            host,
-                                                                            sidecarPort,
-                                                                            DATA_DIR_INDEX,
-                                                                            snapshotName,
-                                                                            keyspace,
-                                                                            tableName,
-                                                                            fileName));
+            int fileNameIndex = snapshotFile.path.indexOf(snapshotDirectory) + offset;
+            Preconditions.checkArgument(fileNameIndex < snapshotFile.path.length(),
+                                        "Invalid snapshot file '" + snapshotFile.path + "'");
+            response.addSnapshotFile(
+            new ListSnapshotFilesResponse.FileInfo(snapshotFile.size,
+                                                   host,
+                                                   sidecarPort,
+                                                   dataDirectoryIndex,
+                                                   directory.snapshotName,
+                                                   directory.keyspace,
+                                                   directory.tableName,
+                                                   snapshotFile.path.substring(fileNameIndex)));
         }
         return response;
+    }
+
+    private int dataDirectoryIndex(String host, String dataDirectory)
+    {
+        List<String> dataDirs = instancesConfig.instanceFromHost(host).dataDirs();
+        for (int index = 0; index < dataDirs.size(); index++)
+        {
+            if (dataDirectory.startsWith(dataDirs.get(index)))
+            {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private ListSnapshotFilesRequest extractParamsOrThrow(final RoutingContext context)

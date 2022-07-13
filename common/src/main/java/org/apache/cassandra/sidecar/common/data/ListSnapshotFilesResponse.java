@@ -23,11 +23,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.common.annotations.Beta;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * A class representing a response for the {@link ListSnapshotFilesRequest}
+ * A class representing a response for the {@link ListSnapshotFilesRequest}.
+ * This class is expected to evolve and has been mark with the {@link Beta} annotation.
  */
+@Beta
 public class ListSnapshotFilesResponse
 {
     private final List<FileInfo> snapshotFilesInfo;

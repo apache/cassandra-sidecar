@@ -60,7 +60,7 @@ public class SnapshotPathBuilder
 {
     private static final Logger logger = LoggerFactory.getLogger(SnapshotPathBuilder.class);
     private static final String DATA_SUB_DIR = "/data";
-    public static final int SNAPSHOTS_MAX_DEPTH = 4;
+    public static final int SNAPSHOTS_MAX_DEPTH = 5;
     public static final String SNAPSHOTS_DIR_NAME = "snapshots";
     protected final Vertx vertx;
     protected final FileSystem fs;
@@ -129,10 +129,10 @@ public class SnapshotPathBuilder
      * @param includeSecondaryIndexFiles whether to include secondary index files
      * @return a future with a list of files inside the snapshot directory
      */
-    public Future<List<Pair<String, FileProps>>> listSnapshotDirectory(String snapshotDirectory,
-                                                                       boolean includeSecondaryIndexFiles)
+    public Future<List<SnapshotFile>> listSnapshotDirectory(String snapshotDirectory,
+                                                            boolean includeSecondaryIndexFiles)
     {
-        Promise<List<Pair<String, FileProps>>> promise = Promise.promise();
+        Promise<List<SnapshotFile>> promise = Promise.promise();
 
         // List the snapshot directory
         fs.readDir(snapshotDirectory)
@@ -158,10 +158,15 @@ public class SnapshotPathBuilder
                              {
 
                                  // Create a pair of path/fileProps for every regular file
-                                 List<Pair<String, FileProps>> snapshotList =
+                                 List<SnapshotFile> snapshotList =
                                  IntStream.range(0, list.size())
                                           .filter(i -> ar.<FileProps>resultAt(i).isRegularFile())
-                                          .mapToObj(i -> Pair.of(list.get(i), ar.<FileProps>resultAt(i)))
+                                          .mapToObj(i ->
+                                          {
+                                              long size = ar.<FileProps>resultAt(i).size();
+                                              return new SnapshotFile(list.get(i),
+                                                                      size);
+                                          })
                                           .collect(Collectors.toList());
 
 
@@ -205,10 +210,10 @@ public class SnapshotPathBuilder
                                                 .onSuccess(idx ->
                                                 {
                                                     //noinspection unchecked
-                                                    List<Pair<String, FileProps>> idxPropList =
+                                                    List<SnapshotFile> idxPropList =
                                                     idx.list()
                                                        .stream()
-                                                       .flatMap(l -> ((List<Pair<String, FileProps>>) l).stream())
+                                                       .flatMap(l -> ((List<SnapshotFile>) l).stream())
                                                        .collect(Collectors.toList());
 
                                                     // aggregate the results and return the full list
@@ -249,7 +254,6 @@ public class SnapshotPathBuilder
 
         return vertx.executeBlocking(promise ->
         {
-
             // a filter to keep directories ending in "/snapshots/<snapshotName>"
             BiPredicate<Path, BasicFileAttributes> filter = (path, basicFileAttributes) ->
             {
@@ -511,5 +515,20 @@ public class SnapshotPathBuilder
                            }
                        });
         return promise.future();
+    }
+
+    /**
+     * Class representing a snapshot component file
+     */
+    public static class SnapshotFile
+    {
+        public final String path;
+        public final long size;
+
+        SnapshotFile(String path, long size)
+        {
+            this.path = path;
+            this.size = size;
+        }
     }
 }
