@@ -35,8 +35,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
@@ -47,37 +46,29 @@ import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
  * For example:
  *
  * <p>
- * /api/v1/snapshots/testSnapshot                                    lists all SSTable component files for all the
- * "testSnapshot" snapshots
- * <p>
- * /api/v1/snapshots/testSnapshot?includeSecondaryIndexFiles=true    lists all SSTable component files including
- * secondary index files for all the "testSnapshot"
- * snapshots
- * <p>
- * /api/v1/keyspace/ks/table/tbl/snapshots/testSnapshot              lists all SSTable component files for the
- * "testSnapshot" snapshot for the "ks" keyspace
- * and the "tbl" table
+ * /api/v1/keyspace/ks/table/tbl/snapshots/testSnapshot
+ * lists all SSTable component files for the "testSnapshot" snapshot for the "ks" keyspace and the "tbl" table
  * <p>
  * /api/v1/keyspace/ks/table/tbl/snapshots/testSnapshot?includeSecondaryIndexFiles=true
- * lists all SSTable component files including
- * secondary index files for the "testSnapshot"
- * snapshot for the "ks" keyspace and the "tbl"
- * table
+ * lists all SSTable component files including secondary index files for the "testSnapshot" snapshot for the "ks"
+ * keyspace and the "tbl" table
  */
 public class ListSnapshotFilesHandler extends AbstractHandler
 {
     private static final Logger logger = LoggerFactory.getLogger(ListSnapshotFilesHandler.class);
     private static final String INCLUDE_SECONDARY_INDEX_FILES = "includeSecondaryIndexFiles";
     private static final int DATA_DIR_INDEX = 0;
-    private static final int TABLE_NAME_SUBPATH_INDEX = 1;
-    private static final int FILE_NAME_SUBPATH_INDEX = 4;
+    private static final int TABLE_NAME_SUBPATH_INDEX_FROM_END = 4;
+    private static final int FILE_NAME_SUBPATH_INDEX_FROM_END = 1;
     private final SnapshotPathBuilder builder;
+    private final Configuration configuration;
 
     @Inject
-    public ListSnapshotFilesHandler(SnapshotPathBuilder builder, InstancesConfig instancesConfig)
+    public ListSnapshotFilesHandler(SnapshotPathBuilder builder, Configuration configuration)
     {
-        super(instancesConfig);
+        super(configuration.getInstancesConfig());
         this.builder = builder;
+        this.configuration = configuration;
     }
 
     @Override
@@ -130,20 +121,18 @@ public class ListSnapshotFilesHandler extends AbstractHandler
                                                     ListSnapshotFilesRequest request,
                                                     List<Pair<String, FileProps>> fileList)
     {
-        InstanceMetadata instanceMetadata = instancesConfig.instanceFromHost(host);
-        int sidecarPort = instanceMetadata.port();
-        Path dataDirPath = Paths.get(instanceMetadata.dataDirs().get(DATA_DIR_INDEX));
         ListSnapshotFilesResponse response = new ListSnapshotFilesResponse();
         String snapshotName = request.getSnapshotName();
+        int sidecarPort = configuration.getPort();
 
         for (Pair<String, FileProps> file : fileList)
         {
-            Path pathFromDataDir = dataDirPath.relativize(Paths.get(file.getLeft()));
+            Path path = Paths.get(file.getLeft());
 
             String keyspace = request.getKeyspace();
             // table name might include a dash (-) with the table UUID so we always use it as part of the response
-            String tableName = pathFromDataDir.getName(TABLE_NAME_SUBPATH_INDEX).toString();
-            String fileName = pathFromDataDir.getName(FILE_NAME_SUBPATH_INDEX).toString();
+            String tableName = path.getName(path.getNameCount() - TABLE_NAME_SUBPATH_INDEX_FROM_END).toString();
+            String fileName = path.getName(path.getNameCount() - FILE_NAME_SUBPATH_INDEX_FROM_END).toString();
 
             response.addSnapshotFile(new ListSnapshotFilesResponse.FileInfo(file.getRight().size(),
                                                                             host,

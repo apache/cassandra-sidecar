@@ -103,7 +103,7 @@ public class ListSnapshotFilesHandlerTest
         ListSnapshotFilesResponse.FileInfo fileInfoExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
                                                "localhost",
-                                               9043,
+                                               6475,
                                                0,
                                                "snapshot1",
                                                "keyspace1",
@@ -112,7 +112,7 @@ public class ListSnapshotFilesHandlerTest
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
                                                "localhost",
-                                               9043,
+                                               6475,
                                                0,
                                                "snapshot1",
                                                "keyspace1",

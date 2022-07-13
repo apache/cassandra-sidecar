@@ -60,7 +60,7 @@ public class SnapshotPathBuilder
 {
     private static final Logger logger = LoggerFactory.getLogger(SnapshotPathBuilder.class);
     private static final String DATA_SUB_DIR = "/data";
-    public static final int SNAPSHOTS_MAX_DEPTH = 4;
+    public static final int SNAPSHOTS_MAX_DEPTH = 5;
     public static final String SNAPSHOTS_DIR_NAME = "snapshots";
     protected final Vertx vertx;
     protected final FileSystem fs;
@@ -249,7 +249,6 @@ public class SnapshotPathBuilder
 
         return vertx.executeBlocking(promise ->
         {
-
             // a filter to keep directories ending in "/snapshots/<snapshotName>"
             BiPredicate<Path, BasicFileAttributes> filter = (path, basicFileAttributes) ->
             {

@@ -81,14 +81,14 @@ public class SnapshotUtils
         InstanceMetadataImpl localhost = new InstanceMetadataImpl(1,
                                                                   "localhost",
                                                                   9043,
-                                                                  Collections.singletonList(rootPath + "/d1/data"),
+                                                                  Collections.singletonList(rootPath + "/d1"),
                                                                   null,
                                                                   versionProvider,
                                                                   1000);
         InstanceMetadataImpl localhost2 = new InstanceMetadataImpl(2,
                                                                    "localhost2",
                                                                    9043,
-                                                                   Collections.singletonList(rootPath + "/d2/data"),
+                                                                   Collections.singletonList(rootPath + "/d2"),
                                                                    null,
                                                                    versionProvider,
                                                                    1000);
