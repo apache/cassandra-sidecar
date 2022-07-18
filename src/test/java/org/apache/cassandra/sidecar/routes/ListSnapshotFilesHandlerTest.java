@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -126,6 +128,51 @@ public class ListSnapshotFilesHandlerTest
                   ListSnapshotFilesResponse resp = response.bodyAsJson(ListSnapshotFilesResponse.class);
                   assertThat(resp.getSnapshotFilesInfo().size()).isEqualTo(1);
                   assertThat(resp.getSnapshotFilesInfo()).contains(fileInfoExpected);
+                  assertThat(resp.getSnapshotFilesInfo()).doesNotContain(fileInfoNotExpected);
+                  context.completeNow();
+              })));
+    }
+
+    @Test
+    public void testRouteSucceedsIncludeSecondaryIndexes(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/keyspace/keyspace1/table/table1-1234" +
+                           "/snapshots/snapshot1?includeSecondaryIndexFiles=true";
+        List<ListSnapshotFilesResponse.FileInfo> fileInfoExpected = Arrays.asList(
+        new ListSnapshotFilesResponse.FileInfo(11,
+                                               "localhost",
+                                               6475,
+                                               0,
+                                               "snapshot1",
+                                               "keyspace1",
+                                               "table1-1234",
+                                               "1.db"),
+        new ListSnapshotFilesResponse.FileInfo(0,
+                                               "localhost",
+                                               6475,
+                                               0,
+                                               "snapshot1",
+                                               "keyspace1",
+                                               "table1-1234",
+                                               "secondary.db")
+        );
+        ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
+        new ListSnapshotFilesResponse.FileInfo(11,
+                                               "localhost",
+                                               6475,
+                                               0,
+                                               "snapshot1",
+                                               "keyspace1",
+                                               "table1-1234",
+                                               "2.db");
+
+        client.get(config.getPort(), "localhost", testRoute)
+              .send(context.succeeding(response -> context.verify(() ->
+              {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  ListSnapshotFilesResponse resp = response.bodyAsJson(ListSnapshotFilesResponse.class);
+                  assertThat(resp.getSnapshotFilesInfo()).containsAll(fileInfoExpected);
                   assertThat(resp.getSnapshotFilesInfo()).doesNotContain(fileInfoNotExpected);
                   context.completeNow();
               })));

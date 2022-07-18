@@ -40,6 +40,8 @@ import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 
+import static org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder.SNAPSHOTS_DIR_NAME;
+
 /**
  * ListSnapshotFilesHandler class lists paths of all the snapshot files of a given snapshot name.
  * Query param includeSecondaryIndexFiles is used to request secondary index files along with other files
@@ -59,6 +61,7 @@ public class ListSnapshotFilesHandler extends AbstractHandler
     private static final String INCLUDE_SECONDARY_INDEX_FILES = "includeSecondaryIndexFiles";
     private static final int DATA_DIR_INDEX = 0;
     private static final int TABLE_NAME_SUBPATH_INDEX_FROM_END = 4;
+    private static final int TABLE_NAME_SUBPATH_INDEX_FROM_END_SECONDARY = 5;
     private static final int FILE_NAME_SUBPATH_INDEX_FROM_END = 1;
     private final SnapshotPathBuilder builder;
     private final Configuration configuration;
@@ -128,11 +131,22 @@ public class ListSnapshotFilesHandler extends AbstractHandler
         for (Pair<String, FileProps> file : fileList)
         {
             Path path = Paths.get(file.getLeft());
+            int nameCount = path.getNameCount();
 
             String keyspace = request.getKeyspace();
-            // table name might include a dash (-) with the table UUID so we always use it as part of the response
-            String tableName = path.getName(path.getNameCount() - TABLE_NAME_SUBPATH_INDEX_FROM_END).toString();
-            String fileName = path.getName(path.getNameCount() - FILE_NAME_SUBPATH_INDEX_FROM_END).toString();
+            // table name might include a dash (-) with the table UUID, so we always use it as part of the response
+            String tableName;
+            if (isSecondaryIndexFile(path))
+            {
+                tableName = path.getName(nameCount - TABLE_NAME_SUBPATH_INDEX_FROM_END_SECONDARY)
+                                .toString();
+            }
+            else
+            {
+                tableName = path.getName(nameCount - TABLE_NAME_SUBPATH_INDEX_FROM_END)
+                                .toString();
+            }
+            String fileName = path.getName(nameCount - FILE_NAME_SUBPATH_INDEX_FROM_END).toString();
 
             response.addSnapshotFile(new ListSnapshotFilesResponse.FileInfo(file.getRight().size(),
                                                                             host,
@@ -144,6 +158,12 @@ public class ListSnapshotFilesHandler extends AbstractHandler
                                                                             fileName));
         }
         return response;
+    }
+
+    private boolean isSecondaryIndexFile(Path path)
+    {
+        return path.getNameCount() >= 4 &&
+               path.getName(path.getNameCount() - 4).endsWith(SNAPSHOTS_DIR_NAME);
     }
 
     private ListSnapshotFilesRequest extractParamsOrThrow(final RoutingContext context)
