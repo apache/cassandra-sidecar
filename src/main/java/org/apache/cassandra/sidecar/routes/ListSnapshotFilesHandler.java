@@ -136,7 +136,7 @@ public class ListSnapshotFilesHandler extends AbstractHandler
             String keyspace = request.getKeyspace();
             // table name might include a dash (-) with the table UUID, so we always use it as part of the response
             String tableName;
-            if (isSecondaryIndexFile(path))
+            if (isSecondaryIndexFile(path, keyspace))
             {
                 tableName = path.getName(nameCount - TABLE_NAME_SUBPATH_INDEX_FROM_END_SECONDARY)
                                 .toString();
@@ -160,9 +160,18 @@ public class ListSnapshotFilesHandler extends AbstractHandler
         return response;
     }
 
-    private boolean isSecondaryIndexFile(Path path)
+    /**
+     * Checks whether the given path is a secondary index file by checking the parent directory "/snapshots/" as
+     * well as the provided "/&lt;{@code keyspace}&gt;/".
+     *
+     * @param path     the path to check
+     * @param keyspace the name of the keyspace
+     * @return true if the path is a secondary index file, false otherwise
+     */
+    private boolean isSecondaryIndexFile(Path path, String keyspace)
     {
-        return path.getNameCount() >= 4 &&
+        return path.getNameCount() >= 6 &&
+               path.getName(path.getNameCount() - 6).endsWith(keyspace) &&
                path.getName(path.getNameCount() - 4).endsWith(SNAPSHOTS_DIR_NAME);
     }
 
