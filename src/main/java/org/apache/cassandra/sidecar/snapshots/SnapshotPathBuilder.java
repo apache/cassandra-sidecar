@@ -67,6 +67,9 @@ public class SnapshotPathBuilder
     protected final InstancesConfig instancesConfig;
     protected final CassandraInputValidator validator;
 
+    private static final int KEYSPACE_SUBPATH_INDEX_FROM_END = 4;
+    private static final int TABLE_NAME_SUBPATH_INDEX_FROM_END = 3;
+
     /**
      * Creates a new SnapshotPathBuilder for snapshots of an instance with the given {@code vertx} instance and
      * {@code instancesConfig Cassandra configuration}.
@@ -129,10 +132,35 @@ public class SnapshotPathBuilder
      * @param includeSecondaryIndexFiles whether to include secondary index files
      * @return a future with a list of files inside the snapshot directory
      */
-    public Future<List<Pair<String, FileProps>>> listSnapshotDirectory(String snapshotDirectory,
-                                                                       boolean includeSecondaryIndexFiles)
+    public Future<List<SnapshotFile>> listSnapshotDirectory(String host,
+                                                            String snapshotDirectory,
+                                                            boolean includeSecondaryIndexFiles)
     {
-        Promise<List<Pair<String, FileProps>>> promise = Promise.promise();
+        return getDataDirectories(host)
+               .compose(dataDirs ->
+               {
+                   Path path = Paths.get(snapshotDirectory);
+                   String keyspace = path.getName(path.getNameCount() - KEYSPACE_SUBPATH_INDEX_FROM_END)
+                                         .toString();
+                   String tableName = path.getName(path.getNameCount() - TABLE_NAME_SUBPATH_INDEX_FROM_END)
+                                          .toString();
+                   int dataDirectoryIndex = determineDataDirectoryIndex(dataDirs, snapshotDirectory);
+
+                   return listSnapshotDirectory(snapshotDirectory,
+                                                keyspace,
+                                                tableName,
+                                                includeSecondaryIndexFiles,
+                                                dataDirectoryIndex);
+               });
+    }
+
+    private Future<List<SnapshotFile>> listSnapshotDirectory(String snapshotDirectory,
+                                                             String keyspace,
+                                                             String tableName,
+                                                             boolean includeSecondaryIndexFiles,
+                                                             int dataDirectoryIndex)
+    {
+        Promise<List<SnapshotFile>> promise = Promise.promise();
 
         // List the snapshot directory
         fs.readDir(snapshotDirectory)
@@ -158,10 +186,18 @@ public class SnapshotPathBuilder
                              {
 
                                  // Create a pair of path/fileProps for every regular file
-                                 List<Pair<String, FileProps>> snapshotList =
+                                 List<SnapshotFile> snapshotList =
                                  IntStream.range(0, list.size())
                                           .filter(i -> ar.<FileProps>resultAt(i).isRegularFile())
-                                          .mapToObj(i -> Pair.of(list.get(i), ar.<FileProps>resultAt(i)))
+                                          .mapToObj(i ->
+                                          {
+                                              String fileName = Paths.get(list.get(i)).getFileName().toString();
+                                              return new SnapshotFile(keyspace,
+                                                                      tableName,
+                                                                      fileName,
+                                                                      ar.<FileProps>resultAt(i).size(),
+                                                                      dataDirectoryIndex);
+                                          })
                                           .collect(Collectors.toList());
 
 
@@ -189,7 +225,11 @@ public class SnapshotPathBuilder
                                                       }
                                                       return false;
                                                   })
-                                          .mapToObj(i -> listSnapshotDirectory(list.get(i), false))
+                                          .mapToObj(i -> listSnapshotDirectory(list.get(i),
+                                                                               keyspace,
+                                                                               tableName,
+                                                                               false,
+                                                                               dataDirectoryIndex))
                                           .collect(Collectors.toList());
                                  if (idxListFutures.isEmpty())
                                  {
@@ -205,10 +245,10 @@ public class SnapshotPathBuilder
                                                 .onSuccess(idx ->
                                                 {
                                                     //noinspection unchecked
-                                                    List<Pair<String, FileProps>> idxPropList =
+                                                    List<SnapshotFile> idxPropList =
                                                     idx.list()
                                                        .stream()
-                                                       .flatMap(l -> ((List<Pair<String, FileProps>>) l).stream())
+                                                       .flatMap(l -> ((List<SnapshotFile>) l).stream())
                                                        .collect(Collectors.toList());
 
                                                     // aggregate the results and return the full list
@@ -511,4 +551,87 @@ public class SnapshotPathBuilder
                        });
         return promise.future();
     }
+
+    /**
+     * Determines the index of the data directory where the directory exits, or -1 if the {@code dataDirs} does not
+     * contain the provided {@code directory}.
+     *
+     * @param dataDirs  the list of data directories
+     * @param directory the directory we are searching for in the list
+     * @return the index of the data directory, or -1 if not found
+     */
+    protected int determineDataDirectoryIndex(List<String> dataDirs, String directory)
+    {
+        for (int index = 0; index < dataDirs.size(); index++)
+        {
+            String dataDir = dataDirs.get(index);
+            if (directory.startsWith(dataDir))
+            {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Class representing a snapshot component file
+     */
+    public static class SnapshotFile
+    {
+        private final String keyspace;
+        private final String tableName;
+        private final String fileName;
+        private final long size;
+        private final int dataDirectoryIndex;
+
+        SnapshotFile(String keyspace, String tableName, String fileName, long size, int dataDirectoryIndex)
+        {
+            this.keyspace = keyspace;
+            this.tableName = tableName;
+            this.fileName = fileName;
+            this.size = size;
+            this.dataDirectoryIndex = dataDirectoryIndex;
+        }
+
+        /**
+         * @return the name of the keyspace where the snapshot file lives
+         */
+        public String getKeyspace()
+        {
+            return keyspace;
+        }
+
+        /**
+         * @return the name of the table where the snapshot file lives
+         */
+        public String getTableName()
+        {
+            return tableName;
+        }
+
+        /**
+         * @return the name of the file for the snapshot
+         */
+        public String getFileName()
+        {
+            return fileName;
+        }
+
+        /**
+         * @return the size of the file
+         */
+        public long size()
+        {
+            return size;
+        }
+
+        /**
+         * @return the index to the data directory for this file
+         */
+        public int dataDirectoryIndex()
+        {
+            return dataDirectoryIndex;
+        }
+    }
+
 }

@@ -20,17 +20,13 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.io.FileNotFoundException;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.file.FileProps;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
@@ -39,8 +35,6 @@ import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
-
-import static org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder.SNAPSHOTS_DIR_NAME;
 
 /**
  * ListSnapshotFilesHandler class lists paths of all the snapshot files of a given snapshot name.
@@ -59,10 +53,6 @@ public class ListSnapshotFilesHandler extends AbstractHandler
 {
     private static final Logger logger = LoggerFactory.getLogger(ListSnapshotFilesHandler.class);
     private static final String INCLUDE_SECONDARY_INDEX_FILES = "includeSecondaryIndexFiles";
-    private static final int DATA_DIR_INDEX = 0;
-    private static final int TABLE_NAME_SUBPATH_INDEX_FROM_END = 4;
-    private static final int TABLE_NAME_SUBPATH_INDEX_FROM_END_SECONDARY = 5;
-    private static final int FILE_NAME_SUBPATH_INDEX_FROM_END = 1;
     private final SnapshotPathBuilder builder;
     private final Configuration configuration;
 
@@ -87,7 +77,7 @@ public class ListSnapshotFilesHandler extends AbstractHandler
         boolean secondaryIndexFiles = requestParams.includeSecondaryIndexFiles();
 
         builder.build(host, requestParams)
-               .compose(directory -> builder.listSnapshotDirectory(directory, secondaryIndexFiles))
+               .compose(directory -> builder.listSnapshotDirectory(host, directory, secondaryIndexFiles))
                .onSuccess(fileList ->
                           {
                               if (fileList.isEmpty())
@@ -122,57 +112,24 @@ public class ListSnapshotFilesHandler extends AbstractHandler
 
     private ListSnapshotFilesResponse buildResponse(String host,
                                                     ListSnapshotFilesRequest request,
-                                                    List<Pair<String, FileProps>> fileList)
+                                                    List<SnapshotPathBuilder.SnapshotFile> fileList)
     {
         ListSnapshotFilesResponse response = new ListSnapshotFilesResponse();
         String snapshotName = request.getSnapshotName();
         int sidecarPort = configuration.getPort();
 
-        for (Pair<String, FileProps> file : fileList)
+        for (SnapshotPathBuilder.SnapshotFile snapshotFile : fileList)
         {
-            Path path = Paths.get(file.getLeft());
-            int nameCount = path.getNameCount();
-
-            String keyspace = request.getKeyspace();
-            // table name might include a dash (-) with the table UUID, so we always use it as part of the response
-            String tableName;
-            if (isSecondaryIndexFile(path, keyspace))
-            {
-                tableName = path.getName(nameCount - TABLE_NAME_SUBPATH_INDEX_FROM_END_SECONDARY)
-                                .toString();
-            }
-            else
-            {
-                tableName = path.getName(nameCount - TABLE_NAME_SUBPATH_INDEX_FROM_END)
-                                .toString();
-            }
-            String fileName = path.getName(nameCount - FILE_NAME_SUBPATH_INDEX_FROM_END).toString();
-
-            response.addSnapshotFile(new ListSnapshotFilesResponse.FileInfo(file.getRight().size(),
+            response.addSnapshotFile(new ListSnapshotFilesResponse.FileInfo(snapshotFile.size(),
                                                                             host,
                                                                             sidecarPort,
-                                                                            DATA_DIR_INDEX,
+                                                                            snapshotFile.dataDirectoryIndex(),
                                                                             snapshotName,
-                                                                            keyspace,
-                                                                            tableName,
-                                                                            fileName));
+                                                                            snapshotFile.getKeyspace(),
+                                                                            snapshotFile.getTableName(),
+                                                                            snapshotFile.getFileName()));
         }
         return response;
-    }
-
-    /**
-     * Checks whether the given path is a secondary index file by checking the parent directory "/snapshots/" as
-     * well as the provided "/&lt;{@code keyspace}&gt;/".
-     *
-     * @param path     the path to check
-     * @param keyspace the name of the keyspace
-     * @return true if the path is a secondary index file, false otherwise
-     */
-    private boolean isSecondaryIndexFile(Path path, String keyspace)
-    {
-        return path.getNameCount() >= 6 &&
-               path.getName(path.getNameCount() - 6).endsWith(keyspace) &&
-               path.getName(path.getNameCount() - 4).endsWith(SNAPSHOTS_DIR_NAME);
     }
 
     private ListSnapshotFilesRequest extractParamsOrThrow(final RoutingContext context)

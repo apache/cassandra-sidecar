@@ -52,14 +52,14 @@ public class ListSnapshotFilesResponse
      */
     public static class FileInfo
     {
-        public final long size;
-        public final String host;
-        public final int port;
-        public final int dataDirIndex;
-        public final String snapshotName;
-        public final String keySpaceName;
-        public final String tableName;
-        public final String fileName;
+        private final long size;
+        private final String host;
+        private final int port;
+        private final int dataDirIndex;
+        private final String snapshotName;
+        private final String keySpaceName;
+        private final String tableName;
+        private final String fileName;
 
         public FileInfo(@JsonProperty("size") long size,
                         @JsonProperty("host") String host,
@@ -83,6 +83,70 @@ public class ListSnapshotFilesResponse
         public String ssTableComponentPath()
         {
             return Paths.get(keySpaceName, tableName, fileName).toString();
+        }
+
+        /**
+         * @return the size of the file
+         */
+        public long getSize()
+        {
+            return size;
+        }
+
+        /**
+         * @return the host where the file is hosted
+         */
+        public String getHost()
+        {
+            return host;
+        }
+
+        /**
+         * @return the port of the service hosting the file
+         */
+        public int getPort()
+        {
+            return port;
+        }
+
+        /**
+         * @return the index to the data directory
+         */
+        public int getDataDirIndex()
+        {
+            return dataDirIndex;
+        }
+
+        /**
+         * @return the name of the snapshot
+         */
+        public String getSnapshotName()
+        {
+            return snapshotName;
+        }
+
+        /**
+         * @return the name of the keyspace this file belongs to
+         */
+        public String getKeySpaceName()
+        {
+            return keySpaceName;
+        }
+
+        /**
+         * @return the name of the table this file belongs to
+         */
+        public String getTableName()
+        {
+            return tableName;
+        }
+
+        /**
+         * @return the name of the file
+         */
+        public String getFileName()
+        {
+            return fileName;
         }
 
         public boolean equals(Object o)
