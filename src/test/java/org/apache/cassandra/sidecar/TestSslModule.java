@@ -23,6 +23,8 @@ import java.io.File;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+
 /**
  * Changes to the TestModule to define SSL dependencies
  */
@@ -32,7 +34,7 @@ public class TestSslModule extends TestModule
 
 
     @Override
-    public Configuration abstractConfig()
+    public Configuration abstractConfig(InstancesConfig instancesConfig)
     {
         final String keyStorePath = TestSslModule.class.getClassLoader().getResource("certs/test.p12").getPath();
         final String keyStorePassword = "password";
@@ -50,7 +52,7 @@ public class TestSslModule extends TestModule
         }
 
         return new Configuration.Builder()
-                           .setInstancesConfig(getInstancesConfig())
+                           .setInstancesConfig(instancesConfig)
                            .setHost("127.0.0.1")
                            .setPort(6475)
                            .setHealthCheckFrequency(1000)

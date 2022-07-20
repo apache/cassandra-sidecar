@@ -36,6 +36,8 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
@@ -155,7 +157,7 @@ public class ListSnapshotFilesHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1-1234",
-                                               "secondary.db")
+                                               ".index/secondary.db")
         );
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
@@ -194,17 +196,11 @@ public class ListSnapshotFilesHandlerTest
 
     class ListSnapshotTestModule extends AbstractModule
     {
-        @Override
-        protected void configure()
+        @Provides
+        @Singleton
+        public InstancesConfig getInstancesConfig() throws IOException
         {
-            try
-            {
-                bind(InstancesConfig.class).toInstance(mockInstancesConfig(temporaryFolder.getCanonicalPath()));
-            }
-            catch (IOException e)
-            {
-                throw new RuntimeException(e);
-            }
+            return mockInstancesConfig(temporaryFolder.getCanonicalPath());
         }
     }
 }

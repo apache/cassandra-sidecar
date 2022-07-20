@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.snapshots;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -130,8 +129,7 @@ public class SnapshotSearchTest
         //noinspection rawtypes
         List<Future> futures = snapshotDirectories.stream()
                                                   .map(directory -> instance
-                                                                    .listSnapshotDirectory(host,
-                                                                                           directory,
+                                                                    .listSnapshotDirectory(directory,
                                                                                            includeSecondaryIndexFiles))
                                                   .collect(Collectors.toList());
 
@@ -146,18 +144,15 @@ public class SnapshotSearchTest
         List<String> snapshotFiles = ar.list()
                                        .stream()
                                        .flatMap(l -> ((List<SnapshotPathBuilder.SnapshotFile>) l).stream())
-                                       .map(SnapshotPathBuilder.SnapshotFile::getFileName)
+                                       .map(snapshotFile -> snapshotFile.path)
                                        .sorted()
                                        .collect(Collectors.toList());
 
         assertThat(snapshotFiles.size()).isEqualTo(expectedFiles.size());
 
-        List<String> expectedFileNames = expectedFiles.stream()
-                                                      .map(expectedFile -> Paths.get(expectedFile)
-                                                                                .getFileName()
-                                                                                .toString())
-                                                      .sorted()
-                                                      .collect(Collectors.toList());
-        assertThat(snapshotFiles).containsAll(expectedFileNames);
+        for (int i = 0; i < expectedFiles.size(); i++)
+        {
+            assertThat(snapshotFiles.get(i)).endsWith(expectedFiles.get(i));
+        }
     }
 }

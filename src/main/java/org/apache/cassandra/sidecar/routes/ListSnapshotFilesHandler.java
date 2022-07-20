@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.nio.file.NoSuchFileException;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +35,7 @@ import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.snapshots.SnapshotDirectory;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 
 /**
@@ -77,59 +79,85 @@ public class ListSnapshotFilesHandler extends AbstractHandler
         boolean secondaryIndexFiles = requestParams.includeSecondaryIndexFiles();
 
         builder.build(host, requestParams)
-               .compose(directory -> builder.listSnapshotDirectory(host, directory, secondaryIndexFiles))
-               .onSuccess(fileList ->
-                          {
-                              if (fileList.isEmpty())
-                              {
-                                  String payload = "Snapshot '" + requestParams.getSnapshotName() + "' not found";
-                                  context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), payload));
-                              }
-                              else
-                              {
-                                  logger.debug("ListSnapshotFilesHandler handled {} for {}. Instance: {}",
-                                               requestParams, remoteAddress, host);
-                                  context.json(buildResponse(host, requestParams, fileList));
-                              }
-                          })
-               .onFailure(cause ->
-                          {
-                              logger.error("ListSnapshotFilesHandler failed for request: {} from: {}. Instance: {}",
-                                           requestParams, remoteAddress, host);
-                              if (cause instanceof FileNotFoundException ||
-                                  cause instanceof NoSuchFileException)
-                              {
-                                  context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(),
-                                                                 cause.getMessage()));
-                              }
-                              else
-                              {
-                                  context.fail(new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
-                                                                 "Invalid request for " + requestParams));
-                              }
-                          });
+               .onSuccess(snapshotDirectory ->
+                          builder.listSnapshotDirectory(snapshotDirectory, secondaryIndexFiles)
+                                 .onSuccess(fileList ->
+                                 {
+                                     if (fileList.isEmpty())
+                                     {
+                                         String payload = "Snapshot '" + requestParams.getSnapshotName() +
+                                                          "' not found";
+                                         context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), payload));
+                                     }
+                                     else
+                                     {
+                                         logger.debug("ListSnapshotFilesHandler handled {} for {}. Instance: {}",
+                                                      requestParams, remoteAddress, host);
+                                         context.json(buildResponse(host, snapshotDirectory, fileList));
+                                     }
+                                 })
+                                 .onFailure(cause -> processFailure(cause, context, requestParams, remoteAddress, host))
+               )
+               .onFailure(cause -> processFailure(cause, context, requestParams, remoteAddress, host));
+    }
+
+    private void processFailure(Throwable cause, RoutingContext context, ListSnapshotFilesRequest requestParams,
+                                SocketAddress remoteAddress, String host)
+    {
+        logger.error("ListSnapshotFilesHandler failed for request: {} from: {}. Instance: {}",
+                     requestParams, remoteAddress, host);
+        if (cause instanceof FileNotFoundException ||
+            cause instanceof NoSuchFileException)
+        {
+            context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(),
+                                           cause.getMessage()));
+        }
+        else
+        {
+            context.fail(new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
+                                           "Invalid request for " + requestParams));
+        }
     }
 
     private ListSnapshotFilesResponse buildResponse(String host,
-                                                    ListSnapshotFilesRequest request,
+                                                    String snapshotDirectory,
                                                     List<SnapshotPathBuilder.SnapshotFile> fileList)
     {
         ListSnapshotFilesResponse response = new ListSnapshotFilesResponse();
-        String snapshotName = request.getSnapshotName();
         int sidecarPort = configuration.getPort();
+        SnapshotDirectory directory = SnapshotDirectory.of(snapshotDirectory);
+        int dataDirectoryIndex = dataDirectoryIndex(host, directory.dataDirectory);
+        int offset = snapshotDirectory.length() + 1;
 
         for (SnapshotPathBuilder.SnapshotFile snapshotFile : fileList)
         {
-            response.addSnapshotFile(new ListSnapshotFilesResponse.FileInfo(snapshotFile.size(),
-                                                                            host,
-                                                                            sidecarPort,
-                                                                            snapshotFile.dataDirectoryIndex(),
-                                                                            snapshotName,
-                                                                            snapshotFile.getKeyspace(),
-                                                                            snapshotFile.getTableName(),
-                                                                            snapshotFile.getFileName()));
+            int fileNameIndex = snapshotFile.path.indexOf(snapshotDirectory) + offset;
+            Preconditions.checkArgument(fileNameIndex < snapshotFile.path.length(),
+                                        "Invalid snapshot file '" + snapshotFile.path + "'");
+            response.addSnapshotFile(
+            new ListSnapshotFilesResponse.FileInfo(snapshotFile.size,
+                                                   host,
+                                                   sidecarPort,
+                                                   dataDirectoryIndex,
+                                                   directory.snapshotName,
+                                                   directory.keyspace,
+                                                   directory.tableName,
+                                                   snapshotFile.path.substring(fileNameIndex)));
         }
         return response;
+    }
+
+    private int dataDirectoryIndex(String host, String dataDirectory)
+    {
+        List<String> dataDirs = instancesConfig.instanceFromHost(host).dataDirs();
+        for (int index = 0; index < dataDirs.size(); index++)
+        {
+            if (dataDirectory.startsWith(dataDirs.get(index)))
+            {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private ListSnapshotFilesRequest extractParamsOrThrow(final RoutingContext context)
