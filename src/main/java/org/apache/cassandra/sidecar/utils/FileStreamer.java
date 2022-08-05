@@ -198,7 +198,7 @@ public class FileStreamer
      */
     private Future<Range> parseRangeHeader(String rangeHeader, long fileLength)
     {
-        Range fr = new Range(0, fileLength - 1, fileLength);
+        Range fr = Range.of(0, fileLength - 1);
         if (rangeHeader == null)
             return Future.succeededFuture(fr);
 

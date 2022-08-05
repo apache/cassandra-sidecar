@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
@@ -313,7 +314,10 @@ public class StreamSSTableComponentHandlerTest
                 .putHeader("Range", "bytes=-5")
                 .send(context.succeeding(response -> context.verify(() ->
                 {
-                    assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
+                    assertThat(response.statusCode()).isEqualTo(OK.code());
+                    assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
+                        .isEqualTo("4")
+                        .describedAs("Server should shrink the range to the file length");
                     context.completeNow();
                 })));
     }

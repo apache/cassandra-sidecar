@@ -1,5 +1,11 @@
 1.0.0
 -----
+ * Refactor range and add toString (CASSANDRASC-41)
+ * Fix search in list snapshot endpoint (CASSANDRASC-40)
+ * Allow Cassandra input validation to be configurable (CASSANDRAC-39)
+ * Add endpoint to list snapshot files (CASSANDRASC-38)
+ * Optimize file path builder and have separate handler for streaming file (CASSANDRASC-37)
+ * Support for ErrorHandler in Sidecar (CASSANDRASC-36)
  * Allow injecting a LoggerHandler to vertxRouter (CASSANDRASC-34)
  * Optionally support multiple cassandra instances in Sidecar (CASSANDRASC-33)
  * Call the start method of CassandraAdaptorDelegate to start periodic health check (CASSANDRASC-32)
