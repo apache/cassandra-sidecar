@@ -77,8 +77,8 @@ public class Range
             throw invalidRangeHeaderException(rangeHeader);
         }
 
-        long left = m.group(1).isEmpty()? -1L : Long.parseLong(m.group(1));
-        long right = m.group(2).isEmpty()? -1L : Long.parseLong(m.group(2));
+        long left = parseLong(m.group(1), rangeHeader);
+        long right = parseLong(m.group(2), rangeHeader);
 
         if (left == -1L && right == -1L) // matching "bytes=-"
         {
@@ -96,6 +96,23 @@ public class Range
         else
         {
             return new Range(left, right);
+        }
+    }
+
+    // return -1 for empty string; return long value otherwise.
+    // throws IllegalArgumentException for invalid value string
+    private static long parseLong(String valStr, String rangeHeader)
+    {
+        if (valStr == null || valStr.isEmpty())
+            return -1L;
+
+        try
+        {
+            return Long.parseLong(valStr);
+        }
+        catch (NumberFormatException e)
+        {
+            throw invalidRangeHeaderException(rangeHeader);
         }
     }
 

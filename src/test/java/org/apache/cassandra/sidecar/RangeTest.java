@@ -105,4 +105,17 @@ public class RangeTest
         final Range range = Range.parseHeader(rangeHeaderVal, Long.MAX_VALUE);
         assertEquals("bytes=0-100", range.toString());
     }
+
+    @Test
+    public void testInvalidRangeBoundValueInHeader()
+    {
+        // the right end of range is larger than long
+        final String rangeHeader = "bytes=0-1" + Long.MAX_VALUE;
+        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
+        {
+            Range.parseHeader(rangeHeader, Long.MAX_VALUE);
+        });
+        String msg = "Invalid range header: bytes=0-19223372036854775807. Supported Range formats are bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>";
+        assertEquals(msg, thrownException.getMessage());
+    }
 }
