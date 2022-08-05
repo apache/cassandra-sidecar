@@ -20,12 +20,10 @@ package org.apache.cassandra.sidecar;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.exceptions.RangeException;
 import org.apache.cassandra.sidecar.models.Range;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * RangeTest
@@ -40,7 +38,6 @@ public class RangeTest
         assertEquals(3, range.length());
         assertEquals(2, range.start());
         assertEquals(4, range.end());
-        assertTrue(range.isValidHttpRange());
     }
 
     @Test
@@ -51,40 +48,39 @@ public class RangeTest
         assertEquals(101, range.length());
         assertEquals(0, range.start());
         assertEquals(100, range.end());
-        assertTrue(range.isValidHttpRange());
     }
 
     @Test
     public void testInvalidRangeFormat()
     {
-        final String rangeVal = "2344--3432";
+        final String rangeHeader = "bytes=2344--3432";
         IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
         {
-            Range.parse(rangeVal);
+            Range.parseHeader(rangeHeader, Long.MAX_VALUE);
         });
-        String msg = "Supported Range formats are <start>-<end>, <start>-, -<suffix-length>";
+        String msg = "Invalid range header: bytes=2344--3432. Supported Range formats are bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>";
         assertEquals(msg, thrownException.getMessage());
     }
 
     @Test
     public void testInvalidSuffixLength()
     {
-        final String rangeVal = "-0";
+        final String rangeHeader = "bytes=-0";
         IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
         {
-            Range.parse(rangeVal, Long.MAX_VALUE);
+            Range.parseHeader(rangeHeader, Long.MAX_VALUE);
         });
-        String msg = "Suffix length in -0 cannot be less than or equal to 0";
+        String msg = "Range does not satisfy boundary requirements";
         assertEquals(msg, thrownException.getMessage());
     }
 
     @Test
     public void testInvalidRangeBoundary()
     {
-        final String rangeVal = "9-2";
-        RangeException thrownException = assertThrows(RangeException.class, () ->
+        final String rangeHeader = "bytes=9-2";
+        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
         {
-            Range.parse(rangeVal);
+            Range.parseHeader(rangeHeader, Long.MAX_VALUE);
         });
         String msg = "Range does not satisfy boundary requirements";
         assertEquals(msg, thrownException.getMessage());
@@ -94,11 +90,19 @@ public class RangeTest
     public void testWrongRangeUnitUsed()
     {
         final String rangeVal = "bits=0-";
-        UnsupportedOperationException thrownException = assertThrows(UnsupportedOperationException.class, () ->
+        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
         {
             Range.parseHeader(rangeVal, 5);
         });
-        String msg = "Unsupported range unit only bytes are allowed";
+        String msg = "Invalid range header: bits=0-. Supported Range formats are bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>";
         assertEquals(msg, thrownException.getMessage());
+    }
+
+    @Test
+    public void testToString()
+    {
+        final String rangeHeaderVal = "bytes=0-100";
+        final Range range = Range.parseHeader(rangeHeaderVal, Long.MAX_VALUE);
+        assertEquals("bytes=0-100", range.toString());
     }
 }
