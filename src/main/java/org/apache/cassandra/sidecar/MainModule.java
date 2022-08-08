@@ -43,6 +43,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.JksOptions;
@@ -64,6 +65,7 @@ import org.apache.cassandra.sidecar.common.utils.YAMLValidationConfiguration;
 import org.apache.cassandra.sidecar.routes.CassandraHealthService;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.HealthService;
+import org.apache.cassandra.sidecar.routes.KeyspacesHandler;
 import org.apache.cassandra.sidecar.routes.ListSnapshotFilesHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
@@ -168,6 +170,7 @@ public class MainModule extends AbstractModule
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
                               FileStreamHandler fileStreamHandler,
                               ListSnapshotFilesHandler listSnapshotFilesHandler,
+                              KeyspacesHandler keyspacesHandler,
                               LoggerHandler loggerHandler,
                               ErrorHandler errorHandler)
     {
@@ -193,6 +196,19 @@ public class MainModule extends AbstractModule
         final String listSnapshotFilesRoute = "/keyspace/:keyspace/table/:table/snapshots/:snapshot";
         router.get(API_V1_VERSION + listSnapshotFilesRoute)
               .handler(listSnapshotFilesHandler);
+
+        final String keyspacesRoute = "/keyspaces";
+        router.get(API_V1_VERSION + keyspacesRoute)
+              .handler(keyspacesHandler);
+
+        // handles:
+        // - /api/v1/keyspace/:keyspace and
+        // - /api/v1/keyspace/:keyspace/table/:table
+        router.route()
+              .method(HttpMethod.HEAD)
+              .method(HttpMethod.GET)
+              .pathRegex("\\/api\\/v1\\/keyspace\\/(?<keyspace>[^\\/]+)(\\/table\\/(?<table>[^\\/]+))?")
+              .handler(keyspacesHandler);
 
         return router;
     }

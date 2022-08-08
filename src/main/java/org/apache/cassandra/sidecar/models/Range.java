@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.models;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.validation.constraints.NotNull;
+import org.jetbrains.annotations.NotNull;
 
 import com.google.common.base.Preconditions;
 
