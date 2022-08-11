@@ -41,6 +41,7 @@ public class Range
     private final long start;
     private final long end;
     private final long length;
+    private static final long BOUND_ABSENT = -1L;
 
     /**
      * Accepted RangeHeader formats are bytes=start-end, bytes=start-, bytes=-suffix_length
@@ -50,10 +51,6 @@ public class Range
         if (header == null)
         {
             return new Range(0, fileSize - 1);
-        }
-        if (!header.startsWith(RANGE_UNIT + "="))
-        {
-            throw invalidRangeHeaderException(header);
         }
         return Range.parse(header, fileSize);
     }
@@ -80,16 +77,16 @@ public class Range
         long left = parseLong(m.group(1), rangeHeader);
         long right = parseLong(m.group(2), rangeHeader);
 
-        if (left == -1L && right == -1L) // matching "bytes=-"
+        if (left == BOUND_ABSENT && right == BOUND_ABSENT) // matching "bytes=-"
         {
             throw invalidRangeHeaderException(rangeHeader);
         }
-        else if (left == -1L) // matching "bytes=-1"
+        else if (left == BOUND_ABSENT) // matching "bytes=-1"
         {
             long len = Math.min(right, fileSize); // correct the range if it exceeds file size.
             return new Range(fileSize - len, fileSize - 1);
         }
-        else if (right == -1L) // matching "bytes=1-"
+        else if (right == BOUND_ABSENT) // matching "bytes=1-"
         {
             return new Range(left, fileSize - 1);
         }
@@ -104,7 +101,7 @@ public class Range
     private static long parseLong(String valStr, String rangeHeader)
     {
         if (valStr == null || valStr.isEmpty())
-            return -1L;
+            return BOUND_ABSENT;
 
         try
         {
