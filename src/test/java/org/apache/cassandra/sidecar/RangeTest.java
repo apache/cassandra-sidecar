@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.exceptions.RangeException;
 import org.apache.cassandra.sidecar.models.Range;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -117,5 +118,36 @@ public class RangeTest
         });
         String msg = "Invalid range header: bytes=0-19223372036854775807. Supported Range formats are bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>";
         assertEquals(msg, thrownException.getMessage());
+    }
+
+    @Test
+    public void testIntersect() {
+        Range range1, range2, expected;
+        range1 = Range.of(5, 10);
+        range2 = Range.of(9, 15);
+        expected = Range.of(9, 10);
+        assertEquals(expected, range1.intersect(range2));
+        assertEquals(expected, range2.intersect(range1));
+
+        range1 = Range.of(1, 5);
+        range2 = Range.of(5, 15);
+        expected = Range.of(5, 5);
+        assertEquals(expected, range1.intersect(range2));
+        assertEquals(expected, range2.intersect(range1));
+
+        range1 = Range.of(1, 15);
+        range2 = Range.of(5, 10);
+        expected = Range.of(5, 10);
+        assertEquals(expected, range1.intersect(range2));
+        assertEquals(expected, range2.intersect(range1));
+
+    }
+
+    @Test
+    public void testRangesDoNotIntersect() {
+        Range range1 = Range.of(1, 5);
+        Range range2 = Range.of(9, 15);
+
+        assertThrows(RangeException.class, () -> range1.intersect(range2));
     }
 }
