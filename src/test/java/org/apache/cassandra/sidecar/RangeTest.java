@@ -34,11 +34,23 @@ public class RangeTest
     @Test
     public void testValidPartialRange()
     {
-        final String rangeHeaderVal = "bytes=2-";
-        final Range range = Range.parseHeader(rangeHeaderVal, 5);
+        String rangeHeaderVal = "bytes=2-";
+        Range range = Range.parseHeader(rangeHeaderVal, 5);
         assertEquals(3, range.length());
         assertEquals(2, range.start());
         assertEquals(4, range.end());
+
+        rangeHeaderVal = "bytes=-100";
+        range = Range.parseHeader(rangeHeaderVal, 5);
+        assertEquals(5, range.length());
+        assertEquals(0, range.start());
+        assertEquals(4, range.end());
+
+        rangeHeaderVal = "bytes=-100";
+        range = Range.parseHeader(rangeHeaderVal, 200);
+        assertEquals(100, range.length());
+        assertEquals(100, range.start());
+        assertEquals(199, range.end());
     }
 
     @Test
