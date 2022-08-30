@@ -131,16 +131,16 @@ class KeyspacesHandlerTest
         runTest(context, "/api/v1/keyspace/random/table/testTable", 404);
     }
 
-    private void runTest(VertxTestContext context, String URI, int expectedCode)
+    private void runTest(VertxTestContext context, String uri, int expectedCode)
     {
         WebClient client = WebClient.create(vertx);
-        client.head(config.getPort(), config.getHost(), URI)
+        client.head(config.getPort(), config.getHost(), uri)
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() ->
-                                                                  {
-                                                                      assertThat(response.statusCode()).isEqualTo(expectedCode);
-                                                                      context.completeNow();
-                                                                  })));
+                                       {
+                                           assertThat(response.statusCode()).isEqualTo(expectedCode);
+                                           context.completeNow();
+                                       })));
     }
 
     public class KeyspacesInfoTestModule extends AbstractModule

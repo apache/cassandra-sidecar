@@ -41,6 +41,7 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
+import org.assertj.core.api.AbstractStringAssert;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
@@ -315,9 +316,10 @@ public class StreamSSTableComponentHandlerTest
                 .send(context.succeeding(response -> context.verify(() ->
                 {
                     assertThat(response.statusCode()).isEqualTo(OK.code());
+                    AbstractStringAssert<?> as =
                     assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
-                        .isEqualTo("4")
-                        .describedAs("Server should shrink the range to the file length");
+                        .describedAs("Server should shrink the range to the file length")
+                        .isEqualTo("4");
                     context.completeNow();
                 })));
     }

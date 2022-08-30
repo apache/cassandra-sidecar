@@ -21,11 +21,11 @@ package org.apache.cassandra.sidecar.models;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.jetbrains.annotations.NotNull;
 
 import com.google.common.base.Preconditions;
 
 import org.apache.cassandra.sidecar.exceptions.RangeException;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Accepted Range formats are start-end, start-, -suffix_length
@@ -116,7 +116,8 @@ public class Range
     private static IllegalArgumentException invalidRangeHeaderException(String rangeHeader)
     {
         return new IllegalArgumentException("Invalid range header: " + rangeHeader + ". " +
-                                            "Supported Range formats are bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>");
+                                            "Supported Range formats are bytes=<start>-<end>, " +
+                                            "bytes=<start>-, bytes=-<suffix-length>");
     }
 
     // An initialized range is always valid; invalid params fail range initialization.

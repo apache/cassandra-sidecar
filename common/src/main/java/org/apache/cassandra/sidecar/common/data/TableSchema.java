@@ -44,7 +44,7 @@ public class TableSchema
     private final List<String> clusteringOrder;
     private final List<ColumnSchema> columns;
     private final TableOptionsMetadata options;
-    protected transient final Map<String, ColumnSchema> columnsAsMap;
+    protected final transient Map<String, ColumnSchema> columnsAsMap;
 
     protected TableSchema(String keyspaceName,
                           String name,

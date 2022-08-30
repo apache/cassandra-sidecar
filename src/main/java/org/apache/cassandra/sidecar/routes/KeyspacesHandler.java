@@ -78,7 +78,8 @@ public class KeyspacesHandler extends AbstractHandler
                      requestParams, remoteAddress, host);
 
         getMetadata(instanceMeta.session())
-        .onFailure(throwable -> {
+        .onFailure(throwable ->
+        {
             LOGGER.error("Failed to obtain keyspace metadata for request '{}'", requestParams, throwable);
             context.fail(new HttpException(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
                                            "Unable to reach Cassandra service",
@@ -195,7 +196,8 @@ public class KeyspacesHandler extends AbstractHandler
      */
     private Future<Metadata> getMetadata(CQLSession cqlSession)
     {
-        return vertx.executeBlocking(promise -> {
+        return vertx.executeBlocking(promise ->
+        {
             Session session = cqlSession.getLocalCql();
             if (session == null)
             {
