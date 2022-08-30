@@ -21,16 +21,10 @@ package org.apache.cassandra.sidecar.routes;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.KeyspaceMetadata;
@@ -38,20 +32,13 @@ import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.TableMetadata;
 import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.util.Modules;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
-import org.apache.cassandra.sidecar.MainModule;
-import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CQLSession;
@@ -65,82 +52,62 @@ import static org.mockito.Mockito.when;
  * Tests for the {@link KeyspacesHandler}
  */
 @ExtendWith(VertxExtension.class)
-class KeyspacesHandlerTest
+class KeyspacesHandlerTest extends AbstractHandlerTest
 {
-    private static final Logger logger = LoggerFactory.getLogger(KeyspacesHandlerTest.class);
-
     @TempDir
-    protected File dataDir0;
-    Vertx vertx;
-    Configuration config;
-    HttpServer server;
+    File dataDir0;
 
-    @BeforeEach
-    void before() throws InterruptedException
+    @Override
+    protected Module initializeCustomModule()
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
-                                                        .with(Modules.override(new TestModule())
-                                                                     .with(new KeyspacesInfoTestModule())));
-        vertx = injector.getInstance(Vertx.class);
-        server = injector.getInstance(HttpServer.class);
-        config = injector.getInstance(Configuration.class);
-        VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), config.getHost(), context.succeedingThenComplete());
-        context.awaitCompletion(5, TimeUnit.SECONDS);
-    }
-
-    @AfterEach
-    void after() throws InterruptedException
-    {
-        final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> closeLatch.countDown());
-        vertx.close();
-        if (closeLatch.await(60, TimeUnit.SECONDS))
-            logger.info("Close event received before timeout.");
-        else
-            logger.error("Close event timed out.");
+        return new KeyspacesHandlerTest.KeyspacesInfoTestModule();
     }
 
     @Test
     void testKeyspaceExists(VertxTestContext context)
     {
-        runTest(context, "/api/v1/keyspace/testKeyspace", 200);
+        runHeadRequestTests(context, "/api/v1/keyspace/testKeyspace", 200);
     }
 
     @Test
     void testKeyspaceDoesNotExist(VertxTestContext context)
     {
-        runTest(context, "/api/v1/keyspace/random", 404);
+        runHeadRequestTests(context, "/api/v1/keyspace/nonExistent", 404);
     }
 
     @Test
     void testTableExists(VertxTestContext context)
     {
-        runTest(context, "/api/v1/keyspace/testKeyspace/table/testTable", 200);
+        runHeadRequestTests(context, "/api/v1/keyspace/testKeyspace/table/testTable", 200);
     }
 
     @Test
     void testTableDoesNotExist(VertxTestContext context)
     {
-        runTest(context, "/api/v1/keyspace/testKeyspace/table/random", 404);
+        runHeadRequestTests(context, "/api/v1/keyspace/testKeyspace/table/nonExistent", 404);
     }
 
     @Test
-    void testKeyspaceMissingDuringTableCheck(VertxTestContext context)
+    void testKeyspaceMissingForTableCheckRequest(VertxTestContext context)
     {
-        runTest(context, "/api/v1/keyspace/random/table/testTable", 404);
+        runHeadRequestTests(context, "/api/v1/keyspace/random/table/testTable", 404);
     }
 
-    private void runTest(VertxTestContext context, String uri, int expectedCode)
+    @Test
+    void testKeyspaces(VertxTestContext context)
+    {
+    }
+
+    private void runHeadRequestTests(VertxTestContext context, String uri, int expectedCode)
     {
         WebClient client = WebClient.create(vertx);
         client.head(config.getPort(), config.getHost(), uri)
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() ->
-                                       {
-                                           assertThat(response.statusCode()).isEqualTo(expectedCode);
-                                           context.completeNow();
-                                       })));
+                                                                  {
+                                                                      assertThat(response.statusCode()).isEqualTo(expectedCode);
+                                                                      context.completeNow();
+                                                                  })));
     }
 
     public class KeyspacesInfoTestModule extends AbstractModule

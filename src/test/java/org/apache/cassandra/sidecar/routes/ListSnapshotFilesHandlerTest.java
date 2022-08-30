@@ -22,31 +22,18 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.util.Modules;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
-import org.apache.cassandra.sidecar.MainModule;
-import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
@@ -61,42 +48,21 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests for the {@link ListSnapshotFilesHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class ListSnapshotFilesHandlerTest
+class ListSnapshotFilesHandlerTest extends AbstractHandlerTest
 {
-    private static final Logger logger = LoggerFactory.getLogger(ListSnapshotFilesHandlerTest.class);
-    private Vertx vertx;
-    private HttpServer server;
-    private Configuration config;
     @TempDir
     File temporaryFolder;
 
-    @BeforeEach
-    public void setup() throws InterruptedException, IOException
+    @Override
+    protected Module initializeCustomModule()
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
-                                                        .with(Modules.override(new TestModule())
-                                                                     .with(new ListSnapshotTestModule())));
-        server = injector.getInstance(HttpServer.class);
-        vertx = injector.getInstance(Vertx.class);
-        config = injector.getInstance(Configuration.class);
-
-        VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), config.getHost(), context.succeedingThenComplete());
-
-        context.awaitCompletion(5, TimeUnit.SECONDS);
-        SnapshotUtils.initializeTmpDirectory(temporaryFolder);
+        return new ListSnapshotTestModule();
     }
 
-    @AfterEach
-    void tearDown() throws InterruptedException
+    @Override
+    protected void afterInitialized() throws IOException
     {
-        final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> closeLatch.countDown());
-        vertx.close();
-        if (closeLatch.await(60, TimeUnit.SECONDS))
-            logger.info("Close event received before timeout.");
-        else
-            logger.error("Close event timed out.");
+        SnapshotUtils.initializeTmpDirectory(temporaryFolder);
     }
 
     @Test
