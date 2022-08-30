@@ -38,7 +38,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.data.KeyspaceRequest;
 import org.apache.cassandra.sidecar.common.data.KeyspaceSchema;
 import org.apache.cassandra.sidecar.common.data.TableSchema;
@@ -77,7 +76,7 @@ public class KeyspacesHandler extends AbstractHandler
         LOGGER.debug("KeyspacesHandler received request: {} from: {}. Instance: {}",
                      requestParams, remoteAddress, host);
 
-        getMetadata(instanceMeta.session())
+        getMetadata(instanceMeta)
         .onFailure(throwable ->
         {
             LOGGER.error("Failed to obtain keyspace metadata for request '{}'", requestParams, throwable);
@@ -191,17 +190,21 @@ public class KeyspacesHandler extends AbstractHandler
     /**
      * Gets cluster metadata asynchronously.
      *
-     * @param cqlSession session object for a particular Cassandra instance
+     * @param instanceMetadata the instance metadata
      * @return {@link Future} containing {@link Metadata}
      */
-    private Future<Metadata> getMetadata(CQLSession cqlSession)
+    private Future<Metadata> getMetadata(InstanceMetadata instanceMetadata)
     {
         return vertx.executeBlocking(promise ->
         {
-            Session session = cqlSession.getLocalCql();
+            // session() or getLocalCql() can potentially block, so move them inside a executeBlocking lambda
+            Session session = instanceMetadata.session().getLocalCql();
             if (session == null)
             {
-                promise.fail(new RuntimeException("Could not obtain session object"));
+                LOGGER.error("Unable to obtain session for instance='{}' host='{}' port='{}'",
+                             instanceMetadata.id(), instanceMetadata.host(), instanceMetadata.port());
+                promise.fail(new RuntimeException(String.format("Could not obtain session for instance '%d'",
+                                                                instanceMetadata.id())));
             }
             else
             {
