@@ -52,8 +52,11 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.common.data.ColumnSchema;
 import org.apache.cassandra.sidecar.common.data.KeyspaceSchema;
+import org.apache.cassandra.sidecar.common.data.TableSchema;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -131,7 +134,6 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
         .send(context.succeeding(response-> context.verify(() ->
         {
             assertThat(response.statusCode()).isEqualTo(OK.code());
-            System.out.println(response.bodyAsString());
             KeyspaceSchema ksSchema = response.bodyAsJson(KeyspaceSchema.class);
             assertThat(ksSchema.getName()).isEqualTo("testKeyspace");
             assertThat(ksSchema.isVirtual()).isFalse();
@@ -140,8 +142,120 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
             assertThat(ksSchema.getReplication()).containsEntry("DC2", "3");
             assertThat(ksSchema.getReplication()).containsEntry("DC3", "2");
             assertThat(ksSchema.getTables().size()).isEqualTo(1);
+            validateTable(ksSchema.getTables().get(0));
             context.completeNow();
         })));
+    }
+
+    @Test
+    void testGetKeyspaceDoesNotExist(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/keyspace/nonExistent";
+        client.get(config.getPort(), config.getHost(), testRoute)
+              .expect(ResponsePredicate.SC_NOT_FOUND)
+              .send(context.succeeding(response-> context.verify(() ->
+              {
+                  assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
+                  context.completeNow();
+              })));
+    }
+
+    @Test
+    void testGetTable(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/keyspace/testKeyspace/table/testTable";
+        client.get(config.getPort(), config.getHost(), testRoute)
+              .expect(ResponsePredicate.SC_OK)
+              .send(context.succeeding(response-> context.verify(() ->
+              {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  TableSchema tableSchema = response.bodyAsJson(TableSchema.class);
+                  validateTable(tableSchema);
+                  context.completeNow();
+              })));
+    }
+
+    @Test
+    void testGetTableDoesNotExist(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/keyspace/testKeyspace/table/nonExistent";
+        client.get(config.getPort(), config.getHost(), testRoute)
+              .expect(ResponsePredicate.SC_NOT_FOUND)
+              .send(context.succeeding(response-> context.verify(() ->
+              {
+                  assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
+                  context.completeNow();
+              })));
+    }
+
+    @Test
+    void testKeyspaceDoesNotExistInGetTableRequest(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/keyspace/nonExistent/table/testTable";
+        client.get(config.getPort(), config.getHost(), testRoute)
+              .expect(ResponsePredicate.SC_NOT_FOUND)
+              .send(context.succeeding(response-> context.verify(() ->
+              {
+                  assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
+                  context.completeNow();
+              })));
+    }
+
+    private void validateTable(TableSchema tableSchema)
+    {
+        org.apache.cassandra.sidecar.common.data.DataType bigint =
+        new org.apache.cassandra.sidecar.common.data.DataType("BIGINT");
+        List<ColumnSchema> expectedPartitionKey = Arrays.asList(
+        new ColumnSchema("partition_key_1", new org.apache.cassandra.sidecar.common.data.DataType("UUID")),
+        new ColumnSchema("partition_key_2", new org.apache.cassandra.sidecar.common.data.DataType("TEXT")),
+        new ColumnSchema("partition_key_3",
+                         new org.apache.cassandra.sidecar.common.data.DataType("SET", true,
+                                                                               Collections.singletonList(bigint),
+                                                                               true, null))
+        );
+
+        List<ColumnSchema> expectedClusteringColumns = Arrays.asList(
+        new ColumnSchema("clustering_column_1",
+                         new org.apache.cassandra.sidecar.common.data.DataType("DATE")),
+        new ColumnSchema("clustering_column_2",
+                         new org.apache.cassandra.sidecar.common.data.DataType("DURATION"))
+        );
+
+        String customTypeClassName = "org.apache.cassandra.db.marshal.DateType";
+        List<ColumnSchema> expectedColumns = Arrays.asList(
+        new ColumnSchema("column_1",
+                         new org.apache.cassandra.sidecar.common.data.DataType("LIST", false, Collections.singletonList(
+                         new org.apache.cassandra.sidecar.common.data.DataType("BLOB")
+                         ), true, null)),
+        new ColumnSchema("column_2", new org.apache.cassandra.sidecar.common.data.DataType("INET")),
+        new ColumnSchema("column_3",
+                         new org.apache.cassandra.sidecar.common.data.DataType("MAP", false, Arrays.asList(
+                         new org.apache.cassandra.sidecar.common.data.DataType("TEXT"),
+                         new org.apache.cassandra.sidecar.common.data.DataType("BIGINT")
+                         ), true, null)),
+        new ColumnSchema("custom_type_column_4",
+                         new org.apache.cassandra.sidecar.common.data.DataType("CUSTOM", false,
+                                                                               Collections.emptyList(), false,
+                                                                               customTypeClassName))
+        );
+
+        List<ColumnSchema> expectedPrimaryKey = new ArrayList<>();
+        expectedPrimaryKey.addAll(expectedPartitionKey);
+        expectedPrimaryKey.addAll(expectedClusteringColumns);
+
+        assertThat(tableSchema.getKeyspaceName()).isEqualTo("testKeyspace");
+        assertThat(tableSchema.getName()).isEqualTo("testTable");
+        assertThat(tableSchema.isVirtual()).isFalse();
+        assertThat(tableSchema.hasSecondaryIndexes()).isFalse();
+        assertThat(tableSchema.getPartitionKey()).containsExactlyElementsOf(expectedPartitionKey);
+        assertThat(tableSchema.getClusteringColumns()).containsExactlyElementsOf(expectedClusteringColumns);
+        assertThat(tableSchema.getClusteringOrder()).containsExactly("ASC", "DESC");
+        assertThat(tableSchema.getColumns()).containsExactlyElementsOf(expectedColumns);
+        assertThat(tableSchema.getPrimaryKey()).containsExactlyElementsOf(expectedPrimaryKey);
     }
 
     private void runHeadRequestTests(VertxTestContext context, String uri, int expectedCode)
@@ -240,7 +354,11 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
             when(col3.getName()).thenReturn("column_3");
             when(col3.getType()).thenReturn(DataType.map(DataType.text(), DataType.bigint()));
 
-            when(mock1.getColumns()).thenReturn(Arrays.asList(col1, col2, col3));
+            ColumnMetadata col4 = mock(ColumnMetadata.class);
+            when(col4.getName()).thenReturn("custom_type_column_4");
+            when(col4.getType()).thenReturn(DataType.custom("org.apache.cassandra.db.marshal.DateType"));
+
+            when(mock1.getColumns()).thenReturn(Arrays.asList(col1, col2, col3, col4));
 
             listOfMocks.add(mock1);
             return listOfMocks;

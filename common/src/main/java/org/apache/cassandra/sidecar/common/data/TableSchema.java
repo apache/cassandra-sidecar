@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.datastax.driver.core.Metadata;
@@ -40,7 +41,7 @@ public class TableSchema
     private final String keyspaceName;
     private final String name;
     private final boolean isVirtual;
-    private final boolean hasSecondaryIndexes;
+    private final boolean secondaryIndexes;
     private final List<ColumnSchema> partitionKey;
     private final List<ColumnSchema> clusteringColumns;
     private final List<String> clusteringOrder;
@@ -51,7 +52,7 @@ public class TableSchema
     protected TableSchema(@JsonProperty("keyspaceName") String keyspaceName,
                           @JsonProperty("name") String name,
                           @JsonProperty("virtual") boolean isVirtual,
-                          @JsonProperty("secondaryIndexes") boolean hasSecondaryIndexes,
+                          @JsonProperty("secondaryIndexes") boolean secondaryIndexes,
                           @JsonProperty("partitionKey") List<ColumnSchema> partitionKey,
                           @JsonProperty("clusteringColumns") List<ColumnSchema> clusteringColumns,
                           @JsonProperty("clusteringOrder") List<String> clusteringOrder,
@@ -61,7 +62,7 @@ public class TableSchema
         this.keyspaceName = keyspaceName;
         this.name = name;
         this.isVirtual = isVirtual;
-        this.hasSecondaryIndexes = hasSecondaryIndexes;
+        this.secondaryIndexes = secondaryIndexes;
         this.partitionKey = partitionKey;
         this.clusteringColumns = clusteringColumns;
         this.clusteringOrder = clusteringOrder;
@@ -97,9 +98,10 @@ public class TableSchema
     /**
      * @return true if the table has secondary indexes, false otherwise
      */
+    @JsonProperty("secondaryIndexes")
     public boolean hasSecondaryIndexes()
     {
-        return hasSecondaryIndexes;
+        return secondaryIndexes;
     }
 
     /**
@@ -165,6 +167,62 @@ public class TableSchema
     public TableOptionsMetadata getOptions()
     {
         return options;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(keyspaceName,
+                            name,
+                            isVirtual,
+                            secondaryIndexes,
+                            partitionKey,
+                            clusteringColumns,
+                            clusteringOrder,
+                            columns,
+                            options);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TableSchema that = (TableSchema) o;
+        return isVirtual == that.isVirtual
+               && secondaryIndexes == that.secondaryIndexes
+               && Objects.equals(keyspaceName, that.keyspaceName)
+               && Objects.equals(name, that.name)
+               && Objects.equals(partitionKey, that.partitionKey)
+               && Objects.equals(clusteringColumns, that.clusteringColumns)
+               && Objects.equals(clusteringOrder, that.clusteringOrder)
+               && Objects.equals(columns, that.columns)
+               && Objects.equals(options, that.options);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString()
+    {
+        return "TableSchema{" +
+               "keyspaceName='" + keyspaceName + '\'' +
+               ", name='" + name + '\'' +
+               ", isVirtual=" + isVirtual +
+               ", hasSecondaryIndexes=" + secondaryIndexes +
+               ", partitionKey=" + partitionKey +
+               ", clusteringColumns=" + clusteringColumns +
+               ", clusteringOrder=" + clusteringOrder +
+               ", columns=" + columns +
+               ", options=" + options +
+               '}';
     }
 
     /**

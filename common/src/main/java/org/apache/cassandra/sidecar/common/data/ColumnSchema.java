@@ -18,8 +18,11 @@
 
 package org.apache.cassandra.sidecar.common.data;
 
+import java.util.Objects;
+
 import com.datastax.driver.core.ColumnMetadata;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Represents a Cassandra table column. Used by {@link org.apache.cassandra.sidecar.routes.KeyspacesHandler}
@@ -30,6 +33,18 @@ public class ColumnSchema
     private final String name;
     private final DataType type;
     private final boolean isStatic;
+
+    /**
+     * Constructs a non-static {@link ColumnSchema} object with the provided {@code name} and {@code type} parameters.
+     *
+     * @param name the name of the column
+     * @param type the type of the column
+     */
+    @VisibleForTesting
+    public ColumnSchema(String name, DataType type)
+    {
+        this(name, type, false);
+    }
 
     /**
      * Constructs a {@link ColumnSchema} object with the provided {@code name}, {@code type}, and {@code isStatic}
@@ -70,6 +85,42 @@ public class ColumnSchema
     public boolean isStatic()
     {
         return isStatic;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, type, isStatic);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ColumnSchema that = (ColumnSchema) o;
+        return isStatic == that.isStatic
+               && Objects.equals(name, that.name)
+               && Objects.equals(type, that.type);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString()
+    {
+        return "ColumnSchema{" +
+               "name='" + name + '\'' +
+               ", type=" + type +
+               ", isStatic=" + isStatic +
+               '}';
     }
 
     /**

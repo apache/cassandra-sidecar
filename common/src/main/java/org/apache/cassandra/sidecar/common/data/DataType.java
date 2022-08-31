@@ -1,9 +1,17 @@
 package org.apache.cassandra.sidecar.common.data;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Represents a data type for a Cassandra table column. Used by
@@ -11,26 +19,55 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class DataType
 {
+    @NotNull
     private final String name;
     private final boolean frozen;
     private final List<DataType> typeArguments;
     private final boolean collection;
 
-    public DataType(@JsonProperty("name") String name,
+    @Nullable
+    private final String customTypeClassName;
+
+    @VisibleForTesting
+    public DataType(@NotNull String name)
+    {
+        this(name, false, new ArrayList<>(), false, null);
+    }
+
+    public DataType(@JsonProperty("name") @NotNull String name,
                     @JsonProperty("frozen") boolean frozen,
                     @JsonProperty("typeArguments") List<DataType> typeArguments,
-                    @JsonProperty("collection") boolean collection)
+                    @JsonProperty("collection") boolean collection,
+                    @JsonProperty("customTypeClassName") @Nullable String customTypeClassName)
     {
-        this.name = name;
+        if (collection)
+        {
+            Objects.requireNonNull(typeArguments, "typeArguments is required for collection data types");
+            if ("MAP".equals(name))
+            {
+                checkArgument(typeArguments.size() == 2, "MAP data type takes 2 typeArguments");
+            }
+            if ("LIST".equals(name) || "SET".equals(name))
+            {
+                checkArgument(typeArguments.size() == 1, "LIST and SET data types take 1 typeArgument");
+            }
+        }
+        else
+        {
+            checkArgument(typeArguments.isEmpty(),
+                          "typeArguments only need to be provided for collection data types");
+        }
+        this.name = Objects.requireNonNull(name, "the name of the DataType must be non-null");
         this.frozen = frozen;
         this.typeArguments = typeArguments;
         this.collection = collection;
+        this.customTypeClassName = customTypeClassName;
     }
 
     /**
      * @return the name of that type.
      */
-    public String getName()
+    public @NotNull String getName()
     {
         return name;
     }
@@ -81,6 +118,59 @@ public class DataType
     }
 
     /**
+     * Returns the fully qualified name of the subtype of {@code
+     * org.apache.cassandra.db.marshal.AbstractType} that represents this type server-side.
+     *
+     * @return the fully qualified name of the subtype of {@code
+     * org.apache.cassandra.db.marshal.AbstractType} that represents this type server-side.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public @Nullable String getCustomTypeClassName()
+    {
+        return customTypeClassName;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, frozen, typeArguments, collection, customTypeClassName);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DataType dataType = (DataType) o;
+        return frozen == dataType.frozen
+               && collection == dataType.collection
+               && name.equals(dataType.name)
+               && Objects.equals(typeArguments, dataType.typeArguments)
+               && Objects.equals(customTypeClassName, dataType.customTypeClassName);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString()
+    {
+        return "DataType{" +
+               "name='" + name + '\'' +
+               ", frozen=" + frozen +
+               ", typeArguments=" + typeArguments +
+               ", collection=" + collection +
+               ", customTypeClassName='" + customTypeClassName + '\'' +
+               '}';
+    }
+
+    /**
      * Builds a {@link DataType} built from the given {@link com.datastax.driver.core.DataType dataType}.
      *
      * @param dataType the object that describes the Cassandra column type
@@ -91,9 +181,15 @@ public class DataType
         List<DataType> typeArguments = dataType.getTypeArguments().stream()
                                                .map(DataType::of)
                                                .collect(Collectors.toList());
+        String customTypeClassName = null;
+        if (dataType instanceof com.datastax.driver.core.DataType.CustomType)
+        {
+            customTypeClassName = ((com.datastax.driver.core.DataType.CustomType) dataType).getCustomTypeClassName();
+        }
         return new DataType(dataType.getName().name(),
                             dataType.isFrozen(),
                             typeArguments,
-                            dataType.isCollection());
+                            dataType.isCollection(),
+                            customTypeClassName);
     }
 }

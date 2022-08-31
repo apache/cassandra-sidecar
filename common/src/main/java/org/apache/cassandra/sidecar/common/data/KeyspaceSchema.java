@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.common.data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.datastax.driver.core.KeyspaceMetadata;
@@ -88,6 +89,46 @@ public class KeyspaceSchema
     public List<TableSchema> getTables()
     {
         return tables;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, tables, replication, durableWrites, virtual);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        KeyspaceSchema that = (KeyspaceSchema) o;
+        return durableWrites == that.durableWrites
+               && virtual == that.virtual
+               && Objects.equals(name, that.name)
+               && Objects.equals(tables, that.tables)
+               && Objects.equals(replication, that.replication);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString()
+    {
+        return "KeyspaceSchema{" +
+               "name='" + name + '\'' +
+               ", tables=" + tables +
+               ", replication=" + replication +
+               ", durableWrites=" + durableWrites +
+               ", virtual=" + virtual +
+               '}';
     }
 
     /**
