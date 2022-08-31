@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.datastax.driver.core.KeyspaceMetadata;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Represents a keyspace schema used by {@link org.apache.cassandra.sidecar.routes.KeyspacesHandler}
@@ -34,13 +35,13 @@ public class KeyspaceSchema
     private final List<TableSchema> tables;
     private final Map<String, String> replication;
     private final boolean durableWrites;
-    private final transient boolean virtual;
+    private final boolean virtual;
 
-    protected KeyspaceSchema(String name,
-                             List<TableSchema> tables,
-                             Map<String, String> replication,
-                             boolean durableWrites,
-                             boolean virtual)
+    protected KeyspaceSchema(@JsonProperty("name") String name,
+                             @JsonProperty("tables") List<TableSchema> tables,
+                             @JsonProperty("replication") Map<String, String> replication,
+                             @JsonProperty("durableWrites") boolean durableWrites,
+                             @JsonProperty("virtual") boolean virtual)
     {
         this.name = name;
         this.tables = tables;

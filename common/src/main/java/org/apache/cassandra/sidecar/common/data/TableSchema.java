@@ -28,6 +28,8 @@ import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ParseUtils;
 import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.TableOptionsMetadata;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Represents a Cassandra table schema. Used by {@link org.apache.cassandra.sidecar.routes.KeyspacesHandler}
@@ -46,15 +48,15 @@ public class TableSchema
     private final TableOptionsMetadata options;
     protected final transient Map<String, ColumnSchema> columnsAsMap;
 
-    protected TableSchema(String keyspaceName,
-                          String name,
-                          boolean isVirtual,
-                          boolean hasSecondaryIndexes,
-                          List<ColumnSchema> partitionKey,
-                          List<ColumnSchema> clusteringColumns,
-                          List<String> clusteringOrder,
-                          List<ColumnSchema> columns,
-                          TableOptionsMetadata options)
+    protected TableSchema(@JsonProperty("keyspaceName") String keyspaceName,
+                          @JsonProperty("name") String name,
+                          @JsonProperty("virtual") boolean isVirtual,
+                          @JsonProperty("secondaryIndexes") boolean hasSecondaryIndexes,
+                          @JsonProperty("partitionKey") List<ColumnSchema> partitionKey,
+                          @JsonProperty("clusteringColumns") List<ColumnSchema> clusteringColumns,
+                          @JsonProperty("clusteringOrder") List<String> clusteringOrder,
+                          @JsonProperty("columns") List<ColumnSchema> columns,
+                          @JsonProperty("options") TableOptionsMetadata options)
     {
         this.keyspaceName = keyspaceName;
         this.name = name;
@@ -124,24 +126,25 @@ public class TableSchema
         return clusteringOrder;
     }
 
-
-    /**
-     * @return the table's primary key represented by the partition key columns and the clustering columns
-     */
-    public List<ColumnSchema> getPrimaryKey()
-    {
-        List<ColumnSchema> pk = new ArrayList<>(this.partitionKey.size() + this.clusteringColumns.size());
-        pk.addAll(this.partitionKey);
-        pk.addAll(this.clusteringColumns);
-        return pk;
-    }
-
     /**
      * @return a list of {@link ColumnSchema regular columns}
      */
     public List<ColumnSchema> getColumns()
     {
         return columns;
+    }
+
+
+    /**
+     * @return the table's primary key represented by the partition key columns and the clustering columns
+     */
+    @JsonIgnore
+    public List<ColumnSchema> getPrimaryKey()
+    {
+        List<ColumnSchema> pk = new ArrayList<>(this.partitionKey.size() + this.clusteringColumns.size());
+        pk.addAll(this.partitionKey);
+        pk.addAll(this.clusteringColumns);
+        return pk;
     }
 
     /**

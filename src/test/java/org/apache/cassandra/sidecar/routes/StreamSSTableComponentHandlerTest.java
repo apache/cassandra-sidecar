@@ -18,30 +18,15 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.util.Modules;
+import com.google.inject.Module;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
-import org.apache.cassandra.sidecar.MainModule;
-import org.apache.cassandra.sidecar.TestModule;
-import org.assertj.core.api.AbstractStringAssert;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
@@ -55,37 +40,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Test for StreamSSTableComponent
  */
 @ExtendWith(VertxExtension.class)
-public class StreamSSTableComponentHandlerTest
+class StreamSSTableComponentHandlerTest extends AbstractHandlerTest
 {
-    private static final Logger logger = LoggerFactory.getLogger(StreamSSTableComponentHandlerTest.class);
-    private Vertx vertx;
-    private HttpServer server;
-    private Configuration config;
-
-    @BeforeEach
-    void setUp() throws InterruptedException
+    @Override
+    protected Module initializeCustomModule()
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
-        server = injector.getInstance(HttpServer.class);
-        vertx = injector.getInstance(Vertx.class);
-        config = injector.getInstance(Configuration.class);
-
-        VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), context.succeedingThenComplete());
-
-        context.awaitCompletion(5, TimeUnit.SECONDS);
-    }
-
-    @AfterEach
-    void tearDown() throws InterruptedException
-    {
-        final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> closeLatch.countDown());
-        vertx.close();
-        if (closeLatch.await(60, TimeUnit.SECONDS))
-            logger.info("Close event received before timeout.");
-        else
-            logger.error("Close event timed out.");
+        return null; // no custom module
     }
 
     @Test
@@ -316,7 +276,6 @@ public class StreamSSTableComponentHandlerTest
                 .send(context.succeeding(response -> context.verify(() ->
                 {
                     assertThat(response.statusCode()).isEqualTo(OK.code());
-                    AbstractStringAssert<?> as =
                     assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
                         .describedAs("Server should shrink the range to the file length")
                         .isEqualTo("4");

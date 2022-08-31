@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.common.data;
 
 import com.datastax.driver.core.ColumnMetadata;
-import com.datastax.driver.core.DataType;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Represents a Cassandra table column. Used by {@link org.apache.cassandra.sidecar.routes.KeyspacesHandler}
@@ -39,7 +39,9 @@ public class ColumnSchema
      * @param type     the type of the column
      * @param isStatic true if the column is static, false otherwise
      */
-    protected ColumnSchema(String name, DataType type, boolean isStatic)
+    protected ColumnSchema(@JsonProperty("name") String name,
+                           @JsonProperty("type") DataType type,
+                           @JsonProperty("static") boolean isStatic)
     {
         this.name = name;
         this.type = type;
@@ -79,7 +81,7 @@ public class ColumnSchema
     public static ColumnSchema of(ColumnMetadata columnMetadata)
     {
         return new ColumnSchema(columnMetadata.getName(),
-                                columnMetadata.getType(),
+                                DataType.of(columnMetadata.getType()),
                                 columnMetadata.isStatic());
     }
 }

@@ -20,13 +20,21 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
+import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ClusteringOrder;
+import com.datastax.driver.core.ColumnMetadata;
+import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
@@ -36,6 +44,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -43,7 +52,9 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.common.data.KeyspaceSchema;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -93,9 +104,44 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
         runHeadRequestTests(context, "/api/v1/keyspace/random/table/testTable", 404);
     }
 
+//    @Test
+//    void testKeyspaces(VertxTestContext context)
+//    {
+//        WebClient client = WebClient.create(vertx);
+//        String testRoute = "/api/v1/keyspaces";
+//        String testRoute = "/api/v1/keyspace/testKeyspace/table/testTable";
+//        client.get(config.getPort(), config.getHost(), testRoute)
+//              .send(context.succeeding(response -> context.verify(() ->
+//              {
+//                  assertThat(response.statusCode()).isEqualTo(OK.code());
+//                  JsonArray resp = response.bodyAsJsonArray();
+//                  assertThat(resp.size()).isEqualTo(1);
+//                  response
+//                  context.completeNow();
+//              })));
+//    }
+
     @Test
-    void testKeyspaces(VertxTestContext context)
+    void testGetKeyspace(VertxTestContext context)
     {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/keyspace/testKeyspace";
+        client.get(config.getPort(), config.getHost(), testRoute)
+        .expect(ResponsePredicate.SC_OK)
+        .send(context.succeeding(response-> context.verify(() ->
+        {
+            assertThat(response.statusCode()).isEqualTo(OK.code());
+            System.out.println(response.bodyAsString());
+            KeyspaceSchema ksSchema = response.bodyAsJson(KeyspaceSchema.class);
+            assertThat(ksSchema.getName()).isEqualTo("testKeyspace");
+            assertThat(ksSchema.isVirtual()).isFalse();
+            assertThat(ksSchema.isDurableWrites()).isTrue();
+            assertThat(ksSchema.getReplication()).containsEntry("DC1", "3");
+            assertThat(ksSchema.getReplication()).containsEntry("DC2", "3");
+            assertThat(ksSchema.getReplication()).containsEntry("DC3", "2");
+            assertThat(ksSchema.getTables().size()).isEqualTo(1);
+            context.completeNow();
+        })));
     }
 
     private void runHeadRequestTests(VertxTestContext context, String uri, int expectedCode)
@@ -104,10 +150,10 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
         client.head(config.getPort(), config.getHost(), uri)
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() ->
-                                                                  {
-                                                                      assertThat(response.statusCode()).isEqualTo(expectedCode);
-                                                                      context.completeNow();
-                                                                  })));
+              {
+                  assertThat(response.statusCode()).isEqualTo(expectedCode);
+                  context.completeNow();
+              })));
     }
 
     public class KeyspacesInfoTestModule extends AbstractModule
@@ -129,9 +175,10 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
             when(mockCqlSession.getLocalCql()).thenReturn(mockSession);
             Cluster mockCluster = mock(Cluster.class);
             Metadata mockMetadata = mock(Metadata.class);
-            KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
-            TableMetadata tableMetadata = mock(TableMetadata.class);
-            when(keyspaceMetadata.getTable("testTable")).thenReturn(tableMetadata);
+            List<TableMetadata> tables = mockTableMetadataCollection();
+            KeyspaceMetadata keyspaceMetadata = mockKeyspaceMetadata(tables);
+
+            when(keyspaceMetadata.getTable("testTable")).thenReturn(tables.get(0));
             when(mockMetadata.getKeyspace("testKeyspace")).thenReturn(keyspaceMetadata);
             when(mockCluster.getMetadata()).thenReturn(mockMetadata);
             when(mockSession.getCluster()).thenReturn(mockCluster);
@@ -143,6 +190,71 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
             when(mockInstancesConfig.instanceFromHost(host)).thenReturn(instanceMetadata);
 
             return mockInstancesConfig;
+        }
+
+        List<TableMetadata> mockTableMetadataCollection()
+        {
+            KeyspaceMetadata ksMock = mock(KeyspaceMetadata.class);
+            when(ksMock.getName()).thenReturn("testKeyspace");
+            List<TableMetadata> listOfMocks = new ArrayList<>();
+            TableMetadata mock1 = mock(TableMetadata.class);
+            when(mock1.getKeyspace()).thenReturn(ksMock);
+            when(mock1.getName()).thenReturn("testTable");
+            when(mock1.isVirtual()).thenReturn(false);
+            when(mock1.getIndexes()).thenReturn(Collections.emptyList());
+
+            ColumnMetadata pk1 = mock(ColumnMetadata.class);
+            when(pk1.getName()).thenReturn("partition_key_1");
+            when(pk1.getType()).thenReturn(DataType.uuid());
+
+            ColumnMetadata pk2 = mock(ColumnMetadata.class);
+            when(pk2.getName()).thenReturn("partition_key_2");
+            when(pk2.getType()).thenReturn(DataType.text());
+
+            ColumnMetadata pk3 = mock(ColumnMetadata.class);
+            when(pk3.getName()).thenReturn("partition_key_3");
+            when(pk3.getType()).thenReturn(DataType.frozenSet(DataType.bigint()));
+
+            when(mock1.getPartitionKey()).thenReturn(Arrays.asList(pk1, pk2, pk3));
+
+            ColumnMetadata cc1 = mock(ColumnMetadata.class);
+            when(cc1.getName()).thenReturn("clustering_column_1");
+            when(cc1.getType()).thenReturn(DataType.date());
+
+            ColumnMetadata cc2 = mock(ColumnMetadata.class);
+            when(cc2.getName()).thenReturn("clustering_column_2");
+            when(cc2.getType()).thenReturn(DataType.duration());
+
+            when(mock1.getClusteringColumns()).thenReturn(Arrays.asList(cc1, cc2));
+            when(mock1.getClusteringOrder()).thenReturn(Arrays.asList(ClusteringOrder.ASC, ClusteringOrder.DESC));
+
+            ColumnMetadata col1 = mock(ColumnMetadata.class);
+            when(col1.getName()).thenReturn("column_1");
+            when(col1.getType()).thenReturn(DataType.list(DataType.blob()));
+
+            ColumnMetadata col2 = mock(ColumnMetadata.class);
+            when(col2.getName()).thenReturn("column_2");
+            when(col2.getType()).thenReturn(DataType.inet());
+
+            ColumnMetadata col3 = mock(ColumnMetadata.class);
+            when(col3.getName()).thenReturn("column_3");
+            when(col3.getType()).thenReturn(DataType.map(DataType.text(), DataType.bigint()));
+
+            when(mock1.getColumns()).thenReturn(Arrays.asList(col1, col2, col3));
+
+            listOfMocks.add(mock1);
+            return listOfMocks;
+        }
+
+        KeyspaceMetadata mockKeyspaceMetadata(Collection<TableMetadata> tables)
+        {
+            KeyspaceMetadata mock = mock(KeyspaceMetadata.class);
+            when(mock.getName()).thenReturn("testKeyspace");
+            when(mock.getReplication()).thenReturn(ImmutableMap.of("DC1", "3", "DC2", "3", "DC3", "2"));
+            when(mock.isDurableWrites()).thenReturn(true);
+            when(mock.isVirtual()).thenReturn(false);
+            when(mock.getTables()).thenReturn(tables);
+            return mock;
         }
     }
 }
