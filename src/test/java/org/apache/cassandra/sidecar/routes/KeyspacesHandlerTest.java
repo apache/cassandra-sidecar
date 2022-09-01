@@ -39,10 +39,14 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.TableMetadata;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.jackson.JacksonCodec;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.codec.BodyCodec;
@@ -107,22 +111,24 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
         runHeadRequestTests(context, "/api/v1/keyspace/random/table/testTable", 404);
     }
 
-//    @Test
-//    void testKeyspaces(VertxTestContext context)
-//    {
-//        WebClient client = WebClient.create(vertx);
-//        String testRoute = "/api/v1/keyspaces";
-//        String testRoute = "/api/v1/keyspace/testKeyspace/table/testTable";
-//        client.get(config.getPort(), config.getHost(), testRoute)
-//              .send(context.succeeding(response -> context.verify(() ->
-//              {
-//                  assertThat(response.statusCode()).isEqualTo(OK.code());
-//                  JsonArray resp = response.bodyAsJsonArray();
-//                  assertThat(resp.size()).isEqualTo(1);
-//                  response
-//                  context.completeNow();
-//              })));
-//    }
+    @Test
+    void testKeyspaces(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/keyspaces";
+        client.get(config.getPort(), config.getHost(), testRoute)
+              .expect(ResponsePredicate.SC_OK)
+              .send(context.succeeding(response-> context.verify(() ->
+              {
+                  List<KeyspaceSchema> keyspaces =
+                  JacksonCodec.decodeValue(response.body(), new TypeReference<List<KeyspaceSchema>>()
+                  {
+                  });
+                  assertThat(keyspaces.size()).isEqualTo(1);
+                  validateKeyspace(keyspaces.get(0));
+                  context.completeNow();
+              })));
+    }
 
     @Test
     void testGetKeyspace(VertxTestContext context)
@@ -135,14 +141,7 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
         {
             assertThat(response.statusCode()).isEqualTo(OK.code());
             KeyspaceSchema ksSchema = response.bodyAsJson(KeyspaceSchema.class);
-            assertThat(ksSchema.getName()).isEqualTo("testKeyspace");
-            assertThat(ksSchema.isVirtual()).isFalse();
-            assertThat(ksSchema.isDurableWrites()).isTrue();
-            assertThat(ksSchema.getReplication()).containsEntry("DC1", "3");
-            assertThat(ksSchema.getReplication()).containsEntry("DC2", "3");
-            assertThat(ksSchema.getReplication()).containsEntry("DC3", "2");
-            assertThat(ksSchema.getTables().size()).isEqualTo(1);
-            validateTable(ksSchema.getTables().get(0));
+            validateKeyspace(ksSchema);
             context.completeNow();
         })));
     }
@@ -203,6 +202,18 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
                   context.completeNow();
               })));
+    }
+
+    private void validateKeyspace(KeyspaceSchema ksSchema)
+    {
+        assertThat(ksSchema.getName()).isEqualTo("testKeyspace");
+        assertThat(ksSchema.isVirtual()).isFalse();
+        assertThat(ksSchema.isDurableWrites()).isTrue();
+        assertThat(ksSchema.getReplication()).containsEntry("DC1", "3");
+        assertThat(ksSchema.getReplication()).containsEntry("DC2", "3");
+        assertThat(ksSchema.getReplication()).containsEntry("DC3", "2");
+        assertThat(ksSchema.getTables().size()).isEqualTo(1);
+        validateTable(ksSchema.getTables().get(0));
     }
 
     private void validateTable(TableSchema tableSchema)
@@ -294,6 +305,7 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
 
             when(keyspaceMetadata.getTable("testTable")).thenReturn(tables.get(0));
             when(mockMetadata.getKeyspace("testKeyspace")).thenReturn(keyspaceMetadata);
+            when(mockMetadata.getKeyspaces()).thenReturn(Collections.singletonList(keyspaceMetadata));
             when(mockCluster.getMetadata()).thenReturn(mockMetadata);
             when(mockSession.getCluster()).thenReturn(mockCluster);
             when(instanceMetadata.session()).thenReturn(mockCqlSession);
