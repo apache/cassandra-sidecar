@@ -82,31 +82,31 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
     @Test
     void testKeyspaceExists(VertxTestContext context)
     {
-        runHeadRequestTests(context, "/api/v1/keyspace/testKeyspace", 200);
+        runHeadRequestTests(context, "/api/v1/keyspaces/testKeyspace", 200);
     }
 
     @Test
     void testKeyspaceDoesNotExist(VertxTestContext context)
     {
-        runHeadRequestTests(context, "/api/v1/keyspace/nonExistent", 404);
+        runHeadRequestTests(context, "/api/v1/keyspaces/nonExistent", 404);
     }
 
     @Test
     void testTableExists(VertxTestContext context)
     {
-        runHeadRequestTests(context, "/api/v1/keyspace/testKeyspace/table/testTable", 200);
+        runHeadRequestTests(context, "/api/v1/keyspaces/testKeyspace/tables/testTable", 200);
     }
 
     @Test
     void testTableDoesNotExist(VertxTestContext context)
     {
-        runHeadRequestTests(context, "/api/v1/keyspace/testKeyspace/table/nonExistent", 404);
+        runHeadRequestTests(context, "/api/v1/keyspaces/testKeyspace/tables/nonExistent", 404);
     }
 
     @Test
     void testKeyspaceMissingForTableCheckRequest(VertxTestContext context)
     {
-        runHeadRequestTests(context, "/api/v1/keyspace/random/table/testTable", 404);
+        runHeadRequestTests(context, "/api/v1/keyspaces/random/tables/testTable", 404);
     }
 
     @Test
@@ -132,7 +132,7 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
     void testGetKeyspace(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspace/testKeyspace";
+        String testRoute = "/api/v1/keyspaces/testKeyspace";
         client.get(config.getPort(), config.getHost(), testRoute)
         .expect(ResponsePredicate.SC_OK)
         .send(context.succeeding(response-> context.verify(() ->
@@ -148,7 +148,7 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
     void testGetKeyspaceDoesNotExist(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspace/nonExistent";
+        String testRoute = "/api/v1/keyspaces/nonExistent";
         client.get(config.getPort(), config.getHost(), testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeeding(response-> context.verify(() ->
@@ -162,7 +162,7 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
     void testGetTable(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspace/testKeyspace/table/testTable";
+        String testRoute = "/api/v1/keyspaces/testKeyspace/tables/testTable";
         client.get(config.getPort(), config.getHost(), testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response-> context.verify(() ->
@@ -178,7 +178,7 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
     void testGetTableDoesNotExist(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspace/testKeyspace/table/nonExistent";
+        String testRoute = "/api/v1/keyspaces/testKeyspace/tables/nonExistent";
         client.get(config.getPort(), config.getHost(), testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeeding(response-> context.verify(() ->
@@ -192,7 +192,7 @@ class KeyspacesHandlerTest extends AbstractHandlerTest
     void testKeyspaceDoesNotExistInGetTableRequest(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspace/nonExistent/table/testTable";
+        String testRoute = "/api/v1/keyspaces/nonExistent/tables/testTable";
         client.get(config.getPort(), config.getHost(), testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeeding(response-> context.verify(() ->

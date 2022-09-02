@@ -201,14 +201,14 @@ public class MainModule extends AbstractModule
         router.get(API_V1_VERSION + keyspacesRoute)
               .handler(keyspacesHandler);
 
-        final String keyspaceRoute = "/keyspace/:keyspace";
+        final String keyspaceRoute = "/keyspaces/:keyspace";
         router.route()
               .method(HttpMethod.HEAD)
               .method(HttpMethod.GET)
               .path(API_V1_VERSION + keyspaceRoute)
               .handler(keyspacesHandler);
 
-        final String tableRoute = "/keyspace/:keyspace/table/:table";
+        final String tableRoute = "/keyspaces/:keyspace/tables/:table";
         router.route()
               .method(HttpMethod.HEAD)
               .method(HttpMethod.GET)
