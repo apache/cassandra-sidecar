@@ -76,57 +76,74 @@ public class KeyspacesHandler extends AbstractHandler
         LOGGER.debug("KeyspacesHandler received request: {} from: {}. Instance: {}",
                      requestParams, remoteAddress, host);
 
-        getMetadata(instanceMeta)
-        .onFailure(throwable ->
-        {
-            LOGGER.error("Failed to obtain keyspace metadata for request '{}'", requestParams, throwable);
-            context.fail(new HttpException(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
-                                           "Unable to reach Cassandra service",
-                                           throwable));
-        })
-        .onSuccess(metadata ->
-                   {
-                       KeyspaceMetadata ksMetadata;
-                       if (metadata == null)
-                       {
-                           LOGGER.error("Failed to obtain keyspace metadata for request '{}'", requestParams);
-                           context.fail(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
-                       }
-                       else if (requestParams.getKeyspace() == null)
-                       {
-                           // keyspaces request
-                           buildKeyspacesResponse(context, metadata);
-                       }
-                       else if ((ksMetadata = metadata.getKeyspace(requestParams.getKeyspace())) == null)
-                       {
-                           // keyspace does not exist
-                           String errorMessage = String.format("Keyspace '%s' does not exist.",
-                                                               requestParams.getKeyspace());
-                           context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), errorMessage));
-                       }
-                       else if (requestParams.getTableName() == null)
-                       {
-                           // keyspace request
-                           buildKeyspaceResponse(context, ksMetadata);
-                       }
-                       else
-                       {
-                           TableMetadata tableMetadata = ksMetadata.getTable(requestParams.getTableName());
+        getMetadata(instanceMeta).onFailure(throwable -> handleFailure(context, requestParams, throwable))
+                                 .onSuccess(metadata -> handleWithMetadata(context, requestParams, metadata));
+    }
 
-                           if (tableMetadata == null)
-                           {
-                               String errorMessage = String.format("Table '%s' does not exist in the '%s' keyspace",
-                                                                   requestParams.getTableName(),
-                                                                   requestParams.getKeyspace());
-                               context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), errorMessage));
-                           }
-                           else
-                           {
-                               // keyspace / table request
-                               buildTableResponse(context, tableMetadata);
-                           }
-                       }
-                   });
+    /**
+     * Handles the request with the Cassandra {@link Metadata metadata}.
+     *
+     * @param context       the event to handle
+     * @param requestParams the {@link KeyspaceRequest} parsed from the request
+     * @param metadata      the metadata on the connected cluster, including known nodes and schema definitions
+     */
+    private void handleWithMetadata(RoutingContext context, KeyspaceRequest requestParams, Metadata metadata)
+    {
+        if (metadata == null)
+        {
+            // set request as failed and return
+            LOGGER.error("Failed to obtain keyspace metadata for request '{}'", requestParams);
+            context.fail(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+            return;
+        }
+
+        if (requestParams.getKeyspace() == null)
+        {
+            // list keyspaces and return
+            listKeyspaces(context, metadata);
+            return;
+        }
+
+        // retrieve keyspace metadata
+        KeyspaceMetadata ksMetadata = metadata.getKeyspace(requestParams.getKeyspace());
+        if (ksMetadata == null)
+        {
+            // set request as failed and return
+            // keyspace does not exist
+            String errorMessage = String.format("Keyspace '%s' does not exist.",
+                                                requestParams.getKeyspace());
+            context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), errorMessage));
+            return;
+        }
+
+        if (requestParams.getTableName() == null)
+        {
+            // keyspace request
+            getKeyspace(context, ksMetadata);
+            return;
+        }
+
+        // retrieve table metadata
+        TableMetadata tableMetadata = ksMetadata.getTable(requestParams.getTableName());
+        if (tableMetadata == null)
+        {
+            String errorMessage = String.format("Table '%s' does not exist in the '%s' keyspace",
+                                                requestParams.getTableName(),
+                                                requestParams.getKeyspace());
+            context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), errorMessage));
+            return;
+        }
+
+        // processes the table request
+        getTable(context, tableMetadata);
+    }
+
+    private void handleFailure(RoutingContext context, KeyspaceRequest requestParams, Throwable throwable)
+    {
+        LOGGER.error("Failed to obtain keyspace metadata for request '{}'", requestParams, throwable);
+        context.fail(new HttpException(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
+                                       "Unable to reach Cassandra service",
+                                       throwable));
     }
 
     /**
@@ -135,7 +152,7 @@ public class KeyspacesHandler extends AbstractHandler
      * @param context  the context to handle
      * @param metadata the metadata on the connected cluster, including known nodes and schema definitions
      */
-    private void buildKeyspacesResponse(RoutingContext context, @NotNull Metadata metadata)
+    private void listKeyspaces(RoutingContext context, @NotNull Metadata metadata)
     {
         if (context.request().method() == HttpMethod.HEAD)
         {
@@ -155,7 +172,7 @@ public class KeyspacesHandler extends AbstractHandler
      * @param context          the context to handle
      * @param keyspaceMetadata the object that describes a keyspace defined in the Cassandra cluster
      */
-    private void buildKeyspaceResponse(RoutingContext context, @NotNull KeyspaceMetadata keyspaceMetadata)
+    private void getKeyspace(RoutingContext context, @NotNull KeyspaceMetadata keyspaceMetadata)
     {
         if (context.request().method() == HttpMethod.HEAD)
         {
@@ -175,7 +192,7 @@ public class KeyspacesHandler extends AbstractHandler
      * @param context       the context to handle
      * @param tableMetadata the object that describes a table defined in the Cassandra cluster
      */
-    private void buildTableResponse(RoutingContext context, @NotNull TableMetadata tableMetadata)
+    private void getTable(RoutingContext context, @NotNull TableMetadata tableMetadata)
     {
         if (context.request().method() == HttpMethod.HEAD)
         {
@@ -195,8 +212,7 @@ public class KeyspacesHandler extends AbstractHandler
      */
     private Future<Metadata> getMetadata(InstanceMetadata instanceMetadata)
     {
-        return vertx.executeBlocking(promise ->
-        {
+        return vertx.executeBlocking(promise -> {
             // session() or getLocalCql() can potentially block, so move them inside a executeBlocking lambda
             Session session = instanceMetadata.session().getLocalCql();
             if (session == null)

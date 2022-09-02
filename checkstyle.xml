@@ -260,6 +260,10 @@ page at http://checkstyle.sourceforge.net/config.html -->
             <!-- Checks for placement of the left curly brace ('{'). -->
             <property name="option" value="nl"/>
             <property name="severity" value="error" />
+            <property name="tokens" value="ANNOTATION_DEF, CLASS_DEF, CTOR_DEF, ENUM_CONSTANT_DEF,
+            ENUM_DEF, INTERFACE_DEF, LITERAL_CATCH, LITERAL_DO, LITERAL_ELSE, LITERAL_FINALLY,
+            LITERAL_FOR, LITERAL_IF, LITERAL_SWITCH, LITERAL_SYNCHRONIZED, LITERAL_TRY, LITERAL_WHILE,
+            METHOD_DEF, OBJBLOCK, STATIC_INIT"/>
         </module>
 
         <module name="RightCurly">
