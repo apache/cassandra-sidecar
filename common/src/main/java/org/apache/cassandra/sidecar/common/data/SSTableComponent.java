@@ -41,7 +41,7 @@ public class SSTableComponent extends QualifiedTableName
     /**
      * @return the name of the SSTable component
      */
-    public String getComponentName()
+    public String componentName()
     {
         return componentName;
     }
@@ -53,8 +53,8 @@ public class SSTableComponent extends QualifiedTableName
     public String toString()
     {
         return "SSTableComponent{" +
-               "keyspace='" + getKeyspace() + '\'' +
-               ", tableName='" + getTableName() + '\'' +
+               "keyspace='" + keyspace() + '\'' +
+               ", tableName='" + tableName() + '\'' +
                ", componentName='" + componentName + '\'' +
                '}';
     }

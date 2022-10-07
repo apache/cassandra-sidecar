@@ -316,8 +316,8 @@ public class StreamSSTableComponentHandlerTest
                 {
                     assertThat(response.statusCode()).isEqualTo(OK.code());
                     assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
-                        .isEqualTo("4")
-                        .describedAs("Server should shrink the range to the file length");
+                        .describedAs("Server should shrink the range to the file length")
+                        .isEqualTo("4");
                     context.completeNow();
                 })));
     }

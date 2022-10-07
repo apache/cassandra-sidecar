@@ -98,10 +98,10 @@ public class SnapshotPathBuilder
         validate(request);
         // Search for the file
         return getDataDirectories(host)
-               .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.getKeyspace()))
-               .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.getTableName()))
-               .compose(tableDirectory -> findComponent(tableDirectory, request.getSnapshotName(),
-                                                        request.getComponentName()));
+               .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
+               .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.tableName()))
+               .compose(tableDirectory -> findComponent(tableDirectory, request.snapshotName(),
+                                                        request.componentName()));
     }
 
     /**
@@ -116,9 +116,9 @@ public class SnapshotPathBuilder
     public Future<String> build(String host, ListSnapshotFilesRequest request)
     {
         return getDataDirectories(host)
-               .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.getKeyspace()))
-               .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.getTableName()))
-               .compose(tableDirectory -> findSnapshotDirectory(tableDirectory, request.getSnapshotName()));
+               .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
+               .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.tableName()))
+               .compose(tableDirectory -> findSnapshotDirectory(tableDirectory, request.snapshotName()));
     }
 
     /**
@@ -294,7 +294,7 @@ public class SnapshotPathBuilder
     protected void validate(StreamSSTableComponentRequest request)
     {
         // Only allow .db and TOC.txt components here
-        validator.validateRestrictedComponentName(request.getComponentName());
+        validator.validateRestrictedComponentName(request.componentName());
     }
 
     /**

@@ -47,7 +47,7 @@ public class ListSnapshotFilesRequest extends QualifiedTableName
     /**
      * @return the name of the snapshot
      */
-    public String getSnapshotName()
+    public String snapshotName()
     {
         return snapshotName;
     }
@@ -66,8 +66,8 @@ public class ListSnapshotFilesRequest extends QualifiedTableName
     public String toString()
     {
         return "ListSnapshotFilesRequest{" +
-               "keyspace='" + getKeyspace() + '\'' +
-               ", tableName='" + getTableName() + '\'' +
+               "keyspace='" + keyspace() + '\'' +
+               ", tableName='" + tableName() + '\'' +
                ", snapshotName='" + snapshotName + '\'' +
                ", includeSecondaryIndexFiles=" + includeSecondaryIndexFiles +
                '}';

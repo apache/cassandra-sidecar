@@ -59,7 +59,7 @@ public class QualifiedTableName
     /**
      * @return the keyspace in Cassandra
      */
-    public String getKeyspace()
+    public String keyspace()
     {
         return keyspace;
     }
@@ -67,7 +67,7 @@ public class QualifiedTableName
     /**
      * @return the table name in Cassandra
      */
-    public String getTableName()
+    public String tableName()
     {
         return tableName;
     }

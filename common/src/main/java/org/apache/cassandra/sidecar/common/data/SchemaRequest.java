@@ -15,37 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.cassandra.sidecar.common.data;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
- * Holder class for the {@code org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler}
+ * Holder class for the {@link org.apache.cassandra.sidecar.routes.SchemaHandler}
  * request parameters
  */
-public class StreamSSTableComponentRequest extends SSTableComponent
+public class SchemaRequest extends QualifiedTableName
 {
-    private final String snapshotName;
-
     /**
-     * Constructor for the holder class
+     * Constructs a {@link SchemaRequest} with the {@link org.jetbrains.annotations.Nullable} {@code keyspace}.
      *
-     * @param keyspace      the keyspace in Cassandra
-     * @param tableName     the table name in Cassandra
-     * @param snapshotName  the name of the snapshot
-     * @param componentName the name of the SSTable component
+     * @param keyspace the keyspace in Cassandra
      */
-    public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName, String componentName)
+    public SchemaRequest(@Nullable String keyspace)
     {
-        super(keyspace, tableName, componentName);
-        this.snapshotName = validator.validateSnapshotName(snapshotName);
-    }
-
-    /**
-     * @return the name of the snapshot
-     */
-    public String snapshotName()
-    {
-        return snapshotName;
+        super(keyspace, null, false);
     }
 
     /**
@@ -53,11 +40,9 @@ public class StreamSSTableComponentRequest extends SSTableComponent
      */
     public String toString()
     {
-        return "StreamSSTableComponentRequest{" +
+        return "SchemaRequest{" +
                "keyspace='" + keyspace() + '\'' +
                ", tableName='" + tableName() + '\'' +
-               ", snapshot='" + snapshotName + '\'' +
-               ", componentName='" + componentName() + '\'' +
                '}';
     }
 }
