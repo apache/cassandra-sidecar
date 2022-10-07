@@ -78,7 +78,6 @@ class SchemaHandlerTest
     HttpServer server;
     @TempDir
     File dataDir0;
-    String allKeyspacesSchema;
     String testKeyspaceSchema;
 
     @SuppressWarnings("DataFlowIssue")
@@ -87,8 +86,6 @@ class SchemaHandlerTest
     {
         ClassLoader cl = getClass().getClassLoader();
         testKeyspaceSchema = IOUtils.toString(cl.getResourceAsStream("schema/test_keyspace_schema.cql"),
-                                              StandardCharsets.UTF_8);
-        allKeyspacesSchema = IOUtils.toString(cl.getResourceAsStream("schema/all_keyspaces_schema.cql"),
                                               StandardCharsets.UTF_8);
 
         Injector injector;
@@ -128,7 +125,7 @@ class SchemaHandlerTest
                   JsonObject jsonObject = response.bodyAsJsonObject();
                   assertThat(jsonObject.getString("keyspace")).isNull();
                   assertThat(jsonObject.getString("schema"))
-                      .isEqualTo(allKeyspacesSchema);
+                      .isEqualTo("FULL SCHEMA");
                   context.completeNow();
               })));
     }
@@ -185,7 +182,7 @@ class SchemaHandlerTest
             Cluster mockCluster = mock(Cluster.class);
             Metadata mockMetadata = mock(Metadata.class);
             KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
-            when(mockMetadata.exportSchemaAsString()).thenReturn(allKeyspacesSchema);
+            when(mockMetadata.exportSchemaAsString()).thenReturn("FULL SCHEMA");
             when(mockMetadata.getKeyspace("testKeyspace")).thenReturn(mockKeyspaceMetadata);
             when(mockKeyspaceMetadata.exportAsString()).thenReturn(testKeyspaceSchema);
 
