@@ -65,6 +65,7 @@ import org.apache.cassandra.sidecar.routes.CassandraHealthService;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.routes.ListSnapshotFilesHandler;
+import org.apache.cassandra.sidecar.routes.SchemaHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
@@ -168,6 +169,7 @@ public class MainModule extends AbstractModule
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
                               FileStreamHandler fileStreamHandler,
                               ListSnapshotFilesHandler listSnapshotFilesHandler,
+                              SchemaHandler schemaHandler,
                               LoggerHandler loggerHandler,
                               ErrorHandler errorHandler)
     {
@@ -193,6 +195,14 @@ public class MainModule extends AbstractModule
         final String listSnapshotFilesRoute = "/keyspace/:keyspace/table/:table/snapshots/:snapshot";
         router.get(API_V1_VERSION + listSnapshotFilesRoute)
               .handler(listSnapshotFilesHandler);
+
+        final String allKeyspacesSchemasRoute = "/schema/keyspaces";
+        router.get(API_V1_VERSION + allKeyspacesSchemasRoute)
+              .handler(schemaHandler);
+
+        final String keyspaceSchemaRoute = "/schema/keyspaces/:keyspace";
+        router.get(API_V1_VERSION + keyspaceSchemaRoute)
+              .handler(schemaHandler);
 
         return router;
     }

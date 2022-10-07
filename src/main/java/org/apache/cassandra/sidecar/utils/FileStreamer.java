@@ -112,7 +112,7 @@ public class FileStreamer
         if (!isRateLimited() || acquire(response, filename, fileLength, range, startTime, promise))
         {
             // Stream data if rate limiting is disabled or if we acquire
-            LOGGER.info("Streaming range {} for file {} to client {}. Instance: {}", range, filename,
+            LOGGER.debug("Streaming range {} for file {} to client {}. Instance: {}", range, filename,
                         response.remoteAddress(), response.host());
             response.sendFile(filename, fileLength, range)
                     .onSuccess(v ->

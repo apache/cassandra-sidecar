@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -51,6 +52,7 @@ import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
  * lists all SSTable component files including secondary index files for the "testSnapshot" snapshot for the "ks"
  * keyspace and the "tbl" table
  */
+@Singleton
 public class ListSnapshotFilesHandler extends AbstractHandler
 {
     private static final Logger logger = LoggerFactory.getLogger(ListSnapshotFilesHandler.class);
