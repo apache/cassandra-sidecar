@@ -19,10 +19,6 @@
 package org.apache.cassandra.sidecar.common;
 
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,36 +49,14 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private SimpleCassandraVersion currentVersion;
     private ICassandraAdapter adapter;
     private volatile boolean isUp = false;
-    private final int refreshRate;
 
     private static final Logger logger = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
-    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    private ScheduledFuture<?> healthCheckRoutine;
     private boolean registered = false;
 
     public CassandraAdapterDelegate(CassandraVersionProvider provider, CQLSession cqlSession)
     {
-        this(provider, cqlSession, 5000);
-    }
-
-    public CassandraAdapterDelegate(CassandraVersionProvider provider, CQLSession cqlSession, int refreshRate)
-    {
         this.cqlSession = cqlSession;
         this.versionProvider = provider;
-        this.refreshRate = refreshRate;
-    }
-
-    public synchronized void start()
-    {
-        logger.info("Starting health check");
-        // only schedule the health check once.
-        if (healthCheckRoutine == null)
-        {
-            healthCheckRoutine = executor.scheduleWithFixedDelay(this::healthCheck,
-                                                                 0,
-                                                                 refreshRate,
-                                                                 TimeUnit.MILLISECONDS);
-        }
     }
 
     private synchronized void maybeRegisterHostListener(@NotNull Session session)
@@ -103,12 +77,6 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
     }
 
-    public synchronized void stop()
-    {
-        logger.info("Stopping health check");
-        executor.shutdown();
-    }
-
     /**
      * Make an attempt to obtain the session object.
      *
@@ -127,7 +95,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      * Should be called on initial connect as well as when a server comes back since it might be from an upgrade
      * synchronized so we don't flood the DB with version requests
      *
-     * If the healthcheck determines we've changed versions, it should load the proper adapter
+     * <p>If the healthcheck determines we've changed versions, it should load the proper adapter
      */
     public synchronized void healthCheck()
     {
