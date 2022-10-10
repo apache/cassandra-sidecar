@@ -39,7 +39,6 @@ import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -107,7 +106,6 @@ public class TestModule extends AbstractModule
 
         CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
         when(delegate.isUp()).thenReturn(isUp);
-        doNothing().when(delegate).start();
         when(instanceMeta.delegate()).thenReturn(delegate);
         return instanceMeta;
     }

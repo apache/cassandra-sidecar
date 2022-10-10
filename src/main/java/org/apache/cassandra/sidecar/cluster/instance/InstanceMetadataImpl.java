@@ -45,7 +45,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         this.dataDirs = dataDirs;
 
         this.session = new CQLSession(host, port, healthCheckFrequencyMillis);
-        this.delegate = new CassandraAdapterDelegate(versionProvider, session, healthCheckFrequencyMillis);
+        this.delegate = new CassandraAdapterDelegate(versionProvider, session);
     }
 
     public int id()

@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import org.apache.cassandra.sidecar.utils.SslUtils;
 
@@ -37,12 +38,15 @@ import org.apache.cassandra.sidecar.utils.SslUtils;
 public class CassandraSidecarDaemon
 {
     private static final Logger logger = LoggerFactory.getLogger(CassandraSidecarDaemon.class);
+    private final Vertx vertx;
     private final HttpServer server;
     private final Configuration config;
+    private long healthCheckTimerId;
 
     @Inject
-    public CassandraSidecarDaemon(HttpServer server, Configuration config)
+    public CassandraSidecarDaemon(Vertx vertx, HttpServer server, Configuration config)
     {
+        this.vertx = vertx;
         this.server = server;
         this.config = config;
     }
@@ -53,14 +57,14 @@ public class CassandraSidecarDaemon
         validate();
         logger.info("Starting Cassandra Sidecar on {}:{}", config.getHost(), config.getPort());
         server.listen(config.getPort(), config.getHost());
-        this.config.getInstancesConfig().instances().forEach(instanceMetadata -> instanceMetadata.delegate().start());
+        healthCheckTimerId = vertx.setPeriodic(config.getHealthCheckFrequencyMillis(), this::healthCheck);
     }
 
     public void stop()
     {
         logger.info("Stopping Cassandra Sidecar");
         server.close();
-        this.config.getInstancesConfig().instances().forEach(instanceMetadata -> instanceMetadata.delegate().stop());
+        vertx.cancelTimer(healthCheckTimerId);
     }
 
     private void banner(PrintStream out)
@@ -95,6 +99,20 @@ public class CassandraSidecarDaemon
             }
         }
 
+    }
+
+    /**
+     * Checks the health of every instance configured in the {@link Configuration#getInstancesConfig()}.
+     * The health check is executed in a blocking thread to prevent the event-loop threads from blocking.
+     *
+     * @param timerId the ID of the periodic timer
+     */
+    private void healthCheck(Long timerId)
+    {
+        config.getInstancesConfig()
+              .instances()
+              .forEach(instanceMetadata ->
+                       vertx.executeBlocking(promise -> instanceMetadata.delegate().healthCheck()));
     }
 
 
