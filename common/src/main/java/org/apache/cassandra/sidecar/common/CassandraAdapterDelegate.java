@@ -47,7 +47,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 {
     private final CQLSession cqlSession;
     private final CassandraVersionProvider versionProvider;
-    private Session session;
+    private volatile Session session;
     private SimpleCassandraVersion currentVersion;
     private ICassandraAdapter adapter;
     private volatile boolean isUp = false;
