@@ -53,7 +53,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private volatile boolean isUp = false;
 
     private static final Logger logger = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
-    private boolean registered = false;
+    private final AtomicBoolean registered = new AtomicBoolean(false);
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
 
     public CassandraAdapterDelegate(CassandraVersionProvider provider, CQLSession cqlSession)
@@ -62,21 +62,19 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         this.versionProvider = provider;
     }
 
-    private synchronized void maybeRegisterHostListener(@NotNull Session session)
+    private void maybeRegisterHostListener(@NotNull Session session)
     {
-        if (!registered)
+        if (registered.compareAndSet(false, true))
         {
             session.getCluster().register(this);
-            registered = true;
         }
     }
 
-    private synchronized void maybeUnregisterHostListener(@NotNull Session session)
+    private void maybeUnregisterHostListener(@NotNull Session session)
     {
-        if (registered)
+        if (registered.compareAndSet(true, false))
         {
             session.getCluster().unregister(this);
-            registered = false;
         }
     }
 
