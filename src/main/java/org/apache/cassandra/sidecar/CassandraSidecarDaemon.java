@@ -41,7 +41,6 @@ public class CassandraSidecarDaemon
     private final Vertx vertx;
     private final HttpServer server;
     private final Configuration config;
-    private long healthCheckTimerId;
 
     @Inject
     public CassandraSidecarDaemon(Vertx vertx, HttpServer server, Configuration config)
@@ -57,14 +56,13 @@ public class CassandraSidecarDaemon
         validate();
         logger.info("Starting Cassandra Sidecar on {}:{}", config.getHost(), config.getPort());
         server.listen(config.getPort(), config.getHost());
-        healthCheckTimerId = vertx.setPeriodic(config.getHealthCheckFrequencyMillis(), this::healthCheck);
+        vertx.setTimer(config.getHealthCheckFrequencyMillis(), this::healthCheck);
     }
 
     public void stop()
     {
         logger.info("Stopping Cassandra Sidecar");
         server.close();
-        vertx.cancelTimer(healthCheckTimerId);
     }
 
     private void banner(PrintStream out)
@@ -109,6 +107,9 @@ public class CassandraSidecarDaemon
      */
     private void healthCheck(Long timerId)
     {
+        // schedule the next timer
+        vertx.setTimer(config.getHealthCheckFrequencyMillis(), this::healthCheck);
+        // perform health check for all instances
         config.getInstancesConfig()
               .instances()
               .forEach(instanceMetadata ->
