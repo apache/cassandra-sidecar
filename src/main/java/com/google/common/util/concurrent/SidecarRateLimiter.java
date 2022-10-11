@@ -18,6 +18,10 @@
 
 package com.google.common.util.concurrent;
 
+import java.util.concurrent.TimeUnit;
+
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+
 /**
  * Wrapper class over guava Rate Limiter, uses SmoothBursty Ratelimiter. This class mainly exists to expose
  * package protected method queryEarliestAvailable of guava RateLimiter
@@ -36,6 +40,8 @@ public class SidecarRateLimiter
         return new SidecarRateLimiter(permitsPerSecond);
     }
 
+    // Delegated methods
+
     /**
      * Returns earliest time permits will become available
      */
@@ -50,5 +56,74 @@ public class SidecarRateLimiter
     public boolean tryAcquire()
     {
         return this.rateLimiter.tryAcquire();
+    }
+
+    /**
+     * Updates the stable rate of the internal {@code RateLimiter}, that is, the {@code permitsPerSecond}
+     * argument provided in the factory method that constructed the {@code RateLimiter}.
+     *
+     * @param permitsPerSecond the new stable rate of this {@code RateLimiter}
+     * @throws IllegalArgumentException if {@code permitsPerSecond} is negative or zero
+     */
+    public void setRate(double permitsPerSecond)
+    {
+        this.rateLimiter.setRate(permitsPerSecond);
+    }
+
+    public void doSetRate(double permitsPerSecond, long nowMicros)
+    {
+        rateLimiter.doSetRate(permitsPerSecond, nowMicros);
+    }
+
+    public double getRate()
+    {
+        return rateLimiter.getRate();
+    }
+
+    public double doGetRate()
+    {
+        return rateLimiter.doGetRate();
+    }
+
+    @CanIgnoreReturnValue
+    public double acquire()
+    {
+        return rateLimiter.acquire();
+    }
+
+    @CanIgnoreReturnValue
+    public double acquire(int permits)
+    {
+        return rateLimiter.acquire(permits);
+    }
+
+    public long reserve(int permits)
+    {
+        return rateLimiter.reserve(permits);
+    }
+
+    public boolean tryAcquire(long timeout, TimeUnit unit)
+    {
+        return rateLimiter.tryAcquire(timeout, unit);
+    }
+
+    public boolean tryAcquire(int permits)
+    {
+        return rateLimiter.tryAcquire(permits);
+    }
+
+    public boolean tryAcquire(int permits, long timeout, TimeUnit unit)
+    {
+        return rateLimiter.tryAcquire(permits, timeout, unit);
+    }
+
+    public long reserveAndGetWaitLength(int permits, long nowMicros)
+    {
+        return rateLimiter.reserveAndGetWaitLength(permits, nowMicros);
+    }
+
+    public long reserveEarliestAvailable(int permits, long nowMicros)
+    {
+        return rateLimiter.reserveEarliestAvailable(permits, nowMicros);
     }
 }
