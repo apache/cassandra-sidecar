@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.common;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,11 +36,12 @@ import org.jetbrains.annotations.NotNull;
  * of the underlying Cassandra adapter.  If a server reboots, we can swap out the right Adapter when the driver
  * reconnects.
  *
- * This delegate *MUST* checkSession() before every call, because:
+ * <p>This delegate <b>MUST</b> invoke {@link #checkSession()} before every call, because:</p>
  *
- * 1. The session lazily connects
- * 2. We might need to swap out the adapter if the version has changed
- *
+ * <ol>
+ * <li>The session lazily connects</li>
+ * <li>We might need to swap out the adapter if the version has changed</li>
+ * </ol>
  */
 public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateListener
 {
@@ -52,6 +54,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     private static final Logger logger = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
     private boolean registered = false;
+    private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
 
     public CassandraAdapterDelegate(CassandraVersionProvider provider, CQLSession cqlSession)
     {
@@ -80,14 +83,22 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     /**
      * Make an attempt to obtain the session object.
      *
-     * It needs to be called before routing the request to the adapter
-     * We might end up swapping the adapter out because of a server upgrade
+     * <p>It needs to be called before routing the request to the adapter
+     * We might end up swapping the adapter out because of a server upgrade</p>
      */
-    public synchronized void checkSession()
+    public void checkSession()
     {
-        if (session == null)
+        if (session != null)
         {
-            session = cqlSession.getLocalCql();
+            return;
+        }
+
+        synchronized (this)
+        {
+            if (session == null)
+            {
+                session = cqlSession.getLocalCql();
+            }
         }
     }
 
@@ -95,26 +106,42 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      * Should be called on initial connect as well as when a server comes back since it might be from an upgrade
      * synchronized so we don't flood the DB with version requests
      *
-     * <p>If the healthcheck determines we've changed versions, it should load the proper adapter
+     * <p>If the healthcheck determines we've changed versions, it should load the proper adapter</p>
      */
-    public synchronized void healthCheck()
+    public void healthCheck()
+    {
+        if (isHealthCheckActive.compareAndSet(false, true))
+        {
+            try
+            {
+                healthCheckInternal();
+            }
+            finally
+            {
+                isHealthCheckActive.set(false);
+            }
+        }
+    }
+
+    private void healthCheckInternal()
     {
         checkSession();
 
-        if (session == null)
+        Session activeSession = session;
+        if (activeSession == null)
         {
             logger.info("No local CQL session is available. Cassandra is down presumably.");
             isUp = false;
             return;
         }
 
-        maybeRegisterHostListener(session);
+        maybeRegisterHostListener(activeSession);
 
         try
         {
-            String version = session.execute("select release_version from system.local")
-                    .one()
-                    .getString("release_version");
+            String version = activeSession.execute("select release_version from system.local")
+                                          .one()
+                                          .getString("release_version");
             isUp = true;
             // this might swap the adapter out
             SimpleCassandraVersion newVersion = SimpleCassandraVersion.create(version);
@@ -132,7 +159,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             // The cassandra node is down.
             // Unregister the host listener and nullify the session in order to get a new object.
             isUp = false;
-            maybeUnregisterHostListener(session);
+            maybeUnregisterHostListener(activeSession);
             session = null;
         }
     }
