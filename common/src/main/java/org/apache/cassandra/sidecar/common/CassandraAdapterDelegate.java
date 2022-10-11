@@ -121,6 +121,10 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 isHealthCheckActive.set(false);
             }
         }
+        else
+        {
+            logger.debug("Skipping health check because there's an active check at the moment");
+        }
     }
 
     private void healthCheckInternal()
