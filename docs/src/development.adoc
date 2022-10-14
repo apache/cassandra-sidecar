@@ -46,7 +46,7 @@ Tests in the cassandra-integration-tests submodule should be marked as integrati
         //
     }
 
-The `CassandraTestTemplate` will handle starting up each of the Kubernetes services required for testing and inject the
+The `CassandraTestTemplate` will handle starting up each of the Docker services required for testing and inject the
 `CassandraTestContext`, which will have the version, CQLSession, container, and other useful information required for testing.
 
 ### Main Project
