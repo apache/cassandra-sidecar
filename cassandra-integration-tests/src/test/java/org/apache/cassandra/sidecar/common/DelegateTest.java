@@ -16,21 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.testing;
+package org.apache.cassandra.sidecar.common;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
-import io.kubernetes.client.openapi.ApiException;
-import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
-import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
+import com.datastax.driver.core.NettyOptions;
+import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
+import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
 import org.apache.cassandra.sidecar.mocks.V30;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Insures the Delegate works correctly
  */
-public class DelegateTest
+class DelegateTest
 {
     @CassandraIntegrationTest
     void testCorrectVersionIsEnabled(CassandraTestContext context)
@@ -43,7 +44,7 @@ public class DelegateTest
     }
 
     @CassandraIntegrationTest
-    void testHealthCheck(CassandraTestContext context) throws InterruptedException, ApiException, IOException
+    void testHealthCheck(CassandraTestContext context) throws IOException, InterruptedException
     {
         CassandraVersionProvider provider = new CassandraVersionProvider.Builder().add(new V30()).build();
         CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(provider, context.session);
@@ -51,17 +52,18 @@ public class DelegateTest
         delegate.checkSession();
         delegate.healthCheck();
 
-        assertThat(delegate.isUp()).isTrue();
+        assertThat(delegate.isUp()).as("health check succeeds").isTrue();
 
-        context.container.disableBinary();
-
-        delegate.healthCheck();
-        assertThat(delegate.isUp()).isFalse();
-
-        context.container.enableBinary();
+        context.container.execInContainer("nodetool", "disablebinary");
 
         delegate.healthCheck();
+        assertThat(delegate.isUp()).as("health check fails after binary has been disabled").isFalse();
 
-        assertThat(delegate.isUp()).isTrue();
+        context.container.execInContainer("nodetool", "enablebinary");
+
+        TimeUnit.SECONDS.sleep(1);
+        delegate.healthCheck();
+
+        assertThat(delegate.isUp()).as("health check succeeds after binary has been enabled").isTrue();
     }
 }
