@@ -23,7 +23,7 @@ aliases:
 # we might modify this in the future to accept a parameter for the java package to install
 commands:
   install_java:
-    description: "Installs Java 8 using AdoptOpenJDK"
+    description: "Installs Java using AdoptOpenJDK"
     parameters:
       version:
         type: string
@@ -33,11 +33,6 @@ commands:
       - run: sudo apt-get update
       - run: sudo apt-get install -y << parameters.version>>
 
-  install_kube:
-    description: "Installs kubernetes"
-    steps:
-      - run: .circleci/setup-microk8.sh
-
   install_common:
     description: "Installs common software and certificates"
     steps:
@@ -45,14 +40,14 @@ commands:
       - run: sudo apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
 
 jobs:
+  # Runs java 8 tests on a docker image
   java8_docker:
     docker:
      - image: circleci/openjdk:8-jdk-stretch
     steps:
      - checkout
 
-     # setting the docker registry here skips the internal minikube setup
-     - run: SIDECAR_DOCKER_REGISTRY="127.0.0.1" ./gradlew -i clean test  --stacktrace
+     - run: ./gradlew -i clean test -x :cassandra-integration-tests:test --stacktrace
 
      - store_artifacts:
          path: build/reports
@@ -61,23 +56,18 @@ jobs:
      - store_test_results:
          path: ~/repo/build/test-results/
 
+  # Runs java 8 tests on a VM to be able to run Docker for integration tests
   java8:
     <<: *base_job
-
-    # todo move to common command for integration tests
-    environment:
-      SIDECAR_DOCKER_REGISTRY: "http://localhost:32000"
 
     steps:
       - checkout
       - install_common
-      - install_kube
 
       - install_java:
           version: adoptopenjdk-8-hotspot
       - run: sudo update-java-alternatives -s adoptopenjdk-8-hotspot-amd64 && java -version
-      - run: ./gradlew :containers:pushAll
-      - run: ./gradlew -i test integrationTest --stacktrace
+      - run: ./gradlew -i clean test --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -89,13 +79,14 @@ jobs:
       - store_test_results:
           path: ~/repo/cassandra-integration-tests/build/test-results/
 
+  # Runs java 11 tests on a docker image
   java11_docker:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
     steps:
       - checkout
 
-      - run: SIDECAR_DOCKER_REGISTRY="127.0.0.1" ./gradlew -i clean test --stacktrace
+      - run: ./gradlew -i clean test -x :cassandra-integration-tests:test --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -104,22 +95,18 @@ jobs:
       - store_test_results:
           path: ~/repo/build/test-results/
 
+  # Runs java 11 tests on a VM to be able to run Docker for integration tests
   java11:
     <<: *base_job
-    environment:
-      SIDECAR_DOCKER_REGISTRY: "http://localhost:32000"
 
     steps:
       - checkout
       - install_common
-      - install_kube
 
       - install_java:
           version: adoptopenjdk-11-hotspot
       - run: sudo update-java-alternatives -s adoptopenjdk-11-hotspot-amd64 && java -version
-      - run: export
-      - run: ./gradlew :containers:pushAll
-      - run: ./gradlew -i test integrationTest --stacktrace
+      - run: ./gradlew -i clean test --stacktrace
 
       - store_artifacts:
           path: build/reports

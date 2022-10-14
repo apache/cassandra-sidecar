@@ -27,14 +27,13 @@ Cassandra integration tests leverage Docker to create Cassandra nodes and test t
 of the ICassandraAdapters against real C* nodes.
 
 The integration tests will not run by default when running `./gradlew test` since they require a bit of setup and you may not have
-Kubernetes available.
+Docker available.
 
 #### Running Integration Tests
 
 Integration tests can be run with the following:
 
     ./gradlew integrationTest
-
 
 
 #### Tests
@@ -47,7 +46,7 @@ Tests in the cassandra-integration-tests submodule should be marked as integrati
         //
     }
 
-The `CassandraTestTemplate` will handle starting up each of the Kubernetes services required for testing and inject the
+The `CassandraTestTemplate` will handle starting up each of the Docker services required for testing and inject the
 `CassandraTestContext`, which will have the version, CQLSession, container, and other useful information required for testing.
 
 ### Main Project

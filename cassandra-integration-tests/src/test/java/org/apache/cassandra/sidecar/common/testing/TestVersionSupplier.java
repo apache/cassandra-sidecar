@@ -38,7 +38,7 @@ public class TestVersionSupplier
 {
     Stream<TestVersion> getTestVersions()
     {
-        return Stream.of(new TestVersion("4.0.0", new Cassandra40Factory(), "cassandra:4.0.6"));
+        return Stream.of(new TestVersion("4.0.0", new Cassandra40Factory(), "cassandra:4.0"));
     }
 
 }
