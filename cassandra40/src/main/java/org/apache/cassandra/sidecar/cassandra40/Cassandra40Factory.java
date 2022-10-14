@@ -18,12 +18,10 @@
 
 package org.apache.cassandra.sidecar.cassandra40;
 
-import java.util.List;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.ICassandraFactory;
 import org.apache.cassandra.sidecar.common.MinimumVersion;
-import org.apache.cassandra.sidecar.common.NodeStatus;
 
 /**
  * Factory to produce the 4.0 adapter
@@ -34,12 +32,6 @@ public class Cassandra40Factory implements ICassandraFactory
     @Override
     public ICassandraAdapter create(CQLSession session)
     {
-        return new ICassandraAdapter()
-        {
-            public List<NodeStatus> getStatus()
-            {
-                return null;
-            }
-        };
+        return () -> null;
     }
 }

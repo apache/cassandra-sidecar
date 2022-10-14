@@ -31,52 +31,8 @@ allprojects {
     apply plugin: 'checkstyle'
     apply plugin: "com.github.spotbugs"
 
-    tasks.register("configureKubernetes") {
-        // figure out the docker registry, make this as easy as possible for new folks
-        def dockerRegistryString = System.getenv("SIDECAR_DOCKER_REGISTRY")
-        if(dockerRegistryString != null) {
-            logger.info("Using ENV SIDECAR_DOCKER_REGISTRY ${dockerRegistryString}")
-        }
-        else {
-            // SIDECAR_DOCKER_REGISTRY not set (likely a local environment), let's try minikube
-            logger.info("Looking for minikube ip")
-            new ByteArrayOutputStream().withStream { os ->
-                try {
-
-                def result = exec {
-                    executable = "minikube"
-                    args = ["ip"]
-                    standardOutput = os
-                }
-                def output = os.toString()
-                if(output != "") {
-                    dockerRegistryString = "http://${output.trim()}:5000" // minikube uses port 5000
-                    logger.info("Env variable SIDECAR_DOCKER_REGISTRY not defined, using output of minikube ip ${dockerRegistryString}")
-                } else {
-                    logger.warn("SIDECAR_DOCKER_REGISTRY not set and minikube ip failed")
-                }
-                if(result.exitValue != 0) {
-                    logger.error("Could not find minikube ip: exit code ${result.exitValue}")
-                }
-                }
-                catch (GradleException e) {
-                    // microk8s use this
-                    dockerRegistryString = "http://localhost:5000"
-                    logger.error("Could not auto configure docker registry, please set your SIDECAR_DOCKER_REGISTRY environment variable.  Using $dockerRegistryString")
-                }
-            }
-        }
-
-        ext.dockerTag = "latest"
-        ext.dockerGroup = System.getenv("SIDECAR_DOCKER_GROUP") ?: "cassandra_sidecar"
-        ext.kubernetesNamespace = System.getenv("SIDECAR_KUBERNETES_NAMESPACE") ?: "default"
-        ext.dockerRegistry = new URI(dockerRegistryString)
-        ext.dockerRegistryWithoutProtocol = dockerRegistry.getHost() + ":" + dockerRegistry.getPort()
-    }
-
     repositories {
         mavenCentral()
-        jcenter()
     }
 
     checkstyle {
@@ -173,7 +129,7 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
-    testImplementation "org.assertj:assertj-core:3.14.0"
+    testImplementation "org.assertj:assertj-core:3.23.1"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
 
     testImplementation('org.cassandraunit:cassandra-unit-shaded:3.11.2.0')
@@ -191,7 +147,7 @@ dependencies {
     testFixturesImplementation('org.mockito:mockito-all:1.10.19')
     testFixturesImplementation("org.junit.jupiter:junit-jupiter-api:${project.junitVersion}")
     testFixturesImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")
-    testFixturesImplementation("org.assertj:assertj-core:3.14.0")
+    testFixturesImplementation("org.assertj:assertj-core:3.23.1")
     testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}")
 }
 

@@ -17,27 +17,31 @@
  */
 
 package org.apache.cassandra.sidecar.common;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
 import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
 /**
  * Placeholder test
  */
-public class StatusTest
+class StatusTest
 {
     private static final Logger logger = LoggerFactory.getLogger(StatusTest.class);
 
     @BeforeEach
     void setupData(CassandraTestContext context)
     {
-        logger.info("setup {}", context.container);
+        assertThat(context.container.isRunning()).isTrue();
+        logger.info("Running Cassandra on host={}", context.container.getContactPoint());
     }
 
     @CassandraIntegrationTest
@@ -46,6 +50,7 @@ public class StatusTest
     {
         logger.info("test context in test {}", context);
         Session session = context.session.getLocalCql();
-        session.execute("SELECT * from system.peers_v2");
+        ResultSet rs = session.execute("SELECT * from system.peers_v2");
+        assertThat(rs).isNotNull();
     }
 }

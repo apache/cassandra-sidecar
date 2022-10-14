@@ -2,7 +2,6 @@ rootProject.name = "cassandra-sidecar"
 
 include "cassandra40"
 include "common"
-include "containers"
 include "docs"
 include "cassandra-integration-tests"
 

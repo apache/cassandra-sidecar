@@ -116,7 +116,8 @@ public class Range
     private static IllegalArgumentException invalidRangeHeaderException(String rangeHeader)
     {
         return new IllegalArgumentException("Invalid range header: " + rangeHeader + ". " +
-                                            "Supported Range formats are bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>");
+                                            "Supported Range formats are bytes=<start>-<end>, bytes=<start>-, " +
+                                            "bytes=-<suffix-length>");
     }
 
     // An initialized range is always valid; invalid params fail range initialization.

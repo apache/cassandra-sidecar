@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.common.testing;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
+import org.testcontainers.containers.CassandraContainer;
 
 /**
  * Passed to integration tests.
@@ -31,10 +32,10 @@ public class CassandraTestContext
 {
     public final CQLSession session;
     public final SimpleCassandraVersion version;
-    public final CassandraPod container;
+    public final CassandraContainer<?> container;
     public final ICassandraAdapter cassandra;
 
-    CassandraTestContext(SimpleCassandraVersion version, CassandraPod container, CQLSession session,
+    CassandraTestContext(SimpleCassandraVersion version, CassandraContainer<?> container, CQLSession session,
                          ICassandraAdapter cassandra)
     {
         this.version = version;

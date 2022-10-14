@@ -71,7 +71,8 @@ public class RangeTest
         {
             Range.parseHeader(rangeHeader, Long.MAX_VALUE);
         });
-        String msg = "Invalid range header: bytes=2344--3432. Supported Range formats are bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>";
+        String msg = "Invalid range header: bytes=2344--3432. Supported Range formats are bytes=<start>-<end>, " +
+                     "bytes=<start>-, bytes=-<suffix-length>";
         assertEquals(msg, thrownException.getMessage());
     }
 
@@ -107,7 +108,8 @@ public class RangeTest
         {
             Range.parseHeader(rangeVal, 5);
         });
-        String msg = "Invalid range header: bits=0-. Supported Range formats are bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>";
+        String msg = "Invalid range header: bits=0-. Supported Range formats are bytes=<start>-<end>, " +
+                     "bytes=<start>-, bytes=-<suffix-length>";
         assertEquals(msg, thrownException.getMessage());
     }
 
@@ -128,12 +130,14 @@ public class RangeTest
         {
             Range.parseHeader(rangeHeader, Long.MAX_VALUE);
         });
-        String msg = "Invalid range header: bytes=0-19223372036854775807. Supported Range formats are bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>";
+        String msg = "Invalid range header: bytes=0-19223372036854775807. Supported Range formats are " +
+                     "bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>";
         assertEquals(msg, thrownException.getMessage());
     }
 
     @Test
-    public void testIntersect() {
+    public void testIntersect()
+    {
         Range range1, range2, expected;
         range1 = Range.of(5, 10);
         range2 = Range.of(9, 15);
@@ -156,7 +160,8 @@ public class RangeTest
     }
 
     @Test
-    public void testRangesDoNotIntersect() {
+    public void testRangesDoNotIntersect()
+    {
         Range range1 = Range.of(1, 5);
         Range range2 = Range.of(9, 15);
 

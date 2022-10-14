@@ -28,17 +28,17 @@ import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
  * versions of Cassandra.  This may be due to releases that don't add new features that would affect the sidecar,
  * but we still want to test those versions specifically to avoid the chance of regressions.
  *
- * At the moment, it's returning a hard coded list.  We could / should probably load this from a configuration and make
+ * <p>At the moment, it's returning a hard coded list.  We could / should probably load this from a configuration and make
  * it possible to override it, so teams that customize C* can run and test their own implementation
  *
- * Ideally, we'd probably have concurrent runs of the test infrastructure each running tests against one specific
+ * <p>Ideally, we'd probably have concurrent runs of the test infrastructure each running tests against one specific
  * version of C*, but we don't need that yet given we only have one version.
  */
 public class TestVersionSupplier
 {
     Stream<TestVersion> getTestVersions()
     {
-        return Stream.of(new TestVersion("4.0.0", new Cassandra40Factory(), "cassandra40"));
+        return Stream.of(new TestVersion("4.0.0", new Cassandra40Factory(), "cassandra:4.0.6"));
     }
 
 }

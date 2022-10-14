@@ -34,10 +34,12 @@ import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.NettyOptions;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.ICassandraFactory;
 import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
+import org.testcontainers.containers.CassandraContainer;
 
 /**
  * Creates a test per version of Cassandra we are testing
@@ -109,14 +111,15 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     @Override
                     public void beforeEach(ExtensionContext context) throws Exception
                     {
-                        // spin up a C* instance using Kubernetes
+                        // spin up a C* instance using Testcontainers
                         ICassandraFactory factory = version.getFactory();
 
-                        CassandraPod container = CassandraPod.createFromProperties(version.getImage());
+                        CassandraContainer<?> container = new CassandraContainer<>(version.getImage())
+                                                          .withExposedPorts(9042);
                         container.start();
                         logger.info("Testing {} against docker container", version);
 
-                        CQLSession session = new CQLSession(container.getIp(), container.getPort(), 5000);
+                        CQLSession session = new CQLSession(container.getContactPoint(), new NettyOptions());
 
                         SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.getVersion());
 
@@ -134,14 +137,9 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
              */
             private AfterTestExecutionCallback postProcessor()
             {
-                return new AfterTestExecutionCallback()
-                {
-                    @Override
-                    public void afterTestExecution(ExtensionContext context) throws Exception
-                    {
-                        // tear down the docker instance
-                        cassandraTestContext.container.delete();
-                    }
+                return context1 -> {
+                    // tear down the docker instance
+                    cassandraTestContext.container.stop();
                 };
             }
 

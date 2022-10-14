@@ -23,60 +23,11 @@ Implementation of ICassandraAdapter for Cassandra 4.0.
 
 ### Cassandra Integration Tests
 
-Cassandra integration tests leverage Kubernetes to create Cassandra nodes and test the different implementations
+Cassandra integration tests leverage Docker to create Cassandra nodes and test the different implementations
 of the ICassandraAdapters against real C* nodes.
 
 The integration tests will not run by default when running `./gradlew test` since they require a bit of setup and you may not have
 Kubernetes available.
-
-#### Mac Local Setup
-
-Running kubernetes locally on a Mac can be a bit tricky as it requires several steps.
-
-First, install minikube: https://kubernetes.io/docs/tasks/tools/install-minikube/
-
-There is a convenience script, located at `scripts/setup-minikube.sh`, that can be used to create the minikube environment and enable the registry for you.
-
-You will also need Docker: https://docs.docker.com/get-docker/ to build containers locally before pushing to the minikube registry.
-
-NOTE: If you have a registry already running you can skip the above step and instead set the SIDECAR_DOCKER_REGISTRY environment variable to the full URI of your registry..
-
-If you're using the local option, make sure you can push to an insecure registry.
-The following should be added to your docker configuration (under docker preferences -> docker engine).  Be sure to use whatever ip is reported by `minikube ip`:
-
-    {
-        "insecure-registries": ["192.168.64.16:5000"]
-    }
-
-You will need to run `minikube tunnel` to ensure your Mac can connect to the IP addresses inside the hyperkit virtual machine:
-
-    minikube tunnel
-
-Enter your password when prompted.  It'll redirect part of the 10.x address space to the hyperkit virtual machine.
-
-Once all this is completed, execute `./gradlew pushAll` to create all the containers required for integration testing.
-
-Sometimes minikube can run into issues starting up new jobs, especially if there are several running pods which failed to get cleaned up.  Running the following can help clean up the old pods:
-
-    scripts/cleanup-pods.sh
-
-#### Linux Setup
-
-The most straightforward setup on Linux is to use microk8s, as this relies on non virtualized containers, which give excellent performance.
-
-https://microk8s.io
-
-You will need to configure the SIDECAR_DOCKER_REGISTRY environment variable.  If you're using the built in microk8's registry you should configure the following:
-
-    export SIDECAR_DOCKER_REGISTRY="http://localhost:32000"
-
-NOTE: The MicroK8 project uses 32000 for its registry while minikube on MacOS uses port 5000.
-
-Please see the setup in `.circleci/setup-microk8.sh`.
-
-#### Push containers to the registry
-
-    ./gradlew pushAll
 
 #### Running Integration Tests
 
