@@ -40,6 +40,23 @@ commands:
       - run: sudo apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
 
 jobs:
+  # Runs java 8 tests on a docker image
+  java8_docker:
+    docker:
+     - image: circleci/openjdk:8-jdk-stretch
+    steps:
+     - checkout
+
+     - run: ./gradlew -i clean test -x :cassandra-integration-tests:test --stacktrace
+
+     - store_artifacts:
+         path: build/reports
+         destination: test-reports
+
+     - store_test_results:
+         path: ~/repo/build/test-results/
+
+  # Runs java 8 tests on a VM to be able to run Docker for integration tests
   java8:
     <<: *base_job
 
@@ -62,6 +79,23 @@ jobs:
       - store_test_results:
           path: ~/repo/cassandra-integration-tests/build/test-results/
 
+  # Runs java 11 tests on a docker image
+  java11_docker:
+    docker:
+      - image: circleci/openjdk:11-jdk-stretch
+    steps:
+      - checkout
+
+      - run: ./gradlew -i clean test -x :cassandra-integration-tests:test --stacktrace
+
+      - store_artifacts:
+          path: build/reports
+          destination: test-reports
+
+      - store_test_results:
+          path: ~/repo/build/test-results/
+
+  # Runs java 11 tests on a VM to be able to run Docker for integration tests
   java11:
     <<: *base_job
 
@@ -122,25 +156,41 @@ workflows:
   version: 2
   build-and-test:
     jobs:
-      - java8
-      - java11
+      - java8_docker
+      - java11_docker
+      - java8:
+          requires:
+            - java8_docker
+      - java11:
+          requires:
+            - java11_docker
       - docs_build:
           requires:
             - java8
+            - java8_docker
             - java11
+            - java11_docker
       - docker_build:
           requires:
             - java8
+            - java8_docker
             - java11
+            - java11_docker
       - rpm_build_install:
           requires:
             - java8
+            - java8_docker
             - java11
+            - java11_docker
       - deb_build_install:
           requires:
             - java8
+            - java8_docker
             - java11
+            - java11_docker
       - docker_build:
           requires:
             - java8
+            - java8_docker
             - java11
+            - java11_docker
