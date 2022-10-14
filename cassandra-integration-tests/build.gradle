@@ -24,3 +24,13 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+tasks.register("integrationTest", Test) {
+    jacoco {
+        enabled = false
+    }
+    useJUnitPlatform() {
+        includeTags "integrationTest"
+    }
+    group = "verification"
+}
