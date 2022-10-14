@@ -111,7 +111,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     @Override
                     public void beforeEach(ExtensionContext context) throws Exception
                     {
-                        // spin up a C* instance using Kubernetes
+                        // spin up a C* instance using Testcontainers
                         ICassandraFactory factory = version.getFactory();
 
                         CassandraContainer<?> container = new CassandraContainer<>(version.getImage())
