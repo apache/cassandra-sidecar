@@ -65,7 +65,7 @@ public class SidecarRateLimiter
      * @param permitsPerSecond the new stable rate of this {@code RateLimiter}
      * @throws IllegalArgumentException if {@code permitsPerSecond} is negative or zero
      */
-    public void setRate(double permitsPerSecond)
+    public void rate(double permitsPerSecond)
     {
         this.rateLimiter.setRate(permitsPerSecond);
     }
@@ -75,7 +75,7 @@ public class SidecarRateLimiter
         rateLimiter.doSetRate(permitsPerSecond, nowMicros);
     }
 
-    public double getRate()
+    public double rate()
     {
         return rateLimiter.getRate();
     }
