@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.common.data;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * A class representing a response for the {@link SchemaRequest}.
@@ -46,7 +47,8 @@ public class SchemaResponse
      * @param keyspace the keyspace in Cassandra
      * @param schema   the schema for the given {@code keyspace}
      */
-    public SchemaResponse(String keyspace, String schema)
+    public SchemaResponse(@JsonProperty("keyspace") String keyspace,
+                          @JsonProperty("schema") String schema)
     {
         this.keyspace = Objects.requireNonNull(keyspace, "keyspace must be non-null");
         this.schema = Objects.requireNonNull(schema, "schema must be non-null");
@@ -55,8 +57,9 @@ public class SchemaResponse
     /**
      * @return the name of the Cassandra keyspace
      */
+    @JsonProperty("keyspace")
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public String getKeyspace()
+    public String keyspace()
     {
         return keyspace;
     }
@@ -64,7 +67,8 @@ public class SchemaResponse
     /**
      * @return the string representing the schema for the response
      */
-    public String getSchema()
+    @JsonProperty("schema")
+    public String schema()
     {
         return schema;
     }

@@ -87,7 +87,7 @@ public class ListSnapshotFilesHandler extends AbstractHandler
                                  {
                                      if (fileList.isEmpty())
                                      {
-                                         String payload = "Snapshot '" + requestParams.getSnapshotName() +
+                                         String payload = "Snapshot '" + requestParams.snapshotName() +
                                                           "' not found";
                                          context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), payload));
                                      }

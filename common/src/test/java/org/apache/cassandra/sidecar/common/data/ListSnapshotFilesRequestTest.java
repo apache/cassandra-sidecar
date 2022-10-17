@@ -142,9 +142,9 @@ class ListSnapshotFilesRequestTest
     {
         ListSnapshotFilesRequest request = new ListSnapshotFilesRequest("ks", "table", "snapshot", false);
 
-        assertThat(request.getKeyspace()).isEqualTo("ks");
-        assertThat(request.getTableName()).isEqualTo("table");
-        assertThat(request.getSnapshotName()).isEqualTo("snapshot");
+        assertThat(request.keyspace()).isEqualTo("ks");
+        assertThat(request.tableName()).isEqualTo("table");
+        assertThat(request.snapshotName()).isEqualTo("snapshot");
         assertThat(request.includeSecondaryIndexFiles()).isFalse();
         assertThat(request.toString()).isEqualTo("ListSnapshotFilesRequest{keyspace='ks', tableName='table', " +
                                                  "snapshotName='snapshot', includeSecondaryIndexFiles=false}");

@@ -43,7 +43,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     /**
      * @return the name of the snapshot
      */
-    public String getSnapshotName()
+    public String snapshotName()
     {
         return snapshotName;
     }
@@ -54,10 +54,10 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     public String toString()
     {
         return "StreamSSTableComponentRequest{" +
-               "keyspace='" + getKeyspace() + '\'' +
-               ", tableName='" + getTableName() + '\'' +
+               "keyspace='" + keyspace() + '\'' +
+               ", tableName='" + tableName() + '\'' +
                ", snapshot='" + snapshotName + '\'' +
-               ", componentName='" + getComponentName() + '\'' +
+               ", componentName='" + componentName() + '\'' +
                '}';
     }
 }

@@ -41,8 +41,8 @@ public class SchemaRequest extends QualifiedTableName
     public String toString()
     {
         return "SchemaRequest{" +
-               "keyspace='" + getKeyspace() + '\'' +
-               ", tableName='" + getTableName() + '\'' +
+               "keyspace='" + keyspace() + '\'' +
+               ", tableName='" + tableName() + '\'' +
                '}';
     }
 }

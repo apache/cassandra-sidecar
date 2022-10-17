@@ -90,7 +90,7 @@ public class SchemaHandler extends AbstractHandler
             return;
         }
 
-        if (requestParams.getKeyspace() == null)
+        if (requestParams.keyspace() == null)
         {
             SchemaResponse schemaResponse = new SchemaResponse(metadata.exportSchemaAsString());
             context.json(schemaResponse);
@@ -98,18 +98,18 @@ public class SchemaHandler extends AbstractHandler
         }
 
         // retrieve keyspace metadata
-        KeyspaceMetadata ksMetadata = metadata.getKeyspace(requestParams.getKeyspace());
+        KeyspaceMetadata ksMetadata = metadata.getKeyspace(requestParams.keyspace());
         if (ksMetadata == null)
         {
             // set request as failed and return
             // keyspace does not exist
             String errorMessage = String.format("Keyspace '%s' does not exist.",
-                                                requestParams.getKeyspace());
+                                                requestParams.keyspace());
             context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), errorMessage));
             return;
         }
 
-        SchemaResponse schemaResponse = new SchemaResponse(requestParams.getKeyspace(), ksMetadata.exportAsString());
+        SchemaResponse schemaResponse = new SchemaResponse(requestParams.keyspace(), ksMetadata.exportAsString());
         context.json(schemaResponse);
     }
 

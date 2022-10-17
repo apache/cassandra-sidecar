@@ -164,10 +164,10 @@ class StreamSSTableComponentRequestTest
         StreamSSTableComponentRequest req =
         new StreamSSTableComponentRequest("ks", "table", "snapshot", "data.db");
 
-        assertThat(req.getKeyspace()).isEqualTo("ks");
-        assertThat(req.getTableName()).isEqualTo("table");
-        assertThat(req.getSnapshotName()).isEqualTo("snapshot");
-        assertThat(req.getComponentName()).isEqualTo("data.db");
+        assertThat(req.keyspace()).isEqualTo("ks");
+        assertThat(req.tableName()).isEqualTo("table");
+        assertThat(req.snapshotName()).isEqualTo("snapshot");
+        assertThat(req.componentName()).isEqualTo("data.db");
         assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
                                              "snapshot='snapshot', componentName='data.db'}");
     }
