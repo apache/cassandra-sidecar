@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id "java-test-fixtures"
 }
 
 repositories {
@@ -7,22 +8,24 @@ repositories {
 }
 
 dependencies {
-    testImplementation project(":cassandra40")
+    testFixturesApi project(":cassandra40")
 
     implementation('ch.qos.logback:logback-core:1.2.3')
     implementation('ch.qos.logback:logback-classic:1.2.3')
     implementation('com.datastax.cassandra:cassandra-driver-core:3.9.0+')
 
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}")
-    testImplementation('org.assertj:assertj-core:3.23.1')
-    testImplementation("org.testcontainers:testcontainers:${project.testcontainersVersion}")
-    testImplementation("org.testcontainers:cassandra:${project.testcontainersVersion}")
-    testImplementation("org.testcontainers:junit-jupiter:${project.testcontainersVersion}")
+    testFixturesApi('org.assertj:assertj-core:3.23.1')
+    testFixturesApi("org.testcontainers:testcontainers:${project.testcontainersVersion}")
+    testFixturesApi("org.testcontainers:cassandra:${project.testcontainersVersion}")
+    testFixturesApi("org.testcontainers:junit-jupiter:${project.testcontainersVersion}")
 }
 
 // Docker is required to run integration tests
 test {
-    useJUnitPlatform()
+    useJUnitPlatform() {
+        excludeTags "integrationTest"
+    }
 }
 
 tasks.register("integrationTest", Test) {

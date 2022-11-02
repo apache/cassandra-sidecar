@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.cluster;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,6 +33,11 @@ public class InstancesConfigImpl implements InstancesConfig
     private final Map<Integer, InstanceMetadata> idToInstanceMetas;
     private final Map<String, InstanceMetadata> hostToInstanceMetas;
     private final List<InstanceMetadata> instanceMetas;
+
+    public InstancesConfigImpl(InstanceMetadata instanceMetadata)
+    {
+        this(Collections.singletonList(instanceMetadata));
+    }
 
     public InstancesConfigImpl(List<InstanceMetadata> instanceMetas)
     {

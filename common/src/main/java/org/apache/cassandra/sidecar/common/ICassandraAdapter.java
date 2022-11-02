@@ -30,4 +30,9 @@ public interface ICassandraAdapter
 {
     List<NodeStatus> getStatus();
 
+    /**
+     * @return the {@link StorageOperations} implementation for the Cassandra cluster
+     */
+    StorageOperations storageOperations();
+
 }

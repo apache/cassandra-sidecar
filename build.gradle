@@ -88,10 +88,7 @@ sourceSets {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
-            srcDir file('src/integration/java')
-        }
-        resources {
-            srcDirs = [main.resources, "src/integration/resources"]
+            srcDir file('src/test/integration')
         }
     }
 }
@@ -99,8 +96,7 @@ sourceSets {
 configurations {
     jolokia
 
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestImplementation.extendsFrom testImplementation
 }
 
 dependencies {

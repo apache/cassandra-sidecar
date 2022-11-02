@@ -18,14 +18,24 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.util.Map;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 /**
- *
+ * An interface that defines interactions with the storage system in Cassandra.
  */
-public class MockCassandraFactory implements ICassandraFactory
+public interface StorageOperations
 {
-    @Override
-    public ICassandraAdapter create(CQLSession session, JmxClient jmxClient)
-    {
-        return null;
-    }
+    /**
+     * Takes the snapshot of a multiple column family from different keyspaces. A snapshot name must be specified.
+     *
+     * @param tag      the tag given to the snapshot; may not be null or empty
+     * @param keyspace the keyspace in the Cassandra database to use for the snapshot
+     * @param table    the table in the Cassandra database to use for the snapshot
+     * @param options  map of options, for example ttl, skipFlush
+     */
+    void takeSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table,
+                      @Nullable Map<String, String> options);
 }

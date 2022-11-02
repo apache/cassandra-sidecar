@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.common.JmxClient;
 
 /**
  * Metadata of an instance
@@ -29,32 +30,37 @@ import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 public interface InstanceMetadata
 {
     /**
-     * Instance id.
+     * @return an identifier for the Cassandra instance
      */
     int id();
 
     /**
-     * Host address of cassandra instance.
+     * @return the host address of the Cassandra instance
      */
     String host();
 
     /**
-     * Port number of cassandra instance.
+     * @return the port number of the Cassandra instance
      */
     int port();
 
     /**
-     * List of data directories of cassandra instance.
+     * @return a list of data directories of cassandra instance
      */
     List<String> dataDirs();
 
     /**
-     * CQLSession for connecting with instance.
+     * @return {@link CQLSession} for connecting with instance via CQL
      */
     CQLSession session();
 
     /**
-     * Delegate specific for the instance.
+     * @return {@link JmxClient} for connecting with the instance via JMX
+     */
+    JmxClient jmxClient();
+
+    /**
+     * @return a {@link CassandraAdapterDelegate} specific for the instance
      */
     CassandraAdapterDelegate delegate();
 }

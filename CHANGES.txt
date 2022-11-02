@@ -1,5 +1,10 @@
 1.0.0
 -----
+ * Introduce JMX foundation in Sidecar (CASSANDRASC-47)
+ * Delegate methods to the RateLimiter (CASSANDRASC-45)
+ * Add Schema API (CASSANDRASC-43)
+ * Refactor health check to use vertx timer (CASSANDRASC-44)
+ * Migrate minikube to testcontainers for integration tests (CASSANDRASC-46)
  * Refactor range and add toString (CASSANDRASC-41)
  * Fix search in list snapshot endpoint (CASSANDRASC-40)
  * Allow Cassandra input validation to be configurable (CASSANDRAC-39)

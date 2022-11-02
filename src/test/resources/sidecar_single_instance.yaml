@@ -5,6 +5,11 @@ cassandra:
   - host: localhost
   - port: 9042
   - data_dirs: /cassandra/d1/data, /cassandra/d2/data
+  - jmx_host: 127.0.0.1
+  - jmx_port: 7199
+  - jmx_role: controlRole
+  - jmx_role_password: controlPassword
+  - jmx_ssl_enabled: true
 
 sidecar:
   - host: 0.0.0.0

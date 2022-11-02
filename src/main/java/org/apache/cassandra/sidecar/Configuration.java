@@ -35,10 +35,10 @@ public class Configuration
     private final Integer port;
 
     /* Sidecar's listen address */
-    private String host;
+    private final String host;
 
-    /* Healthcheck frequency in miilis */
-    private final Integer healthCheckFrequencyMillis;
+    /* Healthcheck frequency in millis */
+    private final long healthCheckFrequencyMillis;
 
     /* SSL related settings */
     @Nullable
@@ -63,7 +63,7 @@ public class Configuration
 
     private final ValidationConfiguration validationConfiguration;
 
-    public Configuration(InstancesConfig instancesConfig, String host, Integer port, Integer healthCheckFrequencyMillis,
+    public Configuration(InstancesConfig instancesConfig, String host, Integer port, long healthCheckFrequencyMillis,
                          boolean isSslEnabled, @Nullable String keyStorePath, @Nullable String keyStorePassword,
                          @Nullable String trustStorePath, @Nullable String trustStorePassword,
                          long rateLimitStreamRequestsPerSecond, long throttleTimeoutInSeconds,
@@ -86,13 +86,20 @@ public class Configuration
     }
 
     /**
-     * Get Cassandra Instances config
-     *
-     * @return
+     * @return the Cassandra Instances config
      */
     public InstancesConfig getInstancesConfig()
     {
         return instancesConfig;
+    }
+
+    /**
+     *
+     * @return the Cassandra validation configuration
+     */
+    public ValidationConfiguration getValidationConfiguration()
+    {
+        return validationConfiguration;
     }
 
     /**
@@ -120,7 +127,7 @@ public class Configuration
      *
      * @return
      */
-    public Integer getHealthCheckFrequencyMillis()
+    public long getHealthCheckFrequencyMillis()
     {
         return healthCheckFrequencyMillis;
     }

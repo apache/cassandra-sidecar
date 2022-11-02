@@ -30,7 +30,6 @@ import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
 import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,18 +37,22 @@ import com.datastax.driver.core.NettyOptions;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.ICassandraFactory;
+import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
-import org.testcontainers.containers.CassandraContainer;
+import org.apache.cassandra.sidecar.common.containers.CassandraContainer;
+
+import static org.apache.cassandra.sidecar.common.containers.CassandraContainer.JMX_PORT;
+import static org.apache.cassandra.sidecar.common.containers.CassandraContainer.RMI_SERVER_HOSTNAME;
 
 /**
  * Creates a test per version of Cassandra we are testing
  * Tests must be marked with {@link CassandraIntegrationTest}
- *
- *  This is a mix of parameterized tests + a custom extension.  we need to be able to provide the test context
- *  to each test (like an extension) but also need to create multiple tests (like parameterized tests).  Unfortunately
- *  the two don't play well with each other.  You can't get access to the parameters from the extension.
- *  This test template allows us full control of the test lifecycle and lets us tightly couple the context to each test
- *  we generate, since the same test can be run for multiple versions of C*.
+ * <p>
+ * This is a mix of parameterized tests + a custom extension.  we need to be able to provide the test context
+ * to each test (like an extension) but also need to create multiple tests (like parameterized tests).  Unfortunately
+ * the two don't play well with each other.  You can't get access to the parameters from the extension.
+ * This test template allows us full control of the test lifecycle and lets us tightly couple the context to each test
+ * we generate, since the same test can be run for multiple versions of C*.
  */
 public class CassandraTestTemplate implements TestTemplateInvocationContextProvider
 {
@@ -67,14 +70,16 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
     public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(ExtensionContext context)
     {
         return new TestVersionSupplier().getTestVersions()
-                .map(v -> invocationContext(v, context));
+                                        .map(v -> invocationContext(v, context));
     }
 
     /**
+     * Returns a {@link TestTemplateInvocationContext}
      *
-     * @param version
-     * @param context
-     * @return
+     * @param version a version for the test
+     * @param context the <em>context</em> in which the current test or container is being executed.
+     * @return the <em>context</em> of a single invocation of a
+     *         {@linkplain org.junit.jupiter.api.TestTemplate test template}
      */
     private TestTemplateInvocationContext invocationContext(TestVersion version, ExtensionContext context)
     {
@@ -85,8 +90,8 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
             /**
              * A display name can be configured per test still - this adds the C* version we're testing automatically
              * as a suffix to the name
-             * @param invocationIndex
-             * @return
+             * @param invocationIndex the index to the invocation
+             * @return the display name
              */
             @Override
             public String getDisplayName(int invocationIndex)
@@ -96,7 +101,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
             /**
              * Used to register the extensions required to start and stop the docker environment
-             * @return
+             * @return a list of registered {@link Extension extensions}
              */
             @Override
             public List<Extension> getAdditionalExtensions()
@@ -106,38 +111,37 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
             private BeforeEachCallback beforeEach()
             {
-                return new BeforeEachCallback()
-                {
-                    @Override
-                    public void beforeEach(ExtensionContext context) throws Exception
-                    {
-                        // spin up a C* instance using Testcontainers
-                        ICassandraFactory factory = version.getFactory();
+                return beforeEachCtx -> {
+                    // spin up a C* instance using Testcontainers
+                    ICassandraFactory factory = version.getFactory();
 
-                        CassandraContainer<?> container = new CassandraContainer<>(version.getImage())
-                                                          .withExposedPorts(9042);
-                        container.start();
-                        logger.info("Testing {} against docker container", version);
+                    CassandraContainer container = new CassandraContainer(version.getImage());
+                    container.start();
+                    logger.info("Testing {} against docker container", version);
 
-                        CQLSession session = new CQLSession(container.getContactPoint(), new NettyOptions());
+                    CQLSession session = new CQLSession(container.getContactPoint(), new NettyOptions());
+                    JmxClient jmxClient = new JmxClient(RMI_SERVER_HOSTNAME, JMX_PORT);
 
-                        SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.getVersion());
+                    SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.getVersion());
 
-                        ICassandraAdapter cassandra = factory.create(session);
+                    ICassandraAdapter cassandra = factory.create(session, jmxClient);
 
-                        cassandraTestContext = new CassandraTestContext(versionParsed, container, session, cassandra);
-                        logger.info("Created test context {}", cassandraTestContext);
-                    }
+                    cassandraTestContext = new CassandraTestContext(versionParsed,
+                                                                    container,
+                                                                    session,
+                                                                    jmxClient,
+                                                                    cassandra);
+                    logger.info("Created test context {}", cassandraTestContext);
                 };
             }
 
             /**
              * Shuts down the docker container when the test is finished
-             * @return
+             * @return the {@link AfterTestExecutionCallback}
              */
             private AfterTestExecutionCallback postProcessor()
             {
-                return context1 -> {
+                return postProcessorCtx -> {
                     // tear down the docker instance
                     cassandraTestContext.container.stop();
                 };
@@ -145,7 +149,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
             /**
              * Required for Junit to know the CassandraTestContext can be used in these tests
-             * @return
+             * @return a {@link ParameterResolver}
              */
             private ParameterResolver parameterResolver()
             {
@@ -156,8 +160,8 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                                                      ExtensionContext extensionContext)
                     {
                         return parameterContext.getParameter()
-                                .getType()
-                                .equals(CassandraTestContext.class);
+                                               .getType()
+                                               .equals(CassandraTestContext.class);
                     }
 
                     @Override
@@ -168,7 +172,6 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     }
                 };
             }
-
         };
     }
 }

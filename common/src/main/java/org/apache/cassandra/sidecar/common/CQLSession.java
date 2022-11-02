@@ -37,7 +37,7 @@ import com.datastax.driver.core.policies.RoundRobinPolicy;
 import com.datastax.driver.core.policies.WhiteListPolicy;
 
 /**
- * Represents a connection to Cassandra cluster. Currently supports returning the local connection only as
+ * Represents a connection to Cassandra cluster. Currently, supports returning the local connection only as
  * defined in the Configuration.
  */
 public class CQLSession
@@ -48,11 +48,11 @@ public class CQLSession
     private Session localSession;
     private final InetSocketAddress inet;
     private final WhiteListPolicy wlp;
-    private NettyOptions nettyOptions;
-    private QueryOptions queryOptions;
-    private ReconnectionPolicy reconnectionPolicy;
+    private final NettyOptions nettyOptions;
+    private final QueryOptions queryOptions;
+    private final ReconnectionPolicy reconnectionPolicy;
 
-    public CQLSession(String host, Integer port, Integer healthCheckFrequency)
+    public CQLSession(String host, int port, long healthCheckFrequency)
     {
         // this was originally using unresolved Inet addresses, but it would fail when trying to
         // connect to a docker container
@@ -75,7 +75,7 @@ public class CQLSession
     }
 
     /**
-     * Provides a Session connected only to the local node from configuration. If null it means the the connection was
+     * Provides a Session connected only to the local node from configuration. If null it means the connection was
      * not able to be established. The session still might throw a NoHostAvailableException if the local host goes
      * offline or otherwise unavailable.
      *
@@ -120,6 +120,14 @@ public class CQLSession
             }
         }
         return localSession;
+    }
+
+    /**
+     * @return the address of the instance where the session is established
+     */
+    public InetSocketAddress inet()
+    {
+        return inet;
     }
 
     public synchronized void close()

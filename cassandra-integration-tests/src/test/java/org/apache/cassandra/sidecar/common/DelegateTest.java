@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.common;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import com.datastax.driver.core.NettyOptions;
 import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
 import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
 import org.apache.cassandra.sidecar.mocks.V30;
@@ -29,7 +28,7 @@ import org.apache.cassandra.sidecar.mocks.V30;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Insures the Delegate works correctly
+ * Ensures the Delegate works correctly
  */
 class DelegateTest
 {
@@ -37,7 +36,7 @@ class DelegateTest
     void testCorrectVersionIsEnabled(CassandraTestContext context)
     {
         CassandraVersionProvider provider = new CassandraVersionProvider.Builder().add(new V30()).build();
-        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(provider, context.session);
+        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(provider, context.session, context.jmxClient);
         delegate.checkSession();
         SimpleCassandraVersion version = delegate.getVersion();
         assertThat(version).isNotNull();
@@ -47,7 +46,7 @@ class DelegateTest
     void testHealthCheck(CassandraTestContext context) throws IOException, InterruptedException
     {
         CassandraVersionProvider provider = new CassandraVersionProvider.Builder().add(new V30()).build();
-        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(provider, context.session);
+        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(provider, context.session, context.jmxClient);
 
         delegate.checkSession();
         delegate.healthCheck();

@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.common.JmxClient;
 
 /**
  * Local implementation of InstanceMetadata.
@@ -30,49 +31,62 @@ import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 public class InstanceMetadataImpl implements InstanceMetadata
 {
     private final int id;
-    private final String host;
-    private final int port;
     private final List<String> dataDirs;
     private final CQLSession session;
+    private final JmxClient jmxClient;
     private final CassandraAdapterDelegate delegate;
 
-    public InstanceMetadataImpl(int id, String host, int port, List<String> dataDirs, CQLSession session,
-                                CassandraVersionProvider versionProvider, int healthCheckFrequencyMillis)
+    public InstanceMetadataImpl(int id,
+                                List<String> dataDirs,
+                                CQLSession session,
+                                JmxClient jmxClient,
+                                CassandraVersionProvider versionProvider)
     {
         this.id = id;
-        this.host = host;
-        this.port = port;
         this.dataDirs = dataDirs;
 
-        this.session = new CQLSession(host, port, healthCheckFrequencyMillis);
-        this.delegate = new CassandraAdapterDelegate(versionProvider, session);
+        this.session = session;
+        this.jmxClient = jmxClient;
+        this.delegate = new CassandraAdapterDelegate(versionProvider, session, jmxClient);
     }
 
+    @Override
     public int id()
     {
         return id;
     }
 
+    @Override
     public String host()
     {
-        return host;
+        return session.inet().getHostName();
     }
 
+    @Override
     public int port()
     {
-        return port;
+        return session.inet().getPort();
     }
 
+    @Override
     public List<String> dataDirs()
     {
         return dataDirs;
     }
 
+    @Override
     public CQLSession session()
     {
         return session;
     }
 
+    @Override
+    public JmxClient jmxClient()
+    {
+        return jmxClient;
+    }
+
+    @Override
     public CassandraAdapterDelegate delegate()
     {
         return delegate;
