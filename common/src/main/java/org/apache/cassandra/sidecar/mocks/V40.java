@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.mocks;
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.ICassandraFactory;
+import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.MinimumVersion;
 
 /**
@@ -30,7 +31,7 @@ import org.apache.cassandra.sidecar.common.MinimumVersion;
 public class V40 implements ICassandraFactory
 {
     @Override
-    public ICassandraAdapter create(CQLSession session)
+    public ICassandraAdapter create(CQLSession session, JmxClient jmxClient)
     {
         return null;
     }

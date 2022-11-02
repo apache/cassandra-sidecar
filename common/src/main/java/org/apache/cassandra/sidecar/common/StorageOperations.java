@@ -16,23 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.mocks;
+package org.apache.cassandra.sidecar.common;
 
-import org.apache.cassandra.sidecar.common.CQLSession;
-import org.apache.cassandra.sidecar.common.ICassandraAdapter;
-import org.apache.cassandra.sidecar.common.ICassandraFactory;
-import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.MinimumVersion;
+import java.util.Map;
 
 /**
- * Placeholder for 4.1
+ * An interface that defines interactions with the storage system in Cassandra
  */
-@MinimumVersion("4.1.0")
-public class V41 implements ICassandraFactory
+public interface StorageOperations
 {
-    @Override
-    public ICassandraAdapter create(CQLSession session, JmxClient jmxClient)
-    {
-        return null;
-    }
+    /**
+     * Takes the snapshot of a multiple column family from different keyspaces. A snapshot name must be specified.
+     *
+     * @param tag      the tag given to the snapshot; may not be null or empty
+     * @param options  map of options, for example ttl, skipFlush
+     * @param entities list of keyspaces / tables in the form of empty | ks1 ks2 ... | ks1.cf1,ks2.cf2,...
+     */
+    void takeSnapshot(String tag, Map<String, String> options, String... entities);
 }

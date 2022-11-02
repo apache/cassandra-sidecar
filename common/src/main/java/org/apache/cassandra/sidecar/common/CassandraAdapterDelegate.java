@@ -46,6 +46,7 @@ import org.jetbrains.annotations.NotNull;
 public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateListener
 {
     private final CQLSession cqlSession;
+    private final JmxClient jmxClient;
     private final CassandraVersionProvider versionProvider;
     private volatile Session session;
     private SimpleCassandraVersion currentVersion;
@@ -56,10 +57,11 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private final AtomicBoolean registered = new AtomicBoolean(false);
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
 
-    public CassandraAdapterDelegate(CassandraVersionProvider provider, CQLSession cqlSession)
+    public CassandraAdapterDelegate(CassandraVersionProvider provider, CQLSession cqlSession, JmxClient jmxClient)
     {
-        this.cqlSession = cqlSession;
         this.versionProvider = provider;
+        this.cqlSession = cqlSession;
+        this.jmxClient = jmxClient;
     }
 
     private void maybeRegisterHostListener(@NotNull Session session)
@@ -150,7 +152,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             if (!newVersion.equals(currentVersion))
             {
                 currentVersion = newVersion;
-                adapter = versionProvider.getCassandra(version).create(cqlSession);
+                adapter = versionProvider.getCassandra(version).create(cqlSession, jmxClient);
                 logger.info("Cassandra version change detected. New adapter loaded: {}", adapter);
             }
             logger.debug("Cassandra version {}", version);
@@ -172,6 +174,13 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     {
         checkSession();
         return adapter.getStatus();
+    }
+
+    @Override
+    public StorageOperations storageOperations()
+    {
+        checkSession();
+        return adapter.storageOperations();
     }
 
     @Override

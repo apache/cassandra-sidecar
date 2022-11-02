@@ -20,8 +20,9 @@ package org.apache.cassandra.sidecar.common.testing;
 
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.ICassandraAdapter;
+import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
-import org.testcontainers.containers.CassandraContainer;
+import org.apache.cassandra.sidecar.common.containers.CassandraContainer;
 
 /**
  * Passed to integration tests.
@@ -30,28 +31,34 @@ import org.testcontainers.containers.CassandraContainer;
  */
 public class CassandraTestContext
 {
+    public final JmxClient jmxClient;
     public final CQLSession session;
     public final SimpleCassandraVersion version;
-    public final CassandraContainer<?> container;
+    public final CassandraContainer container;
     public final ICassandraAdapter cassandra;
 
-    CassandraTestContext(SimpleCassandraVersion version, CassandraContainer<?> container, CQLSession session,
+    CassandraTestContext(SimpleCassandraVersion version,
+                         CassandraContainer container,
+                         CQLSession session,
+                         JmxClient jmxClient,
                          ICassandraAdapter cassandra)
     {
         this.version = version;
         this.container = container;
         this.session = session;
         this.cassandra = cassandra;
+        this.jmxClient = jmxClient;
     }
 
     @Override
     public String toString()
     {
         return "CassandraTestContext{" +
-                "session=" + session +
-                ", version=" + version +
-                ", container=" + container +
-                ", cassandra=" + cassandra +
-                '}';
+               "jmxClient=" + jmxClient +
+               ", session=" + session +
+               ", version=" + version +
+               ", container=" + container +
+               ", cassandra=" + cassandra +
+               '}';
     }
 }

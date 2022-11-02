@@ -23,5 +23,12 @@ package org.apache.cassandra.sidecar.common;
  */
 public interface ICassandraFactory
 {
-    ICassandraAdapter create(CQLSession session);
+    /**
+     * Creates a new {@link ICassandraAdapter} with the provided {@link CQLSession} and {@link JmxClient}
+     *
+     * @param session the session to the Cassandra database
+     * @param client  the JMX client to connect to the Cassandra database
+     * @return a {@link ICassandraAdapter}
+     */
+    ICassandraAdapter create(CQLSession session, JmxClient client);
 }

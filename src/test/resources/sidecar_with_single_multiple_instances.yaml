@@ -5,16 +5,31 @@ cassandra:
   - host: localhost
   - port: 9042
   - data_dirs: /cassandra/d1/data, /cassandra/d2/data
+  - jmx_host: 127.0.0.1
+  - jmx_port: 7199
+  - jmx_role: controlRole
+  - jmx_role_password: controlPassword
+  - jmx_ssl_enabled: true
 
 cassandra_instances:
   - id: 1
     host: localhost1
     port: 9042
     data_dirs: /cassandra/d1/data, /cassandra/d2/data
+    jmx_host: 127.0.0.1
+    jmx_port: 7100
+    jmx_role: controlRole
+    jmx_role_password: controlPassword
+    jmx_ssl_enabled: true
   - id: 2
     host: localhost2
     port: 9042
     data_dirs: /cassandra/d3/data, /cassandra/d4/data
+    jmx_host: 127.0.0.1
+    jmx_port: 7200
+    jmx_role: controlRole
+    jmx_role_password: controlPassword
+    jmx_ssl_enabled: true
 
 sidecar:
   - host: 0.0.0.0

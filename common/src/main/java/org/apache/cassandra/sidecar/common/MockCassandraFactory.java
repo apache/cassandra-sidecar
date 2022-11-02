@@ -24,7 +24,7 @@ package org.apache.cassandra.sidecar.common;
 public class MockCassandraFactory implements ICassandraFactory
 {
     @Override
-    public ICassandraAdapter create(CQLSession session)
+    public ICassandraAdapter create(CQLSession session, JmxClient jmxClient)
     {
         return null;
     }

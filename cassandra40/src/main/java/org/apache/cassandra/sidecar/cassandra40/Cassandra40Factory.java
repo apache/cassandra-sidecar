@@ -18,10 +18,15 @@
 
 package org.apache.cassandra.sidecar.cassandra40;
 
+import java.util.List;
+
 import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.ICassandraFactory;
+import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.MinimumVersion;
+import org.apache.cassandra.sidecar.common.NodeStatus;
+import org.apache.cassandra.sidecar.common.StorageOperations;
 
 /**
  * Factory to produce the 4.0 adapter
@@ -29,9 +34,30 @@ import org.apache.cassandra.sidecar.common.MinimumVersion;
 @MinimumVersion("4.0.0")
 public class Cassandra40Factory implements ICassandraFactory
 {
+
+    /**
+     * Returns a new adapter for Cassandra 4.0 clusters.
+     *
+     * @param session the session to the Cassandra database
+     * @param jmxClient  the JMX client to connect to the Cassandra database
+     * @return a new adapter for the 4.0 clusters
+     */
     @Override
-    public ICassandraAdapter create(CQLSession session)
+    public ICassandraAdapter create(CQLSession session, JmxClient jmxClient)
     {
-        return () -> null;
+        return new ICassandraAdapter()
+        {
+            @Override
+            public List<NodeStatus> getStatus()
+            {
+                return null;
+            }
+
+            @Override
+            public StorageOperations storageOperations()
+            {
+                return new Cassandra40StorageOperations(jmxClient);
+            }
+        };
     }
 }
