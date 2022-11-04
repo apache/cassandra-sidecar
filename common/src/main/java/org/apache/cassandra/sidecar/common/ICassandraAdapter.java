@@ -28,9 +28,6 @@ import java.util.List;
  */
 public interface ICassandraAdapter
 {
-    /**
-     * @return a list of {@link NodeStatus} for the Cassandra cluster
-     */
     List<NodeStatus> getStatus();
 
     /**

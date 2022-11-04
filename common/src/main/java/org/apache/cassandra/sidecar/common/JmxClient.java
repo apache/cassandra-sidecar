@@ -109,16 +109,14 @@ public class JmxClient implements NotificationListener
      *                    also be implemented by the returned proxy
      * @param remoteName  the name of the MBean within {@code connection} to forward to
      * @param func        the remote function that will be executed through the proxy
-     * @param <TClient>   the type of the proxy client
-     * @param <TResult>   the type of the result returned by the proxy
+     * @param <C>         the type of the proxy client
+     * @param <R>         the type of the result returned by the proxy
      * @return the result of the remote function after being executed via the proxy
      */
-    public <TClient, TResult> TResult apply(Class<TClient> clientClass,
-                                            String remoteName,
-                                            Function<TClient, TResult> func)
+    public <C, R> R apply(Class<C> clientClass, String remoteName, Function<C, R> func)
     {
         checkConnection();
-        TClient client = getProxy(clientClass, remoteName);
+        C client = getProxy(clientClass, remoteName);
         return func.apply(client);
     }
 
@@ -129,18 +127,16 @@ public class JmxClient implements NotificationListener
      *                    also be implemented by the returned proxy
      * @param remoteName  the name of the MBean within {@code connection} to forward to
      * @param caller      the consumer to be called through the proxy
-     * @param <TClient>   the type of the proxy client
+     * @param <C>         the type of the proxy client
      */
-    public <TClient> void call(Class<TClient> clientClass,
-                               String remoteName,
-                               Consumer<TClient> caller)
+    public <C> void call(Class<C> clientClass, String remoteName, Consumer<C> caller)
     {
         checkConnection();
-        TClient client = getProxy(clientClass, remoteName);
+        C client = getProxy(clientClass, remoteName);
         caller.accept(client);
     }
 
-    private <TClient> TClient getProxy(Class<TClient> clientClass, String remoteName)
+    private <C> C getProxy(Class<C> clientClass, String remoteName)
     {
         try
         {

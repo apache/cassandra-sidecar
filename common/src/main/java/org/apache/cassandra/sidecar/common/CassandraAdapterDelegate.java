@@ -179,7 +179,6 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     @Override
     public StorageOperations storageOperations()
     {
-        checkSession();
         return adapter.storageOperations();
     }
 

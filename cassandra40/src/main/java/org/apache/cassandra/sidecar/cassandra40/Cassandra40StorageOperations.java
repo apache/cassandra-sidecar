@@ -28,7 +28,7 @@ import org.apache.cassandra.sidecar.common.StorageOperations;
  */
 public class Cassandra40StorageOperations implements StorageOperations
 {
-    private static final String SS_OBJ_NAME = "org.apache.cassandra.db:type=StorageService";
+    private static final String STORAGE_SERVICE_OBJ_NAME = "org.apache.cassandra.db:type=StorageService";
     private final JmxClient jmxClient;
 
     /**
@@ -46,7 +46,7 @@ public class Cassandra40StorageOperations implements StorageOperations
      */
     public void takeSnapshot(String tag, Map<String, String> options, String... entities)
     {
-        jmxClient.call(StorageOperations.class, SS_OBJ_NAME,
+        jmxClient.call(StorageOperations.class, STORAGE_SERVICE_OBJ_NAME,
                        ssProxy -> ssProxy.takeSnapshot(tag, options, entities));
     }
 }

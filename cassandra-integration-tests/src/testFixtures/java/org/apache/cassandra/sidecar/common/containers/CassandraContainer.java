@@ -35,7 +35,6 @@ public class CassandraContainer extends org.testcontainers.containers.CassandraC
     public CassandraContainer(String dockerImageName)
     {
         super(dockerImageName);
-//        addExposedPort(JMX_PORT);
         addFixedExposedPort(JMX_PORT, JMX_PORT);
 
         addEnv("LOCAL_JMX", "no");
