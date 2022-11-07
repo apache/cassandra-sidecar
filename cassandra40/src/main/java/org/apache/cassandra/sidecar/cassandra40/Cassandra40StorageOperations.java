@@ -22,6 +22,8 @@ import java.util.Map;
 
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.StorageOperations;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * An implementation of the {@link StorageOperations} that interfaces with Cassandra 4.0
@@ -44,9 +46,11 @@ public class Cassandra40StorageOperations implements StorageOperations
     /**
      * {@inheritDoc}
      */
-    public void takeSnapshot(String tag, Map<String, String> options, String... entities)
+    @Override
+    public void takeSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table,
+                             @Nullable Map<String, String> options)
     {
-        jmxClient.call(StorageOperations.class, STORAGE_SERVICE_OBJ_NAME,
-                       ssProxy -> ssProxy.takeSnapshot(tag, options, entities));
+        jmxClient.call(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME,
+                       ssProxy -> ssProxy.takeSnapshot(tag, options, keyspace + "." + table));
     }
 }
