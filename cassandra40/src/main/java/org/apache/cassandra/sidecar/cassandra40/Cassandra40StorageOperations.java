@@ -25,6 +25,8 @@ import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * An implementation of the {@link StorageOperations} that interfaces with Cassandra 4.0
  */
@@ -50,6 +52,9 @@ public class Cassandra40StorageOperations implements StorageOperations
     public void takeSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table,
                              @Nullable Map<String, String> options)
     {
+        requireNonNull(tag, "snapshot tag must be non-null");
+        requireNonNull(keyspace, "keyspace for the  must be non-null");
+        requireNonNull(table, "table must be non-null");
         jmxClient.call(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME,
                        ssProxy -> ssProxy.takeSnapshot(tag, options, keyspace + "." + table));
     }
