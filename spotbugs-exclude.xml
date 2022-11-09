@@ -23,4 +23,13 @@
         <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME" />
     </Match>
 
+    <!--
+    Ignore NM_SAME_SIMPLE_NAME_AS_SUPERCLASS for our own provided CassandraContainer class. This
+    class is internal to the test and won't be exposed to the testing classes directly.
+     -->
+    <Match>
+        <Class name="org.apache.cassandra.sidecar.common.containers.CassandraContainer" />
+        <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
+    </Match>
+
 </FindBugsFilter>
