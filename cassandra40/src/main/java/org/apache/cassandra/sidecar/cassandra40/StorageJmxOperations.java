@@ -5,7 +5,7 @@ import java.util.Map;
 /**
  * An interface that pulls a method from the Cassandra Storage Service Proxy
  */
-interface StorageJmxOperations
+public interface StorageJmxOperations
 {
     /**
      * Takes the snapshot of a multiple column family from different keyspaces. A snapshot name must be specified.
