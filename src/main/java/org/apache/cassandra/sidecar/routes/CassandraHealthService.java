@@ -39,8 +39,6 @@ import io.vertx.core.json.Json;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.utils.RequestUtils.extractHostAddressWithoutPort;
-
 /**
  * Provides a simple REST endpoint to determine if a node is available
  */
@@ -69,13 +67,13 @@ public class CassandraHealthService
                                        @QueryParam(AbstractHandler.INSTANCE_ID) Integer instanceId)
     {
         CassandraAdapterDelegate cassandra;
-        if (instanceId != null)
+        try
         {
-            cassandra = metadataFetcher.getDelegate(instanceId);
+            cassandra = metadataFetcher.getDelegate(req.host(), instanceId);
         }
-        else
+        catch (IllegalArgumentException e)
         {
-            cassandra = metadataFetcher.getDelegate(extractHostAddressWithoutPort(req.host()));
+            return Response.status(HttpResponseStatus.BAD_REQUEST.code()).entity(e.getMessage()).build();
         }
         return getHealthResponse(cassandra);
     }

@@ -108,6 +108,7 @@ dependencies {
     implementation('com.google.inject:guice:4.2.2')
     implementation('io.swagger.core.v3:swagger-jaxrs2:2.1.0')
     implementation("org.jboss.resteasy:resteasy-vertx:4.7.4.Final")
+    implementation('org.jboss.resteasy:resteasy-jackson2-provider:4.7.4.Final')
     implementation(group: 'org.jboss.spec.javax.servlet', name: 'jboss-servlet-api_4.0_spec', version: '2.0.0.Final')
     implementation('org.jetbrains:annotations:23.0.0')
 

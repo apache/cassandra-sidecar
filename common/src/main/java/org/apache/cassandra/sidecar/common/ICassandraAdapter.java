@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.common;
 
-import java.util.List;
-
 /**
  * Core Cassandra Adapter interface
  * For now, this is just a placeholder.  We will most likely want to define the interface to returns bits such as
@@ -28,7 +26,7 @@ import java.util.List;
  */
 public interface ICassandraAdapter
 {
-    List<NodeStatus> getStatus();
+    NodeSettings getSettings();
 
     /**
      * @return the {@link StorageOperations} implementation for the Cassandra cluster

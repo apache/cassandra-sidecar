@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.common;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -26,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import org.jetbrains.annotations.NotNull;
@@ -51,7 +51,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private volatile Session session;
     private SimpleCassandraVersion currentVersion;
     private ICassandraAdapter adapter;
-    private volatile boolean isUp = false;
+    private volatile NodeSettings nodeSettings = null;
 
     private static final Logger logger = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
     private final AtomicBoolean registered = new AtomicBoolean(false);
@@ -135,7 +135,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         if (activeSession == null)
         {
             logger.info("No local CQL session is available. Cassandra is down presumably.");
-            isUp = false;
+            nodeSettings = null;
             return;
         }
 
@@ -143,37 +143,39 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
         try
         {
-            String version = activeSession.execute("select release_version from system.local")
-                                          .one()
-                                          .getString("release_version");
-            isUp = true;
+            Row oneResult = activeSession.execute("select release_version, partitioner from system.local")
+                                   .one();
+            NodeSettings nodeSettings = new NodeSettings(oneResult.getString("release_version"),
+                                                   oneResult.getString("partitioner"));
+            this.nodeSettings = nodeSettings;
             // this might swap the adapter out
-            SimpleCassandraVersion newVersion = SimpleCassandraVersion.create(version);
+            SimpleCassandraVersion newVersion = SimpleCassandraVersion.create(nodeSettings.releaseVersion());
             if (!newVersion.equals(currentVersion))
             {
                 currentVersion = newVersion;
-                adapter = versionProvider.getCassandra(version).create(cqlSession, jmxClient);
+                adapter = versionProvider.getCassandra(nodeSettings.releaseVersion()).create(cqlSession, jmxClient);
                 logger.info("Cassandra version change detected. New adapter loaded: {}", adapter);
             }
-            logger.debug("Cassandra version {}", version);
+            logger.debug("Cassandra version {}", nodeSettings.releaseVersion());
         }
         catch (NoHostAvailableException e)
         {
             logger.error("Unexpected error connecting to Cassandra instance.", e);
             // The cassandra node is down.
             // Unregister the host listener and nullify the session in order to get a new object.
-            isUp = false;
+            nodeSettings = null;
             maybeUnregisterHostListener(activeSession);
+            session.close();
             session = null;
         }
     }
 
 
     @Override
-    public List<NodeStatus> getStatus()
+    public NodeSettings getSettings()
     {
         checkSession();
-        return adapter.getStatus();
+        return nodeSettings;
     }
 
     @Override
@@ -192,13 +194,12 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     public void onUp(Host host)
     {
         healthCheck();
-        isUp = true;
     }
 
     @Override
     public void onDown(Host host)
     {
-        isUp = false;
+        nodeSettings = null;
     }
 
     @Override
@@ -219,7 +220,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     public boolean isUp()
     {
-        return isUp;
+        return nodeSettings != null;
     }
 
     public SimpleCassandraVersion getVersion()

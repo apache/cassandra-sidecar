@@ -24,6 +24,8 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 
+import static org.apache.cassandra.sidecar.utils.RequestUtils.extractHostAddressWithoutPort;
+
 /**
  * To fetch instance information according to instance id provided.
  * By default returns 1st instance's information
@@ -51,6 +53,20 @@ public class InstanceMetadataFetcher
         return instanceId == null
                ? getFirstInstance().delegate()
                : instancesConfig.instanceFromId(instanceId).delegate();
+    }
+
+    public CassandraAdapterDelegate getDelegate(String host, Integer instanceId)
+    {
+        CassandraAdapterDelegate cassandra;
+        if (instanceId != null)
+        {
+            cassandra = getDelegate(instanceId);
+        }
+        else
+        {
+            cassandra = getDelegate(extractHostAddressWithoutPort(host));
+        }
+        return cassandra;
     }
 
     private InstanceMetadata getFirstInstance()
