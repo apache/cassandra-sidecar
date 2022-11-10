@@ -55,7 +55,7 @@ public class Cassandra40StorageOperations implements StorageOperations
         requireNonNull(tag, "snapshot tag must be non-null");
         requireNonNull(keyspace, "keyspace for the  must be non-null");
         requireNonNull(table, "table must be non-null");
-        jmxClient.call(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME,
-                       ssProxy -> ssProxy.takeSnapshot(tag, options, keyspace + "." + table));
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .takeSnapshot(tag, options, keyspace + "." + table);
     }
 }

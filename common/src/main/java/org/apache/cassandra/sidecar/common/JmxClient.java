@@ -24,8 +24,6 @@ import java.rmi.server.RMIClientSocketFactory;
 import java.rmi.server.RMISocketFactory;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import javax.management.JMX;
 import javax.management.MBeanServerConnection;
 import javax.management.MalformedObjectNameException;
@@ -103,47 +101,21 @@ public class JmxClient implements NotificationListener
     }
 
     /**
-     * Applies a function through the JMX bean proxy
+     * Returns a proxy for a Standard MBean in a local or remote MBean Server.
      *
      * @param clientClass the management interface that the MBean exports, which will
      *                    also be implemented by the returned proxy
      * @param remoteName  the name of the MBean within {@code connection} to forward to
-     * @param func        the remote function that will be executed through the proxy
      * @param <C>         the type of the proxy client
-     * @param <R>         the type of the result returned by the proxy
-     * @return the result of the remote function after being executed via the proxy
+     * @return the proxy for a Standard MBean in a local or remote MBean Server
      */
-    public <C, R> R apply(Class<C> clientClass, String remoteName, Function<C, R> func)
+    public <C> C proxy(Class<C> clientClass, String remoteName)
     {
         checkConnection();
-        C client = getProxy(clientClass, remoteName);
-        return func.apply(client);
-    }
-
-    /**
-     * Calls a remote function through the JMX bean proxy
-     *
-     * @param clientClass the management interface that the MBean exports, which will
-     *                    also be implemented by the returned proxy
-     * @param remoteName  the name of the MBean within {@code connection} to forward to
-     * @param caller      the consumer to be called through the proxy
-     * @param <C>         the type of the proxy client
-     */
-    public <C> void call(Class<C> clientClass, String remoteName, Consumer<C> caller)
-    {
-        checkConnection();
-        C client = getProxy(clientClass, remoteName);
-        caller.accept(client);
-    }
-
-    private <C> C getProxy(Class<C> clientClass, String remoteName)
-    {
         try
         {
-            // NOTE: Because proxy instances can "go stale" if the connection drops,
-            // we don't allow consumers to hold references to them.  Instead, we get a new proxy
-            // each time we need one (much of the underlying construction is cached by the JMX infrastructure
-            // so we believe this to not be terribly resource-intensive
+            // NOTE: We get a new proxy each time we need one (much of the underlying construction is
+            // cached by the JMX infrastructure, so we believe this to not be terribly resource-intensive
             ObjectName name = new ObjectName(remoteName);
             return JMX.newMBeanProxy(mBeanServerConnection, name, clientClass);
         }

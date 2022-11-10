@@ -33,10 +33,8 @@ public class JmxClientTest
     @CassandraIntegrationTest
     void testJmxConnectivity(CassandraTestContext context)
     {
-        String opMode = context.jmxClient
-                        .apply(SSProxy.class,
-                               SS_OBJ_NAME,
-                               SSProxy::getOperationMode);
+        String opMode = context.jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
+                                         .getOperationMode();
         assertThat(opMode).isNotNull();
         assertThat(opMode).isIn("LEAVING", "JOINING", "NORMAL", "DECOMMISSIONED", "CLIENT");
     }
@@ -44,10 +42,8 @@ public class JmxClientTest
     @CassandraIntegrationTest
     void testConsumerCall(CassandraTestContext context)
     {
-        context.jmxClient
-        .call(SSProxy.class,
-              SS_OBJ_NAME,
-              SSProxy::refreshSizeEstimates);
+        context.jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
+                         .refreshSizeEstimates();
     }
 
     /**
