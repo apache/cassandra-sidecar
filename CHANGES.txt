@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add an endpoint that gives information about the release version & partitioner name of a node (CASSANDRASC-48)
  * Introduce JMX foundation in Sidecar (CASSANDRASC-47)
  * Delegate methods to the RateLimiter (CASSANDRASC-45)
  * Add Schema API (CASSANDRASC-43)

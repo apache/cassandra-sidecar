@@ -39,7 +39,6 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.routes.HealthService;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
@@ -51,7 +50,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 public abstract class AbstractHealthServiceTest
 {
     private static final Logger logger = LoggerFactory.getLogger(AbstractHealthServiceTest.class);
-    private HealthService service;
     private Vertx vertx;
     private Configuration config;
     private HttpServer server;
@@ -71,12 +69,11 @@ public abstract class AbstractHealthServiceTest
     {
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(getTestModule()));
         server = injector.getInstance(HttpServer.class);
-        service = injector.getInstance(HealthService.class);
         vertx = injector.getInstance(Vertx.class);
         config = injector.getInstance(Configuration.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), context.succeedingThenComplete());
+        server.listen(config.getPort(), config.getHost(), context.succeedingThenComplete());
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }

@@ -41,6 +41,7 @@ import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.routes.CassandraHealthService;
+import org.apache.cassandra.sidecar.routes.CassandraSettingsService;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.routes.ListSnapshotFilesHandler;
@@ -105,7 +106,8 @@ public class MainModule extends AbstractModule
     @Singleton
     private VertxRequestHandler configureServices(Vertx vertx,
                                                   HealthService healthService,
-                                                  CassandraHealthService cassandraHealthService)
+                                                  CassandraHealthService cassandraHealthService,
+                                                  CassandraSettingsService cassandraSettingsService)
     {
         VertxResteasyDeployment deployment = new VertxResteasyDeployment();
         deployment.start();
@@ -114,6 +116,7 @@ public class MainModule extends AbstractModule
         r.addPerInstanceResource(SwaggerOpenApiResource.class);
         r.addSingletonResource(healthService);
         r.addSingletonResource(cassandraHealthService);
+        r.addSingletonResource(cassandraSettingsService);
 
         return new VertxRequestHandler(vertx, deployment);
     }

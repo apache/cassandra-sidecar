@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
+import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 
@@ -105,6 +106,10 @@ public class TestModule extends AbstractModule
         when(instanceMeta.dataDirs()).thenReturn(Collections.singletonList(dataDir));
 
         CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
+        if (isUp)
+        {
+            when(delegate.getSettings()).thenReturn(new NodeSettings("testVersion", "testPartitioner"));
+        }
         when(delegate.isUp()).thenReturn(isUp);
         when(instanceMeta.delegate()).thenReturn(delegate);
         return instanceMeta;
