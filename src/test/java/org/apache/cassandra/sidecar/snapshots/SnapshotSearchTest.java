@@ -36,15 +36,20 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
 import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.getSnapshot1Instance1Files;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.getSnapshot1Instance2Files;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for searching snapshots
@@ -68,7 +73,13 @@ public class SnapshotSearchTest
 
         ValidationConfiguration validationConfiguration = new TestValidationConfiguration();
         CassandraInputValidator validator = new CassandraInputValidator(validationConfiguration);
-        instance = new SnapshotPathBuilder(vertx, mockInstancesConfig, validator);
+        Configuration configuration = mock(Configuration.class);
+        WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfiguration("test-pool", 10,
+                                                                             TimeUnit.SECONDS.toMillis(30));
+        when(configuration.serverWorkerPoolConfiguration()).thenReturn(workerPoolConf);
+        when(configuration.serverInternalWorkerPoolConfiguration()).thenReturn(workerPoolConf);
+        ExecutorPools executorPools = new ExecutorPools(vertx, configuration);
+        instance = new SnapshotPathBuilder(vertx, mockInstancesConfig, validator, executorPools);
     }
 
     @Test

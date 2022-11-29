@@ -14,10 +14,19 @@ cassandra:
 sidecar:
   - host: 0.0.0.0
   - port: 9043
+  - request_idle_timeout_millis: 500000 # this field expects integer value
+  - request_timeout_millis: 1200000
   - throttle:
-    - stream_requests_per_sec: 5000
-    - delay_sec: 5
-    - timeout_sec: 10
+      - stream_requests_per_sec: 80
+      - delay_sec: 7
+      - timeout_sec: 21
+  - allowable_time_skew_in_minutes: 89
+  - sstable_import:
+      - poll_interval_millis: 50
+      - cache:
+          - expire_after_access_millis: 1000
+          - maximum_size: 100
+
 #
 # Enable SSL configuration (Disabled by default)
 #

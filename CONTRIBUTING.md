@@ -63,7 +63,9 @@ EVENT LOOP THREAD!
 ### <a name="thread-pools"></a>Thread Pool Model
 
 Vertx uses different thread pools for internal processing. By default, vertx will use the event loop thread pool,
-the worker thread pool, and the internal worker thread pool.
+the worker thread pool, and the internal worker thread pool. We also introduced `ExecutorPools` in Sidecar to run
+blocking executions and can be configured separately. `ExecutorPools` should be preferred over the worker and internal
+worker pools from vertx.
 
 #### The event loop thread pool (i.e. vert.x-eventloop-thread-1)
 
@@ -92,6 +94,20 @@ An internal worker thread pool used by vertx for internal operations. Similarly 
 internal worker thread pool has 20 threads by default. Do not use this thread pool directly, use the worker
 thread pool instead.
 
+#### ExecutorPools
+
+It manages worker pools to schedule and execute _blocking_ tasks on dedicated threadpools to avoid blocking
+netty eventloop. It is a facade to handle one-off and periodic blocking execution.
+
+It exposes 2 worker pools. The `service` worker pool is for short-lived tasks, which should not occupy a thread for too 
+long. Typically, those tasks are client-facing, triggered by the http requests. The `internal` worker pool is for
+internal background tasks. Those tasks can live longer and potentially get queued up if prior tasks take a longer
+duration. In other words, they are not time sensitive.
+
+The `service` worker pool has the name `sidecar-worker-pool`.
+
+The `internal` worker pool has the name `sidecar-internal-worker-pool`.
+
 ### <a href="timers"></a>One-shot Timers and Periodic Timers
 
 Use vertx APIs to set one-shot timers and periodic timers. If you need to execute a one-time operation in the future,
@@ -100,7 +116,7 @@ threads that are managed internal by vertx. For example
 
 ```java
 logger.debug("Retrying streaming after {} millis", millis);
-vertx.setTimer(millis, t -> acquireAndSend(context, filename, fileLength, range, startTime));
+executorPools.service().setTimer(millis, t -> acquireAndSend(context, filename, fileLength, range, startTime));
 ```
 
 ### <a href="resteasy"></a>RestEasy Integration
@@ -178,7 +194,7 @@ Here's an example of a route that uses multiple handlers.
 
 ```java
 router.route().method(HttpMethod.GET)
-      .path("/api/v1/keyspace/:keyspace/table/:table/snapshots/:snapshot/component/:component")
+      .path("/api/v1/keyspaces/:keyspace/tables/:table/snapshots/:snapshot/components/:component")
       .handler(validateQualifiedTableHandler)
       .handler(streamSSTableComponentHandler)
       .handler(fileStreamHandler);
@@ -326,4 +342,4 @@ To import the formatting configuration run the following gradle task:
 ```
 
 This will install the style settings into the `.idea` directory located at the root of the project directory.
-You can then use the provided configuration that adhere to the project source file coding standards.
+You can then use the provided configuration that adheres to the project source file coding standards.

@@ -28,7 +28,7 @@ import com.google.common.annotations.Beta;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * A class representing a response for the {@link ListSnapshotFilesRequest}.
+ * A class representing a response for the {@code SnapshotRequest}.
  * This class is expected to evolve and has been mark with the {@link Beta} annotation.
  */
 @Beta

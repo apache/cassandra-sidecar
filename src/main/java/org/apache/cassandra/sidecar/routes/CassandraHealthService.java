@@ -69,7 +69,9 @@ public class CassandraHealthService
         CassandraAdapterDelegate cassandra;
         try
         {
-            cassandra = metadataFetcher.getDelegate(req.host(), instanceId);
+            cassandra = instanceId == null
+                        ? metadataFetcher.delegate(req.host())
+                        : metadataFetcher.delegate(instanceId);
         }
         catch (IllegalArgumentException e)
         {
@@ -88,7 +90,7 @@ public class CassandraHealthService
     @Path("/v1/cassandra/instance/{instanceId}/__health")
     public Response getCassandraHealthForInstance(@PathParam("instanceId") int instanceId)
     {
-        final CassandraAdapterDelegate cassandra = metadataFetcher.getDelegate(instanceId);
+        final CassandraAdapterDelegate cassandra = metadataFetcher.delegate(instanceId);
         return getHealthResponse(cassandra);
     }
 

@@ -19,9 +19,9 @@
 package org.apache.cassandra.sidecar.snapshots;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -29,15 +29,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -46,26 +43,22 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.FileProps;
-import io.vertx.core.file.FileSystem;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesRequest;
-import org.apache.cassandra.sidecar.common.data.StreamSSTableComponentRequest;
 import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.data.SnapshotRequest;
+import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
+import org.apache.cassandra.sidecar.utils.BaseFileSystem;
 
 /**
  * This class builds the snapshot path on a given host validating that it exists
  */
 @Singleton
-public class SnapshotPathBuilder
+public class SnapshotPathBuilder extends BaseFileSystem
 {
-    private static final Logger logger = LoggerFactory.getLogger(SnapshotPathBuilder.class);
     private static final String DATA_SUB_DIR = "/data";
     public static final int SNAPSHOTS_MAX_DEPTH = 5;
     public static final String SNAPSHOTS_DIR_NAME = "snapshots";
-    protected final Vertx vertx;
-    protected final FileSystem fs;
-    protected final InstancesConfig instancesConfig;
-    protected final CassandraInputValidator validator;
 
     /**
      * Creates a new SnapshotPathBuilder for snapshots of an instance with the given {@code vertx} instance and
@@ -74,14 +67,15 @@ public class SnapshotPathBuilder
      * @param vertx           the vertx instance
      * @param instancesConfig the configuration for Cassandra
      * @param validator       a validator instance to validate Cassandra-specific input
+     * @param executorPools   executor pools for blocking executions
      */
     @Inject
-    public SnapshotPathBuilder(Vertx vertx, InstancesConfig instancesConfig, CassandraInputValidator validator)
+    public SnapshotPathBuilder(Vertx vertx,
+                               InstancesConfig instancesConfig,
+                               CassandraInputValidator validator,
+                               ExecutorPools executorPools)
     {
-        this.vertx = vertx;
-        this.fs = vertx.fileSystem();
-        this.instancesConfig = instancesConfig;
-        this.validator = validator;
+        super(vertx.fileSystem(), instancesConfig, validator, executorPools);
     }
 
     /**
@@ -113,7 +107,7 @@ public class SnapshotPathBuilder
      * @param request the request to list the snapshot files
      * @return the absolute path of the snapshot directory
      */
-    public Future<String> build(String host, ListSnapshotFilesRequest request)
+    public Future<String> build(String host, SnapshotRequest request)
     {
         return getDataDirectories(host)
                .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
@@ -137,8 +131,7 @@ public class SnapshotPathBuilder
         // List the snapshot directory
         fs.readDir(snapshotDirectory)
           .onFailure(promise::fail)
-          .onSuccess(list ->
-          {
+          .onSuccess(list -> {
 
               logger.debug("Found {} files in snapshot directory '{}'", list.size(), snapshotDirectory);
 
@@ -149,20 +142,17 @@ public class SnapshotPathBuilder
                                          .collect(Collectors.toList());
 
               CompositeFuture.all(futures)
-                             .onFailure(cause ->
-                             {
+                             .onFailure(cause -> {
                                  logger.debug("Failed to get FileProps", cause);
                                  promise.fail(cause);
                              })
-                             .onSuccess(ar ->
-                             {
+                             .onSuccess(ar -> {
 
                                  // Create a pair of path/fileProps for every regular file
                                  List<SnapshotFile> snapshotList =
                                  IntStream.range(0, list.size())
                                           .filter(i -> ar.<FileProps>resultAt(i).isRegularFile())
-                                          .mapToObj(i ->
-                                          {
+                                          .mapToObj(i -> {
                                               long size = ar.<FileProps>resultAt(i).size();
                                               return new SnapshotFile(list.get(i),
                                                                       size);
@@ -181,19 +171,18 @@ public class SnapshotPathBuilder
                                  //noinspection rawtypes
                                  List<Future> idxListFutures =
                                  IntStream.range(0, list.size())
-                                          .filter(i ->
-                                                  {
-                                                      if (ar.<FileProps>resultAt(i).isDirectory())
-                                                      {
-                                                          Path path = Paths.get(list.get(i));
-                                                          int count = path.getNameCount();
-                                                          return count > 0
-                                                                 && path.getName(count - 1)
-                                                                        .toString()
-                                                                        .startsWith(".");
-                                                      }
-                                                      return false;
-                                                  })
+                                          .filter(i -> {
+                                              if (ar.<FileProps>resultAt(i).isDirectory())
+                                              {
+                                                  Path path = Paths.get(list.get(i));
+                                                  int count = path.getNameCount();
+                                                  return count > 0
+                                                         && path.getName(count - 1)
+                                                                .toString()
+                                                                .startsWith(".");
+                                              }
+                                              return false;
+                                          })
                                           .mapToObj(i -> listSnapshotDirectory(list.get(i), false))
                                           .collect(Collectors.toList());
                                  if (idxListFutures.isEmpty())
@@ -207,8 +196,7 @@ public class SnapshotPathBuilder
                                  // if we have index directories, list them all
                                  CompositeFuture.all(idxListFutures)
                                                 .onFailure(promise::fail)
-                                                .onSuccess(idx ->
-                                                {
+                                                .onSuccess(idx -> {
                                                     //noinspection unchecked
                                                     List<SnapshotFile> idxPropList =
                                                     idx.list()
@@ -252,11 +240,9 @@ public class SnapshotPathBuilder
         Path snapshotsDirPath = Paths.get(SNAPSHOTS_DIR_NAME);
         Path snapshotNamePath = Paths.get(snapshotName);
 
-        return vertx.executeBlocking(promise ->
-        {
+        return executorPools.internal().executeBlocking(promise -> {
             // a filter to keep directories ending in "/snapshots/<snapshotName>"
-            BiPredicate<Path, BasicFileAttributes> filter = (path, basicFileAttributes) ->
-            {
+            BiPredicate<Path, BasicFileAttributes> filter = (path, basicFileAttributes) -> {
                 int nameCount;
                 return basicFileAttributes.isDirectory() &&
                        (nameCount = path.getNameCount()) >= 2 &&
@@ -293,24 +279,11 @@ public class SnapshotPathBuilder
      */
     protected void validate(StreamSSTableComponentRequest request)
     {
+        validator.validateKeyspaceName(request.keyspace());
+        validator.validateTableName(request.tableName());
+        validator.validateSnapshotName(request.snapshotName());
         // Only allow .db and TOC.txt components here
         validator.validateRestrictedComponentName(request.componentName());
-    }
-
-    /**
-     * @param host the host
-     * @return the data directories for the given {@code host}
-     */
-    protected Future<List<String>> getDataDirectories(String host)
-    {
-        List<String> dataDirs = instancesConfig.instanceFromHost(host).dataDirs();
-        if (dataDirs == null || dataDirs.isEmpty())
-        {
-            String errMsg = String.format("No data directories are available for host '%s'", host);
-            logger.error(errMsg);
-            return Future.failedFuture(new FileNotFoundException(errMsg));
-        }
-        return Future.succeededFuture(dataDirs);
     }
 
     /**
@@ -334,12 +307,11 @@ public class SnapshotPathBuilder
             Future<String> f = candidates.get(i);
             root = root.recover(v -> f);
         }
-        return root.recover(t ->
-                            {
-                                String errorMessage = String.format("Keyspace '%s' does not exist", keyspace);
-                                logger.debug(errorMessage, t);
-                                return Future.failedFuture(new FileNotFoundException(errorMessage));
-                            });
+        return root.recover(t -> {
+            String errorMessage = String.format("Keyspace '%s' does not exist", keyspace);
+            logger.debug(errorMessage, t);
+            return Future.failedFuture(new NoSuchFileException(errorMessage));
+        });
     }
 
     /**
@@ -395,7 +367,7 @@ public class SnapshotPathBuilder
                         {
                             String errMsg = String.format("Snapshot directory '%s' does not exist", snapshotName);
                             logger.warn("Snapshot directory {} does not exist in {}", snapshotName, snapshotDirectory);
-                            return Future.failedFuture(new FileNotFoundException(errMsg));
+                            return Future.failedFuture(new NoSuchFileException(errMsg));
                         });
     }
 
@@ -415,61 +387,13 @@ public class SnapshotPathBuilder
                                    File.separator + componentName;
 
         return isValidFilename(componentFilename)
-               .recover(t ->
-                        {
-                            logger.warn("Snapshot directory {} or component {} does not exist in {}", snapshotName,
-                                        componentName, componentFilename);
-                            String errMsg = String.format("Component '%s' does not exist for snapshot '%s'",
-                                                          componentName, snapshotName);
-                            return Future.failedFuture(new FileNotFoundException(errMsg));
-                        });
-    }
-
-    /**
-     * @param filename the path to the file
-     * @return a future of the {@code filename} if it exists and is a regular file, a failed future otherwise
-     */
-    protected Future<String> isValidFilename(String filename)
-    {
-        return isValidOfType(filename, FileProps::isRegularFile);
-    }
-
-    /**
-     * @param path the path to the directory
-     * @return a future of the {@code path} if it exists and is a directory, a failed future otherwise
-     */
-    protected Future<String> isValidDirectory(String path)
-    {
-        return isValidOfType(path, FileProps::isDirectory);
-    }
-
-    /**
-     * @param filename  the path
-     * @param predicate a predicate that evaluates based on {@link FileProps}
-     * @return a future of the {@code filename} if it exists and {@code predicate} evaluates to true,
-     * a failed future otherwise
-     */
-    protected Future<String> isValidOfType(String filename, Predicate<FileProps> predicate)
-    {
-        return fs.exists(filename)
-                 .compose(exists ->
-                          {
-                              if (!exists)
-                              {
-                                  String errMsg = "File '" + filename + "' does not exist";
-                                  return Future.failedFuture(new FileNotFoundException(errMsg));
-                              }
-                              return fs.props(filename)
-                                       .compose(fileProps ->
-                                                {
-                                                    if (fileProps == null || !predicate.test(fileProps))
-                                                    {
-                                                        String errMsg = "File '" + filename + "' does not exist";
-                                                        return Future.failedFuture(new FileNotFoundException(errMsg));
-                                                    }
-                                                    return Future.succeededFuture(filename);
-                                                });
-                          });
+               .recover(t -> {
+                   logger.warn("Snapshot directory {} or component {} does not exist in {}", snapshotName,
+                               componentName, componentFilename);
+                   String errMsg = String.format("Component '%s' does not exist for snapshot '%s'",
+                                                 componentName, snapshotName);
+                   return Future.failedFuture(new NoSuchFileException(errMsg));
+               });
     }
 
     /**
@@ -482,7 +406,7 @@ public class SnapshotPathBuilder
         if (fileList.size() == 0)
         {
             String errMsg = String.format("Table '%s' does not exist", tableName);
-            return Future.failedFuture(new FileNotFoundException(errMsg));
+            return Future.failedFuture(new NoSuchFileException(errMsg));
         }
 
         //noinspection rawtypes
@@ -493,8 +417,7 @@ public class SnapshotPathBuilder
         Promise<String> promise = Promise.promise();
         CompositeFuture.all(futures)
                        .onFailure(promise::fail)
-                       .onSuccess(ar ->
-                       {
+                       .onSuccess(ar -> {
                            String directory = IntStream.range(0, fileList.size())
                                                        .mapToObj(i -> Pair.of(fileList.get(i),
                                                                               ar.<FileProps>resultAt(i)))
@@ -507,7 +430,7 @@ public class SnapshotPathBuilder
                            if (directory == null)
                            {
                                String errMsg = String.format("Table '%s' does not exist", tableName);
-                               promise.fail(new FileNotFoundException(errMsg));
+                               promise.fail(new NoSuchFileException(errMsg));
                            }
                            else
                            {

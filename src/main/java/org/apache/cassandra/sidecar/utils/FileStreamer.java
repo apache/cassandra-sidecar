@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.utils;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
@@ -31,13 +30,14 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.Configuration;
-import org.apache.cassandra.sidecar.exceptions.RangeException;
+import org.apache.cassandra.sidecar.common.exceptions.RangeException;
+import org.apache.cassandra.sidecar.common.utils.HttpRange;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.models.HttpResponse;
-import org.apache.cassandra.sidecar.models.Range;
 
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
 import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
 
@@ -50,14 +50,14 @@ public class FileStreamer
     private static final Logger LOGGER = LoggerFactory.getLogger(FileStreamer.class);
     private static final long DEFAULT_RATE_LIMIT_STREAM_REQUESTS_PER_SECOND = Long.MAX_VALUE;
 
-    private final Vertx vertx;
+    private final ExecutorPools executorPools;
     private final Configuration config;
     private final SidecarRateLimiter rateLimiter;
 
     @Inject
-    public FileStreamer(Vertx vertx, Configuration config, SidecarRateLimiter rateLimiter)
+    public FileStreamer(ExecutorPools executorPools, Configuration config, SidecarRateLimiter rateLimiter)
     {
-        this.vertx = vertx;
+        this.executorPools = executorPools;
         this.config = config;
         this.rateLimiter = rateLimiter;
     }
@@ -66,10 +66,10 @@ public class FileStreamer
      * Streams the {@code filename file} with length {@code fileLength} for the (optionally) requested
      * {@code rangeHeader} using the provided {@code response}.
      *
-     * @param response      the response to use
-     * @param filename      the path to the file to serve
-     * @param fileLength    the size of the file to serve
-     * @param rangeHeader   (optional) a string representing the requested range for the file
+     * @param response    the response to use
+     * @param filename    the path to the file to serve
+     * @param fileLength  the size of the file to serve
+     * @param rangeHeader (optional) a string representing the requested range for the file
      * @return a future with the result of the streaming
      */
     public Future<Void> stream(HttpResponse response, String filename, long fileLength, String rangeHeader)
@@ -82,13 +82,13 @@ public class FileStreamer
      * Streams the {@code filename file} with length {@code fileLength} for the requested
      * {@code range} using the provided {@code response}.
      *
-     * @param response      the response to use
-     * @param filename      the path to the file to serve
-     * @param fileLength    the size of the file to serve
-     * @param range         the range to stream
+     * @param response   the response to use
+     * @param filename   the path to the file to serve
+     * @param fileLength the size of the file to serve
+     * @param range      the range to stream
      * @return a future with the result of the streaming
      */
-    public Future<Void> stream(HttpResponse response, String filename, long fileLength, Range range)
+    public Future<Void> stream(HttpResponse response, String filename, long fileLength, HttpRange range)
     {
         Promise<Void> promise = Promise.promise();
         acquireAndSend(response, filename, fileLength, range, Instant.now(), promise);
@@ -99,28 +99,32 @@ public class FileStreamer
      * Send the file if rate-limiting is disabled or when it successfully acquires a permit from the
      * {@link SidecarRateLimiter}.
      *
-     * @param response      the response to use
-     * @param filename      the path to the file to serve
-     * @param fileLength    the size of the file to serve
-     * @param range         the range to stream
-     * @param startTime     the start time of this request
-     * @param promise       a promise for the stream
+     * @param response   the response to use
+     * @param filename   the path to the file to serve
+     * @param fileLength the size of the file to serve
+     * @param range      the range to stream
+     * @param startTime  the start time of this request
+     * @param promise    a promise for the stream
      */
-    private void acquireAndSend(HttpResponse response, String filename, long fileLength, Range range, Instant startTime,
+    private void acquireAndSend(HttpResponse response,
+                                String filename,
+                                long fileLength,
+                                HttpRange range,
+                                Instant startTime,
                                 Promise<Void> promise)
     {
         if (!isRateLimited() || acquire(response, filename, fileLength, range, startTime, promise))
         {
             // Stream data if rate limiting is disabled or if we acquire
             LOGGER.debug("Streaming range {} for file {} to client {}. Instance: {}", range, filename,
-                        response.remoteAddress(), response.host());
+                         response.remoteAddress(), response.host());
             response.sendFile(filename, fileLength, range)
                     .onSuccess(v ->
-                    {
-                        LOGGER.debug("Streamed file {} successfully to client {}. Instance: {}", filename,
-                                     response.remoteAddress(), response.host());
-                        promise.complete();
-                    })
+                               {
+                                   LOGGER.debug("Streamed file {} successfully to client {}. Instance: {}", filename,
+                                                response.remoteAddress(), response.host());
+                                   promise.complete();
+                               })
                     .onFailure(promise::fail);
         }
     }
@@ -130,15 +134,15 @@ public class FileStreamer
      * delay. Otherwise, it will retry acquiring the permit later in the future until it exhausts the
      * retry timeout, in which case it will ask the client to retry later in the future.
      *
-     * @param response      the response to use
-     * @param filename      the path to the file to serve
-     * @param fileLength    the size of the file to serve
-     * @param range         the range to stream
-     * @param startTime     the start time of this request
-     * @param promise       a promise for the stream
+     * @param response   the response to use
+     * @param filename   the path to the file to serve
+     * @param fileLength the size of the file to serve
+     * @param range      the range to stream
+     * @param startTime  the start time of this request
+     * @param promise    a promise for the stream
      * @return {@code true} if the permit was acquired, {@code false} otherwise
      */
-    private boolean acquire(HttpResponse response, String filename, long fileLength, Range range, Instant startTime,
+    private boolean acquire(HttpResponse response, String filename, long fileLength, HttpRange range, Instant startTime,
                             Promise<Void> promise)
     {
         if (rateLimiter.tryAcquire())
@@ -158,8 +162,9 @@ public class FileStreamer
 
             LOGGER.debug("Retrying streaming after {} micros for client {}. Instance: {}", microsToWait,
                          response.remoteAddress(), response.host());
-            vertx.setTimer(MICROSECONDS.toMillis(microsToWait),
-                           t -> acquireAndSend(response, filename, fileLength, range, startTime, promise));
+            executorPools.service()
+                         .setTimer(MICROSECONDS.toMillis(microsToWait),
+                                   t -> acquireAndSend(response, filename, fileLength, range, startTime, promise));
         }
         else
         {
@@ -196,17 +201,17 @@ public class FileStreamer
      * @param fileLength  The length of the file
      * @return a succeeded future when the parsing is successful, a failed future when the range parsing fails
      */
-    private Future<Range> parseRangeHeader(String rangeHeader, long fileLength)
+    private Future<HttpRange> parseRangeHeader(String rangeHeader, long fileLength)
     {
-        Range fr = Range.of(0, fileLength - 1);
+        HttpRange fr = HttpRange.of(0, fileLength - 1);
         if (rangeHeader == null)
             return Future.succeededFuture(fr);
 
         try
         {
             // sidecar does not support multiple ranges as of now
-            final Range hr = Range.parseHeader(rangeHeader, fileLength);
-            Range intersect = fr.intersect(hr);
+            final HttpRange hr = HttpRange.parseHeader(rangeHeader, fileLength);
+            HttpRange intersect = fr.intersect(hr);
             LOGGER.debug("Calculated range {} for streaming", intersect);
             return Future.succeededFuture(intersect);
         }

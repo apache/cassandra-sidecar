@@ -18,24 +18,50 @@
 
 package org.apache.cassandra.sidecar.common.data;
 
+import java.util.Objects;
+
 /**
  * Represents an SSTable component that includes a keyspace, table name and component name
  */
-public class SSTableComponent extends QualifiedTableName
+public class SSTableComponent
 {
+    private final QualifiedTableName qualifiedTableName;
     private final String componentName;
 
     /**
      * Constructor for the holder class
      *
-     * @param keyspace      the keyspace in Cassandra
-     * @param tableName     the table name in Cassandra
-     * @param componentName the name of the SSTable component
+     * @param qualifiedTableName the qualified table name in Cassandra
+     * @param componentName      the name of the SSTable component
      */
-    public SSTableComponent(String keyspace, String tableName, String componentName)
+    public SSTableComponent(QualifiedTableName qualifiedTableName, String componentName)
     {
-        super(keyspace, tableName);
-        this.componentName = validator.validateComponentName(componentName);
+        this.qualifiedTableName = Objects.requireNonNull(qualifiedTableName, "qualifiedTableName must not be null");
+        this.componentName = Objects.requireNonNull(componentName, "componentName must not be null");
+    }
+
+    /**
+     * @return the qualified table name in Cassandra
+     */
+    public QualifiedTableName qualifiedTableName()
+    {
+        return qualifiedTableName;
+    }
+
+    /**
+     * @return the keyspace in Cassandra
+     */
+    public String keyspace()
+    {
+        return qualifiedTableName.keyspace();
+    }
+
+    /**
+     * @return the table name in Cassandra
+     */
+    public String tableName()
+    {
+        return qualifiedTableName.tableName();
     }
 
     /**
@@ -53,8 +79,7 @@ public class SSTableComponent extends QualifiedTableName
     public String toString()
     {
         return "SSTableComponent{" +
-               "keyspace='" + keyspace() + '\'' +
-               ", tableName='" + tableName() + '\'' +
+               "qualifiedTableName='" + qualifiedTableName + '\'' +
                ", componentName='" + componentName + '\'' +
                '}';
     }

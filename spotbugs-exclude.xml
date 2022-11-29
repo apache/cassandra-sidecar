@@ -13,8 +13,21 @@
 
     <!-- Ignore RV_RETURN_VALUE_IGNORED_BAD_PRACTICE for directory/file creation during test setup -->
     <Match>
-        <Class name="org.apache.cassandra.sidecar.snapshots.AbstractSnapshotPathBuilderTest" />
         <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
+        <Or>
+            <Class name="org.apache.cassandra.sidecar.snapshots.AbstractSnapshotPathBuilderTest" />
+            <Class name="org.apache.cassandra.sidecar.routes.SStableUploadsHandlerTest" />
+        </Or>
+    </Match>
+
+    <!-- Ignore RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT for classes that executes in the fire and forget fashion -->
+    <Match>
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT" />
+        <Or>
+            <Class name="org.apache.cassandra.sidecar.concurrent.ExecutorPools$TaskExecutorPool" />
+            <Class name="org.apache.cassandra.sidecar.CassandraSidecarDaemon" />
+            <Class name="org.apache.cassandra.sidecar.utils.SSTableImporter" />
+        </Or>
     </Match>
 
     <!-- Ignore DMI_HARDCODED_ABSOLUTE_FILENAME for testing SnapshotDirectory.of with strings that are paths -->
@@ -23,13 +36,24 @@
         <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME" />
     </Match>
 
-    <!--
-    Ignore NM_SAME_SIMPLE_NAME_AS_SUPERCLASS for our own provided CassandraContainer class. This
-    class is internal to the test and won't be exposed to the testing classes directly.
-     -->
     <Match>
-        <Class name="org.apache.cassandra.sidecar.common.containers.CassandraContainer" />
-        <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+        <Class name="org.apache.cassandra.sidecar.utils.SSTableUploader" />
+    </Match>
+
+    <Match>
+        <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD" />
+        <Class name="org.apache.cassandra.sidecar.routes.RingHandlerTest" />
+    </Match>
+
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP" />
+        <Class name="org.apache.cassandra.sidecar.client.HttpResponseImpl" />
+    </Match>
+
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2" />
+        <Class name="org.apache.cassandra.sidecar.client.HttpResponseImpl" />
     </Match>
 
 </FindBugsFilter>

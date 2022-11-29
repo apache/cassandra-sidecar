@@ -31,14 +31,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.Session;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -57,7 +54,6 @@ import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
@@ -175,20 +171,15 @@ class SchemaHandlerTest
             when(instanceMetadata.port()).thenReturn(9042);
             when(instanceMetadata.dataDirs()).thenReturn(Collections.singletonList(dataDir0.getCanonicalPath()));
             when(instanceMetadata.id()).thenReturn(instanceId);
-            when(instanceMetadata.delegate()).thenReturn(mock(CassandraAdapterDelegate.class));
-            CQLSession mockCqlSession = mock(CQLSession.class);
-            Session mockSession = mock(Session.class);
-            when(mockCqlSession.getLocalCql()).thenReturn(mockSession);
-            Cluster mockCluster = mock(Cluster.class);
+            CassandraAdapterDelegate mockCassandraAdapterDelegate = mock(CassandraAdapterDelegate.class);
+            when(instanceMetadata.delegate()).thenReturn(mockCassandraAdapterDelegate);
             Metadata mockMetadata = mock(Metadata.class);
             KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
             when(mockMetadata.exportSchemaAsString()).thenReturn("FULL SCHEMA");
             when(mockMetadata.getKeyspace("testKeyspace")).thenReturn(mockKeyspaceMetadata);
             when(mockKeyspaceMetadata.exportAsString()).thenReturn(testKeyspaceSchema);
 
-            when(mockCluster.getMetadata()).thenReturn(mockMetadata);
-            when(mockSession.getCluster()).thenReturn(mockCluster);
-            when(instanceMetadata.session()).thenReturn(mockCqlSession);
+            when(mockCassandraAdapterDelegate.metadata()).thenReturn(mockMetadata);
 
             InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
             when(mockInstancesConfig.instances()).thenReturn(Collections.singletonList(instanceMetadata));

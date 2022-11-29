@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
@@ -41,16 +42,11 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
-import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.LoggerFormatter;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
-import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
-import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -66,11 +62,12 @@ public class LoggerHandlerInjectionTest
     private Configuration config;
     private final Logger logger = mock(Logger.class);
     private HttpServer server;
+    private FakeLoggerHandler loggerHandler;
 
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        FakeLoggerHandler loggerHandler = new FakeLoggerHandler(logger);
+        loggerHandler = new FakeLoggerHandler(logger);
         Injector injector = Guice.createInjector(Modules.override(Modules.override(new MainModule())
                                                                          .with(new TestModule()))
                                                         .with(binder -> binder.bind(LoggerHandler.class)
@@ -79,20 +76,7 @@ public class LoggerHandlerInjectionTest
         config = injector.getInstance(Configuration.class);
         Router router = injector.getInstance(Router.class);
 
-        router.get("/500-route").handler(p ->
-                                         {
-                                             throw new RuntimeException("Fails with 500");
-                                         });
-
-        router.get("/404-route").handler(p ->
-                                         {
-                                             throw new HttpException(NOT_FOUND.code(), "Sorry, it's not here");
-                                         });
-
-        router.get("/204-route").handler(p ->
-                                         {
-                                             throw new HttpException(NO_CONTENT.code(), "Sorry, no content");
-                                         });
+        router.get("/fake-route").handler(promise -> promise.json("done"));
 
         VertxTestContext context = new VertxTestContext();
         server = injector.getInstance(HttpServer.class);
@@ -117,46 +101,16 @@ public class LoggerHandlerInjectionTest
         }
     }
 
-    @DisplayName("Should log at error level when the request fails with a 500 code")
+    @DisplayName("Custom log handler is invoked for every request")
     @Test
-    public void testInjectedLoggerHandlerLogsAtErrorLevel(VertxTestContext testContext)
-    {
-        helper("/500-route", testContext, INTERNAL_SERVER_ERROR.code(),
-               "Error 500: Internal Server Error");
-    }
-
-    @DisplayName("Should log at warn level when the request fails with a 404 error")
-    @Test
-    public void testInjectedLoggerHandlerLogsAtWarnLevel(VertxTestContext testContext)
-    {
-        helper("/404-route", testContext, NOT_FOUND.code(), "Error 404: Not Found");
-    }
-
-    @DisplayName("Should log at info level when the request returns with a 204 status code")
-    @Test
-    public void testInjectedLoggerHandlerLogsAtInfoLevel(VertxTestContext testContext)
-    {
-        helper("/204-route", testContext, NO_CONTENT.code(), null);
-    }
-
-    private void helper(String requestURI, VertxTestContext testContext, int expectedStatusCode, String expectedBody)
+    public void testInjectedLoggerHandlerIsCalledWhenARequestIsServed(VertxTestContext testContext)
     {
         WebClient client = WebClient.create(vertx);
-        Handler<HttpResponse<String>> responseVerifier = response -> testContext.verify(() ->
-        {
-            assertThat(response.statusCode()).isEqualTo(expectedStatusCode);
-            if (expectedBody == null)
-            {
-                assertThat(response.body()).isNull();
-            }
-            else
-            {
-                assertThat(response.body()).isEqualTo(expectedBody);
-            }
+        Handler<HttpResponse<String>> responseVerifier = response -> testContext.verify(() -> {
+            verify(logger, times(1)).info("{}", HttpResponseStatus.OK.code());
             testContext.completeNow();
-            verify(logger, times(1)).info("{}", expectedStatusCode);
         });
-        client.get(config.getPort(), "localhost", requestURI)
+        client.get(config.getPort(), "localhost", "/fake-route")
               .as(BodyCodec.string()).ssl(false)
               .send(testContext.succeeding(responseVerifier));
     }

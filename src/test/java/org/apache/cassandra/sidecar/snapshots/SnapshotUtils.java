@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.snapshots;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,19 +32,26 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
-import org.apache.cassandra.sidecar.common.CQLSession;
+import org.apache.cassandra.sidecar.common.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Utilities for testing snapshot related features
  */
 public class SnapshotUtils
 {
+    public static final String STAGING_DIR = "staging";
+
+    public static String makeStagingDir(String rootPath)
+    {
+        return rootPath + File.separatorChar + STAGING_DIR;
+    }
+
     public static void initializeTmpDirectory(File temporaryFolder) throws IOException
     {
         for (final String[] folderPath : getMockSnapshotDirectories())
@@ -78,23 +84,43 @@ public class SnapshotUtils
 
     public static InstancesConfig mockInstancesConfig(String rootPath)
     {
+        CQLSessionProvider mockSession1 = mock(CQLSessionProvider.class);
+        CQLSessionProvider mockSession2 = mock(CQLSessionProvider.class);
+        return mockInstancesConfig(rootPath, null, null, mockSession1, mockSession2);
+    }
+
+    public static InstancesConfig mockInstancesConfig(String rootPath,
+                                                      CassandraAdapterDelegate delegate1,
+                                                      CassandraAdapterDelegate delegate2,
+                                                      CQLSessionProvider cqlSessionProvider1,
+                                                      CQLSessionProvider cqlSessionProvider2)
+    {
         CassandraVersionProvider.Builder versionProviderBuilder = new CassandraVersionProvider.Builder();
         versionProviderBuilder.add(new MockCassandraFactory());
         CassandraVersionProvider versionProvider = versionProviderBuilder.build();
-        CQLSession mockSession1 = mock(CQLSession.class);
-        when(mockSession1.inet()).thenReturn(InetSocketAddress.createUnresolved("localhost", 9043));
-        CQLSession mockSession2 = mock(CQLSession.class);
-        when(mockSession2.inet()).thenReturn(InetSocketAddress.createUnresolved("localhost2", 9043));
+
+        if (delegate1 == null)
+        {
+            delegate1 = new CassandraAdapterDelegate(versionProvider, cqlSessionProvider1, null);
+        }
+
+        if (delegate2 == null)
+        {
+            delegate2 = new CassandraAdapterDelegate(versionProvider, cqlSessionProvider2, null);
+        }
+
         InstanceMetadataImpl localhost = new InstanceMetadataImpl(1,
+                                                                  "localhost",
+                                                                  9043,
                                                                   Collections.singletonList(rootPath + "/d1"),
-                                                                  mockSession1,
-                                                                  null,
-                                                                  versionProvider);
+                                                                  makeStagingDir(rootPath),
+                                                                  delegate1);
         InstanceMetadataImpl localhost2 = new InstanceMetadataImpl(2,
+                                                                   "localhost2",
+                                                                   9043,
                                                                    Collections.singletonList(rootPath + "/d2"),
-                                                                   mockSession2,
-                                                                   null,
-                                                                   versionProvider);
+                                                                   makeStagingDir(rootPath),
+                                                                   delegate2);
         List<InstanceMetadata> instanceMetas = Arrays.asList(localhost, localhost2);
         return new InstancesConfigImpl(instanceMetas);
     }
