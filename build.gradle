@@ -8,6 +8,7 @@ buildscript {
 }
 
 plugins {
+    id 'idea'
     id 'java'
     id 'java-test-fixtures'
     id 'application'
@@ -23,10 +24,7 @@ plugins {
     id 'com.google.cloud.tools.jib' version '2.2.0'
 }
 
-
-
 allprojects {
-    apply plugin: 'idea'
     apply plugin: 'jacoco'
     apply plugin: 'checkstyle'
     apply plugin: "com.github.spotbugs"
@@ -149,9 +147,13 @@ dependencies {
     testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}")
 }
 
-task copyCodeStyle(type: Copy) {
-    from "ide/idea/codeStyleSettings.xml"
+task copyIdeaSettings(type: Copy) {
+    from "ide/idea"
     into ".idea"
+}
+
+tasks.named('idea').configure {
+    dependsOn copyIdeaSettings
 }
 
 // Lets copy the distributions from build/install directory to /bin and /lib
