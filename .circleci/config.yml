@@ -47,7 +47,7 @@ jobs:
     steps:
      - checkout
 
-     - run: ./gradlew -i clean test -x :cassandra-integration-tests:test --stacktrace
+     - run: ./gradlew -i clean test -x integrationTest --stacktrace
 
      - store_artifacts:
          path: build/reports
@@ -86,7 +86,7 @@ jobs:
     steps:
       - checkout
 
-      - run: ./gradlew -i clean test -x :cassandra-integration-tests:test --stacktrace
+      - run: ./gradlew -i clean test -x integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
