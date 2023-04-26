@@ -19,6 +19,8 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.util.Objects;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -53,5 +55,25 @@ public class NodeSettings
     public String partitioner()
     {
         return partitioner;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        NodeSettings that = (NodeSettings) o;
+        return Objects.equals(releaseVersion, that.releaseVersion)
+               && Objects.equals(partitioner, that.partitioner);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public int hashCode()
+    {
+        return Objects.hash(releaseVersion, partitioner);
     }
 }

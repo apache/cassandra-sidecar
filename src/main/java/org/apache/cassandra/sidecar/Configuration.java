@@ -22,6 +22,8 @@ import javax.annotation.Nullable;
 
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
+import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 /**
  * Sidecar configuration
@@ -32,13 +34,13 @@ public class Configuration
     private final InstancesConfig instancesConfig;
 
     /* Sidecar's HTTP REST API port */
-    private final Integer port;
+    private final int port;
 
     /* Sidecar's listen address */
     private final String host;
 
     /* Healthcheck frequency in millis */
-    private final long healthCheckFrequencyMillis;
+    private final int healthCheckFrequencyMillis;
 
     /* SSL related settings */
     @Nullable
@@ -61,18 +63,51 @@ public class Configuration
 
     private final long throttleDelayInSeconds;
 
-    private final ValidationConfiguration validationConfiguration;
+    private final int allowableSkewInMinutes;
 
-    public Configuration(InstancesConfig instancesConfig, String host, Integer port, long healthCheckFrequencyMillis,
-                         boolean isSslEnabled, @Nullable String keyStorePath, @Nullable String keyStorePassword,
-                         @Nullable String trustStorePath, @Nullable String trustStorePassword,
-                         long rateLimitStreamRequestsPerSecond, long throttleTimeoutInSeconds,
-                         long throttleDelayInSeconds, ValidationConfiguration validationConfiguration)
+    private final int requestIdleTimeoutMillis;
+
+    private final long requestTimeoutMillis;
+    private final int ssTableImportPollIntervalMillis;
+
+    private final float minSpacePercentRequiredForUpload;
+
+    private final int concurrentUploadsLimit;
+
+    private final ValidationConfiguration validationConfiguration;
+    private final CacheConfiguration ssTableImportCacheConfiguration;
+    private final WorkerPoolConfiguration serverWorkerPoolConfiguration;
+    private final WorkerPoolConfiguration serverInternalWorkerPoolConfiguration;
+
+    public Configuration(InstancesConfig instancesConfig,
+                         String host,
+                         int port,
+                         int healthCheckFrequencyMillis,
+                         boolean isSslEnabled,
+                         @Nullable String keyStorePath,
+                         @Nullable String keyStorePassword,
+                         @Nullable String trustStorePath,
+                         @Nullable String trustStorePassword,
+                         long rateLimitStreamRequestsPerSecond,
+                         long throttleTimeoutInSeconds,
+                         long throttleDelayInSeconds,
+                         int allowableSkewInMinutes,
+                         int requestIdleTimeoutMillis,
+                         long requestTimeoutMillis,
+                         float minSpacePercentRequiredForUpload,
+                         int concurrentUploadsLimit,
+                         int ssTableImportPollIntervalMillis,
+                         ValidationConfiguration validationConfiguration,
+                         CacheConfiguration ssTableImportCacheConfiguration,
+                         WorkerPoolConfiguration serverWorkerPoolConfiguration,
+                         WorkerPoolConfiguration serverInternalWorkerPoolConfiguration)
     {
         this.instancesConfig = instancesConfig;
         this.host = host;
         this.port = port;
         this.healthCheckFrequencyMillis = healthCheckFrequencyMillis;
+        this.ssTableImportPollIntervalMillis = ssTableImportPollIntervalMillis;
+        this.ssTableImportCacheConfiguration = ssTableImportCacheConfiguration;
 
         this.keyStorePath = keyStorePath;
         this.keyStorePassword = keyStorePassword;
@@ -82,7 +117,45 @@ public class Configuration
         this.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond;
         this.throttleTimeoutInSeconds = throttleTimeoutInSeconds;
         this.throttleDelayInSeconds = throttleDelayInSeconds;
+        this.allowableSkewInMinutes = allowableSkewInMinutes;
+        this.requestIdleTimeoutMillis = requestIdleTimeoutMillis;
+        this.requestTimeoutMillis = requestTimeoutMillis;
+        this.minSpacePercentRequiredForUpload = minSpacePercentRequiredForUpload;
+        this.concurrentUploadsLimit = concurrentUploadsLimit;
         this.validationConfiguration = validationConfiguration;
+        this.serverWorkerPoolConfiguration = serverWorkerPoolConfiguration;
+        this.serverInternalWorkerPoolConfiguration = serverInternalWorkerPoolConfiguration;
+    }
+
+    /**
+     * Constructs a new configuration object with the given {@link Builder}
+     *
+     * @param builder the configuration builder
+     */
+    protected Configuration(Builder builder)
+    {
+        instancesConfig = builder.instancesConfig;
+        port = builder.port;
+        host = builder.host;
+        healthCheckFrequencyMillis = builder.healthCheckFrequencyMillis;
+        keyStorePath = builder.keyStorePath;
+        keyStorePassword = builder.keyStorePassword;
+        trustStorePath = builder.trustStorePath;
+        trustStorePassword = builder.trustStorePassword;
+        isSslEnabled = builder.isSslEnabled;
+        rateLimitStreamRequestsPerSecond = builder.rateLimitStreamRequestsPerSecond;
+        throttleTimeoutInSeconds = builder.throttleTimeoutInSeconds;
+        throttleDelayInSeconds = builder.throttleDelayInSeconds;
+        allowableSkewInMinutes = builder.allowableSkewInMinutes;
+        requestIdleTimeoutMillis = builder.requestIdleTimeoutMillis;
+        requestTimeoutMillis = builder.requestTimeoutMillis;
+        ssTableImportPollIntervalMillis = builder.ssTableImportPollIntervalMillis;
+        minSpacePercentRequiredForUpload = builder.minSpacePercentRequiredForUploads;
+        concurrentUploadsLimit = builder.concurrentUploadsLimit;
+        validationConfiguration = builder.validationConfiguration;
+        ssTableImportCacheConfiguration = builder.ssTableImportCacheConfiguration;
+        serverWorkerPoolConfiguration = builder.serverWorkerPoolConfiguration;
+        serverInternalWorkerPoolConfiguration = builder.serverInternalWorkerPoolConfiguration;
     }
 
     /**
@@ -94,7 +167,6 @@ public class Configuration
     }
 
     /**
-     *
      * @return the Cassandra validation configuration
      */
     public ValidationConfiguration getValidationConfiguration()
@@ -103,9 +175,7 @@ public class Configuration
     }
 
     /**
-     *  Sidecar's listen address
-     *
-     * @return
+     * @return the listen address for Sidecar
      */
     public String getHost()
     {
@@ -113,9 +183,7 @@ public class Configuration
     }
 
     /**
-     * Get the Sidecar's REST HTTP API port
-     *
-     * @return
+     * @return the Sidecar's REST HTTP API port
      */
     public Integer getPort()
     {
@@ -123,19 +191,23 @@ public class Configuration
     }
 
     /**
-     * Get the health check frequency in millis
-     *
-     * @return
+     * @return the health check frequency in milliseconds
      */
-    public long getHealthCheckFrequencyMillis()
+    public int getHealthCheckFrequencyMillis()
     {
         return healthCheckFrequencyMillis;
     }
 
     /**
-     * Get the SSL status
-     *
-     * @return
+     * @return the SSTable import poll interval in milliseconds
+     */
+    public int getSSTableImportPollIntervalMillis()
+    {
+        return ssTableImportPollIntervalMillis;
+    }
+
+    /**
+     * @return true if SSL is enabled, false otherwise
      */
     public boolean isSslEnabled()
     {
@@ -143,9 +215,7 @@ public class Configuration
     }
 
     /**
-     * Get the Keystore Path
-     *
-     * @return
+     * @return the Keystore Path
      */
     @Nullable
     public String getKeyStorePath()
@@ -154,9 +224,7 @@ public class Configuration
     }
 
     /**
-     * Get the Keystore password
-     *
-     * @return
+     * @return the Keystore password
      */
     @Nullable
     public String getKeystorePassword()
@@ -165,9 +233,7 @@ public class Configuration
     }
 
     /**
-     * Get the Truststore Path
-     *
-     * @return
+     * @return the Truststore Path
      */
     @Nullable
     public String getTrustStorePath()
@@ -176,9 +242,7 @@ public class Configuration
     }
 
     /**
-     * Get the Truststore password
-     *
-     * @return
+     * @return the Truststore password
      */
     @Nullable
     public String getTruststorePassword()
@@ -187,9 +251,7 @@ public class Configuration
     }
 
     /**
-     * Get number of stream requests accepted per second
-     *
-     * @return
+     * @return the number of stream requests accepted per second
      */
     public long getRateLimitStreamRequestsPerSecond()
     {
@@ -206,110 +268,359 @@ public class Configuration
         return throttleDelayInSeconds;
     }
 
-    /**
-     * Configuration Builder
-     */
-    public static class Builder
+    public int allowableSkewInMinutes()
     {
-        private InstancesConfig instancesConfig;
-        private String host;
-        private Integer port;
-        private Integer healthCheckFrequencyMillis;
-        private String keyStorePath;
-        private String keyStorePassword;
-        private String trustStorePath;
-        private String trustStorePassword;
-        private boolean isSslEnabled;
-        private long rateLimitStreamRequestsPerSecond;
-        private long throttleTimeoutInSeconds;
-        private long throttleDelayInSeconds;
+        return allowableSkewInMinutes;
+    }
 
-        private ValidationConfiguration validationConfiguration;
+    public int getRequestIdleTimeoutMillis()
+    {
+        return this.requestIdleTimeoutMillis;
+    }
 
-        public Builder setInstancesConfig(InstancesConfig instancesConfig)
+    public long getRequestTimeoutMillis()
+    {
+        return this.requestTimeoutMillis;
+    }
+
+    public float getMinSpacePercentRequiredForUpload()
+    {
+        return this.minSpacePercentRequiredForUpload;
+    }
+
+    public int getConcurrentUploadsLimit()
+    {
+        return this.concurrentUploadsLimit;
+    }
+
+    public CacheConfiguration ssTableImportCacheConfiguration()
+    {
+        return ssTableImportCacheConfiguration;
+    }
+
+    public WorkerPoolConfiguration serverWorkerPoolConfiguration()
+    {
+        return serverWorkerPoolConfiguration;
+    }
+
+    public WorkerPoolConfiguration serverInternalWorkerPoolConfiguration()
+    {
+        return serverInternalWorkerPoolConfiguration;
+    }
+
+    /**
+     * {@code Configuration} builder static inner class.
+     * @param <T> the type that extends Builder
+     */
+    public static class Builder<T extends Builder<T>>
+    {
+        protected InstancesConfig instancesConfig;
+        protected String host;
+        protected int port;
+        protected int healthCheckFrequencyMillis;
+        protected String keyStorePath;
+        protected String keyStorePassword;
+        protected String trustStorePath;
+        protected String trustStorePassword;
+        protected boolean isSslEnabled;
+        protected long rateLimitStreamRequestsPerSecond;
+        protected long throttleTimeoutInSeconds;
+        protected long throttleDelayInSeconds;
+        protected int allowableSkewInMinutes;
+        protected int requestIdleTimeoutMillis;
+        protected long requestTimeoutMillis;
+        protected int ssTableImportPollIntervalMillis = 100;
+        protected float minSpacePercentRequiredForUploads;
+        protected int concurrentUploadsLimit;
+        protected ValidationConfiguration validationConfiguration;
+        protected CacheConfiguration ssTableImportCacheConfiguration;
+        protected WorkerPoolConfiguration serverWorkerPoolConfiguration;
+        protected WorkerPoolConfiguration serverInternalWorkerPoolConfiguration;
+
+        protected T self()
+        {
+            //noinspection unchecked
+            return (T) this;
+        }
+
+        /**
+         * Sets the {@code instancesConfig} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param instancesConfig the {@code instancesConfig} to set
+         * @return a reference to this Builder
+         */
+        public T setInstancesConfig(InstancesConfig instancesConfig)
         {
             this.instancesConfig = instancesConfig;
-            return this;
+            return self();
         }
 
-        public Builder setHost(String host)
+        /**
+         * Sets the {@code host} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param host the {@code host} to set
+         * @return a reference to this Builder
+         */
+        public T setHost(String host)
         {
             this.host = host;
-            return this;
+            return self();
         }
 
-        public Builder setPort(Integer port)
+        /**
+         * Sets the {@code port} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param port the {@code port} to set
+         * @return a reference to this Builder
+         */
+        public T setPort(int port)
         {
             this.port = port;
-            return this;
+            return self();
         }
 
-        public Builder setHealthCheckFrequency(Integer freqMillis)
+        /**
+         * Sets the {@code healthCheckFrequencyMillis} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param freqMillis the {@code healthCheckFrequencyMillis} to set
+         * @return a reference to this Builder
+         */
+        public T setHealthCheckFrequency(int freqMillis)
         {
-            this.healthCheckFrequencyMillis = freqMillis;
-            return this;
+            healthCheckFrequencyMillis = freqMillis;
+            return self();
         }
 
-        public Builder setKeyStorePath(String path)
+        /**
+         * Sets the {@code keyStorePath} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param path the {@code keyStorePath} to set
+         * @return a reference to this Builder
+         */
+        public T setKeyStorePath(String path)
         {
-            this.keyStorePath = path;
-            return this;
+            keyStorePath = path;
+            return self();
         }
 
-        public Builder setKeyStorePassword(String password)
+        /**
+         * Sets the {@code keyStorePassword} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param password the {@code keyStorePassword} to set
+         * @return a reference to this Builder
+         */
+        public T setKeyStorePassword(String password)
         {
-            this.keyStorePassword = password;
-            return this;
+            keyStorePassword = password;
+            return self();
         }
 
-        public Builder setTrustStorePath(String path)
+        /**
+         * Sets the {@code trustStorePath} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param path the {@code trustStorePath} to set
+         * @return a reference to this Builder
+         */
+        public T setTrustStorePath(String path)
         {
-            this.trustStorePath = path;
-            return this;
+            trustStorePath = path;
+            return self();
         }
 
-        public Builder setTrustStorePassword(String password)
+        /**
+         * Sets the {@code trustStorePassword} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param password the {@code trustStorePassword} to set
+         * @return a reference to this Builder
+         */
+        public T setTrustStorePassword(String password)
         {
-            this.trustStorePassword = password;
-            return this;
+            trustStorePassword = password;
+            return self();
         }
 
-        public Builder setSslEnabled(boolean enabled)
+        /**
+         * Sets the {@code isSslEnabled} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param enabled the {@code isSslEnabled} to set
+         * @return a reference to this Builder
+         */
+        public T setSslEnabled(boolean enabled)
         {
-            this.isSslEnabled = enabled;
-            return this;
+            isSslEnabled = enabled;
+            return self();
         }
 
-        public Builder setRateLimitStreamRequestsPerSecond(long rateLimitStreamRequestsPerSecond)
+        /**
+         * Sets the {@code rateLimitStreamRequestsPerSecond} and returns a reference to this Builder enabling method
+         * chaining.
+         *
+         * @param rateLimitStreamRequestsPerSecond the {@code rateLimitStreamRequestsPerSecond} to set
+         * @return a reference to this Builder
+         */
+        public T setRateLimitStreamRequestsPerSecond(long rateLimitStreamRequestsPerSecond)
         {
             this.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond;
-            return this;
+            return self();
         }
 
-        public Builder setThrottleTimeoutInSeconds(long throttleTimeoutInSeconds)
+        /**
+         * Sets the {@code throttleTimeoutInSeconds} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param throttleTimeoutInSeconds the {@code throttleTimeoutInSeconds} to set
+         * @return a reference to this Builder
+         */
+        public T setThrottleTimeoutInSeconds(long throttleTimeoutInSeconds)
         {
             this.throttleTimeoutInSeconds = throttleTimeoutInSeconds;
-            return this;
+            return self();
         }
 
-        public Builder setThrottleDelayInSeconds(long throttleDelayInSeconds)
+        /**
+         * Sets the {@code throttleDelayInSeconds} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param throttleDelayInSeconds the {@code throttleDelayInSeconds} to set
+         * @return a reference to this Builder
+         */
+        public T setThrottleDelayInSeconds(long throttleDelayInSeconds)
         {
             this.throttleDelayInSeconds = throttleDelayInSeconds;
-            return this;
+            return self();
         }
 
-        public Builder setValidationConfiguration(ValidationConfiguration validationConfiguration)
+        /**
+         * Sets the {@code allowableSkewInMinutes} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param allowableSkewInMinutes the {@code allowableSkewInMinutes} to set
+         * @return a reference to this Builder
+         */
+        public T setAllowableSkewInMinutes(int allowableSkewInMinutes)
+        {
+            this.allowableSkewInMinutes = allowableSkewInMinutes;
+            return self();
+        }
+
+        /**
+         * Sets the {@code requestIdleTimeoutMillis} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param requestIdleTimeoutMillis the {@code requestIdleTimeoutMillis} to set
+         * @return a reference to this Builder
+         */
+        public T setRequestIdleTimeoutMillis(int requestIdleTimeoutMillis)
+        {
+            this.requestIdleTimeoutMillis = requestIdleTimeoutMillis;
+            return self();
+        }
+
+        /**
+         * Sets the {@code requestTimeoutMillis} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param requestTimeoutMillis the {@code requestTimeoutMillis} to set
+         * @return a reference to this Builder
+         */
+        public T setRequestTimeoutMillis(long requestTimeoutMillis)
+        {
+            this.requestTimeoutMillis = requestTimeoutMillis;
+            return self();
+        }
+
+        /**
+         * Sets the {@code ssTableImportPollIntervalMillis} and returns a reference to this Builder enabling method
+         * chaining.
+         *
+         * @param ssTableImportPollIntervalMillis the {@code ssTableImportPollIntervalMillis} to set
+         * @return a reference to this Builder
+         */
+        public T setSSTableImportPollIntervalMillis(int ssTableImportPollIntervalMillis)
+        {
+            this.ssTableImportPollIntervalMillis = ssTableImportPollIntervalMillis;
+            return self();
+        }
+
+        /**
+         * Sets the {@code minSpacePercentRequiredForUpload} and returns a reference to this Builder enabling method
+         * chaining.
+         *
+         * @param minSpacePercentRequiredForUploads the {@code minSpacePercentRequiredForUpload} to set
+         * @return a reference to this Builder
+         */
+        public T setMinSpacePercentRequiredForUploads(float minSpacePercentRequiredForUploads)
+        {
+            this.minSpacePercentRequiredForUploads = minSpacePercentRequiredForUploads;
+            return self();
+        }
+
+        /**
+         * Sets the {@code concurrentUploadsLimit} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param concurrentUploadsLimit the {@code concurrentUploadsLimit} to set
+         * @return a reference to this Builder
+         */
+        public T setConcurrentUploadsLimit(int concurrentUploadsLimit)
+        {
+            this.concurrentUploadsLimit = concurrentUploadsLimit;
+            return self();
+        }
+
+        /**
+         * Sets the {@code validationConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param validationConfiguration the {@code validationConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public T setValidationConfiguration(ValidationConfiguration validationConfiguration)
         {
             this.validationConfiguration = validationConfiguration;
-            return this;
+            return self();
         }
 
+        /**
+         * Sets the {@code ssTableImportCacheConfiguration} and returns a reference to this Builder enabling method
+         * chaining.
+         *
+         * @param cacheConfiguration the {@code ssTableImportCacheConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public T setSSTableImportCacheConfiguration(CacheConfiguration cacheConfiguration)
+        {
+            ssTableImportCacheConfiguration = cacheConfiguration;
+            return self();
+        }
+
+        /**
+         * Sets the {@code serverWorkerPoolConfiguration} and returns a reference to this Builder enabling method
+         * chaining.
+         *
+         * @param workerPoolConfiguration the {@code serverWorkerPoolConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public T setServerWorkerPoolConfiguration(WorkerPoolConfiguration workerPoolConfiguration)
+        {
+            serverWorkerPoolConfiguration = workerPoolConfiguration;
+            return self();
+        }
+
+        /**
+         * Sets the {@code serverInternalWorkerPoolConfiguration} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param workerPoolConfiguration the {@code serverInternalWorkerPoolConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public T setServerInternalWorkerPoolConfiguration(WorkerPoolConfiguration workerPoolConfiguration)
+        {
+            serverInternalWorkerPoolConfiguration = workerPoolConfiguration;
+            return self();
+        }
+
+        /**
+         * Returns a {@code Configuration} built from the parameters previously set.
+         *
+         * @return a {@code Configuration} built with parameters of this {@code Configuration.Builder}
+         */
         public Configuration build()
         {
-            return new Configuration(instancesConfig, host, port, healthCheckFrequencyMillis, isSslEnabled,
-                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword,
-                                     rateLimitStreamRequestsPerSecond, throttleTimeoutInSeconds,
-                                     throttleDelayInSeconds, validationConfiguration);
+            return new Configuration(this);
         }
     }
 }

@@ -18,19 +18,35 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import com.datastax.driver.core.Metadata;
+
 /**
  * Core Cassandra Adapter interface
  * For now, this is just a placeholder.  We will most likely want to define the interface to returns bits such as
- * getCompaction(), getClusterMembership, etc, which return interfaces such as ICompaction, IClusterMembership.
+ * compaction(), clusterMembership(), etc., which return interfaces such as Compaction, ClusterMembership.
  * We will need different implementations due to the slow move away from JMX towards CQL for some, but not all, actions.
  */
 public interface ICassandraAdapter
 {
-    NodeSettings getSettings();
+    /**
+     * @return metadata on the connected cluster, including known nodes and schema definitions
+     */
+    Metadata metadata();
+
+    NodeSettings nodeSettings();
 
     /**
      * @return the {@link StorageOperations} implementation for the Cassandra cluster
      */
     StorageOperations storageOperations();
 
+    /**
+     * @return the {@link ClusterMembershipOperations} implementation for handling cluster membership operations
+     */
+    ClusterMembershipOperations clusterMembershipOperations();
+
+    /**
+     * @return the {@link TableOperations} implementation for the Cassandra cluster
+     */
+    TableOperations tableOperations();
 }

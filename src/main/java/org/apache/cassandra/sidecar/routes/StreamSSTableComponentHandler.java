@@ -18,82 +18,89 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.io.FileNotFoundException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.nio.file.NoSuchFileException;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.common.data.StreamSSTableComponentRequest;
+import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * This handler validates that the component exists in the cluster and sets up the context
  * for the {@link FileStreamHandler} to stream the component back to the client
  */
 @Singleton
-public class StreamSSTableComponentHandler extends AbstractHandler
+public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTableComponentRequest>
 {
-    private static final Logger logger = LoggerFactory.getLogger(StreamSSTableComponentHandler.class);
-
     private final SnapshotPathBuilder snapshotPathBuilder;
+    private final CassandraInputValidator validator;
 
     @Inject
-    public StreamSSTableComponentHandler(SnapshotPathBuilder snapshotPathBuilder, InstancesConfig instancesConfig)
+    public StreamSSTableComponentHandler(InstanceMetadataFetcher metadataFetcher,
+                                         SnapshotPathBuilder snapshotPathBuilder,
+                                         CassandraInputValidator validator,
+                                         ExecutorPools executorPools)
     {
-        super(instancesConfig);
+        super(metadataFetcher, executorPools, validator);
         this.snapshotPathBuilder = snapshotPathBuilder;
+        this.validator = validator;
     }
 
     @Override
-    public void handle(RoutingContext context)
+    public void handleInternal(RoutingContext context,
+                               HttpServerRequest httpRequest,
+                               String host,
+                               SocketAddress remoteAddress,
+                               StreamSSTableComponentRequest request)
     {
-        final HttpServerRequest request = context.request();
-        final String host = getHost(context);
-        final SocketAddress remoteAddress = request.remoteAddress();
-        final StreamSSTableComponentRequest requestParams = extractParamsOrThrow(context);
-        logger.debug("StreamSSTableComponentHandler received request: {} from: {}. Instance: {}", requestParams,
-                     remoteAddress, host);
-
-        snapshotPathBuilder.build(host, requestParams)
-                           .onSuccess(path ->
-                           {
-                               logger.debug("StreamSSTableComponentHandler handled {} for client {}. Instance: {}",
-                                            path, remoteAddress, host);
-                               context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
-                                      .next();
-                           })
-                           .onFailure(cause ->
-                           {
-                               String errMsg =
-                               "StreamSSTableComponentHandler failed for request: {} from: {}. Instance: {}";
-                               logger.error(errMsg, requestParams, remoteAddress, host);
-                               if (cause instanceof FileNotFoundException)
-                               {
-                                   context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(),
-                                                                  cause.getMessage()));
-                               }
-                               else
-                               {
-                                   context.fail(new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
-                                                                  "Invalid request for " + requestParams));
-                               }
-                           });
+        validate(request)
+        .compose(validParams ->
+                 snapshotPathBuilder.build(host, validParams)
+                                    .onSuccess(path -> {
+                                        logger.debug("StreamSSTableComponentHandler handled {} for client {}. "
+                                                     + "Instance: {}", path, remoteAddress, host);
+                                        context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
+                                               .next();
+                                    }))
+        .onFailure(cause -> {
+            String errMsg =
+            "StreamSSTableComponentHandler failed for request: {} from: {}. Instance: {}";
+            logger.error(errMsg, request, remoteAddress, host, cause);
+            if (cause instanceof NoSuchFileException)
+            {
+                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
+            }
+            else
+            {
+                context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid request for " + request));
+            }
+        });
     }
 
-    private StreamSSTableComponentRequest extractParamsOrThrow(final RoutingContext rc)
+    @Override
+    protected StreamSSTableComponentRequest extractParamsOrThrow(RoutingContext context)
     {
-        return new StreamSSTableComponentRequest(rc.pathParam("keyspace"),
-                                                 rc.pathParam("table"),
-                                                 rc.pathParam("snapshot"),
-                                                 rc.pathParam("component")
+        return new StreamSSTableComponentRequest(qualifiedTableName(context),
+                                                 context.pathParam("snapshot"),
+                                                 context.pathParam("component")
         );
+    }
+
+    private Future<StreamSSTableComponentRequest> validate(StreamSSTableComponentRequest request)
+    {
+        validator.validateComponentName(request.componentName());
+        validator.validateSnapshotName(request.snapshotName());
+        return Future.succeededFuture(request);
     }
 }

@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 
 import org.apache.commons.configuration2.HierarchicalConfiguration;
@@ -36,44 +37,62 @@ import org.apache.commons.configuration2.tree.ImmutableNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.VertxOptions;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
-import org.apache.cassandra.sidecar.common.CQLSession;
+import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.common.utils.YAMLValidationConfiguration;
+import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_ALLOWED_CHARS_FOR_COMPONENT_NAME;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_ALLOWED_CHARS_FOR_DIRECTORY;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_FORBIDDEN_KEYSPACES;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_INPUT_VALIDATION;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_INSTANCE;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_INSTANCES;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_INSTANCE_DATA_DIRS;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_INSTANCE_HOST;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_INSTANCE_ID;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_INSTANCE_PORT;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_JMX_HOST;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_JMX_PORT;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_JMX_ROLE;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_JMX_ROLE_PASSWORD;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.CASSANDRA_JMX_SSL_ENABLED;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.HEALTH_CHECK_FREQ;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.HOST;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.KEYSTORE_PASSWORD;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.KEYSTORE_PATH;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.PORT;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.SSL_ENABLED;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.STREAM_REQUESTS_PER_SEC;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.THROTTLE_DELAY_SEC;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.THROTTLE_TIMEOUT_SEC;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.TRUSTSTORE_PASSWORD;
-import static org.apache.cassandra.sidecar.utils.YAMLKeyConstants.TRUSTSTORE_PATH;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.ALLOWABLE_SKEW_IN_MINUTES;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CACHE_EXPIRE_AFTER_ACCESS_MILLIS;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CACHE_MAXIMUM_SIZE;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_ALLOWED_CHARS_FOR_COMPONENT_NAME;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_ALLOWED_CHARS_FOR_DIRECTORY;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_FORBIDDEN_KEYSPACES;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INPUT_VALIDATION;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCES;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_DATA_DIRS;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_HOST;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_ID;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_PORT;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_UPLOADS_STAGING_DIR;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_JMX_HOST;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_JMX_PORT;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_JMX_ROLE;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_JMX_ROLE_PASSWORD;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_JMX_SSL_ENABLED;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CONCURRENT_UPLOAD_LIMIT;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.HEALTH_CHECK_INTERVAL;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.HOST;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.KEYSTORE_PASSWORD;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.KEYSTORE_PATH;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.MIN_FREE_SPACE_PERCENT_FOR_UPLOAD;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.PORT;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.REQUEST_IDLE_TIMEOUT_MILLIS;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.REQUEST_TIMEOUT_MILLIS;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.SSL_ENABLED;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.SSTABLE_IMPORT_CACHE_CONFIGURATION;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.SSTABLE_IMPORT_POLL_INTERVAL_MILLIS;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.STREAM_REQUESTS_PER_SEC;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.THROTTLE_DELAY_SEC;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.THROTTLE_TIMEOUT_SEC;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.TRUSTSTORE_PASSWORD;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.TRUSTSTORE_PATH;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.WORKER_POOL_FOR_INTERNAL;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.WORKER_POOL_FOR_SERVICE;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.WORKER_POOL_MAX_EXECUTION_TIME_MILLIS;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.WORKER_POOL_NAME;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.WORKER_POOL_SIZE;
 
 /**
  * A {@link Configuration} that is built from a YAML configuration file for Sidecar
@@ -85,7 +104,7 @@ public class YAMLSidecarConfiguration extends Configuration
     private YAMLSidecarConfiguration(InstancesConfig instancesConfig,
                                      String host,
                                      Integer port,
-                                     long healthCheckFrequencyMillis,
+                                     int healthCheckFrequencyMillis,
                                      boolean isSslEnabled,
                                      @Nullable String keyStorePath,
                                      @Nullable String keyStorePassword,
@@ -94,7 +113,16 @@ public class YAMLSidecarConfiguration extends Configuration
                                      long rateLimitStreamRequestsPerSecond,
                                      long throttleTimeoutInSeconds,
                                      long throttleDelayInSeconds,
-                                     ValidationConfiguration validationConfiguration)
+                                     int allowableSkewInMinutes,
+                                     int requestIdleTimeoutMillis,
+                                     long requestTimeoutMillis,
+                                     float minFreeSpacePercentRequiredForUpload,
+                                     int concurrentUploadsLimit,
+                                     int ssTableImportPollIntervalMillis,
+                                     ValidationConfiguration validationConfiguration,
+                                     CacheConfiguration ssTableImportCacheConfiguration,
+                                     WorkerPoolConfiguration serverWorkerPoolConfiguration,
+                                     WorkerPoolConfiguration serverInternalWorkerPoolConfiguration)
     {
         super(instancesConfig,
               host,
@@ -108,7 +136,16 @@ public class YAMLSidecarConfiguration extends Configuration
               rateLimitStreamRequestsPerSecond,
               throttleTimeoutInSeconds,
               throttleDelayInSeconds,
-              validationConfiguration);
+              allowableSkewInMinutes,
+              requestIdleTimeoutMillis,
+              requestTimeoutMillis,
+              minFreeSpacePercentRequiredForUpload,
+              concurrentUploadsLimit,
+              ssTableImportPollIntervalMillis,
+              validationConfiguration,
+              ssTableImportCacheConfiguration,
+              serverWorkerPoolConfiguration,
+              serverInternalWorkerPoolConfiguration);
     }
 
     /**
@@ -123,9 +160,20 @@ public class YAMLSidecarConfiguration extends Configuration
     public static Configuration of(String confPath, CassandraVersionProvider versionProvider) throws IOException
     {
         YAMLConfiguration yamlConf = yamlConfiguration(confPath);
-        long healthCheckFrequencyMillis = yamlConf.getLong(HEALTH_CHECK_FREQ, 1000);
+        int healthCheckFrequencyMillis = yamlConf.getInt(HEALTH_CHECK_INTERVAL, 1000);
         ValidationConfiguration validationConfiguration = validationConfiguration(yamlConf);
         InstancesConfig instancesConfig = instancesConfig(yamlConf, versionProvider, healthCheckFrequencyMillis);
+        CacheConfiguration ssTableImportCacheConfiguration = cacheConfig(yamlConf, SSTABLE_IMPORT_CACHE_CONFIGURATION,
+                                                                         TimeUnit.HOURS.toMillis(2),
+                                                                         10_000);
+        WorkerPoolConfiguration serverWorkerPoolConf = workerPoolConfiguration(yamlConf, WORKER_POOL_FOR_SERVICE,
+                                                                               "sidecar-worker-pool",
+                                                                               VertxOptions.DEFAULT_WORKER_POOL_SIZE,
+                                                                               TimeUnit.SECONDS.toMillis(60));
+        WorkerPoolConfiguration internalWorkerPoolConf = workerPoolConfiguration(yamlConf, WORKER_POOL_FOR_INTERNAL,
+                                                                                 "sidecar-internal-worker-pool",
+                                                                                 VertxOptions.DEFAULT_WORKER_POOL_SIZE,
+                                                                                 TimeUnit.SECONDS.toMillis(60));
 
         return new YAMLSidecarConfiguration(instancesConfig,
                                             yamlConf.get(String.class, HOST),
@@ -139,7 +187,16 @@ public class YAMLSidecarConfiguration extends Configuration
                                             yamlConf.getLong(STREAM_REQUESTS_PER_SEC, 5000L),
                                             yamlConf.getLong(THROTTLE_TIMEOUT_SEC, 10),
                                             yamlConf.getLong(THROTTLE_DELAY_SEC, 5),
-                                            validationConfiguration);
+                                            yamlConf.getInt(ALLOWABLE_SKEW_IN_MINUTES, 60),
+                                            yamlConf.getInt(REQUEST_IDLE_TIMEOUT_MILLIS, 300_000),
+                                            yamlConf.getLong(REQUEST_TIMEOUT_MILLIS, 300_000L),
+                                            yamlConf.getFloat(MIN_FREE_SPACE_PERCENT_FOR_UPLOAD, 10),
+                                            yamlConf.getInt(CONCURRENT_UPLOAD_LIMIT, 80),
+                                            yamlConf.getInt(SSTABLE_IMPORT_POLL_INTERVAL_MILLIS, 100),
+                                            validationConfiguration,
+                                            ssTableImportCacheConfiguration,
+                                            serverWorkerPoolConf,
+                                            internalWorkerPoolConf);
     }
 
     /**
@@ -177,7 +234,7 @@ public class YAMLSidecarConfiguration extends Configuration
      * @return the parsed {@link InstancesConfig} from the {@code yamlConf} object
      */
     private static InstancesConfig instancesConfig(YAMLConfiguration yamlConf, CassandraVersionProvider versionProvider,
-                                                   long healthCheckFrequencyMillis)
+                                                   int healthCheckFrequencyMillis)
     {
         /* Since we are supporting handling multiple instances in Sidecar optionally, we prefer reading single instance
          * data over reading multiple instances section
@@ -201,6 +258,28 @@ public class YAMLSidecarConfiguration extends Configuration
             instanceMetas.add(instanceMetadata);
         }
         return new InstancesConfigImpl(instanceMetas);
+    }
+
+    private static CacheConfiguration cacheConfig(YAMLConfiguration yamlConf, String prefix,
+                                                  long defaultExpireAfterAccessMillis, int defaultMaximumSize)
+    {
+        org.apache.commons.configuration2.Configuration cacheConf = yamlConf.subset(prefix);
+        return new CacheConfiguration(
+        cacheConf.getLong(CACHE_EXPIRE_AFTER_ACCESS_MILLIS, defaultExpireAfterAccessMillis),
+        cacheConf.getInt(CACHE_MAXIMUM_SIZE, defaultMaximumSize)
+        );
+    }
+
+    private static WorkerPoolConfiguration workerPoolConfiguration(YAMLConfiguration yamlConf, String prefix,
+                                                                   String defaultName, int defaultSize,
+                                                                   long defaultMaxExecutionTimeMillis)
+    {
+        org.apache.commons.configuration2.Configuration conf = yamlConf.subset(prefix);
+        return new WorkerPoolConfiguration(
+        conf.getString(WORKER_POOL_NAME, defaultName),
+        conf.getInt(WORKER_POOL_SIZE, defaultSize),
+        conf.getLong(WORKER_POOL_MAX_EXECUTION_TIME_MILLIS, defaultMaxExecutionTimeMillis)
+        );
     }
 
     /**
@@ -238,22 +317,26 @@ public class YAMLSidecarConfiguration extends Configuration
      */
     private static InstanceMetadata buildInstanceMetadata(org.apache.commons.configuration2.Configuration instance,
                                                           CassandraVersionProvider versionProvider,
-                                                          long healthCheckFrequencyMillis)
+                                                          int healthCheckFrequencyMillis)
     {
         int id = instance.get(Integer.class, CASSANDRA_INSTANCE_ID, 1);
         String host = instance.get(String.class, CASSANDRA_INSTANCE_HOST);
         int port = instance.get(Integer.class, CASSANDRA_INSTANCE_PORT);
         String dataDirs = instance.get(String.class, CASSANDRA_INSTANCE_DATA_DIRS);
+        String stagingDir = instance.get(String.class, CASSANDRA_INSTANCE_UPLOADS_STAGING_DIR);
         String jmxHost = instance.get(String.class, CASSANDRA_JMX_HOST, "127.0.0.1");
         int jmxPort = instance.get(Integer.class, CASSANDRA_JMX_PORT, 7199);
         String jmxRole = instance.get(String.class, CASSANDRA_JMX_ROLE, null);
         String jmxRolePassword = instance.get(String.class, CASSANDRA_JMX_ROLE_PASSWORD, null);
         boolean jmxSslEnabled = instance.get(Boolean.class, CASSANDRA_JMX_SSL_ENABLED, false);
 
-        CQLSession session = new CQLSession(host, port, healthCheckFrequencyMillis);
+        CQLSessionProvider session = new CQLSessionProvider(host, port, healthCheckFrequencyMillis);
         JmxClient jmxClient = new JmxClient(jmxHost, jmxPort, jmxRole, jmxRolePassword, jmxSslEnabled);
         return new InstanceMetadataImpl(id,
+                                        host,
+                                        port,
                                         Collections.unmodifiableList(Arrays.asList(dataDirs.split(","))),
+                                        stagingDir,
                                         session,
                                         jmxClient,
                                         versionProvider);

@@ -2,7 +2,7 @@ rootProject.name = "cassandra-sidecar"
 
 include "cassandra40"
 include "common"
+include "client"
+include "vertx-client"
+include "vertx-client-shaded"
 include "docs"
-include "cassandra-integration-tests"
-
-

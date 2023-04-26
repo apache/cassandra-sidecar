@@ -20,52 +20,47 @@ package org.apache.cassandra.sidecar.utils;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.impl.Http1xServerRequest;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * RequestUtilsTest
  */
-public class RequestUtilsTest
+class RequestUtilsTest
 {
     @Test
-    public void testAddressWithIPv4Host()
+    void testParseBooleanHeader()
     {
-        final String host = RequestUtils.extractHostAddressWithoutPort("127.0.0.1");
-        assertEquals("127.0.0.1", host);
-    }
+        HttpServerRequest mockRequest = mock(Http1xServerRequest.class);
+        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "non-existent", true)).isTrue();
+        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "non-existent-false", false)).isFalse();
 
-    @Test
-    public void testAddressIPv4HostAndPort()
-    {
-        final String host = RequestUtils.extractHostAddressWithoutPort("127.0.0.1:9043");
-        assertEquals("127.0.0.1", host);
-    }
+        when(mockRequest.getParam("false-param")).thenReturn("false");
+        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "false-param", true)).isFalse();
 
-    @Test
-    public void testAddressWithIPv6Host()
-    {
-        final String host = RequestUtils.extractHostAddressWithoutPort("2001:db8:0:0:0:ff00:42:8329");
-        assertEquals("2001:db8:0:0:0:ff00:42:8329", host);
-    }
+        when(mockRequest.getParam("fAlSe-mixed-case-param")).thenReturn("fAlSe");
+        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "fAlSe-mixed-case-param", true)).isFalse();
 
-    @Test
-    public void testAddressWithIPv6HostAndPort()
-    {
-        final String host = RequestUtils.extractHostAddressWithoutPort("[2001:db8:0:0:0:ff00:42:8329]:9043");
-        assertEquals("2001:db8:0:0:0:ff00:42:8329", host);
-    }
+        when(mockRequest.getParam("FALSE-uppercase-param")).thenReturn("FALSE");
+        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "FALSE-uppercase-param", true)).isFalse();
 
-    @Test
-    public void testAddressWithIPv6HostShortcut()
-    {
-        final String host = RequestUtils.extractHostAddressWithoutPort("::1");
-        assertEquals("::1", host);
-    }
+        when(mockRequest.getParam("true-param")).thenReturn("true");
+        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "true-param", false)).isTrue();
 
-    @Test
-    public void testAddressWithIPv6HostShortcutWithPort()
-    {
-        final String host = RequestUtils.extractHostAddressWithoutPort("[::1]:9043");
-        assertEquals("::1", host);
+        when(mockRequest.getParam("TrUe-mixed-case-param")).thenReturn("TrUe");
+        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "TrUe-mixed-case-param", false)).isTrue();
+
+        when(mockRequest.getParam("TRUE-uppercase-param")).thenReturn("TRUE");
+        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "TRUE-uppercase-param", false)).isTrue();
+
+        when(mockRequest.getParam("default-value-true")).thenReturn("not-a-valid-true");
+        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "default-value-true", false)).isFalse();
+
+        when(mockRequest.getParam("default-value-false")).thenReturn("not-a-valid-false");
+        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "default-value-false", true)).isTrue();
     }
 }

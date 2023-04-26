@@ -1,0 +1,94 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id('java-library')
+    id('idea')
+    id('maven-publish')
+}
+
+group 'org.apache.cassandra.sidecar'
+version project.version
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+test {
+    useJUnitPlatform()
+}
+
+configurations {
+    all*.exclude(group: 'ch.qos.logback')
+}
+
+// TODO: The vertx version differs from the version the server uses because the version used by the server does not
+//       support configuring daemon threads. There's a pending action on updating vertx's version for the server and
+//       keep them in sync.
+dependencies {
+    api(project(':client'))
+    api(group: 'io.vertx', name: 'vertx-web-client', version: '4.4.1') {
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
+    }
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.44.Final')  // for openSSL
+    implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
+    implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
+
+    compileOnly('org.jetbrains:annotations:23.0.0')
+
+    testImplementation(testFixtures(project(':client')))
+
+    testImplementation("io.vertx:vertx-junit5:4.4.1")
+    testImplementation("org.assertj:assertj-core:3.24.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:${project.junitVersion}")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
+    testImplementation('org.mockito:mockito-core:4.10.0')
+
+    // logging dependencies for tests
+    testImplementation("org.apache.logging.log4j:log4j-api:2.20.0")
+    testImplementation("org.apache.logging.log4j:log4j-core:2.20.0")
+    testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.20.0")
+
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            groupId project.group
+            artifactId "${archivesBaseName}"
+            version System.getenv("CODE_VERSION") ?: "${version}"
+        }
+    }
+}
+
+javadoc {
+    if (JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
+}
+
+check.dependsOn(checkstyleMain, checkstyleTest, jacocoTestReport)

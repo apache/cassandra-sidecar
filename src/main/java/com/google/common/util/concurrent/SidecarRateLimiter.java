@@ -43,7 +43,10 @@ public class SidecarRateLimiter
     // Delegated methods
 
     /**
-     * Returns earliest time permits will become available
+     * Returns the earliest time permits will become available
+     *
+     * @param nowMicros current time in micros
+     * @return earliest time permits will become available
      */
     public long queryEarliestAvailable(final long nowMicros)
     {
@@ -52,6 +55,8 @@ public class SidecarRateLimiter
 
     /**
      * Tries to reserve 1 permit, if not available immediately returns false
+     *
+     * @return {@code true} if the permit was acquired, {@code false} otherwise
      */
     public boolean tryAcquire()
     {
