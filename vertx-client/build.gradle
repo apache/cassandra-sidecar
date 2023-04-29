@@ -49,7 +49,6 @@ dependencies {
     }
     implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.44.Final')  // for openSSL
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
-    implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
 
     compileOnly('org.jetbrains:annotations:23.0.0')
 

@@ -24,7 +24,7 @@ package org.apache.cassandra.sidecar.common;
 public final class ApiEndpointsV1
 {
     public static final String API = "/api";
-    private static final String API_V1 = API + "/v1";
+    public static final String API_V1 = API + "/v1";
 
     public static final String CASSANDRA = "/cassandra";
     public static final String KEYSPACE_PATH_PARAM = ":keyspace";
@@ -33,11 +33,11 @@ public final class ApiEndpointsV1
     public static final String COMPONENT_PATH_PARAM = ":component";
     public static final String UPLOAD_ID_PATH_PARAM = ":uploadId";
 
-    private static final String PER_KEYSPACE = "/keyspaces/" + KEYSPACE_PATH_PARAM;
-    private static final String PER_TABLE = "/tables/" + TABLE_PATH_PARAM;
-    private static final String PER_SNAPSHOT = "/snapshots/" + SNAPSHOT_PATH_PARAM;
-    private static final String PER_COMPONENT = "/components/" + COMPONENT_PATH_PARAM;
-    private static final String PER_UPLOAD = "/uploads/" + UPLOAD_ID_PATH_PARAM;
+    public static final String PER_KEYSPACE = "/keyspaces/" + KEYSPACE_PATH_PARAM;
+    public static final String PER_TABLE = "/tables/" + TABLE_PATH_PARAM;
+    public static final String PER_SNAPSHOT = "/snapshots/" + SNAPSHOT_PATH_PARAM;
+    public static final String PER_COMPONENT = "/components/" + COMPONENT_PATH_PARAM;
+    public static final String PER_UPLOAD = "/uploads/" + UPLOAD_ID_PATH_PARAM;
 
     @Deprecated  // NOTE: Uses singular forms of "keyspace" and "table"
     public static final String DEPRECATED_SNAPSHOTS_ROUTE = API_V1 + "/keyspace/" + KEYSPACE_PATH_PARAM +

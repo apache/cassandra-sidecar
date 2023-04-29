@@ -64,7 +64,8 @@ public class RunnableOnStatusCodeRetryPolicy extends RetryPolicy
                            boolean canRetryOnADifferentHost,
                            RetryAction retryAction)
     {
-        if (response.statusCode() == statusCode
+        if (response != null
+            && response.statusCode() == statusCode
             && recordedAttempts.getAndIncrement() % numberOfEntriesToSkip == 0)
         {
             runnable.run();

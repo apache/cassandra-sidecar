@@ -49,10 +49,10 @@ public class SidecarClient implements AutoCloseable
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarClient.class);
 
-    RequestExecutor executor;
-    private final RetryPolicy defaultRetryPolicy;
-    private final RetryPolicy ignoreConflictRetryPolicy;
-    RequestContext.Builder baseBuilder;
+    protected RequestExecutor executor;
+    protected final RetryPolicy defaultRetryPolicy;
+    protected final RetryPolicy ignoreConflictRetryPolicy;
+    protected RequestContext.Builder baseBuilder;
 
     public SidecarClient(SidecarInstancesProvider instancesProvider,
                          RequestExecutor requestExecutor,
