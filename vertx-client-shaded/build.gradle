@@ -44,13 +44,15 @@ configurations {
 
 dependencies {
     shadow(group: 'org.slf4j', name: 'slf4j-api', version: "${project.slf4jVersion}")
+    shadow(group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.14.2')
     api(project(':vertx-client'))
 }
 
 // Relocating a Package
 shadowJar {
     archiveClassifier.set('')
-    relocate 'com.fasterxml.jackson', 'o.a.c.sidecar.client.shaded.com.fasterxml.jackson'
+    relocate 'com.fasterxml.jackson.core', 'o.a.c.sidecar.client.shaded.com.fasterxml.jackson.core'
+    relocate 'com.fasterxml.jackson.databind', 'o.a.c.sidecar.client.shaded.com.fasterxml.jackson.databind'
     relocate 'io.netty', 'o.a.c.sidecar.client.shaded.io.netty'
     relocate 'io.vertx', 'o.a.c.sidecar.client.shaded.io.vertx'
     relocate 'META-INF/native/libnetty', 'META-INF/native/sidecar_client_netty_shaded_netty'
@@ -61,6 +63,10 @@ shadowJar {
 
     dependencies {
         exclude(dependency('org.slf4j:.*:.*'))
+        // Exclude the jackson-annotations dependency so that extension clients can keep annotating POJOs
+        // without the need to use shadow annotations. For example, they can continue using
+        // com.fasterxml.jackson.annotation.JsonProperty.
+        exclude(dependency('com.fasterxml.jackson.core:jackson-annotations:.*'))
     }
 }
 
