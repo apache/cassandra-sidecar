@@ -19,6 +19,8 @@
 package org.apache.cassandra.sidecar;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
@@ -46,10 +48,9 @@ import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
-import org.apache.cassandra.sidecar.routes.CassandraHealthService;
+import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.GossipInfoHandler;
-import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
@@ -73,6 +74,9 @@ import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
  */
 public class MainModule extends AbstractModule
 {
+    public static final Map<String, String> OK_STATUS = Collections.singletonMap("status", "OK");
+    public static final Map<String, String> NOT_OK_STATUS = Collections.singletonMap("status", "NOT_OK");
+
     @Provides
     @Singleton
     public Vertx vertx()
@@ -114,17 +118,12 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    private VertxRequestHandler configureServices(Vertx vertx,
-                                                  HealthService healthService,
-                                                  CassandraHealthService cassandraHealthService)
+    private VertxRequestHandler configureServices(Vertx vertx)
     {
         VertxResteasyDeployment deployment = new VertxResteasyDeployment();
         deployment.start();
         VertxRegistry registry = deployment.getRegistry();
-
         registry.addPerInstanceResource(SwaggerOpenApiResource.class);
-        registry.addSingletonResource(healthService);
-        registry.addSingletonResource(cassandraHealthService);
 
         return new VertxRequestHandler(vertx, deployment);
     }
@@ -133,6 +132,7 @@ public class MainModule extends AbstractModule
     @Singleton
     public Router vertxRouter(Vertx vertx,
                               Configuration conf,
+                              CassandraHealthHandler cassandraHealthHandler,
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
                               FileStreamHandler fileStreamHandler,
                               SnapshotsHandler snapshotsHandler,
@@ -170,6 +170,13 @@ public class MainModule extends AbstractModule
               .handler(docs);
 
         // Add custom routers
+        // Provides a simple REST endpoint to determine if Sidecar is available
+        router.get(ApiEndpointsV1.HEALTH_ROUTE)
+              .handler(context -> context.json(OK_STATUS));
+
+        router.get(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE)
+              .handler(cassandraHealthHandler);
+
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_COMPONENTS_ROUTE)
               .handler(streamSSTableComponentHandler)

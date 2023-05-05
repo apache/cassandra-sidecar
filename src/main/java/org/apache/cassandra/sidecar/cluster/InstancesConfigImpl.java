@@ -51,12 +51,14 @@ public class InstancesConfigImpl implements InstancesConfig
         this.instanceMetadataList = instanceMetadataList;
     }
 
+    @Override
     public List<InstanceMetadata> instances()
     {
         return instanceMetadataList;
     }
 
-    public InstanceMetadata instanceFromId(int id)
+    @Override
+    public InstanceMetadata instanceFromId(int id) throws IllegalArgumentException
     {
         InstanceMetadata instanceMetadata = idToInstanceMetadata.get(id);
         if (instanceMetadata == null)
@@ -66,7 +68,8 @@ public class InstancesConfigImpl implements InstancesConfig
         return instanceMetadata;
     }
 
-    public InstanceMetadata instanceFromHost(String host)
+    @Override
+    public InstanceMetadata instanceFromHost(String host) throws IllegalArgumentException
     {
         InstanceMetadata instanceMetadata = hostToInstanceMetadata.get(host);
         if (instanceMetadata == null)

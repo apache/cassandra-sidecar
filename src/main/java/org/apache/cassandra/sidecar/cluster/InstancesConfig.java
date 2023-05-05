@@ -37,14 +37,16 @@ public interface InstancesConfig
      *
      * @param id instance's id
      * @return instance meta information
+     * @throws IllegalArgumentException when the instance with {@code id} does not exist
      */
-    InstanceMetadata instanceFromId(final int id);
+    InstanceMetadata instanceFromId(int id) throws IllegalArgumentException;
 
     /**
      * Lookup instance metadata by host name.
      *
      * @param host host address of instance
      * @return instance meta information
+     * @throws IllegalArgumentException when the instance for {@code host} does not exist
      */
-    InstanceMetadata instanceFromHost(final String host);
+    InstanceMetadata instanceFromHost(String host) throws IllegalArgumentException;
 }

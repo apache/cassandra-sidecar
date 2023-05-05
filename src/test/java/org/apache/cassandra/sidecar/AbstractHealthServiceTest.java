@@ -40,6 +40,7 @@ import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,7 +52,6 @@ public abstract class AbstractHealthServiceTest
 {
     private static final Logger logger = LoggerFactory.getLogger(AbstractHealthServiceTest.class);
     private Vertx vertx;
-    private Configuration config;
     private HttpServer server;
 
     public abstract boolean isSslEnabled();
@@ -70,10 +70,9 @@ public abstract class AbstractHealthServiceTest
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(testModule()));
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);
-        config = injector.getInstance(Configuration.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), config.getHost(), context.succeedingThenComplete());
+        server.listen(0, context.succeedingThenComplete());
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
@@ -92,11 +91,11 @@ public abstract class AbstractHealthServiceTest
 
     @DisplayName("Should return HTTP 200 OK if sidecar server is running")
     @Test
-    public void testSidecarHealthCheckReturnsOK(VertxTestContext testContext)
+    void testSidecarHealthCheckReturnsOK(VertxTestContext testContext)
     {
         WebClient client = client();
 
-        client.get(config.getPort(), "localhost", "/api/v1/__health")
+        client.get(server.actualPort(), "localhost", "/api/v1/__health")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
@@ -125,11 +124,11 @@ public abstract class AbstractHealthServiceTest
 
     @DisplayName("Should return HTTP 200 OK when cassandra instance is up")
     @Test
-    public void testHealthCheckReturns200OK(VertxTestContext testContext)
+    void testHealthCheckReturns200OK(VertxTestContext testContext)
     {
         WebClient client = client();
 
-        client.get(config.getPort(), "localhost", "/api/v1/cassandra/__health")
+        client.get(server.actualPort(), "localhost", "/api/v1/cassandra/__health")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
@@ -140,13 +139,13 @@ public abstract class AbstractHealthServiceTest
               })));
     }
 
-    @DisplayName("Should return HTTP 503 Failure when instance is down")
+    @DisplayName("Should return HTTP 503 Failure when instance is down with query param")
     @Test
-    public void testHealthCheckReturns503Failure(VertxTestContext testContext)
+    void testHealthCheckReturns503FailureWithQueryParam(VertxTestContext testContext)
     {
         WebClient client = client();
 
-        client.get(config.getPort(), "localhost", "/api/v1/cassandra/instance/2/__health")
+        client.get(server.actualPort(), "localhost", "/api/v1/cassandra/__health?instanceId=2")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
@@ -157,19 +156,21 @@ public abstract class AbstractHealthServiceTest
               })));
     }
 
-    @DisplayName("Should return HTTP 503 Failure when instance is down with query param")
+    @DisplayName("Should return HTTP 404 (NOT FOUND) when instance is not found")
     @Test
-    public void testHealthCheckReturns503FailureWithQueryParam(VertxTestContext testContext)
+    void testHealthCheckReturns404NotFound(VertxTestContext testContext)
     {
         WebClient client = client();
 
-        client.get(config.getPort(), "localhost", "/api/v1/cassandra/__health?instanceId=2")
+        // instance with ID=400 does not exist
+        client.get(server.actualPort(), "localhost", "/api/v1/cassandra/__health?instanceId=400")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
               .send(testContext.succeeding(response -> testContext.verify(() ->
               {
-                  assertThat(response.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
-                  assertThat(response.body()).isEqualTo("{\"status\":\"NOT_OK\"}");
+                  assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
+                  assertThat(response.body())
+                  .isEqualTo("{\"status\":\"Not Found\",\"code\":404,\"message\":\"Instance id 400 not found\"}");
                   testContext.completeNow();
               })));
     }
