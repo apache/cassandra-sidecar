@@ -80,8 +80,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
                                          TEST_KEYSPACE, table);
         client.put(config.getPort(), "localhost", testRoute)
               .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> context.verify(() ->
-              {
+              .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
 
                   // creating the snapshot with the same name will return a 409 (Conflict) status code
@@ -105,8 +104,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
                                          TEST_KEYSPACE, table);
         client.put(config.getPort(), "localhost", testRoute)
               .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> context.verify(() ->
-              {
+              .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
 
                   // validate that the snapshot is created
@@ -175,29 +173,25 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
 
         // first create the snapshot
         client.put(config.getPort(), "localhost", testRoute)
-              .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(createResponse -> context.verify(() ->
-              {
+              .send(context.succeeding(createResponse -> context.verify(() -> {
                   assertThat(createResponse.statusCode()).isEqualTo(OK.code());
                   ExtendedCassandraContainer container = cassandraTestContext.container;
-                  final String directory = container.execInContainer("find",
-                                                                     "/opt/cassandra/data/",
-                                                                     "-name",
-                                                                     "my-snapshot").getStdout().trim();
+                  String directory = container.execInContainer("find",
+                                                               "/opt/cassandra/data/",
+                                                               "-name",
+                                                               "my-snapshot").getStdout().trim();
                   // snapshot directory exists inside container
                   assertThat(directory).isNotBlank();
 
                   // then delete the snapshot
                   client.delete(config.getPort(), "localhost", testRoute)
-                        .expect(ResponsePredicate.SC_OK)
-                        .send(context.succeeding(deleteResponse -> context.verify(() ->
-                        {
+                        .send(context.succeeding(deleteResponse -> context.verify(() -> {
                             assertThat(deleteResponse.statusCode()).isEqualTo(OK.code());
                             // validate that the snapshot is removed
-                            final String removedDir = container.execInContainer("find",
-                                                                                "/opt/cassandra/data/",
-                                                                                "-name",
-                                                                                "my-snapshot").getStdout().trim();
+                            String removedDir = container.execInContainer("find",
+                                                                          "/opt/cassandra/data/",
+                                                                          "-name",
+                                                                          "my-snapshot").getStdout().trim();
                             assertThat(removedDir).isEmpty();
 
                             context.completeNow();

@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.util.Collections;
-import java.util.HashSet;
 import javax.servlet.ServletConfig;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -71,6 +70,6 @@ public class SwaggerOpenApiResource
     static
     {
         Reader reader = new Reader(new SwaggerConfiguration());
-        OAS = reader.read(new HashSet<>(Collections.singletonList(HealthService.class)));
+        OAS = reader.read(Collections.emptySet());
     }
 }

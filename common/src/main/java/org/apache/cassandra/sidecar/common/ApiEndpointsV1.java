@@ -26,6 +26,7 @@ public final class ApiEndpointsV1
     public static final String API = "/api";
     public static final String API_V1 = API + "/v1";
 
+    public static final String HEALTH = "/__health";
     public static final String CASSANDRA = "/cassandra";
     public static final String KEYSPACE_PATH_PARAM = ":keyspace";
     public static final String TABLE_PATH_PARAM = ":table";
@@ -38,6 +39,9 @@ public final class ApiEndpointsV1
     public static final String PER_SNAPSHOT = "/snapshots/" + SNAPSHOT_PATH_PARAM;
     public static final String PER_COMPONENT = "/components/" + COMPONENT_PATH_PARAM;
     public static final String PER_UPLOAD = "/uploads/" + UPLOAD_ID_PATH_PARAM;
+
+    public static final String HEALTH_ROUTE = API_V1 + HEALTH;
+    public static final String CASSANDRA_HEALTH_ROUTE = API_V1 + CASSANDRA + HEALTH;
 
     @Deprecated  // NOTE: Uses singular forms of "keyspace" and "table"
     public static final String DEPRECATED_SNAPSHOTS_ROUTE = API_V1 + "/keyspace/" + KEYSPACE_PATH_PARAM +

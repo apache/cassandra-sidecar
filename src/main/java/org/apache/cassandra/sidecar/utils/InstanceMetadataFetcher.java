@@ -25,8 +25,6 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.cassandra.sidecar.routes.AbstractHandler.extractHostAddressWithoutPort;
-
 /**
  * Helper class to retrieve instance information from an instanceId or hostname.
  */
@@ -53,7 +51,7 @@ public class InstanceMetadataFetcher
     {
         return host == null
                ? firstInstance()
-               : instancesConfig.instanceFromHost(extractHostAddressWithoutPort(host));
+               : instancesConfig.instanceFromHost(host);
     }
 
     /**
