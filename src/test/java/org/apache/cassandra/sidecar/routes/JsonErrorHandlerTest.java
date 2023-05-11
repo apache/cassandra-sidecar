@@ -116,7 +116,7 @@ class JsonErrorHandlerTest
     {
         VertxTestContext context = new VertxTestContext();
 
-        Router router = getRouter(vertx, displayExceptionDetails);
+        Router router = router(vertx, displayExceptionDetails);
 
         HttpServer server = vertx.createHttpServer()
                                  .requestHandler(router)
@@ -138,7 +138,7 @@ class JsonErrorHandlerTest
         assertThat(testContext.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    private Router getRouter(Vertx vertx, boolean displayExceptionDetails)
+    private Router router(Vertx vertx, boolean displayExceptionDetails)
     {
         Router router = Router.router(vertx);
         router.route().failureHandler(new JsonErrorHandler(displayExceptionDetails))

@@ -71,16 +71,16 @@ public class RingProvider
                                                                    ENDPOINT_SNITCH_INFO_OBJ_NAME);
 
         // Collect required data from the probe
-        List<String> liveNodes = probe.getLiveNodesWithPort();
-        List<String> deadNodes = probe.getUnreachableNodesWithPort();
+        List<String> liveNodes = probe.liveNodesWithPort();
+        List<String> deadNodes = probe.unreachableNodesWithPort();
         Status status = new Status(liveNodes, deadNodes);
-        List<String> joiningNodes = probe.getJoiningNodesWithPort();
-        List<String> leavingNodes = probe.getLeavingNodesWithPort();
-        List<String> movingNodes = probe.getMovingNodesWithPort();
+        List<String> joiningNodes = probe.joiningNodesWithPort();
+        List<String> leavingNodes = probe.leavingNodesWithPort();
+        List<String> movingNodes = probe.movingNodesWithPort();
         State state = new State(joiningNodes, leavingNodes, movingNodes);
-        Map<String, String> loadMap = probe.getLoadMapWithPort();
-        Map<String, String> tokensToEndpoints = probe.getTokenToEndpointWithPortMap();
-        Map<String, String> endpointsToHostIds = probe.getEndpointWithPortToHostId();
+        Map<String, String> loadMap = probe.loadMapWithPort();
+        Map<String, String> tokensToEndpoints = probe.tokenToEndpointWithPortMap();
+        Map<String, String> endpointsToHostIds = probe.endpointWithPortToHostId();
 
         boolean showEffectiveOwnership = true;
         // Calculate per-token ownership of the ring
@@ -91,7 +91,7 @@ public class RingProvider
         }
         catch (IllegalStateException ex)
         {
-            ownerships = probe.getOwnershipWithPort();
+            ownerships = probe.ownershipWithPort();
             LOGGER.warn("Unable to retrieve effective ownership information for keyspace={}", keyspace, ex);
             showEffectiveOwnership = false;
         }
@@ -106,7 +106,7 @@ public class RingProvider
             HostAndPort hap = resolve(endpoint, dnsResolver);
             Float owns = ownerships.get(endpoint);
             RingEntry ringEntry = new RingEntry.Builder()
-                                  .datacenter(epSnitchInfo.getDatacenter(endpoint))
+                                  .datacenter(epSnitchInfo.dataCenter(endpoint))
                                   .rack(queryRack(epSnitchInfo, endpoint))
                                   .status(status.of(endpoint))
                                   .state(state.of(endpoint))
@@ -201,7 +201,7 @@ public class RingProvider
     {
         try
         {
-            return epSnitchInfo.getRack(endpoint);
+            return epSnitchInfo.rack(endpoint);
         }
         catch (UnknownHostException e)
         {

@@ -43,7 +43,7 @@ public class TimeSkewInfo
      */
     public TimeSkewResponse timeSkewResponse()
     {
-        return new TimeSkewResponse(timeProvider.getCurrentTimeMillis(),
+        return new TimeSkewResponse(timeProvider.currentTimeMillis(),
                                     configuration.allowableSkewInMinutes());
     }
 }

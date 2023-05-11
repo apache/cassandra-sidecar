@@ -46,7 +46,7 @@ public class ListSnapshotFilesResponse
         snapshotFilesInfo.add(fileInfo);
     }
 
-    public List<FileInfo> getSnapshotFilesInfo()
+    public List<FileInfo> snapshotFilesInfo()
     {
         return snapshotFilesInfo;
     }

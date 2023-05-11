@@ -87,16 +87,16 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public InstancesConfig getInstancesConfig()
+    public InstancesConfig instancesConfig()
     {
-        return new InstancesConfigImpl(getInstanceMetas());
+        return new InstancesConfigImpl(instancesMetas());
     }
 
-    public List<InstanceMetadata> getInstanceMetas()
+    public List<InstanceMetadata> instancesMetas()
     {
-        InstanceMetadata instance1 = getMockInstance("localhost", 1, "src/test/resources/instance1/data", true);
-        InstanceMetadata instance2 = getMockInstance("localhost2", 2, "src/test/resources/instance2/data", false);
-        InstanceMetadata instance3 = getMockInstance("localhost3", 3, "src/test/resources/instance3/data", true);
+        InstanceMetadata instance1 = mockInstance("localhost", 1, "src/test/resources/instance1/data", true);
+        InstanceMetadata instance2 = mockInstance("localhost2", 2, "src/test/resources/instance2/data", false);
+        InstanceMetadata instance3 = mockInstance("localhost3", 3, "src/test/resources/instance3/data", true);
         final List<InstanceMetadata> instanceMetas = new ArrayList<>();
         instanceMetas.add(instance1);
         instanceMetas.add(instance2);
@@ -104,7 +104,7 @@ public class TestModule extends AbstractModule
         return instanceMetas;
     }
 
-    private InstanceMetadata getMockInstance(String host, int id, String dataDir, boolean isUp)
+    private InstanceMetadata mockInstance(String host, int id, String dataDir, boolean isUp)
     {
         InstanceMetadata instanceMeta = mock(InstanceMetadata.class);
         when(instanceMeta.id()).thenReturn(id);

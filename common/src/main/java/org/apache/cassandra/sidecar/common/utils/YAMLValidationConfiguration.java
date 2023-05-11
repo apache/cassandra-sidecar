@@ -41,22 +41,22 @@ public class YAMLValidationConfiguration implements ValidationConfiguration
         this.allowedPatternForRestrictedComponentName = allowedPatternForRestrictedComponentName;
     }
 
-    public Set<String> getForbiddenKeyspaces()
+    public Set<String> forbiddenKeyspaces()
     {
         return forbiddenKeyspaces;
     }
 
-    public String getAllowedPatternForDirectory()
+    public String allowedPatternForDirectory()
     {
         return allowedPatternForDirectory;
     }
 
-    public String getAllowedPatternForComponentName()
+    public String allowedPatternForComponentName()
     {
         return allowedPatternForComponentName;
     }
 
-    public String getAllowedPatternForRestrictedComponentName()
+    public String allowedPatternForRestrictedComponentName()
     {
         return allowedPatternForRestrictedComponentName;
     }

@@ -48,7 +48,7 @@ public class IntegrationTestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public InstancesConfig getInstancesConfig(CassandraVersionProvider versionProvider)
+    public InstancesConfig instancesConfig(CassandraVersionProvider versionProvider)
     {
         String dataDirectory = cassandraTestContext.dataDirectoryPath.toFile().getAbsolutePath();
         String uploadsStagingDirectory = cassandraTestContext.dataDirectoryPath.resolve("staging")

@@ -60,7 +60,7 @@ public class CassandraInputValidator
     {
         Objects.requireNonNull(keyspace, "keyspace must not be null");
         validatePattern(keyspace, "keyspace");
-        if (validationConfiguration.getForbiddenKeyspaces().contains(keyspace))
+        if (validationConfiguration.forbiddenKeyspaces().contains(keyspace))
             throw new HttpException(HttpResponseStatus.FORBIDDEN.code(), "Forbidden keyspace: " + keyspace);
         return keyspace;
     }
@@ -112,7 +112,7 @@ public class CassandraInputValidator
     public String validateComponentName(@NotNull String componentName)
     {
         return validateComponentNameByRegex(componentName,
-                                            validationConfiguration.getAllowedPatternForComponentName());
+                                            validationConfiguration.allowedPatternForComponentName());
     }
 
     /**
@@ -128,7 +128,7 @@ public class CassandraInputValidator
     public String validateRestrictedComponentName(@NotNull String componentName)
     {
         return validateComponentNameByRegex(componentName,
-                                            validationConfiguration.getAllowedPatternForRestrictedComponentName());
+                                            validationConfiguration.allowedPatternForRestrictedComponentName());
     }
 
     /**
@@ -159,7 +159,7 @@ public class CassandraInputValidator
      */
     private void validatePattern(String input, String name)
     {
-        if (!input.matches(validationConfiguration.getAllowedPatternForDirectory()))
+        if (!input.matches(validationConfiguration.allowedPatternForDirectory()))
             throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
                                     "Invalid characters in " + name + ": " + input);
     }

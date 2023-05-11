@@ -76,7 +76,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
     public void handle(RoutingContext context)
     {
         HttpServerRequest request = context.request();
-        String host = getHost(context);
+        String host = host(context);
         SocketAddress remoteAddress = request.remoteAddress();
         T requestParams = extractParamsOrThrow(context);
         logger.debug("{} received request={}, remoteAddress={}, instance={}",
@@ -116,7 +116,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
      * @return the host for the routing context
      * @throws HttpException when the {@code /instance/} path parameter is {@code null}
      */
-    public String getHost(RoutingContext context)
+    public String host(RoutingContext context)
     {
         if (context.request().params().contains(INSTANCE_ID))
         {

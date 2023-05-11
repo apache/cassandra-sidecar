@@ -130,9 +130,9 @@ public class SnapshotsHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   ListSnapshotFilesResponse resp = response.bodyAsJson(ListSnapshotFilesResponse.class);
-                  assertThat(resp.getSnapshotFilesInfo().size()).isEqualTo(1);
-                  assertThat(resp.getSnapshotFilesInfo()).contains(fileInfoExpected);
-                  assertThat(resp.getSnapshotFilesInfo()).doesNotContain(fileInfoNotExpected);
+                  assertThat(resp.snapshotFilesInfo().size()).isEqualTo(1);
+                  assertThat(resp.snapshotFilesInfo()).contains(fileInfoExpected);
+                  assertThat(resp.snapshotFilesInfo()).doesNotContain(fileInfoNotExpected);
                   context.completeNow();
               })));
     }
@@ -175,8 +175,8 @@ public class SnapshotsHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   ListSnapshotFilesResponse resp = response.bodyAsJson(ListSnapshotFilesResponse.class);
-                  assertThat(resp.getSnapshotFilesInfo()).containsAll(fileInfoExpected);
-                  assertThat(resp.getSnapshotFilesInfo()).doesNotContain(fileInfoNotExpected);
+                  assertThat(resp.snapshotFilesInfo()).containsAll(fileInfoExpected);
+                  assertThat(resp.snapshotFilesInfo()).doesNotContain(fileInfoNotExpected);
                   context.completeNow();
               })));
     }
@@ -240,7 +240,7 @@ public class SnapshotsHandlerTest
     {
         @Provides
         @Singleton
-        public InstancesConfig getInstancesConfig() throws IOException
+        public InstancesConfig instancesConfig() throws IOException
         {
             return mockInstancesConfig(temporaryFolder.getCanonicalPath());
         }

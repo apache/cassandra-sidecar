@@ -37,7 +37,7 @@ public class JmxClientTest
     void testJmxConnectivity(CassandraTestContext context)
     {
         String opMode = context.jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
-                                         .getOperationMode();
+                                         .operationMode();
         assertThat(opMode).isNotNull();
         assertThat(opMode).isIn("LEAVING", "JOINING", "NORMAL", "DECOMMISSIONED", "CLIENT");
     }
@@ -47,7 +47,7 @@ public class JmxClientTest
     {
         SSProxy proxy = context.jmxClient.proxy(SSProxy.class,
                                                 "org.apache.cassandra.net:type=FailureDetector");
-        String rawGossipInfo = proxy.getAllEndpointStatesWithPort();
+        String rawGossipInfo = proxy.allEndpointStatesWithPort();
         assertThat(rawGossipInfo).isNotEmpty();
         Map<String, ?> gossipInfoMap = GossipInfoParser.parse(rawGossipInfo);
         assertThat(gossipInfoMap).isNotEmpty();
@@ -66,10 +66,10 @@ public class JmxClientTest
      */
     public interface SSProxy
     {
-        String getOperationMode();
+        String operationMode();
 
         void refreshSizeEstimates();
 
-        String getAllEndpointStatesWithPort();
+        String allEndpointStatesWithPort();
     }
 }

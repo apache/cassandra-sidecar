@@ -289,8 +289,8 @@ abstract class SidecarClientTest
                                                                     "2023.04.11")
                                                  .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
-        assertThat(result.getSnapshotFilesInfo()).hasSize(1);
-        ListSnapshotFilesResponse.FileInfo fileInfo = result.getSnapshotFilesInfo().get(0);
+        assertThat(result.snapshotFilesInfo()).hasSize(1);
+        ListSnapshotFilesResponse.FileInfo fileInfo = result.snapshotFilesInfo().get(0);
         assertThat(fileInfo.size).isEqualTo(15);
         assertThat(fileInfo.host).isEqualTo("localhost1");
         assertThat(fileInfo.port).isEqualTo(2020);
@@ -327,8 +327,8 @@ abstract class SidecarClientTest
                                                                     false)
                                                  .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
-        assertThat(result.getSnapshotFilesInfo()).hasSize(1);
-        ListSnapshotFilesResponse.FileInfo fileInfo = result.getSnapshotFilesInfo().get(0);
+        assertThat(result.snapshotFilesInfo()).hasSize(1);
+        ListSnapshotFilesResponse.FileInfo fileInfo = result.snapshotFilesInfo().get(0);
         assertThat(fileInfo.size).isEqualTo(15);
         assertThat(fileInfo.host).isEqualTo("localhost1");
         assertThat(fileInfo.port).isEqualTo(2020);

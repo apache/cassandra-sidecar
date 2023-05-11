@@ -42,22 +42,22 @@ public class TestValidationConfiguration implements ValidationConfiguration
     private static final String ALLOWED_PATTERN_FOR_RESTRICTED_COMPONENT_NAME = ALLOWED_PATTERN_FOR_DIRECTORY
                                                                                   + "(.db|TOC.txt)";
 
-    public Set<String> getForbiddenKeyspaces()
+    public Set<String> forbiddenKeyspaces()
     {
         return FORBIDDEN_KEYSPACES;
     }
 
-    public String getAllowedPatternForDirectory()
+    public String allowedPatternForDirectory()
     {
         return ALLOWED_PATTERN_FOR_DIRECTORY;
     }
 
-    public String getAllowedPatternForComponentName()
+    public String allowedPatternForComponentName()
     {
         return ALLOWED_PATTERN_FOR_COMPONENT_NAME;
     }
 
-    public String getAllowedPatternForRestrictedComponentName()
+    public String allowedPatternForRestrictedComponentName()
     {
         return ALLOWED_PATTERN_FOR_RESTRICTED_COMPONENT_NAME;
     }

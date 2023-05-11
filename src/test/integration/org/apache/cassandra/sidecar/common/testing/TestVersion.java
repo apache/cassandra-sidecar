@@ -36,7 +36,7 @@ public class TestVersion
         this.image = image;
     }
 
-    public String getVersion()
+    public String version()
     {
         return version;
     }
@@ -46,7 +46,7 @@ public class TestVersion
         return factory;
     }
 
-    public String getImage()
+    public String image()
     {
         return image;
     }

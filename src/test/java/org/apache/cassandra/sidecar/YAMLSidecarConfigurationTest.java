@@ -107,11 +107,11 @@ class YAMLSidecarConfigurationTest
                                     versionProvider);
         ValidationConfiguration validationConfiguration = configuration.getValidationConfiguration();
 
-        assertThat(validationConfiguration.getForbiddenKeyspaces()).contains("a", "b", "c");
-        assertThat(validationConfiguration.getAllowedPatternForDirectory()).isEqualTo("[a-z]+");
-        assertThat(validationConfiguration.getAllowedPatternForComponentName())
+        assertThat(validationConfiguration.forbiddenKeyspaces()).contains("a", "b", "c");
+        assertThat(validationConfiguration.allowedPatternForDirectory()).isEqualTo("[a-z]+");
+        assertThat(validationConfiguration.allowedPatternForComponentName())
         .isEqualTo("(.db|.cql|.json|.crc32|TOC.txt)");
-        assertThat(validationConfiguration.getAllowedPatternForRestrictedComponentName())
+        assertThat(validationConfiguration.allowedPatternForRestrictedComponentName())
         .isEqualTo("(.db|TOC.txt)");
     }
 

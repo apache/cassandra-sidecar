@@ -44,9 +44,9 @@ import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
-import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.getSnapshot1Instance1Files;
-import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.getSnapshot1Instance2Files;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
+import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.snapshot1Instance1Files;
+import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.snapshot1Instance2Files;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -100,7 +100,7 @@ public class SnapshotSearchTest
         findAndListSnapshotHelper("localhost", "snapshot1", false,
                                   Arrays.asList(rootDir + "/d1/data/keyspace1/table1-1234/snapshots/snapshot1",
                                                 rootDir + "/d1/data/keyspace1/table2-1234/snapshots/snapshot1"),
-                                  getSnapshot1Instance1Files());
+                                  snapshot1Instance1Files());
     }
 
     @Test
@@ -110,13 +110,13 @@ public class SnapshotSearchTest
         findAndListSnapshotHelper("localhost", "snapshot1", false,
                                   Arrays.asList(rootDir + "/d1/data/keyspace1/table1-1234/snapshots/snapshot1",
                                                 rootDir + "/d1/data/keyspace1/table2-1234/snapshots/snapshot1"),
-                                  getSnapshot1Instance1Files());
+                                  snapshot1Instance1Files());
 
         // When host name is instance2's host name, we should get files of snapshot1 from instance 1
         findAndListSnapshotHelper("localhost2", "snapshot1", false,
                                   Arrays.asList(rootDir + "/d2/data/keyspace1/table1-1234/snapshots/snapshot1",
                                                 rootDir + "/d2/data/keyspace1/table2-1234/snapshots/snapshot1"),
-                                  getSnapshot1Instance2Files());
+                                  snapshot1Instance2Files());
     }
 
     // Helper methods

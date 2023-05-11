@@ -66,7 +66,7 @@ public class SchemaHandler extends AbstractHandler<SchemaRequest>
                                SocketAddress remoteAddress,
                                SchemaRequest request)
     {
-        getMetadata(host)
+        metadata(host)
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request))
         .onSuccess(metadata -> handleWithMetadata(context, request, metadata));
     }
@@ -117,7 +117,7 @@ public class SchemaHandler extends AbstractHandler<SchemaRequest>
      * @param host the Cassandra instance host
      * @return {@link Future} containing {@link Metadata}
      */
-    private Future<Metadata> getMetadata(String host)
+    private Future<Metadata> metadata(String host)
     {
         return executorPools.service().executeBlocking(promise -> {
             CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);

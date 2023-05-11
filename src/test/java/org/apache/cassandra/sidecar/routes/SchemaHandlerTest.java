@@ -162,7 +162,7 @@ class SchemaHandlerTest
     {
         @Provides
         @Singleton
-        public InstancesConfig getInstanceConfig() throws IOException
+        public InstancesConfig instanceConfig() throws IOException
         {
             final int instanceId = 100;
             final String host = "127.0.0.1";

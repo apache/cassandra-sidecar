@@ -83,26 +83,26 @@ public class ListSnapshotFilesRequestTestParameters implements RequestTestParame
     public void validateResponse(ListSnapshotFilesResponse response)
     {
         assertThat(response).isNotNull();
-        assertThat(response.getSnapshotFilesInfo()).hasSize(10);
-        assertThat(response.getSnapshotFilesInfo().get(0).fileName).isEqualTo("nb-1-big-TOC.txt");
-        assertThat(response.getSnapshotFilesInfo().get(0).size).isEqualTo(80);
-        assertThat(response.getSnapshotFilesInfo().get(1).fileName).isEqualTo("nb-1-big-Digest.crc32");
-        assertThat(response.getSnapshotFilesInfo().get(1).size).isEqualTo(10);
-        assertThat(response.getSnapshotFilesInfo().get(2).fileName).isEqualTo("nb-1-big-CRC.db");
-        assertThat(response.getSnapshotFilesInfo().get(2).size).isEqualTo(424);
-        assertThat(response.getSnapshotFilesInfo().get(3).fileName).isEqualTo("nb-1-big-Summary.db");
-        assertThat(response.getSnapshotFilesInfo().get(3).size).isEqualTo(5222);
-        assertThat(response.getSnapshotFilesInfo().get(4).fileName).isEqualTo("nb-1-big-Index.db");
-        assertThat(response.getSnapshotFilesInfo().get(4).size).isEqualTo(500769);
-        assertThat(response.getSnapshotFilesInfo().get(5).fileName).isEqualTo("manifest.json");
-        assertThat(response.getSnapshotFilesInfo().get(5).size).isEqualTo(31);
-        assertThat(response.getSnapshotFilesInfo().get(6).fileName).isEqualTo("nb-1-big-Data.db");
-        assertThat(response.getSnapshotFilesInfo().get(6).size).isEqualTo(6870000);
-        assertThat(response.getSnapshotFilesInfo().get(7).fileName).isEqualTo("schema.cql");
-        assertThat(response.getSnapshotFilesInfo().get(7).size).isEqualTo(864);
-        assertThat(response.getSnapshotFilesInfo().get(8).fileName).isEqualTo("nb-1-big-Filter.db");
-        assertThat(response.getSnapshotFilesInfo().get(8).size).isEqualTo(37512);
-        assertThat(response.getSnapshotFilesInfo().get(9).fileName).isEqualTo("nb-1-big-Statistics.db");
-        assertThat(response.getSnapshotFilesInfo().get(9).size).isEqualTo(10353);
+        assertThat(response.snapshotFilesInfo()).hasSize(10);
+        assertThat(response.snapshotFilesInfo().get(0).fileName).isEqualTo("nb-1-big-TOC.txt");
+        assertThat(response.snapshotFilesInfo().get(0).size).isEqualTo(80);
+        assertThat(response.snapshotFilesInfo().get(1).fileName).isEqualTo("nb-1-big-Digest.crc32");
+        assertThat(response.snapshotFilesInfo().get(1).size).isEqualTo(10);
+        assertThat(response.snapshotFilesInfo().get(2).fileName).isEqualTo("nb-1-big-CRC.db");
+        assertThat(response.snapshotFilesInfo().get(2).size).isEqualTo(424);
+        assertThat(response.snapshotFilesInfo().get(3).fileName).isEqualTo("nb-1-big-Summary.db");
+        assertThat(response.snapshotFilesInfo().get(3).size).isEqualTo(5222);
+        assertThat(response.snapshotFilesInfo().get(4).fileName).isEqualTo("nb-1-big-Index.db");
+        assertThat(response.snapshotFilesInfo().get(4).size).isEqualTo(500769);
+        assertThat(response.snapshotFilesInfo().get(5).fileName).isEqualTo("manifest.json");
+        assertThat(response.snapshotFilesInfo().get(5).size).isEqualTo(31);
+        assertThat(response.snapshotFilesInfo().get(6).fileName).isEqualTo("nb-1-big-Data.db");
+        assertThat(response.snapshotFilesInfo().get(6).size).isEqualTo(6870000);
+        assertThat(response.snapshotFilesInfo().get(7).fileName).isEqualTo("schema.cql");
+        assertThat(response.snapshotFilesInfo().get(7).size).isEqualTo(864);
+        assertThat(response.snapshotFilesInfo().get(8).fileName).isEqualTo("nb-1-big-Filter.db");
+        assertThat(response.snapshotFilesInfo().get(8).size).isEqualTo(37512);
+        assertThat(response.snapshotFilesInfo().get(9).fileName).isEqualTo("nb-1-big-Statistics.db");
+        assertThat(response.snapshotFilesInfo().get(9).size).isEqualTo(10353);
     }
 }

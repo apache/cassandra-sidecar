@@ -69,7 +69,7 @@ public class Cassandra40Factory implements ICassandraFactory
             @Nullable
             public Metadata metadata()
             {
-                Session activeSession = session.getLocalCql();
+                Session activeSession = session.localCql();
                 if (activeSession == null)
                 {
                     LOGGER.warn("There is no active session to Cassandra");
@@ -98,7 +98,7 @@ public class Cassandra40Factory implements ICassandraFactory
             @Nullable
             public NodeSettings nodeSettings()
             {
-                Session activeSession = session.getLocalCql();
+                Session activeSession = session.localCql();
                 if (activeSession == null)
                 {
                     return null;

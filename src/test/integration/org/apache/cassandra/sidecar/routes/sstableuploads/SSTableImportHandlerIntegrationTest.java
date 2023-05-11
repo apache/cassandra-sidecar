@@ -67,7 +67,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         // Test the import SSTable endpoint by importing data that was originally truncated.
         // Verify by querying the table contains all the results before truncation and after truncation.
 
-        Session session = getSessionOrFail(cassandraTestContext);
+        Session session = maybeGetSession(cassandraTestContext);
         createTestKeyspace(cassandraTestContext);
         QualifiedTableName tableName = createTestTableAndPopulate(cassandraTestContext, Arrays.asList("a", "b"));
 
@@ -155,7 +155,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
     private void truncateAndVerify(CassandraTestContext cassandraTestContext, QualifiedTableName qualifiedTableName)
     throws InterruptedException
     {
-        Session session = getSessionOrFail(cassandraTestContext);
+        Session session = maybeGetSession(cassandraTestContext);
         session.execute("TRUNCATE TABLE " + qualifiedTableName);
 
         while (true)
@@ -169,7 +169,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
 
     private List<String> queryValues(CassandraTestContext cassandraTestContext, QualifiedTableName tableName)
     {
-        Session session = getSessionOrFail(cassandraTestContext);
+        Session session = maybeGetSession(cassandraTestContext);
         return session.execute("SELECT id FROM " + tableName)
                       .all()
                       .stream()
@@ -182,7 +182,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
     {
         QualifiedTableName tableName = createTestTable(cassandraTestContext,
                                                        "CREATE TABLE IF NOT EXISTS %s (id text, PRIMARY KEY(id));");
-        Session session = getSessionOrFail(cassandraTestContext);
+        Session session = maybeGetSession(cassandraTestContext);
         populateTable(session, tableName, values);
         return tableName;
     }

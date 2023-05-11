@@ -58,9 +58,9 @@ public class SwaggerOpenApiResource
     @GET
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(hidden = true)
-    public Response getOpenApi(@Context HttpHeaders headers,
-                               @Context UriInfo uriInfo,
-                               @PathParam("type") String type)
+    public Response openApi(@Context HttpHeaders headers,
+                            @Context UriInfo uriInfo,
+                            @PathParam("type") String type)
     {
         return Response.status(Response.Status.OK)
                        .entity(Json.pretty(OAS))

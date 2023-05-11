@@ -164,7 +164,7 @@ class BaseUploadsHandlerTest
 
         @Provides
         @Singleton
-        public InstancesConfig getInstancesConfig() throws IOException
+        public InstancesConfig instancesConfig() throws IOException
         {
             return mockInstancesConfig(temporaryFolder.getCanonicalPath(), delegate, delegate, null, null);
         }

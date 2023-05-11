@@ -31,7 +31,7 @@ public class UnexpectedStatusCodeException extends RuntimeException
      */
     public UnexpectedStatusCodeException(int statusCode, String body)
     {
-        this(getMessage(statusCode, body), null);
+        this(message(statusCode, body), null);
     }
 
     /**
@@ -45,7 +45,7 @@ public class UnexpectedStatusCodeException extends RuntimeException
         super(message, cause);
     }
 
-    private static String getMessage(int statusCode, String body)
+    private static String message(int statusCode, String body)
     {
         String message = "Unexpected HTTP status code " + statusCode;
         return body == null ? message : message + "\n\n" + body;

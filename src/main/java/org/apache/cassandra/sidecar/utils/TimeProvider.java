@@ -28,5 +28,5 @@ public interface TimeProvider
     /**
      * @return the current time in milliseconds
      */
-    long getCurrentTimeMillis();
+    long currentTimeMillis();
 }

@@ -34,7 +34,7 @@ public interface StorageJmxOperations
      *
      * @return set of IP addresses, as Strings
      */
-    List<String> getLiveNodesWithPort();
+    List<String> liveNodesWithPort();
 
     /**
      * Retrieve the list of unreachable nodes in the cluster, as determined
@@ -42,33 +42,33 @@ public interface StorageJmxOperations
      *
      * @return set of IP addresses, as Strings
      */
-    List<String> getUnreachableNodesWithPort();
+    List<String> unreachableNodesWithPort();
 
     /**
      * Retrieve the list of nodes currently bootstrapping into the ring.
      *
      * @return set of IP addresses, as Strings
      */
-    List<String> getJoiningNodesWithPort();
+    List<String> joiningNodesWithPort();
 
     /**
      * Retrieve the list of nodes currently leaving the ring.
      *
      * @return set of IP addresses, as Strings
      */
-    List<String> getLeavingNodesWithPort();
+    List<String> leavingNodesWithPort();
 
     /**
      * Retrieve the list of nodes currently moving in the ring.
      *
      * @return set of IP addresses, as Strings
      */
-    List<String> getMovingNodesWithPort();
+    List<String> movingNodesWithPort();
 
     /**
      * Human-readable load value.  Keys are IP addresses.
      */
-    Map<String, String> getLoadMapWithPort();
+    Map<String, String> loadMapWithPort();
 
     /**
      * Retrieve a map of tokens to endpoints, including the bootstrapping
@@ -76,7 +76,7 @@ public interface StorageJmxOperations
      *
      * @return a map of tokens to endpoints in ascending order
      */
-    Map<String, String> getTokenToEndpointWithPortMap();
+    Map<String, String> tokenToEndpointWithPortMap();
 
     /**
      * Effective ownership is % of the data each node owns given the keyspace
@@ -91,12 +91,12 @@ public interface StorageJmxOperations
      * given a list of tokens (representing the nodes in the cluster), returns
      * a mapping from {@code "token -> %age of cluster owned by that token"}
      */
-    Map<String, Float> getOwnershipWithPort();
+    Map<String, Float> ownershipWithPort();
 
     /**
      * Retrieve the mapping of endpoint to host ID
      */
-    Map<String, String> getEndpointWithPortToHostId();
+    Map<String, String> endpointWithPortToHostId();
 
     /**
      * Takes the snapshot of a multiple column family from different keyspaces. A snapshot name must be specified.
@@ -122,7 +122,7 @@ public interface StorageJmxOperations
      * @return Returns a mapping of token range (represented by the first two entries in the key) to
      * a list of endpoints
      */
-    Map<List<String>, List<String>> getRangeToEndpointWithPortMap(String keyspace);
+    Map<List<String>, List<String>> rangeToEndpointWithPortMap(String keyspace);
 
     /**
      * Retrieve the list of pending node endpoints by token range for the given keyspace
@@ -131,5 +131,5 @@ public interface StorageJmxOperations
      * @return Returns a mapping of token range (represented by the first two entries in the key) to
      * a list of endpoints
      */
-    Map<List<String>, List<String>> getPendingRangeToEndpointWithPortMap(String keyspace);
+    Map<List<String>, List<String>> pendingRangeToEndpointWithPortMap(String keyspace);
 }

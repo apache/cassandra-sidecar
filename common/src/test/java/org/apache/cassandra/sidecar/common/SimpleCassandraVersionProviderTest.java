@@ -45,28 +45,28 @@ class SimpleCassandraVersionProviderTest
     @Test
     void simpleTest()
     {
-        ICassandraFactory cassandra = provider.getCassandra(SimpleCassandraVersion.create("3.0.1"));
+        ICassandraFactory cassandra = provider.cassandra(SimpleCassandraVersion.create("3.0.1"));
         assertThat(cassandra).hasSameClassAs(new V30());
     }
 
     @Test
     void equalityTest()
     {
-        ICassandraFactory cassandra = provider.getCassandra(SimpleCassandraVersion.create("3.0.0"));
+        ICassandraFactory cassandra = provider.cassandra(SimpleCassandraVersion.create("3.0.0"));
         assertThat(cassandra).hasSameClassAs(new V30());
     }
 
     @Test
     void equalityTest2()
     {
-        ICassandraFactory cassandra = provider.getCassandra(SimpleCassandraVersion.create("4.0.0"));
+        ICassandraFactory cassandra = provider.cassandra(SimpleCassandraVersion.create("4.0.0"));
         assertThat(cassandra).hasSameClassAs(new V40());
     }
 
     @Test
     void ensureHighVersionsWork()
     {
-        ICassandraFactory cassandra = provider.getCassandra(SimpleCassandraVersion.create("10.0.0"));
+        ICassandraFactory cassandra = provider.cassandra(SimpleCassandraVersion.create("10.0.0"));
         assertThat(cassandra).hasSameClassAs(new V41());
     }
 
@@ -78,7 +78,7 @@ class SimpleCassandraVersionProviderTest
                           .add(new V41())
                           .add(new V30()).build();
 
-        ICassandraFactory cassandra = provider.getCassandra(SimpleCassandraVersion.create("4.0.0"));
+        ICassandraFactory cassandra = provider.cassandra(SimpleCassandraVersion.create("4.0.0"));
         assertThat(cassandra).hasSameClassAs(new V40());
     }
 

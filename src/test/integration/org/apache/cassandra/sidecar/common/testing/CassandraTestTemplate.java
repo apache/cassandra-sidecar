@@ -73,7 +73,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
     @Override
     public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(ExtensionContext context)
     {
-        return new TestVersionSupplier().getTestVersions()
+        return new TestVersionSupplier().testVersions()
                                         .map(v -> invocationContext(v, context));
     }
 
@@ -100,7 +100,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
             @Override
             public String getDisplayName(int invocationIndex)
             {
-                return context.getDisplayName() + ": " + version.getVersion();
+                return context.getDisplayName() + ": " + version.version();
             }
 
             /**
@@ -121,7 +121,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
                     // Create a temp directory to be mounted inside the container
                     Path dataDirectoryPath = Files.createTempDirectory("cassandra-sidecar-test-");
-                    ExtendedCassandraContainer container = new ExtendedCassandraContainer(version.getImage())
+                    ExtendedCassandraContainer container = new ExtendedCassandraContainer(version.image())
                                                       // Mount the temp directory as the Cassandra data directory
                                                       .withFileSystemBind(dataDirectoryPath.toFile().getAbsolutePath(),
                                                                           CONTAINER_CASSANDRA_DATA_PATH);
@@ -132,7 +132,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                                                                         new NettyOptions());
                     JmxClient jmxClient = new JmxClient(RMI_SERVER_HOSTNAME, JMX_PORT);
 
-                    SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.getVersion());
+                    SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.version());
 
                     ICassandraAdapter cassandra = factory.create(session, jmxClient);
 

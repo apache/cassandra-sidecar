@@ -77,10 +77,10 @@ public class TokenRangeReplicaProviderTest
         Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
         readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.rangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
-        when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
+        when(storageOperations.pendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
+        when(endpointOperations.dataCenter(anyString())).thenReturn(TEST_DC1);
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Random);
         assertThat(result).isNotNull();
@@ -99,12 +99,12 @@ public class TokenRangeReplicaProviderTest
         readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
         readReplicaMappings.put(TOKEN_RANGE2, TEST_ENDPOINTS2);
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.rangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
+        when(storageOperations.pendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
 
-        when(endpointOperations.getDatacenter(startsWith("dc1_"))).thenReturn(TEST_DC1);
-        when(endpointOperations.getDatacenter(startsWith("dc2_"))).thenReturn(TEST_DC2);
+        when(endpointOperations.dataCenter(startsWith("dc1_"))).thenReturn(TEST_DC1);
+        when(endpointOperations.dataCenter(startsWith("dc2_"))).thenReturn(TEST_DC2);
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas("test_keyspace", Partitioner.Random);
         assertThat(result).isNotNull();
@@ -125,12 +125,12 @@ public class TokenRangeReplicaProviderTest
         readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
         readReplicaMappings.put(TOKEN_RANGE2, TEST_MULTI_DC_ENDPOINTS);
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.rangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
+        when(storageOperations.pendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
 
-        when(endpointOperations.getDatacenter(startsWith("dc1_"))).thenReturn(TEST_DC1);
-        when(endpointOperations.getDatacenter(startsWith("dc2_"))).thenReturn(TEST_DC2);
+        when(endpointOperations.dataCenter(startsWith("dc1_"))).thenReturn(TEST_DC1);
+        when(endpointOperations.dataCenter(startsWith("dc2_"))).thenReturn(TEST_DC2);
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas("test_keyspace", Partitioner.Random);
         assertThat(result).isNotNull();
@@ -155,11 +155,11 @@ public class TokenRangeReplicaProviderTest
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
         writeReplicaMappings.put(TOKEN_RANGE2, TEST_ENDPOINTS2);
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
+        when(storageOperations.rangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.pendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
 
-        when(endpointOperations.getDatacenter(startsWith("dc1_"))).thenReturn(TEST_DC1);
-        when(endpointOperations.getDatacenter(startsWith("dc2_"))).thenReturn(TEST_DC2);
+        when(endpointOperations.dataCenter(startsWith("dc1_"))).thenReturn(TEST_DC1);
+        when(endpointOperations.dataCenter(startsWith("dc2_"))).thenReturn(TEST_DC2);
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas("test_keyspace", Partitioner.Random);
         assertThat(result).isNotNull();
@@ -182,10 +182,10 @@ public class TokenRangeReplicaProviderTest
         );
         Map<List<String>, List<String>> pendingRangeToEndpointWithPortMap = Collections.emptyMap();
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
+        when(storageOperations.rangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
+        when(storageOperations.pendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
                 .thenReturn(pendingRangeToEndpointWithPortMap);
-        when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
+        when(endpointOperations.dataCenter(anyString())).thenReturn(TEST_DC1);
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Murmur3);
         assertThat(result).isNotNull();
@@ -216,10 +216,10 @@ public class TokenRangeReplicaProviderTest
                 Collections.singletonList("127.0.0.4:7000")
         );
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
+        when(storageOperations.rangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
+        when(storageOperations.pendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
                 .thenReturn(pendingRangeToEndpointWithPortMap);
-        when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
+        when(endpointOperations.dataCenter(anyString())).thenReturn(TEST_DC1);
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Murmur3);
         assertThat(result).isNotNull();
@@ -251,10 +251,10 @@ public class TokenRangeReplicaProviderTest
         );
         Map<List<String>, List<String>> pendingRangeToEndpointWithPortMap = Collections.emptyMap();
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
+        when(storageOperations.rangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
+        when(storageOperations.pendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
                 .thenReturn(pendingRangeToEndpointWithPortMap);
-        when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
+        when(endpointOperations.dataCenter(anyString())).thenReturn(TEST_DC1);
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Murmur3);
         assertThat(result).isNotNull();

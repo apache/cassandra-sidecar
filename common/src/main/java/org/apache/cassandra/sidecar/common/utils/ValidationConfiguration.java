@@ -28,21 +28,21 @@ public interface ValidationConfiguration
     /**
      * @return a set of forbidden keyspaces
      */
-    Set<String> getForbiddenKeyspaces();
+    Set<String> forbiddenKeyspaces();
 
     /**
      * @return a regular expression for an allowed pattern for directory names
      * (i.e. keyspace directory name or table directory name)
      */
-    String getAllowedPatternForDirectory();
+    String allowedPatternForDirectory();
 
     /**
      * @return a regular expression for an allowed pattern for component names
      */
-    String getAllowedPatternForComponentName();
+    String allowedPatternForComponentName();
 
     /**
      * @return a regular expression to an allowed pattern for a subset of component names
      */
-    String getAllowedPatternForRestrictedComponentName();
+    String allowedPatternForRestrictedComponentName();
 }

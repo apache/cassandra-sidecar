@@ -109,7 +109,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     private void healthCheckInternal()
     {
-        Session activeSession = cqlSessionProvider.getLocalCql();
+        Session activeSession = cqlSessionProvider.localCql();
         if (activeSession == null)
         {
             logger.info("No local CQL session is available. Cassandra is down presumably.");
@@ -132,7 +132,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 // update the nodeSettings cache.
                 SimpleCassandraVersion previousVersion = currentVersion;
                 currentVersion = SimpleCassandraVersion.create(releaseVersion);
-                adapter = versionProvider.getCassandra(releaseVersion)
+                adapter = versionProvider.cassandra(releaseVersion)
                                          .create(cqlSessionProvider, jmxClient);
                 nodeSettings = newNodeSettings;
                 logger.info("Cassandra version change detected (from={} to={}). New adapter loaded={}",
@@ -159,7 +159,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     @Override
     public Metadata metadata()
     {
-        return getFromAdapter(ICassandraAdapter::metadata);
+        return fromAdapter(ICassandraAdapter::metadata);
     }
 
     /**
@@ -176,21 +176,21 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     @Override
     public StorageOperations storageOperations()
     {
-        return getFromAdapter(ICassandraAdapter::storageOperations);
+        return fromAdapter(ICassandraAdapter::storageOperations);
     }
 
     @Nullable
     @Override
     public ClusterMembershipOperations clusterMembershipOperations()
     {
-        return getFromAdapter(ICassandraAdapter::clusterMembershipOperations);
+        return fromAdapter(ICassandraAdapter::clusterMembershipOperations);
     }
 
     @Nullable
     @Override
     public TableOperations tableOperations()
     {
-        return getFromAdapter(ICassandraAdapter::tableOperations);
+        return fromAdapter(ICassandraAdapter::tableOperations);
     }
 
     @Override
@@ -234,7 +234,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     public void close()
     {
-        Session activeSession = cqlSessionProvider.getLocalCql();
+        Session activeSession = cqlSessionProvider.localCql();
         if (activeSession != null)
         {
             maybeUnregisterHostListener(activeSession);
@@ -243,14 +243,14 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         nodeSettings = null;
     }
 
-    public SimpleCassandraVersion getVersion()
+    public SimpleCassandraVersion version()
     {
         healthCheck();
         return currentVersion;
     }
 
     @Nullable
-    private <T> T getFromAdapter(Function<ICassandraAdapter, T> getter)
+    private <T> T fromAdapter(Function<ICassandraAdapter, T> getter)
     {
         ICassandraAdapter localAdapter = this.adapter;
         return localAdapter == null ? null : getter.apply(localAdapter);

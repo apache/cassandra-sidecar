@@ -37,7 +37,7 @@ class DelegateTest
     {
         CassandraVersionProvider provider = new CassandraVersionProvider.Builder().add(new V30()).build();
         CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(provider, context.session, context.jmxClient);
-        SimpleCassandraVersion version = delegate.getVersion();
+        SimpleCassandraVersion version = delegate.version();
         assertThat(version).isNotNull();
     }
 

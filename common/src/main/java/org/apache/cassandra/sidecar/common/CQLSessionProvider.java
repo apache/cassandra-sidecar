@@ -86,7 +86,7 @@ public class CQLSessionProvider
      * @return Session
      */
     @Nullable
-    public synchronized Session getLocalCql()
+    public synchronized Session localCql()
     {
         Cluster cluster = null;
         try

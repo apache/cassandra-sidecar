@@ -38,7 +38,7 @@ public class CassandraVersionProvider
     }
 
     @VisibleForTesting
-    public List<ICassandraFactory> getAllVersions()
+    public List<ICassandraFactory> allVersions()
     {
         return this.versions;
     }
@@ -51,7 +51,7 @@ public class CassandraVersionProvider
      * @param requestedVersion the requested Cassandra version
      * @return the factory for the requested Cassandra version
      */
-    public ICassandraFactory getCassandra(SimpleCassandraVersion requestedVersion)
+    public ICassandraFactory cassandra(SimpleCassandraVersion requestedVersion)
     {
         ICassandraFactory result = versions.get(0);
 
@@ -79,10 +79,10 @@ public class CassandraVersionProvider
      * @throws IllegalArgumentException if the provided string does not
      *                                  represent a version
      */
-    ICassandraFactory getCassandra(String requestedVersion)
+    ICassandraFactory cassandra(String requestedVersion)
     {
         SimpleCassandraVersion version = SimpleCassandraVersion.create(requestedVersion);
-        return getCassandra(version);
+        return cassandra(version);
     }
 
     /**

@@ -47,6 +47,6 @@ public class Cassandra40ClusterMembershipOperations implements ClusterMembership
     public String gossipInfo()
     {
         return jmxClient.proxy(ClusterMembershipJmxOperations.class, FAILURE_DETECTOR_OBJ_NAME)
-                        .getAllEndpointStatesWithPort();
+                        .allEndpointStatesWithPort();
     }
 }

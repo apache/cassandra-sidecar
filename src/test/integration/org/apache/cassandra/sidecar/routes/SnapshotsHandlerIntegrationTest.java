@@ -211,7 +211,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     {
         QualifiedTableName tableName = createTestTable(cassandraTestContext,
                                                        "CREATE TABLE %s (id text PRIMARY KEY, name text);");
-        Session session = getSessionOrFail(cassandraTestContext);
+        Session session = maybeGetSession(cassandraTestContext);
 
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('1', 'Francisco');");
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('2', 'Saranya');");

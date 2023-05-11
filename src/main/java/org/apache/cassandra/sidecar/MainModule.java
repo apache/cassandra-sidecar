@@ -76,7 +76,7 @@ public class MainModule extends AbstractModule
 {
     @Provides
     @Singleton
-    public Vertx getVertx()
+    public Vertx vertx()
     {
         return Vertx.vertx(new VertxOptions().setMetricsOptions(new DropwizardMetricsOptions()
                                                                 .setEnabled(true)
@@ -247,7 +247,7 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public InstancesConfig getInstancesConfig(Configuration configuration)
+    public InstancesConfig instancesConfig(Configuration configuration)
     {
         return configuration.getInstancesConfig();
     }
@@ -284,7 +284,7 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public TimeProvider getTimeProvider()
+    public TimeProvider timeProvider()
     {
         return TimeProvider.DEFAULT_TIME_PROVIDER;
     }

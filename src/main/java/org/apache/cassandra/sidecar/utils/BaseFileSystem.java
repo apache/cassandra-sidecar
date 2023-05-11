@@ -66,7 +66,7 @@ public class BaseFileSystem
      * @param host the host
      * @return the data directories for the given {@code host}
      */
-    protected Future<List<String>> getDataDirectories(String host)
+    protected Future<List<String>> dataDirectories(String host)
     {
         List<String> dataDirs = instancesConfig.instanceFromHost(host).dataDirs();
         if (dataDirs == null || dataDirs.isEmpty())

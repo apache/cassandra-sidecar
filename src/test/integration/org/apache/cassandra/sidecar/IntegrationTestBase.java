@@ -100,7 +100,7 @@ public abstract class IntegrationTestBase
 
     protected void createTestKeyspace(CassandraTestContext cassandraTestContext)
     {
-        Session session = getSessionOrFail(cassandraTestContext);
+        Session session = maybeGetSession(cassandraTestContext);
 
         session.execute(
         "CREATE KEYSPACE " + TEST_KEYSPACE +
@@ -111,15 +111,15 @@ public abstract class IntegrationTestBase
 
     protected QualifiedTableName createTestTable(CassandraTestContext cassandraTestContext, String createTableStatement)
     {
-        Session session = getSessionOrFail(cassandraTestContext);
+        Session session = maybeGetSession(cassandraTestContext);
         QualifiedTableName tableName = uniqueTestTableFullName();
         session.execute(String.format(createTableStatement, tableName));
         return tableName;
     }
 
-    protected Session getSessionOrFail(CassandraTestContext cassandraTestContext)
+    protected Session maybeGetSession(CassandraTestContext cassandraTestContext)
     {
-        Session session = cassandraTestContext.session.getLocalCql();
+        Session session = cassandraTestContext.session.localCql();
         assertThat(session).isNotNull();
         return session;
     }

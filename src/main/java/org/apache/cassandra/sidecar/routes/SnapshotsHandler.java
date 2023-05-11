@@ -234,7 +234,7 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
     {
         ExecutorPools.TaskExecutorPool pool = executorPools.service();
         pool.executeBlocking(promise -> {
-                CassandraAdapterDelegate delegate = metadataFetcher.delegate(getHost(context));
+                CassandraAdapterDelegate delegate = metadataFetcher.delegate(host(context));
                 StorageOperations storageOperations = delegate.storageOperations();
                 if (storageOperations == null)
                     throw cassandraServiceUnavailable();
@@ -314,7 +314,7 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
                .compose(snapshotDirectory ->
                         executorPools.service().executeBlocking(promise -> {
                             CassandraAdapterDelegate delegate =
-                            metadataFetcher.delegate(getHost(context));
+                            metadataFetcher.delegate(host(context));
                             StorageOperations storageOperations = delegate.storageOperations();
                             if (storageOperations == null)
                                 throw cassandraServiceUnavailable();

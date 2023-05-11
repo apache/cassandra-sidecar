@@ -49,7 +49,7 @@ class StatusTest
     void testSomething(CassandraTestContext context)
     {
         logger.info("test context in test {}", context);
-        Session session = context.session.getLocalCql();
+        Session session = context.session.localCql();
         assertThat(session).isNotNull();
         assert session != null; // quiet spotbugs
         ResultSet rs = session.execute("SELECT * from system.peers_v2");

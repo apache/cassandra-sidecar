@@ -37,7 +37,7 @@ import org.apache.cassandra.sidecar.common.dns.DnsResolver;
  */
 public class TestVersionSupplier
 {
-    Stream<TestVersion> getTestVersions()
+    Stream<TestVersion> testVersions()
     {
         return Stream.of(new TestVersion("4.0.7", new Cassandra40Factory(DnsResolver.DEFAULT), "cassandra:4.0"));
     }

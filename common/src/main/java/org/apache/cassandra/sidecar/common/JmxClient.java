@@ -97,7 +97,7 @@ public class JmxClient implements NotificationListener
             String[] credentials = new String[]{ role, password };
             jmxEnv.put(JMXConnector.CREDENTIALS, credentials);
         }
-        jmxEnv.put(REGISTRY_CONTEXT_SOCKET_FACTORY, getRMIClientSocketFactory(enableSsl));
+        jmxEnv.put(REGISTRY_CONTEXT_SOCKET_FACTORY, RMIClientSocketFactory(enableSsl));
     }
 
     /**
@@ -125,7 +125,7 @@ public class JmxClient implements NotificationListener
         }
     }
 
-    private RMIClientSocketFactory getRMIClientSocketFactory(boolean enableSsl)
+    private RMIClientSocketFactory RMIClientSocketFactory(boolean enableSsl)
     {
         return enableSsl
                ? new SslRMIClientSocketFactory()

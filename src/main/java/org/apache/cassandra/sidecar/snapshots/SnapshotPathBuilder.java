@@ -91,7 +91,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
     {
         validate(request);
         // Search for the file
-        return getDataDirectories(host)
+        return dataDirectories(host)
                .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
                .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.tableName()))
                .compose(tableDirectory -> findComponent(tableDirectory, request.snapshotName(),
@@ -109,7 +109,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
      */
     public Future<String> build(String host, SnapshotRequest request)
     {
-        return getDataDirectories(host)
+        return dataDirectories(host)
                .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
                .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.tableName()))
                .compose(tableDirectory -> findSnapshotDirectory(tableDirectory, request.snapshotName()));
@@ -223,7 +223,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
      */
     public Future<List<String>> findSnapshotDirectories(String host, String snapshotName)
     {
-        return getDataDirectories(host)
+        return dataDirectories(host)
                .compose(dataDirs -> findSnapshotDirectoriesRecursively(dataDirs, snapshotName));
     }
 
@@ -346,7 +346,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
     protected Future<String> findTableDirectory(String baseDirectory, String tableName)
     {
         return fs.readDir(baseDirectory, tableName + "($|-.*)") // match exact table name or table-.*
-                 .compose(list -> getLastModifiedTableDirectory(list, tableName));
+                 .compose(list -> lastModifiedTableDirectory(list, tableName));
     }
 
     /**
@@ -401,7 +401,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
      * @param tableName the name of the Cassandra table
      * @return a future with the last modified directory from the list, or a failed future when there are no directories
      */
-    protected Future<String> getLastModifiedTableDirectory(List<String> fileList, String tableName)
+    protected Future<String> lastModifiedTableDirectory(List<String> fileList, String tableName)
     {
         if (fileList.size() == 0)
         {
