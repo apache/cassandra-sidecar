@@ -2,7 +2,7 @@
 <Configuration status="ERROR">
     <Properties>
         <Property name="LOG_PATTERN">%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} %p %m%n</Property>
-        <Property name="APP_LOG_ROOT">c:/temp</Property>
+        <Property name="APP_LOG_ROOT">/var/log/</Property>
     </Properties>
 
     <Appenders>

@@ -83,7 +83,6 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
         if (this.partitioner != other.partitioner)
             throw new IllegalStateException("Token ranges being compared do not have the same partitioner");
 
-        // TODO
         BigInteger maxValue = this.partitioner.maxToken;
         if (this.start.compareTo(other.start) == 0)
         {
@@ -130,7 +129,6 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
         BigInteger maxValue = this.partitioner.maxToken;
         if (this.start.compareTo(other.start) >= 0)
         {
-            // TODO:
             if (other.end.equals(maxValue)) return true;
             if (this.end.equals(maxValue)) return false;
             if (this.end.compareTo(other.end) <= 0) return true;
