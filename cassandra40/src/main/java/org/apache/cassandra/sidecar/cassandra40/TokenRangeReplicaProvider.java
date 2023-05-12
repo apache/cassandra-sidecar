@@ -60,9 +60,9 @@ public class TokenRangeReplicaProvider
         StorageJmxOperations storage = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);
 
         // Retrieve map of primary token ranges to endpoints that describe the ring topology
-        Map<List<String>, List<String>> rangeToEndpointMappings = storage.rangeToEndpointWithPortMap(keyspace);
+        Map<List<String>, List<String>> rangeToEndpointMappings = storage.getRangeToEndpointWithPortMap(keyspace);
         // Pending ranges include bootstrap tokens and leaving endpoints as represented in the Cassandra TokenMetadata
-        Map<List<String>, List<String>> pendingRangeMappings = storage.pendingRangeToEndpointWithPortMap(keyspace);
+        Map<List<String>, List<String>> pendingRangeMappings = storage.getPendingRangeToEndpointWithPortMap(keyspace);
 
         Stream<String> hostsStream = Stream.concat(rangeToEndpointMappings.values().stream().flatMap(List::stream),
                                                    pendingRangeMappings.values().stream().flatMap(List::stream));
@@ -148,7 +148,7 @@ public class TokenRangeReplicaProvider
     {
         try
         {
-            return endpointSnitchInfo.dataCenter(host);
+            return endpointSnitchInfo.getDatacenter(host);
         }
         catch (UnknownHostException e)
         {

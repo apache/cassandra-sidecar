@@ -29,5 +29,5 @@ public interface ClusterMembershipJmxOperations
      * Retrieves gossip info with ports included for the nodes
      * @return gossip info text
      */
-    String allEndpointStatesWithPort();
+    String getAllEndpointStatesWithPort();
 }

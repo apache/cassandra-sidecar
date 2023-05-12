@@ -46,6 +46,7 @@ public class ListSnapshotFilesResponse
         snapshotFilesInfo.add(fileInfo);
     }
 
+    @JsonProperty("snapshotFilesInfo")
     public List<FileInfo> snapshotFilesInfo()
     {
         return snapshotFilesInfo;

@@ -33,7 +33,7 @@ public interface EndpointSnitchJmxOperations
      * @param host the ip or hostname
      * @throws UnknownHostException when the host is not resolved
      */
-    String rack(String host) throws UnknownHostException;
+    String getRack(String host) throws UnknownHostException;
 
     /**
      * Provides the Datacenter name depending on the respective snitch used, given the hostname/ip
@@ -41,5 +41,5 @@ public interface EndpointSnitchJmxOperations
      * @param host the ip or hostname
      * @throws UnknownHostException when the host is not resolved
      */
-    String dataCenter(String host) throws UnknownHostException;
+    String getDatacenter(String host) throws UnknownHostException;
 }

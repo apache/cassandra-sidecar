@@ -60,7 +60,7 @@ public class SidecarLoggerHandler implements LoggerHandler
     @Override
     public void handle(RoutingContext context)
     {
-        context.addBodyEndHandler((Void) -> {
+        context.addBodyEndHandler(v -> {
             if (context.statusCode() >= 500 && context.failure() != null)
             {
                 LOGGER.error("Server error code={}, path={}, params={}", context.statusCode(),
