@@ -22,7 +22,6 @@ import java.nio.file.NoSuchFileException;
 
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
@@ -30,8 +29,6 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
-
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * Manages cleaning up uploaded SSTables
@@ -69,12 +66,6 @@ public class SSTableCleanupHandler extends AbstractHandler<String>
                                SocketAddress remoteAddress,
                                String uploadId)
     {
-        if (context.request().method() != HttpMethod.DELETE)
-        {
-            context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Unknown API requested"));
-            return;
-        }
-
         uploadPathBuilder.resolveStagingDirectory(host, uploadId)
                          .compose(uploadPathBuilder::isValidDirectory)
                          .compose(stagingDirectory -> context.vertx()

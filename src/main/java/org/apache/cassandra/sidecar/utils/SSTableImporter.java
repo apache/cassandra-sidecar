@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Predicate;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -288,11 +287,6 @@ public class SSTableImporter
         public void unlock()
         {
             isQueueInUse.set(false);
-        }
-
-        public boolean removeIf(Predicate<? super Pair<Promise<Void>, ImportOptions>> filter)
-        {
-            return super.removeIf(filter);
         }
     }
 

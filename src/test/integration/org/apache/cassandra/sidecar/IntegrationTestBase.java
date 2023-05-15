@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Base class for integration test.
- * Start a docker container of cassandra at the begining of each test, and
+ * Start a docker container of cassandra at the beginning of each test, and
  * teardown the container after each test.
  */
 public abstract class IntegrationTestBase

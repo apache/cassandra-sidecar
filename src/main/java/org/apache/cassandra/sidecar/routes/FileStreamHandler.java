@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.vertx.core.Future;

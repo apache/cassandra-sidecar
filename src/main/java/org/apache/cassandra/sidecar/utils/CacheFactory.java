@@ -92,7 +92,7 @@ public class CacheFactory
                        .removalListener((RemovalListener<SSTableImporter.ImportOptions, Future<Void>>)
                                         (options, result, cause) -> {
                                             LOGGER.debug("Removed entry '{}' with options '{}' from SSTable Import " +
-                                                         "Cache  and cause {}", result, options, cause);
+                                                         "Cache and cause {}", result, options, cause);
                                             ssTableImporter.cancelImport(options);
                                         }
                        )

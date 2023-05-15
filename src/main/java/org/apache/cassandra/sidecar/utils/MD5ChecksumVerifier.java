@@ -40,6 +40,7 @@ import io.vertx.ext.web.handler.HttpException;
 public class MD5ChecksumVerifier implements ChecksumVerifier
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(MD5ChecksumVerifier.class);
+    public static final int DEFAULT_READ_BUFFER_SIZE = 64 * 1024; // 64KiB
     private final FileSystem fs;
 
     public MD5ChecksumVerifier(FileSystem fs)
@@ -87,7 +88,7 @@ public class MD5ChecksumVerifier implements ChecksumVerifier
 
         Promise<String> result = Promise.promise();
         file.pause()
-            .setReadBufferSize(64 * 1024)
+            .setReadBufferSize(DEFAULT_READ_BUFFER_SIZE)
             .handler(buf -> digest.update(buf.getBytes()))
             .endHandler(_v -> result.complete(Base64.getEncoder().encodeToString(digest.digest())))
             .exceptionHandler(cause ->

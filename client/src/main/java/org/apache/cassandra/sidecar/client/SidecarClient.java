@@ -365,11 +365,49 @@ public class SidecarClient implements AutoCloseable
     }
 
     /**
+     * Returns a copy of the request builder with the default parameters configured for the client.
+     *
+     * <p>The request builder can be used to create the request, containing default values as depicted in the example
+     * below:
+     *
+     * <pre>
+     * RequestContext requestContext = client.requestBuilder()
+     *                                       .request(new new NodeSettingsRequest())
+     *                                       .retryPolicy(new NoRetryPolicy())
+     *                                       .build();
+     * </pre>
+     *
+     * <p>The example above will create a request to retrieve the node settings from a random Sidecar instance
+     * in the cluster. It will use the {@code NoRetryPolicy} policy. A custom retry policy can encapsulate the
+     * desired behavior of the client when dealing with specific status codes.
+     *
      * @return a copy of the builder to prevent threads modifying the state of the builder
      */
-    protected RequestContext.Builder requestBuilder()
+    public RequestContext.Builder requestBuilder()
     {
         return baseBuilder.copy();
+    }
+
+    /**
+     * @return the default {@link RetryPolicy} configured for the client
+     */
+    public RetryPolicy defaultRetryPolicy()
+    {
+        return defaultRetryPolicy;
+    }
+
+    /**
+     * Returns a future with the expected instance of type {@code <T>} after executing the {@code request} and
+     * processing it.
+     *
+     * @param context the request context
+     * @param <T>     the expected type for the instance
+     * @return a future with the expected instance of type {@code <T>} after executing the {@code request} and
+     * processing it
+     */
+    public <T> CompletableFuture<T> executeRequestAsync(RequestContext context)
+    {
+        return executor.executeRequestAsync(context);
     }
 
     /**

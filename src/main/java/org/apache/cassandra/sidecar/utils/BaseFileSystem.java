@@ -33,7 +33,7 @@ import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 
 /**
- * Provides functionality for filesytem operations
+ * Provides functionality for filesystem operations
  */
 public class BaseFileSystem
 {

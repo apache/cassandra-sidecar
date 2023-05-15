@@ -28,9 +28,11 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterEach;
@@ -48,7 +50,11 @@ import okio.Buffer;
 import okio.Okio;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
 import org.apache.cassandra.sidecar.client.request.ImportSSTableRequest;
+import org.apache.cassandra.sidecar.client.request.NodeSettingsRequest;
+import org.apache.cassandra.sidecar.client.request.Request;
 import org.apache.cassandra.sidecar.client.request.RequestExecutorTest;
+import org.apache.cassandra.sidecar.client.retry.RetryAction;
+import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
@@ -885,6 +891,51 @@ abstract class SidecarClientTest
         .isThrownBy(() -> client.schema("cycling").get(30, TimeUnit.SECONDS))
         .withRootCauseInstanceOf(RetriesExhaustedException.class)
         .withMessageContaining("Unable to complete request '/api/v1/keyspaces/cycling/schema' after 4 attempts");
+    }
+
+    @Test
+    void testProvidingCustomRetryPolicy() throws ExecutionException, InterruptedException, TimeoutException
+    {
+        String nodeSettingsAsString = "{\"partitioner\":\"test-partitioner\", \"releaseVersion\": \"4.0.0\"}";
+        MockResponse response = new MockResponse().setResponseCode(ACCEPTED.code()).setBody(nodeSettingsAsString);
+        enqueue(response);
+
+        RequestContext requestContext = client.requestBuilder()
+                                     .request(new NodeSettingsRequest())
+                                     .retryPolicy(new RetryPolicy()
+                                     {
+                                         @Override
+                                         public void onResponse(CompletableFuture<HttpResponse> responseFuture,
+                                                                Request request,
+                                                                HttpResponse response,
+                                                                Throwable throwable,
+                                                                int attempts,
+                                                                boolean canRetryOnADifferentHost,
+                                                                RetryAction retryAction)
+                                         {
+                                             if (response != null && response.statusCode() == ACCEPTED.code())
+                                             {
+                                                 responseFuture.complete(response);
+                                             }
+                                             else
+                                             {
+                                                 client.defaultRetryPolicy().onResponse(responseFuture,
+                                                                                        request,
+                                                                                        response,
+                                                                                        throwable,
+                                                                                        attempts,
+                                                                                        canRetryOnADifferentHost,
+                                                                                        retryAction);
+                                             }
+                                         }
+                                     })
+                                     .build();
+        NodeSettings result = client.<NodeSettings>executeRequestAsync(requestContext).get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.partitioner()).isEqualTo("test-partitioner");
+        assertThat(result.releaseVersion()).isEqualTo("4.0.0");
+
+        validateResponseServed(ApiEndpointsV1.NODE_SETTINGS_ROUTE);
     }
 
     private void validateReplicaInfo(TokenRangeReplicasResponse.ReplicaInfo writeReplica0)

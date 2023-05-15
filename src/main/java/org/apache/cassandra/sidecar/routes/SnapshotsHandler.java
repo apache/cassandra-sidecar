@@ -47,6 +47,7 @@ import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.snapshots.SnapshotDirectory;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.RequestUtils;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -346,8 +347,9 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
     @Override
     protected SnapshotRequest extractParamsOrThrow(final RoutingContext context)
     {
-        boolean includeSecondaryIndexFiles =
-        "true".equalsIgnoreCase(context.request().getParam(INCLUDE_SECONDARY_INDEX_FILES, "false"));
+        boolean includeSecondaryIndexFiles = RequestUtils.parseBooleanHeader(context.request(),
+                                                                             INCLUDE_SECONDARY_INDEX_FILES,
+                                                                             false);
 
         SnapshotRequest snapshotRequest = new SnapshotRequest(qualifiedTableName(context),
                                                               context.pathParam("snapshot"),
