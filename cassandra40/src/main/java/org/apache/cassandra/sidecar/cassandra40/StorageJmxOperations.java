@@ -83,7 +83,7 @@ public interface StorageJmxOperations
      * we calculate the percentage using replication factor.
      * If Keyspace == null, this method will try to verify if all the keyspaces
      * in the cluster have the same replication strategies and if yes then we will
-     * use the first else a empty Map is returned.
+     * use the first else an empty Map is returned.
      */
     Map<String, Float> effectiveOwnershipWithPort(String keyspace) throws IllegalStateException;
 

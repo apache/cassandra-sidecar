@@ -83,16 +83,16 @@ public class TokenRangeReplicaProvider
     }
 
     private List<TokenRangeReplicasResponse.ReplicaInfo>
-    writeReplicasFromPendingRanges(Map<List<String>, List<String>> readReplicaMappings,
+    writeReplicasFromPendingRanges(Map<List<String>, List<String>> naturalReplicaMappings,
                                    Map<List<String>, List<String>> pendingRangeMappings,
                                    Map<String, String> hostToDatacenter,
                                    Partitioner partitioner,
                                    String keyspace)
     {
         LOGGER.debug("Pending token ranges for keyspace={}, pendingRangeMappings={}", keyspace, pendingRangeMappings);
-        // Merge primary and pending replicas to generate candidates for write-replicas
+        // Merge natural and pending range replicas to generate candidates for write-replicas
         List<TokenRangeReplicas> replicas = Stream.concat(
-                                                  readReplicaMappings.entrySet().stream(),
+                                                  naturalReplicaMappings.entrySet().stream(),
                                                   pendingRangeMappings.entrySet().stream())
                                                   .map(entry ->
                                                        new TokenRangeReplicas(
@@ -102,7 +102,11 @@ public class TokenRangeReplicaProvider
                                                                new HashSet<>(entry.getValue())))
                                                   .collect(Collectors.toList());
 
-        // Candidate write-replica mappings are normalized by removing overlapping ranges
+        // Candidate write-replica mappings (merged from natural and pending ranges) are normalized by consolidate
+        // overlapping ranges. For an overlapping range that is included in both natural and pending ranges, say
+        // R_natural and R_pending (where R_natural == R_pending), the replicas of both R_natural and R_pending should
+        // receive writes. Therefore, the write-replicas of such range is the union of both replica sets.
+        // The procedure (esp. normalize method) implements the consolidation process.
         return TokenRangeReplicas.normalize(replicas).stream()
                                  .map(range -> {
                                      Map<String, List<String>> replicasByDc =

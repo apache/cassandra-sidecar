@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class RingRequestForKeyspaceTestParameters implements RequestTestParameters<RingResponse>
 {
-    public static final String KEYSPACE = "tutorialspoint";
+    public static final String KEYSPACE = "testkeyspace";
 
     @Override
     public RequestContext.Builder specificRequest(RequestContext.Builder requestContextBuilder)

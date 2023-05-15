@@ -74,10 +74,10 @@ public class TokenRangeReplicaProviderTest
     @Test
     public void replicasByTokenRangeTest() throws UnknownHostException
     {
-        Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
-        readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
+        Map<List<String>, List<String>> naturalReplicaMappings = new HashMap<>();
+        naturalReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(naturalReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
         when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
         when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
@@ -86,20 +86,20 @@ public class TokenRangeReplicaProviderTest
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(1);
         // Single token range
-        assertThat(result.readReplicas().size()).isEqualTo(1);
+        assertThat(result.naturalReplicas().size()).isEqualTo(1);
         // Single DC
-        assertThat(result.readReplicas().get(0).replicasByDatacenter().size()).isEqualTo(1);
-        assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
+        assertThat(result.naturalReplicas().get(0).replicasByDatacenter().size()).isEqualTo(1);
+        assertThat(result.naturalReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
     }
 
     @Test
     public void replicasByTokenRangeTestMultipleDCs() throws UnknownHostException
     {
-        Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
-        readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
-        readReplicaMappings.put(TOKEN_RANGE2, TEST_ENDPOINTS2);
+        Map<List<String>, List<String>> naturalReplicaMappings = new HashMap<>();
+        naturalReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
+        naturalReplicaMappings.put(TOKEN_RANGE2, TEST_ENDPOINTS2);
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(naturalReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
         when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
 
@@ -110,22 +110,22 @@ public class TokenRangeReplicaProviderTest
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(2);
         // Single token range
-        assertThat(result.readReplicas().size()).isEqualTo(2);
+        assertThat(result.naturalReplicas().size()).isEqualTo(2);
         // Single DC per token range
-        assertThat(result.readReplicas().get(0).replicasByDatacenter().size()).isEqualTo(1);
-        assertThat(result.readReplicas().get(1).replicasByDatacenter().size()).isEqualTo(1);
-        assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
-        assertThat(result.readReplicas().get(1).replicasByDatacenter().get(TEST_DC2)).containsAll(TEST_ENDPOINTS2);
+        assertThat(result.naturalReplicas().get(0).replicasByDatacenter().size()).isEqualTo(1);
+        assertThat(result.naturalReplicas().get(1).replicasByDatacenter().size()).isEqualTo(1);
+        assertThat(result.naturalReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
+        assertThat(result.naturalReplicas().get(1).replicasByDatacenter().get(TEST_DC2)).containsAll(TEST_ENDPOINTS2);
     }
 
     @Test
     public void replicasByTokenRangeTestMultipleDCsPerTokenRange() throws UnknownHostException
     {
-        Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
-        readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
-        readReplicaMappings.put(TOKEN_RANGE2, TEST_MULTI_DC_ENDPOINTS);
+        Map<List<String>, List<String>> naturalReplicaMappings = new HashMap<>();
+        naturalReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
+        naturalReplicaMappings.put(TOKEN_RANGE2, TEST_MULTI_DC_ENDPOINTS);
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(naturalReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
         when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
 
@@ -136,26 +136,26 @@ public class TokenRangeReplicaProviderTest
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(2);
         // 2 token ranges
-        assertThat(result.readReplicas().size()).isEqualTo(2);
+        assertThat(result.naturalReplicas().size()).isEqualTo(2);
 
         // Validate token range has entries from both DCs
         TokenRangeReplicasResponse.ReplicaInfo replicaInfoWithMultipleDCs =
-                result.readReplicas().stream().filter(r -> TOKEN_RANGE2.get(0).equals(r.start())).findAny().get();
+                result.naturalReplicas().stream().filter(r -> TOKEN_RANGE2.get(0).equals(r.start())).findAny().get();
         assertThat(replicaInfoWithMultipleDCs.replicasByDatacenter().size()).isEqualTo(2);
-        assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
-        assertThat(result.readReplicas().get(1).replicasByDatacenter().get(TEST_DC2)).containsAll(TEST_ENDPOINTS2);
+        assertThat(result.naturalReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
+        assertThat(result.naturalReplicas().get(1).replicasByDatacenter().get(TEST_DC2)).containsAll(TEST_ENDPOINTS2);
     }
 
     @Test
-    public void readAndWriteReplicasByTokenRangeTest() throws UnknownHostException
+    public void naturalAndWriteReplicasByTokenRangeTest() throws UnknownHostException
     {
-        Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
-        readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
+        Map<List<String>, List<String>> naturalReplicaMappings = new HashMap<>();
+        naturalReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
 
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
         writeReplicaMappings.put(TOKEN_RANGE2, TEST_ENDPOINTS2);
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(naturalReplicaMappings);
         when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
 
         when(endpointOperations.getDatacenter(startsWith("dc1_"))).thenReturn(TEST_DC1);
@@ -164,9 +164,9 @@ public class TokenRangeReplicaProviderTest
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas("test_keyspace", Partitioner.Random);
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(2);
-        assertThat(result.readReplicas().size()).isEqualTo(1);
-        assertThat(result.readReplicas().get(0).replicasByDatacenter().size()).isEqualTo(1);
-        assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
+        assertThat(result.naturalReplicas().size()).isEqualTo(1);
+        assertThat(result.naturalReplicas().get(0).replicasByDatacenter().size()).isEqualTo(1);
+        assertThat(result.naturalReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
     }
 
     @Test
@@ -189,9 +189,9 @@ public class TokenRangeReplicaProviderTest
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Murmur3);
         assertThat(result).isNotNull();
-        assertThat(result.readReplicas().size()).isEqualTo(3);
-        assertThat(validateRangeExists(result.readReplicas(), "3074457345618258602",
-                Long.toString(Long.MAX_VALUE))).isTrue();
+        assertThat(result.naturalReplicas().size()).isEqualTo(3);
+        assertThat(validateRangeExists(result.naturalReplicas(), "3074457345618258602",
+                                       Long.toString(Long.MAX_VALUE))).isTrue();
         assertThat(validateRangeExists(result.writeReplicas(), "3074457345618258602",
                 Long.toString(Long.MAX_VALUE))).isTrue();
     }
@@ -223,17 +223,17 @@ public class TokenRangeReplicaProviderTest
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Murmur3);
         assertThat(result).isNotNull();
-        assertThat(result.readReplicas().size()).isEqualTo(3);
+        assertThat(result.naturalReplicas().size()).isEqualTo(3);
         assertThat(result.writeReplicas().size()).isEqualTo(4);
         // Write replicas includes the new range ending at "maxToken"
         assertThat(validateRangeExists(result.writeReplicas(), "6148914691236517204",
                 Long.toString(Long.MAX_VALUE))).isTrue();
-        // Read replicas does NOT include the new range from pending ranges
-        assertThat(validateRangeExists(result.readReplicas(), "6148914691236517204",
-                Long.toString(Long.MAX_VALUE))).isFalse();
-        // Existing read replicas wrap-around range ends at "maxToken"
-        assertThat(validateRangeExists(result.readReplicas(), "3074457345618258602",
-                Long.toString(Long.MAX_VALUE))).isTrue();
+        // Natural replicas does NOT include the new range from pending ranges
+        assertThat(validateRangeExists(result.naturalReplicas(), "6148914691236517204",
+                                       Long.toString(Long.MAX_VALUE))).isFalse();
+        // Existing natural replicas wrap-around range ends at "maxToken"
+        assertThat(validateRangeExists(result.naturalReplicas(), "3074457345618258602",
+                                       Long.toString(Long.MAX_VALUE))).isTrue();
     }
 
     @Test
@@ -258,10 +258,10 @@ public class TokenRangeReplicaProviderTest
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Murmur3);
         assertThat(result).isNotNull();
-        assertThat(result.readReplicas().size()).isEqualTo(4);
+        assertThat(result.naturalReplicas().size()).isEqualTo(4);
         assertThat(result.writeReplicas().size()).isEqualTo(4);
-        assertThat(validateRangeExists(result.readReplicas(), "6148914691236517204",
-                Long.toString(Long.MAX_VALUE))).isTrue();
+        assertThat(validateRangeExists(result.naturalReplicas(), "6148914691236517204",
+                                       Long.toString(Long.MAX_VALUE))).isTrue();
         assertThat(validateRangeExists(result.writeReplicas(), "6148914691236517204",
                 Long.toString(Long.MAX_VALUE))).isTrue();
     }

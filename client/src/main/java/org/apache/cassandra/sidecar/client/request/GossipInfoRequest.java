@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
 
@@ -32,5 +33,14 @@ public class GossipInfoRequest extends DecodableRequest<GossipInfoResponse>
     public GossipInfoRequest()
     {
         super(ApiEndpointsV1.GOSSIP_INFO_ROUTE);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public HttpMethod method()
+    {
+        return HttpMethod.GET;
     }
 }

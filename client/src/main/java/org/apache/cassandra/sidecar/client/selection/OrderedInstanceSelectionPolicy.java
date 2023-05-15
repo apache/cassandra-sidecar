@@ -25,7 +25,8 @@ import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A selection policy for a multiple Cassandra Sidecar instances where the iterator returns in order
+ * A selection policy for multiple Cassandra Sidecar instances where the iterator returns in the order specified
+ * by the underlying {@link Iterator} for the {@link SidecarInstancesProvider#instances()}.
  */
 public class OrderedInstanceSelectionPolicy implements InstanceSelectionPolicy
 {

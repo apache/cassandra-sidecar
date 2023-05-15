@@ -55,7 +55,7 @@ public class GossipInfoRequestTestParameters implements RequestTestParameters<Go
                "\"releaseVersion\":\"4.0.8\",\"hostId\":\"dba02656-ea8c-4a1d-8011-cbc0dab5f411\"," +
                "\"nativeAddressAndPort\":\"127.0.0.2:9042\",\"load\":\"89084.0\",\"sstableVersions\":\"big-nb\"," +
                "\"tokens\":\"<hidden>\",\"rpcReady\":\"true\",\"dc\":\"LO\",\"netVersion\":\"12\"," +
-               "\"statusWithPort\":\"NORMAL,-3074457345618258603\"}}[root@b77ac3582e25 /]";
+               "\"statusWithPort\":\"NORMAL,-3074457345618258603\"}}";
     }
 
     @Override

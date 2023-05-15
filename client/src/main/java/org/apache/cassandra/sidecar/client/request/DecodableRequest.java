@@ -32,7 +32,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * @param <T> the type to decode
  */
-public class DecodableRequest<T> extends Request
+public abstract class DecodableRequest<T> extends Request
 {
     static final ObjectMapper MAPPER = new ObjectMapper();
     private final JavaType javaType = MAPPER.constructType(((ParameterizedType) this.getClass().getGenericSuperclass())

@@ -255,7 +255,7 @@ abstract class SidecarClientTest
     {
         String responseAsString = "{\"writeReplicas\":[{\"start\":\"10\",\"end\":\"20\"," +
                                   "\"replicas\":{\"dc1\":[\"localhost1\",\"localhost2\",\"localhost3\"]}}]," +
-                                  "\"readReplicas\":[{\"start\":\"10\",\"end\":\"20\"," +
+                                  "\"naturalReplicas\":[{\"start\":\"10\",\"end\":\"20\"," +
                                   "\"replicas\":{\"dc1\":[\"localhost1\",\"localhost2\",\"localhost3\"]}}]" +
                                   "}";
         MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(responseAsString);
@@ -266,7 +266,7 @@ abstract class SidecarClientTest
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas()).isNotNull().hasSize(1);
         validateReplicaInfo(result.writeReplicas().get(0));
-        validateReplicaInfo(result.readReplicas().get(0));
+        validateReplicaInfo(result.naturalReplicas().get(0));
 
         validateResponseServed(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE
                                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling"));

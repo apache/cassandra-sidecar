@@ -77,12 +77,12 @@ class TokenRangeReplicaMapHandlerIntegrationTest extends IntegrationTestBase
     {
         TokenRangeReplicasResponse mappingResponse = response.bodyAsJson(TokenRangeReplicasResponse.class);
         assertThat(mappingResponse).isNotNull();
-        assertThat(mappingResponse.readReplicas()).isNotNull();
+        assertThat(mappingResponse.naturalReplicas()).isNotNull();
         assertThat(mappingResponse.writeReplicas()).isNotNull();
-        TokenRangeReplicasResponse.ReplicaInfo readReplica = mappingResponse.readReplicas().get(0);
-        assertThat(readReplica.replicasByDatacenter()).isNotNull().hasSize(1);
-        assertThat(readReplica.replicasByDatacenter().keySet()).isNotEmpty().contains("datacenter1");
-        assertThat(readReplica.replicasByDatacenter().values()).isNotEmpty();
+        TokenRangeReplicasResponse.ReplicaInfo naturalReplica = mappingResponse.naturalReplicas().get(0);
+        assertThat(naturalReplica.replicasByDatacenter()).isNotNull().hasSize(1);
+        assertThat(naturalReplica.replicasByDatacenter().keySet()).isNotEmpty().contains("datacenter1");
+        assertThat(naturalReplica.replicasByDatacenter().values()).isNotEmpty();
         TokenRangeReplicasResponse.ReplicaInfo writeReplica = mappingResponse.writeReplicas().get(0);
         assertThat(writeReplica.replicasByDatacenter()).isNotNull().hasSize(1);
         assertThat(writeReplica.replicasByDatacenter().keySet()).isNotEmpty().contains("datacenter1");

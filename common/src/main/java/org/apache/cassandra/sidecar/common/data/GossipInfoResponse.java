@@ -62,13 +62,13 @@ public class GossipInfoResponse extends HashMap<String, GossipInfoResponse.Gossi
          * Converts the key, if it is using the UPPER UNDERSCORE format, into camel case.
          * Then, put the new key and value.
          *
-         * @param snakeCaseKey the key to convert
-         * @param value        the value for the gossip info entry
+         * @param key   the key to convert
+         * @param value the value for the gossip info entry
          */
-        public void camelizeKeyAndPut(String snakeCaseKey, String value)
+        public void camelizeKeyAndPut(String key, String value)
         {
-            String key = toLowerCamelCase(snakeCaseKey.toUpperCase());
-            super.put(key, value);
+            String lowerCamelCasedKey = GossipField.valueOf(key.toUpperCase()).toLowerCamelCase();
+            super.put(lowerCamelCasedKey, value);
         }
 
         @NotNull
@@ -221,7 +221,7 @@ public class GossipInfoResponse extends HashMap<String, GossipInfoResponse.Gossi
 
         // Below are copied from org.apache.cassandra.gms.ApplicationState
         // Note: that all padding fields are not included.
-        @Deprecated STATUS, //Deprecated and unsued in 4.0, stop publishing in 5.0, reclaim in 6.0
+        @Deprecated STATUS, //Deprecated and unused in 4.0, stop publishing in 5.0, reclaim in 6.0
         LOAD,
         SCHEMA,
         DC,
@@ -252,41 +252,37 @@ public class GossipInfoResponse extends HashMap<String, GossipInfoResponse.Gossi
 
         static String read(GossipInfo gossipInfo, GossipField field)
         {
-            return gossipInfo.get(toLowerCamelCase(field.name()));
+            return gossipInfo.get(field.toLowerCamelCase());
         }
-    }
 
-    /**
-     * Returns the lower case camel version for the given {@code upperUnderscoreCase}. This method allows us not to
-     * add a dependency to guava for the client, because guava can cause a lot of conflicts when used in libraries.
-     *
-     * @param upperUnderscoreCase the input in upper underscore case
-     * @return the lower case camel version for the given {@code upperUnderscoreCase}
-     */
-    static String toLowerCamelCase(String upperUnderscoreCase)
-    {
-        if (upperUnderscoreCase == null || upperUnderscoreCase.isEmpty())
+        /**
+         * Returns the lower case camel version for the given {@code upperUnderscoreCase}. This method allows us not to
+         * add a dependency to guava for the client, because guava can cause a lot of conflicts when used in libraries.
+         *
+         * @return the lower case camel version for the given {@code upperUnderscoreCase}
+         */
+        String toLowerCamelCase()
         {
-            return upperUnderscoreCase;
-        }
+            String upperUnderscoreCase = name();
 
-        StringBuilder sb = new StringBuilder(upperUnderscoreCase.length());
-        sb.append(Character.toLowerCase(upperUnderscoreCase.charAt(0)));
+            StringBuilder sb = new StringBuilder(upperUnderscoreCase.length());
+            sb.append(Character.toLowerCase(upperUnderscoreCase.charAt(0)));
 
-        int length = upperUnderscoreCase.length();
-        for (int i = 1; i < length; i++)
-        {
-            if (upperUnderscoreCase.charAt(i) == '_' && i + 1 < length)
+            int length = upperUnderscoreCase.length();
+            for (int i = 1; i < length; i++)
             {
-                i++;
-                sb.append(upperUnderscoreCase.charAt(i));
+                if (upperUnderscoreCase.charAt(i) == '_' && i + 1 < length)
+                {
+                    i++;
+                    sb.append(upperUnderscoreCase.charAt(i));
+                }
+                else
+                {
+                    sb.append(Character.toLowerCase(upperUnderscoreCase.charAt(i)));
+                }
             }
-            else
-            {
-                sb.append(Character.toLowerCase(upperUnderscoreCase.charAt(i)));
-            }
-        }
 
-        return sb.toString();
+            return sb.toString();
+        }
     }
 }

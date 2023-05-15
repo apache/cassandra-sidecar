@@ -146,7 +146,7 @@ public class RingProvider
     }
 
     /**
-     * Data class to get status of endppints
+     * Data class to get status of endpoints
      */
     static class Status
     {

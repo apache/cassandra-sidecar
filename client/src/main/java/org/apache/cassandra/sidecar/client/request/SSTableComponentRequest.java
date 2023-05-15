@@ -19,6 +19,7 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 
@@ -55,6 +56,15 @@ public class SSTableComponentRequest extends Request
     protected HttpRange range()
     {
         return range;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public HttpMethod method()
+    {
+        return HttpMethod.GET;
     }
 
     /**

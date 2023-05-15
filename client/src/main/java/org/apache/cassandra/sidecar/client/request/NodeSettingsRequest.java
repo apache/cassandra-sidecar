@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.NodeSettings;
 
@@ -32,5 +33,14 @@ public class NodeSettingsRequest extends DecodableRequest<NodeSettings>
     public NodeSettingsRequest()
     {
         super(ApiEndpointsV1.NODE_SETTINGS_ROUTE);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public HttpMethod method()
+    {
+        return HttpMethod.GET;
     }
 }

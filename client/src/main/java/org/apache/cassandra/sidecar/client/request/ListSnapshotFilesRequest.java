@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 
 /**
@@ -40,5 +41,14 @@ public class ListSnapshotFilesRequest extends SnapshotRequest<ListSnapshotFilesR
                                     boolean includeSecondaryIndexFiles)
     {
         super(keyspace, table, snapshotName, includeSecondaryIndexFiles);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public HttpMethod method()
+    {
+        return HttpMethod.GET;
     }
 }

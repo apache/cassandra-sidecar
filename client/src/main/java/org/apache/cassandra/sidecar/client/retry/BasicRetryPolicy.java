@@ -34,7 +34,7 @@ import org.apache.cassandra.sidecar.client.request.Request;
 public class BasicRetryPolicy extends RetryPolicy
 {
     protected static final String RETRY_AFTER = "Retry-After";
-    // Use -1 to retry indefinitely
+    public static final int RETRY_INDEFINITELY = -1;
     protected final int maxRetries;
     protected final long retryDelayMillis;
 
@@ -43,7 +43,7 @@ public class BasicRetryPolicy extends RetryPolicy
      */
     public BasicRetryPolicy()
     {
-        this(-1, 0);
+        this(RETRY_INDEFINITELY, 0);
     }
 
     /**
@@ -256,7 +256,7 @@ public class BasicRetryPolicy extends RetryPolicy
                          Throwable throwable)
     {
         int configuredMaxRetries = maxRetries();
-        if (configuredMaxRetries > -1 && attempts >= configuredMaxRetries)
+        if (configuredMaxRetries > RETRY_INDEFINITELY && attempts >= configuredMaxRetries)
         {
             future.completeExceptionally(retriesExhausted(attempts, request, throwable));
         }

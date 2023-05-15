@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
 
@@ -32,5 +33,14 @@ public class TimeSkewRequest extends DecodableRequest<TimeSkewResponse>
     public TimeSkewRequest()
     {
         super(ApiEndpointsV1.TIME_SKEW_ROUTE);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public HttpMethod method()
+    {
+        return HttpMethod.GET;
     }
 }

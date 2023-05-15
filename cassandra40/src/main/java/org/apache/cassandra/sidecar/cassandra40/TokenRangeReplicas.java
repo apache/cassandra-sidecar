@@ -34,10 +34,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.VisibleForTesting;
 
 
 /**
- * Representation of a token range and the corresponding mapping to replica-set hosts
+ * Representation of a token range and the corresponding mapping to replica-set hosts. The range corresponds to
+ * an exclusive start range and inclusive end range {@code (start, end]}.
  */
 public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
 {
@@ -80,8 +82,7 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
     @Override
     public int compareTo(@NotNull TokenRangeReplicas other)
     {
-        if (this.partitioner != other.partitioner)
-            throw new IllegalStateException("Token ranges being compared do not have the same partitioner");
+        validateMatchingPartitioner(other);
 
         BigInteger maxValue = this.partitioner.maxToken;
         if (this.start.compareTo(other.start) == 0)
@@ -116,39 +117,65 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
         return Objects.hashCode(start, end, partitioner);
     }
 
-    private boolean isWrapAround()
+    private static boolean isWrapAround(TokenRangeReplicas tokenRangeReplicas)
     {
-        return start.compareTo(end) >= 0;
-    }
-
-    private boolean isSubsetOf(TokenRangeReplicas other)
-    {
-        if (this.partitioner != other.partitioner)
-            throw new IllegalStateException("Token ranges being compared do not have the same partitioner");
-
-        BigInteger maxValue = this.partitioner.maxToken;
-        if (this.start.compareTo(other.start) >= 0)
-        {
-            if (other.end.equals(maxValue)) return true;
-            if (this.end.equals(maxValue)) return false;
-            if (this.end.compareTo(other.end) <= 0) return true;
-        }
-        return false;
+        return tokenRangeReplicas.start.compareTo(tokenRangeReplicas.end) >= 0;
     }
 
     /**
-     * For subset ranges, this is used to determine if a range is larger than the other by comparing start-end lengths
-     * If both ranges end at the min, we compare starting points to determine the result.
+     * Returns {@code true} if {@code this} contains the {@code other} range.
+     *
+     * @param other the other range to determine if it is contained or not
+     * @return {@code true} if {@code this} contains the {@code other} range
+     */
+    @VisibleForTesting
+    boolean contains(TokenRangeReplicas other)
+    {
+        validateMatchingPartitioner(other);
+
+        if (isFullRing(this))
+        {
+            // full ring always contains all other ranges
+            return true;
+        }
+
+        boolean thisWraps = isWrapAround(this);
+        boolean otherWraps = isWrapAround(other);
+
+        if (thisWraps == otherWraps)
+        {
+            return start.compareTo(other.start) <= 0 && other.end.compareTo(end) <= 0;
+        }
+        else if (thisWraps)
+        {
+            // wrapping might contain non-wrapping
+            // other is contained if both its tokens are in one of our wrap segments
+            return start.compareTo(other.start) <= 0 || other.end.compareTo(end) <= 0;
+        }
+        else
+        {
+            // (otherWraps)
+            // non-wrapping cannot contain wrapping
+            return false;
+        }
+    }
+
+    /**
+     * For subset ranges, this is used to determine if a range is larger than the other by comparing start-end lengths.
+     * This method assumes that the ranges are sorted, i.e. {@code this} comes before {@code other} AND are unwrapped
+     * i.e. there's no wrapping around the {@link Partitioner#minToken}.
+     *
+     * <p>If both ranges end at the min, we compare starting points to determine the result.
      * When the left range is the only one ending at min, it is always the larger one since all subsequent ranges
      * in the sorted range list have to be smaller.
      *
      * @param other the next range in the range list to compare
      * @return true if "this" range is larger than the other
      */
-    private boolean isLarger(TokenRangeReplicas other)
+    @VisibleForTesting
+    boolean isLarger(TokenRangeReplicas other)
     {
-        if (this.partitioner != other.partitioner)
-            throw new IllegalStateException("Token ranges being compared do not have the same partitioner");
+        validateMatchingPartitioner(other);
 
         // If both ranges end at min, we compare start of ranges
         if (this.end.equals(partitioner.maxToken) && other.end.equals(partitioner.maxToken))
@@ -170,10 +197,45 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
      * @param other the range we are currently processing to check if "this" intersects it
      * @return true if "this" range intersects the other
      */
-    private boolean intersects(TokenRangeReplicas other)
+    @VisibleForTesting
+    boolean intersects(TokenRangeReplicas other)
     {
-        return (other.end.compareTo(partitioner.maxToken) == 0 && this.start.compareTo(other.start) > 0) ||
-               this.start.compareTo(other.end) < 0;
+        if (isFullRing(this) || isFullRing(other))
+        {
+            // full ring for this or other means that it contains any other range
+            return true;
+        }
+
+        boolean thisWraps = isWrapAround(this);
+        boolean otherWraps = isWrapAround(other);
+
+        if (!thisWraps && !otherWraps)
+        {
+            // the straightforward case
+            if (start.compareTo(other.start) < 0)
+            {
+                return other.start.compareTo(end) < 0;
+            }
+            return start.compareTo(other.end) < 0;
+        }
+
+        if (thisWraps && otherWraps)
+        {
+            // two wrapping ranges always intersect
+            return true;
+        }
+
+        if (thisWraps && intersectsWithWrapping(this, other))
+        {
+            return true;
+        }
+
+        if (otherWraps && intersectsWithWrapping(other, this))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -185,7 +247,7 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
      */
     public List<TokenRangeReplicas> unwrap()
     {
-        if (!isWrapAround())
+        if (!isWrapAround(this))
         {
             return Collections.singletonList(this);
         }
@@ -193,7 +255,7 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
         if (end.compareTo(partitioner.minToken) == 0)
         {
             return Collections.singletonList(
-                    new TokenRangeReplicas(start, partitioner.maxToken, partitioner, replicaSet));
+            new TokenRangeReplicas(start, partitioner.maxToken, partitioner, replicaSet));
         }
 
         // Wrap-around range goes beyond at the "min-token" and is therefore split into two.
@@ -208,7 +270,7 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
      * Given a list of token ranges with replica-sets, normalizes them by unwrapping around the beginning/min
      * of the range and removing overlaps to return a sorted list of non-overlapping ranges.
      *
-     * @param ranges
+     * @param ranges list of ranges to normalize
      * @return sorted list of non-overlapping ranges and replica-sets
      */
     public static List<TokenRangeReplicas> normalize(List<TokenRangeReplicas> ranges)
@@ -282,7 +344,7 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
             // Since ranges are "unwrapped" and sorted, we  also treat intersections from a range that ends at the
             // "min" (and following ranges) to fall under the subset case.
             else if (current.end.compareTo(partitioner.minToken) == 0
-                     || current.isSubsetOf(next) || next.isSubsetOf(current))
+                     || current.contains(next) || next.contains(current))
             {
                 current = processSubsetCases(partitioner, output, iter, current, next);
             }
@@ -405,11 +467,49 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
     }
 
     /**
+     * Determine whether {@code other} intersects with the {@code wrapping} range.
+     *
+     * @param wrapping the wrapping range
+     * @param other    the other range
+     * @return {@code true} if it intersects, {@code false} otherwise
+     */
+    private static boolean intersectsWithWrapping(TokenRangeReplicas wrapping, TokenRangeReplicas other)
+    {
+        if (wrapping.end.compareTo(other.start) > 0 && wrapping.end.compareTo(other.end) <= 0)
+            return true;
+        return other.end.compareTo(wrapping.start) > 0;
+    }
+
+    /**
+     * @param range the range
+     * @return true if the range starts and ends at the same value
+     */
+    private static boolean isFullRing(TokenRangeReplicas range)
+    {
+        return range.start.equals(range.end);
+    }
+
+    private void validateMatchingPartitioner(TokenRangeReplicas other)
+    {
+        if (this.partitioner != other.partitioner)
+        {
+            String message = String.format("Token ranges being compared do not have the same partitioner." +
+                                           " This partitioner=%s, other partitioner=%s",
+                                           this.partitioner, other.partitioner);
+            throw new IllegalStateException(message);
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
-    @Override
     public String toString()
     {
-        return String.format("%s - %s : %s:%s", start.toString(), end.toString(), replicaSet, partitioner);
+        return "TokenRangeReplicas{" +
+               "start=" + start +
+               ", end=" + end +
+               ", partitioner=" + partitioner +
+               ", replicaSet=" + replicaSet +
+               '}';
     }
 }

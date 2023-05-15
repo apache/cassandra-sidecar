@@ -30,19 +30,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class TokenRangeReplicasResponse
 {
     private final List<ReplicaInfo> writeReplicas;
-    private final List<ReplicaInfo> readReplicas;
+    private final List<ReplicaInfo> naturalReplicas;
 
     /**
      * Constructs token range replicas response object with given params.
      *
-     * @param writeReplicas list of write replicas {@link ReplicaInfo} instances breakdown by token range
-     * @param readReplicas  list of read replica {@link ReplicaInfo} instances breakdown by token range
+     * @param writeReplicas   list of write replicas {@link ReplicaInfo} instances breakdown by token range
+     * @param naturalReplicas list of natural replica {@link ReplicaInfo} instances breakdown by token range
      */
     public TokenRangeReplicasResponse(@JsonProperty("writeReplicas") List<ReplicaInfo> writeReplicas,
-                                      @JsonProperty("readReplicas") List<ReplicaInfo> readReplicas)
+                                      @JsonProperty("naturalReplicas") List<ReplicaInfo> naturalReplicas)
     {
         this.writeReplicas = writeReplicas;
-        this.readReplicas = readReplicas;
+        this.naturalReplicas = naturalReplicas;
     }
 
     /**
@@ -55,12 +55,12 @@ public class TokenRangeReplicasResponse
     }
 
     /**
-     * @return returns the {@link ReplicaInfo} instances representing read replicas for each token range
+     * @return returns the {@link ReplicaInfo} instances representing natural replicas for each token range
      */
-    @JsonProperty("readReplicas")
-    public List<ReplicaInfo> readReplicas()
+    @JsonProperty("naturalReplicas")
+    public List<ReplicaInfo> naturalReplicas()
     {
-        return readReplicas;
+        return naturalReplicas;
     }
 
     /**

@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.ResourceNotFoundException;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
@@ -42,43 +44,12 @@ import org.apache.cassandra.sidecar.client.exception.UnexpectedStatusCodeExcepti
 import org.apache.cassandra.sidecar.client.request.Request;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
-import static io.netty.handler.codec.http.HttpResponseStatus.BAD_GATEWAY;
-import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
-import static io.netty.handler.codec.http.HttpResponseStatus.CONFLICT;
-import static io.netty.handler.codec.http.HttpResponseStatus.EXPECTATION_FAILED;
-import static io.netty.handler.codec.http.HttpResponseStatus.FAILED_DEPENDENCY;
-import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
-import static io.netty.handler.codec.http.HttpResponseStatus.GATEWAY_TIMEOUT;
-import static io.netty.handler.codec.http.HttpResponseStatus.GONE;
-import static io.netty.handler.codec.http.HttpResponseStatus.HTTP_VERSION_NOT_SUPPORTED;
-import static io.netty.handler.codec.http.HttpResponseStatus.INSUFFICIENT_STORAGE;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
-import static io.netty.handler.codec.http.HttpResponseStatus.LENGTH_REQUIRED;
-import static io.netty.handler.codec.http.HttpResponseStatus.LOCKED;
-import static io.netty.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED;
-import static io.netty.handler.codec.http.HttpResponseStatus.MISDIRECTED_REQUEST;
-import static io.netty.handler.codec.http.HttpResponseStatus.NETWORK_AUTHENTICATION_REQUIRED;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_ACCEPTABLE;
-import static io.netty.handler.codec.http.HttpResponseStatus.NOT_EXTENDED;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_IMPLEMENTED;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.handler.codec.http.HttpResponseStatus.PAYMENT_REQUIRED;
-import static io.netty.handler.codec.http.HttpResponseStatus.PRECONDITION_FAILED;
-import static io.netty.handler.codec.http.HttpResponseStatus.PRECONDITION_REQUIRED;
-import static io.netty.handler.codec.http.HttpResponseStatus.PROXY_AUTHENTICATION_REQUIRED;
-import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
-import static io.netty.handler.codec.http.HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE;
-import static io.netty.handler.codec.http.HttpResponseStatus.REQUEST_TIMEOUT;
-import static io.netty.handler.codec.http.HttpResponseStatus.REQUEST_URI_TOO_LONG;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
-import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
-import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
-import static io.netty.handler.codec.http.HttpResponseStatus.UNPROCESSABLE_ENTITY;
-import static io.netty.handler.codec.http.HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE;
-import static io.netty.handler.codec.http.HttpResponseStatus.UPGRADE_REQUIRED;
-import static io.netty.handler.codec.http.HttpResponseStatus.VARIANT_ALSO_NEGOTIATES;
-import static io.netty.handler.codec.rtsp.RtspResponseStatuses.REQUEST_ENTITY_TOO_LARGE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Fail.fail;
@@ -236,33 +207,10 @@ class BasicRetryPolicyTest
 
     private static Stream<Arguments> clientStatusCodeArguments()
     {
-        return Stream.of(
-        Arguments.of(BAD_REQUEST.code()),
-        Arguments.of(UNAUTHORIZED.code()),
-        Arguments.of(PAYMENT_REQUIRED.code()),
-        Arguments.of(FORBIDDEN.code()),
-        Arguments.of(METHOD_NOT_ALLOWED.code()),
-        Arguments.of(NOT_ACCEPTABLE.code()),
-        Arguments.of(PROXY_AUTHENTICATION_REQUIRED.code()),
-        Arguments.of(REQUEST_TIMEOUT.code()),
-        Arguments.of(CONFLICT.code()),
-        Arguments.of(GONE.code()),
-        Arguments.of(LENGTH_REQUIRED.code()),
-        Arguments.of(PRECONDITION_FAILED.code()),
-        Arguments.of(REQUEST_ENTITY_TOO_LARGE.code()),
-        Arguments.of(REQUEST_URI_TOO_LONG.code()),
-        Arguments.of(UNSUPPORTED_MEDIA_TYPE.code()),
-        Arguments.of(REQUESTED_RANGE_NOT_SATISFIABLE.code()),
-        Arguments.of(EXPECTATION_FAILED.code()),
-        Arguments.of(MISDIRECTED_REQUEST.code()),
-        Arguments.of(UNPROCESSABLE_ENTITY.code()),
-        Arguments.of(LOCKED.code()),
-        Arguments.of(FAILED_DEPENDENCY.code()),
-        Arguments.of(UPGRADE_REQUIRED.code()),
-        Arguments.of(PRECONDITION_REQUIRED.code()),
-        Arguments.of(TOO_MANY_REQUESTS.code()),
-        Arguments.of(REQUEST_HEADER_FIELDS_TOO_LARGE.code())
-        );
+        return IntStream.range(400, 500)
+                        .filter(statusCode -> statusCode != HttpResponseStatus.NOT_FOUND.code())
+                        .boxed()
+                        .map(Arguments::of);
     }
 
     @ParameterizedTest(name = "{index} => statusCode={0}")
@@ -276,15 +224,12 @@ class BasicRetryPolicyTest
 
     private static Stream<Arguments> serverStatusCodeArguments()
     {
-        return Stream.of(
-        Arguments.of(BAD_GATEWAY.code()),
-        Arguments.of(GATEWAY_TIMEOUT.code()),
-        Arguments.of(HTTP_VERSION_NOT_SUPPORTED.code()),
-        Arguments.of(VARIANT_ALSO_NEGOTIATES.code()),
-        Arguments.of(INSUFFICIENT_STORAGE.code()),
-        Arguments.of(NOT_EXTENDED.code()),
-        Arguments.of(NETWORK_AUTHENTICATION_REQUIRED.code())
-        );
+        return IntStream.range(500, 600)
+                        .filter(statusCode -> statusCode != INTERNAL_SERVER_ERROR.code()
+                                              && statusCode != NOT_IMPLEMENTED.code()
+                                              && statusCode != SERVICE_UNAVAILABLE.code())
+                        .boxed()
+                        .map(Arguments::of);
     }
 
     @ParameterizedTest(name = "{index} => statusCode={0}")

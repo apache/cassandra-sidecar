@@ -42,6 +42,7 @@ package org.apache.cassandra.sidecar.client.retry;
 public class ExponentialBackoffRetryPolicy extends BasicRetryPolicy
 {
     private final long maxRetryDelayMillis;
+    private final long maxAttemptsBeforeOverflow;
 
     /**
      * Constructs an exponential backoff retry policy unlimited number of retries and no delay between retries.
@@ -50,6 +51,7 @@ public class ExponentialBackoffRetryPolicy extends BasicRetryPolicy
     {
         super();
         this.maxRetryDelayMillis = 0;
+        this.maxAttemptsBeforeOverflow = computeMaxAttemptsBeforeOverflow();
     }
 
     /**
@@ -65,6 +67,7 @@ public class ExponentialBackoffRetryPolicy extends BasicRetryPolicy
     {
         super(maxRetries, retryDelayMillis);
         this.maxRetryDelayMillis = maxRetryDelayMillis;
+        this.maxAttemptsBeforeOverflow = computeMaxAttemptsBeforeOverflow();
     }
 
     /**
@@ -78,13 +81,44 @@ public class ExponentialBackoffRetryPolicy extends BasicRetryPolicy
     @Override
     protected long retryDelayMillis(int attempts)
     {
-        long exponentialValue = (long) Math.pow(2, attempts - 1);
-        // do not multiply times retryDelayMillis, if we've reached the Long.MAX_VALUE already to avoid overflows
-        long retryDelay = exponentialValue == Long.MAX_VALUE ? exponentialValue : exponentialValue * retryDelayMillis;
+        long retryDelay;
+        if (attempts >= maxAttemptsBeforeOverflow)
+        {
+            // the number of attempts in the method will overflow, so just use the Long.MAX_VALUE
+            retryDelay = Long.MAX_VALUE;
+        }
+        else
+        {
+            retryDelay = (long) Math.pow(2, attempts - 1)  * retryDelayMillis;
+        }
         if (maxRetryDelayMillis > 0)
         {
             return Math.min(maxRetryDelayMillis, retryDelay);
         }
         return retryDelay;
+    }
+
+    /**
+     * Computes the maximum number of attempts possible before overflowing. The value is computed from:
+     *
+     * <pre>
+     *                             (   Long.MAX_VALUE  )
+     *     max_attempts = 1 + log2 ( ----------------- )
+     *                             (  retryDelayMills  )
+     * </pre>
+     *
+     * Which is deduced from the {@code retryDelay} calculation in the {@link #retryDelayMillis(int)} method:
+     *
+     * <pre>
+     *     retryDelay = 2^(attempts - 1) * retryDelayMillis
+     * </pre>
+     *
+     * Where the {@code retryDelay} is the maximum allowed value before overflowing, {@code Long.MAX_VALUE}.
+     *
+     * @return the maximum number of attempts before overflowing
+     */
+    private long computeMaxAttemptsBeforeOverflow()
+    {
+        return 1L + (long) (Math.log((double) Long.MAX_VALUE / (double) retryDelayMillis) / Math.log(2));
     }
 }

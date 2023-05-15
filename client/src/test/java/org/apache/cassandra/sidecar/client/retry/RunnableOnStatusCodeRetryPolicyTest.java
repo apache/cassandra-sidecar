@@ -26,8 +26,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.cassandra.sidecar.client.HttpResponse;
@@ -43,8 +41,6 @@ import static org.mockito.Mockito.when;
  */
 class RunnableOnStatusCodeRetryPolicyTest
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RunnableOnStatusCodeRetryPolicyTest.class);
-
     Request mockRequest;
     HttpResponse mockResponse;
     Map<String, List<String>> headersMap;

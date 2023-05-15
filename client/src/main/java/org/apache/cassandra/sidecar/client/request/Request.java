@@ -69,10 +69,7 @@ public abstract class Request
     /**
      * @return the HTTP method to be used for the request
      */
-    public HttpMethod method()
-    {
-        return HttpMethod.GET;
-    }
+    public abstract HttpMethod method();
 
     /**
      * @return the URI for the request

@@ -72,10 +72,6 @@ public class SidecarConfig
         private long retryDelayMillis = DEFAULT_RETRY_DELAY_MILLIS;
         private long maxRetryDelayMillis = DEFAULT_MAX_RETRY_DELAY_MILLIS;
 
-        public Builder()
-        {
-        }
-
         /**
          * Sets the {@code maxRetries} and returns a reference to this Builder enabling method chaining.
          *

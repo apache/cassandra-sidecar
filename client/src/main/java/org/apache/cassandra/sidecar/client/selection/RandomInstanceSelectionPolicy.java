@@ -29,7 +29,8 @@ import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * An instance selection policy that returns instances in random order
+ * An instance selection policy that returns instances in random order, and does not necessarily return the instances
+ * in the provided order from the underlying {@link Iterator} for the {@link SidecarInstancesProvider#instances()}.
  */
 public class RandomInstanceSelectionPolicy extends OrderedInstanceSelectionPolicy
 {

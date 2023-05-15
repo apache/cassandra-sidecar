@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.SchemaResponse;
 
@@ -42,5 +43,14 @@ public class SchemaRequest extends DecodableRequest<SchemaResponse>
     public SchemaRequest(String keyspace)
     {
         super(ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public HttpMethod method()
+    {
+        return HttpMethod.GET;
     }
 }

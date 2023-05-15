@@ -44,7 +44,7 @@ class TokenRangeReplicasRequestTestParameters implements RequestTestParameters<T
                "\"replicas\":{\"datacenter1\":[\"127.0.0.2:7000\"]}},{\"start\":\"-3074457345618258603\"," +
                "\"end\":\"3074457345618258602\",\"replicas\":{\"datacenter1\":[\"127.0.0.3:7000\"]}}," +
                "{\"start\":\"3074457345618258602\",\"end\":\"9223372036854775807\",\"replicas\":" +
-               "{\"datacenter1\":[\"127.0.0.1:7000\"]}}],\"readReplicas\":[{\"start\":\"3074457345618258602\"," +
+               "{\"datacenter1\":[\"127.0.0.1:7000\"]}}],\"naturalReplicas\":[{\"start\":\"3074457345618258602\"," +
                "\"end\":\"9223372036854775807\",\"replicas\":{\"datacenter1\":[\"127.0.0.1:7000\"]}}," +
                "{\"start\":\"-3074457345618258603\",\"end\":\"3074457345618258602\",\"replicas\":" +
                "{\"datacenter1\":[\"127.0.0.3:7000\"]}},{\"start\":\"-9223372036854775808\"," +
@@ -62,18 +62,18 @@ class TokenRangeReplicasRequestTestParameters implements RequestTestParameters<T
     {
         assertThat(response).isNotNull();
         assertThat(response.writeReplicas()).isNotNull();
-        assertThat(response.readReplicas()).isNotNull();
+        assertThat(response.naturalReplicas()).isNotNull();
         assertThat(response.writeReplicas()).hasSize(3);
         assertThat(response.writeReplicas().get(0).start()).isEqualTo("-9223372036854775808");
         assertThat(response.writeReplicas().get(0).end()).isEqualTo("-3074457345618258603");
         assertThat(response.writeReplicas().get(0).replicasByDatacenter()).hasSize(1);
         assertThat(response.writeReplicas().get(0).replicasByDatacenter())
         .hasEntrySatisfying("datacenter1", v -> assertThat(v).hasSize(1));
-        assertThat(response.readReplicas()).hasSize(3);
-        assertThat(response.readReplicas().get(1).start()).isEqualTo("-3074457345618258603");
-        assertThat(response.readReplicas().get(1).end()).isEqualTo("3074457345618258602");
-        assertThat(response.readReplicas().get(1).replicasByDatacenter()).hasSize(1);
-        assertThat(response.readReplicas().get(1).replicasByDatacenter())
+        assertThat(response.naturalReplicas()).hasSize(3);
+        assertThat(response.naturalReplicas().get(1).start()).isEqualTo("-3074457345618258603");
+        assertThat(response.naturalReplicas().get(1).end()).isEqualTo("3074457345618258602");
+        assertThat(response.naturalReplicas().get(1).replicasByDatacenter()).hasSize(1);
+        assertThat(response.naturalReplicas().get(1).replicasByDatacenter())
         .hasEntrySatisfying("datacenter1", v -> assertThat(v).hasSize(1));
     }
 }

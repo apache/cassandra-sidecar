@@ -46,11 +46,11 @@ class SingleInstanceSelectionPolicyTest
         InstanceSelectionPolicy instanceSelectionPolicy = new SingleInstanceSelectionPolicy(mockSidecarInstance);
         Iterator<SidecarInstance> iterator = instanceSelectionPolicy.iterator();
 
-        assertThat(iterator.hasNext()).isTrue();
         assertThat(iterator.hasNext()).isTrue().as("Expected to be true");
+        assertThat(iterator.hasNext()).isTrue().as("Test idempotency of hasNext by running it again");
         assertThat(iterator.next()).isSameAs(mockSidecarInstance);
-        assertThat(iterator.hasNext()).isFalse();
         assertThat(iterator.hasNext()).isFalse().as("Expected to be false");
+        assertThat(iterator.hasNext()).isFalse().as("Test idempotency of hasNext by running it again");
         assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(iterator::next);
     }
 }

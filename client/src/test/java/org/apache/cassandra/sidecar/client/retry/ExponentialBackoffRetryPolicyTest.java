@@ -57,13 +57,18 @@ class ExponentialBackoffRetryPolicyTest
     void testOverflows()
     {
         long delay = new ExponentialBackoffRetryPolicy(1, 1, 0)
-                     .retryDelayMillis(66); // 2 ^ 63 + 1 overflows
-        assertThat(delay).as("Should not overflow when the exponential grows larger ")
+                     .retryDelayMillis(64); // 2 ^ (64 - 1) + 1 overflows
+        assertThat(delay).as("Should not overflow when the exponential grows larger")
                          .isEqualTo(Long.MAX_VALUE);
 
         delay = new ExponentialBackoffRetryPolicy(1, 2, 0)
-                .retryDelayMillis(66); // 2 * 2 ^ 63 + 1 overflows
+                .retryDelayMillis(63); // 2 * 2 ^ (63 - 1) + 1 overflows
         assertThat(delay).isEqualTo(Long.MAX_VALUE);
+
+        delay = new ExponentialBackoffRetryPolicy(1, 200, 0)
+                .retryDelayMillis(56);
+        assertThat(delay).as("If the number of retries is greater than or equals to 56, the value will overflow")
+                         .isEqualTo(Long.MAX_VALUE);
     }
 
     @Test

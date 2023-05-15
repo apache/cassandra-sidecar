@@ -42,7 +42,7 @@ class GossipInfoResponseTest
     @MethodSource(value = { "gossipFields" })
     void testLowerCamelCase(GossipInfoResponse.GossipField gossipField, String expectedValue)
     {
-        assertThat(GossipInfoResponse.toLowerCamelCase(gossipField.name())).isEqualTo(expectedValue);
+        assertThat(gossipField.toLowerCamelCase()).isEqualTo(expectedValue);
     }
 
     static Stream<Arguments> gossipFields()
