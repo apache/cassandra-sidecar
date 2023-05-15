@@ -48,9 +48,9 @@ public interface InstanceMetadata
     List<String> dataDirs();
 
     /**
-     * @return staging directory for the uploads of the cassandra instance
+     * @return a staging directory of the cassandra instance
      */
-    String uploadsStagingDir();
+    String stagingDir();
 
     /**
      * @return a {@link CassandraAdapterDelegate} specific for the instance

@@ -51,13 +51,13 @@ public class IntegrationTestModule extends AbstractModule
     public InstancesConfig instancesConfig(CassandraVersionProvider versionProvider)
     {
         String dataDirectory = cassandraTestContext.dataDirectoryPath.toFile().getAbsolutePath();
-        String uploadsStagingDirectory = cassandraTestContext.dataDirectoryPath.resolve("staging")
+        String stagingDirectory = cassandraTestContext.dataDirectoryPath.resolve("staging")
                                                                                .toFile().getAbsolutePath();
         InstanceMetadata metadata = new InstanceMetadataImpl(1,
                                                              "localhost",
                                                              9043,
                                                              Collections.singleton(dataDirectory),
-                                                             uploadsStagingDirectory,
+                                                             stagingDirectory,
                                                              cassandraTestContext.session,
                                                              cassandraTestContext.jmxClient,
                                                              versionProvider);

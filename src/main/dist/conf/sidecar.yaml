@@ -6,7 +6,7 @@ cassandra_instances:
     host: localhost1
     port: 9042
     data_dirs: /ccm/test/node1/data0, /ccm/test/node1/data1
-    uploads_staging_dir: /ccm/test/node1/sstable-staging
+    staging_dir: /ccm/test/node1/sstable-staging
     jmx_host: 127.0.0.1
     jmx_port: 7100
     jmx_ssl_enabled: false
@@ -16,7 +16,7 @@ cassandra_instances:
     host: localhost2
     port: 9042
     data_dirs: /ccm/test/node2/data0, /ccm/test/node2/data1
-    uploads_staging_dir: /ccm/test/node2/sstable-staging
+    staging_dir: /ccm/test/node2/sstable-staging
     jmx_host: 127.0.0.1
     jmx_port: 7200
     jmx_ssl_enabled: false
@@ -26,7 +26,7 @@ cassandra_instances:
     host: localhost3
     port: 9042
     data_dirs: /ccm/test/node3/data0, /ccm/test/node3/data1
-    uploads_staging_dir: /ccm/test/node3/sstable-staging
+    staging_dir: /ccm/test/node3/sstable-staging
     jmx_host: 127.0.0.1
     jmx_port: 7300
     jmx_ssl_enabled: false

@@ -197,7 +197,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         {
             return Future.succeededFuture();
         }
-        return fs.fsProps(instanceMetadata.uploadsStagingDir())
+        return fs.fsProps(instanceMetadata.stagingDir())
                  .compose(fsProps -> {
                      // calculate available disk space percentage
                      long totalSpace = fsProps.totalSpace();
@@ -213,7 +213,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                      if (availableDiskSpacePercentage < minimumPercentageRequired)
                      {
                          logger.warn("Insufficient space available for upload in stagingDir={}, available={}%, " +
-                                     "required={}%", instanceMetadata.uploadsStagingDir(),
+                                     "required={}%", instanceMetadata.stagingDir(),
                                      availableDiskSpacePercentage, minimumPercentageRequired);
                          return Future.failedFuture(wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                                                       "Insufficient space available for upload"));

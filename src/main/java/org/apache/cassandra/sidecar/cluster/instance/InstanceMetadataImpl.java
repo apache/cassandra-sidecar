@@ -37,19 +37,19 @@ public class InstanceMetadataImpl implements InstanceMetadata
     private final String host;
     private final int port;
     private final List<String> dataDirs;
-    private final String uploadsStagingDir;
+    private final String stagingDir;
     private final CassandraAdapterDelegate delegate;
 
     public InstanceMetadataImpl(int id,
                                 String host,
                                 int port,
                                 Iterable<String> dataDirs,
-                                String uploadsStagingDir,
+                                String stagingDir,
                                 CQLSessionProvider sessionProvider,
                                 JmxClient jmxClient,
                                 CassandraVersionProvider versionProvider)
     {
-        this(id, host, port, dataDirs, uploadsStagingDir,
+        this(id, host, port, dataDirs, stagingDir,
              new CassandraAdapterDelegate(versionProvider, sessionProvider, jmxClient));
     }
 
@@ -58,14 +58,14 @@ public class InstanceMetadataImpl implements InstanceMetadata
                                 String host,
                                 int port,
                                 Iterable<String> dataDirs,
-                                String uploadsStagingDir,
+                                String stagingDir,
                                 CassandraAdapterDelegate delegate)
     {
         this.id = id;
         this.host = host;
         this.port = port;
         this.dataDirs = ImmutableList.copyOf(dataDirs);
-        this.uploadsStagingDir = uploadsStagingDir;
+        this.stagingDir = stagingDir;
         this.delegate = delegate;
     }
 
@@ -94,9 +94,9 @@ public class InstanceMetadataImpl implements InstanceMetadata
     }
 
     @Override
-    public String uploadsStagingDir()
+    public String stagingDir()
     {
-        return uploadsStagingDir;
+        return stagingDir;
     }
 
     @Override

@@ -91,7 +91,7 @@ public class SSTableUploadsPathBuilder extends BaseFileSystem
         return validateUploadId(uploadId)
                .compose(validUploadId -> {
                    InstanceMetadata instanceMeta = instancesConfig.instanceFromHost(host);
-                   return isValidDirectory(StringUtils.removeEnd(instanceMeta.uploadsStagingDir(), File.separator));
+                   return isValidDirectory(StringUtils.removeEnd(instanceMeta.stagingDir(), File.separator));
                })
                .compose(directory -> Future.succeededFuture(directory + File.separatorChar + uploadId));
     }

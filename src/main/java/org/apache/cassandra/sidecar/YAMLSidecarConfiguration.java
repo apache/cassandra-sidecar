@@ -65,7 +65,7 @@ import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_
 import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_HOST;
 import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_ID;
 import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_PORT;
-import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_UPLOADS_STAGING_DIR;
+import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_INSTANCE_STAGING_DIR;
 import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_JMX_HOST;
 import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_JMX_PORT;
 import static org.apache.cassandra.sidecar.utils.SidecarYaml.CASSANDRA_JMX_ROLE;
@@ -323,7 +323,7 @@ public class YAMLSidecarConfiguration extends Configuration
         String host = instance.get(String.class, CASSANDRA_INSTANCE_HOST);
         int port = instance.get(Integer.class, CASSANDRA_INSTANCE_PORT);
         String dataDirs = instance.get(String.class, CASSANDRA_INSTANCE_DATA_DIRS);
-        String stagingDir = instance.get(String.class, CASSANDRA_INSTANCE_UPLOADS_STAGING_DIR);
+        String stagingDir = instance.get(String.class, CASSANDRA_INSTANCE_STAGING_DIR);
         String jmxHost = instance.get(String.class, CASSANDRA_JMX_HOST, "127.0.0.1");
         int jmxPort = instance.get(Integer.class, CASSANDRA_JMX_PORT, 7199);
         String jmxRole = instance.get(String.class, CASSANDRA_JMX_ROLE, null);

@@ -52,7 +52,7 @@ public class SidecarYaml
     public static final String CASSANDRA_INSTANCE_HOST = "host";
     public static final String CASSANDRA_INSTANCE_PORT = "port";
     public static final String CASSANDRA_INSTANCE_DATA_DIRS = "data_dirs";
-    public static final String CASSANDRA_INSTANCE_UPLOADS_STAGING_DIR = "uploads_staging_dir";
+    public static final String CASSANDRA_INSTANCE_STAGING_DIR = "staging_dir";
     public static final String CASSANDRA_JMX_HOST = "jmx_host";
     public static final String CASSANDRA_JMX_PORT = "jmx_port";
     public static final String CASSANDRA_JMX_ROLE = "jmx_role";
