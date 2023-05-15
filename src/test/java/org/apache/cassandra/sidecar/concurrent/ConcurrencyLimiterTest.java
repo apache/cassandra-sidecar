@@ -154,6 +154,6 @@ public class ConcurrencyLimiterTest
 
         pool.shutdown();
         assertThat(pool.awaitTermination(1, TimeUnit.MINUTES)).isTrue();
-        assertThat(limiter.permits.get()).isEqualTo(0);
+        assertThat(limiter.acquiredPermits()).isEqualTo(0);
     }
 }

@@ -44,7 +44,6 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class FileStreamHandler extends AbstractHandler<String>
 {
     public static final String FILE_PATH_CONTEXT_KEY = "fileToTransfer";
-    private static final Logger LOGGER = LoggerFactory.getLogger(FileStreamHandler.class);
     private final FileStreamer fileStreamer;
 
     @Inject
@@ -68,7 +67,7 @@ public class FileStreamHandler extends AbstractHandler<String>
           .compose(exists -> ensureValidFile(fs, localFile, exists))
           .compose(fileProps -> fileStreamer.stream(new HttpResponse(httpRequest, context.response()), localFile,
                                                     fileProps.size(), httpRequest.getHeader(HttpHeaderNames.RANGE)))
-          .onSuccess(v -> LOGGER.debug("Completed streaming file '{}'", localFile))
+          .onSuccess(v -> logger.debug("Completed streaming file '{}'", localFile))
           .onFailure(context::fail);
     }
 
@@ -91,7 +90,7 @@ public class FileStreamHandler extends AbstractHandler<String>
     {
         if (!exists)
         {
-            LOGGER.error("The requested file '{}' does not exist", localFile);
+            logger.error("The requested file '{}' does not exist", localFile);
             return Future.failedFuture(wrapHttpException(NOT_FOUND, "The requested file does not exist"));
         }
 
@@ -100,13 +99,13 @@ public class FileStreamHandler extends AbstractHandler<String>
                      if (fileProps == null || !fileProps.isRegularFile())
                      {
                          // File is not a regular file
-                         LOGGER.error("The requested file '{}' does not exist", localFile);
+                         logger.error("The requested file '{}' does not exist", localFile);
                          return Future.failedFuture(wrapHttpException(NOT_FOUND, "The requested file does not exist"));
                      }
 
                      if (fileProps.size() <= 0)
                      {
-                         LOGGER.error("The requested file '{}' has 0 size", localFile);
+                         logger.error("The requested file '{}' has 0 size", localFile);
                          return Future.failedFuture(wrapHttpException(REQUESTED_RANGE_NOT_SATISFIABLE,
                                                                       "The requested file is empty"));
                      }

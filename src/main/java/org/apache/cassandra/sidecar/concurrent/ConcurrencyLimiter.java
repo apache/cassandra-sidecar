@@ -21,8 +21,6 @@ package org.apache.cassandra.sidecar.concurrent;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * A class that provides functionality for a concurrency limiter where implementing consumers can try to acquire a
  * permit before executing an operation, and later releasing the permit when the operation is completed. This
@@ -61,8 +59,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class ConcurrencyLimiter
 {
-    @VisibleForTesting
-    final AtomicInteger permits = new AtomicInteger(0);
+    private final AtomicInteger permits = new AtomicInteger(0);
     private final IntSupplier concurrencyLimitSupplier;
 
     public ConcurrencyLimiter(IntSupplier concurrencyLimitSupplier)
@@ -108,5 +105,13 @@ public class ConcurrencyLimiter
     public int limit()
     {
         return concurrencyLimitSupplier.getAsInt();
+    }
+
+    /**
+     * @return the number of acquired permits at this moment
+     */
+    public int acquiredPermits()
+    {
+        return permits.get();
     }
 }
