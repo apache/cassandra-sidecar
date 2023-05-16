@@ -34,7 +34,6 @@ import org.apache.cassandra.sidecar.client.request.RingRequest;
 import org.apache.cassandra.sidecar.client.request.SSTableComponentRequest;
 import org.apache.cassandra.sidecar.client.request.SchemaRequest;
 import org.apache.cassandra.sidecar.client.request.TimeSkewRequest;
-import org.apache.cassandra.sidecar.client.request.TokenRangeReplicasRequest;
 import org.apache.cassandra.sidecar.client.request.UploadSSTableRequest;
 import org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.NoRetryPolicy;
@@ -251,18 +250,6 @@ public class RequestContext
         public Builder gossipInfoRequest()
         {
             return request(GOSSIP_INFO_REQUEST);
-        }
-
-        /**
-         * Sets the {@code request} to be a {@link TokenRangeReplicasRequest} for the given {@code keyspace} and
-         * returns a reference to this Builder enabling method chaining.
-         *
-         * @param keyspace the keyspace in Cassandra
-         * @return a reference to this Builder
-         */
-        public Builder tokenRangeReplicasRequest(String keyspace)
-        {
-            return request(new TokenRangeReplicasRequest(keyspace));
         }
 
         /**

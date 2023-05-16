@@ -20,13 +20,13 @@ package org.apache.cassandra.sidecar.cassandra40;
 
 import java.net.UnknownHostException;
 import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -42,7 +42,6 @@ public class Cassandra40StorageOperations implements StorageOperations
     private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra40StorageOperations.class);
     private final JmxClient jmxClient;
     private final RingProvider ringProvider;
-    private final TokenRangeReplicaProvider tokenRangeReplicaProvider;
 
     /**
      * Creates a new instance with the provided {@link JmxClient}
@@ -53,7 +52,6 @@ public class Cassandra40StorageOperations implements StorageOperations
     {
         this.jmxClient = jmxClient;
         this.ringProvider = new RingProvider(jmxClient, dnsResolver);
-        this.tokenRangeReplicaProvider = new TokenRangeReplicaProvider(jmxClient);
     }
 
     /**
@@ -93,14 +91,5 @@ public class Cassandra40StorageOperations implements StorageOperations
     public RingResponse ring(@Nullable String keyspace) throws UnknownHostException
     {
         return ringProvider.ring(keyspace);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public TokenRangeReplicasResponse tokenRangeReplicas(@NotNull String keyspace, @NotNull String partitioner)
-    {
-        return tokenRangeReplicaProvider.tokenRangeReplicas(keyspace, Partitioner.fromClassName(partitioner));
     }
 }

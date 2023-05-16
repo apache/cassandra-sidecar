@@ -64,7 +64,6 @@ import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.data.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.data.SchemaResponse;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
@@ -254,28 +253,6 @@ abstract class SidecarClientTest
         assertThat(result.currentTime).isEqualTo(5555555);
 
         validateResponseServed(ApiEndpointsV1.TIME_SKEW_ROUTE);
-    }
-
-    @Test
-    public void testTokenRangeReplicasRequest() throws Exception
-    {
-        String responseAsString = "{\"writeReplicas\":[{\"start\":\"10\",\"end\":\"20\"," +
-                                  "\"replicas\":{\"dc1\":[\"localhost1\",\"localhost2\",\"localhost3\"]}}]," +
-                                  "\"naturalReplicas\":[{\"start\":\"10\",\"end\":\"20\"," +
-                                  "\"replicas\":{\"dc1\":[\"localhost1\",\"localhost2\",\"localhost3\"]}}]" +
-                                  "}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(responseAsString);
-        enqueue(response);
-
-        TokenRangeReplicasResponse result = client.tokenRangeReplicasRequest(instances.subList(0, 2), "cycling")
-                                                  .get(30, TimeUnit.SECONDS);
-        assertThat(result).isNotNull();
-        assertThat(result.writeReplicas()).isNotNull().hasSize(1);
-        validateReplicaInfo(result.writeReplicas().get(0));
-        validateReplicaInfo(result.naturalReplicas().get(0));
-
-        validateResponseServed(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE
-                               .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling"));
     }
 
     @Test
@@ -936,15 +913,6 @@ abstract class SidecarClientTest
         assertThat(result.releaseVersion()).isEqualTo("4.0.0");
 
         validateResponseServed(ApiEndpointsV1.NODE_SETTINGS_ROUTE);
-    }
-
-    private void validateReplicaInfo(TokenRangeReplicasResponse.ReplicaInfo writeReplica0)
-    {
-        assertThat(writeReplica0.start()).isEqualTo("10");
-        assertThat(writeReplica0.end()).isEqualTo("20");
-        assertThat(writeReplica0.replicasByDatacenter()).hasSize(1);
-        List<String> dc1WriteReplicas = writeReplica0.replicasByDatacenter().get("dc1");
-        assertThat(dc1WriteReplicas).containsExactly("localhost1", "localhost2", "localhost3");
     }
 
     private void enqueue(MockResponse response)

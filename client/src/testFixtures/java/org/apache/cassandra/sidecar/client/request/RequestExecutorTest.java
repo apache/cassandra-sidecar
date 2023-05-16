@@ -232,7 +232,6 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
         new RingRequestForKeyspaceTestParameters(),
         new RingRequestTestParameters(),
         new TimeSkewRequestTestParameters(),
-        new TokenRangeReplicasRequestTestParameters(),
         new FullSchemaRequestTestParameters(),
         new SchemaRequestTestParameters(),
         new ListSnapshotFilesRequestTestParameters()
