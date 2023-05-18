@@ -38,7 +38,7 @@ public class SidecarYaml
     public static final String ALLOWABLE_SKEW_IN_MINUTES = "sidecar.allowable_time_skew_in_minutes";
     public static final String REQUEST_IDLE_TIMEOUT_MILLIS = "sidecar.request_idle_timeout_millis";
     public static final String REQUEST_TIMEOUT_MILLIS = "sidecar.request_timeout_millis";
-    public static final String MIN_FREE_SPACE_PERCENT_FOR_UPLOAD = "sidecar.sstable_uploads.min_free_space_percent";
+    public static final String MIN_FREE_SPACE_PERCENT_FOR_UPLOAD = "sidecar.sstable_upload.min_free_space_percent";
     public static final String CONCURRENT_UPLOAD_LIMIT = "sidecar.sstable_upload.concurrent_upload_limit";
     public static final String SSTABLE_IMPORT_POLL_INTERVAL_MILLIS = "sidecar.sstable_import.poll_interval_millis";
     public static final String SSTABLE_IMPORT_CACHE_CONFIGURATION = "sidecar.sstable_import.cache";
