@@ -1,6 +1,7 @@
 .gitignore
 
 # C*
+.out/
 build/
 src/gen-java/
 src/resources/org/apache/cassandra/config/
@@ -71,7 +72,6 @@ lib/jsr223/jython/cachedir
 lib/jsr223/scala/*.jar
 
 /.ant-targets-build.xml
-
 
 src/dist/*
 *.logdir_IS_UNDEFINED

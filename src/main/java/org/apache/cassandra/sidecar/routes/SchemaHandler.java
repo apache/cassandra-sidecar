@@ -17,60 +17,58 @@
  */
 package org.apache.cassandra.sidecar.routes;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.Session;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.data.SchemaRequest;
+import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.data.SchemaResponse;
+import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.data.SchemaRequest;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * The {@link SchemaHandler} class returns a
+ * The {@link SchemaHandler} class handles schema requests
  */
 @Singleton
-public class SchemaHandler extends AbstractHandler
+public class SchemaHandler extends AbstractHandler<SchemaRequest>
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SchemaHandler.class);
-
     /**
-     * Constructs a handler with the provided {@code instancesConfig}
+     * Constructs a handler with the provided {@code metadataFetcher}
      *
-     * @param instancesConfig the instances configuration
+     * @param metadataFetcher the interface to retrieve metadata
+     * @param executorPools   executor pools for blocking executions
+     * @param validator       a validator instance to validate Cassandra-specific input
      */
     @Inject
-    protected SchemaHandler(InstancesConfig instancesConfig)
+    protected SchemaHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools,
+                            CassandraInputValidator validator)
     {
-        super(instancesConfig);
+        super(metadataFetcher, executorPools, validator);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void handle(RoutingContext context)
+    public void handleInternal(RoutingContext context,
+                               HttpServerRequest httpRequest,
+                               String host,
+                               SocketAddress remoteAddress,
+                               SchemaRequest request)
     {
-        final HttpServerRequest request = context.request();
-        final String host = getHost(context);
-        final SocketAddress remoteAddress = request.remoteAddress();
-        final SchemaRequest requestParams = extractParamsOrThrow(context);
-        final InstanceMetadata instanceMeta = instancesConfig.instanceFromHost(host);
-        LOGGER.debug("SchemaHandler received request: {} from: {}. Instance: {}",
-                     requestParams, remoteAddress, host);
-
-        final Vertx vertx = context.vertx();
-        getMetadata(vertx, instanceMeta).onFailure(throwable -> handleFailure(context, requestParams, throwable))
-                                        .onSuccess(metadata -> handleWithMetadata(context, requestParams, metadata));
+        metadata(host)
+        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request))
+        .onSuccess(metadata -> handleWithMetadata(context, request, metadata));
     }
 
     /**
@@ -85,8 +83,8 @@ public class SchemaHandler extends AbstractHandler
         if (metadata == null)
         {
             // set request as failed and return
-            LOGGER.error("Failed to obtain metadata on the connected cluster for request '{}'", requestParams);
-            context.fail(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+            logger.error("Failed to obtain metadata on the connected cluster for request '{}'", requestParams);
+            context.fail(cassandraServiceUnavailable());
             return;
         }
 
@@ -105,7 +103,7 @@ public class SchemaHandler extends AbstractHandler
             // keyspace does not exist
             String errorMessage = String.format("Keyspace '%s' does not exist.",
                                                 requestParams.keyspace());
-            context.fail(new HttpException(HttpResponseStatus.NOT_FOUND.code(), errorMessage));
+            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, errorMessage));
             return;
         }
 
@@ -113,47 +111,30 @@ public class SchemaHandler extends AbstractHandler
         context.json(schemaResponse);
     }
 
-    private void handleFailure(RoutingContext context, SchemaRequest requestParams, Throwable throwable)
-    {
-        LOGGER.error("Failed to obtain keyspace metadata for request '{}'", requestParams, throwable);
-        context.fail(new HttpException(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
-                                       "Unable to reach the Cassandra service", throwable));
-    }
-
     /**
      * Gets cluster metadata asynchronously.
      *
-     * @param vertx            the vertx instance
-     * @param instanceMetadata the instance metadata
+     * @param host the Cassandra instance host
      * @return {@link Future} containing {@link Metadata}
      */
-    private Future<Metadata> getMetadata(Vertx vertx, InstanceMetadata instanceMetadata)
+    private Future<Metadata> metadata(String host)
     {
-        return vertx.executeBlocking(promise -> {
-            // session() or getLocalCql() can potentially block, so move them inside a executeBlocking lambda
-            Session session = instanceMetadata.session().getLocalCql();
-            if (session == null)
-            {
-                LOGGER.error("Unable to obtain session for instance='{}' host='{}' port='{}'",
-                             instanceMetadata.id(), instanceMetadata.host(), instanceMetadata.port());
-                promise.fail(new RuntimeException(String.format("Could not obtain session for instance '%d'",
-                                                                instanceMetadata.id())));
-            }
-            else
-            {
-                promise.complete(session.getCluster().getMetadata());
-            }
+        return executorPools.service().executeBlocking(promise -> {
+            CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+            // metadata can block so we need to run in a blocking thread
+            promise.complete(delegate.metadata());
         });
     }
 
     /**
      * Parses the request parameters
      *
-     * @param rc the event to handle
+     * @param context the event to handle
      * @return the {@link SchemaRequest} parsed from the request
      */
-    private SchemaRequest extractParamsOrThrow(final RoutingContext rc)
+    @Override
+    protected SchemaRequest extractParamsOrThrow(RoutingContext context)
     {
-        return new SchemaRequest(rc.pathParam("keyspace"));
+        return new SchemaRequest(keyspace(context, false));
     }
 }

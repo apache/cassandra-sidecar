@@ -28,12 +28,13 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 public interface InstancesConfig
 {
     /**
-     * returns metadata of instances owned by the sidecar
+     * @return metadata of instances owned by the sidecar
      */
     List<InstanceMetadata> instances();
 
     /**
      * Lookup instance metadata by id.
+     *
      * @param id instance's id
      * @return instance meta information
      */
@@ -41,6 +42,7 @@ public interface InstancesConfig
 
     /**
      * Lookup instance metadata by host name.
+     *
      * @param host host address of instance
      * @return instance meta information
      */

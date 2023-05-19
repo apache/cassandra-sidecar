@@ -18,21 +18,20 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.google.common.base.Objects;
 
 /**
  * Implements versioning used in Cassandra and CQL.
  * <p>
  * Note: The following code uses a slight variation from the semver document (http://semver.org).
  * </p>
- *
+ * <p>
  * The rules here are a bit different than normal semver comparison.  For simplicity,
  * an alpha version of 4.0 or a snapshot is equal to 4.0.  This allows us to test sidecar
  * against alpha versions of a release.
- *
+ * <p>
  * While it's possible to implement full version comparison, it's likely not very useful
  * This is because the main testing we are going to do will be against release versions - something like 4.0.
  * We want to list an adapter as being compatible with 4.0 - and that should include 4.0 alpha, etc.
@@ -45,8 +44,8 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
      **/
     private static final String VERSION_REGEXP = "(\\d+)\\.(\\d+)(?:\\.(\\w+))?(\\-[.\\w]+)?([.+][.\\w]+)?";
 
-    private static final Pattern pattern = Pattern.compile(VERSION_REGEXP);
-    private static final Pattern SNAPSHOT = Pattern.compile("-SNAPSHOT");
+    private static final Pattern PATTERN = Pattern.compile(VERSION_REGEXP);
+    private static final String SNAPSHOT = "-SNAPSHOT";
 
     public final int major;
     public final int minor;
@@ -56,15 +55,16 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
      * Parse a version from a string.
      *
      * @param version the string to parse
+     * @return the {@link SimpleCassandraVersion} parsed from the {@code version} string
      * @throws IllegalArgumentException if the provided string does not
      *                                  represent a version
      */
     public static SimpleCassandraVersion create(String version)
     {
-        String stripped = SNAPSHOT.matcher(version).replaceFirst("");
-        Matcher matcher = pattern.matcher(stripped);
+        String stripped = version.toUpperCase().replace(SNAPSHOT, "");
+        Matcher matcher = PATTERN.matcher(stripped);
         if (!matcher.matches())
-            throw new IllegalArgumentException("Invalid version value: " + version);
+            throw new IllegalArgumentException("Invalid Cassandra version value: " + version);
 
         try
         {
@@ -76,7 +76,7 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
         }
         catch (NumberFormatException e)
         {
-            throw new IllegalArgumentException("Invalid version value: " + version, e);
+            throw new IllegalArgumentException("Invalid Cassandra version value: " + version, e);
         }
     }
 
@@ -128,14 +128,15 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
             return false;
         SimpleCassandraVersion that = (SimpleCassandraVersion) o;
         return major == that.major
-                && minor == that.minor
-                && patch == that.patch;
+               && minor == that.minor
+               && patch == that.patch;
     }
 
     /**
-     * Returns true if this > v2
-     * @param v2
-     * @return
+     * Returns true if this &gt; v2
+     *
+     * @param v2 the version to compare
+     * @return the result of the comparison
      */
     public boolean isGreaterThan(SimpleCassandraVersion v2)
     {
@@ -145,7 +146,7 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
     @Override
     public int hashCode()
     {
-        return Objects.hashCode(major, minor, patch);
+        return Objects.hash(major, minor, patch);
     }
 
     @Override

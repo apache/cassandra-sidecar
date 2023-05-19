@@ -24,6 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 /**
  * Changes to the TestModule to define SSL dependencies
@@ -51,6 +53,9 @@ public class TestSslModule extends TestModule
             logger.error("Trust Store file not found");
         }
 
+        WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfiguration("test-pool", 10,
+                                                                             30000);
+
         return new Configuration.Builder()
                            .setInstancesConfig(instancesConfig)
                            .setHost("127.0.0.1")
@@ -62,6 +67,13 @@ public class TestSslModule extends TestModule
                            .setTrustStorePassword(trustStorePassword)
                            .setSslEnabled(true)
                            .setRateLimitStreamRequestsPerSecond(1)
+                           .setRequestIdleTimeoutMillis(300_000)
+                           .setRequestTimeoutMillis(300_000L)
+                           .setConcurrentUploadsLimit(80)
+                           .setMinSpacePercentRequiredForUploads(0)
+                           .setSSTableImportCacheConfiguration(new CacheConfiguration(60_000, 100))
+                           .setServerWorkerPoolConfiguration(workerPoolConf)
+                           .setServerInternalWorkerPoolConfiguration(workerPoolConf)
                            .build();
     }
 }

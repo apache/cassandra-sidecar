@@ -19,14 +19,17 @@
 package org.apache.cassandra.sidecar;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.JksOptions;
@@ -35,19 +38,32 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
+import io.vertx.ext.web.handler.TimeoutHandler;
 import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
-import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
+import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.routes.CassandraHealthService;
-import org.apache.cassandra.sidecar.routes.CassandraSettingsService;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
+import org.apache.cassandra.sidecar.routes.GossipInfoHandler;
 import org.apache.cassandra.sidecar.routes.HealthService;
-import org.apache.cassandra.sidecar.routes.ListSnapshotFilesHandler;
+import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
+import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
+import org.apache.cassandra.sidecar.routes.SnapshotsHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
+import org.apache.cassandra.sidecar.routes.TimeSkewHandler;
+import org.apache.cassandra.sidecar.routes.cassandra.NodeSettingsHandler;
+import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableCleanupHandler;
+import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
+import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
+import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
+import org.apache.cassandra.sidecar.utils.MD5ChecksumVerifier;
+import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
 import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
 import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
@@ -57,17 +73,9 @@ import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
  */
 public class MainModule extends AbstractModule
 {
-    private static final String API_V1_VERSION = "/api/v1";
-
-    @Override
-    protected void configure()
-    {
-        requestStaticInjection(QualifiedTableName.class);
-    }
-
     @Provides
     @Singleton
-    public Vertx getVertx()
+    public Vertx vertx()
     {
         return Vertx.vertx(new VertxOptions().setMetricsOptions(new DropwizardMetricsOptions()
                                                                 .setEnabled(true)
@@ -80,6 +88,8 @@ public class MainModule extends AbstractModule
     public HttpServer vertxServer(Vertx vertx, Configuration conf, Router router, VertxRequestHandler restHandler)
     {
         HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
+        options.setIdleTimeoutUnit(TimeUnit.MILLISECONDS)
+               .setIdleTimeout(conf.getRequestIdleTimeoutMillis());
 
         if (conf.isSslEnabled())
         {
@@ -106,17 +116,15 @@ public class MainModule extends AbstractModule
     @Singleton
     private VertxRequestHandler configureServices(Vertx vertx,
                                                   HealthService healthService,
-                                                  CassandraHealthService cassandraHealthService,
-                                                  CassandraSettingsService cassandraSettingsService)
+                                                  CassandraHealthService cassandraHealthService)
     {
         VertxResteasyDeployment deployment = new VertxResteasyDeployment();
         deployment.start();
-        VertxRegistry r = deployment.getRegistry();
+        VertxRegistry registry = deployment.getRegistry();
 
-        r.addPerInstanceResource(SwaggerOpenApiResource.class);
-        r.addSingletonResource(healthService);
-        r.addSingletonResource(cassandraHealthService);
-        r.addSingletonResource(cassandraSettingsService);
+        registry.addPerInstanceResource(SwaggerOpenApiResource.class);
+        registry.addSingletonResource(healthService);
+        registry.addSingletonResource(cassandraHealthService);
 
         return new VertxRequestHandler(vertx, deployment);
     }
@@ -124,43 +132,101 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     public Router vertxRouter(Vertx vertx,
+                              Configuration conf,
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
                               FileStreamHandler fileStreamHandler,
-                              ListSnapshotFilesHandler listSnapshotFilesHandler,
+                              SnapshotsHandler snapshotsHandler,
                               SchemaHandler schemaHandler,
+                              RingHandler ringHandler,
                               LoggerHandler loggerHandler,
+                              GossipInfoHandler gossipInfoHandler,
+                              TimeSkewHandler timeSkewHandler,
+                              NodeSettingsHandler nodeSettingsHandler,
+                              SSTableUploadHandler ssTableUploadHandler,
+                              SSTableImportHandler ssTableImportHandler,
+                              SSTableCleanupHandler ssTableCleanupHandler,
                               ErrorHandler errorHandler)
     {
         Router router = Router.router(vertx);
         router.route()
-              .failureHandler(errorHandler)
-              .handler(loggerHandler);
+              .handler(loggerHandler)
+              .handler(TimeoutHandler.create(conf.getRequestTimeoutMillis(),
+                                             HttpResponseStatus.REQUEST_TIMEOUT.code()));
+
+        router.route()
+              .path(ApiEndpointsV1.API + "/*")
+              .failureHandler(errorHandler);
 
         // Static web assets for Swagger
         StaticHandler swaggerStatic = StaticHandler.create("META-INF/resources/webjars/swagger-ui");
-        router.route().path("/static/swagger-ui/*").handler(swaggerStatic);
+        router.route()
+              .path("/static/swagger-ui/*")
+              .handler(swaggerStatic);
 
         // Docs index.html page
         StaticHandler docs = StaticHandler.create("docs");
-        router.route().path("/docs/*").handler(docs);
+        router.route()
+              .path("/docs/*")
+              .handler(docs);
 
-        // add custom routers
-        final String componentRoute = "/keyspace/:keyspace/table/:table/snapshots/:snapshot/component/:component";
-        router.get(API_V1_VERSION + componentRoute)
+        // Add custom routers
+        //noinspection deprecation
+        router.get(ApiEndpointsV1.DEPRECATED_COMPONENTS_ROUTE)
               .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
-        final String listSnapshotFilesRoute = "/keyspace/:keyspace/table/:table/snapshots/:snapshot";
-        router.get(API_V1_VERSION + listSnapshotFilesRoute)
-              .handler(listSnapshotFilesHandler);
+        router.get(ApiEndpointsV1.COMPONENTS_ROUTE)
+              .handler(streamSSTableComponentHandler)
+              .handler(fileStreamHandler);
 
-        final String allKeyspacesSchemasRoute = "/schema/keyspaces";
-        router.get(API_V1_VERSION + allKeyspacesSchemasRoute)
+        //noinspection deprecation
+        router.get(ApiEndpointsV1.DEPRECATED_SNAPSHOTS_ROUTE)
+              .handler(snapshotsHandler);
+
+        router.route()
+              .method(HttpMethod.GET)
+              .method(HttpMethod.PUT)
+              .method(HttpMethod.DELETE)
+              .path(ApiEndpointsV1.SNAPSHOTS_ROUTE)
+              .handler(snapshotsHandler);
+
+        //noinspection deprecation
+        router.get(ApiEndpointsV1.DEPRECATED_ALL_KEYSPACES_SCHEMA_ROUTE)
               .handler(schemaHandler);
 
-        final String keyspaceSchemaRoute = "/schema/keyspaces/:keyspace";
-        router.get(API_V1_VERSION + keyspaceSchemaRoute)
+        router.get(ApiEndpointsV1.ALL_KEYSPACES_SCHEMA_ROUTE)
               .handler(schemaHandler);
+
+        //noinspection deprecation
+        router.get(ApiEndpointsV1.DEPRECATED_KEYSPACE_SCHEMA_ROUTE)
+              .handler(schemaHandler);
+
+        router.get(ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE)
+              .handler(schemaHandler);
+
+        router.get(ApiEndpointsV1.RING_ROUTE)
+              .handler(ringHandler);
+
+        router.get(ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE)
+              .handler(ringHandler);
+
+        router.put(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE)
+              .handler(ssTableUploadHandler);
+
+        router.put(ApiEndpointsV1.SSTABLE_IMPORT_ROUTE)
+              .handler(ssTableImportHandler);
+
+        router.delete(ApiEndpointsV1.SSTABLE_CLEANUP_ROUTE)
+              .handler(ssTableCleanupHandler);
+
+        router.get(ApiEndpointsV1.GOSSIP_INFO_ROUTE)
+              .handler(gossipInfoHandler);
+
+        router.get(ApiEndpointsV1.TIME_SKEW_ROUTE)
+              .handler(timeSkewHandler);
+
+        router.get(ApiEndpointsV1.NODE_SETTINGS_ROUTE)
+              .handler(nodeSettingsHandler);
 
         return router;
     }
@@ -176,7 +242,7 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public InstancesConfig getInstancesConfig(Configuration configuration)
+    public InstancesConfig instancesConfig(Configuration configuration)
     {
         return configuration.getInstancesConfig();
     }
@@ -190,10 +256,10 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public CassandraVersionProvider cassandraVersionProvider()
+    public CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
     {
         CassandraVersionProvider.Builder builder = new CassandraVersionProvider.Builder();
-        builder.add(new Cassandra40Factory());
+        builder.add(new Cassandra40Factory(dnsResolver));
         return builder.build();
     }
 
@@ -208,13 +274,34 @@ public class MainModule extends AbstractModule
     @Singleton
     public LoggerHandler loggerHandler()
     {
-        return LoggerHandler.create();
+        return SidecarLoggerHandler.create(LoggerHandler.create());
+    }
+
+    @Provides
+    @Singleton
+    public TimeProvider timeProvider()
+    {
+        return TimeProvider.DEFAULT_TIME_PROVIDER;
     }
 
     @Provides
     @Singleton
     public ErrorHandler errorHandler(Vertx vertx)
     {
-        return ErrorHandler.create(vertx);
+        return new JsonErrorHandler();
+    }
+
+    @Provides
+    @Singleton
+    public DnsResolver dnsResolver()
+    {
+        return DnsResolver.DEFAULT;
+    }
+
+    @Provides
+    @Singleton
+    public ChecksumVerifier checksumVerifier(Vertx vertx)
+    {
+        return new MD5ChecksumVerifier(vertx.fileSystem());
     }
 }

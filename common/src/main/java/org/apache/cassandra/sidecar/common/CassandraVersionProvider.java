@@ -21,7 +21,9 @@ package org.apache.cassandra.sidecar.common;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
-import com.google.common.annotations.VisibleForTesting;
+
+import org.jetbrains.annotations.VisibleForTesting;
+
 
 /**
  * Manages multiple Cassandra versions
@@ -36,7 +38,7 @@ public class CassandraVersionProvider
     }
 
     @VisibleForTesting
-    public List<ICassandraFactory> getAllVersions()
+    public List<ICassandraFactory> allVersions()
     {
         return this.versions;
     }
@@ -45,10 +47,11 @@ public class CassandraVersionProvider
      * For the provided CassandraVersion, return a new ICassandraFactory instance
      * that meets the minimum version requirements
      * That factory can be used to create an ICassandraAdapter
-     * @param requestedVersion
-     * @return
+     *
+     * @param requestedVersion the requested Cassandra version
+     * @return the factory for the requested Cassandra version
      */
-    public ICassandraFactory getCassandra(SimpleCassandraVersion requestedVersion)
+    public ICassandraFactory cassandra(SimpleCassandraVersion requestedVersion)
     {
         ICassandraFactory result = versions.get(0);
 
@@ -70,13 +73,16 @@ public class CassandraVersionProvider
 
     /**
      * Convenience method for getCassandra, converts the String version to a typed one
-     * @param requestedVersion
-     * @return
+     *
+     * @param requestedVersion the version string to parse
+     * @return the Cassandra Factory implementation for the input {@code requestedVersion}
+     * @throws IllegalArgumentException if the provided string does not
+     *                                  represent a version
      */
-    ICassandraFactory getCassandra(String requestedVersion)
+    ICassandraFactory cassandra(String requestedVersion)
     {
         SimpleCassandraVersion version = SimpleCassandraVersion.create(requestedVersion);
-        return getCassandra(version);
+        return cassandra(version);
     }
 
     /**
@@ -86,6 +92,7 @@ public class CassandraVersionProvider
     public static class Builder
     {
         ArrayList<ICassandraFactory> versions;
+
         public Builder()
         {
             versions = new ArrayList<>();
@@ -99,11 +106,11 @@ public class CassandraVersionProvider
             }
             return new CassandraVersionProvider(versions);
         }
+
         public Builder add(ICassandraFactory version)
         {
             versions.add(version);
             return this;
         }
-
     }
 }

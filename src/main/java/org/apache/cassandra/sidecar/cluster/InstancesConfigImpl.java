@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.cluster;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -30,34 +31,34 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
  */
 public class InstancesConfigImpl implements InstancesConfig
 {
-    private final Map<Integer, InstanceMetadata> idToInstanceMetas;
-    private final Map<String, InstanceMetadata> hostToInstanceMetas;
-    private final List<InstanceMetadata> instanceMetas;
+    private final Map<Integer, InstanceMetadata> idToInstanceMetadata;
+    private final Map<String, InstanceMetadata> hostToInstanceMetadata;
+    private final List<InstanceMetadata> instanceMetadataList;
 
     public InstancesConfigImpl(InstanceMetadata instanceMetadata)
     {
         this(Collections.singletonList(instanceMetadata));
     }
 
-    public InstancesConfigImpl(List<InstanceMetadata> instanceMetas)
+    public InstancesConfigImpl(List<InstanceMetadata> instanceMetadataList)
     {
-        this.idToInstanceMetas = instanceMetas.stream()
-                                              .collect(Collectors.toMap(InstanceMetadata::id,
-                                                                        instanceMeta -> instanceMeta));
-        this.hostToInstanceMetas = instanceMetas.stream()
-                                                .collect(Collectors.toMap(InstanceMetadata::host,
-                                                                          instanceMeta -> instanceMeta));
-        this.instanceMetas = instanceMetas;
+        this.idToInstanceMetadata = instanceMetadataList.stream()
+                                                        .collect(Collectors.toMap(InstanceMetadata::id,
+                                                                                  Function.identity()));
+        this.hostToInstanceMetadata = instanceMetadataList.stream()
+                                                          .collect(Collectors.toMap(InstanceMetadata::host,
+                                                                                    Function.identity()));
+        this.instanceMetadataList = instanceMetadataList;
     }
 
     public List<InstanceMetadata> instances()
     {
-        return instanceMetas;
+        return instanceMetadataList;
     }
 
     public InstanceMetadata instanceFromId(int id)
     {
-        InstanceMetadata instanceMetadata = idToInstanceMetas.get(id);
+        InstanceMetadata instanceMetadata = idToInstanceMetadata.get(id);
         if (instanceMetadata == null)
         {
             throw new IllegalArgumentException("Instance id " + id + " not found");
@@ -67,7 +68,7 @@ public class InstancesConfigImpl implements InstancesConfig
 
     public InstanceMetadata instanceFromHost(String host)
     {
-        InstanceMetadata instanceMetadata = hostToInstanceMetas.get(host);
+        InstanceMetadata instanceMetadata = hostToInstanceMetadata.get(host);
         if (instanceMetadata == null)
         {
             throw new IllegalArgumentException("Instance with host address " + host + " not found");

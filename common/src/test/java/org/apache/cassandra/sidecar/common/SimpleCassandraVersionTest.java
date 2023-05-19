@@ -118,4 +118,13 @@ public class SimpleCassandraVersionTest
 
     }
 
+    @Test
+    void testLowerCaseSnapshotBuild()
+    {
+        SimpleCassandraVersion snapshot = SimpleCassandraVersion.create("4.0.0.0-snapshot");
+        assertThat(snapshot.major).isEqualTo(4);
+        assertThat(snapshot.minor).isEqualTo(0);
+        assertThat(snapshot.patch).isEqualTo(0);
+    }
+
 }

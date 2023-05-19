@@ -42,7 +42,7 @@ public class HealthService
     description = "Returns HTTP 200 if Sidecar is available")
     @Produces(MediaType.APPLICATION_JSON)
     @GET
-    public Response getSidecarHealth()
+    public Response sidecarHealth()
     {
         return Response.status(HttpResponseStatus.OK.code()).entity(Json.encode(ImmutableMap.of("status", "OK")))
                        .build();

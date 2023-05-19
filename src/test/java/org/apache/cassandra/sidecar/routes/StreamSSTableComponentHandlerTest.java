@@ -25,6 +25,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +59,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class StreamSSTableComponentHandlerTest
 {
     private static final Logger logger = LoggerFactory.getLogger(StreamSSTableComponentHandlerTest.class);
+    static final String TEST_KEYSPACE = "TestKeyspace";
+    static final String TEST_TABLE = "TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b";
+
     private Vertx vertx;
     private HttpServer server;
     private Configuration config;
@@ -91,263 +96,321 @@ public class StreamSSTableComponentHandlerTest
     void testRoute(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .as(BodyCodec.buffer())
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(OK.code());
-                    assertThat(response.bodyAsString()).isEqualTo("data");
-                    context.completeNow();
-                })));
+              .as(BodyCodec.buffer())
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  assertThat(response.bodyAsString()).isEqualTo("data");
+                  context.completeNow();
+              })));
+    }
+
+    @Test
+    void failsWhenKeyspaceContainsInvalidCharacters(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/keyspaces/i_❤_u/tables/table/snapshots/snapshot/components/component-Data.db";
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
+                  assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
+                  context.completeNow();
+              })));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "system_schema", "system_traces", "system_distributed", "system", "system_auth",
+                             "system_views", "system_virtual_schema" })
+    void failsWhenKeyspaceIsForbidden(String forbiddenKeyspace)
+    {
+        VertxTestContext context = new VertxTestContext();
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/keyspaces/" + forbiddenKeyspace + "/tables/table/snapshots/snapshot" +
+                           "/components/component-Data.db";
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
+                  assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testKeyspaceNotFound(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/random/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/random/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
-                    context.completeNow();
-                })));
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testSnapshotNotFound(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/random/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/random/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
-                    context.completeNow();
-                })));
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testForbiddenKeyspace(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/system/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/system/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
-                    assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
-                    context.completeNow();
-                })));
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
+                  assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testIncorrectKeyspaceFormat(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/k*s/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/k*s/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                    assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                    context.completeNow();
-                })));
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
+                  assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testIncorrectComponentFormat(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data...db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data...db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                    assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                    context.completeNow();
-                })));
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
+                  assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testAccessDeniedToCertainComponents(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Digest.crc32d";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Digest.crc32d";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                    assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                    context.completeNow();
-                })));
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
+                  assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
+                  context.completeNow();
+              })));
+    }
+
+    @Test
+    void failsWhenTableNameContainsInvalidCharacters(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/i_❤_u/snapshots/snap/components/component-Data.db";
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
+                  assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
+                  context.completeNow();
+              })));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "slash/is-not-allowed", "null-char\0-is-not-allowed", "../../../etc/passwd" })
+    void failsWhenSnapshotNameContainsInvalidCharacters(String invalidFileName)
+    {
+        VertxTestContext context = new VertxTestContext();
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/TestTable/snapshots/" +
+                           invalidFileName + "/components/component-Data.db";
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
+                  assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
+                  context.completeNow();
+              })));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "i_❤_u.db", "this-is-not-allowed.jar", "../../../etc/passwd.db" })
+    void failsWhenComponentNameContainsInvalidCharacters(String invalidComponentName)
+    {
+        VertxTestContext context = new VertxTestContext();
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots/snap/components/" +
+                           invalidComponentName;
+        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
+                  assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testPartialTableName(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable/snapshots/TestSnapshot/component" +
-                "/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/TestTable/snapshots/TestSnapshot/components" +
+                           "/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .putHeader("Range", "bytes=0-")
-                .as(BodyCodec.buffer())
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(OK.code());
-                    assertThat(response.bodyAsString()).isEqualTo("data");
-                    context.completeNow();
-                })));
+              .putHeader("Range", "bytes=0-")
+              .as(BodyCodec.buffer())
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  assertThat(response.bodyAsString()).isEqualTo("data");
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testInvalidRange(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .putHeader("Range", "bytes=4-3")
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
-                    context.completeNow();
-                })));
+              .putHeader("Range", "bytes=4-3")
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testRangeExceeds(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .putHeader("Range", "bytes=5-9")
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
-                    context.completeNow();
-                })));
+              .putHeader("Range", "bytes=5-9")
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testPartialRangeExceeds(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .putHeader("Range", "bytes=5-")
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
-                    context.completeNow();
-                })));
+              .putHeader("Range", "bytes=5-")
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testRangeBoundaryExceeds(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .putHeader("Range", "bytes=0-999999")
-                .as(BodyCodec.buffer())
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(OK.code());
-                    assertThat(response.bodyAsString()).isEqualTo("data");
-                    context.completeNow();
-                })));
+              .putHeader("Range", "bytes=0-999999")
+              .as(BodyCodec.buffer())
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  assertThat(response.bodyAsString()).isEqualTo("data");
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testPartialRangeStreamed(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .putHeader("Range", "bytes=0-2") // 3 bytes streamed
-                .as(BodyCodec.buffer())
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
-                    assertThat(response.bodyAsString()).isEqualTo("dat");
-                    context.completeNow();
-                })));
+              .putHeader("Range", "bytes=0-2") // 3 bytes streamed
+              .as(BodyCodec.buffer())
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
+                  assertThat(response.bodyAsString()).isEqualTo("dat");
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testSuffixRange(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .putHeader("Range", "bytes=-2") // last 2 bytes streamed
-                .as(BodyCodec.buffer())
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
-                    assertThat(response.bodyAsString()).isEqualTo("ta");
-                    context.completeNow();
-                })));
+              .putHeader("Range", "bytes=-2") // last 2 bytes streamed
+              .as(BodyCodec.buffer())
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
+                  assertThat(response.bodyAsString()).isEqualTo("ta");
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testSuffixRangeExceeds(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .putHeader("Range", "bytes=-5")
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(OK.code());
-                    assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
-                        .describedAs("Server should shrink the range to the file length")
-                        .isEqualTo("4");
-                    context.completeNow();
-                })));
+              .putHeader("Range", "bytes=-5")
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
+                  .describedAs("Server should shrink the range to the file length")
+                  .isEqualTo("4");
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testInvalidRangeUnit(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/component/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
+                           "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
-                .putHeader("Range", "bits=0-2")
-                .send(context.succeeding(response -> context.verify(() ->
-                {
-                    assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
-                    context.completeNow();
-                })));
+              .putHeader("Range", "bits=0-2")
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
+                  context.completeNow();
+              })));
     }
 
     @Test
     void testStreamingFromSpecificInstance(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspace/TestKeyspace/table/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/" +
-                           "snapshots/TestSnapshot/component/" +
-                           "TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/" +
+                           "snapshots/TestSnapshot/components/" +
+                           TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
         client.get(config.getPort(), "localhost", "/api/v1" + testRoute + "?instanceId=2")
               .as(BodyCodec.buffer())
-              .send(context.succeeding(response -> context.verify(() ->
-              {
+              .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.bodyAsString()).isEqualTo("data");
                   context.completeNow();

@@ -22,13 +22,12 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.SocketAddress;
+import org.apache.cassandra.sidecar.common.utils.HttpRange;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
-import static org.apache.cassandra.sidecar.utils.RequestUtils.extractHostAddressWithoutPort;
 
 /**
  * Wrapper around HttpServerResponse
@@ -43,7 +42,7 @@ public class HttpResponse
     {
         this.request = request;
         this.response = response;
-        this.host = extractHostAddressWithoutPort(request.host());
+        this.host = request.host();
     }
 
     public void setRetryAfterHeader(long microsToWait)
@@ -62,13 +61,13 @@ public class HttpResponse
         response.setStatusCode(HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE.code()).setStatusMessage(msg).end();
     }
 
-    public void setPartialContentStatus(Range range)
+    public void setPartialContentStatus(HttpRange range)
     {
         response.setStatusCode(HttpResponseStatus.PARTIAL_CONTENT.code())
                 .putHeader(HttpHeaderNames.CONTENT_RANGE, contentRangeHeader(range));
     }
 
-    private String contentRangeHeader(Range r)
+    private String contentRangeHeader(HttpRange r)
     {
         return "bytes " + r.start() + "-" + r.end() + "/" + r.length();
     }
@@ -96,10 +95,10 @@ public class HttpResponse
      * @param range      range to send
      * @return a future completed with the body result
      */
-    public Future<Void> sendFile(String fileName, long fileLength, Range range)
+    public Future<Void> sendFile(String fileName, long fileLength, HttpRange range)
     {
         // notify client we support range requests
-        response.putHeader(HttpHeaders.ACCEPT_RANGES, "bytes");
+        response.putHeader(HttpHeaderNames.ACCEPT_RANGES, "bytes");
 
         if (range.length() != fileLength)
         {

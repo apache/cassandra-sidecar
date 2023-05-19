@@ -23,12 +23,12 @@ import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
+import org.jetbrains.annotations.Nullable;
 
-import static org.apache.cassandra.sidecar.utils.RequestUtils.extractHostAddressWithoutPort;
+import static org.apache.cassandra.sidecar.routes.AbstractHandler.extractHostAddressWithoutPort;
 
 /**
- * To fetch instance information according to instance id provided.
- * By default returns 1st instance's information
+ * Helper class to retrieve instance information from an instanceId or hostname.
  */
 @Singleton
 public class InstanceMetadataFetcher
@@ -41,35 +41,65 @@ public class InstanceMetadataFetcher
         this.instancesConfig = instancesConfig;
     }
 
-    public CassandraAdapterDelegate getDelegate(String host)
+    /**
+     * Returns the {@link InstanceMetadata} for the given {@code host}. When the {@code host} is {@code null},
+     * returns the first instance from the list of configured instances.
+     *
+     * @param host the Cassandra instance host
+     * @return the {@link InstanceMetadata} for the given {@code host}, or the first instance when {@code host} is
+     * {@code null}
+     */
+    public InstanceMetadata instance(@Nullable String host)
     {
         return host == null
-               ? getFirstInstance().delegate()
-               : instancesConfig.instanceFromHost(host).delegate();
+               ? firstInstance()
+               : instancesConfig.instanceFromHost(extractHostAddressWithoutPort(host));
     }
 
-    public CassandraAdapterDelegate getDelegate(Integer instanceId)
+    /**
+     * Returns the {@link InstanceMetadata} for the given {@code instanceId}, or the first instance when
+     * {@code instanceId} is {@code null}.
+     *
+     * @param instanceId the identifier for the Cassandra instance
+     * @return the {@link InstanceMetadata} for the given {@code instanceId}, or the first instance when
+     * {@code instanceId} is {@code null}
+     */
+    public InstanceMetadata instance(int instanceId)
     {
-        return instanceId == null
-               ? getFirstInstance().delegate()
-               : instancesConfig.instanceFromId(instanceId).delegate();
+        return instancesConfig.instanceFromId(instanceId);
     }
 
-    public CassandraAdapterDelegate getDelegate(String host, Integer instanceId)
+    /**
+     * Returns the {@link CassandraAdapterDelegate} for the given {@code host}. When the {@code host} is {@code null},
+     * returns the delegate for the first instance from the list of configured instances.
+     *
+     * @param host the Cassandra instance host
+     * @return the {@link CassandraAdapterDelegate} for the given {@code host}, or the first instance when {@code host}
+     * is {@code null}
+     */
+    public CassandraAdapterDelegate delegate(String host)
     {
-        CassandraAdapterDelegate cassandra;
-        if (instanceId != null)
-        {
-            cassandra = getDelegate(instanceId);
-        }
-        else
-        {
-            cassandra = getDelegate(extractHostAddressWithoutPort(host));
-        }
-        return cassandra;
+        return instance(host).delegate();
     }
 
-    private InstanceMetadata getFirstInstance()
+    /**
+     * Returns the {@link CassandraAdapterDelegate} for the given {@code instanceId}, or the delegate for the first
+     * instance when {@code instanceId} is {@code null}.
+     *
+     * @param instanceId the identifier for the Cassandra instance
+     * @return the {@link CassandraAdapterDelegate} for the given {@code instanceId}, or the first instance when
+     * {@code instanceId} is {@code null}
+     */
+    public CassandraAdapterDelegate delegate(int instanceId)
+    {
+        return instance(instanceId).delegate();
+    }
+
+    /**
+     * @return the first instance from the list of configured instances
+     * @throws IllegalStateException when there are no configured instances
+     */
+    public InstanceMetadata firstInstance()
     {
         if (instancesConfig.instances().isEmpty())
         {

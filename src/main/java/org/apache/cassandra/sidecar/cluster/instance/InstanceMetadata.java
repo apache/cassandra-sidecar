@@ -20,9 +20,7 @@ package org.apache.cassandra.sidecar.cluster.instance;
 
 import java.util.List;
 
-import org.apache.cassandra.sidecar.common.CQLSession;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.JmxClient;
 
 /**
  * Metadata of an instance
@@ -50,14 +48,9 @@ public interface InstanceMetadata
     List<String> dataDirs();
 
     /**
-     * @return {@link CQLSession} for connecting with instance via CQL
+     * @return a staging directory of the cassandra instance
      */
-    CQLSession session();
-
-    /**
-     * @return {@link JmxClient} for connecting with the instance via JMX
-     */
-    JmxClient jmxClient();
+    String stagingDir();
 
     /**
      * @return a {@link CassandraAdapterDelegate} specific for the instance

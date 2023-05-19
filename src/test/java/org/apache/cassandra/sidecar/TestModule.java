@@ -22,9 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -39,6 +36,8 @@ import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
+import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -48,8 +47,6 @@ import static org.mockito.Mockito.when;
  */
 public class TestModule extends AbstractModule
 {
-    private static final Logger logger = LoggerFactory.getLogger(TestModule.class);
-
     @Singleton
     @Provides
     public CassandraAdapterDelegate delegate()
@@ -66,6 +63,8 @@ public class TestModule extends AbstractModule
 
     protected Configuration abstractConfig(InstancesConfig instancesConfig)
     {
+        WorkerPoolConfiguration workPoolConf = new WorkerPoolConfiguration("test-pool", 10,
+                                                                           30000);
         return new Configuration.Builder()
                .setInstancesConfig(instancesConfig)
                .setHost("127.0.0.1")
@@ -75,21 +74,29 @@ public class TestModule extends AbstractModule
                .setRateLimitStreamRequestsPerSecond(1)
                .setThrottleDelayInSeconds(5)
                .setThrottleTimeoutInSeconds(10)
+               .setAllowableSkewInMinutes(60)
+               .setRequestIdleTimeoutMillis(300_000)
+               .setRequestTimeoutMillis(300_000L)
+               .setConcurrentUploadsLimit(80)
+               .setMinSpacePercentRequiredForUploads(0)
+               .setSSTableImportCacheConfiguration(new CacheConfiguration(60_000, 100))
+               .setServerWorkerPoolConfiguration(workPoolConf)
+               .setServerInternalWorkerPoolConfiguration(workPoolConf)
                .build();
     }
 
     @Provides
     @Singleton
-    public InstancesConfig getInstancesConfig()
+    public InstancesConfig instancesConfig()
     {
-        return new InstancesConfigImpl(getInstanceMetas());
+        return new InstancesConfigImpl(instancesMetas());
     }
 
-    public List<InstanceMetadata> getInstanceMetas()
+    public List<InstanceMetadata> instancesMetas()
     {
-        InstanceMetadata instance1 = getMockInstance("localhost", 1, "src/test/resources/instance1/data", true);
-        InstanceMetadata instance2 = getMockInstance("localhost2", 2, "src/test/resources/instance2/data", false);
-        InstanceMetadata instance3 = getMockInstance("localhost3", 3, "src/test/resources/instance3/data", true);
+        InstanceMetadata instance1 = mockInstance("localhost", 1, "src/test/resources/instance1/data", true);
+        InstanceMetadata instance2 = mockInstance("localhost2", 2, "src/test/resources/instance2/data", false);
+        InstanceMetadata instance3 = mockInstance("localhost3", 3, "src/test/resources/instance3/data", true);
         final List<InstanceMetadata> instanceMetas = new ArrayList<>();
         instanceMetas.add(instance1);
         instanceMetas.add(instance2);
@@ -97,7 +104,7 @@ public class TestModule extends AbstractModule
         return instanceMetas;
     }
 
-    private InstanceMetadata getMockInstance(String host, int id, String dataDir, boolean isUp)
+    private InstanceMetadata mockInstance(String host, int id, String dataDir, boolean isUp)
     {
         InstanceMetadata instanceMeta = mock(InstanceMetadata.class);
         when(instanceMeta.id()).thenReturn(id);
@@ -108,7 +115,7 @@ public class TestModule extends AbstractModule
         CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
         if (isUp)
         {
-            when(delegate.getSettings()).thenReturn(new NodeSettings("testVersion", "testPartitioner"));
+            when(delegate.nodeSettings()).thenReturn(new NodeSettings("testVersion", "testPartitioner"));
         }
         when(delegate.isUp()).thenReturn(isUp);
         when(instanceMeta.delegate()).thenReturn(delegate);

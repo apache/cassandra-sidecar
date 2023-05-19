@@ -11,6 +11,7 @@ plugins {
     id 'java'
     id 'java-test-fixtures'
     id 'application'
+    id 'maven-publish'
 
     // since we're using a specific version here, we delay applying the plugin till the all projects
     id "com.github.spotbugs" version "3.0.0" apply false
@@ -83,6 +84,7 @@ run {
                                  "-javaagent:$projectDir/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
 }
 
+// add integration test
 sourceSets {
     integrationTest {
         java {
@@ -93,6 +95,13 @@ sourceSets {
     }
 }
 
+// and mark it as test root
+idea {
+    module {
+        testSourceDirs += sourceSets.integrationTest.java.srcDirs
+    }
+}
+
 configurations {
     jolokia
 
@@ -100,20 +109,23 @@ configurations {
 }
 
 dependencies {
-    implementation("io.vertx:vertx-web:${project.vertxVersion}")
+    implementation("io.vertx:vertx-web:${project.vertxVersion}") {
+        exclude group: 'junit', module: 'junit'
+    }
     implementation("io.vertx:vertx-dropwizard-metrics:${project.vertxVersion}")
     implementation("io.vertx:vertx-web-client:${project.vertxVersion}")
 
-    implementation('com.datastax.cassandra:cassandra-driver-core:3.9.0+')
+    implementation('com.datastax.cassandra:cassandra-driver-core:3.11.3')
     implementation('com.google.inject:guice:4.2.2')
     implementation('io.swagger.core.v3:swagger-jaxrs2:2.1.0')
     implementation("org.jboss.resteasy:resteasy-vertx:4.7.4.Final")
     implementation('org.jboss.resteasy:resteasy-jackson2-provider:4.7.4.Final')
     implementation(group: 'org.jboss.spec.javax.servlet', name: 'jboss-servlet-api_4.0_spec', version: '2.0.0.Final')
-    implementation('org.jetbrains:annotations:23.0.0')
+    compileOnly('org.jetbrains:annotations:23.0.0')
+    implementation("com.github.ben-manes.caffeine:caffeine:2.9.3")
 
     // Trying to be exactly compatible with Cassandra's deps
-    implementation('org.slf4j:slf4j-api:1.7.25')
+    implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
     implementation('ch.qos.logback:logback-core:1.2.3')
     implementation('ch.qos.logback:logback-classic:1.2.3')
 
@@ -127,26 +139,55 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
-    testImplementation "org.assertj:assertj-core:3.23.1"
+    testImplementation "org.assertj:assertj-core:3.24.2"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
 
-    testImplementation('org.cassandraunit:cassandra-unit-shaded:3.11.2.0')
+    testImplementation('com.google.guava:guava-testlib:31.1-jre') {
+        exclude group: 'junit', module: 'junit'
+    }
+    testImplementation('org.cassandraunit:cassandra-unit-shaded:3.11.2.0') {
+        exclude group: 'junit', module: 'junit'
+    }
+
     testImplementation('com.datastax.cassandra:cassandra-driver-core:3.9.0:tests')
-    testImplementation('org.mockito:mockito-all:1.10.19')
+    testImplementation('org.mockito:mockito-core:4.10.0')
+    testImplementation('org.mockito:mockito-inline:4.10.0')
     testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
     testImplementation(testFixtures(project(":common")))
-    
+
     implementation(project(":common"))
     implementation(project(":cassandra40"))
 
     testFixturesApi(testFixtures(project(":common")))
     testFixturesImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
     testFixturesImplementation('com.google.inject:guice:4.2.2')
-    testFixturesImplementation('org.mockito:mockito-all:1.10.19')
+    testFixturesImplementation('org.mockito:mockito-core:4.10.0')
     testFixturesImplementation("org.junit.jupiter:junit-jupiter-api:${project.junitVersion}")
     testFixturesImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")
-    testFixturesImplementation("org.assertj:assertj-core:3.23.1")
-    testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}")
+    testFixturesImplementation("org.assertj:assertj-core:3.24.2")
+    testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}") {
+        exclude group: 'junit', module: 'junit'
+    }
+
+    integrationTestImplementation("org.testcontainers:testcontainers:${project.testcontainersVersion}")
+    integrationTestImplementation("org.testcontainers:cassandra:${project.testcontainersVersion}")
+    integrationTestImplementation("org.testcontainers:junit-jupiter:${project.testcontainersVersion}")
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            groupId project.group
+            artifactId "${archivesBaseName}"
+            version System.getenv("CODE_VERSION") ?: "${version}"
+        }
+    }
 }
 
 task copyCodeStyle(type: Copy) {
@@ -177,6 +218,7 @@ clean.doLast {
 }
 
 test {
+    systemProperty "vertxweb.environment", "dev"
     // ordinarily we don't need integration tests
     // see the integrationTest task
     useJUnitPlatform()
@@ -187,6 +229,7 @@ test {
 }
 
 tasks.register("integrationTest", Test) {
+    systemProperty "vertxweb.environment", "dev"
     jacoco {
         enabled = false
     }
@@ -250,7 +293,7 @@ resolve {
     outputDir = file('build/generated/swagger')
 }
 
-
+integrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia

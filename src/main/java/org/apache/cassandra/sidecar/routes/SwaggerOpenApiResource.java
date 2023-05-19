@@ -45,25 +45,22 @@ import io.swagger.v3.oas.models.OpenAPI;
 public class SwaggerOpenApiResource
 {
     static final OpenAPI OAS;
-
-    static
-    {
-        Reader reader = new Reader(new SwaggerConfiguration());
-        OAS = reader.read(new HashSet<>(Collections.singletonList(HealthService.class)));
-    }
-
     @Context
     ServletConfig config;
-
     @Context
     Application app;
+
+    public SwaggerOpenApiResource()
+    {
+        super();
+    }
 
     @GET
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(hidden = true)
-    public Response getOpenApi(@Context HttpHeaders headers,
-                               @Context UriInfo uriInfo,
-                               @PathParam("type") String type)
+    public Response openApi(@Context HttpHeaders headers,
+                            @Context UriInfo uriInfo,
+                            @PathParam("type") String type)
     {
         return Response.status(Response.Status.OK)
                        .entity(Json.pretty(OAS))
@@ -71,8 +68,9 @@ public class SwaggerOpenApiResource
                        .build();
     }
 
-    public SwaggerOpenApiResource()
+    static
     {
-        super();
+        Reader reader = new Reader(new SwaggerConfiguration());
+        OAS = reader.read(new HashSet<>(Collections.singletonList(HealthService.class)));
     }
 }

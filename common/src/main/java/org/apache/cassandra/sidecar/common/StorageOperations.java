@@ -18,8 +18,10 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.net.UnknownHostException;
 import java.util.Map;
 
+import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,4 +40,22 @@ public interface StorageOperations
      */
     void takeSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table,
                       @Nullable Map<String, String> options);
+
+    /**
+     * Remove the snapshot with the given {@code tag} from the given {@code keyspace}/{@code table}.
+     *
+     * @param tag      the tag used to create the snapshot (name of the snapshot)
+     * @param keyspace the keyspace in the Cassandra database to use for the snapshot
+     * @param table    the table in the Cassandra database to use for the snapshot
+     */
+    void clearSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table);
+
+    /**
+     * Get the ring view of the cluster
+     *
+     * @param keyspace keyspace to check the data ownership; Cassandra selects a keyspace if null value is passed.
+     * @return ring view
+     * @throws UnknownHostException when hostname of peer Cassandra nodes cannot be resolved
+     */
+    RingResponse ring(@Nullable String keyspace) throws UnknownHostException;
 }

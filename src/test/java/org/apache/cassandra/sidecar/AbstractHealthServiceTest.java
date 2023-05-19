@@ -56,7 +56,7 @@ public abstract class AbstractHealthServiceTest
 
     public abstract boolean isSslEnabled();
 
-    public AbstractModule getTestModule()
+    public AbstractModule testModule()
     {
         if (isSslEnabled())
             return new TestSslModule();
@@ -67,7 +67,7 @@ public abstract class AbstractHealthServiceTest
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(getTestModule()));
+        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(testModule()));
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);
         config = injector.getInstance(Configuration.class);
@@ -94,7 +94,7 @@ public abstract class AbstractHealthServiceTest
     @Test
     public void testSidecarHealthCheckReturnsOK(VertxTestContext testContext)
     {
-        WebClient client = getClient();
+        WebClient client = client();
 
         client.get(config.getPort(), "localhost", "/api/v1/__health")
               .as(BodyCodec.string())
@@ -107,12 +107,12 @@ public abstract class AbstractHealthServiceTest
               })));
     }
 
-    private WebClient getClient()
+    private WebClient client()
     {
-        return WebClient.create(vertx, getWebClientOptions());
+        return WebClient.create(vertx, webClientOptions());
     }
 
-    private WebClientOptions getWebClientOptions()
+    private WebClientOptions webClientOptions()
     {
         WebClientOptions options = new WebClientOptions();
         if (isSslEnabled())
@@ -127,7 +127,7 @@ public abstract class AbstractHealthServiceTest
     @Test
     public void testHealthCheckReturns200OK(VertxTestContext testContext)
     {
-        WebClient client = getClient();
+        WebClient client = client();
 
         client.get(config.getPort(), "localhost", "/api/v1/cassandra/__health")
               .as(BodyCodec.string())
@@ -144,7 +144,7 @@ public abstract class AbstractHealthServiceTest
     @Test
     public void testHealthCheckReturns503Failure(VertxTestContext testContext)
     {
-        WebClient client = getClient();
+        WebClient client = client();
 
         client.get(config.getPort(), "localhost", "/api/v1/cassandra/instance/2/__health")
               .as(BodyCodec.string())
@@ -161,7 +161,7 @@ public abstract class AbstractHealthServiceTest
     @Test
     public void testHealthCheckReturns503FailureWithQueryParam(VertxTestContext testContext)
     {
-        WebClient client = getClient();
+        WebClient client = client();
 
         client.get(config.getPort(), "localhost", "/api/v1/cassandra/__health?instanceId=2")
               .as(BodyCodec.string())

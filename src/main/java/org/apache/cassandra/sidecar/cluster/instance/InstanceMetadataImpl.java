@@ -20,10 +20,13 @@ package org.apache.cassandra.sidecar.cluster.instance;
 
 import java.util.List;
 
-import org.apache.cassandra.sidecar.common.CQLSession;
+import com.google.common.collect.ImmutableList;
+
+import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.JmxClient;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Local implementation of InstanceMetadata.
@@ -31,23 +34,39 @@ import org.apache.cassandra.sidecar.common.JmxClient;
 public class InstanceMetadataImpl implements InstanceMetadata
 {
     private final int id;
+    private final String host;
+    private final int port;
     private final List<String> dataDirs;
-    private final CQLSession session;
-    private final JmxClient jmxClient;
+    private final String stagingDir;
     private final CassandraAdapterDelegate delegate;
 
     public InstanceMetadataImpl(int id,
-                                List<String> dataDirs,
-                                CQLSession session,
+                                String host,
+                                int port,
+                                Iterable<String> dataDirs,
+                                String stagingDir,
+                                CQLSessionProvider sessionProvider,
                                 JmxClient jmxClient,
                                 CassandraVersionProvider versionProvider)
     {
-        this.id = id;
-        this.dataDirs = dataDirs;
+        this(id, host, port, dataDirs, stagingDir,
+             new CassandraAdapterDelegate(versionProvider, sessionProvider, jmxClient));
+    }
 
-        this.session = session;
-        this.jmxClient = jmxClient;
-        this.delegate = new CassandraAdapterDelegate(versionProvider, session, jmxClient);
+    @VisibleForTesting
+    public InstanceMetadataImpl(int id,
+                                String host,
+                                int port,
+                                Iterable<String> dataDirs,
+                                String stagingDir,
+                                CassandraAdapterDelegate delegate)
+    {
+        this.id = id;
+        this.host = host;
+        this.port = port;
+        this.dataDirs = ImmutableList.copyOf(dataDirs);
+        this.stagingDir = stagingDir;
+        this.delegate = delegate;
     }
 
     @Override
@@ -59,13 +78,13 @@ public class InstanceMetadataImpl implements InstanceMetadata
     @Override
     public String host()
     {
-        return session.inet().getHostName();
+        return host;
     }
 
     @Override
     public int port()
     {
-        return session.inet().getPort();
+        return port;
     }
 
     @Override
@@ -75,15 +94,9 @@ public class InstanceMetadataImpl implements InstanceMetadata
     }
 
     @Override
-    public CQLSession session()
+    public String stagingDir()
     {
-        return session;
-    }
-
-    @Override
-    public JmxClient jmxClient()
-    {
-        return jmxClient;
+        return stagingDir;
     }
 
     @Override

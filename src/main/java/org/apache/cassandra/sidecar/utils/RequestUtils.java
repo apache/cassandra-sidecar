@@ -18,30 +18,29 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import io.vertx.core.http.HttpServerRequest;
+
 /**
  * Utility class for Http request related operations.
  */
 public class RequestUtils
 {
     /**
-     * Given a combined host address like 127.0.0.1:9042 or [2001:db8:0:0:0:ff00:42:8329]:9042, this method
-     * removes port information and returns 127.0.0.1 or 2001:db8:0:0:0:ff00:42:8329.
-     * @param address
-     * @return host address without port information
+     * Parses a boolean parameter from the {@code request}, for the given {@code headerName}. If the request param
+     * is not {@code true} or {@code false}, it returns the {@code defaultValue}.
+     *
+     * @param request      the request
+     * @param headerName   the name of the header
+     * @param defaultValue the default value when the request parameter does not match {@code true} or {@code false}
+     * @return the parsed value for the {@code headerName} from the {@code request}
      */
-    public static String extractHostAddressWithoutPort(String address)
+    public static boolean parseBooleanHeader(HttpServerRequest request, String headerName, boolean defaultValue)
     {
-        if (address.contains(":"))
-        {
-            // just ipv6 host name present without port information
-            if (address.split(":").length > 2 && !address.startsWith("["))
-            {
-                return address;
-            }
-            String host = address.substring(0, address.lastIndexOf(':'));
-            // remove brackets from ipv6 addresses
-            return host.startsWith("[") ? host.substring(1, host.length() - 1) : host;
-        }
-        return address;
+        String value = request.getParam(headerName);
+        if ("true".equalsIgnoreCase(value))
+            return true;
+        if ("false".equalsIgnoreCase(value))
+            return false;
+        return defaultValue;
     }
 }

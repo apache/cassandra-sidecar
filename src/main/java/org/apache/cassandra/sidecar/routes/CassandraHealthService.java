@@ -63,19 +63,21 @@ public class CassandraHealthService
     })
     @GET
     @Path("/v1/cassandra/__health")
-    public Response getCassandraHealth(@Context HttpServerRequest req,
-                                       @QueryParam(AbstractHandler.INSTANCE_ID) Integer instanceId)
+    public Response cassandraHealth(@Context HttpServerRequest req,
+                                    @QueryParam(AbstractHandler.INSTANCE_ID) Integer instanceId)
     {
         CassandraAdapterDelegate cassandra;
         try
         {
-            cassandra = metadataFetcher.getDelegate(req.host(), instanceId);
+            cassandra = instanceId == null
+                        ? metadataFetcher.delegate(req.host())
+                        : metadataFetcher.delegate(instanceId);
         }
         catch (IllegalArgumentException e)
         {
             return Response.status(HttpResponseStatus.BAD_REQUEST.code()).entity(e.getMessage()).build();
         }
-        return getHealthResponse(cassandra);
+        return healthResponse(cassandra);
     }
 
     @Operation(summary = "Health Check for a particular cassandra instance's status",
@@ -86,13 +88,13 @@ public class CassandraHealthService
     })
     @GET
     @Path("/v1/cassandra/instance/{instanceId}/__health")
-    public Response getCassandraHealthForInstance(@PathParam("instanceId") int instanceId)
+    public Response cassandraHealthForInstance(@PathParam("instanceId") int instanceId)
     {
-        final CassandraAdapterDelegate cassandra = metadataFetcher.getDelegate(instanceId);
-        return getHealthResponse(cassandra);
+        final CassandraAdapterDelegate cassandra = metadataFetcher.delegate(instanceId);
+        return healthResponse(cassandra);
     }
 
-    private Response getHealthResponse(CassandraAdapterDelegate cassandra)
+    private Response healthResponse(CassandraAdapterDelegate cassandra)
     {
         final boolean up = cassandra.isUp();
         int status = up ? HttpResponseStatus.OK.code() : HttpResponseStatus.SERVICE_UNAVAILABLE.code();

@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * A class representing a response for the {@link SchemaRequest}.
+ * A class representing a response for the {@code SchemaRequest}.
  */
 public class SchemaResponse
 {
@@ -37,8 +37,7 @@ public class SchemaResponse
      */
     public SchemaResponse(String schema)
     {
-        this.keyspace = null;
-        this.schema = Objects.requireNonNull(schema, "schema must be non-null");
+        this(null, schema);
     }
 
     /**
@@ -50,7 +49,7 @@ public class SchemaResponse
     public SchemaResponse(@JsonProperty("keyspace") String keyspace,
                           @JsonProperty("schema") String schema)
     {
-        this.keyspace = Objects.requireNonNull(keyspace, "keyspace must be non-null");
+        this.keyspace = keyspace;
         this.schema = Objects.requireNonNull(schema, "schema must be non-null");
     }
 

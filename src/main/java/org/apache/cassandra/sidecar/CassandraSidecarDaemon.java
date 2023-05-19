@@ -19,6 +19,9 @@
 package org.apache.cassandra.sidecar;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,8 +29,11 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.SslUtils;
 
 /**
@@ -42,13 +48,24 @@ public class CassandraSidecarDaemon
     private final HttpServer server;
     private final Configuration config;
     private long healthCheckTimerId;
+    private final ExecutorPools executorPools;
 
     @Inject
-    public CassandraSidecarDaemon(Vertx vertx, HttpServer server, Configuration config)
+    public CassandraSidecarDaemon(Vertx vertx, HttpServer server, Configuration config, ExecutorPools executorPools)
     {
         this.vertx = vertx;
         this.server = server;
         this.config = config;
+        this.executorPools = executorPools;
+    }
+
+    public static void main(String[] args)
+    {
+        CassandraSidecarDaemon app = Guice.createInjector(new MainModule())
+                                          .getInstance(CassandraSidecarDaemon.class);
+
+        app.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(app::stop));
     }
 
     public void start()
@@ -69,12 +86,30 @@ public class CassandraSidecarDaemon
     public void stop()
     {
         logger.info("Stopping Cassandra Sidecar");
-        server.close();
-        vertx.cancelTimer(healthCheckTimerId);
+        List<Future> closingFutures = new ArrayList<>();
+        closingFutures.add(server.close());
+        executorPools.internal().cancelTimer(healthCheckTimerId);
         config.getInstancesConfig()
               .instances()
-              .forEach(instanceMetadata ->
-                       vertx.executeBlocking(promise -> instanceMetadata.session().close()));
+              .forEach(instance ->
+                       closingFutures.add(executorPools.internal()
+                                                       .executeBlocking(p -> instance.delegate().close())));
+
+        try
+        {
+            // Some closing action is executed on the executorPool (which is closed when closing vertx).
+            // Reflecting the dependncy below.
+
+            CompositeFuture.all(closingFutures)
+                           .onComplete(v -> vertx.close()).toCompletionStage()
+                           .toCompletableFuture()
+                           .get(10, TimeUnit.SECONDS);
+            logger.info("Cassandra Sidecar stopped successfully");
+        }
+        catch (Exception ex)
+        {
+            logger.warn("Failed to stop Sidecar in 10 seconds", ex);
+        }
     }
 
     private void banner(PrintStream out)
@@ -108,7 +143,6 @@ public class CassandraSidecarDaemon
                 throw new RuntimeException("Invalid keystore parameters for SSL", e);
             }
         }
-
     }
 
     /**
@@ -116,16 +150,17 @@ public class CassandraSidecarDaemon
      *
      * @param healthCheckFrequencyMillis the new health check frequency in milliseconds
      */
-    public void updateHealthChecker(long healthCheckFrequencyMillis)
+    public void updateHealthChecker(int healthCheckFrequencyMillis)
     {
         if (healthCheckTimerId > 0)
         {
             // Stop existing timer
-            vertx.cancelTimer(healthCheckTimerId);
+            executorPools.internal().cancelTimer(healthCheckTimerId);
             logger.info("Stopped health check timer with timerId={}", healthCheckTimerId);
         }
         // TODO: when upgrading to latest vertx version, we can set an initial delay, and the periodic delay
-        healthCheckTimerId = vertx.setPeriodic(healthCheckFrequencyMillis, t -> healthCheck());
+        healthCheckTimerId = executorPools.internal()
+                                          .setPeriodic(healthCheckFrequencyMillis, t -> healthCheck());
         logger.info("Started health check with frequency={} and timerId={}",
                     healthCheckFrequencyMillis, healthCheckTimerId);
     }
@@ -137,18 +172,9 @@ public class CassandraSidecarDaemon
     private void healthCheck()
     {
         config.getInstancesConfig().instances()
-              .forEach((instanceMetadata) ->
-                       vertx.executeBlocking((promise) -> instanceMetadata.delegate().healthCheck()));
-    }
-
-
-    public static void main(String[] args)
-    {
-        CassandraSidecarDaemon app = Guice.createInjector(new MainModule())
-                                          .getInstance(CassandraSidecarDaemon.class);
-
-        app.start();
-        Runtime.getRuntime().addShutdownHook(new Thread(app::stop));
+              .forEach(instanceMetadata ->
+                       executorPools.internal()
+                                    .executeBlocking(promise -> instanceMetadata.delegate().healthCheck()));
     }
 }
 

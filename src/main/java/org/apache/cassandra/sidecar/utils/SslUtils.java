@@ -33,12 +33,12 @@ public class SslUtils
     /**
      * Given the parameters, validate the keystore can be loaded and is usable
      *
-     * @param keyStorePath
-     * @param keystorePassword
-     * @throws KeyStoreException
-     * @throws NoSuchAlgorithmException
-     * @throws IOException
-     * @throws CertificateException
+     * @param keyStorePath     the path to the keystore
+     * @param keystorePassword the password for the keystore
+     * @throws KeyStoreException        when there is an error accessing the keystore
+     * @throws NoSuchAlgorithmException when the keystore type algorithm is not available
+     * @throws IOException              when an IO exception occurs
+     * @throws CertificateException     when a problem was encountered with the certificate
      */
     public static void validateSslOpts(String keyStorePath, String keystorePassword) throws KeyStoreException,
                                                                                             NoSuchAlgorithmException,

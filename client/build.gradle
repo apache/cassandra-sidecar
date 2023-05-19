@@ -1,0 +1,94 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id('idea')
+    // A Java library
+    id('java-library')
+    // which produces test fixtures
+    id('java-test-fixtures')
+    // and is published
+    id('maven-publish')
+}
+
+group 'org.apache.cassandra.sidecar'
+version project.version
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+configurations {
+    all*.exclude(group: 'ch.qos.logback')
+}
+
+dependencies {
+    api(project(':common'))
+    implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.2')
+    implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
+
+    compileOnly('org.jetbrains:annotations:23.0.0')
+    compileOnly(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
+
+    testImplementation(platform('org.junit:junit-bom:5.9.2'))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+    testImplementation("org.assertj:assertj-core:3.24.2")
+    testImplementation('org.mockito:mockito-core:4.10.0')
+    testImplementation('com.squareup.okhttp3:mockwebserver:4.10.0')
+    testImplementation(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
+
+    testFixturesImplementation(platform('org.junit:junit-bom:5.9.2'))
+    testFixturesImplementation('org.junit.jupiter:junit-jupiter')
+    testFixturesImplementation("org.assertj:assertj-core:3.24.2")
+    testFixturesImplementation('org.mockito:mockito-core:4.10.0')
+    testFixturesImplementation('com.squareup.okhttp3:mockwebserver:4.10.0')
+    testFixturesCompileOnly(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            groupId project.group
+            artifactId "${archivesBaseName}"
+            version System.getenv("CODE_VERSION") ?: "${version}"
+        }
+    }
+}
+
+javadoc {
+    if (JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
+}
+
+check.dependsOn(checkstyleMain, checkstyleTest, jacocoTestReport)
