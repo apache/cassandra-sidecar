@@ -46,9 +46,10 @@ import org.jetbrains.annotations.Nullable;
  */
 public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateListener
 {
+    private final String sidecarVersion;
+    private final CassandraVersionProvider versionProvider;
     private final CQLSessionProvider cqlSessionProvider;
     private final JmxClient jmxClient;
-    private final CassandraVersionProvider versionProvider;
     private SimpleCassandraVersion currentVersion;
     private ICassandraAdapter adapter;
     private volatile NodeSettings nodeSettings = null;
@@ -57,11 +58,13 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private final AtomicBoolean registered = new AtomicBoolean(false);
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
 
-    public CassandraAdapterDelegate(CassandraVersionProvider provider,
+    public CassandraAdapterDelegate(CassandraVersionProvider versionProvider,
                                     CQLSessionProvider cqlSessionProvider,
-                                    JmxClient jmxClient)
+                                    JmxClient jmxClient,
+                                    String sidecarVersion)
     {
-        this.versionProvider = provider;
+        this.sidecarVersion = sidecarVersion;
+        this.versionProvider = versionProvider;
         this.cqlSessionProvider = cqlSessionProvider;
         this.jmxClient = jmxClient;
     }
@@ -126,10 +129,12 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
             // Note that within the scope of this method, we should keep on using the local releaseVersion
             String releaseVersion = oneResult.getString("release_version");
-            NodeSettings newNodeSettings = new NodeSettings(releaseVersion, oneResult.getString("partitioner"));
+            NodeSettings newNodeSettings = new NodeSettings(releaseVersion,
+                                                            oneResult.getString("partitioner"),
+                                                            sidecarVersion);
             if (!newNodeSettings.equals(nodeSettings))
             {
-                // update the nodeSettings cache.
+                // Update the nodeSettings cache
                 SimpleCassandraVersion previousVersion = currentVersion;
                 currentVersion = SimpleCassandraVersion.create(releaseVersion);
                 adapter = versionProvider.cassandra(releaseVersion)

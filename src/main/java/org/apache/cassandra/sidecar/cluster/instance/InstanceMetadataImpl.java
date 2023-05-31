@@ -47,10 +47,11 @@ public class InstanceMetadataImpl implements InstanceMetadata
                                 String stagingDir,
                                 CQLSessionProvider sessionProvider,
                                 JmxClient jmxClient,
-                                CassandraVersionProvider versionProvider)
+                                CassandraVersionProvider versionProvider,
+                                String sidecarVersion)
     {
         this(id, host, port, dataDirs, stagingDir,
-             new CassandraAdapterDelegate(versionProvider, sessionProvider, jmxClient));
+             new CassandraAdapterDelegate(versionProvider, sessionProvider, jmxClient, sidecarVersion));
     }
 
     @VisibleForTesting

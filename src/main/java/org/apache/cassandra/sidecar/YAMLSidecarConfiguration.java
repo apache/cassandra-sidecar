@@ -154,23 +154,32 @@ public class YAMLSidecarConfiguration extends Configuration
      *
      * @param confPath        the path to the Sidecar YAML configuration file
      * @param versionProvider a Cassandra version provider
+     * @param sidecarVersion  the version of the Sidecar from the current binary
      * @return the {@link YAMLConfiguration} parsed from the YAML file
      * @throws IOException when reading the configuration from file fails
      */
-    public static Configuration of(String confPath, CassandraVersionProvider versionProvider) throws IOException
+    public static Configuration of(String confPath,
+                                   CassandraVersionProvider versionProvider,
+                                   String sidecarVersion) throws IOException
     {
         YAMLConfiguration yamlConf = yamlConfiguration(confPath);
         int healthCheckFrequencyMillis = yamlConf.getInt(HEALTH_CHECK_INTERVAL, 1000);
         ValidationConfiguration validationConfiguration = validationConfiguration(yamlConf);
-        InstancesConfig instancesConfig = instancesConfig(yamlConf, versionProvider, healthCheckFrequencyMillis);
-        CacheConfiguration ssTableImportCacheConfiguration = cacheConfig(yamlConf, SSTABLE_IMPORT_CACHE_CONFIGURATION,
+        InstancesConfig instancesConfig = instancesConfig(yamlConf,
+                                                          versionProvider,
+                                                          healthCheckFrequencyMillis,
+                                                          sidecarVersion);
+        CacheConfiguration ssTableImportCacheConfiguration = cacheConfig(yamlConf,
+                                                                         SSTABLE_IMPORT_CACHE_CONFIGURATION,
                                                                          TimeUnit.HOURS.toMillis(2),
                                                                          10_000);
-        WorkerPoolConfiguration serverWorkerPoolConf = workerPoolConfiguration(yamlConf, WORKER_POOL_FOR_SERVICE,
+        WorkerPoolConfiguration serverWorkerPoolConf = workerPoolConfiguration(yamlConf,
+                                                                               WORKER_POOL_FOR_SERVICE,
                                                                                "sidecar-worker-pool",
                                                                                VertxOptions.DEFAULT_WORKER_POOL_SIZE,
                                                                                TimeUnit.SECONDS.toMillis(60));
-        WorkerPoolConfiguration internalWorkerPoolConf = workerPoolConfiguration(yamlConf, WORKER_POOL_FOR_INTERNAL,
+        WorkerPoolConfiguration internalWorkerPoolConf = workerPoolConfiguration(yamlConf,
+                                                                                 WORKER_POOL_FOR_INTERNAL,
                                                                                  "sidecar-internal-worker-pool",
                                                                                  VertxOptions.DEFAULT_WORKER_POOL_SIZE,
                                                                                  TimeUnit.SECONDS.toMillis(60));
@@ -231,10 +240,13 @@ public class YAMLSidecarConfiguration extends Configuration
      * @param yamlConf                   the object used to parse the YAML file
      * @param versionProvider            a Cassandra version provider
      * @param healthCheckFrequencyMillis the health check frequency configuration in milliseconds
+     * @param sidecarVersion             the version of the Sidecar from the current binary
      * @return the parsed {@link InstancesConfig} from the {@code yamlConf} object
      */
-    private static InstancesConfig instancesConfig(YAMLConfiguration yamlConf, CassandraVersionProvider versionProvider,
-                                                   int healthCheckFrequencyMillis)
+    private static InstancesConfig instancesConfig(YAMLConfiguration yamlConf,
+                                                   CassandraVersionProvider versionProvider,
+                                                   int healthCheckFrequencyMillis,
+                                                   String sidecarVersion)
     {
         /* Since we are supporting handling multiple instances in Sidecar optionally, we prefer reading single instance
          * data over reading multiple instances section
@@ -244,7 +256,8 @@ public class YAMLSidecarConfiguration extends Configuration
         {
             InstanceMetadata instanceMetadata = buildInstanceMetadata(singleInstanceConf,
                                                                       versionProvider,
-                                                                      healthCheckFrequencyMillis);
+                                                                      healthCheckFrequencyMillis,
+                                                                      sidecarVersion);
             return new InstancesConfigImpl(instanceMetadata);
         }
 
@@ -254,7 +267,8 @@ public class YAMLSidecarConfiguration extends Configuration
         {
             InstanceMetadata instanceMetadata = buildInstanceMetadata(instance,
                                                                       versionProvider,
-                                                                      healthCheckFrequencyMillis);
+                                                                      healthCheckFrequencyMillis,
+                                                                      sidecarVersion);
             instanceMetas.add(instanceMetadata);
         }
         return new InstancesConfigImpl(instanceMetas);
@@ -313,11 +327,13 @@ public class YAMLSidecarConfiguration extends Configuration
      * @param instance                   the object that allows reading from the YAML file
      * @param versionProvider            a Cassandra version provider
      * @param healthCheckFrequencyMillis the health check frequency configuration in milliseconds
+     * @param sidecarVersion             the version of the Sidecar from the current binary
      * @return the parsed {@link InstanceMetadata} from YAML
      */
     private static InstanceMetadata buildInstanceMetadata(org.apache.commons.configuration2.Configuration instance,
                                                           CassandraVersionProvider versionProvider,
-                                                          int healthCheckFrequencyMillis)
+                                                          int healthCheckFrequencyMillis,
+                                                          String sidecarVersion)
     {
         int id = instance.get(Integer.class, CASSANDRA_INSTANCE_ID, 1);
         String host = instance.get(String.class, CASSANDRA_INSTANCE_HOST);
@@ -339,6 +355,7 @@ public class YAMLSidecarConfiguration extends Configuration
                                         stagingDir,
                                         session,
                                         jmxClient,
-                                        versionProvider);
+                                        versionProvider,
+                                        sidecarVersion);
     }
 }

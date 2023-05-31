@@ -63,8 +63,7 @@ public class TestModule extends AbstractModule
 
     protected Configuration abstractConfig(InstancesConfig instancesConfig)
     {
-        WorkerPoolConfiguration workPoolConf = new WorkerPoolConfiguration("test-pool", 10,
-                                                                           30000);
+        WorkerPoolConfiguration workPoolConf = new WorkerPoolConfiguration("test-pool", 10, 30000);
         return new Configuration.Builder()
                .setInstancesConfig(instancesConfig)
                .setHost("127.0.0.1")
@@ -115,7 +114,8 @@ public class TestModule extends AbstractModule
         CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
         if (isUp)
         {
-            when(delegate.nodeSettings()).thenReturn(new NodeSettings("testVersion", "testPartitioner"));
+            when(delegate.nodeSettings()).thenReturn(new NodeSettings(
+                    "testVersion", "testPartitioner", Collections.singletonMap("version", "testSidecar")));
         }
         when(delegate.isUp()).thenReturn(isUp);
         when(instanceMeta.delegate()).thenReturn(delegate);

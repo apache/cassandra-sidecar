@@ -22,8 +22,9 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 import com.google.common.util.concurrent.SidecarRateLimiter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -64,6 +65,7 @@ import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
 import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.MD5ChecksumVerifier;
+import org.apache.cassandra.sidecar.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
 import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
@@ -74,6 +76,8 @@ import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
  */
 public class MainModule extends AbstractModule
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MainModule.class);
+
     public static final Map<String, String> OK_STATUS = Collections.singletonMap("status", "OK");
     public static final Map<String, String> NOT_OK_STATUS = Collections.singletonMap("status", "NOT_OK");
 
@@ -240,11 +244,11 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Configuration configuration(CassandraVersionProvider cassandraVersionProvider)
-    throws IOException
+    public Configuration configuration(CassandraVersionProvider cassandraVersionProvider,
+                                       SidecarVersionProvider sidecarVersionProvider) throws IOException
     {
         final String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
-        return YAMLSidecarConfiguration.of(confPath, cassandraVersionProvider);
+        return YAMLSidecarConfiguration.of(confPath, cassandraVersionProvider, sidecarVersionProvider.sidecarVersion());
     }
 
     @Provides
@@ -263,10 +267,11 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
+    public CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver,
+                                                             SidecarVersionProvider sidecarVersionProvider)
     {
         CassandraVersionProvider.Builder builder = new CassandraVersionProvider.Builder();
-        builder.add(new Cassandra40Factory(dnsResolver));
+        builder.add(new Cassandra40Factory(dnsResolver, sidecarVersionProvider.sidecarVersion()));
         return builder.build();
     }
 
@@ -310,5 +315,12 @@ public class MainModule extends AbstractModule
     public ChecksumVerifier checksumVerifier(Vertx vertx)
     {
         return new MD5ChecksumVerifier(vertx.fileSystem());
+    }
+
+    @Provides
+    @Singleton
+    public SidecarVersionProvider sidecarVersionProvider()
+    {
+        return new SidecarVersionProvider("/sidecar.version");
     }
 }

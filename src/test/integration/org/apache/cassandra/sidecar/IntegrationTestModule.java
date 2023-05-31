@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.utils.SidecarVersionProvider;
 
 /**
  * Provides the basic dependencies for integration tests
@@ -48,7 +49,8 @@ public class IntegrationTestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public InstancesConfig instancesConfig(CassandraVersionProvider versionProvider)
+    public InstancesConfig instancesConfig(CassandraVersionProvider versionProvider,
+                                           SidecarVersionProvider sidecarVersionProvider)
     {
         String dataDirectory = cassandraTestContext.dataDirectoryPath.toFile().getAbsolutePath();
         String stagingDirectory = cassandraTestContext.dataDirectoryPath.resolve("staging")
@@ -60,7 +62,8 @@ public class IntegrationTestModule extends AbstractModule
                                                              stagingDirectory,
                                                              cassandraTestContext.session,
                                                              cassandraTestContext.jmxClient,
-                                                             versionProvider);
+                                                             versionProvider,
+                                                             sidecarVersionProvider.sidecarVersion());
         return new InstancesConfigImpl(metadata);
     }
 

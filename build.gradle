@@ -78,10 +78,10 @@ startScripts {
 run {
     confFile = "file:" + File.separator + File.separator + "$projectDir/conf/sidecar.yaml"
     jvmArgs = ["-Dsidecar.logdir=./logs",
-                                 "-Dsidecar.config=" + confFile,
-                                 "-Dlogback.configurationFile=./conf/logback.xml",
-                                 "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
-                                 "-javaagent:$projectDir/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
+               "-Dsidecar.config=" + confFile,
+               "-Dlogback.configurationFile=./conf/logback.xml",
+               "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
+               "-javaagent:$projectDir/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
 }
 
 // add integration test
@@ -172,6 +172,14 @@ dependencies {
     integrationTestImplementation("org.testcontainers:testcontainers:${project.testcontainersVersion}")
     integrationTestImplementation("org.testcontainers:cassandra:${project.testcontainersVersion}")
     integrationTestImplementation("org.testcontainers:junit-jupiter:${project.testcontainersVersion}")
+}
+
+jar {
+    doFirst {
+        // Store current Cassandra Sidecar build version in an embedded resource file;
+        // the file is either created or overwritten, and ignored by Git source control
+        new File("$projectDir/src/main/resources/sidecar.version").text = version
+    }
 }
 
 java {

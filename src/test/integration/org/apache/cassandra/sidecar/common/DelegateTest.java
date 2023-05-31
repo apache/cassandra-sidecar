@@ -36,7 +36,8 @@ class DelegateTest
     void testCorrectVersionIsEnabled(CassandraTestContext context)
     {
         CassandraVersionProvider provider = new CassandraVersionProvider.Builder().add(new V30()).build();
-        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(provider, context.session, context.jmxClient);
+        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(
+                provider, context.session, context.jmxClient, "1.0-TEST");
         SimpleCassandraVersion version = delegate.version();
         assertThat(version).isNotNull();
     }
@@ -45,7 +46,8 @@ class DelegateTest
     void testHealthCheck(CassandraTestContext context) throws IOException, InterruptedException
     {
         CassandraVersionProvider provider = new CassandraVersionProvider.Builder().add(new V30()).build();
-        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(provider, context.session, context.jmxClient);
+        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(
+                provider, context.session, context.jmxClient, "1.0-TEST");
 
         delegate.healthCheck();
 
