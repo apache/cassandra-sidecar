@@ -47,7 +47,7 @@ public class NodeSettings
         }
         catch (Exception exception)
         {
-            LOGGER.error("Failed to ex Sidecar version", exception);
+            LOGGER.error("Failed to retrieve Sidecar version", exception);
         }
         return "unknown";
     }
