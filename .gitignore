@@ -76,6 +76,9 @@ lib/jsr223/scala/*.jar
 src/dist/*
 *.logdir_IS_UNDEFINED
 
+# Sidecar version
+sidecar.version
+
 # Sidecar copyDist files copied to root directory
 agents
 bin

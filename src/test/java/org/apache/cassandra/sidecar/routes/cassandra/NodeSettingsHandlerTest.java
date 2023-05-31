@@ -93,6 +93,7 @@ class NodeSettingsHandlerTest
                   NodeSettings status = resp.result().bodyAsJson(NodeSettings.class);
                   assertThat(status.partitioner()).isEqualTo("testPartitioner");
                   assertThat(status.releaseVersion()).isEqualTo("testVersion");
+                  assertThat(status.sidecarVersion()).isEqualTo("testSidecar");
                   context.completeNow();
               });
     }
@@ -108,6 +109,7 @@ class NodeSettingsHandlerTest
                   NodeSettings status = resp.result().bodyAsJson(NodeSettings.class);
                   assertThat(status.partitioner()).isEqualTo("testPartitioner");
                   assertThat(status.releaseVersion()).isEqualTo("testVersion");
+                  assertThat(status.sidecarVersion()).isEqualTo("testSidecar");
                   context.completeNow();
               });
     }

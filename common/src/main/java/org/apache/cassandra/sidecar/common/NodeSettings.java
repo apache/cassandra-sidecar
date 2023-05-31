@@ -16,39 +16,68 @@
  * limitations under the License.
  */
 
-
 package org.apache.cassandra.sidecar.common;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Holds information about the specific node settings
  */
 public class NodeSettings
 {
-    private final String releaseVersion;
-    private final String partitioner;
+    private static final Logger LOGGER = LoggerFactory.getLogger(NodeSettings.class);
 
-    /**
-     * Constructs a new {@link NodeSettings} object with the Cassandra node's release version and partitioner
-     * information.
-     *
-     * @param releaseVersion the release version of the Cassandra node
-     * @param partitioner    the partitioner used by the Cassandra node
-     */
-    public NodeSettings(@JsonProperty("releaseVersion") String releaseVersion,
-                        @JsonProperty("partitioner") String partitioner)
+    private final String partitioner;
+    private final String releaseVersion;
+    private final String sidecarVersion;
+
+    private static String getSidecarVersion()
     {
-        this.releaseVersion = releaseVersion;
-        this.partitioner = partitioner;
+        try (InputStream version = NodeSettings.class.getResourceAsStream("/sidecar.version"))
+        {
+            return IOUtils.toString(version, StandardCharsets.UTF_8);
+        }
+        catch (Exception exception)
+        {
+            LOGGER.error("Failed to ex Sidecar version", exception);
+        }
+        return "unknown";
     }
 
-    @JsonProperty("releaseVersion")
-    public String releaseVersion()
+    /**
+     * Constructs a new {@link NodeSettings} object with the Cassandra node's partitioner
+     * and release version information, uses Sidecar version from the currently loaded binary
+     *
+     * @param partitioner    the partitioner used by the Cassandra node
+     * @param releaseVersion the release version of the Cassandra node
+     */
+    public NodeSettings(String partitioner, String releaseVersion)
     {
-        return releaseVersion;
+        this(partitioner, releaseVersion, getSidecarVersion());
+    }
+
+    /**
+     * Constructs a new {@link NodeSettings} object with the Cassandra node's partitioner,
+     * release version, and Sidecar version information
+     *
+     * @param partitioner    the partitioner used by the Cassandra node
+     * @param releaseVersion the release version of the Cassandra node
+     * @param sidecarVersion the version of the Sidecar on the Cassandra node
+     */
+    public NodeSettings(@JsonProperty("partitioner")    String partitioner,
+                        @JsonProperty("releaseVersion") String releaseVersion,
+                        @JsonProperty("sidecarVersion") String sidecarVersion)
+    {
+        this.partitioner = partitioner;
+        this.releaseVersion = releaseVersion;
+        this.sidecarVersion = sidecarVersion;
     }
 
     @JsonProperty("partitioner")
@@ -57,16 +86,35 @@ public class NodeSettings
         return partitioner;
     }
 
+    @JsonProperty("releaseVersion")
+    public String releaseVersion()
+    {
+        return releaseVersion;
+    }
+
+    @JsonProperty("sidecarVersion")
+    public String sidecarVersion()
+    {
+        return sidecarVersion;
+    }
+
     /**
      * {@inheritDoc}
      */
-    public boolean equals(Object o)
+    public boolean equals(Object other)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        NodeSettings that = (NodeSettings) o;
-        return Objects.equals(releaseVersion, that.releaseVersion)
-               && Objects.equals(partitioner, that.partitioner);
+        if (this == other)
+        {
+            return true;
+        }
+        if (other == null || this.getClass() != other.getClass())
+        {
+            return false;
+        }
+        NodeSettings that = (NodeSettings) other;
+        return Objects.equals(this.partitioner,    that.partitioner)
+            && Objects.equals(this.releaseVersion, that.releaseVersion)
+            && Objects.equals(this.sidecarVersion, that.sidecarVersion);
     }
 
     /**
@@ -74,6 +122,6 @@ public class NodeSettings
      */
     public int hashCode()
     {
-        return Objects.hash(releaseVersion, partitioner);
+        return Objects.hash(partitioner, releaseVersion, sidecarVersion);
     }
 }

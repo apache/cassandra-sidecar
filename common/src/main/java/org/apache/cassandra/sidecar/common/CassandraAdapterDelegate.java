@@ -126,7 +126,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
             // Note that within the scope of this method, we should keep on using the local releaseVersion
             String releaseVersion = oneResult.getString("release_version");
-            NodeSettings newNodeSettings = new NodeSettings(releaseVersion, oneResult.getString("partitioner"));
+            NodeSettings newNodeSettings = new NodeSettings(oneResult.getString("partitioner"), releaseVersion);
             if (!newNodeSettings.equals(nodeSettings))
             {
                 // update the nodeSettings cache.
