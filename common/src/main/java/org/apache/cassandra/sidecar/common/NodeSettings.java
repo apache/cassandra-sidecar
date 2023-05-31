@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 public class NodeSettings
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeSettings.class);
+    private static final String SIDECAR_VERSION = getSidecarVersion();
 
     private final String partitioner;
     private final String releaseVersion;
@@ -60,7 +61,7 @@ public class NodeSettings
      */
     public NodeSettings(String partitioner, String releaseVersion)
     {
-        this(partitioner, releaseVersion, getSidecarVersion());
+        this(partitioner, releaseVersion, SIDECAR_VERSION);
     }
 
     /**
