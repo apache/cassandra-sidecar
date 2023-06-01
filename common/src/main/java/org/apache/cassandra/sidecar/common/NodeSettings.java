@@ -38,8 +38,8 @@ public class NodeSettings
     private static final String VERSION = "version";
     private static final String SIDECAR_VERSION = getSidecarVersion();
 
-    private final String partitioner;
     private final String releaseVersion;
+    private final String partitioner;
     private final Map<String, String> sidecar;
 
     private static String getSidecarVersion()
@@ -64,44 +64,44 @@ public class NodeSettings
     }
 
     /**
-     * Constructs a new {@link NodeSettings} object with the Cassandra node's partitioner
-     * and release version information, uses Sidecar version from the currently loaded binary
+     * Constructs a new {@link NodeSettings} object with the Cassandra node's release version
+     * and partitioner information, uses Sidecar version from the currently loaded binary
      *
-     * @param partitioner    the partitioner used by the Cassandra node
      * @param releaseVersion the release version of the Cassandra node
+     * @param partitioner    the partitioner used by the Cassandra node
      */
-    public NodeSettings(String partitioner, String releaseVersion)
+    public NodeSettings(String releaseVersion, String partitioner)
     {
-        this(partitioner, releaseVersion, Collections.singletonMap(VERSION, SIDECAR_VERSION));
+        this(releaseVersion, partitioner, Collections.singletonMap(VERSION, SIDECAR_VERSION));
     }
 
     /**
-     * Constructs a new {@link NodeSettings} object with the Cassandra node's partitioner,
-     * release version, and Sidecar version information
+     * Constructs a new {@link NodeSettings} object with the Cassandra node's release version,
+     * partitioner, and Sidecar version information
      *
-     * @param partitioner    the partitioner used by the Cassandra node
      * @param releaseVersion the release version of the Cassandra node
+     * @param partitioner    the partitioner used by the Cassandra node
      * @param sidecar        the settings of the Sidecar on the Cassandra node, including its version
      */
-    public NodeSettings(@JsonProperty("partitioner")    String partitioner,
-                        @JsonProperty("releaseVersion") String releaseVersion,
+    public NodeSettings(@JsonProperty("releaseVersion") String releaseVersion,
+                        @JsonProperty("partitioner")    String partitioner,
                         @JsonProperty("sidecar")        Map<String, String> sidecar)
     {
-        this.partitioner    = partitioner;
         this.releaseVersion = releaseVersion;
+        this.partitioner    = partitioner;
         this.sidecar        = sidecar;
-    }
-
-    @JsonProperty("partitioner")
-    public String partitioner()
-    {
-        return partitioner;
     }
 
     @JsonProperty("releaseVersion")
     public String releaseVersion()
     {
         return releaseVersion;
+    }
+
+    @JsonProperty("partitioner")
+    public String partitioner()
+    {
+        return partitioner;
     }
 
     @JsonProperty("sidecar")
@@ -129,8 +129,8 @@ public class NodeSettings
             return false;
         }
         NodeSettings that = (NodeSettings) other;
-        return Objects.equals(this.partitioner,    that.partitioner)
-            && Objects.equals(this.releaseVersion, that.releaseVersion)
+        return Objects.equals(this.releaseVersion, that.releaseVersion)
+            && Objects.equals(this.partitioner,    that.partitioner)
             && Objects.equals(this.sidecar,        that.sidecar);
     }
 
@@ -139,6 +139,6 @@ public class NodeSettings
      */
     public int hashCode()
     {
-        return Objects.hash(partitioner, releaseVersion, sidecar);
+        return Objects.hash(releaseVersion, partitioner, sidecar);
     }
 }

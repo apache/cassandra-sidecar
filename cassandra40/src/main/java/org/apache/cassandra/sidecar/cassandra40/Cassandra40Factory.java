@@ -107,8 +107,8 @@ public class Cassandra40Factory implements ICassandraFactory
                 Row oneResult = activeSession.execute("select release_version, partitioner from system.local")
                                              .one();
 
-                return new NodeSettings(oneResult.getString("partitioner"),
-                                        oneResult.getString("release_version"));
+                return new NodeSettings(oneResult.getString("release_version"),
+                                        oneResult.getString("partitioner"));
             }
 
             /**
