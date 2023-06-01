@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.common;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,15 +35,17 @@ import org.slf4j.LoggerFactory;
 public class NodeSettings
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeSettings.class);
+    private static final String VERSION = "version";
     private static final String SIDECAR_VERSION = getSidecarVersion();
 
     private final String partitioner;
     private final String releaseVersion;
-    private final String sidecarVersion;
+    private final Map<String, String> sidecar;
 
     private static String getSidecarVersion()
     {
-        try (InputStream input = NodeSettings.class.getResourceAsStream("/sidecar.version");
+        final String resource = "/sidecar.version";
+        try (InputStream input = NodeSettings.class.getResourceAsStream(resource);
              ByteArrayOutputStream output = new ByteArrayOutputStream())
         {
             byte[] buffer = new byte[32];
@@ -68,7 +72,7 @@ public class NodeSettings
      */
     public NodeSettings(String partitioner, String releaseVersion)
     {
-        this(partitioner, releaseVersion, SIDECAR_VERSION);
+        this(partitioner, releaseVersion, Collections.singletonMap(VERSION, SIDECAR_VERSION));
     }
 
     /**
@@ -77,15 +81,15 @@ public class NodeSettings
      *
      * @param partitioner    the partitioner used by the Cassandra node
      * @param releaseVersion the release version of the Cassandra node
-     * @param sidecarVersion the version of the Sidecar on the Cassandra node
+     * @param sidecar        the settings of the Sidecar on the Cassandra node, including its version
      */
     public NodeSettings(@JsonProperty("partitioner")    String partitioner,
                         @JsonProperty("releaseVersion") String releaseVersion,
-                        @JsonProperty("sidecarVersion") String sidecarVersion)
+                        @JsonProperty("sidecar")        Map<String, String> sidecar)
     {
-        this.partitioner = partitioner;
+        this.partitioner    = partitioner;
         this.releaseVersion = releaseVersion;
-        this.sidecarVersion = sidecarVersion;
+        this.sidecar        = sidecar;
     }
 
     @JsonProperty("partitioner")
@@ -100,10 +104,15 @@ public class NodeSettings
         return releaseVersion;
     }
 
-    @JsonProperty("sidecarVersion")
+    @JsonProperty("sidecar")
+    public Map<String, String> sidecar()
+    {
+        return sidecar;
+    }
+
     public String sidecarVersion()
     {
-        return sidecarVersion;
+        return sidecar.get(VERSION);
     }
 
     /**
@@ -122,7 +131,7 @@ public class NodeSettings
         NodeSettings that = (NodeSettings) other;
         return Objects.equals(this.partitioner,    that.partitioner)
             && Objects.equals(this.releaseVersion, that.releaseVersion)
-            && Objects.equals(this.sidecarVersion, that.sidecarVersion);
+            && Objects.equals(this.sidecar,        that.sidecar);
     }
 
     /**
@@ -130,6 +139,6 @@ public class NodeSettings
      */
     public int hashCode()
     {
-        return Objects.hash(partitioner, releaseVersion, sidecarVersion);
+        return Objects.hash(partitioner, releaseVersion, sidecar);
     }
 }

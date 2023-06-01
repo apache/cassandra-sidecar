@@ -114,7 +114,8 @@ public class TestModule extends AbstractModule
         CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
         if (isUp)
         {
-            when(delegate.nodeSettings()).thenReturn(new NodeSettings("testPartitioner", "testVersion", "testSidecar"));
+            when(delegate.nodeSettings()).thenReturn(new NodeSettings(
+                    "testPartitioner", "testVersion", Collections.singletonMap("version", "testSidecar")));
         }
         when(delegate.isUp()).thenReturn(isUp);
         when(instanceMeta.delegate()).thenReturn(delegate);
