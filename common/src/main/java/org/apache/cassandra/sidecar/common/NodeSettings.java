@@ -18,12 +18,12 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,9 +41,16 @@ public class NodeSettings
 
     private static String getSidecarVersion()
     {
-        try (InputStream version = NodeSettings.class.getResourceAsStream("/sidecar.version"))
+        try (InputStream input = NodeSettings.class.getResourceAsStream("/sidecar.version");
+             ByteArrayOutputStream output = new ByteArrayOutputStream())
         {
-            return IOUtils.toString(version, StandardCharsets.UTF_8);
+            byte[] buffer = new byte[32];
+            int length;
+            while ((length = input.read(buffer)) >= 0)
+            {
+                output.write(buffer, 0, length);
+            }
+            return output.toString(StandardCharsets.UTF_8.name());
         }
         catch (Exception exception)
         {

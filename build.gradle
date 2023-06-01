@@ -176,6 +176,8 @@ dependencies {
 
 jar {
     doFirst {
+        // Store current Cassandra Sidecar build version in an embedded resource file;
+        // the file is either created or overwritten, and ignored by Git source control
         new File("$projectDir/src/main/resources/sidecar.version").text = version
     }
 }
