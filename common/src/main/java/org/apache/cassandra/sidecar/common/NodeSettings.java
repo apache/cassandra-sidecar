@@ -36,7 +36,7 @@ public class NodeSettings
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeSettings.class);
     private static final String VERSION = "version";
-    private static final String SIDECAR_VERSION = getSidecarVersion();
+    private static final Map<String, String> SIDECAR = Collections.singletonMap(VERSION, getSidecarVersion());
 
     private final String releaseVersion;
     private final String partitioner;
@@ -72,7 +72,7 @@ public class NodeSettings
      */
     public NodeSettings(String releaseVersion, String partitioner)
     {
-        this(releaseVersion, partitioner, Collections.singletonMap(VERSION, SIDECAR_VERSION));
+        this(releaseVersion, partitioner, SIDECAR);
     }
 
     /**
