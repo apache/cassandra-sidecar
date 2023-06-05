@@ -18,10 +18,6 @@
 
 package org.apache.cassandra.sidecar.common.testing;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
@@ -37,16 +33,17 @@ import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.NettyOptions;
-import org.apache.cassandra.sidecar.common.CQLSessionProvider;
-import org.apache.cassandra.sidecar.common.ICassandraAdapter;
-import org.apache.cassandra.sidecar.common.ICassandraFactory;
-import org.apache.cassandra.sidecar.common.JmxClient;
+import com.vdurmont.semver4j.Semver;
+import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.Feature;
+import org.apache.cassandra.distributed.api.TokenSupplier;
+import org.apache.cassandra.distributed.shared.Versions;
+import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
+import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
-import org.apache.cassandra.sidecar.common.containers.ExtendedCassandraContainer;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.apache.cassandra.sidecar.utils.SidecarVersionProvider;
 
-import static org.apache.cassandra.sidecar.common.containers.ExtendedCassandraContainer.JMX_PORT;
-import static org.apache.cassandra.sidecar.common.containers.ExtendedCassandraContainer.RMI_SERVER_HOSTNAME;
 
 /**
  * Creates a test per version of Cassandra we are testing
@@ -62,7 +59,9 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 {
 
     private static final Logger logger = LoggerFactory.getLogger(CassandraTestTemplate.class);
-    public static final String CONTAINER_CASSANDRA_DATA_PATH = "/var/lib/cassandra";
+    private static SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
+
+    private UpgradeableCluster cluster;
 
     @Override
     public boolean supportsTestTemplate(ExtensionContext context)
@@ -83,7 +82,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
      * @param version a version for the test
      * @param context the <em>context</em> in which the current test or container is being executed.
      * @return the <em>context</em> of a single invocation of a
-     *         {@linkplain org.junit.jupiter.api.TestTemplate test template}
+     * {@linkplain org.junit.jupiter.api.TestTemplate test template}
      */
     private TestTemplateInvocationContext invocationContext(TestVersion version, ExtensionContext context)
     {
@@ -104,7 +103,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
             }
 
             /**
-             * Used to register the extensions required to start and stop the docker environment
+             * Used to register the extensions required to start and stop the in-jvm dtest environment
              * @return a list of registered {@link Extension extensions}
              */
             @Override
@@ -116,62 +115,65 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
             private BeforeEachCallback beforeEach()
             {
                 return beforeEachCtx -> {
-                    // spin up a C* instance using Testcontainers
-                    ICassandraFactory factory = version.getFactory();
+                    CassandraIntegrationTest annotation =
+                    context.getElement().map(e -> e.getAnnotation(CassandraIntegrationTest.class)).get();
+                    // spin up a C* cluster using the in-jvm dtest
+                    Versions versions = Versions.find();
+                    int nodesPerDc = annotation.nodesPerDc();
+                    int dcCount = annotation.numDcs();
+                    int newNodesPerDc = annotation.newNodesPerDc(); // if the test wants to add more nodes later
+                    int finalNodeCount = dcCount * (nodesPerDc + newNodesPerDc);
+                    Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(),
+                                                                                      Semver.SemverType.LOOSE));
+                    UpgradeableCluster.Builder builder =
+                    UpgradeableCluster.build(nodesPerDc)
+                                      .withVersion(requestedVersion)
+                                      .withDCs(dcCount)
+                                      .withDataDirCount(annotation.numDataDirsPerInstance())
+                                      .withConfig(config -> {
+                                          if (annotation.nativeTransport())
+                                          {
+                                              config.with(Feature.NATIVE_PROTOCOL);
+                                          }
+                                          if (annotation.jmx())
+                                          {
+                                              config.with(Feature.JMX);
+                                          }
+                                          if (annotation.gossip())
+                                          {
+                                              config.with(Feature.GOSSIP);
+                                          }
+                                          if (annotation.network())
+                                          {
+                                              config.with(Feature.NETWORK);
+                                          }
+                                      });
+                    TokenSupplier tokenSupplier = TokenSupplier.evenlyDistributedTokens(finalNodeCount,
+                                                                                        builder.getTokenCount());
+                    builder.withTokenSupplier(tokenSupplier);
+                    cluster = builder.start();
 
-                    // Create a temp directory to be mounted inside the container
-                    Path dataDirectoryPath = Files.createTempDirectory("cassandra-sidecar-test-");
-                    ExtendedCassandraContainer container = new ExtendedCassandraContainer(version.image())
-                                                      // Mount the temp directory as the Cassandra data directory
-                                                      .withFileSystemBind(dataDirectoryPath.toFile().getAbsolutePath(),
-                                                                          CONTAINER_CASSANDRA_DATA_PATH);
-                    container.start();
-                    logger.info("Testing {} against docker container", version);
-
-                    CQLSessionProvider session = new CQLSessionProvider(container.getContactPoint(),
-                                                                        new NettyOptions());
-                    JmxClient jmxClient = new JmxClient(RMI_SERVER_HOSTNAME, JMX_PORT);
-
+                    logger.info("Testing {} against in-jvm dtest cluster", version);
+                    CassandraVersionProvider versionProvider = cassandraVersionProvider(DnsResolver.DEFAULT);
                     SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.version());
-
-                    ICassandraAdapter cassandra = factory.create(session, jmxClient);
-
-                    cassandraTestContext = new CassandraTestContext(versionParsed,
-                                                                    container,
-                                                                    session,
-                                                                    jmxClient,
-                                                                    cassandra,
-                                                                    dataDirectoryPath);
+                    cassandraTestContext = new CassandraTestContext(versionParsed, cluster, versionProvider);
                     logger.info("Created test context {}", cassandraTestContext);
                 };
             }
 
             /**
-             * Shuts down the docker container when the test is finished
+             * Shuts down the in-jvm dtest cluster when the test is finished
              * @return the {@link AfterTestExecutionCallback}
              */
             private AfterTestExecutionCallback postProcessor()
             {
                 return postProcessorCtx -> {
-                    // tear down the docker instance
-                    cassandraTestContext.container.stop();
-                    // cleanup temp directory
-                    deleteDataDirectory(cassandraTestContext.dataDirectoryPath);
+                    // Tear down the client-side before the cluster as we need to close some server-side connections
+                    // that can only be closed by clients?
+                    cassandraTestContext.close();
+                    // tear down the in-jvm cluster
+                    cluster.close();
                 };
-            }
-
-            private void deleteDataDirectory(Path dataDirectoryPath)
-            {
-                try
-                {
-                    Files.walk(dataDirectoryPath)
-                         .map(Path::toFile)
-                         .forEach(File::delete);
-                    Files.delete(dataDirectoryPath);
-                }
-                catch (IOException ignored)
-                {
-                }
             }
 
             /**
@@ -186,19 +188,33 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     public boolean supportsParameter(ParameterContext parameterContext,
                                                      ExtensionContext extensionContext)
                     {
-                        return parameterContext.getParameter()
-                                               .getType()
-                                               .equals(CassandraTestContext.class);
+                        return parameterContext.getParameter().getType().equals(CassandraTestContext.class);
                     }
 
                     @Override
-                    public Object resolveParameter(ParameterContext parameterContext,
-                                                   ExtensionContext extensionContext)
+                    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
                     {
                         return cassandraTestContext;
                     }
                 };
             }
         };
+    }
+
+    public CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
+    {
+        return new CassandraVersionProvider.Builder()
+               .add(new CassandraFactory(dnsResolver, svp.sidecarVersion())).build();
+    }
+
+    static
+    {
+        // Settings to reduce the test setup delay incurred if gossip is enabled
+        System.setProperty("cassandra.ring_delay_ms", "5000"); // down from 30s default
+        System.setProperty("cassandra.consistent.rangemovement", "false");
+        System.setProperty("cassandra.consistent.simultaneousmoves.allow", "true");
+        // End gossip delay settings
+        // Set the location of dtest jars
+        System.setProperty("cassandra.test.dtest_jar_path", "dtest-jars");
     }
 }

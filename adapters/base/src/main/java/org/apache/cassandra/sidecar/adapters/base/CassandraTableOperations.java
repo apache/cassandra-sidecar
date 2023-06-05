@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.cassandra40;
+package org.apache.cassandra.sidecar.adapters.base;
 
 import java.util.Collections;
 import java.util.List;
@@ -26,13 +26,13 @@ import org.apache.cassandra.sidecar.common.TableOperations;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * An implementation of the {@link TableOperations} that interfaces with Cassandra 4.0
+ * An implementation of the {@link TableOperations} that interfaces with Cassandra 4.0 and later
  */
-public class Cassandra40TableOperations implements TableOperations
+public class CassandraTableOperations implements TableOperations
 {
     private final JmxClient jmxClient;
 
-    public Cassandra40TableOperations(JmxClient jmxClient)
+    public CassandraTableOperations(JmxClient jmxClient)
     {
         this.jmxClient = jmxClient;
     }

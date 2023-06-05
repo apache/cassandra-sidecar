@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.nio.file.Path;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +31,6 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
-import org.apache.cassandra.sidecar.common.containers.ExtendedCassandraContainer;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
 import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
@@ -44,7 +46,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/keyspaces/non-existent/tables/testtable/snapshots/my-snapshot";
-        client.put(config.getPort(), "localhost", testRoute)
+        client.put(config.getPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeedingThenComplete());
         // wait until the test completes
@@ -60,7 +62,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
 
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non-existent/snapshots/my-snapshot";
-        client.put(config.getPort(), "localhost", testRoute)
+        client.put(config.getPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeedingThenComplete());
         // wait until the test completes
@@ -78,16 +80,18 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         WebClient client = WebClient.create(vertx);
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          TEST_KEYSPACE, table);
-        client.put(config.getPort(), "localhost", testRoute)
+        client.put(config.getPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> context.verify(() -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
+              .send(context.succeeding(response ->
+                                       context.verify(() -> {
+                                           assertThat(response.statusCode()).isEqualTo(OK.code());
 
-                  // creating the snapshot with the same name will return a 409 (Conflict) status code
-                  client.put(config.getPort(), "localhost", testRoute)
-                        .expect(ResponsePredicate.SC_CONFLICT)
-                        .send(context.succeedingThenComplete());
-              })));
+                                           // creating the snapshot with the same name will return
+                                           // a 409 (Conflict) status code
+                                           client.put(config.getPort(), "127.0.0.1", testRoute)
+                                                 .expect(ResponsePredicate.SC_CONFLICT)
+                                                 .send(context.succeedingThenComplete());
+                                       })));
         // wait until the test completes
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
@@ -102,25 +106,20 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         WebClient client = WebClient.create(vertx);
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          TEST_KEYSPACE, table);
-        client.put(config.getPort(), "localhost", testRoute)
+        client.put(config.getPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
 
                   // validate that the snapshot is created
-                  ExtendedCassandraContainer container = cassandraTestContext.container;
-                  final String directory = container.execInContainer("find",
-                                                                     "/opt/cassandra/data/",
-                                                                     "-name",
-                                                                     "my-snapshot").getStdout().trim();
-                  assertThat(directory).isNotEmpty();
-                  assertThat(directory).contains("testkeyspace");
-                  assertThat(directory).contains("testtable");
-                  assertThat(directory).contains("my-snapshot");
-                  final String lsSnapshot = container.execInContainer("ls", directory).getStdout();
-                  assertThat(lsSnapshot).contains("manifest.json");
-                  assertThat(lsSnapshot).contains("schema.cql");
-                  assertThat(lsSnapshot).contains("-big-Data.db");
+                  final List<Path> found = findChildFile(cassandraTestContext, "127.0.0.1",
+                                                         "my-snapshot");
+                  assertThat(found).isNotEmpty();
+
+                  assertThat(found.stream().anyMatch(p -> p.endsWith("manifest.json")));
+                  assertThat(found.stream().anyMatch(p -> p.endsWith("schema.cql")));
+                  assertThat(found.stream().anyMatch(p -> p.endsWith("-big-Data.db")));
+
 
                   context.completeNow();
               })));
@@ -160,7 +159,8 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         assertNotFoundOnDeleteSnapshot(context, testRoute);
     }
 
-    @CassandraIntegrationTest
+    @CassandraIntegrationTest(numDataDirsPerInstance = 1)
+        // Set to > 1 to fail test
     void testDeleteSnapshotEndpoint(VertxTestContext context, CassandraTestContext cassandraTestContext)
     throws InterruptedException
     {
@@ -168,34 +168,38 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         String table = createTestTableAndPopulate(cassandraTestContext);
 
         WebClient client = WebClient.create(vertx);
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                         TEST_KEYSPACE, table);
+        String snapshotName = "my-snapshot" + UUID.randomUUID();
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s",
+                                         TEST_KEYSPACE, table, snapshotName);
 
         // first create the snapshot
-        client.put(config.getPort(), "localhost", testRoute)
-              .send(context.succeeding(createResponse -> context.verify(() -> {
+        client.put(config.getPort(), "127.0.0.1", testRoute)
+              .expect(ResponsePredicate.SC_OK)
+              .send(context.succeeding(
+              createResponse ->
+              context.verify(() -> {
                   assertThat(createResponse.statusCode()).isEqualTo(OK.code());
-                  ExtendedCassandraContainer container = cassandraTestContext.container;
-                  String directory = container.execInContainer("find",
-                                                               "/opt/cassandra/data/",
-                                                               "-name",
-                                                               "my-snapshot").getStdout().trim();
-                  // snapshot directory exists inside container
-                  assertThat(directory).isNotBlank();
+                  final List<Path> found =
+                  findChildFile(cassandraTestContext, "127.0.0.1", snapshotName);
+                  assertThat(found).isNotEmpty();
+
+                  // snapshot directory exists inside data directory
+                  assertThat(found).isNotEmpty();
 
                   // then delete the snapshot
-                  client.delete(config.getPort(), "localhost", testRoute)
-                        .send(context.succeeding(deleteResponse -> context.verify(() -> {
-                            assertThat(deleteResponse.statusCode()).isEqualTo(OK.code());
-                            // validate that the snapshot is removed
-                            String removedDir = container.execInContainer("find",
-                                                                          "/opt/cassandra/data/",
-                                                                          "-name",
-                                                                          "my-snapshot").getStdout().trim();
-                            assertThat(removedDir).isEmpty();
-
-                            context.completeNow();
-                        })));
+                  client.delete(config.getPort(), "127.0.0.1", testRoute)
+                        .expect(ResponsePredicate.SC_OK)
+                        .send(context.succeeding(
+                        deleteResponse ->
+                        context.verify(() ->
+                                       {
+                                           assertThat(deleteResponse.statusCode()).isEqualTo(OK.code());
+                                           final List<Path> found2 =
+                                           findChildFile(cassandraTestContext,
+                                                         "127.0.0.1", snapshotName);
+                                           assertThat(found2).isEmpty();
+                                           context.completeNow();
+                                       })));
               })));
         // wait until the test completes
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
@@ -216,7 +220,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     private void assertNotFoundOnDeleteSnapshot(VertxTestContext context, String testRoute) throws InterruptedException
     {
         WebClient client = WebClient.create(vertx);
-        client.delete(config.getPort(), "localhost", testRoute)
+        client.delete(config.getPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeedingThenComplete());
         // wait until test completes

@@ -18,28 +18,24 @@
 
 package org.apache.cassandra.sidecar.common.testing;
 
+import java.util.Arrays;
 import java.util.stream.Stream;
-
-import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
-import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 
 /**
  * Generates the list of versions we're going to test against.
- * Depending on future releases, we may end up running the same module (Cassandra40 for example) against multiple
- * versions of Cassandra.  This may be due to releases that don't add new features that would affect the sidecar,
+ * We will run the same module (trunk for example) against multiple versions of Cassandra.
+ * This is due to releases that don't add new features that would affect the sidecar,
  * but we still want to test those versions specifically to avoid the chance of regressions.
  *
- * <p>At the moment, it's returning a hard coded list.  We could / should probably load this from a configuration
- * and make it possible to override it, so teams that customize C* can run and test their own implementation.
- *
  * <p>Ideally, we'd probably have concurrent runs of the test infrastructure each running tests against one specific
- * version of C*, but we don't need that yet given we only have one version.
+ * version of C*, but this will require some additional work in the dtest framework so for now we run one at a time.
  */
 public class TestVersionSupplier
 {
     Stream<TestVersion> testVersions()
     {
-        return Stream.of(
-                new TestVersion("4.0.7", new Cassandra40Factory(DnsResolver.DEFAULT, "1.0-TEST"), "cassandra:4.0"));
+        // By default, we test 2 versions that will exercise oldest and newest supported versions
+        String versions = System.getProperty("cassandra.sidecar.versions_to_test", "4.0,5.0");
+        return Arrays.stream(versions.split(",")).map(String::trim).map(TestVersion::new);
     }
 }

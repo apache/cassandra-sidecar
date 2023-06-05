@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -126,7 +125,7 @@ public class GossipInfoHandlerTest
     {
         @Provides
         @Singleton
-        public InstancesConfig instanceConfig() throws IOException
+        public InstancesConfig instanceConfig()
         {
             final int instanceId = 100;
             final String host = "127.0.0.1";

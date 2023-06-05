@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.cassandra40;
+package org.apache.cassandra.sidecar.adapters.base;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -104,8 +105,9 @@ public interface StorageJmxOperations
      * @param tag      the tag given to the snapshot; may not be null or empty
      * @param options  map of options, for example ttl, skipFlush
      * @param entities list of keyspaces / tables in the form of empty | ks1 ks2 ... | ks1.cf1,ks2.cf2,...
+     * @throws IOException in certain versions of Cassandra.
      */
-    void takeSnapshot(String tag, Map<String, String> options, String... entities);
+    void takeSnapshot(String tag, Map<String, String> options, String... entities) throws IOException;
 
     /**
      * Remove the snapshot with the given name from the given keyspaces.

@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
@@ -246,6 +247,15 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             cqlSessionProvider.close();
         }
         nodeSettings = null;
+        try
+        {
+            jmxClient.close();
+        }
+        catch (IOException e)
+        {
+            // Can't throw unchecked exceptions here, so wrap and rethrow
+            throw new RuntimeException(e);
+        }
     }
 
     public SimpleCassandraVersion version()

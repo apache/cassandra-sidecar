@@ -17,17 +17,19 @@ Packages can be built using the following Gradle commands:
 
 Contains the libraries which are shared between the version specific Cassandra code as well as the dependencies of Cassandra itself.
 
-### Cassandra40
+### adapters
 
-Implementation of ICassandraAdapter for Cassandra 4.0.
+Implementation of ICassandraAdapter and related classes for different Cassandra versions.
+
+#### adapters/base
+
+Implementation of ICassandraAdapter and related classes for Cassandra 4.0.
 
 ### Cassandra Integration Tests
 
-Cassandra integration tests leverage Docker to create Cassandra nodes and test the different implementations
-of the ICassandraAdapters against real C* nodes.
+Cassandra integration tests leverage the in-jvm dtest framework to create Cassandra nodes and test the different implementations of the ICassandraAdapters against real C* nodes.
 
-The integration tests will not run by default when running `./gradlew test` since they require a bit of setup and you may not have
-Docker available.
+The integration tests will not run by default when running `./gradlew test` since they require a bit of setup.
 
 #### Running Integration Tests
 
@@ -38,7 +40,7 @@ Integration tests can be run with the following:
 
 #### Tests
 
-Tests in the cassandra-integration-tests submodule should be marked as integration tests with the @CassandraIntegrationTest annotation:
+Integration tests should be marked as integration tests with the @CassandraIntegrationTest annotation:
 
     @CassandraIntegrationTest
     void myTestHere(CassandraTestContext context)
@@ -46,8 +48,8 @@ Tests in the cassandra-integration-tests submodule should be marked as integrati
         //
     }
 
-The `CassandraTestTemplate` will handle starting up each of the Docker services required for testing and inject the
-`CassandraTestContext`, which will have the version, CQLSession, container, and other useful information required for testing.
+The `CassandraTestTemplate` will handle starting up each of the instance(s) for testing and inject the
+`CassandraTestContext`, which will have the version, CQLSession, and other useful information required for testing.
 
 ### Main Project
 

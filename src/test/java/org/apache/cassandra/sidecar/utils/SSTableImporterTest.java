@@ -67,7 +67,7 @@ class SSTableImporterTest
         mockTableOperations1 = mock(TableOperations.class);
         TableOperations mockTableOperations2 = mock(TableOperations.class);
         when(mockConfiguration.getSSTableImportPollIntervalMillis()).thenReturn(10);
-        when(mockMetadataFetcher.delegate("127.0.0.1")).thenReturn(mockCassandraAdapterDelegate1);
+        when(mockMetadataFetcher.delegate("localhost")).thenReturn(mockCassandraAdapterDelegate1);
         when(mockMetadataFetcher.delegate("127.0.0.2")).thenReturn(mockCassandraAdapterDelegate2);
         when(mockMetadataFetcher.delegate("127.0.0.3")).thenReturn(mockCassandraAdapterDelegate3);
         when(mockCassandraAdapterDelegate1.tableOperations()).thenReturn(mockTableOperations1);
@@ -103,7 +103,7 @@ class SSTableImporterTest
     void testImportSucceeds(VertxTestContext context)
     {
         Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
-                                                            .host("127.0.0.1")
+                                                            .host("localhost")
                                                             .keyspace("ks")
                                                             .tableName("tbl")
                                                             .directory("/dir")
@@ -111,7 +111,7 @@ class SSTableImporterTest
                                                             .build());
         importFuture.onComplete(context.succeeding(v -> {
             assertThat(importer.importQueuePerHost).isNotEmpty();
-            assertThat(importer.importQueuePerHost).containsKey("127.0.0.1$ks$tbl");
+            assertThat(importer.importQueuePerHost).containsKey("localhost$ks$tbl");
             for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
             {
                 assertThat(queue).isEmpty();
@@ -152,7 +152,7 @@ class SSTableImporterTest
     void testImportFailsWhenImportReturnsFailedDirectories(VertxTestContext context)
     {
         Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
-                                                            .host("127.0.0.1")
+                                                            .host("localhost")
                                                             .keyspace("ks")
                                                             .tableName("tbl")
                                                             .directory("/failed-dir")
@@ -166,7 +166,7 @@ class SSTableImporterTest
             assertThat(exception.getPayload()).isEqualTo("Failed to import from directories: [/failed-dir]");
 
             assertThat(importer.importQueuePerHost).isNotEmpty();
-            assertThat(importer.importQueuePerHost).containsKey("127.0.0.1$ks$tbl");
+            assertThat(importer.importQueuePerHost).containsKey("localhost$ks$tbl");
             for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
             {
                 assertThat(queue).isEmpty();
@@ -208,7 +208,7 @@ class SSTableImporterTest
         SSTableImporter importer = new SSTableImporter(vertx, mockMetadataFetcher, mockConfiguration, executorPools,
                                                        mockUploadPathBuilder);
         SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder()
-                                                .host("127.0.0.1")
+                                                .host("localhost")
                                                 .keyspace("ks")
                                                 .tableName("tbl")
                                                 .directory("/dir")
@@ -223,7 +223,7 @@ class SSTableImporterTest
     void testCancelImportNoOpAfterProcessing(VertxTestContext context)
     {
         SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder()
-                                                .host("127.0.0.1")
+                                                .host("localhost")
                                                 .keyspace("ks")
                                                 .tableName("tbl")
                                                 .directory("/dir")

@@ -19,8 +19,6 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.nio.file.NoSuchFileException;
 import java.util.List;
 
@@ -41,6 +39,8 @@ import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.common.exceptions.NodeBootstrappingException;
+import org.apache.cassandra.sidecar.common.exceptions.SnapshotAlreadyExistsException;
 import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
@@ -256,38 +256,29 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
         logger.error("SnapshotsHandler failed for request={}, remoteAddress={}, instance={}, method={}",
                      requestParams, remoteAddress, host, context.request().method(), cause);
 
-        Throwable rootCause = cause instanceof UndeclaredThrowableException
-                              ? ((UndeclaredThrowableException) cause).getUndeclaredThrowable()
-                              : cause;
-
-        if (rootCause instanceof IOException)
+        if (cause instanceof SnapshotAlreadyExistsException)
         {
-            if (StringUtils.contains(rootCause.getMessage(),
-                                     "Snapshot " + requestParams.snapshotName() + " already exists"))
-            {
-                context.fail(wrapHttpException(HttpResponseStatus.CONFLICT, rootCause.getMessage()));
-                return;
-            }
-            else if (StringUtils.contains(rootCause.getMessage(),
-                                          "Cannot snapshot until bootstrap completes"))
-            {
-                // Cassandra does not allow taking snapshots while the node is JOINING the ring
-                context.fail(wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE,
-                                               "The Cassandra instance " + host + " is not available"));
-            }
+            context.fail(wrapHttpException(HttpResponseStatus.CONFLICT, cause.getMessage()));
+            return;
         }
-        else if (rootCause instanceof IllegalArgumentException)
+        else if (cause instanceof NodeBootstrappingException)
         {
-            if (StringUtils.contains(rootCause.getMessage(),
+            // Cassandra does not allow taking snapshots while the node is JOINING the ring
+            context.fail(wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE,
+                                           "The Cassandra instance " + host + " is not available"));
+        }
+        else if (cause instanceof IllegalArgumentException)
+        {
+            if (StringUtils.contains(cause.getMessage(),
                                      "Keyspace " + requestParams.keyspace() + " does not exist") ||
-                StringUtils.contains(rootCause.getMessage(),
+                StringUtils.contains(cause.getMessage(),
                                      "Unknown keyspace/cf pair"))
             {
-                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, rootCause.getMessage()));
+                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
             }
             else
             {
-                context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, rootCause.getMessage()));
+                context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause.getMessage()));
             }
             return;
         }

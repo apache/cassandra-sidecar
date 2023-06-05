@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'idea'
     id 'maven-publish'
+    id "com.github.spotbugs"
 }
 
 group 'org.apache.cassandra.sidecar'
@@ -18,10 +19,10 @@ test {
 }
 
 dependencies {
-    implementation(project(":common"))
+    api(project(":common"))
+    api("com.google.guava:guava:${project.rootProject.guavaVersion}")
     compileOnly('org.jetbrains:annotations:23.0.0')
     compileOnly('com.datastax.cassandra:cassandra-driver-core:3.11.3')
-    implementation("com.google.guava:guava:${project.rootProject.guavaVersion}")
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.cassandra40;
+package org.apache.cassandra.sidecar.adapters.base;
 
 /**
  * An interface that pulls a method from Cassandra Gossiper and Failure Detector proxies

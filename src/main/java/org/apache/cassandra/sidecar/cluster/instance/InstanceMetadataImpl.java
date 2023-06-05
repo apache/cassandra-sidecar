@@ -105,4 +105,5 @@ public class InstanceMetadataImpl implements InstanceMetadata
     {
         return delegate;
     }
+
 }

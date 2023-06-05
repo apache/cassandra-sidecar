@@ -16,22 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.testing;
+package org.apache.cassandra.sidecar.common.exceptions;
 
 /**
- * Works with {@link TestVersionSupplier}
+ * Exception thrown when a node is bootstrapping while an operation cannot be performed when the node is bootstrapping
  */
-public class TestVersion
+public class NodeBootstrappingException extends RuntimeException
 {
-    private final String version;
-
-    public TestVersion(String version)
+    public NodeBootstrappingException(Exception inner)
     {
-        this.version = version;
-    }
-
-    public String version()
-    {
-        return version;
+        super(inner);
     }
 }

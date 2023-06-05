@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.cassandra40;
+package org.apache.cassandra.sidecar.adapters.base;
 
 import org.apache.cassandra.sidecar.common.ClusterMembershipOperations;
 import org.apache.cassandra.sidecar.common.JmxClient;
 
-import static org.apache.cassandra.sidecar.cassandra40.ClusterMembershipJmxOperations.FAILURE_DETECTOR_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.ClusterMembershipJmxOperations.FAILURE_DETECTOR_OBJ_NAME;
 
 /**
- * An implementation of the {@link ClusterMembershipOperations} that interfaces with Cassandra 4.0
+ * An implementation of the {@link ClusterMembershipOperations} that interfaces with Cassandra 4.0 and later
  */
-public class Cassandra40ClusterMembershipOperations implements ClusterMembershipOperations
+public class CassandraClusterMembershipOperations implements ClusterMembershipOperations
 {
     private final JmxClient jmxClient;
 
@@ -35,7 +35,7 @@ public class Cassandra40ClusterMembershipOperations implements ClusterMembership
      *
      * @param jmxClient the JMX client used to communicate with the Cassandra instance
      */
-    public Cassandra40ClusterMembershipOperations(JmxClient jmxClient)
+    public CassandraClusterMembershipOperations(JmxClient jmxClient)
     {
         this.jmxClient = jmxClient;
     }

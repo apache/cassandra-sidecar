@@ -36,15 +36,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 class GossipInfoHandlerIntegrationTest extends IntegrationTestBase
 {
-    @CassandraIntegrationTest
+    @CassandraIntegrationTest()
     void retrieveGossipInfo(VertxTestContext context, CassandraTestContext cassandraTestContext) throws Exception
     {
         String testRoute = "/api/v1/cassandra/gossip";
-        String expectedReleaseVersionSimple = String.format("%s.%s",
-                                                            cassandraTestContext.version.major,
-                                                            cassandraTestContext.version.minor);
         testWithClient(context, client -> {
-            client.get(config.getPort(), "localhost", testRoute)
+            client.get(config.getPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
                       GossipInfoResponse gossipResponse = response.bodyAsJson(GossipInfoResponse.class);
@@ -55,7 +52,9 @@ class GossipInfoHandlerIntegrationTest extends IntegrationTestBase
                       assertThat(gossipInfo.generation()).isNotNull();
                       assertThat(gossipInfo.heartbeat()).isNotNull();
                       assertThat(gossipInfo.hostId()).isNotNull();
-                      assertThat(gossipInfo.releaseVersion()).startsWith(expectedReleaseVersionSimple);
+                      String releaseVersion = cassandraTestContext.cluster.getFirstRunningInstance()
+                                                                          .getReleaseVersionString();
+                      assertThat(gossipInfo.releaseVersion()).startsWith(releaseVersion);
                       context.completeNow();
                   }));
         });

@@ -37,4 +37,61 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(CassandraTestTemplate.class)
 public @interface CassandraIntegrationTest
 {
+    /**
+     * Returns the number of initial nodes per datacenter for the integration tests. Defaults to 1 node per datacenter.
+     *
+     * @return the number of nodes per datacenter for the integration tests
+     * */
+    int nodesPerDc() default 1;
+
+    /**
+     * Returns the number of nodes expected to be added by the end of the integration test. Defaults ot 0.
+     * @return the number of nodes the test expects to add for the integration test.
+     */
+    int newNodesPerDc() default 0;
+
+    /**
+     * Returns the number of datacenters to configure for the integration test. Defaults to 1 datacenter.
+     *
+     * @return the number of datacenters to configure for the integration test
+     */
+    int numDcs() default 1;
+
+    /**
+     * Returns the number of data directories to use per instance. Cassandra supports multiple data directories
+     * for each instance. Defaults to 1 data directory per instance.
+     *
+     * @return the number of data directories to use per instance
+     */
+    int numDataDirsPerInstance() default 1;
+
+    /**
+     * Returns whether gossip is enabled or disabled for the integration test. Defaults to {@code false}.
+     *
+     * @return whether gossip is enabled or disabled for the integration test
+     */
+    boolean gossip() default false;
+
+    /**
+     * Returns whether internode networking is enabled or disabled for the integration test. Defaults to {@code false}.
+     *
+     * @return whether internode networking is enabled or disabled for the integration test
+     */
+    boolean network() default false;
+
+    /**
+     * Returns whether JMX is enabled or disabled for the integration test. Defaults to {@code true}.
+     *
+     * @return whether JMX is enabled or disabled for the integration test
+     */
+    boolean jmx() default true;
+
+    /**
+     * Returns whether the native transport protocol is enabled or disabled for the integration test. Defaults to
+     * {@code true}.
+     *
+     * @return whether the native transport protocol is enabled or disabled for the integration test
+     */
+    boolean nativeTransport() default true;
+
 }

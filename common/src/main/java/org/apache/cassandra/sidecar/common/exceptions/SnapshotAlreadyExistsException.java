@@ -16,22 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.testing;
+package org.apache.cassandra.sidecar.common.exceptions;
 
 /**
- * Works with {@link TestVersionSupplier}
+ * Exception thrown when the snapshot with the same name already exists
  */
-public class TestVersion
+public class SnapshotAlreadyExistsException extends RuntimeException
 {
-    private final String version;
-
-    public TestVersion(String version)
+    public SnapshotAlreadyExistsException(Exception inner)
     {
-        this.version = version;
-    }
-
-    public String version()
-    {
-        return version;
+        super(inner);
     }
 }

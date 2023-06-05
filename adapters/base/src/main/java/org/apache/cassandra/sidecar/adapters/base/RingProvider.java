@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.cassandra40;
+package org.apache.cassandra.sidecar.adapters.base;
 
 import java.net.UnknownHostException;
 import java.text.DecimalFormat;
@@ -35,8 +35,8 @@ import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.cassandra.sidecar.cassandra40.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
-import static org.apache.cassandra.sidecar.cassandra40.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
 
 /**
  * Aggregates the ring view of cluster
@@ -54,7 +54,7 @@ public class RingProvider
     private static final String STATE_NORMAL = "Normal";
     private static final String DECIMAL_FORMAT = "##0.00%";
 
-    private final JmxClient jmxClient;
+    protected final JmxClient jmxClient;
     private final DnsResolver dnsResolver;
 
     public RingProvider(JmxClient jmxClient, DnsResolver dnsResolver)
@@ -66,32 +66,31 @@ public class RingProvider
     @SuppressWarnings("UnstableApiUsage")
     public RingResponse ring(@Nullable String keyspace) throws UnknownHostException
     {
-        StorageJmxOperations probe = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);
-        EndpointSnitchJmxOperations epSnitchInfo = jmxClient.proxy(EndpointSnitchJmxOperations.class,
-                                                                   ENDPOINT_SNITCH_INFO_OBJ_NAME);
+        StorageJmxOperations storageOps = initializeStorageOps();
+        EndpointSnitchJmxOperations epSnitchInfo = initializeEndpointProxy();
 
         // Collect required data from the probe
-        List<String> liveNodes = probe.getLiveNodesWithPort();
-        List<String> deadNodes = probe.getUnreachableNodesWithPort();
+        List<String> liveNodes = storageOps.getLiveNodesWithPort();
+        List<String> deadNodes = storageOps.getUnreachableNodesWithPort();
         Status status = new Status(liveNodes, deadNodes);
-        List<String> joiningNodes = probe.getJoiningNodesWithPort();
-        List<String> leavingNodes = probe.getLeavingNodesWithPort();
-        List<String> movingNodes = probe.getMovingNodesWithPort();
+        List<String> joiningNodes = storageOps.getJoiningNodesWithPort();
+        List<String> leavingNodes = storageOps.getLeavingNodesWithPort();
+        List<String> movingNodes = storageOps.getMovingNodesWithPort();
         State state = new State(joiningNodes, leavingNodes, movingNodes);
-        Map<String, String> loadMap = probe.getLoadMapWithPort();
-        Map<String, String> tokensToEndpoints = probe.getTokenToEndpointWithPortMap();
-        Map<String, String> endpointsToHostIds = probe.getEndpointWithPortToHostId();
+        Map<String, String> loadMap = storageOps.getLoadMapWithPort();
+        Map<String, String> tokensToEndpoints = storageOps.getTokenToEndpointWithPortMap();
+        Map<String, String> endpointsToHostIds = storageOps.getEndpointWithPortToHostId();
 
         boolean showEffectiveOwnership = true;
         // Calculate per-token ownership of the ring
         Map<String, Float> ownerships;
         try
         {
-            ownerships = probe.effectiveOwnershipWithPort(keyspace);
+            ownerships = storageOps.effectiveOwnershipWithPort(keyspace);
         }
         catch (IllegalStateException ex)
         {
-            ownerships = probe.getOwnershipWithPort();
+            ownerships = storageOps.getOwnershipWithPort();
             LOGGER.warn("Unable to retrieve effective ownership information for keyspace={}", keyspace, ex);
             showEffectiveOwnership = false;
         }
@@ -122,6 +121,16 @@ public class RingProvider
         }
 
         return response;
+    }
+
+    protected EndpointSnitchJmxOperations initializeEndpointProxy()
+    {
+        return jmxClient.proxy(EndpointSnitchJmxOperations.class, ENDPOINT_SNITCH_INFO_OBJ_NAME);
+    }
+
+    protected StorageJmxOperations initializeStorageOps()
+    {
+        return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);
     }
 
     /**

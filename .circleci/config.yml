@@ -41,79 +41,39 @@ commands:
 
 jobs:
   # Runs java 8 tests on a docker image
-  java8_docker:
+  java8:
     docker:
      - image: circleci/openjdk:8-jdk-stretch
     steps:
      - checkout
 
-     - run: ./gradlew -i clean test -x integrationTest --stacktrace
+     - run: BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
+     - run: echo 'export DTEST_JAR=$(cd dtest-jars && find . -name 'dtest-4.1*.jar' -maxdepth 1)' >> "$BASH_ENV"
+     - run: ./gradlew -i test integrationTest --stacktrace -Dcassandra.sidecar.versions_to_test="4.0,4.1"
 
      - store_artifacts:
          path: build/reports
          destination: test-reports
 
      - store_test_results:
-         path: ~/repo/build/test-results/
-
-  # Runs java 8 tests on a VM to be able to run Docker for integration tests
-  java8:
-    <<: *base_job
-
-    steps:
-      - checkout
-      - install_common
-
-      - install_java:
-          version: adoptopenjdk-8-hotspot
-      - run: sudo update-java-alternatives -s adoptopenjdk-8-hotspot-amd64 && java -version
-      - run: ./gradlew -i clean test integrationTest --stacktrace
-
-      - store_artifacts:
-          path: build/reports
-          destination: test-reports
-
-      - store_test_results:
-          path: ~/repo/build/test-results/
-
-      - store_test_results:
-          path: ~/repo/cassandra-integration-tests/build/test-results/
+         path: build/test-results/
 
   # Runs java 11 tests on a docker image
-  java11_docker:
+  java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
     steps:
       - checkout
 
-      - run: ./gradlew -i clean test -x integrationTest --stacktrace
+      - run: CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
+      - run: ./gradlew -i test integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
           destination: test-reports
 
       - store_test_results:
-          path: ~/repo/build/test-results/
-
-  # Runs java 11 tests on a VM to be able to run Docker for integration tests
-  java11:
-    <<: *base_job
-
-    steps:
-      - checkout
-      - install_common
-
-      - install_java:
-          version: adoptopenjdk-11-hotspot
-      - run: sudo update-java-alternatives -s adoptopenjdk-11-hotspot-amd64 && java -version
-      - run: ./gradlew -i clean test integrationTest --stacktrace
-
-      - store_artifacts:
-          path: build/reports
-          destination: test-reports
-
-      - store_test_results:
-          path: ~/repo/build/test-results/
+          path: build/test-results/
 
   # ensures we can build and install deb packages
   deb_build_install:
@@ -156,41 +116,25 @@ workflows:
   version: 2
   build-and-test:
     jobs:
-      - java8_docker
-      - java11_docker
-      - java8:
-          requires:
-            - java8_docker
-      - java11:
-          requires:
-            - java11_docker
+      - java8
+      - java11
       - docs_build:
           requires:
             - java8
-            - java8_docker
             - java11
-            - java11_docker
       - docker_build:
           requires:
             - java8
-            - java8_docker
             - java11
-            - java11_docker
       - rpm_build_install:
           requires:
             - java8
-            - java8_docker
             - java11
-            - java11_docker
       - deb_build_install:
           requires:
             - java8
-            - java8_docker
             - java11
-            - java11_docker
       - docker_build:
           requires:
             - java8
-            - java8_docker
             - java11
-            - java11_docker
