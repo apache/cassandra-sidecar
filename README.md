@@ -11,6 +11,24 @@ Requirements
   2. Apache Cassandra 4.0.  We depend on virtual tables which is a 4.0 only feature.
   3. [Docker](https://www.docker.com/products/docker-desktop/) for running integration tests.
 
+Build Prerequisites
+-------------------
+We depend on the Cassandra in-jvm dtest framework for testing. 
+Because these jars are not published, you must manually build the dtest jars before you can build the project.
+
+```shell
+./scripts/build-dtest-jars.sh
+```
+
+The build script supports two parameters:
+- `REPO` - the Cassandra git repository to use for the source files. This is helpful if you need to test with a fork of the Cassandra codebase.
+    - default: `git@github.com:apache/cassandra.git`
+- `BRANCHES` - a space-delimited list of branches to build.
+  -default: `"cassandra-4.1 trunk"`
+
+Remove any versions you may not want to test with. We recommend at least the latest (released) 4.X series and `trunk`.
+See Testing for more details on how to choose which Cassandra versions to use while testing.
+
 Getting started: Running The Sidecar
 --------------------------------------
 
@@ -27,9 +45,9 @@ While setting up cassandra instance, make sure the data directories of cassandra
 Testing
 -------
 
-We rely on docker containers for integration tests.
-
-The only requirement is to install and run [Docker](https://www.docker.com/products/docker-desktop/) on your test machine.
+The test framework is set up to run 4.1 and 5.0 (Trunk) tests (see `TestVersionSupplier.java`) by default.  
+You can change this via the Java property `cassandra.sidecar.versions_to_test` by supplying a comma-delimited string.
+For example, `-Dcassandra.sidecar.versions_to_test=4.0,4.1,5.0`.
 
 CircleCI Testing
 -----------------

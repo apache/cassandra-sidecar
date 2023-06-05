@@ -18,10 +18,18 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +44,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
 
@@ -43,8 +52,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Base class for integration test.
- * Start a docker container of cassandra at the beginning of each test, and
- * teardown the container after each test.
+ * Start an in-jvm dtest cluster at the beginning of each test, and
+ * teardown the cluster after each test.
  */
 public abstract class IntegrationTestBase
 {
@@ -58,7 +67,7 @@ public abstract class IntegrationTestBase
     private static final AtomicInteger TEST_TABLE_ID = new AtomicInteger(0);
 
     @BeforeEach
-    public void setup(CassandraTestContext cassandraTestContext) throws InterruptedException
+    void setup(CassandraTestContext cassandraTestContext) throws InterruptedException
     {
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(new IntegrationTestModule(cassandraTestContext)));
@@ -119,7 +128,7 @@ public abstract class IntegrationTestBase
 
     protected Session maybeGetSession(CassandraTestContext cassandraTestContext)
     {
-        Session session = cassandraTestContext.session.localCql();
+        Session session = cassandraTestContext.session();
         assertThat(session).isNotNull();
         return session;
     }
@@ -127,5 +136,28 @@ public abstract class IntegrationTestBase
     private static QualifiedTableName uniqueTestTableFullName()
     {
         return new QualifiedTableName(TEST_KEYSPACE, TEST_TABLE_PREFIX + TEST_TABLE_ID.getAndIncrement());
+    }
+
+    public List<Path> findChildFile(CassandraTestContext context, String hostname, String target)
+    {
+        InstanceMetadata instanceConfig = context.getInstancesConfig().instanceFromHost("127.0.0.1");
+        List<String> parentDirectories = instanceConfig.dataDirs();
+
+        return parentDirectories.stream().flatMap(s -> findChildFile(Paths.get(s), target).stream())
+                                .collect(Collectors.toList());
+    }
+
+    private List<Path> findChildFile(Path path, String target)
+    {
+        try (Stream<Path> walkStream = Files.walk(path))
+        {
+            return walkStream.filter(p -> p.toString().endsWith(target)
+                                          || p.toString().contains("/" + target + "/"))
+                             .collect(Collectors.toList());
+        }
+        catch (IOException e)
+        {
+            return Collections.emptyList();
+        }
     }
 }

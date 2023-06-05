@@ -30,6 +30,12 @@
         </Or>
     </Match>
 
+    <!-- Ignore GC call in CassandraTestTemplate as we want to GC after cluster shutdown -->
+    <Match>
+        <Class name="org.apache.cassandra.sidecar.common.testing.CassandraTestTemplate" />
+        <Bug pattern="DM_GC" />
+    </Match>
+
     <!-- Ignore DMI_HARDCODED_ABSOLUTE_FILENAME for testing SnapshotDirectory.of with strings that are paths -->
     <Match>
         <Class name="org.apache.cassandra.sidecar.snapshots.SnapshotDirectoryTest" />

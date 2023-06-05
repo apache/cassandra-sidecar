@@ -17,6 +17,7 @@ We warmly welcome and appreciate contributions from the community.
   * [Asynchronous Handlers](#async-handlers)
   * [Future Composition](#future-composition)
   * [Failure Handling](#failure-handling)
+  * [Cassandra Adapters](#cassandra-adapters)
 * [Source Code Style](#source-code-style)
 
 ## <a name="how-to-contribute"></a>How to Contribute
@@ -328,6 +329,17 @@ public class SidecarFailureHandler implements Handler<RoutingContext> {
   …
 }
 ```
+
+### <a name="cassandra-adapters></a>Cassandra Adapters
+The Cassandra Sidecar is designed to support multiple Cassandra versions, including multiple, different instances on the same host.
+The `adapters` subproject contains an implementation of the Cassandra adapter for different versions of Cassandra.
+The `base` adapter supports Cassandra 4.0 and greater, including `trunk`.
+When some form of breaking change is necessary in `base`, the new functionality should be developed in the `base` adapter,
+and then any shim necessary to work with the older version(s) should be added to a new adapter package.
+The `CassandraAdapterFactory` has a version tag which represents the minimum version that particular adapter package supports.
+When adding shims, implement the minimum necessary changes in the new package and name all classes with a version number after the word `Cassandra`.
+For example, if `base`'s minimum version is moved to 5.0, a Cassandra40 adapter package/subproject should be added, with a minimum version of 4.0.0.
+Within that project, the classes should all be named `Cassandra40*`, so `Cassandra40Adapter`, `Cassandra40Factory`, etc.
 
 ## <a name="source-code-style"></a>Source Code Style
 

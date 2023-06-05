@@ -42,7 +42,7 @@ import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
-import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
+import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
@@ -271,7 +271,7 @@ public class MainModule extends AbstractModule
                                                              SidecarVersionProvider sidecarVersionProvider)
     {
         CassandraVersionProvider.Builder builder = new CassandraVersionProvider.Builder();
-        builder.add(new Cassandra40Factory(dnsResolver, sidecarVersionProvider.sidecarVersion()));
+        builder.add(new CassandraFactory(dnsResolver, sidecarVersionProvider.sidecarVersion()));
         return builder.build();
     }
 

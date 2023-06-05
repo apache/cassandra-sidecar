@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.rmi.server.RMIClientSocketFactory;
@@ -41,7 +42,7 @@ import org.jetbrains.annotations.VisibleForTesting;
 /**
  * A simple wrapper around a JMX connection that makes it easier to get proxy instances.
  */
-public class JmxClient implements NotificationListener
+public class JmxClient implements NotificationListener, Closeable
 {
     public static final String JMX_SERVICE_URL_FMT = "service:jmx:rmi://%s/jndi/rmi://%s:%d/jmxrmi";
     public static final String REGISTRY_CONTEXT_SOCKET_FACTORY = "com.sun.jndi.rmi.factory.socket";
@@ -49,6 +50,7 @@ public class JmxClient implements NotificationListener
     private MBeanServerConnection mBeanServerConnection;
     private final Map<String, Object> jmxEnv;
     private boolean connected = false;
+    private JMXConnector jmxConnector;
 
     /**
      * Creates a new client with the provided {@code host} and {@code port}.
@@ -144,7 +146,7 @@ public class JmxClient implements NotificationListener
     {
         try
         {
-            JMXConnector jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, jmxEnv);
+            jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, jmxEnv);
             jmxConnector.addConnectionNotificationListener(this, null, null);
             mBeanServerConnection = jmxConnector.getMBeanServerConnection();
             connected = true;
@@ -157,6 +159,7 @@ public class JmxClient implements NotificationListener
         }
     }
 
+    @Override
     public void handleNotification(Notification notification, Object handback)
     {
         if (notification instanceof JMXConnectionNotification)
@@ -204,6 +207,17 @@ public class JmxClient implements NotificationListener
             String errorMessage = String.format("Unable to build JMXServiceURL for host=%s, port=%d",
                                                 host, port);
             throw new RuntimeException(errorMessage, e);
+        }
+    }
+
+    @Override
+    public synchronized void close() throws IOException
+    {
+        JMXConnector connector = jmxConnector;
+        if (connector != null)
+        {
+            jmxConnector = null;
+            connector.close();
         }
     }
 }

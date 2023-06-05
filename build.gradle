@@ -1,3 +1,4 @@
+import java.nio.file.Paths
 
 buildscript {
     dependencies {
@@ -24,6 +25,10 @@ plugins {
     id 'nebula.ospackage-application' version "8.3.0"
     id 'com.google.cloud.tools.jib' version '2.2.0'
 }
+
+ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-5.0.jar" // trunk is currently 5.0.jar - update when trunk moves
+println("Using DTest jar: ${ext.dtestJar}")
+
 
 allprojects {
     apply plugin: 'jacoco'
@@ -143,9 +148,6 @@ dependencies {
     testImplementation('com.google.guava:guava-testlib:31.1-jre') {
         exclude group: 'junit', module: 'junit'
     }
-    testImplementation('org.cassandraunit:cassandra-unit-shaded:3.11.2.0') {
-        exclude group: 'junit', module: 'junit'
-    }
 
     testImplementation('com.datastax.cassandra:cassandra-driver-core:3.9.0:tests')
     testImplementation('org.mockito:mockito-core:4.10.0')
@@ -154,7 +156,7 @@ dependencies {
     testImplementation(testFixtures(project(":common")))
 
     implementation(project(":common"))
-    implementation(project(":cassandra40"))
+    implementation(project(":adapters:base"))
 
     testFixturesApi(testFixtures(project(":common")))
     testFixturesImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
@@ -167,9 +169,9 @@ dependencies {
         exclude group: 'junit', module: 'junit'
     }
 
-    integrationTestImplementation("org.testcontainers:testcontainers:${project.testcontainersVersion}")
-    integrationTestImplementation("org.testcontainers:cassandra:${project.testcontainersVersion}")
-    integrationTestImplementation("org.testcontainers:junit-jupiter:${project.testcontainersVersion}")
+    integrationTestImplementation(files("dtest-jars/${dtestJar}"))
+    integrationTestImplementation("org.apache.cassandra:dtest-api:0.0.15")
+    integrationTestImplementation("org.junit.vintage:junit-vintage-engine:${junitVersion}")
 }
 
 jar {
@@ -234,21 +236,66 @@ test {
     useJUnitPlatform()
     reports {
         junitXml.enabled = true
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "test").toFile()
+        println("Destination directory for unit tests: ${destDir}")
+        junitXml.destination = destDir
         html.enabled = true
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
     }
 }
 
 tasks.register("integrationTest", Test) {
+    if (JavaVersion.current().isJava11Compatible()) {
+        def JDK11_OPTIONS = ['-Djdk.attach.allowAttachSelf=true',
+                             '--add-exports', 'java.base/jdk.internal.misc=ALL-UNNAMED',
+                             '--add-exports', 'java.base/jdk.internal.ref=ALL-UNNAMED',
+                             '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED',
+                             '--add-exports', 'java.management.rmi/com.sun.jmx.remote.internal.rmi=ALL-UNNAMED',
+                             '--add-exports', 'java.rmi/sun.rmi.registry=ALL-UNNAMED',
+                             '--add-exports', 'java.rmi/sun.rmi.server=ALL-UNNAMED',
+                             '--add-exports', 'java.sql/java.sql=ALL-UNNAMED',
+                             '--add-opens', 'java.base/java.lang.module=ALL-UNNAMED',
+                             '--add-opens', 'java.base/jdk.internal.loader=ALL-UNNAMED',
+                             '--add-opens', 'java.base/jdk.internal.ref=ALL-UNNAMED',
+                             '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED',
+                             '--add-opens', 'java.base/jdk.internal.math=ALL-UNNAMED',
+                             '--add-opens', 'java.base/jdk.internal.module=ALL-UNNAMED',
+                             '--add-opens', 'java.base/jdk.internal.util.jar=ALL-UNNAMED',
+                             '--add-opens', 'jdk.management/com.sun.management.internal=ALL-UNNAMED']
+        jvmArgs(JDK11_OPTIONS)
+        println("JVM arguments for $project.name are $allJvmArgs")
+    }
     systemProperty "vertxweb.environment", "dev"
+    // Because tests are forked, we need to explicitly pass the system property from the
+    // Gradle JVM down to the children
+
+    def versionsToTest = System.getProperty("cassandra.sidecar.versions_to_test", null)
+    if (versionsToTest != "" && versionsToTest != null) {
+        systemProperty "cassandra.sidecar.versions_to_test", versionsToTest
+    }
     jacoco {
         enabled = false
     }
     useJUnitPlatform() {
         includeTags "integrationTest"
     }
+    reports {
+        junitXml.enabled = true
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "integration").toFile()
+        println("Destination directory for integration tests: ${destDir}")
+        junitXml.destination = destDir
+        html.enabled = true
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     shouldRunAfter test
+    forkEvery = 1 // DTest framework tends to have issues without forkEvery method
+    maxHeapSize = "8g"
 }
 
 // copy the user documentation to the final build

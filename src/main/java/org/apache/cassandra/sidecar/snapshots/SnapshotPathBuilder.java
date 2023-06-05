@@ -366,7 +366,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
                .recover(t ->
                         {
                             String errMsg = String.format("Snapshot directory '%s' does not exist", snapshotName);
-                            logger.warn("Snapshot directory {} does not exist in {}", snapshotName, snapshotDirectory);
+                            logger.warn("Snapshot directory {} does not exist in {}", snapshotName, baseDirectory);
                             return Future.failedFuture(new NoSuchFileException(errMsg));
                         });
     }

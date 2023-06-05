@@ -18,22 +18,15 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.util.Collections;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
-import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
 import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
-import org.apache.cassandra.sidecar.utils.SidecarVersionProvider;
 
 /**
  * Provides the basic dependencies for integration tests
@@ -49,22 +42,9 @@ public class IntegrationTestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public InstancesConfig instancesConfig(CassandraVersionProvider versionProvider,
-                                           SidecarVersionProvider sidecarVersionProvider)
+    public InstancesConfig instancesConfig()
     {
-        String dataDirectory = cassandraTestContext.dataDirectoryPath.toFile().getAbsolutePath();
-        String stagingDirectory = cassandraTestContext.dataDirectoryPath.resolve("staging")
-                                                                               .toFile().getAbsolutePath();
-        InstanceMetadata metadata = new InstanceMetadataImpl(1,
-                                                             "localhost",
-                                                             9043,
-                                                             Collections.singleton(dataDirectory),
-                                                             stagingDirectory,
-                                                             cassandraTestContext.session,
-                                                             cassandraTestContext.jmxClient,
-                                                             versionProvider,
-                                                             sidecarVersionProvider.sidecarVersion());
-        return new InstancesConfigImpl(metadata);
+        return cassandraTestContext.getInstancesConfig();
     }
 
     @Provides
@@ -76,7 +56,7 @@ public class IntegrationTestModule extends AbstractModule
                                                                            30000);
         return new Configuration.Builder()
                .setInstancesConfig(instancesConfig)
-               .setHost("localhost")
+               .setHost("127.0.0.1")
                .setPort(9043)
                .setRateLimitStreamRequestsPerSecond(1000L)
                .setValidationConfiguration(validationConfiguration)

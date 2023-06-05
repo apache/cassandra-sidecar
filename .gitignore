@@ -87,3 +87,6 @@ lib
 
 # Local gradle cache
 .gradle
+
+dtest-jars
+scripts/dependency-reduced-pom.xml

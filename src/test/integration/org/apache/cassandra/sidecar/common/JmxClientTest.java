@@ -18,8 +18,11 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.io.IOException;
 import java.util.Map;
 
+import org.apache.cassandra.distributed.api.IInstanceConfig;
+import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
 import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
 import org.apache.cassandra.sidecar.common.utils.GossipInfoParser;
@@ -34,31 +37,40 @@ public class JmxClientTest
     private static final String SS_OBJ_NAME = "org.apache.cassandra.db:type=StorageService";
 
     @CassandraIntegrationTest
-    void testJmxConnectivity(CassandraTestContext context)
+    void testJmxConnectivity(CassandraTestContext context) throws IOException
     {
-        String opMode = context.jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
-                                         .getOperationMode();
-        assertThat(opMode).isNotNull();
-        assertThat(opMode).isIn("LEAVING", "JOINING", "NORMAL", "DECOMMISSIONED", "CLIENT");
+        try (JmxClient jmxClient = getJmxClient(context))
+        {
+            String opMode = jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
+                                     .getOperationMode();
+            assertThat(opMode).isNotNull();
+            assertThat(opMode).isIn("LEAVING", "JOINING", "NORMAL", "DECOMMISSIONED", "CLIENT");
+        }
     }
 
     @CassandraIntegrationTest
-    void testGossipInfo(CassandraTestContext context)
+    void testGossipInfo(CassandraTestContext context) throws IOException
     {
-        SSProxy proxy = context.jmxClient.proxy(SSProxy.class,
-                                                "org.apache.cassandra.net:type=FailureDetector");
-        String rawGossipInfo = proxy.getAllEndpointStatesWithPort();
-        assertThat(rawGossipInfo).isNotEmpty();
-        Map<String, ?> gossipInfoMap = GossipInfoParser.parse(rawGossipInfo);
-        assertThat(gossipInfoMap).isNotEmpty();
-        gossipInfoMap.forEach((key, value) -> GossipInfoParser.isGossipInfoHostHeader(key));
+        try (JmxClient jmxClient = getJmxClient(context))
+        {
+            FailureDetector proxy = jmxClient.proxy(FailureDetector.class,
+                                                    "org.apache.cassandra.net:type=FailureDetector");
+            String rawGossipInfo = proxy.getAllEndpointStates();
+            assertThat(rawGossipInfo).isNotEmpty();
+            Map<String, ?> gossipInfoMap = GossipInfoParser.parse(rawGossipInfo);
+            assertThat(gossipInfoMap).isNotEmpty();
+            gossipInfoMap.forEach((key, value) -> GossipInfoParser.isGossipInfoHostHeader(key));
+        }
     }
 
     @CassandraIntegrationTest
-    void testConsumerCall(CassandraTestContext context)
+    void testCorrectVersion(CassandraTestContext context) throws IOException
     {
-        context.jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
-                         .refreshSizeEstimates();
+        try (JmxClient jmxClient = getJmxClient(context))
+        {
+            jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
+                     .refreshSizeEstimates();
+        }
     }
 
     /**
@@ -70,6 +82,23 @@ public class JmxClientTest
 
         void refreshSizeEstimates();
 
-        String getAllEndpointStatesWithPort();
+        String getReleaseVersion();
+    }
+
+    /**
+     * An interface that pulls information from the Failure Detector MBean
+     */
+    public interface FailureDetector
+    {
+        String getAllEndpointStates();
+    }
+
+
+    private static JmxClient getJmxClient(CassandraTestContext context)
+    {
+        IUpgradeableInstance instance = context.cluster.getFirstRunningInstance();
+        IInstanceConfig config = instance.config();
+        JmxClient client = new JmxClient(config.broadcastAddress().getAddress().getHostAddress(), config.jmxPort());
+        return client;
     }
 }

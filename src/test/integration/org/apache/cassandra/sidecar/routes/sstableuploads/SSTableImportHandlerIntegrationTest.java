@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.routes.sstableuploads;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -42,15 +44,15 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
-import org.apache.cassandra.sidecar.common.containers.ExtendedCassandraContainer;
+import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
 import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
-import org.testcontainers.containers.Container;
 
-import static org.apache.cassandra.sidecar.common.testing.CassandraTestTemplate.CONTAINER_CASSANDRA_DATA_PATH;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Integration tests for {@link SSTableImportHandler}
@@ -58,10 +60,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
 {
+    public static final SimpleCassandraVersion MIN_VERSION_WITH_IMPORT = SimpleCassandraVersion.create("4.0.0");
+
     @CassandraIntegrationTest
     void testSSTableImport(VertxTestContext context, CassandraTestContext cassandraTestContext)
     throws IOException, InterruptedException
     {
+        // Cassandra before 4.0 does not have the necessary JMX endpoints,
+        // so we skip if the cluster version is below 4.0
+        assumeThat(cassandraTestContext.version)
+        .withFailMessage("Import is only available in Cassandra 4.0 and later.")
+        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_IMPORT);
+
         // create a table. Insert some data, create a snapshot that we'll use for import.
         // Truncate the table, insert more data.
         // Test the import SSTable endpoint by importing data that was originally truncated.
@@ -72,46 +82,43 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         QualifiedTableName tableName = createTestTableAndPopulate(cassandraTestContext, Arrays.asList("a", "b"));
 
         // create a snapshot called <tableName>-snapshot for tbl1
-        ExtendedCassandraContainer container = cassandraTestContext.container;
-        final String snapshotStdout =
-        container.execInContainer("nodetool", "snapshot",
-                                  "--tag", tableName.tableName() + "-snapshot",
-                                  "--table", tableName.tableName(),
-                                  "--", tableName.keyspace()).getStdout();
+        UpgradeableCluster cluster = cassandraTestContext.cluster;
+        final String snapshotStdout = cluster.get(1).nodetoolResult("snapshot",
+                                                                    "--tag", tableName.tableName() + "-snapshot",
+                                                                    "--table", tableName.tableName(),
+                                                                    "--", tableName.keyspace()).getStdout();
         assertThat(snapshotStdout).contains("Snapshot directory: " + tableName.tableName() + "-snapshot");
         // find the directory in the filesystem
-        final String directory = container.execInContainer("find",
-                                                           CONTAINER_CASSANDRA_DATA_PATH,
-                                                           "-name",
-                                                           tableName.tableName() + "-snapshot").getStdout().trim();
-        assertThat(directory).isNotEmpty();
+        final List<Path> snapshotFiles = findChildFile(cassandraTestContext,
+                                                       "127.0.0.1", tableName.tableName() + "-snapshot");
+
+        assertThat(snapshotFiles).isNotEmpty();
 
         // copy the snapshot to the expected staging directory
         final UUID uploadId = UUID.randomUUID();
-        final String stagingPathInContainer = cassandraTestContext.dataDirectoryPath.toFile().getAbsolutePath()
-                                              + File.separator + "staging" + File.separator + uploadId
+        // for the test, we need to have the same directory structure for the local data directory replicated
+        // inside the cluster. The way the endpoint works is by verifying that the directory exists, this
+        // verification happens in the host system. When calling import we use the same directory, but the
+        // directory does not exist inside the cluster. For that reason we need to do the following to
+        // ensure "import" finds the path inside the cluster
+        String uploadStagingDir = cassandraTestContext.getInstancesConfig()
+                                                      .instanceFromHost("127.0.0.1").stagingDir();
+        final String stagingPathInContainer = uploadStagingDir + File.separator + uploadId
                                               + File.separator + tableName.keyspace()
                                               + File.separator + tableName.tableName();
-        // for the test, we need to have the same directory structure for the local data directory replicated
-        // inside the container. The way the endpoint works is by verifying that the directory exists, this
-        // verification happens in the host system. When calling import we use the same directory, but the
-        // directory does not exist inside the container. For that reason we need to do the following to
-        // ensure "import" finds the path inside the container
-        container.execInContainer("mkdir", "-p", stagingPathInContainer);
-        // write/execute permission required for Cassandra import
-        container.execInContainer("chmod", "777", stagingPathInContainer);
-        // copy snapshot files into the staging path in the container
-        // we use sh -c because wildcards are not supported
-        Container.ExecResult cpCmd = container
-                                     .execInContainer("sh", "-c",
-                                                      String.format("cp %s/* %s/", directory, stagingPathInContainer));
-        assertThat(cpCmd.getExitCode()).isEqualTo(0);
-        // create the directory in the host for validation
-        Files.createDirectories(
-        cassandraTestContext.dataDirectoryPath.resolve("staging")
-                                              .resolve(uploadId.toString())
-                                              .resolve(tableName.keyspace())
-                                              .resolve(tableName.tableName()));
+        boolean mkdirs = new File(stagingPathInContainer).mkdirs();
+        assertThat(mkdirs)
+        .withFailMessage("Could not create directory " + uploadStagingDir)
+        .isTrue();
+
+        // copy snapshot files into the staging path in the cluster
+        for (Path path : snapshotFiles)
+        {
+            if (path.toFile().isFile())
+            {
+                Files.copy(path, Paths.get(stagingPathInContainer).resolve(path.getFileName()));
+            }
+        }
 
         // Now truncate the contents of the table
         truncateAndVerify(cassandraTestContext, tableName);
@@ -123,7 +130,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + tableName.keyspace()
                            + "/tables/" + tableName.tableName() + "/import";
         sendRequest(context,
-                    () -> client.put(config.getPort(), "localhost", testRoute),
+                    () -> client.put(config.getPort(), "127.0.0.1", testRoute),
                     context.succeeding(response -> context.verify(() -> {
                         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                         assertThat(queryValues(cassandraTestContext, tableName))

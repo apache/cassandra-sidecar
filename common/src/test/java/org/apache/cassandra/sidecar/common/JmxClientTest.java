@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
 import java.rmi.registry.LocateRegistry;
@@ -105,26 +106,33 @@ public class JmxClientTest
     }
 
     @Test
-    public void testCanCallMethodWithoutEntireInterface()
+    public void testCanCallMethodWithoutEntireInterface() throws IOException
     {
-        JmxClient client = new JmxClient(serviceURL, "controlRole", "password");
-        List<String> result = client.proxy(Import.class, objectName)
-                                    .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
-                                                       true, true, true, true,
-                                                       true);
+        List<String> result;
+        try (JmxClient client = new JmxClient(serviceURL, "controlRole", "password"))
+        {
+            result = client.proxy(Import.class, objectName)
+                           .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
+                                              true, true, true, true,
+                                              true);
+        }
         assertThat(result.size()).isEqualTo(0);
     }
 
     @Test
-    public void testCanCallMethodWithoutEntireInterfaceGetResults()
+    public void testCanCallMethodWithoutEntireInterfaceGetResults() throws IOException
     {
         importMBean.shouldSucceed = false;
-        JmxClient client = new JmxClient(serviceURL, "controlRole", "password");
-        final HashSet<String> srcPaths = Sets.newHashSet("foo", "bar");
-        final List<String> failedDirs = client.proxy(Import.class, objectName)
-                                              .importNewSSTables(srcPaths, true,
-                                                                 true, true, true, true,
-                                                                 true);
+        HashSet<String> srcPaths;
+        List<String> failedDirs;
+        try (JmxClient client = new JmxClient(serviceURL, "controlRole", "password"))
+        {
+            srcPaths = Sets.newHashSet("foo", "bar");
+            failedDirs = client.proxy(Import.class, objectName)
+                               .importNewSSTables(srcPaths, true,
+                                                  true, true, true, true,
+                                                  true);
+        }
         assertThat(failedDirs.size()).isEqualTo(2);
         assertThat(failedDirs.toArray()).isEqualTo(srcPaths.toArray());
     }
@@ -135,54 +143,61 @@ public class JmxClientTest
         assertThatExceptionOfType(SecurityException.class)
         .isThrownBy(() ->
                     {
-                        JmxClient client = new JmxClient(serviceURL);
-                        client.proxy(Import.class, objectName)
-                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true);
+                        try (JmxClient client = new JmxClient(serviceURL))
+                        {
+                            client.proxy(Import.class, objectName)
+                                  .importNewSSTables(Sets.newHashSet("foo", "bar"),
+                                                     true,
+                                                     true,
+                                                     true,
+                                                     true,
+                                                     true,
+                                                     true);
+                        }
                     });
     }
 
     @Test
     public void testDisconnectReconnect() throws Exception
     {
-        JmxClient client = new JmxClient(serviceURL, "controlRole", "password");
-        assertThat(client.isConnected()).isFalse();
-        List<String> result = client.proxy(Import.class, objectName)
-                                    .importNewSSTables(
-                                    Sets.newHashSet("foo", "bar"), true, true, true,
-                                    true, true,
-                                    true);
-        assertThat(client.isConnected()).isTrue();
-        assertThat(result.size()).isEqualTo(0);
+        List<String> result;
+        try (JmxClient client = new JmxClient(serviceURL, "controlRole", "password"))
+        {
+            assertThat(client.isConnected()).isFalse();
+            result = client.proxy(Import.class, objectName)
+                           .importNewSSTables(
+                           Sets.newHashSet("foo", "bar"), true, true, true,
+                           true, true,
+                           true);
+            assertThat(client.isConnected()).isTrue();
+            assertThat(result.size()).isEqualTo(0);
 
-        tearDown();
-        setUp();
+            tearDown();
+            setUp();
 
-        result = client.proxy(Import.class, objectName)
-                       .importNewSSTables(
-                       Sets.newHashSet("foo", "bar"), true, true, true,
-                       true, true,
-                       true);
+            result = client.proxy(Import.class, objectName)
+                           .importNewSSTables(
+                           Sets.newHashSet("foo", "bar"), true, true, true,
+                           true, true,
+                           true);
+        }
         assertThat(result.size()).isEqualTo(0);
     }
 
     @Test
-    public void testLotsOfProxies()
+    public void testLotsOfProxies() throws IOException
     {
-        JmxClient client = new JmxClient(serviceURL, "controlRole", "password");
-        for (int i = 0; i < PROXIES_TO_TEST; i++)
+        try (JmxClient client = new JmxClient(serviceURL, "controlRole", "password"))
         {
-            List<String> result = client.proxy(Import.class, objectName)
-                                        .importNewSSTables(
-                                        Sets.newHashSet("foo", "bar"), true, true, true,
-                                        true, true,
-                                        true);
-            assertThat(result).isNotNull();
+            for (int i = 0; i < PROXIES_TO_TEST; i++)
+            {
+                List<String> result = client.proxy(Import.class, objectName)
+                                            .importNewSSTables(
+                                            Sets.newHashSet("foo", "bar"), true, true, true,
+                                            true, true,
+                                            true);
+                assertThat(result).isNotNull();
+            }
         }
     }
 

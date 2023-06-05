@@ -187,9 +187,9 @@ class RingHandlerTest
         @Singleton
         public InstancesConfig instanceConfig() throws IOException
         {
-            final int instanceId = 100;
-            final String host = "127.0.0.1";
-            final InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
+            int instanceId = 100;
+            String host = "127.0.0.1";
+            InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
             when(instanceMetadata.host()).thenReturn(host);
             when(instanceMetadata.port()).thenReturn(9042);
             when(instanceMetadata.id()).thenReturn(instanceId);
