@@ -43,11 +43,14 @@ import org.jetbrains.annotations.Nullable;
 public class Cassandra40Factory implements ICassandraFactory
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra40Factory.class);
-    private final DnsResolver dnsResolver;
 
-    public Cassandra40Factory(DnsResolver dnsResolver)
+    private final DnsResolver dnsResolver;
+    private final String sidecarVersion;
+
+    public Cassandra40Factory(DnsResolver dnsResolver, String sidecarVersion)
     {
         this.dnsResolver = dnsResolver;
+        this.sidecarVersion = sidecarVersion;
     }
 
     /**
@@ -108,7 +111,8 @@ public class Cassandra40Factory implements ICassandraFactory
                                              .one();
 
                 return new NodeSettings(oneResult.getString("release_version"),
-                                        oneResult.getString("partitioner"));
+                                        oneResult.getString("partitioner"),
+                                        sidecarVersion);
             }
 
             /**

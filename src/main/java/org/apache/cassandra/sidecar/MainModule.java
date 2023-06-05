@@ -18,7 +18,10 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +31,7 @@ import com.google.common.util.concurrent.SidecarRateLimiter;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -45,6 +49,7 @@ import org.apache.cassandra.sidecar.cassandra40.Cassandra40Factory;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
@@ -68,12 +73,16 @@ import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
 import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
 import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides main binding for more complex Guice dependencies
  */
 public class MainModule extends AbstractModule
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MainModule.class);
+
     public static final Map<String, String> OK_STATUS = Collections.singletonMap("status", "OK");
     public static final Map<String, String> NOT_OK_STATUS = Collections.singletonMap("status", "NOT_OK");
 
@@ -240,11 +249,11 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Configuration configuration(CassandraVersionProvider cassandraVersionProvider)
-    throws IOException
+    public Configuration configuration(CassandraVersionProvider cassandraVersionProvider,
+                                       @Named("SidecarVersion") String sidecarVersion) throws IOException
     {
         final String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
-        return YAMLSidecarConfiguration.of(confPath, cassandraVersionProvider);
+        return YAMLSidecarConfiguration.of(confPath, cassandraVersionProvider, sidecarVersion);
     }
 
     @Provides
@@ -263,10 +272,11 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
+    public CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver,
+                                                             @Named("SidecarVersion") String sidecarVersion)
     {
         CassandraVersionProvider.Builder builder = new CassandraVersionProvider.Builder();
-        builder.add(new Cassandra40Factory(dnsResolver));
+        builder.add(new Cassandra40Factory(dnsResolver, sidecarVersion));
         return builder.build();
     }
 
@@ -310,5 +320,29 @@ public class MainModule extends AbstractModule
     public ChecksumVerifier checksumVerifier(Vertx vertx)
     {
         return new MD5ChecksumVerifier(vertx.fileSystem());
+    }
+
+    @Provides
+    @Singleton
+    @Named("SidecarVersion")
+    private static String sidecarVersion()
+    {
+        final String resource = "/sidecar.version";
+        try (InputStream input = NodeSettings.class.getResourceAsStream(resource);
+             ByteArrayOutputStream output = new ByteArrayOutputStream())
+        {
+            byte[] buffer = new byte[32];
+            int length;
+            while ((length = input.read(buffer)) >= 0)
+            {
+                output.write(buffer, 0, length);
+            }
+            return output.toString(StandardCharsets.UTF_8.name());
+        }
+        catch (Exception exception)
+        {
+            LOGGER.error("Failed to retrieve Sidecar version", exception);
+        }
+        return "unknown";
     }
 }

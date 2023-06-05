@@ -101,12 +101,12 @@ public class SnapshotUtils
 
         if (delegate1 == null)
         {
-            delegate1 = new CassandraAdapterDelegate(versionProvider, cqlSessionProvider1, null);
+            delegate1 = new CassandraAdapterDelegate(versionProvider, cqlSessionProvider1, null, null);
         }
 
         if (delegate2 == null)
         {
-            delegate2 = new CassandraAdapterDelegate(versionProvider, cqlSessionProvider2, null);
+            delegate2 = new CassandraAdapterDelegate(versionProvider, cqlSessionProvider2, null, null);
         }
 
         InstanceMetadataImpl localhost = new InstanceMetadataImpl(1,

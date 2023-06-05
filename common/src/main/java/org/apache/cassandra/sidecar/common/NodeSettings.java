@@ -34,50 +34,28 @@ import org.slf4j.LoggerFactory;
  */
 public class NodeSettings
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(NodeSettings.class);
     private static final String VERSION = "version";
-    private static final Map<String, String> SIDECAR = Collections.singletonMap(VERSION, getSidecarVersion());
 
     private final String releaseVersion;
     private final String partitioner;
     private final Map<String, String> sidecar;
 
-    private static String getSidecarVersion()
-    {
-        final String resource = "/sidecar.version";
-        try (InputStream input = NodeSettings.class.getResourceAsStream(resource);
-             ByteArrayOutputStream output = new ByteArrayOutputStream())
-        {
-            byte[] buffer = new byte[32];
-            int length;
-            while ((length = input.read(buffer)) >= 0)
-            {
-                output.write(buffer, 0, length);
-            }
-            return output.toString(StandardCharsets.UTF_8.name());
-        }
-        catch (Exception exception)
-        {
-            LOGGER.error("Failed to retrieve Sidecar version", exception);
-        }
-        return "unknown";
-    }
-
     /**
-     * Constructs a new {@link NodeSettings} object with the Cassandra node's release version
-     * and partitioner information, uses Sidecar version from the currently loaded binary
+     * Constructs a new {@link NodeSettings} object with the Cassandra node's release version,
+     * partitioner, and Sidecar version information
      *
      * @param releaseVersion the release version of the Cassandra node
      * @param partitioner    the partitioner used by the Cassandra node
+     * @param sidecarVersion the version of the Sidecar on the Cassandra node
      */
-    public NodeSettings(String releaseVersion, String partitioner)
+    public NodeSettings(String releaseVersion, String partitioner, String sidecarVersion)
     {
-        this(releaseVersion, partitioner, SIDECAR);
+        this(releaseVersion, partitioner, Collections.singletonMap(VERSION, sidecarVersion));
     }
 
     /**
      * Constructs a new {@link NodeSettings} object with the Cassandra node's release version,
-     * partitioner, and Sidecar version information
+     * partitioner, and Sidecar settings information
      *
      * @param releaseVersion the release version of the Cassandra node
      * @param partitioner    the partitioner used by the Cassandra node
