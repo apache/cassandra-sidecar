@@ -18,16 +18,11 @@
 
 package org.apache.cassandra.sidecar.common;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Holds information about the specific node settings
@@ -90,7 +85,7 @@ public class NodeSettings
 
     public String sidecarVersion()
     {
-        return sidecar.get(VERSION);
+        return sidecar != null ? sidecar.get(VERSION) : "unknown";
     }
 
     /**

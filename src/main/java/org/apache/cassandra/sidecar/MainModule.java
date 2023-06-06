@@ -325,9 +325,9 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     @Named("SidecarVersion")
-    private static String sidecarVersion()
+    public String sidecarVersion()
     {
-        final String resource = "/sidecar.version";
+        String resource = "/sidecar.version";
         try (InputStream input = NodeSettings.class.getResourceAsStream(resource);
              ByteArrayOutputStream output = new ByteArrayOutputStream())
         {
