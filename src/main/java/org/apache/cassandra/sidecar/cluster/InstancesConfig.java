@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.cluster;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 
@@ -37,16 +38,16 @@ public interface InstancesConfig
      *
      * @param id instance's id
      * @return instance meta information
-     * @throws IllegalArgumentException when the instance with {@code id} does not exist
+     * @throws NoSuchElementException when the instance with {@code id} does not exist
      */
-    InstanceMetadata instanceFromId(int id) throws IllegalArgumentException;
+    InstanceMetadata instanceFromId(int id) throws NoSuchElementException;
 
     /**
      * Lookup instance metadata by host name.
      *
      * @param host host address of instance
      * @return instance meta information
-     * @throws IllegalArgumentException when the instance for {@code host} does not exist
+     * @throws NoSuchElementException when the instance for {@code host} does not exist
      */
-    InstanceMetadata instanceFromHost(String host) throws IllegalArgumentException;
+    InstanceMetadata instanceFromHost(String host) throws NoSuchElementException;
 }

@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.NoSuchElementException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -138,7 +140,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
                 throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
                                         "InstanceId query parameter must be a valid integer");
             }
-            catch (IllegalArgumentException | IllegalStateException ex)
+            catch (NoSuchElementException | IllegalStateException ex)
             {
                 throw new HttpException(HttpResponseStatus.NOT_FOUND.code(), ex.getMessage());
             }

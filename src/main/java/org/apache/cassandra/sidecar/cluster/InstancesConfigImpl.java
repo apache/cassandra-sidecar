@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.cluster;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -58,23 +59,23 @@ public class InstancesConfigImpl implements InstancesConfig
     }
 
     @Override
-    public InstanceMetadata instanceFromId(int id) throws IllegalArgumentException
+    public InstanceMetadata instanceFromId(int id) throws NoSuchElementException
     {
         InstanceMetadata instanceMetadata = idToInstanceMetadata.get(id);
         if (instanceMetadata == null)
         {
-            throw new IllegalArgumentException("Instance id " + id + " not found");
+            throw new NoSuchElementException("Instance id " + id + " not found");
         }
         return instanceMetadata;
     }
 
     @Override
-    public InstanceMetadata instanceFromHost(String host) throws IllegalArgumentException
+    public InstanceMetadata instanceFromHost(String host) throws NoSuchElementException
     {
         InstanceMetadata instanceMetadata = hostToInstanceMetadata.get(host);
         if (instanceMetadata == null)
         {
-            throw new IllegalArgumentException("Instance with host address " + host + " not found");
+            throw new NoSuchElementException("Instance with host address " + host + " not found");
         }
         return instanceMetadata;
     }
