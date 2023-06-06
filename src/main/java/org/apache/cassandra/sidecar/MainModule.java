@@ -341,7 +341,7 @@ public class MainModule extends AbstractModule
         }
         catch (Exception exception)
         {
-            LOGGER.error("Failed to retrieve Sidecar version", exception);
+            LOGGER.error("Failed to retrieve Sidecar version from resource {}", resource, exception);
         }
         return "unknown";
     }
