@@ -165,15 +165,21 @@ public class YAMLSidecarConfiguration extends Configuration
         YAMLConfiguration yamlConf = yamlConfiguration(confPath);
         int healthCheckFrequencyMillis = yamlConf.getInt(HEALTH_CHECK_INTERVAL, 1000);
         ValidationConfiguration validationConfiguration = validationConfiguration(yamlConf);
-        InstancesConfig instancesConfig = instancesConfig(yamlConf, versionProvider, healthCheckFrequencyMillis, sidecarVersion);
-        CacheConfiguration ssTableImportCacheConfiguration = cacheConfig(yamlConf, SSTABLE_IMPORT_CACHE_CONFIGURATION,
+        InstancesConfig instancesConfig = instancesConfig(yamlConf,
+                                                          versionProvider,
+                                                          healthCheckFrequencyMillis,
+                                                          sidecarVersion);
+        CacheConfiguration ssTableImportCacheConfiguration = cacheConfig(yamlConf,
+                                                                         SSTABLE_IMPORT_CACHE_CONFIGURATION,
                                                                          TimeUnit.HOURS.toMillis(2),
                                                                          10_000);
-        WorkerPoolConfiguration serverWorkerPoolConf = workerPoolConfiguration(yamlConf, WORKER_POOL_FOR_SERVICE,
+        WorkerPoolConfiguration serverWorkerPoolConf = workerPoolConfiguration(yamlConf,
+                                                                               WORKER_POOL_FOR_SERVICE,
                                                                                "sidecar-worker-pool",
                                                                                VertxOptions.DEFAULT_WORKER_POOL_SIZE,
                                                                                TimeUnit.SECONDS.toMillis(60));
-        WorkerPoolConfiguration internalWorkerPoolConf = workerPoolConfiguration(yamlConf, WORKER_POOL_FOR_INTERNAL,
+        WorkerPoolConfiguration internalWorkerPoolConf = workerPoolConfiguration(yamlConf,
+                                                                                 WORKER_POOL_FOR_INTERNAL,
                                                                                  "sidecar-internal-worker-pool",
                                                                                  VertxOptions.DEFAULT_WORKER_POOL_SIZE,
                                                                                  TimeUnit.SECONDS.toMillis(60));

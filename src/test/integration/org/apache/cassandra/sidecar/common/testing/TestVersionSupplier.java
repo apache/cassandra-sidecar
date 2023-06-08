@@ -39,6 +39,7 @@ public class TestVersionSupplier
 {
     Stream<TestVersion> testVersions()
     {
-        return Stream.of(new TestVersion("4.0.7", new Cassandra40Factory(DnsResolver.DEFAULT, "1.0-TEST"), "cassandra:4.0"));
+        return Stream.of(
+                new TestVersion("4.0.7", new Cassandra40Factory(DnsResolver.DEFAULT, "1.0-TEST"), "cassandra:4.0"));
     }
 }

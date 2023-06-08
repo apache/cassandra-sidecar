@@ -1,18 +1,20 @@
 package org.apache.cassandra.sidecar;
 
+import org.junit.jupiter.api.Test;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
-import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit tests for the {@link MainModule} class
  */
-public class MainModuleTest {
+public class MainModuleTest
+{
     @Test
     public void testSidecarVersion()
     {
