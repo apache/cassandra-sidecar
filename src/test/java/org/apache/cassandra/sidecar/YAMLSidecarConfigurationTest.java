@@ -37,32 +37,27 @@ import static org.mockito.Mockito.mock;
  */
 class YAMLSidecarConfigurationTest
 {
+    private static final String SIDECAR_VERSION = "unknown";
+
     private final CassandraVersionProvider versionProvider = mock(CassandraVersionProvider.class);
-    private final String sidecarVersion = "unknown";
 
     @Test
     public void testSidecarConfiguration() throws IOException
     {
-        Configuration multipleInstancesConfig =
-        YAMLSidecarConfiguration.of(confPath("sidecar_multiple_instances.yaml"),
-                                    versionProvider,
-                                    sidecarVersion);
+        Configuration multipleInstancesConfig = YAMLSidecarConfiguration.of(
+                confPath("sidecar_multiple_instances.yaml"), versionProvider, SIDECAR_VERSION);
         validateSidecarConfiguration(multipleInstancesConfig);
 
-        Configuration singleInstanceConfig =
-        YAMLSidecarConfiguration.of(confPath("sidecar_single_instance.yaml"),
-                                    versionProvider,
-                                    sidecarVersion);
+        Configuration singleInstanceConfig = YAMLSidecarConfiguration.of(
+                confPath("sidecar_single_instance.yaml"), versionProvider, SIDECAR_VERSION);
         validateSidecarConfiguration(singleInstanceConfig);
     }
 
     @Test
     public void testLegacySidecarYAMLFormatWithSingleInstance() throws IOException
     {
-        Configuration configuration =
-        YAMLSidecarConfiguration.of(confPath("sidecar_single_instance.yaml"),
-                                    versionProvider,
-                                    sidecarVersion);
+        Configuration configuration = YAMLSidecarConfiguration.of(
+                confPath("sidecar_single_instance.yaml"), versionProvider, SIDECAR_VERSION);
         InstancesConfig instancesConfig = configuration.getInstancesConfig();
         assertThat(instancesConfig.instances().size()).isEqualTo(1);
         InstanceMetadata instanceMetadata = instancesConfig.instances().get(0);
@@ -73,26 +68,20 @@ class YAMLSidecarConfigurationTest
     @Test
     public void testReadAllowableTimeSkew() throws IOException
     {
-        Configuration configuration =
-        YAMLSidecarConfiguration.of(confPath("sidecar_single_instance.yaml"),
-                                    versionProvider,
-                                    sidecarVersion);
+        Configuration configuration = YAMLSidecarConfiguration.of(
+                confPath("sidecar_single_instance.yaml"), versionProvider, SIDECAR_VERSION);
         assertThat(configuration.allowableSkewInMinutes()).isEqualTo(89);
 
-        configuration =
-        YAMLSidecarConfiguration.of(confPath("sidecar_custom_allowable_time_skew.yaml"),
-                                    versionProvider,
-                                    sidecarVersion);
+        configuration = YAMLSidecarConfiguration.of(
+                confPath("sidecar_custom_allowable_time_skew.yaml"), versionProvider, SIDECAR_VERSION);
         assertThat(configuration.allowableSkewInMinutes()).isEqualTo(1);
     }
 
     @Test
     public void testReadingSingleInstanceSectionOverMultipleInstances() throws IOException
     {
-        Configuration configuration =
-        YAMLSidecarConfiguration.of(confPath("sidecar_with_single_multiple_instances.yaml"),
-                                    versionProvider,
-                                    sidecarVersion);
+        Configuration configuration = YAMLSidecarConfiguration.of(
+                confPath("sidecar_with_single_multiple_instances.yaml"), versionProvider, SIDECAR_VERSION);
         InstancesConfig instancesConfig = configuration.getInstancesConfig();
         assertThat(instancesConfig.instances().size()).isEqualTo(1);
         InstanceMetadata instanceMetadata = instancesConfig.instances().get(0);
@@ -103,10 +92,8 @@ class YAMLSidecarConfigurationTest
     @Test
     public void testReadingMultipleInstances() throws IOException
     {
-        Configuration configuration =
-        YAMLSidecarConfiguration.of(confPath("sidecar_multiple_instances.yaml"),
-                                    versionProvider,
-                                    sidecarVersion);
+        Configuration configuration =  YAMLSidecarConfiguration.of(
+                confPath("sidecar_multiple_instances.yaml"), versionProvider, SIDECAR_VERSION);
         InstancesConfig instancesConfig = configuration.getInstancesConfig();
         assertThat(instancesConfig.instances().size()).isEqualTo(2);
     }
@@ -114,10 +101,8 @@ class YAMLSidecarConfigurationTest
     @Test
     public void testReadingCassandraInputValidation() throws IOException
     {
-        Configuration configuration =
-        YAMLSidecarConfiguration.of(confPath("sidecar_validation_configuration.yaml"),
-                                    versionProvider,
-                                    sidecarVersion);
+        Configuration configuration = YAMLSidecarConfiguration.of(
+                confPath("sidecar_validation_configuration.yaml"), versionProvider, SIDECAR_VERSION);
         ValidationConfiguration validationConfiguration = configuration.getValidationConfiguration();
 
         assertThat(validationConfiguration.forbiddenKeyspaces()).contains("a", "b", "c");
@@ -131,10 +116,8 @@ class YAMLSidecarConfigurationTest
     @Test
     public void testUploadsConfiguration() throws IOException
     {
-        Configuration configuration =
-        YAMLSidecarConfiguration.of(confPath("sidecar_multiple_instances.yaml"),
-                                    versionProvider,
-                                    sidecarVersion);
+        Configuration configuration = YAMLSidecarConfiguration.of(
+                confPath("sidecar_multiple_instances.yaml"), versionProvider, SIDECAR_VERSION);
 
         assertThat(configuration.getConcurrentUploadsLimit()).isEqualTo(80);
         assertThat(configuration.getMinSpacePercentRequiredForUpload()).isEqualTo(10);
