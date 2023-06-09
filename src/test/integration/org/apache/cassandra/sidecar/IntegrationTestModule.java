@@ -23,7 +23,6 @@ import java.util.Collections;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.name.Named;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -34,6 +33,7 @@ import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.utils.SidecarVersionProvider;
 
 /**
  * Provides the basic dependencies for integration tests
@@ -50,7 +50,7 @@ public class IntegrationTestModule extends AbstractModule
     @Provides
     @Singleton
     public InstancesConfig instancesConfig(CassandraVersionProvider versionProvider,
-                                           @Named("SidecarVersion") String sidecarVersion)
+                                           SidecarVersionProvider sidecarVersionProvider)
     {
         String dataDirectory = cassandraTestContext.dataDirectoryPath.toFile().getAbsolutePath();
         String stagingDirectory = cassandraTestContext.dataDirectoryPath.resolve("staging")
@@ -63,7 +63,7 @@ public class IntegrationTestModule extends AbstractModule
                                                              cassandraTestContext.session,
                                                              cassandraTestContext.jmxClient,
                                                              versionProvider,
-                                                             sidecarVersion);
+                                                             sidecarVersionProvider.sidecarVersion());
         return new InstancesConfigImpl(metadata);
     }
 
