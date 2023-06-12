@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -34,7 +35,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public abstract class DecodableRequest<T> extends Request
 {
-    static final ObjectMapper MAPPER = new ObjectMapper();
+    static final ObjectMapper MAPPER = new ObjectMapper()
+                                       // ignore all the properties that are not declared
+                                       .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     private final JavaType javaType = MAPPER.constructType(((ParameterizedType) this.getClass().getGenericSuperclass())
                                                            .getActualTypeArguments()[0]);
 
