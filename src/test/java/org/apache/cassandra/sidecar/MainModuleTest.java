@@ -40,6 +40,6 @@ public class MainModuleTest
 
         String sidecarVersion = sidecarVersionProvider.sidecarVersion();
 
-        assertEquals("1.0-TEST", sidecarVersion);
+        assertEquals("version-string-to-be-read-by-MainModuleTest", sidecarVersion);
     }
 }
