@@ -46,7 +46,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
+import org.apache.cassandra.sidecar.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -140,7 +140,7 @@ public abstract class IntegrationTestBase
 
     public List<Path> findChildFile(CassandraTestContext context, String hostname, String target)
     {
-        InstanceMetadata instanceConfig = context.getInstancesConfig().instanceFromHost("127.0.0.1");
+        InstanceMetadata instanceConfig = context.getInstancesConfig().instanceFromHost(hostname);
         List<String> parentDirectories = instanceConfig.dataDirs();
 
         return parentDirectories.stream().flatMap(s -> findChildFile(Paths.get(s), target).stream())

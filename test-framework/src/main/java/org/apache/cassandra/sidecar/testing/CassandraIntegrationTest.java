@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.testing;
+package org.apache.cassandra.sidecar.testing;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

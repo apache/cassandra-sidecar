@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.testing;
+package org.apache.cassandra.sidecar.testing;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -58,7 +60,7 @@ public class CassandraTestContext implements Closeable
 
     CassandraTestContext(SimpleCassandraVersion version,
                          UpgradeableCluster cluster,
-                         CassandraVersionProvider versionProvider)
+                         CassandraVersionProvider versionProvider) throws IOException
     {
         this.version = version;
         this.cluster = cluster;
@@ -67,7 +69,7 @@ public class CassandraTestContext implements Closeable
         this.instancesConfig = buildInstancesConfig(versionProvider);
     }
 
-    private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider)
+    private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider) throws IOException
     {
         List<InstanceMetadata> metadata = new ArrayList<>();
         for (int i = 0; i < cluster.size(); i++)
@@ -87,8 +89,10 @@ public class CassandraTestContext implements Closeable
             // Use the parent of the first data directory as the staging directory
             Path dataDirParentPath = Paths.get(dataDirectories[0]).getParent();
             assertThat(dataDirParentPath).isNotNull()
-                                         .exists();
-            String uploadsStagingDirectory = dataDirParentPath.resolve("staging").toFile().getAbsolutePath();
+                      .exists();
+            Path stagingPath = dataDirParentPath.resolve("staging");
+            String uploadsStagingDirectory = stagingPath.toFile().getAbsolutePath();
+            Files.createDirectory(stagingPath);
             metadata.add(new InstanceMetadataImpl(i + 1,
                                                   config.broadcastAddress().getAddress().getHostAddress(),
                                                   nativeTransportPort,

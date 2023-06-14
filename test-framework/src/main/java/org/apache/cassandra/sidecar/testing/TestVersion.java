@@ -16,29 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.utils;
+package org.apache.cassandra.sidecar.testing;
 
 /**
- * Retrieves, caches, and provides build version of this Sidecar binary
+ * Works with {@link TestVersionSupplier}
  */
-public class SidecarVersionProvider
+public class TestVersion
 {
-    private final String sidecarVersion;
+    private final String version;
 
-    public SidecarVersionProvider(String resource)
+    public TestVersion(String version)
     {
-        try
-        {
-            sidecarVersion = IOUtils.readFully(resource);
-        }
-        catch (Exception exception)
-        {
-            throw new IllegalStateException("Failed to retrieve Sidecar version from resource " + resource, exception);
-        }
+        this.version = version;
     }
 
-    public String sidecarVersion()
+    public String version()
     {
-        return sidecarVersion;
+        return version;
     }
 }

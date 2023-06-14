@@ -34,8 +34,8 @@ import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
 import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
-import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
-import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
+import org.apache.cassandra.sidecar.testing.CassandraIntegrationTest;
+import org.apache.cassandra.sidecar.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

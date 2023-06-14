@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.testing;
+package org.apache.cassandra.sidecar.testing;
 
 import java.util.Arrays;
 import java.util.List;
@@ -42,7 +42,7 @@ import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
-import org.apache.cassandra.sidecar.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
 
 
 /**

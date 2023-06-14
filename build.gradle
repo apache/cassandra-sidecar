@@ -20,6 +20,7 @@
 
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.Files
 
 buildscript {
     dependencies {
@@ -196,17 +197,17 @@ dependencies {
     testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}") {
         exclude group: 'junit', module: 'junit'
     }
-
+    integrationTestImplementation(project(':test-framework'))
     integrationTestImplementation(files("dtest-jars/${dtestJar}"))
     integrationTestImplementation("org.apache.cassandra:dtest-api:0.0.15")
-    integrationTestImplementation("org.junit.vintage:junit-vintage-engine:${junitVersion}")
 }
 
 jar {
     doFirst {
         // Store current Cassandra Sidecar build version in an embedded resource file;
         // the file is either created or overwritten, and ignored by Git source control
-        new File("$projectDir/src/main/resources/sidecar.version").text = version
+        Files.createDirectories(Paths.get("$projectDir/common/src/main/resources"))
+        new File("$projectDir/common/src/main/resources/sidecar.version").text = version
     }
 }
 

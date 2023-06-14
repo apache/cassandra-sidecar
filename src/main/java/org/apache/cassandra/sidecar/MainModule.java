@@ -48,6 +48,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
@@ -65,7 +66,6 @@ import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
 import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.MD5ChecksumVerifier;
-import org.apache.cassandra.sidecar.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 
 /**

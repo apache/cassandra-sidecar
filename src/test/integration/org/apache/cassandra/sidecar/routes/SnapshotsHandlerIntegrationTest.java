@@ -32,8 +32,8 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
-import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
+import org.apache.cassandra.sidecar.testing.CassandraIntegrationTest;
+import org.apache.cassandra.sidecar.testing.CassandraTestContext;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;

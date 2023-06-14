@@ -25,9 +25,9 @@ import org.apache.cassandra.distributed.api.NodeToolResult;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
-import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
-import org.apache.cassandra.sidecar.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.testing.CassandraIntegrationTest;
+import org.apache.cassandra.sidecar.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

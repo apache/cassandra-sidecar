@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.cluster;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +77,18 @@ public class InstancesConfigImpl implements InstancesConfig
         InstanceMetadata instanceMetadata = hostToInstanceMetadata.get(host);
         if (instanceMetadata == null)
         {
-            throw new NoSuchElementException("Instance with host address " + host + " not found");
+            try
+            {
+                instanceMetadata = hostToInstanceMetadata.get(InetAddress.getByName(host).getHostAddress());
+            }
+            catch (UnknownHostException e)
+            {
+                throw new RuntimeException(e);
+            }
+            if (instanceMetadata == null)
+            {
+                throw new NoSuchElementException("Instance with host address " + host + " not found");
+            }
         }
         return instanceMetadata;
     }

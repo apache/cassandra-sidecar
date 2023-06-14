@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
-import org.apache.cassandra.sidecar.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
