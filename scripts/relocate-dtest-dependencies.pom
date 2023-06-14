@@ -32,7 +32,6 @@
     <properties>
         <project.type>library</project.type>
         <java.version>1.8</java.version>
-        <test.source.directory>src/test/unit/java</test.source.directory>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -71,9 +70,25 @@
     </dependencies>
 
     <build>
-        <testSourceDirectory>${test.source.directory}</testSourceDirectory>
 
         <plugins>
+            <!-- Skip main compilation as we only want to package existing dependencies -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <skipMain>true</skipMain>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- generate a shaded JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

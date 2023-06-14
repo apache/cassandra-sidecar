@@ -16,30 +16,35 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar;
+package org.apache.cassandra.testing;
 
-import org.junit.jupiter.api.Test;
-
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.util.Modules;
-import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.apache.cassandra.distributed.UpgradeableCluster;
 
 /**
- * Unit tests for the {@link MainModule} class
+ * Passed to integration tests.
+ * See {@link CassandraIntegrationTest} for the required annotation
+ * See {@link CassandraTestTemplate} for the Test Template
  */
-public class MainModuleTest
+public class CassandraTestContext extends AbstractCassandraTestContext
 {
-    @Test
-    public void testSidecarVersion()
+
+    public CassandraTestContext(SimpleCassandraVersion version,
+                                UpgradeableCluster cluster)
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
-        SidecarVersionProvider sidecarVersionProvider = injector.getInstance(SidecarVersionProvider.class);
+        super(version, cluster);
+    }
 
-        String sidecarVersion = sidecarVersionProvider.sidecarVersion();
+    @Override
+    public String toString()
+    {
+        return "CassandraTestContext{"
+               + ", version=" + version
+               + ", cluster=" + cluster
+               + '}';
+    }
 
-        assertEquals("version-string-to-be-read-by-MainModuleTest", sidecarVersion);
+    public UpgradeableCluster getCluster()
+    {
+        return cluster;
     }
 }

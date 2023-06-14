@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.testing;
+package org.apache.cassandra.sidecar.testing;
 
-import java.io.Closeable;
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.shared.JMXUtil;
+import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -40,34 +42,67 @@ import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Passed to integration tests.
- * See {@link CassandraIntegrationTest} for the required annotation
- * See {@link CassandraTestTemplate} for the Test Template
  */
-public class CassandraTestContext implements Closeable
+public class CassandraSidecarTestContext extends CassandraTestContext
 {
     public final SimpleCassandraVersion version;
     public final UpgradeableCluster cluster;
     public final InstancesConfig instancesConfig;
     private List<CQLSessionProvider> sessionProviders;
     private List<JmxClient> jmxClients;
+    private static final SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
 
-    CassandraTestContext(SimpleCassandraVersion version,
-                         UpgradeableCluster cluster,
-                         CassandraVersionProvider versionProvider)
+    private CassandraSidecarTestContext(SimpleCassandraVersion version,
+                                        UpgradeableCluster cluster,
+                                        CassandraVersionProvider versionProvider,
+                                        DnsResolver dnsResolver) throws IOException
     {
+        super(org.apache.cassandra.testing.SimpleCassandraVersion.create(version.major,
+                                                                         version.minor,
+                                                                         version.patch), cluster);
         this.version = version;
         this.cluster = cluster;
         this.sessionProviders = new ArrayList<>();
         this.jmxClients = new ArrayList<>();
-        this.instancesConfig = buildInstancesConfig(versionProvider);
+        this.instancesConfig = buildInstancesConfig(versionProvider, dnsResolver);
     }
 
-    private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider)
+    public static CassandraSidecarTestContext from(CassandraTestContext cassandraTestContext, DnsResolver dnsResolver)
+    {
+        org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
+        SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major,
+                                                                             rootVersion.minor,
+                                                                             rootVersion.patch);
+        CassandraVersionProvider versionProvider = cassandraVersionProvider(dnsResolver);
+        try
+        {
+            return new CassandraSidecarTestContext(versionParsed,
+                                                   cassandraTestContext.getCluster(),
+                                                   versionProvider,
+                                                   dnsResolver);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
+    {
+        return new CassandraVersionProvider.Builder()
+               .add(new CassandraFactory(dnsResolver, svp.sidecarVersion())).build();
+    }
+
+    private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider,
+                                                 DnsResolver dnsResolver) throws IOException
     {
         List<InstanceMetadata> metadata = new ArrayList<>();
         for (int i = 0; i < cluster.size(); i++)
@@ -87,8 +122,10 @@ public class CassandraTestContext implements Closeable
             // Use the parent of the first data directory as the staging directory
             Path dataDirParentPath = Paths.get(dataDirectories[0]).getParent();
             assertThat(dataDirParentPath).isNotNull()
-                                         .exists();
-            String uploadsStagingDirectory = dataDirParentPath.resolve("staging").toFile().getAbsolutePath();
+                      .exists();
+            Path stagingPath = dataDirParentPath.resolve("staging");
+            String uploadsStagingDirectory = stagingPath.toFile().getAbsolutePath();
+            Files.createDirectories(stagingPath);
             metadata.add(new InstanceMetadataImpl(i + 1,
                                                   config.broadcastAddress().getAddress().getHostAddress(),
                                                   nativeTransportPort,
@@ -99,7 +136,7 @@ public class CassandraTestContext implements Closeable
                                                   versionProvider,
                                                   "1.0-TEST"));
         }
-        return new InstancesConfigImpl(metadata);
+        return new InstancesConfigImpl(metadata, dnsResolver);
     }
 
     private static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
@@ -138,9 +175,11 @@ public class CassandraTestContext implements Closeable
                ", cluster=" + cluster +
                '}';
     }
+
     @Override
     public void close()
     {
+        sessionProviders.forEach(CQLSessionProvider::close);
         instancesConfig.instances().forEach(instance -> instance.delegate().close());
     }
 

@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.cluster;
 
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 
 /**
  * Local implementation of InstancesConfig.
@@ -35,13 +37,14 @@ public class InstancesConfigImpl implements InstancesConfig
     private final Map<Integer, InstanceMetadata> idToInstanceMetadata;
     private final Map<String, InstanceMetadata> hostToInstanceMetadata;
     private final List<InstanceMetadata> instanceMetadataList;
+    private final DnsResolver dnsResolver;
 
-    public InstancesConfigImpl(InstanceMetadata instanceMetadata)
+    public InstancesConfigImpl(InstanceMetadata instanceMetadata, DnsResolver dnsResolver)
     {
-        this(Collections.singletonList(instanceMetadata));
+        this(Collections.singletonList(instanceMetadata), dnsResolver);
     }
 
-    public InstancesConfigImpl(List<InstanceMetadata> instanceMetadataList)
+    public InstancesConfigImpl(List<InstanceMetadata> instanceMetadataList, DnsResolver dnsResolver)
     {
         this.idToInstanceMetadata = instanceMetadataList.stream()
                                                         .collect(Collectors.toMap(InstanceMetadata::id,
@@ -50,6 +53,7 @@ public class InstancesConfigImpl implements InstancesConfig
                                                           .collect(Collectors.toMap(InstanceMetadata::host,
                                                                                     Function.identity()));
         this.instanceMetadataList = instanceMetadataList;
+        this.dnsResolver = dnsResolver;
     }
 
     @Override
@@ -75,7 +79,23 @@ public class InstancesConfigImpl implements InstancesConfig
         InstanceMetadata instanceMetadata = hostToInstanceMetadata.get(host);
         if (instanceMetadata == null)
         {
-            throw new NoSuchElementException("Instance with host address " + host + " not found");
+            try
+            {
+                instanceMetadata = hostToInstanceMetadata.get(dnsResolver.resolve(host));
+            }
+            catch (UnknownHostException e)
+            {
+                NoSuchElementException error = new NoSuchElementException("Instance with host address "
+                                                      + host +
+                                                      " not found, and an error occurred when " +
+                                                      "attempting to resolve its IP address.");
+                error.initCause(e);
+                throw error;
+            }
+            if (instanceMetadata == null)
+            {
+                throw new NoSuchElementException("Instance with host address " + host + " not found");
+            }
         }
         return instanceMetadata;
     }

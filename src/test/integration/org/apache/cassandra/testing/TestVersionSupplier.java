@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.testing;
+package org.apache.cassandra.testing;
 
 import java.util.Arrays;
 import java.util.stream.Stream;

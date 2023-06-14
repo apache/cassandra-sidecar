@@ -18,8 +18,11 @@
  */
 
 
-import java.nio.file.Files
+import com.github.spotbugs.SpotBugsTask
+import org.nosphere.apache.rat.RatTask
+
 import java.nio.file.Paths
+import java.nio.file.Files
 
 buildscript {
     dependencies {
@@ -53,6 +56,8 @@ plugins {
 ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-5.0.jar" // trunk is currently 5.0.jar - update when trunk moves
 println("Using DTest jar: ${ext.dtestJar}")
 
+// Force checkstyle, rat, and spotBugs to run before test tasks for faster feedback
+def codeCheckTasks = task("codeCheckTasks")
 
 allprojects {
     apply plugin: 'jacoco'
@@ -72,9 +77,20 @@ allprojects {
         excludeFilter = file("${project.rootDir}/spotbugs-exclude.xml")
     }
 
-    tasks.withType(com.github.spotbugs.SpotBugsTask) {
+    tasks.withType(SpotBugsTask) {
         reports.xml.enabled = false
         reports.html.enabled = true
+    }
+
+    codeCheckTasks.dependsOn(tasks.withType(Checkstyle))
+    codeCheckTasks.dependsOn(tasks.withType(RatTask))
+    codeCheckTasks.dependsOn(tasks.withType(SpotBugsTask))
+
+    tasks.withType(Test) {
+        shouldRunAfter(codeCheckTasks)
+        shouldRunAfter(tasks.withType(Checkstyle))
+        shouldRunAfter(tasks.withType(RatTask))
+        shouldRunAfter(tasks.withType(SpotBugsTask))
     }
 
 }
@@ -196,9 +212,9 @@ dependencies {
     testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}") {
         exclude group: 'junit', module: 'junit'
     }
-
     integrationTestImplementation(files("dtest-jars/${dtestJar}"))
     integrationTestImplementation("org.apache.cassandra:dtest-api:0.0.15")
+    // Needed by the Cassandra dtest framework
     integrationTestImplementation("org.junit.vintage:junit-vintage-engine:${junitVersion}")
 }
 
@@ -206,7 +222,8 @@ jar {
     doFirst {
         // Store current Cassandra Sidecar build version in an embedded resource file;
         // the file is either created or overwritten, and ignored by Git source control
-        new File("$projectDir/src/main/resources/sidecar.version").text = version
+        Files.createDirectories(Paths.get("$projectDir/common/src/main/resources"))
+        new File("$projectDir/common/src/main/resources/sidecar.version").text = version
     }
 }
 
@@ -377,7 +394,6 @@ tasks.register('buildIgnoreRatList', Exec) {
 }
 
 rat {
-
     doFirst {
         def excludeFilePath = Paths.get("${buildDir}/.rat-excludes.txt")
         def excludeLines = Files.readAllLines(excludeFilePath)
@@ -412,7 +428,7 @@ integrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia
-check.dependsOn checkstyleMain, checkstyleTest, integrationTest, jacocoTestReport
+check.dependsOn codeCheckTasks, integrationTest, jacocoTestReport
 build.dependsOn copyDist, copyJolokia, copyDocs
 run.dependsOn build
 

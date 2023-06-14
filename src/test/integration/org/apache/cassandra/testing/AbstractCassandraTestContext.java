@@ -16,22 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.testing;
+package org.apache.cassandra.testing;
+
+import org.apache.cassandra.distributed.UpgradeableCluster;
 
 /**
- * Works with {@link TestVersionSupplier}
+ * The base class for all CassandraTestContext implementations
  */
-public class TestVersion
+public abstract class AbstractCassandraTestContext implements AutoCloseable
 {
-    private final String version;
+    public final SimpleCassandraVersion version;
+    protected UpgradeableCluster cluster;
 
-    public TestVersion(String version)
+    public AbstractCassandraTestContext(SimpleCassandraVersion version, UpgradeableCluster cluster)
+    {
+        this.version = version;
+        this.cluster = cluster;
+    }
+
+    public AbstractCassandraTestContext(SimpleCassandraVersion version)
     {
         this.version = version;
     }
 
-    public String version()
+    public void close() throws Exception
     {
-        return version;
+        if (cluster != null)
+        {
+            cluster.close();
+        }
     }
 }

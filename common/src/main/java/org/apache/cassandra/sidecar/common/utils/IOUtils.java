@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.utils;
+package org.apache.cassandra.sidecar.common.utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

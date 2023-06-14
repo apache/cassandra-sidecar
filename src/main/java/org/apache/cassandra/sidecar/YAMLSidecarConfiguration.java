@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.JmxClient;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.common.utils.YAMLValidationConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -155,12 +156,14 @@ public class YAMLSidecarConfiguration extends Configuration
      * @param confPath        the path to the Sidecar YAML configuration file
      * @param versionProvider a Cassandra version provider
      * @param sidecarVersion  the version of the Sidecar from the current binary
+     * @param dnsResolver     the DNS resolver to use
      * @return the {@link YAMLConfiguration} parsed from the YAML file
      * @throws IOException when reading the configuration from file fails
      */
     public static Configuration of(String confPath,
                                    CassandraVersionProvider versionProvider,
-                                   String sidecarVersion) throws IOException
+                                   String sidecarVersion,
+                                   DnsResolver dnsResolver) throws IOException
     {
         YAMLConfiguration yamlConf = yamlConfiguration(confPath);
         int healthCheckFrequencyMillis = yamlConf.getInt(HEALTH_CHECK_INTERVAL, 1000);
@@ -168,7 +171,7 @@ public class YAMLSidecarConfiguration extends Configuration
         InstancesConfig instancesConfig = instancesConfig(yamlConf,
                                                           versionProvider,
                                                           healthCheckFrequencyMillis,
-                                                          sidecarVersion);
+                                                          sidecarVersion, dnsResolver);
         CacheConfiguration ssTableImportCacheConfiguration = cacheConfig(yamlConf,
                                                                          SSTABLE_IMPORT_CACHE_CONFIGURATION,
                                                                          TimeUnit.HOURS.toMillis(2),
@@ -241,12 +244,14 @@ public class YAMLSidecarConfiguration extends Configuration
      * @param versionProvider            a Cassandra version provider
      * @param healthCheckFrequencyMillis the health check frequency configuration in milliseconds
      * @param sidecarVersion             the version of the Sidecar from the current binary
+     * @param dnsResolver                the DNS resolver to use when looking up host IP addresses by name
      * @return the parsed {@link InstancesConfig} from the {@code yamlConf} object
      */
     private static InstancesConfig instancesConfig(YAMLConfiguration yamlConf,
                                                    CassandraVersionProvider versionProvider,
                                                    int healthCheckFrequencyMillis,
-                                                   String sidecarVersion)
+                                                   String sidecarVersion,
+                                                   DnsResolver dnsResolver)
     {
         /* Since we are supporting handling multiple instances in Sidecar optionally, we prefer reading single instance
          * data over reading multiple instances section
@@ -258,7 +263,7 @@ public class YAMLSidecarConfiguration extends Configuration
                                                                       versionProvider,
                                                                       healthCheckFrequencyMillis,
                                                                       sidecarVersion);
-            return new InstancesConfigImpl(instanceMetadata);
+            return new InstancesConfigImpl(instanceMetadata, dnsResolver);
         }
 
         List<HierarchicalConfiguration<ImmutableNode>> instances = yamlConf.configurationsAt(CASSANDRA_INSTANCES);
@@ -271,7 +276,7 @@ public class YAMLSidecarConfiguration extends Configuration
                                                                       sidecarVersion);
             instanceMetas.add(instanceMetadata);
         }
-        return new InstancesConfigImpl(instanceMetas);
+        return new InstancesConfigImpl(instanceMetas, dnsResolver);
     }
 
     private static CacheConfiguration cacheConfig(YAMLConfiguration yamlConf, String prefix,

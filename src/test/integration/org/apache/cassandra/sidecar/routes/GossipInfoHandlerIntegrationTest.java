@@ -25,8 +25,8 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
-import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
-import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
+import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -52,7 +52,7 @@ class GossipInfoHandlerIntegrationTest extends IntegrationTestBase
                       assertThat(gossipInfo.generation()).isNotNull();
                       assertThat(gossipInfo.heartbeat()).isNotNull();
                       assertThat(gossipInfo.hostId()).isNotNull();
-                      String releaseVersion = cassandraTestContext.cluster.getFirstRunningInstance()
+                      String releaseVersion = cassandraTestContext.getCluster().getFirstRunningInstance()
                                                                           .getReleaseVersionString();
                       assertThat(gossipInfo.releaseVersion()).startsWith(releaseVersion);
                       context.completeNow();

@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
@@ -86,9 +87,9 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public InstancesConfig instancesConfig()
+    public InstancesConfig instancesConfig(DnsResolver dnsResolver)
     {
-        return new InstancesConfigImpl(instancesMetas());
+        return new InstancesConfigImpl(instancesMetas(), dnsResolver);
     }
 
     public List<InstanceMetadata> instancesMetas()

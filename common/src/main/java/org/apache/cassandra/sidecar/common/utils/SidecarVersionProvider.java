@@ -16,30 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar;
-
-import org.junit.jupiter.api.Test;
-
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.util.Modules;
-import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+package org.apache.cassandra.sidecar.common.utils;
 
 /**
- * Unit tests for the {@link MainModule} class
+ * Retrieves, caches, and provides build version of this Sidecar binary
  */
-public class MainModuleTest
+public class SidecarVersionProvider
 {
-    @Test
-    public void testSidecarVersion()
+    private final String sidecarVersion;
+
+    public SidecarVersionProvider(String resource)
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
-        SidecarVersionProvider sidecarVersionProvider = injector.getInstance(SidecarVersionProvider.class);
+        try
+        {
+            sidecarVersion = IOUtils.readFully(resource);
+        }
+        catch (Exception exception)
+        {
+            throw new IllegalStateException("Failed to retrieve Sidecar version from resource " + resource, exception);
+        }
+    }
 
-        String sidecarVersion = sidecarVersionProvider.sidecarVersion();
-
-        assertEquals("version-string-to-be-read-by-MainModuleTest", sidecarVersion);
+    public String sidecarVersion()
+    {
+        return sidecarVersion;
     }
 }

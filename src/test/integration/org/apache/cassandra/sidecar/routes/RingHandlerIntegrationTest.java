@@ -34,8 +34,8 @@ import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
 import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
-import org.apache.cassandra.sidecar.common.testing.CassandraIntegrationTest;
-import org.apache.cassandra.sidecar.common.testing.CassandraTestContext;
+import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -47,7 +47,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
 {
 
     @CassandraIntegrationTest
-    void retrieveRingWithoutKeyspace(VertxTestContext context, CassandraTestContext cassandraTestContext)
+    void retrieveRingWithoutKeyspace(VertxTestContext context)
     throws Exception
     {
         String testRoute = "/api/v1/cassandra/ring";
@@ -55,7 +55,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
             client.get(config.getPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
-                      assertRingResponseOK(response, cassandraTestContext);
+                      assertRingResponseOK(response, sidecarTestContext);
                       context.completeNow();
                   }));
         });
@@ -76,12 +76,11 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest
-    void retrieveRingWithExistingKeyspace(VertxTestContext context,
-                                          CassandraTestContext cassandraTestContext) throws Exception
+    void retrieveRingWithExistingKeyspace(VertxTestContext context) throws Exception
     {
-        createTestKeyspace(cassandraTestContext);
+        createTestKeyspace(sidecarTestContext);
         retrieveRingWithKeyspace(context, TEST_KEYSPACE, response -> {
-            assertRingResponseOK(response, cassandraTestContext);
+            assertRingResponseOK(response, sidecarTestContext);
             context.completeNow();
         });
     }
@@ -98,7 +97,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
 
     void assertRingResponseOK(HttpResponse<Buffer> response, CassandraTestContext cassandraTestContext)
     {
-        IInstance instance = cassandraTestContext.cluster.getFirstRunningInstance();
+        IInstance instance = cassandraTestContext.getCluster().getFirstRunningInstance();
         IInstanceConfig config = instance.config();
         RingResponse ringResponse = response.bodyAsJson(RingResponse.class);
         assertThat(ringResponse).isNotNull()

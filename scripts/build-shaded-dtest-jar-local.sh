@@ -31,7 +31,7 @@ echo "${CASSANDRA_VERSION}"
 echo "${GIT_HASH}"
 echo "${DTEST_ARTIFACT_ID}"
 
-ant clean
+ant realclean
 ant dtest-jar -Dno-checkstyle=true
 
 # Install the version that will be shaded

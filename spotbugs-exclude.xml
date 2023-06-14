@@ -48,7 +48,7 @@
 
     <!-- Ignore GC call in CassandraTestTemplate as we want to GC after cluster shutdown -->
     <Match>
-        <Class name="org.apache.cassandra.sidecar.common.testing.CassandraTestTemplate" />
+        <Class name="org.apache.cassandra.sidecar.testing.CassandraTestTemplate" />
         <Bug pattern="DM_GC" />
     </Match>
 
