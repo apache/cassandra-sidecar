@@ -92,7 +92,7 @@ class SSTableImporterTest
         // get NullPointerExceptions because the mock is not wired up, and we need to prevent vertx from actually
         // doing a vertx.filesystem().deleteRecursive(). So we return a failed future with a fake path when checking
         // if the directory exists.
-        when(mockUploadPathBuilder.resolveStagingDirectory(anyString(), anyString()))
+        when(mockUploadPathBuilder.resolveUploadIdDirectory(anyString(), anyString()))
         .thenReturn(Future.failedFuture("fake-path"));
         when(mockUploadPathBuilder.isValidDirectory("fake-path")).thenReturn(Future.failedFuture("skip cleanup"));
         importer = new SSTableImporter(vertx, mockMetadataFetcher, mockConfiguration, executorPools,

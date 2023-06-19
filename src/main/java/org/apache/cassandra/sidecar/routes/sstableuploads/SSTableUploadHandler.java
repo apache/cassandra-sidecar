@@ -32,7 +32,6 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.Configuration;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.data.SSTableUploadResponse;
 import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
@@ -103,8 +102,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         // accept the upload.
         httpRequest.pause();
 
-        InstanceMetadata instanceMetadata = metadataFetcher.instance(host);
-
         long startTimeInNanos = System.nanoTime();
         if (!limiter.tryAcquire())
         {
@@ -116,7 +113,8 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         context.addEndHandler(v -> limiter.releasePermit());
 
         validateKeyspaceAndTable(host, request)
-        .compose(validRequest -> ensureSufficientSpaceAvailable(instanceMetadata))
+        .compose(validRequest -> uploadPathBuilder.resolveStagingDirectory(host))
+        .compose(this::ensureSufficientSpaceAvailable)
         .compose(v -> uploadPathBuilder.build(host, request))
         .compose(uploadDirectory -> uploader.uploadComponent(httpRequest, uploadDirectory, request.component(),
                                                              request.expectedChecksum()))
@@ -187,17 +185,17 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
      * Ensures there is sufficient space available as per configured in the
      * {@link Configuration#getMinSpacePercentRequiredForUpload()}.
      *
-     * @param instanceMetadata instance meta data
+     * @param uploadDirectory the directory where the SSTables are uploaded
      * @return a succeeded future if there is sufficient space available, or failed future otherwise
      */
-    private Future<Void> ensureSufficientSpaceAvailable(InstanceMetadata instanceMetadata)
+    private Future<String> ensureSufficientSpaceAvailable(String uploadDirectory)
     {
         float minimumPercentageRequired = configuration.getMinSpacePercentRequiredForUpload();
         if (minimumPercentageRequired == 0)
         {
-            return Future.succeededFuture();
+            return Future.succeededFuture(uploadDirectory);
         }
-        return fs.fsProps(instanceMetadata.stagingDir())
+        return fs.fsProps(uploadDirectory)
                  .compose(fsProps -> {
                      // calculate available disk space percentage
                      long totalSpace = fsProps.totalSpace();
@@ -213,12 +211,12 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                      if (availableDiskSpacePercentage < minimumPercentageRequired)
                      {
                          logger.warn("Insufficient space available for upload in stagingDir={}, available={}%, " +
-                                     "required={}%", instanceMetadata.stagingDir(),
+                                     "required={}%", uploadDirectory,
                                      availableDiskSpacePercentage, minimumPercentageRequired);
                          return Future.failedFuture(wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                                                       "Insufficient space available for upload"));
                      }
-                     return Future.succeededFuture();
+                     return Future.succeededFuture(uploadDirectory);
                  });
     }
 }

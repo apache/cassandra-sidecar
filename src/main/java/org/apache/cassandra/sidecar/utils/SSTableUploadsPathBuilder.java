@@ -74,9 +74,22 @@ public class SSTableUploadsPathBuilder extends BaseFileSystem
     public <T extends SSTableUploads> Future<String> build(String host, T request)
     {
         return validate(request)
-               .compose(validRequest -> resolveStagingDirectory(host, request.uploadId()))
+               .compose(validRequest -> resolveUploadIdDirectory(host, request.uploadId()))
                .compose(stagingDirectory ->
                         resolveUploadDirectory(stagingDirectory, request.keyspace(), request.tableName()));
+    }
+
+    /**
+     * Builds the path to the configured staging directory for the given {@code host}. Attempt to create the
+     * staging directory if it doesn't exist.
+     *
+     * @param host the name of the host
+     * @return a future to the created and validated staging directory
+     */
+    public Future<String> resolveStagingDirectory(String host)
+    {
+        InstanceMetadata instanceMeta = instancesConfig.instanceFromHost(host);
+        return ensureDirectoryExists(StringUtils.removeEnd(instanceMeta.stagingDir(), File.separator));
     }
 
     /**
@@ -86,13 +99,11 @@ public class SSTableUploadsPathBuilder extends BaseFileSystem
      * @param uploadId an identifier for the upload ID
      * @return the absolute path of the {@code uploadId} staging directory
      */
-    public Future<String> resolveStagingDirectory(String host, String uploadId)
+    public Future<String> resolveUploadIdDirectory(String host, String uploadId)
     {
         return validateUploadId(uploadId)
-               .compose(validUploadId -> {
-                   InstanceMetadata instanceMeta = instancesConfig.instanceFromHost(host);
-                   return isValidDirectory(StringUtils.removeEnd(instanceMeta.stagingDir(), File.separator));
-               })
+               .compose(validUploadId -> resolveStagingDirectory(host))
+               .compose(this::isValidDirectory)
                .compose(directory -> Future.succeededFuture(directory + File.separatorChar + uploadId));
     }
 

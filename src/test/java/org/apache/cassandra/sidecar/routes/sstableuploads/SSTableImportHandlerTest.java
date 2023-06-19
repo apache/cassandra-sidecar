@@ -103,12 +103,17 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     }
 
     @Test
-    void testNonExistentUploadDirectory(VertxTestContext context)
+    void testNonExistentUploadDirectory(VertxTestContext context) throws InterruptedException
     {
         UUID uploadId = UUID.randomUUID();
-        client.put(config.getPort(), "localhost", "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import")
-              .expect(ResponsePredicate.SC_NOT_FOUND)
-              .send(context.succeedingThenComplete());
+
+        TableOperations mockCFOperations = mock(TableOperations.class);
+        when(mockDelegate.tableOperations()).thenReturn(mockCFOperations);
+
+        String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
+        clientRequest(context, requestURI,
+                      response -> assertThat(response.statusCode())
+                                  .isEqualTo(HttpResponseStatus.NOT_FOUND.code()));
     }
 
     @Test

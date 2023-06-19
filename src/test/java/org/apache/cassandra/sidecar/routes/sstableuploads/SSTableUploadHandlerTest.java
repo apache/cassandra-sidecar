@@ -57,7 +57,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testUploadWithoutMd5_expectSuccessfulUpload(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", "",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.OK.code(), false);
     }
@@ -66,7 +65,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testUploadWithCorrectMd5_expectSuccessfulUpload(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-correct-md5.db", "jXd/OF09/siBXSD3SWAm3A==",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.OK.code(), false);
     }
@@ -75,7 +73,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testUploadWithIncorrectMd5_expectErrorCode(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-incorrect-md5.db", "incorrectMd5",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
                                    false);
@@ -85,7 +82,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testInvalidFileName_expectErrorCode(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "ks$tbl-me-4-big-Data.db", "",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
                                    false);
@@ -95,7 +91,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testUploadWithoutContentLength_expectSuccessfulUpload(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-content-length.db",
                                    "jXd/OF09/siBXSD3SWAm3A==", 0, HttpResponseStatus.OK.code(), false);
     }
@@ -106,7 +101,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         // if we send more than actual length, vertx goes hung, probably looking for more data than exists in the file,
         // we should see timeout error in this case
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-higher-content-length.db", "", 1000, -1, true);
     }
 
@@ -114,7 +108,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testUploadWithLesserContentLength_expectSuccessfulUpload(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-lesser-content-length.db",
                                    "", Files.size(Paths.get(FILE_TO_BE_UPLOADED)) - 2, HttpResponseStatus.OK.code(),
                                    false);
@@ -124,7 +117,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     public void testInvalidKeyspace(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "invalidKeyspace", "tbl", "with-lesser-content-length.db", "",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
                                    false);
@@ -134,7 +126,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     public void testInvalidTable(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "ks", "invalidTableName", "with-lesser-content-length.db", "",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
                                    false);
@@ -146,7 +137,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         when(mockConfiguration.getMinSpacePercentRequiredForUpload()).thenReturn(100F);
 
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", "",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
                                    HttpResponseStatus.INSUFFICIENT_STORAGE.code(), false);
@@ -158,7 +148,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         when(mockConfiguration.getConcurrentUploadsLimit()).thenReturn(0);
 
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", "",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
                                    HttpResponseStatus.TOO_MANY_REQUESTS.code(), false);
@@ -170,7 +159,6 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         when(mockConfiguration.getConcurrentUploadsLimit()).thenReturn(1);
 
         UUID uploadId = UUID.randomUUID();
-        ensureStagingDirectoryExists();
         CountDownLatch latch = new CountDownLatch(1);
         sendUploadRequestAndVerify(latch, context, uploadId, "invalidKeyspace", "tbl", "without-md5.db", "",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
@@ -250,10 +238,5 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             }
             client.close();
         });
-    }
-
-    private void ensureStagingDirectoryExists() throws IOException
-    {
-        Files.createDirectories(Paths.get(SnapshotUtils.makeStagingDir(temporaryFolder.getAbsolutePath())));
     }
 }

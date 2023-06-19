@@ -97,6 +97,17 @@ public class BaseFileSystem
     }
 
     /**
+     * Creates the directory if it doesn't exist, and then validates that {@code path} is a valid directory.
+     *
+     * @param path the path to the directory
+     * @return a future of the validated {@code path}, a failed future otherwise
+     */
+    public Future<String> ensureDirectoryExists(String path)
+    {
+        return fs.mkdirs(path).compose(v -> Future.succeededFuture(path));
+    }
+
+    /**
      * @param filename  the path
      * @param predicate a predicate that evaluates based on {@link FileProps}
      * @return a future of the {@code filename} if it exists and {@code predicate} evaluates to true,

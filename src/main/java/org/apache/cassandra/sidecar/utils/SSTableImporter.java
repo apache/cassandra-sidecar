@@ -252,7 +252,7 @@ public class SSTableImporter
      */
     private void cleanup(ImportOptions options)
     {
-        uploadPathBuilder.resolveStagingDirectory(options.host, options.uploadId)
+        uploadPathBuilder.resolveUploadIdDirectory(options.host, options.uploadId)
                          .compose(uploadPathBuilder::isValidDirectory)
                          .compose(stagingDirectory -> vertx.fileSystem()
                                                            .deleteRecursive(stagingDirectory, true))
