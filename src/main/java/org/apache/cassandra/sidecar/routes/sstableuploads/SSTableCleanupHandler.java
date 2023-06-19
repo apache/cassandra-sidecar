@@ -66,7 +66,7 @@ public class SSTableCleanupHandler extends AbstractHandler<String>
                                SocketAddress remoteAddress,
                                String uploadId)
     {
-        uploadPathBuilder.resolveStagingDirectory(host, uploadId)
+        uploadPathBuilder.resolveUploadIdDirectory(host, uploadId)
                          .compose(uploadPathBuilder::isValidDirectory)
                          .compose(stagingDirectory -> context.vertx()
                                                              .fileSystem()

@@ -109,7 +109,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
                              }
                              else if (importResult.failed())
                              {
-                                 context.fail(importResult.cause());
+                                 processFailure(importResult.cause(), context, host, remoteAddress, request);
                              }
                              else
                              {
@@ -121,29 +121,33 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
                                               request, remoteAddress, host);
                              }
                          })
-                         .onFailure(cause -> {
-                             if (cause instanceof NoSuchFileException)
-                             {
-                                 logger.error("Upload directory not found for request={}, remoteAddress={}, " +
-                                              "instance={}", request, remoteAddress, host, cause);
-                                 context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
-                             }
-                             else if (cause instanceof IllegalArgumentException)
-                             {
-                                 context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause.getMessage(),
-                                                                cause));
-                             }
-                             else if (cause instanceof HttpException)
-                             {
-                                 context.fail(cause);
-                             }
-                             else
-                             {
-                                 logger.error("Unexpected error during import SSTables for request={}, " +
-                                              "remoteAddress={}, instance={}", request, remoteAddress, host, cause);
-                                 context.fail(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
-                             }
-                         });
+                         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+    }
+
+    @Override
+    protected void processFailure(Throwable cause,
+                                  RoutingContext context,
+                                  String host,
+                                  SocketAddress remoteAddress,
+                                  SSTableImportRequest request)
+    {
+        if (cause instanceof NoSuchFileException)
+        {
+            logger.error("Upload directory not found for request={}, remoteAddress={}, " +
+                         "instance={}", request, remoteAddress, host, cause);
+            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
+        }
+        else if (cause instanceof IllegalArgumentException)
+        {
+            context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause.getMessage(),
+                                           cause));
+        }
+        else if (cause instanceof HttpException)
+        {
+            context.fail(cause);
+        }
+
+        super.processFailure(cause, context, host, remoteAddress, request);
     }
 
     @Override
