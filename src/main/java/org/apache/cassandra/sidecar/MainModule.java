@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
 import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,6 @@ import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
 import org.apache.cassandra.sidecar.routes.SnapshotsHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
-import org.apache.cassandra.sidecar.routes.SwaggerOpenApiResource;
 import org.apache.cassandra.sidecar.routes.TimeSkewHandler;
 import org.apache.cassandra.sidecar.routes.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableCleanupHandler;
@@ -67,9 +67,6 @@ import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.MD5ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
-import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
-import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
-import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
 
 /**
  * Provides main binding for more complex Guice dependencies
@@ -93,7 +90,7 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public HttpServer vertxServer(Vertx vertx, Configuration conf, Router router, VertxRequestHandler restHandler)
+    public HttpServer vertxServer(Vertx vertx, Configuration conf, Router router)
     {
         HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
         options.setIdleTimeoutUnit(TimeUnit.MILLISECONDS)
@@ -114,22 +111,8 @@ public class MainModule extends AbstractModule
             }
         }
 
-        router.route().pathRegex(".*").handler(rc -> restHandler.handle(rc.request()));
-
         return vertx.createHttpServer(options)
                     .requestHandler(router);
-    }
-
-    @Provides
-    @Singleton
-    private VertxRequestHandler configureServices(Vertx vertx)
-    {
-        VertxResteasyDeployment deployment = new VertxResteasyDeployment();
-        deployment.start();
-        VertxRegistry registry = deployment.getRegistry();
-        registry.addPerInstanceResource(SwaggerOpenApiResource.class);
-
-        return new VertxRequestHandler(vertx, deployment);
     }
 
     @Provides
@@ -160,12 +143,6 @@ public class MainModule extends AbstractModule
         router.route()
               .path(ApiEndpointsV1.API + "/*")
               .failureHandler(errorHandler);
-
-        // Static web assets for Swagger
-        StaticHandler swaggerStatic = StaticHandler.create("META-INF/resources/webjars/swagger-ui");
-        router.route()
-              .path("/static/swagger-ui/*")
-              .handler(swaggerStatic);
 
         // Docs index.html page
         StaticHandler docs = StaticHandler.create("docs");

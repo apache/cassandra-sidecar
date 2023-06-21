@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
@@ -41,7 +42,6 @@ import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.NodeSettings;
-import org.apache.http.HttpStatus;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.NODE_SETTINGS_ROUTE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -89,7 +89,7 @@ class NodeSettingsHandlerTest
         client.get(config.getPort(), "localhost", NODE_SETTINGS_ROUTE)
               .as(BodyCodec.buffer())
               .send(resp -> {
-                  assertThat(resp.result().statusCode()).isEqualTo(HttpStatus.SC_OK);
+                  assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                   NodeSettings status = resp.result().bodyAsJson(NodeSettings.class);
                   assertThat(status.partitioner()).isEqualTo("testPartitioner");
                   assertThat(status.releaseVersion()).isEqualTo("testVersion");
@@ -105,7 +105,7 @@ class NodeSettingsHandlerTest
         client.get(config.getPort(), "localhost", String.format(URI_WITH_INSTANCE_ID, "1"))
               .as(BodyCodec.buffer())
               .send(resp -> {
-                  assertThat(resp.result().statusCode()).isEqualTo(HttpStatus.SC_OK);
+                  assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                   NodeSettings status = resp.result().bodyAsJson(NodeSettings.class);
                   assertThat(status.partitioner()).isEqualTo("testPartitioner");
                   assertThat(status.releaseVersion()).isEqualTo("testVersion");
@@ -121,7 +121,7 @@ class NodeSettingsHandlerTest
         client.get(config.getPort(), "localhost", String.format(URI_WITH_INSTANCE_ID, "10"))
               .as(BodyCodec.buffer())
               .send(resp -> {
-                  assertThat(resp.result().statusCode()).isEqualTo(HttpStatus.SC_NOT_FOUND);
+                  assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code());
                   JsonObject error = resp.result().bodyAsJsonObject();
                   assertThat(error.getString("status")).isEqualTo("Not Found");
                   assertThat(error.getString("message")).isEqualTo("Instance id 10 not found");

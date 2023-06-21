@@ -20,12 +20,10 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,6 +53,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.utils.IOUtils;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -76,13 +75,11 @@ class SchemaHandlerTest
     File dataDir0;
     String testKeyspaceSchema;
 
-    @SuppressWarnings("DataFlowIssue")
     @BeforeEach
     void before() throws InterruptedException, IOException
     {
         ClassLoader cl = getClass().getClassLoader();
-        testKeyspaceSchema = IOUtils.toString(cl.getResourceAsStream("schema/test_keyspace_schema.cql"),
-                                              StandardCharsets.UTF_8);
+        testKeyspaceSchema = IOUtils.readFully(cl.getResourceAsStream("schema/test_keyspace_schema.cql"));
 
         Injector injector;
         injector = Guice.createInjector(Modules.override(new MainModule())
@@ -115,13 +112,12 @@ class SchemaHandlerTest
         String testRoute = "/api/v1/schema/keyspaces";
         client.get(config.getPort(), config.getHost(), testRoute)
               .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> context.verify(() ->
-              {
+              .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   JsonObject jsonObject = response.bodyAsJsonObject();
                   assertThat(jsonObject.getString("keyspace")).isNull();
                   assertThat(jsonObject.getString("schema"))
-                      .isEqualTo("FULL SCHEMA");
+                  .isEqualTo("FULL SCHEMA");
                   context.completeNow();
               })));
     }
@@ -133,13 +129,12 @@ class SchemaHandlerTest
         String testRoute = "/api/v1/schema/keyspaces/testKeyspace";
         client.get(config.getPort(), config.getHost(), testRoute)
               .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> context.verify(() ->
-              {
+              .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   JsonObject jsonObject = response.bodyAsJsonObject();
                   assertThat(jsonObject.getString("keyspace")).isEqualTo("testKeyspace");
                   assertThat(jsonObject.getString("schema"))
-                      .isEqualTo(testKeyspaceSchema);
+                  .isEqualTo(testKeyspaceSchema);
                   context.completeNow();
               })));
     }
@@ -151,8 +146,7 @@ class SchemaHandlerTest
         String testRoute = "/api/v1/schema/keyspaces/nonExistent";
         client.get(config.getPort(), config.getHost(), testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
-              .send(context.succeeding(response -> context.verify(() ->
-              {
+              .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
                   context.completeNow();
               })));

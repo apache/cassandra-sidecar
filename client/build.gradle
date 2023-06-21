@@ -53,6 +53,15 @@ test {
 
 configurations {
     all*.exclude(group: 'ch.qos.logback')
+
+    runtime.exclude(group: "com.google.code.findbugs", module: "jsr305")
+    runtime.exclude(group: "org.codehaus.mojo", module: "animal-sniffer-annotations")
+    runtime.exclude(group: "com.google.guava", module: "listenablefuture")
+    runtime.exclude(group: "com.google.guava", module: "failureaccess")
+    runtime.exclude(group: "org.checkerframework", module: "checker-qual")
+    runtime.exclude(group: "com.google.errorprone", module: "error_prone_annotations")
+    runtime.exclude(group: 'com.github.jnr', module: 'jnr-ffi')
+    runtime.exclude(group: 'com.github.jnr', module: 'jnr-posix')
 }
 
 dependencies {

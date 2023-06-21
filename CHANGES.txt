@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Remove RESTEasy (CASSANDRASC-57)
  * Use in-jvm dtest framework for integration tests (CASSANDRASC-51)
  * Sidecar returns own version in node settings (CASSANDRASC-52)
  * Deprecate the sidecar cassandra health endpoint containing instance segment (CASSANDRASC-50)
