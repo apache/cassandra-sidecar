@@ -20,13 +20,13 @@ package org.apache.cassandra.sidecar.snapshots;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.commons.io.FileUtils;
 
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
@@ -65,18 +65,25 @@ public class SnapshotUtils
         for (final String fileName : mockSnapshotFiles())
         {
             File snapshotFile = new File(temporaryFolder, fileName);
-            FileUtils.writeStringToFile(snapshotFile, "hello world", Charset.defaultCharset());
+            Files.write(snapshotFile.toPath(), "hello world".getBytes(StandardCharsets.UTF_8));
         }
         for (final String fileName : mockNonSnapshotFiles())
         {
             File nonSnapshotFile = new File(temporaryFolder, fileName);
-            FileUtils.touch(nonSnapshotFile);
+            Files.write(nonSnapshotFile.toPath(), new byte[0]);
         }
         // adding secondary index files
         assertThat(new File(temporaryFolder, "d1/data/keyspace1/table1-1234/snapshots/snapshot1/.index/")
                    .mkdirs()).isTrue();
-        FileUtils.touch(new File(temporaryFolder,
-                                 "d1/data/keyspace1/table1-1234/snapshots/snapshot1/.index/secondary.db"));
+        Path path = temporaryFolder.toPath().resolve("d1")
+                                   .resolve("data")
+                                   .resolve("keyspace1")
+                                   .resolve("table1-1234")
+                                   .resolve("snapshots")
+                                   .resolve("snapshot1")
+                                   .resolve(".index")
+                                   .resolve("secondary.db");
+        Files.write(path, new byte[0]);
 
         assertThat(new File(temporaryFolder, "d1/data/keyspace1/table1-1234")
                    .setLastModified(System.currentTimeMillis() + 2_000_000)).isTrue();

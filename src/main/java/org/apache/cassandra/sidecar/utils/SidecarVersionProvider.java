@@ -18,10 +18,6 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-
 /**
  * Retrieves, caches, and provides build version of this Sidecar binary
  */
@@ -31,16 +27,9 @@ public class SidecarVersionProvider
 
     public SidecarVersionProvider(String resource)
     {
-        try (InputStream input = getClass().getResourceAsStream(resource);
-             ByteArrayOutputStream output = new ByteArrayOutputStream())
+        try
         {
-            byte[] buffer = new byte[32];
-            int length;
-            while ((length = input.read(buffer)) >= 0)
-            {
-                output.write(buffer, 0, length);
-            }
-            sidecarVersion = output.toString(StandardCharsets.UTF_8.name());
+            sidecarVersion = IOUtils.readFully(resource);
         }
         catch (Exception exception)
         {

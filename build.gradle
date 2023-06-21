@@ -17,8 +17,6 @@ plugins {
 
     // since we're using a specific version here, we delay applying the plugin till the all projects
     id "com.github.spotbugs" version "3.0.0" apply false
-    id 'org.hidetake.swagger.generator' version '2.16.0'
-    id "io.swagger.core.v3.swagger-gradle-plugin" version "2.1.2"
 
     // https://github.com/nebula-plugins/gradle-ospackage-plugin/wiki
     id "nebula.ospackage" version "8.3.0"
@@ -109,9 +107,19 @@ configurations {
     jolokia
 
     integrationTestImplementation.extendsFrom testImplementation
+
+    runtime.exclude(group: "com.google.code.findbugs", module: "jsr305")
+    runtime.exclude(group: "org.codehaus.mojo", module: "animal-sniffer-annotations")
+    runtime.exclude(group: "com.google.guava", module: "listenablefuture")
+    runtime.exclude(group: "org.checkerframework", module: "checker-qual")
+    runtime.exclude(group: "com.google.errorprone", module: "error_prone_annotations")
+    runtime.exclude(group: 'com.github.jnr', module: 'jnr-ffi')
+    runtime.exclude(group: 'com.github.jnr', module: 'jnr-posix')
 }
 
 dependencies {
+    compileOnly('org.jetbrains:annotations:23.0.0')
+
     implementation("io.vertx:vertx-web:${project.vertxVersion}") {
         exclude group: 'junit', module: 'junit'
     }
@@ -120,11 +128,6 @@ dependencies {
 
     implementation('com.datastax.cassandra:cassandra-driver-core:3.11.3')
     implementation('com.google.inject:guice:4.2.2')
-    implementation('io.swagger.core.v3:swagger-jaxrs2:2.1.0')
-    implementation("org.jboss.resteasy:resteasy-vertx:4.7.4.Final")
-    implementation('org.jboss.resteasy:resteasy-jackson2-provider:4.7.4.Final')
-    implementation(group: 'org.jboss.spec.javax.servlet', name: 'jboss-servlet-api_4.0_spec', version: '2.0.0.Final')
-    compileOnly('org.jetbrains:annotations:23.0.0')
     implementation("com.github.ben-manes.caffeine:caffeine:2.9.3")
 
     // Trying to be exactly compatible with Cassandra's deps
@@ -133,10 +136,9 @@ dependencies {
     implementation('ch.qos.logback:logback-classic:1.2.3')
 
     implementation(group: 'org.apache.commons', name: 'commons-configuration2', version: '2.7')
-    implementation('org.webjars:swagger-ui:3.10.0')
 
-    runtime group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
-    runtime group: 'org.yaml', name: 'snakeyaml', version: '1.26'
+    runtimeOnly group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
+    runtimeOnly group: 'org.yaml', name: 'snakeyaml', version: '1.26'
 
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 
@@ -338,22 +340,10 @@ applicationDistribution.from("LICENSE.txt") {
     into ""
 }
 
-// This task is defined by swagger-gradle-plugin
-// Resolves project openAPI specification and saves
-// the result in JSON during the build process.
-resolve {
-    outputFileName = 'api'
-    outputFormat = 'JSON'
-    prettyPrint = 'TRUE'
-    classpath = sourceSets.main.runtimeClasspath
-    resourcePackages = ['org.apache.cassandra.sidecar']
-    outputDir = file('build/generated/swagger')
-}
-
 integrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia
 check.dependsOn checkstyleMain, checkstyleTest, integrationTest, jacocoTestReport
-build.dependsOn copyDist, generateReDoc, generateSwaggerUI, copyJolokia, copyDocs
+build.dependsOn copyDist, copyJolokia, copyDocs
 run.dependsOn build
