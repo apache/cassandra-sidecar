@@ -28,6 +28,7 @@ dependencies {
     compileOnly('org.jetbrains:annotations:23.0.0')
     compileOnly('com.google.code.findbugs:jsr305:3.0.2') // required for the @NotThreadSafe annotation
     compileOnly(group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.11.3')
+    compileOnly(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
 
     testImplementation("com.google.guava:guava:${project.rootProject.guavaVersion}")
     testImplementation('org.mockito:mockito-inline:4.10.0')

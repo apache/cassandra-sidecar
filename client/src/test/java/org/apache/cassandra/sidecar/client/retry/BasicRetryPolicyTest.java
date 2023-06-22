@@ -36,7 +36,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.ResourceNotFoundException;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
@@ -50,6 +49,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_IMPLEMENTED;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus.CHECKSUM_MISMATCH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Fail.fail;
@@ -159,6 +159,14 @@ class BasicRetryPolicyTest
         testWithRetries(mockRequest, mockResponse, null, 5, 300, canRetryOnADifferentHost);
     }
 
+    @ParameterizedTest(name = "{index} => canRetryOnADifferentHost={0}")
+    @ValueSource(booleans = { true, false })
+    void testRetriesWithChecksumMismatchStatusCode(boolean canRetryOnADifferentHost)
+    {
+        when(mockResponse.statusCode()).thenReturn(CHECKSUM_MISMATCH.code());
+        testWithRetries(mockRequest, mockResponse, null, 5, 300, canRetryOnADifferentHost);
+    }
+
     @Test
     void testRetriesWithServiceUnavailableStatusCodeWithRetryAfterHeader()
     {
@@ -208,7 +216,8 @@ class BasicRetryPolicyTest
     private static Stream<Arguments> clientStatusCodeArguments()
     {
         return IntStream.range(400, 500)
-                        .filter(statusCode -> statusCode != HttpResponseStatus.NOT_FOUND.code())
+                        .filter(statusCode -> statusCode != NOT_FOUND.code()
+                                              && statusCode != CHECKSUM_MISMATCH.code())
                         .boxed()
                         .map(Arguments::of);
     }

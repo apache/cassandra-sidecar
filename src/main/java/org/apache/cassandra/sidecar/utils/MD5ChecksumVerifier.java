@@ -25,13 +25,13 @@ import java.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.ext.web.handler.HttpException;
+import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
 
 /**
  * Implementation of {@link ChecksumVerifier}. Here we use MD5 implementation of {@link java.security.MessageDigest}
@@ -61,7 +61,7 @@ public class MD5ChecksumVerifier implements ChecksumVerifier
                  .compose(this::calculateMD5)
                  .compose(computedChecksum -> {
                      if (!expectedChecksum.equals(computedChecksum))
-                         return Future.failedFuture(new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
+                         return Future.failedFuture(new HttpException(SidecarHttpResponseStatus.CHECKSUM_MISMATCH.code(),
                                                                       String.format("Checksum mismatch. "
                                                                                     + "computed_checksum=%s, "
                                                                                     + "expected_checksum=%s, "
