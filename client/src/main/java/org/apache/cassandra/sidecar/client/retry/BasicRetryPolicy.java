@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpStatusClass;
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.ResourceNotFoundException;
 import org.apache.cassandra.sidecar.client.request.Request;
+import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
 
 /**
  * A basic {@link RetryPolicy} supporting standard status codes
@@ -142,6 +143,21 @@ public class BasicRetryPolicy extends RetryPolicy
         if (response.statusCode() == HttpResponseStatus.ACCEPTED.code())
         {
             retryAction.retry(1, retryDelayMillis(1));
+            return;
+        }
+
+        if (response.statusCode() == SidecarHttpResponseStatus.CHECKSUM_MISMATCH.code())
+        {
+            // assume that the uploaded payload might have been corrupted, so allow for retries when an invalid
+            // checksum is encountered
+            if (canRetryOnADifferentHost)
+            {
+                retryImmediately(responseFuture, request, retryAction, attempts, throwable);
+            }
+            else
+            {
+                retry(responseFuture, request, retryAction, attempts, throwable);
+            }
             return;
         }
 

@@ -38,6 +38,7 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -74,7 +75,8 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-incorrect-md5.db", "incorrectMd5",
-                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
+                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
+                                   SidecarHttpResponseStatus.CHECKSUM_MISMATCH.code(),
                                    false);
     }
 
