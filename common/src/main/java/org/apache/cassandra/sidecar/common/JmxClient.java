@@ -188,6 +188,16 @@ public class JmxClient implements NotificationListener, Closeable
         return connected;
     }
 
+    public String host()
+    {
+        return jmxServiceURL.getHost();
+    }
+
+    public int port()
+    {
+        return jmxServiceURL.getPort();
+    }
+
     private static JMXServiceURL buildJmxServiceURL(String host, int port)
     {
         if (host == null)
