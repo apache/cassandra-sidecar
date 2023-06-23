@@ -44,7 +44,8 @@ import org.jetbrains.annotations.VisibleForTesting;
  */
 public class JmxClient implements NotificationListener, Closeable
 {
-    public static final String JMX_SERVICE_URL_FMT = "service:jmx:rmi://%s/jndi/rmi://%s:%d/jmxrmi";
+    public static final String JMX_PROTOCOL = "rmi";
+    public static final String JMX_URL_PATH_FORMAT = "/jndi/rmi://%s:%d/jmxrmi";
     public static final String REGISTRY_CONTEXT_SOCKET_FACTORY = "com.sun.jndi.rmi.factory.socket";
     private final JMXServiceURL jmxServiceURL;
     private MBeanServerConnection mBeanServerConnection;
@@ -188,19 +189,24 @@ public class JmxClient implements NotificationListener, Closeable
         return connected;
     }
 
+    public String host()
+    {
+        return jmxServiceURL.getHost();
+    }
+
+    public int port()
+    {
+        return jmxServiceURL.getPort();
+    }
+
     private static JMXServiceURL buildJmxServiceURL(String host, int port)
     {
         if (host == null)
             return null;
 
-        if (host.contains(":"))
-        {
-            host = "[" + host + "]";
-            // Use square brackets to surround IPv6 addresses to fix CASSANDRA-7669 and CASSANDRA-17581
-        }
         try
         {
-            return new JMXServiceURL(String.format(JMX_SERVICE_URL_FMT, host, host, port));
+            return new JMXServiceURL(JMX_PROTOCOL, host, port, jmxUrlPath(host, port));
         }
         catch (MalformedURLException e)
         {
@@ -219,5 +225,22 @@ public class JmxClient implements NotificationListener, Closeable
             jmxConnector = null;
             connector.close();
         }
+    }
+
+    private static String jmxUrlPath(String host, int port)
+    {
+        return String.format(JMX_URL_PATH_FORMAT, maybeAddSquareBrackets(host), port);
+    }
+
+    private static String maybeAddSquareBrackets(String host)
+    {
+        if (host == null // host is null
+            || host.isEmpty() // or host is empty
+            || host.charAt(0) == '[' // host already starts with square brackets
+            || !host.contains(":")) // or host doesn't contain ":" (not an IPv6 address)
+            return host;
+
+        // Use square brackets to surround IPv6 addresses to fix CASSANDRA-7669 and CASSANDRA-17581
+        return "[" + host + "]";
     }
 }

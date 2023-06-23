@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Expose JMX host and port from JMXClient (CASSANDRASC-59)
  * Support retries in Sidecar Client on Invalid Checksum (CASSANDRASC-58)
  * Ignore unknown properties during Sidecar client deserialization (CASSANDRASC-53)
  * Create staging directory if it doesn't exists (CASSANDRASC-56)

@@ -39,19 +39,24 @@ public class JmxClientTest
     @CassandraIntegrationTest
     void testJmxConnectivity(CassandraTestContext context) throws IOException
     {
-        try (JmxClient jmxClient = getJmxClient(context))
+        try (JmxClient jmxClient = createJmxClient(context))
         {
             String opMode = jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
                                      .getOperationMode();
             assertThat(opMode).isNotNull();
             assertThat(opMode).isIn("LEAVING", "JOINING", "NORMAL", "DECOMMISSIONED", "CLIENT");
+
+            IUpgradeableInstance instance = context.cluster.getFirstRunningInstance();
+            IInstanceConfig config = instance.config();
+            assertThat(jmxClient.host()).isEqualTo(config.broadcastAddress().getAddress().getHostAddress());
+            assertThat(jmxClient.port()).isEqualTo(config.jmxPort());
         }
     }
 
     @CassandraIntegrationTest
     void testGossipInfo(CassandraTestContext context) throws IOException
     {
-        try (JmxClient jmxClient = getJmxClient(context))
+        try (JmxClient jmxClient = createJmxClient(context))
         {
             FailureDetector proxy = jmxClient.proxy(FailureDetector.class,
                                                     "org.apache.cassandra.net:type=FailureDetector");
@@ -66,7 +71,7 @@ public class JmxClientTest
     @CassandraIntegrationTest
     void testCorrectVersion(CassandraTestContext context) throws IOException
     {
-        try (JmxClient jmxClient = getJmxClient(context))
+        try (JmxClient jmxClient = createJmxClient(context))
         {
             jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
                      .refreshSizeEstimates();
@@ -94,11 +99,10 @@ public class JmxClientTest
     }
 
 
-    private static JmxClient getJmxClient(CassandraTestContext context)
+    private static JmxClient createJmxClient(CassandraTestContext context)
     {
         IUpgradeableInstance instance = context.cluster.getFirstRunningInstance();
         IInstanceConfig config = instance.config();
-        JmxClient client = new JmxClient(config.broadcastAddress().getAddress().getHostAddress(), config.jmxPort());
-        return client;
+        return new JmxClient(config.broadcastAddress().getAddress().getHostAddress(), config.jmxPort());
     }
 }
