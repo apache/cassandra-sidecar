@@ -35,6 +35,7 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.24.2")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${project.junitVersion}")
     testImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")
+    testImplementation(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}")
 }
 
