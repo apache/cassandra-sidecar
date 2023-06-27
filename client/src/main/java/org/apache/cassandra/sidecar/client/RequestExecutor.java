@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.client;
 
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
@@ -415,9 +414,9 @@ public class RequestExecutor implements AutoCloseable
                 future.complete((T) response.contentAsString());
             }
         }
-        catch (IOException e)
+        catch (Throwable t)
         {
-            future.completeExceptionally(e);
+            future.completeExceptionally(t);
         }
     }
 
