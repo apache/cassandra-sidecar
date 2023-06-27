@@ -4,3 +4,11 @@ Copyright 2023- The Apache Software Foundation
 This product includes software developed by The Apache Software
 Foundation (http://www.apache.org/).
 
+
+Eclipse Public License - v 1.0,GNU Lesser General Public License
+
+Logback Classic Module (1.2.3)
+logback-classic module
+
+Logback Core Module (1.2.3)
+logback-core module
