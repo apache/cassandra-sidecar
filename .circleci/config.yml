@@ -1,3 +1,21 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 # Java Gradle CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-java/ for more details
@@ -49,7 +67,7 @@ jobs:
 
      - run: BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
      - run: echo 'export DTEST_JAR=$(cd dtest-jars && find . -name 'dtest-4.1*.jar' -maxdepth 1)' >> "$BASH_ENV"
-     - run: ./gradlew -i test integrationTest --stacktrace -Dcassandra.sidecar.versions_to_test="4.0,4.1"
+     - run: ./gradlew --info check --stacktrace -Dcassandra.sidecar.versions_to_test="4.0,4.1"
 
      - store_artifacts:
          path: build/reports
@@ -66,7 +84,7 @@ jobs:
       - checkout
 
       - run: CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
-      - run: ./gradlew -i test integrationTest --stacktrace
+      - run: ./gradlew --info check --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -110,7 +128,8 @@ jobs:
     steps:
       - checkout
       - run: ./gradlew docs:asciidoctor
-      - run: test -f docs/build/html5/user.html
+      - run: test -f docs/build/user.html
+      - run: test -f docs/build/development.html
 
 workflows:
   version: 2

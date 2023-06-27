@@ -1,3 +1,24 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+
+import java.nio.file.Files
 import java.nio.file.Paths
 
 buildscript {
@@ -23,7 +44,11 @@ plugins {
     id 'nebula.ospackage-application' version "8.3.0"
     id 'com.google.cloud.tools.jib' version '2.2.0'
     id 'org.asciidoctor.jvm.convert' version '3.1.0'
+
+    // Release Audit Tool (RAT) plugin for checking project licenses
+    id("org.nosphere.apache.rat") version "0.8.0"
 }
+
 
 ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-5.0.jar" // trunk is currently 5.0.jar - update when trunk moves
 println("Using DTest jar: ${ext.dtestJar}")
@@ -341,6 +366,48 @@ applicationDistribution.from("LICENSE.txt") {
     into ""
 }
 
+tasks.register('buildIgnoreRatList', Exec) {
+    description 'Builds a list of ignored files for the rat task from the unversioned git files'
+    commandLine 'bash', '-c', "git clean --force -d --dry-run -x | cut -c 14-"
+    doFirst {
+        standardOutput new FileOutputStream("${buildDir}/.rat-excludes.txt")
+    }
+    // allows task to fail when git/cut commands are unavailable or fail
+    ignoreExitValue = true
+}
+
+rat {
+
+    doFirst {
+        def excludeFilePath = Paths.get("${buildDir}/.rat-excludes.txt")
+        def excludeLines = Files.readAllLines(excludeFilePath)
+        excludeLines.each { line ->
+            if (line.endsWith("/")) {
+                excludes.add("**/" + line + "**")
+            } else {
+                excludes.add(line)
+            }
+        }
+    }
+
+    // List of Gradle exclude directives, defaults to ['**/.gradle/**']
+    excludes.add("**/build/**")
+    excludes.add("CHANGES.txt")
+
+    // Documentation files
+    excludes.add("**/docs/src/**")
+    // gradle files
+    excludes.add("gradle/**")
+    excludes.add("gradlew")
+    excludes.add("gradlew.bat")
+
+    // resource files for test
+    excludes.add("**/test**/resources/**")
+
+    // XML, TXT and HTML reports directory, defaults to 'build/reports/rat'
+    reportDir.set(file("build/reports/rat"))
+}
+
 integrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
 
 // copyDist gets called on every build
@@ -348,3 +415,7 @@ copyDist.dependsOn installDist, copyJolokia
 check.dependsOn checkstyleMain, checkstyleTest, integrationTest, jacocoTestReport
 build.dependsOn copyDist, copyJolokia, copyDocs
 run.dependsOn build
+
+tasks.named('rat').configure {
+    dependsOn(buildIgnoreRatList)
+}
