@@ -152,11 +152,11 @@ public class BasicRetryPolicy extends RetryPolicy
             // checksum is encountered
             if (canRetryOnADifferentHost)
             {
-                retryImmediately(responseFuture, request, retryAction, attempts, throwable);
+                retryImmediately(responseFuture, request, retryAction, attempts);
             }
             else
             {
-                retry(responseFuture, request, retryAction, attempts, throwable);
+                retry(responseFuture, request, retryAction, attempts, null);
             }
             return;
         }
