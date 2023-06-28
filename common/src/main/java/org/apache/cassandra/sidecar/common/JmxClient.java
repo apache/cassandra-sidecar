@@ -44,7 +44,7 @@ import org.jetbrains.annotations.VisibleForTesting;
  */
 public class JmxClient implements NotificationListener, Closeable
 {
-    public static final String JMX_SERVICE_URL_FMT = "service:jmx:rmi://%s/jndi/rmi://%s:%d/jmxrmi";
+    public static final String JMX_SERVICE_URL_FMT = "service:jmx:rmi://%s:%d/jndi/rmi://%s:%d/jmxrmi";
     public static final String REGISTRY_CONTEXT_SOCKET_FACTORY = "com.sun.jndi.rmi.factory.socket";
     private final JMXServiceURL jmxServiceURL;
     private MBeanServerConnection mBeanServerConnection;
@@ -203,14 +203,15 @@ public class JmxClient implements NotificationListener, Closeable
         if (host == null)
             return null;
 
-        if (host.contains(":"))
+        if (host.contains(":") && host.charAt(0) != '[')
         {
-            host = "[" + host + "]";
             // Use square brackets to surround IPv6 addresses to fix CASSANDRA-7669 and CASSANDRA-17581
+            host = "[" + host + "]";
         }
+
         try
         {
-            return new JMXServiceURL(String.format(JMX_SERVICE_URL_FMT, host, host, port));
+            return new JMXServiceURL(String.format(JMX_SERVICE_URL_FMT, host, port, host, port));
         }
         catch (MalformedURLException e)
         {
