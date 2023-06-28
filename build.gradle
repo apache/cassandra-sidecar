@@ -395,6 +395,9 @@ rat {
     // resources
     excludes.add("**/resources/sidecar.version")
 
+    // script files
+    excludes.add("**/scripts/**")
+
     // Rat excludes file, one directive per line
     excludeFile.set(layout.projectDirectory.file("build/.rat-excludes.txt"))
 
