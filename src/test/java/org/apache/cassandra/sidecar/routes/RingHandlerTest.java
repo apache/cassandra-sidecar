@@ -47,7 +47,6 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
@@ -56,6 +55,7 @@ import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
+import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
 import org.mockito.stubbing.Answer;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -72,7 +72,6 @@ class RingHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(RingHandlerTest.class);
     Vertx vertx;
-    Configuration config;
     HttpServer server;
 
     @BeforeEach
@@ -84,9 +83,8 @@ class RingHandlerTest
                                                         .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(HttpServer.class);
-        config = injector.getInstance(Configuration.class);
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), config.getHost(), context.succeedingThenComplete());
+        server.listen(0, "127.0.0.1", context.succeedingThenComplete());
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
 
@@ -109,7 +107,7 @@ class RingHandlerTest
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/ring/keyspaces/" + keyspace;
-        client.get(config.getPort(), config.getHost(), testRoute)
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_BAD_REQUEST)
               .send(context.succeedingThenComplete());
     }
@@ -135,7 +133,7 @@ class RingHandlerTest
         };
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/ring";
-        client.get(config.getPort(), config.getHost(), testRoute)
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -168,11 +166,32 @@ class RingHandlerTest
         };
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/ring";
-        client.get(config.getPort(), config.getHost(), testRoute)
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_INTERNAL_SERVER_ERROR)
               .send(context.succeeding(response -> {
                   JsonObject error = response.bodyAsJsonObject();
                   assertThat(error.getInteger("code")).isEqualTo(500);
+                  assertThat(error.getString("message").contains(errorMessage));
+
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testGetRingFailsOnUnavailableJmxConnectivity(VertxTestContext context)
+    {
+        String errorMessage = "Authentication failed! Invalid username or password";
+        RingHandlerTestModule.ringSupplier = () -> {
+            throw new JmxAuthenticationException(errorMessage);
+        };
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/cassandra/ring";
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
+              .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
+              .send(context.succeeding(response -> {
+                  JsonObject error = response.bodyAsJsonObject();
+                  assertThat(error.getInteger("code")).isEqualTo(503);
+                  assertThat(error.getString("status")).isEqualTo("Service Unavailable");
                   assertThat(error.getString("message").contains(errorMessage));
 
                   context.completeNow();

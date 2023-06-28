@@ -64,7 +64,7 @@ public class TestModule extends AbstractModule
     protected Configuration abstractConfig(InstancesConfig instancesConfig)
     {
         WorkerPoolConfiguration workPoolConf = new WorkerPoolConfiguration("test-pool", 10, 30000);
-        return new Configuration.Builder()
+        return new Configuration.Builder<>()
                .setInstancesConfig(instancesConfig)
                .setHost("127.0.0.1")
                .setPort(6475)

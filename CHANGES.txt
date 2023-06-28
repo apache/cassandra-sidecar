@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Support credential rotation in JmxClient (CASSANDRASC-63)
  * File descriptor is not being closed on MD5 checksum (CASSANDRASC-64)
  * Expose JMX host and port from JMXClient (CASSANDRASC-59)
  * Support retries in Sidecar Client on Invalid Checksum (CASSANDRASC-58)

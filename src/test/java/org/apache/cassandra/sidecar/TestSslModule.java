@@ -18,7 +18,8 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,46 +35,49 @@ public class TestSslModule extends TestModule
 {
     private static final Logger logger = LoggerFactory.getLogger(TestSslModule.class);
 
-
     @Override
     public Configuration abstractConfig(InstancesConfig instancesConfig)
     {
-        final String keyStorePath = TestSslModule.class.getClassLoader().getResource("certs/test.p12").getPath();
-        final String keyStorePassword = "password";
+        String keyStorePath = TestSslModule.class.getClassLoader()
+                                                 .getResource("certs/test.p12")
+                                                 .getPath();
+        String keyStorePassword = "password";
 
-        final String trustStorePath = TestSslModule.class.getClassLoader().getResource("certs/ca.p12").getPath();
-        final String trustStorePassword = "password";
+        String trustStorePath = TestSslModule.class.getClassLoader()
+                                                         .getResource("certs/ca.p12")
+                                                         .getPath();
+        String trustStorePassword = "password";
 
-        if (!new File(keyStorePath).exists())
+        if (!Files.exists(Paths.get(keyStorePath)))
         {
-            logger.error("JMX password file not found");
+            logger.error("JMX password file not found in path={}", keyStorePath);
         }
-        if (!new File(trustStorePath).exists())
+        if (!Files.exists(Paths.get(trustStorePath)))
         {
-            logger.error("Trust Store file not found");
+            logger.error("Trust Store file not found in path={}", trustStorePath);
         }
 
         WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfiguration("test-pool", 10,
                                                                              30000);
 
-        return new Configuration.Builder()
-                           .setInstancesConfig(instancesConfig)
-                           .setHost("127.0.0.1")
-                           .setPort(6475)
-                           .setHealthCheckFrequency(1000)
-                           .setKeyStorePath(keyStorePath)
-                           .setKeyStorePassword(keyStorePassword)
-                           .setTrustStorePath(trustStorePath)
-                           .setTrustStorePassword(trustStorePassword)
-                           .setSslEnabled(true)
-                           .setRateLimitStreamRequestsPerSecond(1)
-                           .setRequestIdleTimeoutMillis(300_000)
-                           .setRequestTimeoutMillis(300_000L)
-                           .setConcurrentUploadsLimit(80)
-                           .setMinSpacePercentRequiredForUploads(0)
-                           .setSSTableImportCacheConfiguration(new CacheConfiguration(60_000, 100))
-                           .setServerWorkerPoolConfiguration(workerPoolConf)
-                           .setServerInternalWorkerPoolConfiguration(workerPoolConf)
-                           .build();
+        return new Configuration.Builder<>()
+               .setInstancesConfig(instancesConfig)
+               .setHost("127.0.0.1")
+               .setPort(6475)
+               .setHealthCheckFrequency(1000)
+               .setKeyStorePath(keyStorePath)
+               .setKeyStorePassword(keyStorePassword)
+               .setTrustStorePath(trustStorePath)
+               .setTrustStorePassword(trustStorePassword)
+               .setSslEnabled(true)
+               .setRateLimitStreamRequestsPerSecond(1)
+               .setRequestIdleTimeoutMillis(300_000)
+               .setRequestTimeoutMillis(300_000L)
+               .setConcurrentUploadsLimit(80)
+               .setMinSpacePercentRequiredForUploads(0)
+               .setSSTableImportCacheConfiguration(new CacheConfiguration(60_000, 100))
+               .setServerWorkerPoolConfiguration(workerPoolConf)
+               .setServerInternalWorkerPoolConfiguration(workerPoolConf)
+               .build();
     }
 }
