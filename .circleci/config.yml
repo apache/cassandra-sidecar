@@ -128,7 +128,8 @@ jobs:
     steps:
       - checkout
       - run: ./gradlew docs:asciidoctor
-      - run: test -f docs/build/html5/user.html
+      - run: test -f docs/build/user.html
+      - run: test -f docs/build/development.html
 
 workflows:
   version: 2
