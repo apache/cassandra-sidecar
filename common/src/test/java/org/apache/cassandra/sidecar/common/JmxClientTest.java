@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -45,6 +47,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.commons.util.Preconditions;
+
+import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -138,23 +142,59 @@ public class JmxClientTest
     }
 
     @Test
-    public void testCallWithoutCredentialsFails()
+    public void testCallWithoutCredentialsFails() throws IOException
     {
-        assertThatExceptionOfType(SecurityException.class)
-        .isThrownBy(() ->
-                    {
-                        try (JmxClient client = new JmxClient(serviceURL))
-                        {
-                            client.proxy(Import.class, objectName)
-                                  .importNewSSTables(Sets.newHashSet("foo", "bar"),
-                                                     true,
-                                                     true,
-                                                     true,
-                                                     true,
-                                                     true,
-                                                     true);
-                        }
-                    });
+        try (JmxClient client = new JmxClient(serviceURL))
+        {
+            assertThatExceptionOfType(JmxAuthenticationException.class)
+            .isThrownBy(() ->
+                        client.proxy(Import.class, objectName)
+                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true))
+            .withMessageContaining("Authentication failed! Credentials required");
+        }
+    }
+
+    @Test
+    public void testRetryAfterAuthenticationFailureWithCorrectCredentials() throws IOException
+    {
+        AtomicInteger tryCount = new AtomicInteger(0);
+        List<String> result;
+        Supplier<String> passwordSupplier = () -> {
+            if (tryCount.getAndIncrement() == 0)
+            {
+                // authentication fails on the first attempt
+                return "bad password";
+            }
+            return "password";
+        };
+        try (JmxClient client = new JmxClient(serviceURL, () -> "controlRole", passwordSupplier, () -> false))
+        {
+            // First attempt fails
+            assertThatExceptionOfType(JmxAuthenticationException.class)
+            .isThrownBy(() ->
+                        client.proxy(Import.class, objectName)
+                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true))
+            .withMessageContaining("Authentication failed! Invalid username or password");
+
+            // second attempt succeeds after getting the correct password
+            result = client.proxy(Import.class, objectName)
+                           .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
+                                              true, true, true, true,
+                                              true);
+        }
+        assertThat(result.size()).isEqualTo(0);
     }
 
     @Test

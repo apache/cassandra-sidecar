@@ -25,6 +25,9 @@ import java.rmi.server.RMIClientSocketFactory;
 import java.rmi.server.RMISocketFactory;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import javax.management.JMX;
 import javax.management.MBeanServerConnection;
 import javax.management.MalformedObjectNameException;
@@ -37,6 +40,7 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import javax.rmi.ssl.SslRMIClientSocketFactory;
 
+import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -49,9 +53,11 @@ public class JmxClient implements NotificationListener, Closeable
     public static final String REGISTRY_CONTEXT_SOCKET_FACTORY = "com.sun.jndi.rmi.factory.socket";
     private final JMXServiceURL jmxServiceURL;
     private MBeanServerConnection mBeanServerConnection;
-    private final Map<String, Object> jmxEnv;
     private boolean connected = false;
     private JMXConnector jmxConnector;
+    private final Supplier<String> roleSupplier;
+    private final Supplier<String> passwordSupplier;
+    private final BooleanSupplier enableSslSupplier;
 
     /**
      * Creates a new client with the provided {@code host} and {@code port}.
@@ -75,32 +81,30 @@ public class JmxClient implements NotificationListener, Closeable
      */
     public JmxClient(String host, int port, String role, String password, boolean enableSSl)
     {
-        this(buildJmxServiceURL(host, port), role, password, enableSSl);
+        this(buildJmxServiceURL(host, port), () -> role, () -> password, () -> enableSSl);
     }
 
     @VisibleForTesting
     JmxClient(JMXServiceURL jmxServiceURL)
     {
-        this(jmxServiceURL, null, null, false);
+        this(jmxServiceURL, () -> null, () -> null, () -> false);
     }
 
     @VisibleForTesting
     JmxClient(JMXServiceURL jmxServiceURL, String role, String password)
     {
-        this(jmxServiceURL, role, password, false);
+        this(jmxServiceURL, () -> role, () -> password, () -> false);
     }
 
-    private JmxClient(JMXServiceURL jmxServiceURL, String role, String password, boolean enableSsl)
+    public JmxClient(JMXServiceURL jmxServiceURL,
+                     Supplier<String> roleSupplier,
+                     Supplier<String> passwordSupplier,
+                     BooleanSupplier enableSslSupplier)
     {
-        this.jmxServiceURL = jmxServiceURL;
-
-        jmxEnv = new HashMap<>();
-        if (role != null && password != null)
-        {
-            String[] credentials = new String[]{ role, password };
-            jmxEnv.put(JMXConnector.CREDENTIALS, credentials);
-        }
-        jmxEnv.put(REGISTRY_CONTEXT_SOCKET_FACTORY, rmiClientSocketFactory(enableSsl));
+        this.jmxServiceURL = Objects.requireNonNull(jmxServiceURL, "jmxServiceURL is required");
+        this.roleSupplier = Objects.requireNonNull(roleSupplier, "roleSupplier is required");
+        this.passwordSupplier = Objects.requireNonNull(passwordSupplier, "passwordSupplier is required");
+        this.enableSslSupplier = Objects.requireNonNull(enableSslSupplier, "enableSslSupplier is required");
     }
 
     /**
@@ -147,7 +151,7 @@ public class JmxClient implements NotificationListener, Closeable
     {
         try
         {
-            jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, jmxEnv);
+            jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, buildJmxEnv());
             jmxConnector.addConnectionNotificationListener(this, null, null);
             mBeanServerConnection = jmxConnector.getMBeanServerConnection();
             connected = true;
@@ -157,6 +161,14 @@ public class JmxClient implements NotificationListener, Closeable
             connected = false;
             throw new RuntimeException(String.format("Failed to connect to JMX endpoint %s", jmxServiceURL),
                                        iox);
+        }
+        catch (SecurityException securityException)
+        {
+            connected = false;
+            String errorMessage = securityException.getMessage() != null
+                                  ? securityException.getMessage()
+                                  : "JMX Authentication failed";
+            throw new JmxAuthenticationException(errorMessage, securityException);
         }
     }
 
@@ -214,6 +226,22 @@ public class JmxClient implements NotificationListener, Closeable
                                                 host, port);
             throw new RuntimeException(errorMessage, e);
         }
+    }
+
+    private Map<String, Object> buildJmxEnv()
+    {
+        String role = roleSupplier.get();
+        String password = passwordSupplier.get();
+        boolean enableSsl = enableSslSupplier.getAsBoolean();
+
+        Map<String, Object> jmxEnv = new HashMap<>();
+        if (role != null && password != null)
+        {
+            String[] credentials = new String[]{ role, password };
+            jmxEnv.put(JMXConnector.CREDENTIALS, credentials);
+        }
+        jmxEnv.put(REGISTRY_CONTEXT_SOCKET_FACTORY, rmiClientSocketFactory(enableSsl));
+        return jmxEnv;
     }
 
     @Override

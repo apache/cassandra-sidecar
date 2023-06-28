@@ -32,6 +32,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
 import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -165,9 +166,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
     protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress,
                                   T request)
     {
-        HttpException httpException = cause instanceof HttpException
-                                      ? (HttpException) cause
-                                      : wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, cause);
+        HttpException httpException = determineHttpException(cause);
 
         if (HttpStatusClass.CLIENT_ERROR.contains(httpException.getStatusCode()))
         {
@@ -181,6 +180,21 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
         }
 
         context.fail(httpException);
+    }
+
+    protected HttpException determineHttpException(Throwable cause)
+    {
+        if (cause instanceof HttpException)
+        {
+            return (HttpException) cause;
+        }
+
+        if (cause instanceof JmxAuthenticationException)
+        {
+            return wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE, cause);
+        }
+
+        return wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, cause);
     }
 
     /**
