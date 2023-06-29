@@ -378,13 +378,15 @@ tasks.register('buildIgnoreRatList', Exec) {
 
 rat {
 
-    def excludeFilePath = Paths.get("${buildDir}/.rat-excludes.txt")
-    def excludeLines = Files.readAllLines(excludeFilePath)
-    excludeLines.each { line ->
-        if (line.endsWith("/")) {
-            excludes.add("**/" + line + "**")
-        } else {
-            excludes.add(line)
+    doFirst {
+        def excludeFilePath = Paths.get("${buildDir}/.rat-excludes.txt")
+        def excludeLines = Files.readAllLines(excludeFilePath)
+        excludeLines.each { line ->
+            if (line.endsWith("/")) {
+                excludes.add("**/" + line + "**")
+            } else {
+                excludes.add(line)
+            }
         }
     }
 
