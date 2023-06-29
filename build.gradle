@@ -17,6 +17,8 @@
  * under the License.
  */
 
+
+import java.nio.file.Files
 import java.nio.file.Paths
 
 buildscript {
@@ -366,7 +368,7 @@ applicationDistribution.from("LICENSE.txt") {
 
 tasks.register('buildIgnoreRatList', Exec) {
     description 'Builds a list of ignored files for the rat task from the unversioned git files'
-    commandLine 'bash', '-c', 'git clean --force --dry-run -x | cut -c 14-'
+    commandLine 'bash', '-c', "git clean --force -d --dry-run -x | cut -c 14-"
     doFirst {
         standardOutput new FileOutputStream("${buildDir}/.rat-excludes.txt")
     }
@@ -375,8 +377,18 @@ tasks.register('buildIgnoreRatList', Exec) {
 }
 
 rat {
+
+    def excludeFilePath = Paths.get("${buildDir}/.rat-excludes.txt")
+    def excludeLines = Files.readAllLines(excludeFilePath)
+    excludeLines.each { line ->
+        if (line.endsWith("/")) {
+            excludes.add("**/" + line + "**")
+        } else {
+            excludes.add(line)
+        }
+    }
+
     // List of Gradle exclude directives, defaults to ['**/.gradle/**']
-    excludes.add("**/build/**")
     excludes.add("CHANGES.txt")
 
     // Documentation files
@@ -386,20 +398,8 @@ rat {
     excludes.add("gradlew")
     excludes.add("gradlew.bat")
 
-    // idea generated files
-    excludes.add("**/.idea/**")
-
     // resource files for test
     excludes.add("**/test**/resources/**")
-
-    // resources
-    excludes.add("**/resources/sidecar.version")
-
-    // script files
-    excludes.add("**/scripts/**")
-
-    // Rat excludes file, one directive per line
-    excludeFile.set(layout.projectDirectory.file("build/.rat-excludes.txt"))
 
     // XML, TXT and HTML reports directory, defaults to 'build/reports/rat'
     reportDir.set(file("build/reports/rat"))
@@ -412,4 +412,7 @@ copyDist.dependsOn installDist, copyJolokia
 check.dependsOn checkstyleMain, checkstyleTest, integrationTest, jacocoTestReport
 build.dependsOn copyDist, copyJolokia, copyDocs
 run.dependsOn build
-rat.dependsOn buildIgnoreRatList
+
+tasks.named('rat').configure {
+    dependsOn(buildIgnoreRatList)
+}
