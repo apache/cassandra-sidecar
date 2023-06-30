@@ -391,6 +391,7 @@ rat {
     }
 
     // List of Gradle exclude directives, defaults to ['**/.gradle/**']
+    excludes.add("**/build/**")
     excludes.add("CHANGES.txt")
 
     // Documentation files
