@@ -84,7 +84,7 @@ class MD5ChecksumVerifierTest
         verifier.verify(checksum, filePath.toAbsolutePath().toString())
                 .onComplete(complete -> latch.countDown());
 
-        assertThat(latch.await(90, TimeUnit.SECONDS)).isTrue();
+        assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
 
         assertThat(verifier.file).isNotNull();
         // we can't close the file if it's already closed, so we expect the exception here
