@@ -31,6 +31,7 @@ import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.ext.web.handler.HttpException;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus.CHECKSUM_MISMATCH;
 
@@ -75,7 +76,8 @@ public class MD5ChecksumVerifier implements ChecksumVerifier
                  });
     }
 
-    private Future<String> calculateMD5(AsyncFile file)
+    @VisibleForTesting
+    Future<String> calculateMD5(AsyncFile file)
     {
         MessageDigest digest;
         try
@@ -93,12 +95,12 @@ public class MD5ChecksumVerifier implements ChecksumVerifier
             .handler(buf -> digest.update(buf.getBytes()))
             .endHandler(_v -> {
                 result.complete(Base64.getEncoder().encodeToString(digest.digest()));
-//                file.end();
+                file.end();
             })
             .exceptionHandler(cause -> {
                 LOGGER.error("Error while calculating MD5 checksum", cause);
                 result.fail(cause);
-//                file.end();
+                file.end();
             })
             .resume();
         return result.future();
