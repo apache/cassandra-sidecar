@@ -170,6 +170,11 @@ public class JmxClient implements NotificationListener, Closeable
                                   : "JMX Authentication failed";
             throw new JmxAuthenticationException(errorMessage, securityException);
         }
+        catch (RuntimeException runtimeException)
+        {
+            // catch exceptions coming from the lambdas and wrap them in a JmxAuthenticationException
+            throw new JmxAuthenticationException(runtimeException);
+        }
     }
 
     @Override

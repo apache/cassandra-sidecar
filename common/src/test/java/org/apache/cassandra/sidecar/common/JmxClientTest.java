@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 import javax.management.MBeanServer;
@@ -157,6 +158,57 @@ public class JmxClientTest
                                                  true,
                                                  true))
             .withMessageContaining("Authentication failed! Credentials required");
+        }
+    }
+
+    @Test
+    public void testRoleSupplierThrows() throws IOException
+    {
+        String errorMessage = "bad role state!";
+        Supplier<String> roleSupplier = () -> {
+            throw new IllegalStateException(errorMessage);
+        };
+        testSupplierThrows(errorMessage,
+                           new JmxClient(serviceURL, roleSupplier, () -> "password", () -> false));
+    }
+
+    @Test
+    public void testPasswordSupplierThrows() throws IOException
+    {
+        String errorMessage = "bad password state!";
+        Supplier<String> passwordSupplier = () -> {
+            throw new IllegalStateException(errorMessage);
+        };
+        testSupplierThrows(errorMessage,
+                           new JmxClient(serviceURL, () -> "controlRole", passwordSupplier, () -> false));
+    }
+
+    @Test
+    public void testEnableSslSupplierThrows() throws IOException
+    {
+        String errorMessage = "bad ssl supplier state!";
+        BooleanSupplier enableSslSupplier = () -> {
+            throw new IllegalStateException(errorMessage);
+        };
+        testSupplierThrows(errorMessage,
+                           new JmxClient(serviceURL, () -> "controlRole", () -> "password", enableSslSupplier));
+    }
+
+    private static void testSupplierThrows(String errorMessage, JmxClient jmxClient) throws IOException
+    {
+        try (JmxClient client = jmxClient)
+        {
+            assertThatExceptionOfType(JmxAuthenticationException.class)
+            .isThrownBy(() ->
+                        client.proxy(Import.class, objectName)
+                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true))
+            .withMessageContaining(errorMessage);
         }
     }
 
