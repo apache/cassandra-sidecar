@@ -25,6 +25,7 @@ import java.nio.file.Paths;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +35,9 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.OpenOptions;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -116,6 +119,19 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     }
 
     @Test
+    public void testInvalidUploadId(VertxTestContext context) throws IOException
+    {
+        sendUploadRequestAndVerify(null, context, "foo", "ks", "tbl", "with-lesser-content-length.db", "",
+                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
+                                   false, response -> {
+            JsonObject error = response.bodyAsJsonObject();
+            assertThat(error.getString("status")).isEqualTo("Bad Request");
+            assertThat(error.getInteger("code")).isEqualTo(400);
+            assertThat(error.getString("message")).isEqualTo("Invalid upload id is supplied, uploadId=foo");
+        });
+    }
+
+    @Test
     public void testInvalidKeyspace(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
@@ -162,9 +178,9 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
 
         UUID uploadId = UUID.randomUUID();
         CountDownLatch latch = new CountDownLatch(1);
-        sendUploadRequestAndVerify(latch, context, uploadId, "invalidKeyspace", "tbl", "without-md5.db", "",
-                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
-                                   false);
+        sendUploadRequestAndVerify(latch, context, uploadId.toString(), "invalidKeyspace", "tbl",
+                                   "without-md5.db", "", Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
+                                   HttpResponseStatus.BAD_REQUEST.code(), false);
 
         assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
@@ -183,13 +199,13 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                             int expectedRetCode,
                                             boolean expectTimeout)
     {
-        sendUploadRequestAndVerify(null, context, uploadId, keyspace, tableName, targetFileName, expectedMd5,
-                                   fileLength, expectedRetCode, expectTimeout);
+        sendUploadRequestAndVerify(null, context, uploadId.toString(), keyspace, tableName, targetFileName,
+                                   expectedMd5, fileLength, expectedRetCode, expectTimeout);
     }
 
     private void sendUploadRequestAndVerify(CountDownLatch latch,
                                             VertxTestContext context,
-                                            UUID uploadId,
+                                            String uploadId,
                                             String keyspace,
                                             String tableName,
                                             String targetFileName,
@@ -198,8 +214,33 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                             int expectedRetCode,
                                             boolean expectTimeout)
     {
+        sendUploadRequestAndVerify(latch,
+                                   context,
+                                   uploadId,
+                                   keyspace,
+                                   tableName,
+                                   targetFileName,
+                                   expectedMd5,
+                                   fileLength,
+                                   expectedRetCode,
+                                   expectTimeout,
+                                   null);
+    }
+
+    private void sendUploadRequestAndVerify(CountDownLatch latch,
+                                            VertxTestContext context,
+                                            String uploadId,
+                                            String keyspace,
+                                            String tableName,
+                                            String targetFileName,
+                                            String expectedMd5,
+                                            long fileLength,
+                                            int expectedRetCode,
+                                            boolean expectTimeout,
+                                            Consumer<HttpResponse<Buffer>> responseValidator)
+    {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/uploads/" + uploadId.toString() + "/keyspaces/" + keyspace
+        String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + keyspace
                            + "/tables/" + tableName + "/components/" + targetFileName;
         HttpRequest<Buffer> req = client.put(config.getPort(), "localhost", testRoute);
         if (!expectedMd5.isEmpty())
@@ -222,11 +263,18 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                 return;
             }
 
-            assertThat(response.result().statusCode()).isEqualTo(expectedRetCode);
+            HttpResponse<Buffer> httpResponse = response.result();
+            assertThat(httpResponse.statusCode()).isEqualTo(expectedRetCode);
+
+            if (responseValidator != null)
+            {
+                responseValidator.accept(httpResponse);
+            }
+
             if (expectedRetCode == HttpResponseStatus.OK.code())
             {
                 Path targetFilePath = Paths.get(SnapshotUtils.makeStagingDir(temporaryFolder.getAbsolutePath()),
-                                                uploadId.toString(), keyspace, tableName, targetFileName);
+                                                uploadId, keyspace, tableName, targetFileName);
                 assertThat(Files.exists(targetFilePath)).isTrue();
             }
 

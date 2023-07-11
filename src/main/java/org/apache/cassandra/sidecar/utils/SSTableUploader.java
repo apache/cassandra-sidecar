@@ -88,7 +88,8 @@ public class SSTableUploader
     {
         // pipe read stream to temp file
         return streamToFile(readStream, tempFilePath)
-               .compose(v -> checksumVerifier.verify(expectedChecksum, tempFilePath));
+               .compose(v -> checksumVerifier.verify(expectedChecksum, tempFilePath))
+               .onFailure(throwable -> fs.delete(tempFilePath));
     }
 
     private Future<Void> streamToFile(ReadStream<Buffer> readStream, String tempFilename)

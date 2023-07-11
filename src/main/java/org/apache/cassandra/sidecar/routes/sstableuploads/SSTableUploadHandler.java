@@ -129,6 +129,20 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 
+    @Override
+    protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress,
+                                  SSTableUploadRequest request)
+    {
+        if (cause instanceof IllegalArgumentException)
+        {
+            context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause));
+        }
+        else
+        {
+            super.processFailure(cause, context, host, remoteAddress, request);
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
