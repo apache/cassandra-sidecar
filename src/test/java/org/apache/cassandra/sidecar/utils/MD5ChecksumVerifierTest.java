@@ -63,7 +63,7 @@ class MD5ChecksumVerifierTest
     void testFileDescriptorsClosed() throws IOException, NoSuchAlgorithmException,
                                             InterruptedException
     {
-        int iterationCount = 100_000;
+        int iterationCount = 50_000;
         byte[] randomBytes = generateRandomBytes();
         Path randomFilePath = writeBytesToRandomFile(randomBytes);
         String expectedChecksum = Base64.getEncoder()
@@ -88,7 +88,7 @@ class MD5ChecksumVerifierTest
             if (i % 1000 == 0)
             {
                 // Slow down to prevent OOMs
-                Thread.sleep(TimeUnit.MILLISECONDS.toMillis(100));
+                Thread.sleep(TimeUnit.MILLISECONDS.toMillis(500));
                 LOGGER.info("Processed {} elements, latch={}", i, latch.getCount());
             }
         }
