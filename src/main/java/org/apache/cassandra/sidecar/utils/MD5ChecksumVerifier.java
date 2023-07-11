@@ -93,12 +93,12 @@ public class MD5ChecksumVerifier implements ChecksumVerifier
             .handler(buf -> digest.update(buf.getBytes()))
             .endHandler(_v -> {
                 result.complete(Base64.getEncoder().encodeToString(digest.digest()));
-                file.end();
+//                file.end();
             })
             .exceptionHandler(cause -> {
                 LOGGER.error("Error while calculating MD5 checksum", cause);
                 result.fail(cause);
-                file.end();
+//                file.end();
             })
             .resume();
         return result.future();
