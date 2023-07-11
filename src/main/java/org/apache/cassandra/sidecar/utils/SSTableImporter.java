@@ -18,10 +18,10 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -86,7 +86,7 @@ public class SSTableImporter
         this.executorPools = executorPools;
         this.metadataFetcher = metadataFetcher;
         this.uploadPathBuilder = uploadPathBuilder;
-        this.importQueuePerHost = new HashMap<>();
+        this.importQueuePerHost = new ConcurrentHashMap<>();
         executorPools.internal()
                      .setPeriodic(configuration.getSSTableImportPollIntervalMillis(), this::processPendingImports);
     }
