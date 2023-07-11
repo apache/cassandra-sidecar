@@ -135,7 +135,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
     {
         if (cause instanceof IllegalArgumentException)
         {
-            context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause));
+            context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause.getMessage(), cause));
         }
         else
         {

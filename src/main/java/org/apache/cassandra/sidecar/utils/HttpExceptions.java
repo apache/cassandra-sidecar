@@ -54,7 +54,7 @@ public class HttpExceptions
      */
     public static HttpException wrapHttpException(HttpResponseStatus status, Throwable cause)
     {
-        return wrapHttpException(status, cause != null ? cause.getMessage() : null, cause);
+        return wrapHttpException(status, null, cause);
     }
 
     /**
