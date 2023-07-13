@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.testing;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
@@ -34,6 +33,7 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.shared.JMXUtil;
+import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -42,31 +42,56 @@ import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Passed to integration tests.
- * See {@link CassandraIntegrationTest} for the required annotation
- * See {@link CassandraTestTemplate} for the Test Template
+ * See {@link CassandraSidecarParameterResolver} for the parameter resolver that will create this instance
  */
-public class CassandraTestContext implements Closeable
+public class CassandraSidecarTestContext extends CassandraTestContext
 {
     public final SimpleCassandraVersion version;
     public final UpgradeableCluster cluster;
     public final InstancesConfig instancesConfig;
     private List<CQLSessionProvider> sessionProviders;
     private List<JmxClient> jmxClients;
+    private static final SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
 
-    CassandraTestContext(SimpleCassandraVersion version,
+    CassandraSidecarTestContext(SimpleCassandraVersion version,
                          UpgradeableCluster cluster,
                          CassandraVersionProvider versionProvider) throws IOException
     {
+        super(org.apache.cassandra.testing.SimpleCassandraVersion.create(version.major, version.minor, version.patch), cluster);
         this.version = version;
         this.cluster = cluster;
         this.sessionProviders = new ArrayList<>();
         this.jmxClients = new ArrayList<>();
         this.instancesConfig = buildInstancesConfig(versionProvider);
+    }
+
+    public static CassandraSidecarTestContext from(CassandraTestContext cassandraTestContext)
+    {
+        org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
+        SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major, rootVersion.minor, rootVersion.patch);
+        CassandraVersionProvider versionProvider = cassandraVersionProvider(DnsResolver.DEFAULT);
+        try
+        {
+            return new CassandraSidecarTestContext(versionParsed, cassandraTestContext.cluster, versionProvider);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
+    {
+        return new CassandraVersionProvider.Builder()
+               .add(new CassandraFactory(dnsResolver, svp.sidecarVersion())).build();
     }
 
     private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider) throws IOException
@@ -92,7 +117,10 @@ public class CassandraTestContext implements Closeable
                       .exists();
             Path stagingPath = dataDirParentPath.resolve("staging");
             String uploadsStagingDirectory = stagingPath.toFile().getAbsolutePath();
-            Files.createDirectory(stagingPath);
+            if (!Files.exists(stagingPath))
+            {
+                Files.createDirectory(stagingPath);
+            }
             metadata.add(new InstanceMetadataImpl(i + 1,
                                                   config.broadcastAddress().getAddress().getHostAddress(),
                                                   nativeTransportPort,

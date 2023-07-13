@@ -16,10 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.testing;
+package org.apache.cassandra.testing;
 
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
@@ -38,11 +43,6 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.distributed.shared.Versions;
-import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
-import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
-import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
-import org.apache.cassandra.sidecar.common.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
 
 
 /**
@@ -55,11 +55,11 @@ import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
  * This test template allows us full control of the test lifecycle and lets us tightly couple the context to each test
  * we generate, since the same test can be run for multiple versions of C*.
  */
-public class CassandraTestTemplate implements TestTemplateInvocationContextProvider
+public class CassandraTestTemplate<T extends CassandraTestContext> implements TestTemplateInvocationContextProvider
 {
 
     private static final Logger logger = LoggerFactory.getLogger(CassandraTestTemplate.class);
-    private static SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
+//    private static SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
 
     private UpgradeableCluster cluster;
 
@@ -93,6 +93,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
             /**
              * A display name can be configured per test still - this adds the C* version we're testing automatically
              * as a suffix to the name
+             *
              * @param invocationIndex the index to the invocation
              * @return the display name
              */
@@ -104,6 +105,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
             /**
              * Used to register the extensions required to start and stop the in-jvm dtest environment
+             *
              * @return a list of registered {@link Extension extensions}
              */
             @Override
@@ -115,8 +117,15 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
             private BeforeEachCallback beforeEach()
             {
                 return beforeEachCtx -> {
+                    Optional<AnnotatedElement> annotatedElement = context.getElement();
                     CassandraIntegrationTest annotation =
-                    context.getElement().map(e -> e.getAnnotation(CassandraIntegrationTest.class)).get();
+                    annotatedElement.map(e -> e.getAnnotation(CassandraIntegrationTest.class)).orElseThrow(
+                    () -> new RuntimeException("CassandraTestTemplate could not find @CassandraIntegrationTest annotation")
+                    );
+                    CassandraIntegrationTest.InstanceInitializer instanceInitializer =
+                    annotatedElement
+                    .map(e -> e.getAnnotation(CassandraIntegrationTest.InstanceInitializer.class))
+                    .orElse(null);
                     // spin up a C* cluster using the in-jvm dtest
                     Versions versions = Versions.find();
                     int nodesPerDc = annotation.nodesPerDc();
@@ -151,25 +160,33 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     TokenSupplier tokenSupplier = TokenSupplier.evenlyDistributedTokens(finalNodeCount,
                                                                                         builder.getTokenCount());
                     builder.withTokenSupplier(tokenSupplier);
-                    cluster = builder.start();
+                    if (instanceInitializer != null)
+                    {
+                        builder.withInstanceInitializer(getInstanceInitializer(instanceInitializer, beforeEachCtx));
+                    }
 
+                    cluster = builder.createWithoutStarting();
+                    if (annotation.startCluster())
+                    {
+                        cluster.startup();
+                    }
                     logger.info("Testing {} against in-jvm dtest cluster", version);
-                    CassandraVersionProvider versionProvider = cassandraVersionProvider(DnsResolver.DEFAULT);
                     SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.version());
-                    cassandraTestContext = new CassandraTestContext(versionParsed, cluster, versionProvider);
+                    cassandraTestContext = new CassandraTestContext(versionParsed, cluster);
+                    context.getStore(ExtensionContext.Namespace.create("org.apache.cassandra.testing")).put("cassandra_test_context", cassandraTestContext);
                     logger.info("Created test context {}", cassandraTestContext);
                 };
             }
 
             /**
              * Shuts down the in-jvm dtest cluster when the test is finished
+             *
              * @return the {@link AfterTestExecutionCallback}
              */
             private AfterTestExecutionCallback postProcessor()
             {
                 return postProcessorCtx -> {
-                    // Tear down the client-side before the cluster as we need to close some server-side connections
-                    // that can only be closed by clients?
+                    // In derived classes, we may need to close some resources before closing the cluster
                     cassandraTestContext.close();
                     // tear down the in-jvm cluster
                     cluster.close();
@@ -178,6 +195,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
             /**
              * Required for Junit to know the CassandraTestContext can be used in these tests
+             *
              * @return a {@link ParameterResolver}
              */
             private ParameterResolver parameterResolver()
@@ -198,13 +216,31 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     }
                 };
             }
-        };
-    }
 
-    public CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
-    {
-        return new CassandraVersionProvider.Builder()
-               .add(new CassandraFactory(dnsResolver, svp.sidecarVersion())).build();
+            private BiConsumer<ClassLoader, Integer> getInstanceInitializer(CassandraIntegrationTest.InstanceInitializer instanceInitializer, ExtensionContext context)
+            {
+                // Method is a BiConsumer<ClassLoader, Integer> instanceInitializer
+                Class<?> initializerClass = instanceInitializer.clazz();
+                try
+                {
+                    Method method = initializerClass.getDeclaredMethod(instanceInitializer.method(), ClassLoader.class, Integer.class);
+                    return (ClassLoader cl, Integer num) -> {
+                        try
+                        {
+                            method.invoke(context.getTestInstance().get(), cl, num);
+                        }
+                        catch (IllegalAccessException | InvocationTargetException e)
+                        {
+                            throw new RuntimeException(e);
+                        }
+                    };
+                }
+                catch (NoSuchMethodException e)
+                {
+                    throw new RuntimeException(String.format("Could not load instance initializer method %s from class %s (did you use `int` in stead of `Integer` for node number?)", instanceInitializer.method(), instanceInitializer.clazz()), e);
+                }
+            }
+        };
     }
 
     static
@@ -216,5 +252,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         // End gossip delay settings
         // Set the location of dtest jars
         System.setProperty("cassandra.test.dtest_jar_path", "dtest-jars");
+        // Disable tcnative in netty as it can cause issues and throws lots of errors
+        System.setProperty("cassandra.disable_tcactive_openssl", "true");
     }
 }

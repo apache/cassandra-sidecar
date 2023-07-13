@@ -48,8 +48,8 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
 import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.testing.CassandraIntegrationTest;
-import org.apache.cassandra.sidecar.testing.CassandraTestContext;
+import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
+import org.apache.cassandra.testing.CassandraIntegrationTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -63,7 +63,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
     public static final SimpleCassandraVersion MIN_VERSION_WITH_IMPORT = SimpleCassandraVersion.create("4.0.0");
 
     @CassandraIntegrationTest
-    void testSSTableImport(VertxTestContext context, CassandraTestContext cassandraTestContext)
+    void testSSTableImport(VertxTestContext vertxTestContext)
     throws IOException, InterruptedException
     {
         // Cassandra before 4.0 does not have the necessary JMX endpoints,
@@ -129,28 +129,28 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + tableName.keyspace()
                            + "/tables/" + tableName.tableName() + "/import";
-        sendRequest(context,
+        sendRequest(vertxTestContext,
                     () -> client.put(config.getPort(), "127.0.0.1", testRoute),
-                    context.succeeding(response -> context.verify(() -> {
+                    vertxTestContext.succeeding(response -> vertxTestContext.verify(() -> {
                         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                         assertThat(queryValues(cassandraTestContext, tableName))
                         .containsAll(Arrays.asList("a", "b", "c", "d"));
-                        context.completeNow();
+                        vertxTestContext.completeNow();
                     })));
         // wait until test completes
-        assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
+        assertThat(vertxTestContext.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    private void sendRequest(VertxTestContext context, Supplier<HttpRequest<Buffer>> requestSupplier,
+    private void sendRequest(VertxTestContext vertxTestContext, Supplier<HttpRequest<Buffer>> requestSupplier,
                              Handler<AsyncResult<HttpResponse<Buffer>>> handler)
     {
         requestSupplier.get()
-                       .send(context.succeeding(r -> context.verify(() -> {
+                       .send(vertxTestContext.succeeding(r -> vertxTestContext.verify(() -> {
                            int statusCode = r.statusCode();
                            if (statusCode == HttpResponseStatus.ACCEPTED.code())
                            {
                                // retry the request every second when the request is accepted
-                               vertx.setTimer(1000, tid -> sendRequest(context, requestSupplier, handler));
+                               vertx.setTimer(1000, tid -> sendRequest(vertxTestContext, requestSupplier, handler));
                            }
                            else
                            {
@@ -159,7 +159,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
                        })));
     }
 
-    private void truncateAndVerify(CassandraTestContext cassandraTestContext, QualifiedTableName qualifiedTableName)
+    private void truncateAndVerify(CassandraSidecarTestContext cassandraTestContext, QualifiedTableName qualifiedTableName)
     throws InterruptedException
     {
         Session session = maybeGetSession(cassandraTestContext);
@@ -174,7 +174,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         }
     }
 
-    private List<String> queryValues(CassandraTestContext cassandraTestContext, QualifiedTableName tableName)
+    private List<String> queryValues(CassandraSidecarTestContext cassandraTestContext, QualifiedTableName tableName)
     {
         Session session = maybeGetSession(cassandraTestContext);
         return session.execute("SELECT id FROM " + tableName)
@@ -184,7 +184,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
                       .collect(Collectors.toList());
     }
 
-    private QualifiedTableName createTestTableAndPopulate(CassandraTestContext cassandraTestContext,
+    private QualifiedTableName createTestTableAndPopulate(CassandraSidecarTestContext cassandraTestContext,
                                                           List<String> values)
     {
         QualifiedTableName tableName = createTestTable(cassandraTestContext,

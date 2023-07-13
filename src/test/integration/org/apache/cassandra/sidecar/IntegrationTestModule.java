@@ -26,16 +26,16 @@ import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
 import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
-import org.apache.cassandra.sidecar.testing.CassandraTestContext;
+import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
 
 /**
  * Provides the basic dependencies for integration tests
  */
 public class IntegrationTestModule extends AbstractModule
 {
-    private final CassandraTestContext cassandraTestContext;
+    private final CassandraSidecarTestContext cassandraTestContext;
 
-    public IntegrationTestModule(CassandraTestContext cassandraTestContext)
+    public IntegrationTestModule(CassandraSidecarTestContext cassandraTestContext)
     {
         this.cassandraTestContext = cassandraTestContext;
     }

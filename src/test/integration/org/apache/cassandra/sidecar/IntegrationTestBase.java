@@ -46,7 +46,8 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.testing.CassandraTestContext;
+import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,12 +66,14 @@ public abstract class IntegrationTestBase
     protected static final String TEST_KEYSPACE = "testkeyspace";
     private static final String TEST_TABLE_PREFIX = "testtable";
     private static final AtomicInteger TEST_TABLE_ID = new AtomicInteger(0);
+    protected CassandraSidecarTestContext cassandraTestContext;
 
     @BeforeEach
     void setup(CassandraTestContext cassandraTestContext) throws InterruptedException
     {
+        this.cassandraTestContext = CassandraSidecarTestContext.from(cassandraTestContext);
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
-                                                        .with(new IntegrationTestModule(cassandraTestContext)));
+                                                        .with(new IntegrationTestModule(this.cassandraTestContext)));
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);
         config = injector.getInstance(Configuration.class);
@@ -107,7 +110,7 @@ public abstract class IntegrationTestBase
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    protected void createTestKeyspace(CassandraTestContext cassandraTestContext)
+    protected void createTestKeyspace(CassandraSidecarTestContext cassandraTestContext)
     {
         Session session = maybeGetSession(cassandraTestContext);
 
@@ -118,7 +121,7 @@ public abstract class IntegrationTestBase
         );
     }
 
-    protected QualifiedTableName createTestTable(CassandraTestContext cassandraTestContext, String createTableStatement)
+    protected QualifiedTableName createTestTable(CassandraSidecarTestContext cassandraTestContext, String createTableStatement)
     {
         Session session = maybeGetSession(cassandraTestContext);
         QualifiedTableName tableName = uniqueTestTableFullName();
@@ -126,7 +129,7 @@ public abstract class IntegrationTestBase
         return tableName;
     }
 
-    protected Session maybeGetSession(CassandraTestContext cassandraTestContext)
+    protected Session maybeGetSession(CassandraSidecarTestContext cassandraTestContext)
     {
         Session session = cassandraTestContext.session();
         assertThat(session).isNotNull();
@@ -138,7 +141,7 @@ public abstract class IntegrationTestBase
         return new QualifiedTableName(TEST_KEYSPACE, TEST_TABLE_PREFIX + TEST_TABLE_ID.getAndIncrement());
     }
 
-    public List<Path> findChildFile(CassandraTestContext context, String hostname, String target)
+    public List<Path> findChildFile(CassandraSidecarTestContext context, String hostname, String target)
     {
         InstanceMetadata instanceConfig = context.getInstancesConfig().instanceFromHost(hostname);
         List<String> parentDirectories = instanceConfig.dataDirs();

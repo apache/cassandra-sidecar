@@ -34,8 +34,8 @@ import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
 import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
-import org.apache.cassandra.sidecar.testing.CassandraIntegrationTest;
-import org.apache.cassandra.sidecar.testing.CassandraTestContext;
+import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -47,7 +47,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
 {
 
     @CassandraIntegrationTest
-    void retrieveRingWithoutKeyspace(VertxTestContext context, CassandraTestContext cassandraTestContext)
+    void retrieveRingWithoutKeyspace(VertxTestContext context)
     throws Exception
     {
         String testRoute = "/api/v1/cassandra/ring";
@@ -76,8 +76,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest
-    void retrieveRingWithExistingKeyspace(VertxTestContext context,
-                                          CassandraTestContext cassandraTestContext) throws Exception
+    void retrieveRingWithExistingKeyspace(VertxTestContext context) throws Exception
     {
         createTestKeyspace(cassandraTestContext);
         retrieveRingWithKeyspace(context, TEST_KEYSPACE, response -> {

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.testing;
+package org.apache.cassandra.testing;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -41,11 +41,12 @@ public @interface CassandraIntegrationTest
      * Returns the number of initial nodes per datacenter for the integration tests. Defaults to 1 node per datacenter.
      *
      * @return the number of nodes per datacenter for the integration tests
-     * */
+     */
     int nodesPerDc() default 1;
 
     /**
      * Returns the number of nodes expected to be added by the end of the integration test. Defaults ot 0.
+     *
      * @return the number of nodes the test expects to add for the integration test.
      */
     int newNodesPerDc() default 0;
@@ -94,4 +95,18 @@ public @interface CassandraIntegrationTest
      */
     boolean nativeTransport() default true;
 
+    /**
+     * Return whether the cluster should be started before the test begins.
+     * It may be necessary to delay start/start in a thread if using ByteBuddy-based
+     * interception of cluster startup.
+     * @return true, if the cluster should be started before the test starts, false otherwise
+     */
+    boolean startCluster() default true;
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface InstanceInitializer
+    {
+        Class<?> clazz();
+        String method();
+    }
 }

@@ -24,8 +24,8 @@ import java.util.Map;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.sidecar.common.utils.GossipInfoParser;
-import org.apache.cassandra.sidecar.testing.CassandraIntegrationTest;
-import org.apache.cassandra.sidecar.testing.CassandraTestContext;
+import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
