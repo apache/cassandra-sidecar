@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.ResourceNotFoundException;
+import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
 import org.apache.cassandra.sidecar.client.request.Request;
 import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
 
@@ -89,11 +90,11 @@ public class BasicRetryPolicy extends RetryPolicy
         {
             if (canRetryOnADifferentHost)
             {
-                retryImmediately(responseFuture, request, retryAction, attempts, throwable);
+                retryImmediately(responseFuture, request, response, retryAction, attempts, throwable);
             }
             else
             {
-                retry(responseFuture, request, retryAction, attempts, throwable);
+                retry(responseFuture, request, response, retryAction, attempts, throwable);
             }
             return;
         }
@@ -109,7 +110,7 @@ public class BasicRetryPolicy extends RetryPolicy
         {
             if (canRetryOnADifferentHost)
             {
-                retryImmediately(responseFuture, request, retryAction, attempts);
+                retryImmediately(responseFuture, request, response, retryAction, attempts);
             }
             else
             {
@@ -130,11 +131,11 @@ public class BasicRetryPolicy extends RetryPolicy
         {
             if (canRetryOnADifferentHost)
             {
-                retryImmediately(responseFuture, request, retryAction, attempts);
+                retryImmediately(responseFuture, request, response, retryAction, attempts);
             }
             else
             {
-                retry(responseFuture, request, retryAction, attempts,
+                retry(responseFuture, request, response, retryAction, attempts,
                       maybeParseRetryAfterOrDefault(response, attempts), null);
             }
             return;
@@ -152,11 +153,11 @@ public class BasicRetryPolicy extends RetryPolicy
             // checksum is encountered
             if (canRetryOnADifferentHost)
             {
-                retryImmediately(responseFuture, request, retryAction, attempts);
+                retryImmediately(responseFuture, request, response, retryAction, attempts);
             }
             else
             {
-                retry(responseFuture, request, retryAction, attempts, null);
+                retry(responseFuture, request, response, retryAction, attempts, null);
             }
             return;
         }
@@ -167,12 +168,12 @@ public class BasicRetryPolicy extends RetryPolicy
         {
             if (canRetryOnADifferentHost)
             {
-                retryImmediately(responseFuture, request, retryAction, attempts);
+                retryImmediately(responseFuture, request, response, retryAction, attempts);
             }
             else
             {
                 logger.error("Request exhausted. response={}, attempts={}", response, attempts);
-                responseFuture.completeExceptionally(retriesExhausted(attempts, request));
+                responseFuture.completeExceptionally(RetriesExhaustedException.of(attempts, request, response));
             }
             return;
         }
@@ -203,53 +204,59 @@ public class BasicRetryPolicy extends RetryPolicy
     /**
      * Retries the request with no delay
      *
-     * @param future      a future for the {@link HttpResponse}
-     * @param request     the HTTP request
-     * @param retryAction the action that is called on retry
-     * @param attempts    the number of attempts for the request
+     * @param future       a future for the {@link HttpResponse}
+     * @param request      the HTTP request
+     * @param lastResponse the last received HTTP response
+     * @param retryAction  the action that is called on retry
+     * @param attempts     the number of attempts for the request
      */
     protected void retryImmediately(CompletableFuture<HttpResponse> future,
                                     Request request,
+                                    HttpResponse lastResponse,
                                     RetryAction retryAction,
                                     int attempts)
     {
-        retry(future, request, retryAction, attempts, 0L, null);
+        retry(future, request, lastResponse, retryAction, attempts, 0L, null);
     }
 
     /**
      * Retries the request with no delay
      *
-     * @param future      a future for the {@link HttpResponse}
-     * @param request     the HTTP request
-     * @param retryAction the action that is called on retry
-     * @param attempts    the number of attempts for the request
-     * @param throwable   the underlying exception
+     * @param future       a future for the {@link HttpResponse}
+     * @param request      the HTTP request
+     * @param lastResponse the last received HTTP response
+     * @param retryAction  the action that is called on retry
+     * @param attempts     the number of attempts for the request
+     * @param throwable    the underlying exception
      */
     protected void retryImmediately(CompletableFuture<HttpResponse> future,
                                     Request request,
+                                    HttpResponse lastResponse,
                                     RetryAction retryAction,
                                     int attempts,
                                     Throwable throwable)
     {
-        retry(future, request, retryAction, attempts, 0L, throwable);
+        retry(future, request, lastResponse, retryAction, attempts, 0L, throwable);
     }
 
     /**
      * Retries the request after waiting for the configured retryDelayMillis
      *
-     * @param future      a future for the {@link HttpResponse}
-     * @param request     the HTTP request
-     * @param retryAction the action that is called on retry
-     * @param attempts    the number of attempts for the request
-     * @param throwable   the underlying exception
+     * @param future       a future for the {@link HttpResponse}
+     * @param request      the HTTP request
+     * @param lastResponse the last received HTTP response
+     * @param retryAction  the action that is called on retry
+     * @param attempts     the number of attempts for the request
+     * @param throwable    the underlying exception
      */
     protected void retry(CompletableFuture<HttpResponse> future,
                          Request request,
+                         HttpResponse lastResponse,
                          RetryAction retryAction,
                          int attempts,
                          Throwable throwable)
     {
-        retry(future, request, retryAction, attempts, retryDelayMillis(attempts), throwable);
+        retry(future, request, lastResponse, retryAction, attempts, retryDelayMillis(attempts), throwable);
     }
 
     /**
@@ -259,6 +266,7 @@ public class BasicRetryPolicy extends RetryPolicy
      *
      * @param future          a future for the {@link HttpResponse}
      * @param request         the HTTP request
+     * @param lastResponse    the last received HTTP response
      * @param retryAction     the action that is called on retry
      * @param attempts        the number of attempts for the request
      * @param sleepTimeMillis the amount of time to wait in milliseconds before attempting the request again
@@ -266,6 +274,7 @@ public class BasicRetryPolicy extends RetryPolicy
      */
     protected void retry(CompletableFuture<HttpResponse> future,
                          Request request,
+                         HttpResponse lastResponse,
                          RetryAction retryAction,
                          int attempts,
                          long sleepTimeMillis,
@@ -274,7 +283,7 @@ public class BasicRetryPolicy extends RetryPolicy
         int configuredMaxRetries = maxRetries();
         if (configuredMaxRetries > RETRY_INDEFINITELY && attempts >= configuredMaxRetries)
         {
-            future.completeExceptionally(retriesExhausted(attempts, request, throwable));
+            future.completeExceptionally(RetriesExhaustedException.of(attempts, request, lastResponse, throwable));
         }
         else
         {

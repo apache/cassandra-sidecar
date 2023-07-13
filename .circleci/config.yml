@@ -62,6 +62,7 @@ jobs:
   java8:
     docker:
      - image: circleci/openjdk:8-jdk-stretch
+    resource_class: large
     steps:
      - checkout
 
@@ -80,6 +81,7 @@ jobs:
   java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
+    resource_class: large
     steps:
       - checkout
 

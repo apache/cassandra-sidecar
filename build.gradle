@@ -322,7 +322,7 @@ tasks.register("integrationTest", Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     shouldRunAfter test
-    forkEvery = 1 // DTest framework tends to have issues without forkEvery method
+    forkEvery = 1 // DTest framework tends to have issues without forkEvery test class
     maxHeapSize = "8g"
 }
 
