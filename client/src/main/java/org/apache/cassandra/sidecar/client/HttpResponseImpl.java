@@ -32,6 +32,7 @@ public class HttpResponseImpl implements HttpResponse
     private final String statusMessage;
     private final byte[] raw;
     private final Map<String, List<String>> headers;
+    private final SidecarInstance respondingServer;
 
     /**
      * Constructs a response object with the provided values
@@ -39,10 +40,14 @@ public class HttpResponseImpl implements HttpResponse
      * @param statusCode    the status code of the response
      * @param statusMessage the status message of the response
      * @param headers       the headers from the response
+     * @param server        the server that returns the response
      */
-    public HttpResponseImpl(int statusCode, String statusMessage, Map<String, List<String>> headers)
+    public HttpResponseImpl(int statusCode,
+                            String statusMessage,
+                            Map<String, List<String>> headers,
+                            SidecarInstance respondingServer)
     {
-        this(statusCode, statusMessage, null, headers);
+        this(statusCode, statusMessage, null, headers, respondingServer);
     }
 
     /**
@@ -52,13 +57,19 @@ public class HttpResponseImpl implements HttpResponse
      * @param statusMessage the status message of the response
      * @param raw           the raw bytes received from the response
      * @param headers       the headers from the response
+     * @param server        the server that returns the response
      */
-    public HttpResponseImpl(int statusCode, String statusMessage, byte[] raw, Map<String, List<String>> headers)
+    public HttpResponseImpl(int statusCode,
+                            String statusMessage,
+                            byte[] raw,
+                            Map<String, List<String>> headers,
+                            SidecarInstance server)
     {
         this.statusCode = statusCode;
         this.statusMessage = statusMessage;
         this.raw = raw;
         this.headers = Collections.unmodifiableMap(headers);
+        this.respondingServer = server;
     }
 
     /**
@@ -115,6 +126,15 @@ public class HttpResponseImpl implements HttpResponse
     public Map<String, List<String>> headers()
     {
         return headers;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public SidecarInstance respondingServer()
+    {
+        return respondingServer;
     }
 
     /**

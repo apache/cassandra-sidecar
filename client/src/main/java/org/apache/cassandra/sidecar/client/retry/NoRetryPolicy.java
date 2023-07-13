@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.cassandra.sidecar.client.HttpResponse;
+import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
 import org.apache.cassandra.sidecar.client.request.Request;
 
 /**
@@ -44,7 +45,7 @@ public class NoRetryPolicy extends RetryPolicy
     {
         if (throwable != null)
         {
-            responseFuture.completeExceptionally(retriesExhausted(attempts, request, throwable));
+            responseFuture.completeExceptionally(RetriesExhaustedException.of(attempts, request, response));
         }
         else if (response.statusCode() == HttpResponseStatus.OK.code())
         {
@@ -52,7 +53,7 @@ public class NoRetryPolicy extends RetryPolicy
         }
         else
         {
-            responseFuture.completeExceptionally(retriesExhausted(attempts, request));
+            responseFuture.completeExceptionally(RetriesExhaustedException.of(attempts, request, response));
         }
     }
 }

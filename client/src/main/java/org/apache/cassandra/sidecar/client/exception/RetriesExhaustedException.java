@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.client.exception;
 
+import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.request.Request;
 
 /**
@@ -28,24 +29,52 @@ public class RetriesExhaustedException extends RuntimeException
     /**
      * Constructs an exception with the number of {@code attempts} performed for the request.
      *
-     * @param attempts the number of attempts performed for the request
-     * @param request  the HTTP request
+     * @param attempts      the number of attempts performed for the request
+     * @param request       the HTTP request
+     * @param lastResponse  the last failed HTTP response
      */
-    public RetriesExhaustedException(int attempts, Request request)
+    public static RetriesExhaustedException of(int attempts,
+                                               Request request,
+                                               HttpResponse lastResponse)
     {
-        this(attempts, request, null);
+        return of(attempts, request, lastResponse, null);
     }
 
     /**
      * Constructs an exception with the number of {@code attempts} performed for the request.
      *
-     * @param attempts  the number of attempts performed for the request
-     * @param request   the HTTP request
-     * @param throwable the underlying exception
+     * @param attempts      the number of attempts performed for the request
+     * @param request       the HTTP request
+     * @param lastResponse  the last failed HTTP response
+     * @param throwable     the underlying exception
      */
-    public RetriesExhaustedException(int attempts, Request request, Throwable throwable)
+    public static RetriesExhaustedException of(int attempts,
+                                               Request request,
+                                               HttpResponse lastResponse,
+                                               Throwable throwable)
     {
-        super(String.format("Unable to complete request '%s' after %d attempt%s",
-                            request.requestURI(), attempts, attempts == 1 ? "" : "s"), throwable);
+        return new RetriesExhaustedException(attempts, request, lastResponse, throwable);
+    }
+
+    /**
+     * Constructs an exception with the number of {@code attempts} performed for the request.
+     *
+     * @param attempts      the number of attempts performed for the request
+     * @param request       the HTTP request
+     * @param lastResponse  the last failed HTTP response
+     * @param throwable     the underlying exception
+     */
+    protected RetriesExhaustedException(int attempts,
+                                        Request request,
+                                        HttpResponse lastResponse,
+                                        Throwable throwable)
+    {
+        super(String.format("Unable to complete request '%s' after %d attempt%s; last response '%s' from server '%s'",
+                            request.requestURI(),
+                            attempts,
+                            attempts == 1 ? "" : "s",
+                            lastResponse,
+                            lastResponse != null ? lastResponse.respondingServer() : null),
+              throwable);
     }
 }

@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.client.HttpResponse;
-import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
 import org.apache.cassandra.sidecar.client.exception.UnexpectedStatusCodeException;
 import org.apache.cassandra.sidecar.client.request.Request;
 
@@ -54,31 +53,6 @@ public abstract class RetryPolicy
                                     int attempts,
                                     boolean canRetryOnADifferentHost,
                                     RetryAction retryAction);
-
-    /**
-     * Returns a {@link RetriesExhaustedException} with the number of {@code attempts} performed before the retries.
-     *
-     * @param attempts the number of attempts for the request
-     * @param request  the HTTP request
-     * @return a {@link RetriesExhaustedException} with the number of {@code attempts} performed before the retries
-     */
-    RetriesExhaustedException retriesExhausted(int attempts, Request request)
-    {
-        return new RetriesExhaustedException(attempts, request);
-    }
-
-    /**
-     * Returns a {@link RetriesExhaustedException} with the number of {@code attempts} performed before the retries.
-     *
-     * @param attempts  the number of attempts for the request
-     * @param request   the HTTP request
-     * @param throwable the underlying exception
-     * @return a {@link RetriesExhaustedException} with the number of {@code attempts} performed before the retries
-     */
-    RetriesExhaustedException retriesExhausted(int attempts, Request request, Throwable throwable)
-    {
-        return new RetriesExhaustedException(attempts, request, throwable);
-    }
 
     /**
      * Returns an {@link UnsupportedOperationException} with the provided {@code response}.

@@ -62,4 +62,9 @@ public interface HttpResponse
      * @return the headers for the response
      */
     Map<String, List<String>> headers();
+
+    /**
+     * @return the server that returns the response
+     */
+    SidecarInstance respondingServer();
 }

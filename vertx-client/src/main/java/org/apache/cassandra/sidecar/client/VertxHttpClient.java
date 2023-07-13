@@ -119,7 +119,7 @@ public class VertxHttpClient implements HttpClient
             UploadableRequest uploadableRequest = (UploadableRequest) context.request();
             LOGGER.debug("Uploading file={}, for request={}, instance={}",
                          uploadableRequest.filename(), context.request(), sidecarInstance);
-            return executeUploadFileInternal(vertxRequest, uploadableRequest.filename());
+            return executeUploadFileInternal(sidecarInstance, vertxRequest, uploadableRequest.filename());
         }
         else
         {
@@ -141,13 +141,15 @@ public class VertxHttpClient implements HttpClient
                         promise.complete(new HttpResponseImpl(response.statusCode(),
                                                               response.statusMessage(),
                                                               raw,
-                                                              mapHeaders(response.headers())
+                                                              mapHeaders(response.headers()),
+                                                              sidecarInstance
                         ));
                     });
         return promise.future().toCompletionStage().toCompletableFuture();
     }
 
-    protected CompletableFuture<HttpResponse> executeUploadFileInternal(HttpRequest<Buffer> vertxRequest,
+    protected CompletableFuture<HttpResponse> executeUploadFileInternal(SidecarInstance sidecarInstance,
+                                                                        HttpRequest<Buffer> vertxRequest,
                                                                         String filename)
     {
         Promise<HttpResponse> promise = Promise.promise();
@@ -164,7 +166,8 @@ public class VertxHttpClient implements HttpClient
             promise.complete(new HttpResponseImpl(response.statusCode(),
                                                   response.statusMessage(),
                                                   raw,
-                                                  mapHeaders(response.headers())
+                                                  mapHeaders(response.headers()),
+                                                  sidecarInstance
             ));
         });
 
@@ -192,7 +195,8 @@ public class VertxHttpClient implements HttpClient
                         // fulfill the promise with the response
                         promise.complete(new HttpResponseImpl(response.statusCode(),
                                                               response.statusMessage(),
-                                                              mapHeaders(response.headers())));
+                                                              mapHeaders(response.headers()),
+                                                              sidecarInstance));
 
                         if (response.statusCode() == HttpResponseStatus.OK.code() ||
                             response.statusCode() == HttpResponseStatus.PARTIAL_CONTENT.code())
