@@ -45,9 +45,9 @@ public class HttpResponseImpl implements HttpResponse
     public HttpResponseImpl(int statusCode,
                             String statusMessage,
                             Map<String, List<String>> headers,
-                            SidecarInstance respondingServer)
+                            SidecarInstance server)
     {
-        this(statusCode, statusMessage, null, headers, respondingServer);
+        this(statusCode, statusMessage, null, headers, server);
     }
 
     /**
