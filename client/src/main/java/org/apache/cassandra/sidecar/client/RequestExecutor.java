@@ -101,17 +101,17 @@ public class RequestExecutor implements AutoCloseable
     public <T> CompletableFuture<T> executeRequestAsync(RequestContext context)
     {
         Iterator<SidecarInstance> iterator = context.instanceSelectionPolicy().iterator();
-        SidecarInstance instance = iterator.next();
         CompletableFuture<T> resultFuture = new CompletableFuture<>();
-        if (instance == null)
+        if (!iterator.hasNext())
         {
             resultFuture.completeExceptionally(new IllegalStateException("InstanceSelectionPolicy " +
                                                                          context.instanceSelectionPolicy()
                                                                                 .getClass()
                                                                                 .getSimpleName() +
-                                                                         " selects 0 instance"));
+                                                                         " selects 0 instances"));
             return resultFuture;
         }
+        SidecarInstance instance = iterator.next();
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         executeWithRetries(responseFuture, iterator, instance, context, 1);
 
@@ -131,16 +131,16 @@ public class RequestExecutor implements AutoCloseable
     {
         Objects.requireNonNull(streamConsumer, "streamConsumer must be non-null");
         Iterator<SidecarInstance> iterator = context.instanceSelectionPolicy().iterator();
-        SidecarInstance instance = iterator.next();
-        if (instance == null)
+        if (!iterator.hasNext())
         {
             streamConsumer.onError(new IllegalStateException("InstanceSelectionPolicy " +
                                                              context.instanceSelectionPolicy()
                                                                     .getClass()
                                                                     .getSimpleName() +
-                                                             " selects 0 instance"));
+                                                             " selects 0 instances"));
             return;
         }
+        SidecarInstance instance = iterator.next();
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         streamWithRetries(responseFuture, streamConsumer, iterator, instance, context, 1);
 
@@ -267,21 +267,15 @@ public class RequestExecutor implements AutoCloseable
         context.retryPolicy()
                .onResponse(future, request, response, throwable, attempt, retryOnNewHost, (nextAttempt, delay) -> {
             String statusCode = response != null ? String.valueOf(response.statusCode()) : "<Not Available>";
-            SidecarInstance nextInstance = sidecarInstance;
-            if (iterator.hasNext())
-            {
-                nextInstance = iterator.next();
-            }
-
+            SidecarInstance nextInstance = iterator.hasNext() ? iterator.next() : sidecarInstance;
             if (response == null || response.statusCode() != HttpResponseStatus.ACCEPTED.code())
             {
                 logger.warn("Retrying request on {} instance after {}ms. " +
                             "Failed on instance={}, attempt={}, statusCode={}",
                             nextInstance == sidecarInstance ? "same" : "next", delay,
-                            nextInstance, attempt, statusCode, throwable);
+                            sidecarInstance, attempt, statusCode, throwable);
             }
-            SidecarInstance instance = nextInstance;
-            schedule(delay, () -> executeWithRetries(future, iterator, instance, context, nextAttempt));
+            schedule(delay, () -> executeWithRetries(future, iterator, nextInstance, context, nextAttempt));
         });
     }
 
@@ -312,21 +306,15 @@ public class RequestExecutor implements AutoCloseable
         context.retryPolicy()
                .onResponse(future, request, response, throwable, attempt, retryOnNewHost, (nextAttempt, delay) -> {
             String statusCode = response != null ? String.valueOf(response.statusCode()) : "<Not Available>";
-            SidecarInstance nextInstance = sidecarInstance;
-            if (iterator.hasNext())
-            {
-                nextInstance = iterator.next();
-            }
-
+            SidecarInstance nextInstance = iterator.hasNext() ? iterator.next() : sidecarInstance;
             if (response == null || response.statusCode() != HttpResponseStatus.ACCEPTED.code())
             {
                 logger.warn("Retrying stream on {} instance after {}ms. " +
                             "Failed on instance={}, attempt={}, statusCode={}",
                             nextInstance == sidecarInstance ? "same" : "next", delay,
-                            nextInstance, attempt, statusCode, throwable);
+                            sidecarInstance, attempt, statusCode, throwable);
             }
-            SidecarInstance instance = nextInstance;
-            schedule(delay, () -> streamWithRetries(future, consumer, iterator, instance, context, nextAttempt));
+            schedule(delay, () -> streamWithRetries(future, consumer, iterator, nextInstance, context, nextAttempt));
         });
     }
 

@@ -32,7 +32,7 @@ public class HttpResponseImpl implements HttpResponse
     private final String statusMessage;
     private final byte[] raw;
     private final Map<String, List<String>> headers;
-    private final SidecarInstance respondingServer;
+    private final SidecarInstance sidecarInstance;
 
     /**
      * Constructs a response object with the provided values
@@ -69,7 +69,7 @@ public class HttpResponseImpl implements HttpResponse
         this.statusMessage = statusMessage;
         this.raw = raw;
         this.headers = Collections.unmodifiableMap(headers);
-        this.respondingServer = server;
+        this.sidecarInstance = server;
     }
 
     /**
@@ -132,9 +132,9 @@ public class HttpResponseImpl implements HttpResponse
      * {@inheritDoc}
      */
     @Override
-    public SidecarInstance respondingServer()
+    public SidecarInstance sidecarInstance()
     {
-        return respondingServer;
+        return sidecarInstance;
     }
 
     /**

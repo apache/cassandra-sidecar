@@ -74,7 +74,7 @@ public class RetriesExhaustedException extends RuntimeException
                             attempts,
                             attempts == 1 ? "" : "s",
                             lastResponse,
-                            lastResponse != null ? lastResponse.respondingServer() : null),
+                            lastResponse != null ? lastResponse.sidecarInstance() : null),
               throwable);
     }
 }
