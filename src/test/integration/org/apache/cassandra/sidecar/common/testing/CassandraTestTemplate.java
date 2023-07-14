@@ -18,11 +18,8 @@
 
 package org.apache.cassandra.sidecar.common.testing;
 
-import java.lang.invoke.MethodType;
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
@@ -176,26 +173,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     cassandraTestContext.close();
                     // tear down the in-jvm cluster
                     cluster.close();
-                    tryClearMethodTypeInternTable();
                 };
-            }
-
-            private void tryClearMethodTypeInternTable()
-            {
-                try
-                {
-                    Field tableField = MethodType.class.getDeclaredField("internTable");
-                    tableField.setAccessible(true);
-                    Object internTable = tableField.get(null);
-                    Field mapField = internTable.getClass().getDeclaredField("map");
-                    mapField.setAccessible(true);
-                    Map map = (Map) mapField.get(internTable);
-                    map.clear();
-                }
-                catch (Exception e)
-                {
-                    logger.warn("Ignore the failed attempt to clear MethodType#internTable", e);
-                }
             }
 
             /**
