@@ -84,6 +84,24 @@ public class JmxClient implements NotificationListener, Closeable
         this(buildJmxServiceURL(host, port), () -> role, () -> password, () -> enableSSl);
     }
 
+    /**
+     * Creates a new client with the provided parameters
+     *
+     * @param host the host of the JMX service
+     * @param port the port of the JMX service
+     * @param roleSupplier supplies the JMX role used for authentication
+     * @param passwordSupplier supplies the JMX role password used for authentication
+     * @param enableSslSupplier supplies true if SSL is enabled for JMX, false otherwise
+     */
+    public JmxClient(String host,
+                     int port,
+                     Supplier<String> roleSupplier,
+                     Supplier<String> passwordSupplier,
+                     BooleanSupplier enableSslSupplier)
+    {
+        this(buildJmxServiceURL(host, port), roleSupplier, passwordSupplier, enableSslSupplier);
+    }
+
     @VisibleForTesting
     JmxClient(JMXServiceURL jmxServiceURL)
     {
