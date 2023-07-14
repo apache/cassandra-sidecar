@@ -32,7 +32,6 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.testing.CassandraSidecarParameterResolver;
 import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
@@ -58,7 +57,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     void createSnapshotEndpointFailsWhenTableDoesNotExist(VertxTestContext context)
     throws InterruptedException
     {
-        createTestKeyspace(cassandraTestContext);
+        createTestKeyspace(sidecarTestContext);
 
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non-existent/snapshots/my-snapshot";
@@ -73,8 +72,8 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     void createSnapshotFailsWhenSnapshotAlreadyExists(VertxTestContext context)
     throws InterruptedException
     {
-        createTestKeyspace(cassandraTestContext);
-        String table = createTestTableAndPopulate(cassandraTestContext);
+        createTestKeyspace(sidecarTestContext);
+        String table = createTestTableAndPopulate(sidecarTestContext);
 
         WebClient client = WebClient.create(vertx);
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
@@ -99,8 +98,8 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     void testCreateSnapshotEndpoint(VertxTestContext context)
     throws InterruptedException
     {
-        createTestKeyspace(cassandraTestContext);
-        String table = createTestTableAndPopulate(cassandraTestContext);
+        createTestKeyspace(sidecarTestContext);
+        String table = createTestTableAndPopulate(sidecarTestContext);
 
         WebClient client = WebClient.create(vertx);
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
@@ -111,7 +110,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
                   assertThat(response.statusCode()).isEqualTo(OK.code());
 
                   // validate that the snapshot is created
-                  final List<Path> found = findChildFile(cassandraTestContext, "127.0.0.1",
+                  final List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1",
                                                          "my-snapshot");
                   assertThat(found).isNotEmpty();
 
@@ -137,8 +136,8 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     void deleteSnapshotFailsWhenTableDoesNotExist(VertxTestContext context)
     throws InterruptedException
     {
-        createTestKeyspace(cassandraTestContext);
-        createTestTableAndPopulate(cassandraTestContext);
+        createTestKeyspace(sidecarTestContext);
+        createTestTableAndPopulate(sidecarTestContext);
 
         String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non-existent/snapshots/my-snapshot";
         assertNotFoundOnDeleteSnapshot(context, testRoute);
@@ -148,8 +147,8 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     void deleteSnapshotFailsWhenSnapshotDoesNotExist(VertxTestContext context)
     throws InterruptedException
     {
-        createTestKeyspace(cassandraTestContext);
-        String table = createTestTableAndPopulate(cassandraTestContext);
+        createTestKeyspace(sidecarTestContext);
+        String table = createTestTableAndPopulate(sidecarTestContext);
 
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/non-existent",
                                          TEST_KEYSPACE, table);
@@ -161,8 +160,8 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     void testDeleteSnapshotEndpoint(VertxTestContext context)
     throws InterruptedException
     {
-        createTestKeyspace(cassandraTestContext);
-        String table = createTestTableAndPopulate(cassandraTestContext);
+        createTestKeyspace(sidecarTestContext);
+        String table = createTestTableAndPopulate(sidecarTestContext);
 
         WebClient client = WebClient.create(vertx);
         String snapshotName = "my-snapshot" + UUID.randomUUID();
@@ -177,7 +176,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
               context.verify(() -> {
                   assertThat(createResponse.statusCode()).isEqualTo(OK.code());
                   final List<Path> found =
-                  findChildFile(cassandraTestContext, "127.0.0.1", snapshotName);
+                  findChildFile(sidecarTestContext, "127.0.0.1", snapshotName);
                   assertThat(found).isNotEmpty();
 
                   // snapshot directory exists inside data directory
@@ -192,7 +191,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
                                        {
                                            assertThat(deleteResponse.statusCode()).isEqualTo(OK.code());
                                            final List<Path> found2 =
-                                           findChildFile(cassandraTestContext,
+                                           findChildFile(sidecarTestContext,
                                                          "127.0.0.1", snapshotName);
                                            assertThat(found2).isEmpty();
                                            context.completeNow();

@@ -197,9 +197,10 @@ dependencies {
     testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}") {
         exclude group: 'junit', module: 'junit'
     }
-    integrationTestImplementation(project(':test-framework'))
     integrationTestImplementation(files("dtest-jars/${dtestJar}"))
     integrationTestImplementation("org.apache.cassandra:dtest-api:0.0.15")
+    // Needed by the Cassandra dtest framework
+    integrationTestImplementation("org.junit.vintage:junit-vintage-engine:${junitVersion}")
 }
 
 jar {

@@ -55,11 +55,10 @@ import org.apache.cassandra.distributed.shared.Versions;
  * This test template allows us full control of the test lifecycle and lets us tightly couple the context to each test
  * we generate, since the same test can be run for multiple versions of C*.
  */
-public class CassandraTestTemplate<T extends CassandraTestContext> implements TestTemplateInvocationContextProvider
+public class CassandraTestTemplate implements TestTemplateInvocationContextProvider
 {
 
     private static final Logger logger = LoggerFactory.getLogger(CassandraTestTemplate.class);
-//    private static SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
 
     private UpgradeableCluster cluster;
 
@@ -119,13 +118,13 @@ public class CassandraTestTemplate<T extends CassandraTestContext> implements Te
                 return beforeEachCtx -> {
                     Optional<AnnotatedElement> annotatedElement = context.getElement();
                     CassandraIntegrationTest annotation =
-                    annotatedElement.map(e -> e.getAnnotation(CassandraIntegrationTest.class)).orElseThrow(
-                    () -> new RuntimeException("CassandraTestTemplate could not find @CassandraIntegrationTest annotation")
+                    annotatedElement.map(e -> e.getAnnotation(CassandraIntegrationTest.class))
+                                    .orElseThrow(() -> new RuntimeException("CassandraTestTemplate could not " +
+                                                                            "find @CassandraIntegrationTest annotation")
                     );
                     CassandraIntegrationTest.InstanceInitializer instanceInitializer =
-                    annotatedElement
-                    .map(e -> e.getAnnotation(CassandraIntegrationTest.InstanceInitializer.class))
-                    .orElse(null);
+                    annotatedElement.map(e -> e.getAnnotation(CassandraIntegrationTest.InstanceInitializer.class))
+                                    .orElse(null);
                     // spin up a C* cluster using the in-jvm dtest
                     Versions versions = Versions.find();
                     int nodesPerDc = annotation.nodesPerDc();
@@ -173,7 +172,6 @@ public class CassandraTestTemplate<T extends CassandraTestContext> implements Te
                     logger.info("Testing {} against in-jvm dtest cluster", version);
                     SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.version());
                     cassandraTestContext = new CassandraTestContext(versionParsed, cluster);
-                    context.getStore(ExtensionContext.Namespace.create("org.apache.cassandra.testing")).put("cassandra_test_context", cassandraTestContext);
                     logger.info("Created test context {}", cassandraTestContext);
                 };
             }
@@ -217,13 +215,17 @@ public class CassandraTestTemplate<T extends CassandraTestContext> implements Te
                 };
             }
 
-            private BiConsumer<ClassLoader, Integer> getInstanceInitializer(CassandraIntegrationTest.InstanceInitializer instanceInitializer, ExtensionContext context)
+            private BiConsumer<ClassLoader, Integer>
+            getInstanceInitializer(CassandraIntegrationTest.InstanceInitializer instanceInitializer,
+                                   ExtensionContext context)
             {
                 // Method is a BiConsumer<ClassLoader, Integer> instanceInitializer
                 Class<?> initializerClass = instanceInitializer.clazz();
                 try
                 {
-                    Method method = initializerClass.getDeclaredMethod(instanceInitializer.method(), ClassLoader.class, Integer.class);
+                    Method method = initializerClass.getDeclaredMethod(instanceInitializer.method(),
+                                                                       ClassLoader.class,
+                                                                       Integer.class);
                     return (ClassLoader cl, Integer num) -> {
                         try
                         {
@@ -237,7 +239,12 @@ public class CassandraTestTemplate<T extends CassandraTestContext> implements Te
                 }
                 catch (NoSuchMethodException e)
                 {
-                    throw new RuntimeException(String.format("Could not load instance initializer method %s from class %s (did you use `int` in stead of `Integer` for node number?)", instanceInitializer.method(), instanceInitializer.clazz()), e);
+                    throw new RuntimeException(String.format("Could not load instance initializer method %s from " +
+                                                             "class %s (did you use `int` in stead of `Integer` " +
+                                                             "for node number?)",
+                                                             instanceInitializer.method(),
+                                                             instanceInitializer.clazz()),
+                                               e);
                 }
             }
         };
@@ -252,7 +259,7 @@ public class CassandraTestTemplate<T extends CassandraTestContext> implements Te
         // End gossip delay settings
         // Set the location of dtest jars
         System.setProperty("cassandra.test.dtest_jar_path", "dtest-jars");
-        // Disable tcnative in netty as it can cause issues and throws lots of errors
+        // Disable tcnative in netty as it can cause jni issues and logs lots errors
         System.setProperty("cassandra.disable_tcactive_openssl", "true");
     }
 }

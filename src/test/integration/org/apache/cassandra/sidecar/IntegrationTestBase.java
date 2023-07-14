@@ -66,14 +66,15 @@ public abstract class IntegrationTestBase
     protected static final String TEST_KEYSPACE = "testkeyspace";
     private static final String TEST_TABLE_PREFIX = "testtable";
     private static final AtomicInteger TEST_TABLE_ID = new AtomicInteger(0);
-    protected CassandraSidecarTestContext cassandraTestContext;
+    protected CassandraSidecarTestContext sidecarTestContext;
 
     @BeforeEach
     void setup(CassandraTestContext cassandraTestContext) throws InterruptedException
     {
-        this.cassandraTestContext = CassandraSidecarTestContext.from(cassandraTestContext);
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
-                                                        .with(new IntegrationTestModule(this.cassandraTestContext)));
+        this.sidecarTestContext = CassandraSidecarTestContext.from(cassandraTestContext);
+        Injector injector = Guice.createInjector(Modules
+                                                 .override(new MainModule())
+                                                 .with(new IntegrationTestModule(this.sidecarTestContext)));
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);
         config = injector.getInstance(Configuration.class);
@@ -121,7 +122,8 @@ public abstract class IntegrationTestBase
         );
     }
 
-    protected QualifiedTableName createTestTable(CassandraSidecarTestContext cassandraTestContext, String createTableStatement)
+    protected QualifiedTableName createTestTable(CassandraSidecarTestContext cassandraTestContext,
+                                                 String createTableStatement)
     {
         Session session = maybeGetSession(cassandraTestContext);
         QualifiedTableName tableName = uniqueTestTableFullName();

@@ -50,7 +50,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Passed to integration tests.
- * See {@link CassandraSidecarParameterResolver} for the parameter resolver that will create this instance
  */
 public class CassandraSidecarTestContext extends CassandraTestContext
 {
@@ -61,11 +60,13 @@ public class CassandraSidecarTestContext extends CassandraTestContext
     private List<JmxClient> jmxClients;
     private static final SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
 
-    CassandraSidecarTestContext(SimpleCassandraVersion version,
+    private CassandraSidecarTestContext(SimpleCassandraVersion version,
                          UpgradeableCluster cluster,
                          CassandraVersionProvider versionProvider) throws IOException
     {
-        super(org.apache.cassandra.testing.SimpleCassandraVersion.create(version.major, version.minor, version.patch), cluster);
+        super(org.apache.cassandra.testing.SimpleCassandraVersion.create(version.major,
+                                                                         version.minor,
+                                                                         version.patch), cluster);
         this.version = version;
         this.cluster = cluster;
         this.sessionProviders = new ArrayList<>();
@@ -76,7 +77,9 @@ public class CassandraSidecarTestContext extends CassandraTestContext
     public static CassandraSidecarTestContext from(CassandraTestContext cassandraTestContext)
     {
         org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
-        SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major, rootVersion.minor, rootVersion.patch);
+        SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major,
+                                                                             rootVersion.minor,
+                                                                             rootVersion.patch);
         CassandraVersionProvider versionProvider = cassandraVersionProvider(DnsResolver.DEFAULT);
         try
         {

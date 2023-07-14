@@ -35,24 +35,24 @@ class DelegateTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void testCorrectVersionIsEnabled()
     {
-        CassandraAdapterDelegate delegate = cassandraTestContext.getInstancesConfig().instances().get(0).delegate();
+        CassandraAdapterDelegate delegate = sidecarTestContext.getInstancesConfig().instances().get(0).delegate();
         SimpleCassandraVersion version = delegate.version();
         assertThat(version).isNotNull();
-        assertThat(version.major).isEqualTo(cassandraTestContext.version.major);
-        assertThat(version.minor).isEqualTo(cassandraTestContext.version.minor);
-        assertThat(version).isGreaterThanOrEqualTo(cassandraTestContext.version);
+        assertThat(version.major).isEqualTo(sidecarTestContext.version.major);
+        assertThat(version.minor).isEqualTo(sidecarTestContext.version.minor);
+        assertThat(version).isGreaterThanOrEqualTo(sidecarTestContext.version);
     }
 
     @CassandraIntegrationTest
     void testHealthCheck() throws InterruptedException
     {
-        CassandraAdapterDelegate delegate = cassandraTestContext.getInstancesConfig().instances().get(0).delegate();
+        CassandraAdapterDelegate delegate = sidecarTestContext.getInstancesConfig().instances().get(0).delegate();
 
         delegate.healthCheck();
 
         assertThat(delegate.isUp()).as("health check succeeds").isTrue();
 
-        NodeToolResult nodetoolResult = cassandraTestContext.cluster.get(1).nodetoolResult("disablebinary");
+        NodeToolResult nodetoolResult = sidecarTestContext.cluster.get(1).nodetoolResult("disablebinary");
         assertThat(nodetoolResult.getRc())
         .withFailMessage("Failed to disable binary:\nstdout:" + nodetoolResult.getStdout()
                          + "\nstderr: " + nodetoolResult.getStderr())
@@ -72,7 +72,7 @@ class DelegateTest extends IntegrationTestBase
         }
         assertThat(delegate.isUp()).as("health check fails after binary has been disabled").isFalse();
 
-        cassandraTestContext.cluster.get(1).nodetool("enablebinary");
+        sidecarTestContext.cluster.get(1).nodetool("enablebinary");
 
         TimeUnit.SECONDS.sleep(1);
         delegate.healthCheck();

@@ -103,6 +103,11 @@ public @interface CassandraIntegrationTest
      */
     boolean startCluster() default true;
 
+    /**
+     * Used to specify an instance initializer to be used when creating instances of in-jvm dtest nodes.
+     * This can be used to inject code using ByteBuddy.
+     * The Class (clazz) must be annotated by the {link org.apache.cassandra.utils.Shared} annotation.
+     */
     @Retention(RetentionPolicy.RUNTIME)
     @interface InstanceInitializer
     {

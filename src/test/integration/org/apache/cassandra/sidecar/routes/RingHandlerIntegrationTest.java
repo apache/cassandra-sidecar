@@ -55,7 +55,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
             client.get(config.getPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
-                      assertRingResponseOK(response, cassandraTestContext);
+                      assertRingResponseOK(response, sidecarTestContext);
                       context.completeNow();
                   }));
         });
@@ -78,9 +78,9 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void retrieveRingWithExistingKeyspace(VertxTestContext context) throws Exception
     {
-        createTestKeyspace(cassandraTestContext);
+        createTestKeyspace(sidecarTestContext);
         retrieveRingWithKeyspace(context, TEST_KEYSPACE, response -> {
-            assertRingResponseOK(response, cassandraTestContext);
+            assertRingResponseOK(response, sidecarTestContext);
             context.completeNow();
         });
     }
