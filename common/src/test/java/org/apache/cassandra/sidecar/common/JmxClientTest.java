@@ -194,24 +194,6 @@ public class JmxClientTest
                            new JmxClient(serviceURL, () -> "controlRole", () -> "password", enableSslSupplier));
     }
 
-    private static void testSupplierThrows(String errorMessage, JmxClient jmxClient) throws IOException
-    {
-        try (JmxClient client = jmxClient)
-        {
-            assertThatExceptionOfType(JmxAuthenticationException.class)
-            .isThrownBy(() ->
-                        client.proxy(Import.class, objectName)
-                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true))
-            .withMessageContaining(errorMessage);
-        }
-    }
-
     @Test
     public void testRetryAfterAuthenticationFailureWithCorrectCredentials() throws IOException
     {
@@ -293,6 +275,19 @@ public class JmxClientTest
         }
     }
 
+    @Test
+    public void testConstructorWithHostPort() throws IOException
+    {
+        try (JmxClient client = new JmxClient("localhost", 9999, () -> "controlRole", () -> "password", () -> false))
+        {
+            List<String> result = client.proxy(Import.class, objectName)
+                                        .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
+                                                           true, true, true, true,
+                                                           true);
+            assertThat(result.size()).isEqualTo(0);
+        }
+    }
+
     /**
      * Simulates to C*'s `nodetool import` call
      */
@@ -341,6 +336,24 @@ public class JmxClientTest
         public void someOtherMethod(String helloString)
         {
             logger.info(helloString);
+        }
+    }
+
+    private static void testSupplierThrows(String errorMessage, JmxClient jmxClient) throws IOException
+    {
+        try (JmxClient client = jmxClient)
+        {
+            assertThatExceptionOfType(JmxAuthenticationException.class)
+            .isThrownBy(() ->
+                        client.proxy(Import.class, objectName)
+                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true))
+            .withMessageContaining(errorMessage);
         }
     }
 

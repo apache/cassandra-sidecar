@@ -96,6 +96,15 @@ public class JmxClient implements NotificationListener, Closeable
         this(jmxServiceURL, () -> role, () -> password, () -> false);
     }
 
+    public JmxClient(String host,
+                     int port,
+                     Supplier<String> roleSupplier,
+                     Supplier<String> passwordSupplier,
+                     BooleanSupplier enableSslSupplier)
+    {
+        this(buildJmxServiceURL(host, port), roleSupplier, passwordSupplier, enableSslSupplier);
+    }
+
     public JmxClient(JMXServiceURL jmxServiceURL,
                      Supplier<String> roleSupplier,
                      Supplier<String> passwordSupplier,
