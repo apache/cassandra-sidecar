@@ -17,6 +17,8 @@
  * under the License.
  */
 
+import java.nio.file.Paths
+
 plugins {
     id 'java-library'
     id "java-test-fixtures"
@@ -39,6 +41,13 @@ repositories {
 
 test {
     useJUnitPlatform()
+    reports {
+        junitXml.enabled = true
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "common").toFile()
+        println("Destination directory for common tests: ${destDir}")
+        junitXml.destination = destDir
+        html.enabled = true
+    }
 }
 
 dependencies {
