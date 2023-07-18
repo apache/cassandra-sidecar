@@ -17,6 +17,8 @@
  * under the License.
  */
 
+import java.nio.file.Paths
+
 plugins {
     id 'java-library'
     id "java-test-fixtures"
@@ -39,6 +41,13 @@ repositories {
 
 test {
     useJUnitPlatform()
+    reports {
+        junitXml.enabled = true
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "common").toFile()
+        println("Destination directory for common tests: ${destDir}")
+        junitXml.destination = destDir
+        html.enabled = true
+    }
 }
 
 dependencies {
@@ -56,6 +65,8 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")
     testImplementation(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}")
+
+    testFixturesImplementation("org.assertj:assertj-core:3.24.2")
 }
 
 java {

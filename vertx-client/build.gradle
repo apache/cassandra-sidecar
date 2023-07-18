@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import java.nio.file.Paths
+
 plugins {
     id('java-library')
     id('idea')
@@ -33,6 +35,13 @@ repositories {
 
 test {
     useJUnitPlatform()
+    reports {
+        junitXml.enabled = true
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "vertx-client").toFile()
+        println("Destination directory for vertx-client tests: ${destDir}")
+        junitXml.destination = destDir
+        html.enabled = true
+    }
 }
 
 configurations {

@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar;
 
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,31 +28,37 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
+import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
+
+
 /**
  * Changes to the TestModule to define SSL dependencies
  */
 public class TestSslModule extends TestModule
 {
     private static final Logger logger = LoggerFactory.getLogger(TestSslModule.class);
+    private final Path certPath;
+
+    public TestSslModule(Path certPath)
+    {
+        this.certPath = certPath;
+    }
 
     @Override
     public Configuration abstractConfig(InstancesConfig instancesConfig)
     {
-        String keyStorePath = TestSslModule.class.getClassLoader()
-                                                 .getResource("certs/test.p12")
-                                                 .getPath();
+        ClassLoader classLoader = TestSslModule.class.getClassLoader();
+        Path keyStorePath = writeResourceToPath(classLoader, certPath, "certs/test.p12");
         String keyStorePassword = "password";
 
-        String trustStorePath = TestSslModule.class.getClassLoader()
-                                                         .getResource("certs/ca.p12")
-                                                         .getPath();
+        Path trustStorePath = writeResourceToPath(classLoader, certPath, "certs/ca.p12");
         String trustStorePassword = "password";
 
-        if (!Files.exists(Paths.get(keyStorePath)))
+        if (!Files.exists(keyStorePath))
         {
             logger.error("JMX password file not found in path={}", keyStorePath);
         }
-        if (!Files.exists(Paths.get(trustStorePath)))
+        if (!Files.exists(trustStorePath))
         {
             logger.error("Trust Store file not found in path={}", trustStorePath);
         }
@@ -65,9 +71,9 @@ public class TestSslModule extends TestModule
                .setHost("127.0.0.1")
                .setPort(6475)
                .setHealthCheckFrequency(1000)
-               .setKeyStorePath(keyStorePath)
+               .setKeyStorePath(keyStorePath.toAbsolutePath().toString())
                .setKeyStorePassword(keyStorePassword)
-               .setTrustStorePath(trustStorePath)
+               .setTrustStorePath(trustStorePath.toAbsolutePath().toString())
                .setTrustStorePassword(trustStorePassword)
                .setSslEnabled(true)
                .setRateLimitStreamRequestsPerSecond(1)

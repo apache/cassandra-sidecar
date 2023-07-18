@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +53,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public abstract class AbstractHealthServiceTest
 {
     private static final Logger logger = LoggerFactory.getLogger(AbstractHealthServiceTest.class);
+
+    @TempDir
+    private Path certPath;
     private Vertx vertx;
     private HttpServer server;
 
@@ -59,7 +64,7 @@ public abstract class AbstractHealthServiceTest
     public AbstractModule testModule()
     {
         if (isSslEnabled())
-            return new TestSslModule();
+            return new TestSslModule(certPath);
 
         return new TestModule();
     }

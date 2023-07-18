@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.common;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
+import java.net.ServerSocket;
+import java.nio.file.Path;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -30,7 +32,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
@@ -47,6 +48,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.platform.commons.util.Preconditions;
 
 import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
@@ -65,7 +67,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  */
 public class JmxClientTest
 {
-
+    private static final int port;
     private static final JMXServiceURL serviceURL;
     private static final String objectName = "org.apache.cassandra.jmx:type=ExtendedImport";
     public static final int PROXIES_TO_TEST = 10_000;
@@ -73,17 +75,22 @@ public class JmxClientTest
     private static JMXConnectorServer jmxServer;
     private static MBeanServer mbs;
     private static Registry registry;
+    @TempDir
+    private static Path passwordFilePath;
 
     @BeforeAll
     public static void setUp() throws Exception
     {
+        System.setProperty("java.rmi.server.hostname", "127.0.0.1");
         System.setProperty("java.rmi.server.randomIds", "true");
-        String passwordFile = Objects.requireNonNull(JmxClientTest.class
-                                                     .getClassLoader()
-                                                     .getResource("testJmxPassword.properties")).getPath();
+        String passwordFile = ResourceUtils.writeResourceToPath(JmxClientTest.class.getClassLoader(),
+                                                                passwordFilePath,
+                                                                "testJmxPassword.properties")
+                                           .toAbsolutePath()
+                                           .toString();
         Map<String, String> env = new HashMap<>();
         env.put("jmx.remote.x.password.file", passwordFile);
-        registry = LocateRegistry.createRegistry(9999);
+        registry = LocateRegistry.createRegistry(port);
         mbs = ManagementFactory.getPlatformMBeanServer();
         jmxServer = JMXConnectorServerFactory.newJMXConnectorServer(serviceURL, env, mbs);
         jmxServer.start();
@@ -194,24 +201,6 @@ public class JmxClientTest
                            new JmxClient(serviceURL, () -> "controlRole", () -> "password", enableSslSupplier));
     }
 
-    private static void testSupplierThrows(String errorMessage, JmxClient jmxClient) throws IOException
-    {
-        try (JmxClient client = jmxClient)
-        {
-            assertThatExceptionOfType(JmxAuthenticationException.class)
-            .isThrownBy(() ->
-                        client.proxy(Import.class, objectName)
-                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true))
-            .withMessageContaining(errorMessage);
-        }
-    }
-
     @Test
     public void testRetryAfterAuthenticationFailureWithCorrectCredentials() throws IOException
     {
@@ -293,6 +282,19 @@ public class JmxClientTest
         }
     }
 
+    @Test
+    public void testConstructorWithHostPort() throws IOException
+    {
+        try (JmxClient client = new JmxClient("127.0.0.1", port, () -> "controlRole", () -> "password", () -> false))
+        {
+            List<String> result = client.proxy(Import.class, objectName)
+                                        .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
+                                                           true, true, true, true,
+                                                           true);
+            assertThat(result.size()).isEqualTo(0);
+        }
+    }
+
     /**
      * Simulates to C*'s `nodetool import` call
      */
@@ -344,15 +346,47 @@ public class JmxClientTest
         }
     }
 
+    private static void testSupplierThrows(String errorMessage, JmxClient jmxClient) throws IOException
+    {
+        try (JmxClient client = jmxClient)
+        {
+            assertThatExceptionOfType(JmxAuthenticationException.class)
+            .isThrownBy(() ->
+                        client.proxy(Import.class, objectName)
+                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true))
+            .withMessageContaining(errorMessage);
+        }
+    }
+
     static
     {
         try
         {
-            serviceURL = new JMXServiceURL("service:jmx:rmi://localhost/jndi/rmi://localhost:9999/jmxrmi");
+            port = availablePort();
+            serviceURL = new JMXServiceURL("service:jmx:rmi://127.0.0.1:" + port
+                                           + "/jndi/rmi://127.0.0.1:" + port + "/jmxrmi");
         }
         catch (MalformedURLException e)
         {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static int availablePort()
+    {
+        try (ServerSocket socket = new ServerSocket(0))
+        {
+            return socket.getLocalPort();
+        }
+        catch (IOException exception)
+        {
+            return 9999;
         }
     }
 }
