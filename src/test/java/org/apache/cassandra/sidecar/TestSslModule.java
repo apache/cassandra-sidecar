@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -31,8 +28,11 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
+import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToTempDir;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+
 
 /**
  * Changes to the TestModule to define SSL dependencies
@@ -50,10 +50,11 @@ public class TestSslModule extends TestModule
     @Override
     public Configuration abstractConfig(InstancesConfig instancesConfig)
     {
-        Path keyStorePath = writeResourceToTempDir(certPath, "certs/test.p12");
+        ClassLoader classLoader = TestSslModule.class.getClassLoader();
+        Path keyStorePath = writeResourceToTempDir(classLoader, certPath, "certs/test.p12");
         String keyStorePassword = "password";
 
-        Path trustStorePath = writeResourceToTempDir(certPath, "certs/ca.p12");
+        Path trustStorePath = writeResourceToTempDir(classLoader, certPath, "certs/ca.p12");
         String trustStorePassword = "password";
 
         if (!Files.exists(keyStorePath))
@@ -87,36 +88,5 @@ public class TestSslModule extends TestModule
                .setServerWorkerPoolConfiguration(workerPoolConf)
                .setServerInternalWorkerPoolConfiguration(workerPoolConf)
                .build();
-    }
-
-    private static Path writeResourceToTempDir(Path certPath, String resourceName)
-    {
-        try
-        {
-            Path certFilePath = certPath.resolve(resourceName);
-
-            // ensure parent directory is created
-            Files.createDirectories(certFilePath.getParent());
-
-            try (InputStream inputStream = TestSslModule.class.getClassLoader().getResourceAsStream(resourceName);
-                 OutputStream outputStream = Files.newOutputStream(certFilePath.toFile().toPath()))
-            {
-                assertThat(inputStream).isNotNull();
-
-                int length;
-                byte[] buffer = new byte[1024];
-                while ((length = inputStream.read(buffer)) != -1)
-                {
-                    outputStream.write(buffer, 0, length);
-                }
-            }
-            return certFilePath;
-        }
-        catch (IOException exception)
-        {
-            String failureMessage = "Unable to create resource " + resourceName;
-            fail(failureMessage, exception);
-            throw new RuntimeException(failureMessage, exception);
-        }
     }
 }

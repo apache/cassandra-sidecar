@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.common;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
+import java.nio.file.Path;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -30,7 +31,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
@@ -47,6 +47,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.platform.commons.util.Preconditions;
 
 import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
@@ -65,7 +66,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  */
 public class JmxClientTest
 {
-
     private static final JMXServiceURL serviceURL;
     private static final String objectName = "org.apache.cassandra.jmx:type=ExtendedImport";
     public static final int PROXIES_TO_TEST = 10_000;
@@ -73,14 +73,18 @@ public class JmxClientTest
     private static JMXConnectorServer jmxServer;
     private static MBeanServer mbs;
     private static Registry registry;
+    @TempDir
+    private static Path passwordFilePath;
 
     @BeforeAll
     public static void setUp() throws Exception
     {
         System.setProperty("java.rmi.server.randomIds", "true");
-        String passwordFile = Objects.requireNonNull(JmxClientTest.class
-                                                     .getClassLoader()
-                                                     .getResource("testJmxPassword.properties")).getPath();
+        String passwordFile = ResourceUtils.writeResourceToTempDir(JmxClientTest.class.getClassLoader(),
+                                                                   passwordFilePath,
+                                                                   "testJmxPassword.properties")
+                                           .toAbsolutePath()
+                                           .toString();
         Map<String, String> env = new HashMap<>();
         env.put("jmx.remote.x.password.file", passwordFile);
         registry = LocateRegistry.createRegistry(9999);
