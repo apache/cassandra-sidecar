@@ -30,9 +30,6 @@ import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToTempDir;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
-
 
 /**
  * Changes to the TestModule to define SSL dependencies
