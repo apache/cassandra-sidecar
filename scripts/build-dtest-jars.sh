@@ -25,6 +25,12 @@ DTEST_JAR_DIR="$(dirname "${SCRIPT_DIR}/")/dtest-jars"
 BUILD_DIR="${DTEST_JAR_DIR}/build"
 mkdir -p "${BUILD_DIR}"
 
+#debug - print env
+env
+# debug - check available maven tools
+ls /home/jenkins/tools/maven || true
+ls "${MVN_CMD}" || true
+
 # host key verification
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
