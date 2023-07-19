@@ -83,9 +83,9 @@ public class JmxClientTest
     {
         System.setProperty("java.rmi.server.hostname", "127.0.0.1");
         System.setProperty("java.rmi.server.randomIds", "true");
-        String passwordFile = ResourceUtils.writeResourceToTempDir(JmxClientTest.class.getClassLoader(),
-                                                                   passwordFilePath,
-                                                                   "testJmxPassword.properties")
+        String passwordFile = ResourceUtils.writeResourceToPath(JmxClientTest.class.getClassLoader(),
+                                                                passwordFilePath,
+                                                                "testJmxPassword.properties")
                                            .toAbsolutePath()
                                            .toString();
         Map<String, String> env = new HashMap<>();

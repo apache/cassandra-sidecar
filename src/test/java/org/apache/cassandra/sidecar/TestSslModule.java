@@ -28,7 +28,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
-import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToTempDir;
+import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 
 
 /**
@@ -48,10 +48,10 @@ public class TestSslModule extends TestModule
     public Configuration abstractConfig(InstancesConfig instancesConfig)
     {
         ClassLoader classLoader = TestSslModule.class.getClassLoader();
-        Path keyStorePath = writeResourceToTempDir(classLoader, certPath, "certs/test.p12");
+        Path keyStorePath = writeResourceToPath(classLoader, certPath, "certs/test.p12");
         String keyStorePassword = "password";
 
-        Path trustStorePath = writeResourceToTempDir(classLoader, certPath, "certs/ca.p12");
+        Path trustStorePath = writeResourceToPath(classLoader, certPath, "certs/ca.p12");
         String trustStorePassword = "password";
 
         if (!Files.exists(keyStorePath))

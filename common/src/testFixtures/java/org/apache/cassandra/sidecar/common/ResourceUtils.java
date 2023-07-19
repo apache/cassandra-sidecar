@@ -41,17 +41,17 @@ public final class ResourceUtils
      * @param resourceName    the name of the resource to be loaded
      * @return the {@link Path} to the created resource
      */
-    public static Path writeResourceToTempDir(ClassLoader classLoader, Path destinationPath, String resourceName)
+    public static Path writeResourceToPath(ClassLoader classLoader, Path destinationPath, String resourceName)
     {
         try
         {
-            Path certFilePath = destinationPath.resolve(resourceName);
+            Path resourcePath = destinationPath.resolve(resourceName);
 
             // ensure parent directory is created
-            Files.createDirectories(certFilePath.getParent());
+            Files.createDirectories(resourcePath.getParent());
 
             try (InputStream inputStream = classLoader.getResourceAsStream(resourceName);
-                 OutputStream outputStream = Files.newOutputStream(certFilePath.toFile().toPath()))
+                 OutputStream outputStream = Files.newOutputStream(resourcePath))
             {
                 assertThat(inputStream).isNotNull();
 
@@ -62,7 +62,7 @@ public final class ResourceUtils
                     outputStream.write(buffer, 0, length);
                 }
             }
-            return certFilePath;
+            return resourcePath;
         }
         catch (IOException exception)
         {
