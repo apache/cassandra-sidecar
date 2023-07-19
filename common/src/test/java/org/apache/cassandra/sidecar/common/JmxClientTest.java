@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.common;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
+import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -66,6 +67,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  */
 public class JmxClientTest
 {
+    private static final int port;
     private static final JMXServiceURL serviceURL;
     private static final String objectName = "org.apache.cassandra.jmx:type=ExtendedImport";
     public static final int PROXIES_TO_TEST = 10_000;
@@ -87,7 +89,7 @@ public class JmxClientTest
                                            .toString();
         Map<String, String> env = new HashMap<>();
         env.put("jmx.remote.x.password.file", passwordFile);
-        registry = LocateRegistry.createRegistry(9999);
+        registry = LocateRegistry.createRegistry(port);
         mbs = ManagementFactory.getPlatformMBeanServer();
         jmxServer = JMXConnectorServerFactory.newJMXConnectorServer(serviceURL, env, mbs);
         jmxServer.start();
@@ -282,7 +284,7 @@ public class JmxClientTest
     @Test
     public void testConstructorWithHostPort() throws IOException
     {
-        try (JmxClient client = new JmxClient("localhost", 9999, () -> "controlRole", () -> "password", () -> false))
+        try (JmxClient client = new JmxClient("localhost", port, () -> "controlRole", () -> "password", () -> false))
         {
             List<String> result = client.proxy(Import.class, objectName)
                                         .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
@@ -365,11 +367,24 @@ public class JmxClientTest
     {
         try
         {
-            serviceURL = new JMXServiceURL("service:jmx:rmi://localhost/jndi/rmi://localhost:9999/jmxrmi");
+            port = availablePort();
+            serviceURL = new JMXServiceURL("service:jmx:rmi://localhost/jndi/rmi://localhost:" + port + "/jmxrmi");
         }
         catch (MalformedURLException e)
         {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static int availablePort()
+    {
+        try (ServerSocket socket = new ServerSocket(0))
+        {
+            return socket.getLocalPort();
+        }
+        catch (IOException exception)
+        {
+            return 9999;
         }
     }
 }
