@@ -26,34 +26,32 @@ CASSANDRA_VERSION=$(cat build.xml | grep 'property name="base.version"' | awk -F
 GIT_HASH=$(git rev-parse --short HEAD)
 DTEST_ARTIFACT_ID=${ARTIFACT_NAME}-local
 DTEST_JAR_DIR="$(dirname "${SCRIPT_DIR}/")/dtest-jars"
-MVN_CMD=${MVN_CMD:-mvn}
 
 echo "${CASSANDRA_VERSION}"
 echo "${GIT_HASH}"
 echo "${DTEST_ARTIFACT_ID}"
-echo "${MVN_CMD}"
 
 ant clean
 ant dtest-jar -Dno-checkstyle=true
 
 # Install the version that will be shaded
-${MVN_CMD} install:install-file                            \
-           -Dfile="./build/dtest-${CASSANDRA_VERSION}.jar" \
-           -DgroupId=org.apache.cassandra                  \
-           -DartifactId="${DTEST_ARTIFACT_ID}"             \
-           -Dversion="${CASSANDRA_VERSION}-${GIT_HASH}"    \
-           -Dpackaging=jar                                 \
-           -DgeneratePom=true                              \
-           -DlocalRepositoryPath="${REPO_DIR}"
+"${SCRIPT_DIR}/mvnw" install:install-file                            \
+                     -Dfile="./build/dtest-${CASSANDRA_VERSION}.jar" \
+                     -DgroupId=org.apache.cassandra                  \
+                     -DartifactId="${DTEST_ARTIFACT_ID}"             \
+                     -Dversion="${CASSANDRA_VERSION}-${GIT_HASH}"    \
+                     -Dpackaging=jar                                 \
+                     -DgeneratePom=true                              \
+                     -DlocalRepositoryPath="${REPO_DIR}"
 
 # Create shaded artifact
-${MVN_CMD} -f "${SCRIPT_DIR}/relocate-dtest-dependencies.pom" package         \
-           -Drevision="${CASSANDRA_VERSION}"                                  \
-           -DskipTests                                                        \
-           -Ddtest.version="${CASSANDRA_VERSION}-${GIT_HASH}"                 \
-           -Dmaven.repo.local="${REPO_DIR}"                                   \
-           -DoutputFilePath="${DTEST_JAR_DIR}/dtest-${CASSANDRA_VERSION}.jar" \
-           -Drelocation.prefix="shaded-${GIT_HASH}"                           \
-           -nsu -U
+"${SCRIPT_DIR}/mvnw" --file "${SCRIPT_DIR}/relocate-dtest-dependencies.pom" package     \
+                     -Drevision="${CASSANDRA_VERSION}"                                  \
+                     -DskipTests                                                        \
+                     -Ddtest.version="${CASSANDRA_VERSION}-${GIT_HASH}"                 \
+                     -Dmaven.repo.local="${REPO_DIR}"                                   \
+                     -DoutputFilePath="${DTEST_JAR_DIR}/dtest-${CASSANDRA_VERSION}.jar" \
+                     -Drelocation.prefix="shaded-${GIT_HASH}"                           \
+                     --no-snapshot-updates --update-snapshots
 
 set +xe
