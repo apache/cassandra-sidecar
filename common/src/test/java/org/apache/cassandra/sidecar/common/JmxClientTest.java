@@ -284,7 +284,7 @@ public class JmxClientTest
     @Test
     public void testConstructorWithHostPort() throws IOException
     {
-        try (JmxClient client = new JmxClient("localhost", port, () -> "controlRole", () -> "password", () -> false))
+        try (JmxClient client = new JmxClient("127.0.0.1", port, () -> "controlRole", () -> "password", () -> false))
         {
             List<String> result = client.proxy(Import.class, objectName)
                                         .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
@@ -368,8 +368,8 @@ public class JmxClientTest
         try
         {
             port = availablePort();
-            serviceURL = new JMXServiceURL("service:jmx:rmi://localhost:" + port
-                                           + "/jndi/rmi://localhost:" + port + "/jmxrmi");
+            serviceURL = new JMXServiceURL("service:jmx:rmi://127.0.0.1:" + port
+                                           + "/jndi/rmi://127.0.0.1:" + port + "/jmxrmi");
         }
         catch (MalformedURLException e)
         {
