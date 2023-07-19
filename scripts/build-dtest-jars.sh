@@ -19,7 +19,7 @@
 
 set -xe
 BRANCHES=${BRANCHES:-cassandra-4.0 trunk}
-REPO=${REPO:-"git@github.com:apache/cassandra.git"}
+REPO=${REPO:-"https://github.com/apache/cassandra.git"}
 SCRIPT_DIR=$( dirname -- "$( readlink -f -- "$0"; )"; )
 DTEST_JAR_DIR="$(dirname "${SCRIPT_DIR}/")/dtest-jars"
 BUILD_DIR="${DTEST_JAR_DIR}/build"
