@@ -81,6 +81,7 @@ public class JmxClientTest
     @BeforeAll
     public static void setUp() throws Exception
     {
+        System.setProperty("java.rmi.server.hostname", "127.0.0.1");
         System.setProperty("java.rmi.server.randomIds", "true");
         String passwordFile = ResourceUtils.writeResourceToTempDir(JmxClientTest.class.getClassLoader(),
                                                                    passwordFilePath,
