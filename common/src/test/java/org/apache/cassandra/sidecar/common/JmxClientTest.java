@@ -368,7 +368,8 @@ public class JmxClientTest
         try
         {
             port = availablePort();
-            serviceURL = new JMXServiceURL("service:jmx:rmi://localhost/jndi/rmi://localhost:" + port + "/jmxrmi");
+            serviceURL = new JMXServiceURL("service:jmx:rmi://localhost:" + port
+                                           + "/jndi/rmi://localhost:" + port + "/jmxrmi");
         }
         catch (MalformedURLException e)
         {
