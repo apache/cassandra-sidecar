@@ -304,7 +304,12 @@ public class VertxHttpClient implements HttpClient
 
         if (OpenSSLEngineOptions.isAvailable())
         {
+            LOGGER.info("Building Sidecar vertx client with OpenSSL");
             options = options.setOpenSslEngineOptions(new OpenSSLEngineOptions());
+        }
+        else
+        {
+            LOGGER.warn("OpenSSL not available when building Sidecar vertx client");
         }
 
         return options;

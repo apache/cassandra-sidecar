@@ -23,11 +23,13 @@ REPO=${REPO:-"https://github.com/apache/cassandra.git"}
 SCRIPT_DIR=$( dirname -- "$( readlink -f -- "$0"; )"; )
 DTEST_JAR_DIR="$(dirname "${SCRIPT_DIR}/")/dtest-jars"
 BUILD_DIR="${DTEST_JAR_DIR}/build"
+source "$SCRIPT_DIR/functions.sh"
 mkdir -p "${BUILD_DIR}"
 
 # host key verification
 mkdir -p ~/.ssh
-ssh-keyscan github.com >> ~/.ssh/known_hosts
+REPO_HOST=$(get_hostname "${REPO}")
+ssh-keyscan "${REPO_HOST}" >> ~/.ssh/known_hosts || true
 
 for branch in $BRANCHES; do
   cd "${BUILD_DIR}"
