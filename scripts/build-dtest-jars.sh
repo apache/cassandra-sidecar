@@ -27,7 +27,8 @@ mkdir -p "${BUILD_DIR}"
 
 # host key verification
 mkdir -p ~/.ssh
-ssh-keyscan github.com >> ~/.ssh/known_hosts || true
+REPO_HOST=$("${SCRIPT_DIR}/get-hostname.sh" "${REPO}")
+ssh-keyscan "${REPO_HOST}" >> ~/.ssh/known_hosts || true
 
 for branch in $BRANCHES; do
   cd "${BUILD_DIR}"
