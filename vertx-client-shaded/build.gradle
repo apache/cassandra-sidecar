@@ -27,6 +27,8 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.TransformerContex
 import shadow.org.apache.tools.zip.ZipEntry
 import shadow.org.apache.tools.zip.ZipOutputStream
 
+import java.nio.file.Paths
+
 plugins {
     id('java-library')
     id('maven-publish')
@@ -46,6 +48,21 @@ dependencies {
     shadow(group: 'org.slf4j', name: 'slf4j-api', version: "${project.slf4jVersion}")
     shadow(group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.14.2')
     api(project(':vertx-client'))
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.1'
+    testImplementation(project(path: ':vertx-client-shaded', configuration: 'shadow'))
+}
+
+tasks.named('test') {
+    // Use JUnit Platform for unit tests.
+    useJUnitPlatform()
+    reports {
+        junitXml.enabled = true
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "vertx-client-shaded").toFile()
+        println("Destination directory for vertx-client-shaded tests: ${destDir}")
+        junitXml.destination = destDir
+        html.enabled = true
+    }
 }
 
 // Relocating a Package
@@ -55,8 +72,8 @@ shadowJar {
     relocate 'com.fasterxml.jackson.databind', 'o.a.c.sidecar.client.shaded.com.fasterxml.jackson.databind'
     relocate 'io.netty', 'o.a.c.sidecar.client.shaded.io.netty'
     relocate 'io.vertx', 'o.a.c.sidecar.client.shaded.io.vertx'
-    relocate 'META-INF/native/libnetty', 'META-INF/native/sidecar_client_netty_shaded_netty'
-    relocate 'META-INF/native/netty', 'META-INF/native/io_sidecar_client_netty_shaded_netty'
+    relocate 'META-INF/native/libnetty', 'META-INF/native/libo_a_c_sidecar_client_shaded_netty'
+    relocate 'META-INF/native/netty', 'META-INF/native/io_o_a_c_sidecar_client_shaded_netty'
     relocate 'META-INF/versions/11/io/vertx', 'META-INF/versions/11/o/a/c/sidecar/client/shaded/io/vertx'
     transform(NettyResourceTransformer.class)
     mergeServiceFiles()
