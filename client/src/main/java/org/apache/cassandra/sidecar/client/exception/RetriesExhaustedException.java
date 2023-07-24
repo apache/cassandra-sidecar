@@ -32,6 +32,7 @@ public class RetriesExhaustedException extends RuntimeException
      * @param attempts      the number of attempts performed for the request
      * @param request       the HTTP request
      * @param lastResponse  the last failed HTTP response
+     * @return the constructed {@link RetriesExhaustedException exception}
      */
     public static RetriesExhaustedException of(int attempts,
                                                Request request,
@@ -47,6 +48,7 @@ public class RetriesExhaustedException extends RuntimeException
      * @param request       the HTTP request
      * @param lastResponse  the last failed HTTP response
      * @param throwable     the underlying exception
+     * @return the constructed {@link RetriesExhaustedException exception}
      */
     public static RetriesExhaustedException of(int attempts,
                                                Request request,
