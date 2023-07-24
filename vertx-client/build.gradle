@@ -56,7 +56,7 @@ dependencies {
     api(group: 'io.vertx', name: 'vertx-web-client', version: '4.4.1') {
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
     }
-    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.61.Final')  // for openSSL
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.48.Final')  // for openSSL
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
 
     compileOnly('org.jetbrains:annotations:23.0.0')
