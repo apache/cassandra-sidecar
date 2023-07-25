@@ -74,7 +74,6 @@ shadowJar {
     relocate 'io.vertx', 'o.a.c.sidecar.client.shaded.io.vertx'
     relocate 'META-INF/native/libnetty', 'META-INF/native/libo_a_c_sidecar_client_shaded_netty'
     relocate 'META-INF/versions/11/io/vertx', 'META-INF/versions/11/o/a/c/sidecar/client/shaded/io/vertx'
-    exclude '^META-INF/native/netty**.dll'
     transform(NettyResourceTransformer.class)
     mergeServiceFiles()
 
