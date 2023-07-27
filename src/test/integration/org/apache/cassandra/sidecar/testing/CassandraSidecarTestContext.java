@@ -83,7 +83,7 @@ public class CassandraSidecarTestContext extends CassandraTestContext
         CassandraVersionProvider versionProvider = cassandraVersionProvider(DnsResolver.DEFAULT);
         try
         {
-            return new CassandraSidecarTestContext(versionParsed, cassandraTestContext.cluster, versionProvider);
+            return new CassandraSidecarTestContext(versionParsed, cassandraTestContext.getCluster(), versionProvider);
         }
         catch (IOException e)
         {

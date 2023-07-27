@@ -22,6 +22,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
@@ -104,14 +105,23 @@ public @interface CassandraIntegrationTest
     boolean startCluster() default true;
 
     /**
-     * Used to specify an instance initializer to be used when creating instances of in-jvm dtest nodes.
-     * This can be used to inject code using ByteBuddy.
-     * The Class (clazz) must be annotated by the {link org.apache.cassandra.utils.Shared} annotation.
+     * Return whether the cluster should be built, or to simply add the cluster builder to the context.
+     * This may be useful in cases where the test requires more complex cluster startup.
+     * If false, the test should take an instance of {@link ConfigurableCassandraTestContext}
+     *     and call {@link ConfigurableCassandraTestContext#configureCluster(Consumer)}
+     *     or {@link ConfigurableCassandraTestContext#configureAndStartCluster(Consumer)} to get the cluster.
+     *     NOTE: This cluster object must be closed by the test as the framework doesn't have access to it.
+     * If true (the default), the test should take an instance of {@link CassandraTestContext}
+     *          {@link CassandraTestContext#getCluster()} will contain the built cluster.
+     * @return true if the cluster should be built by the test framework, false otherwise
      */
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface InstanceInitializer
-    {
-        Class<?> clazz();
-        String method();
-    }
+    boolean buildCluster() default true;
+
+    /**
+     * If the integration test does not need to be run on each version of Cassandra, set this to false
+     *      and it will be run only on the first version specified.
+     * @return true if the test should be run on all tested versions of Cassandra,
+     *         false if it should be run on the first version.
+     */
+    boolean versionDependent() default true;
 }

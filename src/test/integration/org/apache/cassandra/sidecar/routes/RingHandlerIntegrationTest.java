@@ -97,7 +97,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
 
     void assertRingResponseOK(HttpResponse<Buffer> response, CassandraTestContext cassandraTestContext)
     {
-        IInstance instance = cassandraTestContext.cluster.getFirstRunningInstance();
+        IInstance instance = cassandraTestContext.getCluster().getFirstRunningInstance();
         IInstanceConfig config = instance.config();
         RingResponse ringResponse = response.bodyAsJson(RingResponse.class);
         assertThat(ringResponse).isNotNull()

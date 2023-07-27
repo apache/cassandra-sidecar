@@ -46,7 +46,7 @@ public class JmxClientTest
             assertThat(opMode).isNotNull();
             assertThat(opMode).isIn("LEAVING", "JOINING", "NORMAL", "DECOMMISSIONED", "CLIENT");
 
-            IUpgradeableInstance instance = context.cluster.getFirstRunningInstance();
+            IUpgradeableInstance instance = context.getCluster().getFirstRunningInstance();
             IInstanceConfig config = instance.config();
             assertThat(jmxClient.host()).isEqualTo(config.broadcastAddress().getAddress().getHostAddress());
             assertThat(jmxClient.port()).isEqualTo(config.jmxPort());
@@ -101,7 +101,7 @@ public class JmxClientTest
 
     private static JmxClient createJmxClient(CassandraTestContext context)
     {
-        IUpgradeableInstance instance = context.cluster.getFirstRunningInstance();
+        IUpgradeableInstance instance = context.getCluster().getFirstRunningInstance();
         IInstanceConfig config = instance.config();
         return new JmxClient(config.broadcastAddress().getAddress().getHostAddress(), config.jmxPort());
     }

@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.testing;
 
-import java.io.IOException;
-
 import org.apache.cassandra.distributed.UpgradeableCluster;
 
 /**
@@ -27,16 +25,13 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
  * See {@link CassandraIntegrationTest} for the required annotation
  * See {@link CassandraTestTemplate} for the Test Template
  */
-public class CassandraTestContext implements AutoCloseable
+public class CassandraTestContext extends AbstractCassandraTestContext
 {
-    public final SimpleCassandraVersion version;
-    public final UpgradeableCluster cluster;
 
     public CassandraTestContext(SimpleCassandraVersion version,
-                         UpgradeableCluster cluster) throws IOException
+                                UpgradeableCluster cluster)
     {
-        this.version = version;
-        this.cluster = cluster;
+        super(version, cluster);
     }
 
     @Override
@@ -48,8 +43,8 @@ public class CassandraTestContext implements AutoCloseable
                '}';
     }
 
-    public void close() throws Exception
+    public UpgradeableCluster getCluster()
     {
-        // Empty implementation in base class - here in case derived classes need it
+        return cluster;
     }
 }
