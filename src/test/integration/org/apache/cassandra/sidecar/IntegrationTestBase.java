@@ -46,6 +46,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
 import org.apache.cassandra.testing.CassandraTestContext;
 
@@ -71,7 +72,7 @@ public abstract class IntegrationTestBase
     @BeforeEach
     void setup(CassandraTestContext cassandraTestContext) throws InterruptedException
     {
-        this.sidecarTestContext = CassandraSidecarTestContext.from(cassandraTestContext);
+        this.sidecarTestContext = CassandraSidecarTestContext.from(cassandraTestContext, DnsResolver.DEFAULT);
         Injector injector = Guice.createInjector(Modules
                                                  .override(new MainModule())
                                                  .with(new IntegrationTestModule(this.sidecarTestContext)));

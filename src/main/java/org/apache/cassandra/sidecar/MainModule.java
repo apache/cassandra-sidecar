@@ -222,10 +222,11 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     public Configuration configuration(CassandraVersionProvider cassandraVersionProvider,
-                                       SidecarVersionProvider sidecarVersionProvider) throws IOException
+                                       SidecarVersionProvider sidecarVersionProvider,
+                                       DnsResolver dnsResolver) throws IOException
     {
         final String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
-        return YAMLSidecarConfiguration.of(confPath, cassandraVersionProvider, sidecarVersionProvider.sidecarVersion());
+        return YAMLSidecarConfiguration.of(confPath, cassandraVersionProvider, sidecarVersionProvider.sidecarVersion(), dnsResolver);
     }
 
     @Provides

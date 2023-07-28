@@ -90,3 +90,5 @@ lib
 
 dtest-jars
 scripts/dependency-reduced-pom.xml
+
+default-stylesheet.xsl

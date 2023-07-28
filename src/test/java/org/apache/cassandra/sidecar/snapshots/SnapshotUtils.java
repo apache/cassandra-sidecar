@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -129,7 +130,7 @@ public class SnapshotUtils
                                                                    makeStagingDir(rootPath),
                                                                    delegate2);
         List<InstanceMetadata> instanceMetas = Arrays.asList(localhost, localhost2);
-        return new InstancesConfigImpl(instanceMetas);
+        return new InstancesConfigImpl(instanceMetas, DnsResolver.DEFAULT);
     }
 
     public static List<String[]> mockSnapshotDirectories()

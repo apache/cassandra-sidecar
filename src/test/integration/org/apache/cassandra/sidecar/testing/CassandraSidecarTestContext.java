@@ -61,8 +61,8 @@ public class CassandraSidecarTestContext extends CassandraTestContext
     private static final SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
 
     private CassandraSidecarTestContext(SimpleCassandraVersion version,
-                         UpgradeableCluster cluster,
-                         CassandraVersionProvider versionProvider) throws IOException
+                                        UpgradeableCluster cluster,
+                                        CassandraVersionProvider versionProvider, DnsResolver dnsResolver) throws IOException
     {
         super(org.apache.cassandra.testing.SimpleCassandraVersion.create(version.major,
                                                                          version.minor,
@@ -71,19 +71,19 @@ public class CassandraSidecarTestContext extends CassandraTestContext
         this.cluster = cluster;
         this.sessionProviders = new ArrayList<>();
         this.jmxClients = new ArrayList<>();
-        this.instancesConfig = buildInstancesConfig(versionProvider);
+        this.instancesConfig = buildInstancesConfig(versionProvider, dnsResolver);
     }
 
-    public static CassandraSidecarTestContext from(CassandraTestContext cassandraTestContext)
+    public static CassandraSidecarTestContext from(CassandraTestContext cassandraTestContext, DnsResolver dnsResolver)
     {
         org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
         SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major,
                                                                              rootVersion.minor,
                                                                              rootVersion.patch);
-        CassandraVersionProvider versionProvider = cassandraVersionProvider(DnsResolver.DEFAULT);
+        CassandraVersionProvider versionProvider = cassandraVersionProvider(dnsResolver);
         try
         {
-            return new CassandraSidecarTestContext(versionParsed, cassandraTestContext.getCluster(), versionProvider);
+            return new CassandraSidecarTestContext(versionParsed, cassandraTestContext.getCluster(), versionProvider, dnsResolver);
         }
         catch (IOException e)
         {
@@ -97,7 +97,7 @@ public class CassandraSidecarTestContext extends CassandraTestContext
                .add(new CassandraFactory(dnsResolver, svp.sidecarVersion())).build();
     }
 
-    private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider) throws IOException
+    private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider, DnsResolver dnsResolver) throws IOException
     {
         List<InstanceMetadata> metadata = new ArrayList<>();
         for (int i = 0; i < cluster.size(); i++)
@@ -134,7 +134,7 @@ public class CassandraSidecarTestContext extends CassandraTestContext
                                                   versionProvider,
                                                   "1.0-TEST"));
         }
-        return new InstancesConfigImpl(metadata);
+        return new InstancesConfigImpl(metadata, dnsResolver);
     }
 
     private static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
@@ -177,6 +177,8 @@ public class CassandraSidecarTestContext extends CassandraTestContext
     public void close()
     {
         instancesConfig.instances().forEach(instance -> instance.delegate().close());
+        // TODO: Do we need to close sessions?
+//        sessionProviders.
     }
 
     public JmxClient jmxClient()
