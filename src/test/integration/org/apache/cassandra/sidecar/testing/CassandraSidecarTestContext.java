@@ -62,7 +62,8 @@ public class CassandraSidecarTestContext extends CassandraTestContext
 
     private CassandraSidecarTestContext(SimpleCassandraVersion version,
                                         UpgradeableCluster cluster,
-                                        CassandraVersionProvider versionProvider, DnsResolver dnsResolver) throws IOException
+                                        CassandraVersionProvider versionProvider,
+                                        DnsResolver dnsResolver) throws IOException
     {
         super(org.apache.cassandra.testing.SimpleCassandraVersion.create(version.major,
                                                                          version.minor,
@@ -83,7 +84,10 @@ public class CassandraSidecarTestContext extends CassandraTestContext
         CassandraVersionProvider versionProvider = cassandraVersionProvider(dnsResolver);
         try
         {
-            return new CassandraSidecarTestContext(versionParsed, cassandraTestContext.getCluster(), versionProvider, dnsResolver);
+            return new CassandraSidecarTestContext(versionParsed,
+                                                   cassandraTestContext.getCluster(),
+                                                   versionProvider,
+                                                   dnsResolver);
         }
         catch (IOException e)
         {
@@ -97,7 +101,8 @@ public class CassandraSidecarTestContext extends CassandraTestContext
                .add(new CassandraFactory(dnsResolver, svp.sidecarVersion())).build();
     }
 
-    private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider, DnsResolver dnsResolver) throws IOException
+    private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider,
+                                                 DnsResolver dnsResolver) throws IOException
     {
         List<InstanceMetadata> metadata = new ArrayList<>();
         for (int i = 0; i < cluster.size(); i++)

@@ -226,7 +226,10 @@ public class MainModule extends AbstractModule
                                        DnsResolver dnsResolver) throws IOException
     {
         final String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
-        return YAMLSidecarConfiguration.of(confPath, cassandraVersionProvider, sidecarVersionProvider.sidecarVersion(), dnsResolver);
+        return YAMLSidecarConfiguration.of(confPath,
+                                           cassandraVersionProvider,
+                                           sidecarVersionProvider.sidecarVersion(),
+                                           dnsResolver);
     }
 
     @Provides
