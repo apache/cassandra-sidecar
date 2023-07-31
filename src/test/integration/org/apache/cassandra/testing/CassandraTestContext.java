@@ -37,10 +37,10 @@ public class CassandraTestContext extends AbstractCassandraTestContext
     @Override
     public String toString()
     {
-        return "CassandraTestContext{" +
-               ", version=" + version +
-               ", cluster=" + cluster +
-               '}';
+        return "CassandraTestContext{"
+               + ", version=" + version
+               + ", cluster=" + cluster
+               + '}';
     }
 
     public UpgradeableCluster getCluster()

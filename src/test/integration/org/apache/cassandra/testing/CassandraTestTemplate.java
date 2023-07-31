@@ -55,7 +55,7 @@ import org.apache.cassandra.distributed.shared.Versions;
 public class CassandraTestTemplate implements TestTemplateInvocationContextProvider
 {
 
-    private static final Logger logger = LoggerFactory.getLogger(CassandraTestTemplate.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraTestTemplate.class);
 
     private AbstractCassandraTestContext cassandraTestContext;
 
@@ -87,166 +87,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
      */
     private TestTemplateInvocationContext invocationContext(TestVersion version, ExtensionContext context)
     {
-        return new TestTemplateInvocationContext()
-        {
-            /**
-             * A display name can be configured per test still - this adds the C* version we're testing automatically
-             * as a suffix to the name
-             *
-             * @param invocationIndex the index to the invocation
-             * @return the display name
-             */
-            @Override
-            public String getDisplayName(int invocationIndex)
-            {
-                return context.getDisplayName() + ": " + version.version();
-            }
-
-            /**
-             * Used to register the extensions required to start and stop the in-jvm dtest environment
-             *
-             * @return a list of registered {@link Extension extensions}
-             */
-            @Override
-            public List<Extension> getAdditionalExtensions()
-            {
-                return Arrays.asList(parameterResolver(), postProcessor(), beforeEach());
-            }
-
-            private BeforeEachCallback beforeEach()
-            {
-                return beforeEachCtx -> {
-                    CassandraIntegrationTest annotation = getCassandraIntegrationTestAnnotation(context, true);
-                    // spin up a C* cluster using the in-jvm dtest
-                    Versions versions = Versions.find();
-                    int nodesPerDc = annotation.nodesPerDc();
-                    int dcCount = annotation.numDcs();
-                    int newNodesPerDc = annotation.newNodesPerDc(); // if the test wants to add more nodes later
-                    int finalNodeCount = dcCount * (nodesPerDc + newNodesPerDc);
-                    Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(),
-                                                                                      Semver.SemverType.LOOSE));
-                    SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.version());
-
-                    UpgradeableCluster.Builder clusterBuilder = UpgradeableCluster.build(nodesPerDc * dcCount)
-                                                       .withVersion(requestedVersion)
-                                                       .withDCs(dcCount)
-                                                       .withDataDirCount(annotation.numDataDirsPerInstance())
-                                                       .withConfig(config -> {
-                                          if (annotation.nativeTransport())
-                                          {
-                                              config.with(Feature.NATIVE_PROTOCOL);
-                                          }
-                                          if (annotation.jmx())
-                                          {
-                                              config.with(Feature.JMX);
-                                          }
-                                          if (annotation.gossip())
-                                          {
-                                              config.with(Feature.GOSSIP);
-                                          }
-                                          if (annotation.network())
-                                          {
-                                              config.with(Feature.NETWORK);
-                                          }
-                                      });
-                    TokenSupplier tokenSupplier = TokenSupplier.evenlyDistributedTokens(finalNodeCount,
-                                                                                        clusterBuilder.getTokenCount());
-                    clusterBuilder.withTokenSupplier(tokenSupplier);
-                    if (annotation.buildCluster())
-                    {
-                        UpgradeableCluster cluster;
-                        cluster = clusterBuilder.createWithoutStarting();
-                        if (annotation.startCluster())
-                        {
-                            cluster.startup();
-                        }
-                        cassandraTestContext = new CassandraTestContext(versionParsed, cluster);
-                    }
-                    else
-                    {
-                        cassandraTestContext = new ConfigurableCassandraTestContext(versionParsed, clusterBuilder);
-                    }
-                    logger.info("Testing {} against in-jvm dtest cluster", version);
-                    logger.info("Created Cassandra test context {}", cassandraTestContext);
-                };
-            }
-
-            /**
-             * Shuts down the in-jvm dtest cluster when the test is finished
-             *
-             * @return the {@link AfterTestExecutionCallback}
-             */
-            private AfterTestExecutionCallback postProcessor()
-            {
-                return postProcessorCtx -> {
-                    if (cassandraTestContext != null)
-                    {
-                        cassandraTestContext.close();
-                    }
-                };
-            }
-
-            /**
-             * Required for Junit to know the CassandraTestContext can be used in these tests
-             *
-             * @return a {@link ParameterResolver}
-             */
-            private ParameterResolver parameterResolver()
-            {
-                return new ParameterResolver()
-                {
-                    @Override
-                    public boolean supportsParameter(ParameterContext parameterContext,
-                                                     ExtensionContext extensionContext)
-                    {
-                        Class<?> parameterType = parameterContext.getParameter().getType();
-                        CassandraIntegrationTest annotation =
-                            getCassandraIntegrationTestAnnotation(extensionContext, false);
-                        if (annotation == null)
-                        {
-                            return false;
-                        }
-                        if (annotation.buildCluster())
-                        {
-                            if (parameterType.equals(CassandraTestContext.class))
-                            {
-                                return true;
-                            }
-                            else if (parameterType.equals(ConfigurableCassandraTestContext.class))
-                            {
-                                throw new IllegalArgumentException("CassandraIntegrationTest.buildCluster is true but" +
-                                                                   " a configurable context was requested. Please " +
-                                                                   "either request a CassandraTestContext " +
-                                                                   "as a parameter or set buildCluster to false");
-                            }
-                        }
-                        else
-                        {
-                            if (parameterType.equals(ConfigurableCassandraTestContext.class))
-                            {
-                                return true;
-                            }
-                            else if (parameterType.equals(CassandraTestContext.class))
-                            {
-                                throw new IllegalArgumentException("CassandraIntegrationTest.buildCluster is false " +
-                                                                   "but a built cluster was requested. Please " +
-                                                                   "either request a " +
-                                                                   "ConfigurableCassandraTestContext as a " +
-                                                                   "parameter or set buildCluster to true" +
-                                                                   "(the default)");
-                            }
-                        }
-                        return false;
-                    }
-
-                    @Override
-                    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
-                    {
-                        return cassandraTestContext;
-                    }
-                };
-            }
-        };
+        return new CassandraTestTemplateInvocationContext(context, version);
     }
 
     private static CassandraIntegrationTest getCassandraIntegrationTestAnnotation(ExtensionContext context,
@@ -257,10 +98,181 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                                                           .orElse(null);
         if (result == null && throwIfNotFound)
         {
-            throw new RuntimeException("CassandraTestTemplate could not " +
-                                       "find @CassandraIntegrationTest annotation");
+            throw new RuntimeException("CassandraTestTemplate could not "
+                                       + "find @CassandraIntegrationTest annotation");
         }
         return result;
+    }
+
+    private final class CassandraTestTemplateInvocationContext implements TestTemplateInvocationContext
+    {
+        private final ExtensionContext context;
+        private final TestVersion version;
+
+        private CassandraTestTemplateInvocationContext(ExtensionContext context, TestVersion version)
+        {
+            this.context = context;
+            this.version = version;
+        }
+
+        /**
+         * A display name can be configured per test still - this adds the C* version we're testing automatically
+         * as a suffix to the name
+         *
+         * @param invocationIndex the index to the invocation
+         * @return the display name
+         */
+        @Override
+        public String getDisplayName(int invocationIndex)
+        {
+            return context.getDisplayName() + ": " + version.version();
+        }
+
+        /**
+         * Used to register the extensions required to start and stop the in-jvm dtest environment
+         *
+         * @return a list of registered {@link Extension extensions}
+         */
+        @Override
+        public List<Extension> getAdditionalExtensions()
+        {
+            return Arrays.asList(parameterResolver(), postProcessor(), beforeEach());
+        }
+
+        private BeforeEachCallback beforeEach()
+        {
+            return beforeEachCtx -> {
+                CassandraIntegrationTest annotation = getCassandraIntegrationTestAnnotation(context, true);
+                // spin up a C* cluster using the in-jvm dtest
+                Versions versions = Versions.find();
+                int nodesPerDc = annotation.nodesPerDc();
+                int dcCount = annotation.numDcs();
+                int newNodesPerDc = annotation.newNodesPerDc(); // if the test wants to add more nodes later
+                int finalNodeCount = dcCount * (nodesPerDc + newNodesPerDc);
+                Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(),
+                                                                                  Semver.SemverType.LOOSE));
+                SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.version());
+
+                UpgradeableCluster.Builder clusterBuilder =
+                    UpgradeableCluster.build(nodesPerDc * dcCount)
+                                      .withVersion(requestedVersion)
+                                      .withDCs(dcCount)
+                                      .withDataDirCount(annotation.numDataDirsPerInstance())
+                                      .withConfig(config -> {
+                                      if (annotation.nativeTransport())
+                                      {
+                                          config.with(Feature.NATIVE_PROTOCOL);
+                                      }
+                                      if (annotation.jmx())
+                                      {
+                                          config.with(Feature.JMX);
+                                      }
+                                      if (annotation.gossip())
+                                      {
+                                          config.with(Feature.GOSSIP);
+                                      }
+                                      if (annotation.network())
+                                      {
+                                          config.with(Feature.NETWORK);
+                                      }
+                                  });
+                TokenSupplier tokenSupplier = TokenSupplier.evenlyDistributedTokens(finalNodeCount,
+                                                                                    clusterBuilder.getTokenCount());
+                clusterBuilder.withTokenSupplier(tokenSupplier);
+                if (annotation.buildCluster())
+                {
+                    UpgradeableCluster cluster;
+                    cluster = clusterBuilder.createWithoutStarting();
+                    if (annotation.startCluster())
+                    {
+                        cluster.startup();
+                    }
+                    cassandraTestContext = new CassandraTestContext(versionParsed, cluster);
+                }
+                else
+                {
+                    cassandraTestContext = new ConfigurableCassandraTestContext(versionParsed, clusterBuilder);
+                }
+                LOGGER.info("Testing {} against in-jvm dtest cluster", version);
+                LOGGER.info("Created Cassandra test context {}", cassandraTestContext);
+            };
+        }
+
+        /**
+         * Shuts down the in-jvm dtest cluster when the test is finished
+         *
+         * @return the {@link AfterTestExecutionCallback}
+         */
+        private AfterTestExecutionCallback postProcessor()
+        {
+            return postProcessorCtx -> {
+                if (cassandraTestContext != null)
+                {
+                    cassandraTestContext.close();
+                }
+            };
+        }
+
+        /**
+         * Required for Junit to know the CassandraTestContext can be used in these tests
+         *
+         * @return a {@link ParameterResolver}
+         */
+        private ParameterResolver parameterResolver()
+        {
+            return new ParameterResolver()
+            {
+                @Override
+                public boolean supportsParameter(ParameterContext parameterContext,
+                                                 ExtensionContext extensionContext)
+                {
+                    Class<?> parameterType = parameterContext.getParameter().getType();
+                    CassandraIntegrationTest annotation =
+                        getCassandraIntegrationTestAnnotation(extensionContext, false);
+                    if (annotation == null)
+                    {
+                        return false;
+                    }
+                    if (annotation.buildCluster())
+                    {
+                        if (parameterType.equals(CassandraTestContext.class))
+                        {
+                            return true;
+                        }
+                        else if (parameterType.equals(ConfigurableCassandraTestContext.class))
+                        {
+                            throw new IllegalArgumentException("CassandraIntegrationTest.buildCluster is true but"
+                                                               + " a configurable context was requested. Please "
+                                                               + "either request a CassandraTestContext "
+                                                               + "as a parameter or set buildCluster to false");
+                        }
+                    }
+                    else
+                    {
+                        if (parameterType.equals(ConfigurableCassandraTestContext.class))
+                        {
+                            return true;
+                        }
+                        else if (parameterType.equals(CassandraTestContext.class))
+                        {
+                            throw new IllegalArgumentException("CassandraIntegrationTest.buildCluster is false "
+                                                               + "but a built cluster was requested. Please "
+                                                               + "either request a "
+                                                               + "ConfigurableCassandraTestContext as a "
+                                                               + "parameter or set buildCluster to true"
+                                                               + "(the default)");
+                        }
+                    }
+                    return false;
+                }
+
+                @Override
+                public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
+                {
+                    return cassandraTestContext;
+                }
+            };
+        }
     }
 
     static

@@ -30,8 +30,8 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 public class ConfigurableCassandraTestContext extends AbstractCassandraTestContext
 {
     public static final String BUILT_CLUSTER_CANNOT_BE_CONFIGURED_ERROR =
-        "Cannot configure a cluster after it is built. Please set the buildCluster annotation attribute to false, " +
-        "and do not call `getCluster` before calling this method.";
+        "Cannot configure a cluster after it is built. Please set the buildCluster annotation attribute to false, "
+        + "and do not call `getCluster` before calling this method.";
 
     private final UpgradeableCluster.Builder builder;
 
@@ -64,9 +64,9 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
     @Override
     public String toString()
     {
-        return "ConfigurableCassandraTestContext{" +
-               ", version=" + version +
-               ", builder=" + builder +
-               '}';
+        return "ConfigurableCassandraTestContext{"
+               + ", version=" + version
+               + ", builder=" + builder
+               + '}';
     }
 }

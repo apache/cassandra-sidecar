@@ -64,7 +64,9 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
         String stripped = version.toUpperCase().replace(SNAPSHOT, "");
         Matcher matcher = PATTERN.matcher(stripped);
         if (!matcher.matches())
+        {
             throw new IllegalArgumentException("Invalid Cassandra version value: " + version);
+        }
 
         try
         {
@@ -90,7 +92,7 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
     }
 
 
-    private SimpleCassandraVersion(int major, int minor, int patch)
+    public SimpleCassandraVersion(int major, int minor, int patch)
     {
         this.major = major;
         this.minor = minor;
@@ -101,19 +103,31 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
     public int compareTo(SimpleCassandraVersion other)
     {
         if (major < other.major)
+        {
             return -1;
+        }
         if (major > other.major)
+        {
             return 1;
+        }
 
         if (minor < other.minor)
+        {
             return -1;
+        }
         if (minor > other.minor)
+        {
             return 1;
+        }
 
         if (patch < other.patch)
+        {
             return -1;
+        }
         if (patch > other.patch)
+        {
             return 1;
+        }
         return 0;
     }
 
@@ -121,7 +135,9 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
     public boolean equals(Object o)
     {
         if (!(o instanceof SimpleCassandraVersion))
+        {
             return false;
+        }
         SimpleCassandraVersion that = (SimpleCassandraVersion) o;
         return major == that.major
                && minor == that.minor
