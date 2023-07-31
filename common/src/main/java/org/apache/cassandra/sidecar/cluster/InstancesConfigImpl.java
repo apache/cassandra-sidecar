@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.cluster;
 
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
