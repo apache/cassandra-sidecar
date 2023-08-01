@@ -40,31 +40,23 @@ aliases:
 
 # we might modify this in the future to accept a parameter for the java package to install
 commands:
-  install_java:
-    description: "Installs Java using AdoptOpenJDK"
-    parameters:
-      version:
-        type: string
-    steps:
-      - run: wget -qO - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
-      - run: sudo add-apt-repository --yes https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y << parameters.version>>
-
   install_common:
-    description: "Installs common software and certificates"
+    description: "Installs common software"
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+      - run: sudo dpkg --purge --force-depends ca-certificates-java
+      # NOTE: These steps must be run separately or the installation of ant will fail.
+      - run: sudo apt-get install ca-certificates-java
+      - run: sudo apt-get install ant
 
 jobs:
   # Runs java 8 tests on a docker image
   java8:
     docker:
-     - image: circleci/openjdk:8-jdk-stretch
+     - image: cimg/openjdk:8.0
     steps:
      - checkout
-
+     - install_common
      - run: BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
      - run: echo 'export DTEST_JAR=$(cd dtest-jars && find . -name 'dtest-4.1*.jar' -maxdepth 1)' >> "$BASH_ENV"
      - run: ./gradlew --info check --stacktrace -Dcassandra.sidecar.versions_to_test="4.0,4.1"
@@ -79,10 +71,10 @@ jobs:
   # Runs java 11 tests on a docker image
   java11:
     docker:
-      - image: circleci/openjdk:11-jdk-stretch
+      - image: cimg/openjdk:11.0
     steps:
       - checkout
-
+      - install_common
       - run: CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
       - run: ./gradlew --info check --stacktrace
 
@@ -96,7 +88,7 @@ jobs:
   # ensures we can build and install deb packages
   deb_build_install:
     docker:
-      - image: circleci/openjdk:11-jdk-stretch
+      - image: cimg/openjdk:11.0
     steps:
       - checkout
       - run: ./gradlew -i clean buildDeb
@@ -124,7 +116,7 @@ jobs:
 
   docs_build:
     docker:
-      - image: circleci/openjdk:11-jdk-stretch
+      - image: cimg/openjdk:11.0
     steps:
       - checkout
       - run: ./gradlew docs:asciidoctor
