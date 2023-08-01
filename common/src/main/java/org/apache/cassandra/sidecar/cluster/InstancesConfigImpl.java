@@ -85,7 +85,10 @@ public class InstancesConfigImpl implements InstancesConfig
             }
             catch (UnknownHostException e)
             {
-                throw new RuntimeException(e);
+                throw new NoSuchElementException("Instance with host address "
+                                                 + host +
+                                                 " not found, and an error occurred when " +
+                                                 "attempting to get its IP address.");
             }
             if (instanceMetadata == null)
             {

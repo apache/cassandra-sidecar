@@ -125,10 +125,7 @@ public class CassandraSidecarTestContext extends CassandraTestContext
                       .exists();
             Path stagingPath = dataDirParentPath.resolve("staging");
             String uploadsStagingDirectory = stagingPath.toFile().getAbsolutePath();
-            if (!Files.exists(stagingPath))
-            {
-                Files.createDirectory(stagingPath);
-            }
+            Files.createDirectories(stagingPath);
             metadata.add(new InstanceMetadataImpl(i + 1,
                                                   config.broadcastAddress().getAddress().getHostAddress(),
                                                   nativeTransportPort,
@@ -178,12 +175,12 @@ public class CassandraSidecarTestContext extends CassandraTestContext
                ", cluster=" + cluster +
                '}';
     }
+
     @Override
     public void close()
     {
+        sessionProviders.forEach(CQLSessionProvider::close);
         instancesConfig.instances().forEach(instance -> instance.delegate().close());
-        // TODO: Do we need to close sessions?
-//        sessionProviders.
     }
 
     public JmxClient jmxClient()

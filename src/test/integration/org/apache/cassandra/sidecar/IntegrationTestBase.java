@@ -100,6 +100,7 @@ public abstract class IntegrationTestBase
             logger.info("Close event received before timeout.");
         else
             logger.error("Close event timed out.");
+        sidecarTestContext.close();
     }
 
     protected void testWithClient(VertxTestContext context, Consumer<WebClient> tester) throws Exception
