@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Publish bytes streamed and written metrics (CASSANDRASC-68)
  * Extract the in-jvm dtest template for use in other projects (CASSANDRASC-55)
  * Fix relocation of native libraries for vertx-client-shaded (CASSANDRASC-67)
  * Enrich RetriesExhaustedException to have more information for better visibility (CASSANDRASC-65)
