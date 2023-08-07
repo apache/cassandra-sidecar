@@ -64,6 +64,7 @@ import org.apache.cassandra.sidecar.routes.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableCleanupHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
+import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.MD5ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
@@ -84,6 +85,7 @@ public class MainModule extends AbstractModule
     {
         return Vertx.vertx(new VertxOptions().setMetricsOptions(new DropwizardMetricsOptions()
                                                                 .setEnabled(true)
+                                                                .setRegistryName("cassandra-sidecar-metrics-registry")
                                                                 .setJmxEnabled(true)
                                                                 .setJmxDomain("cassandra-sidecar-metrics")));
     }
@@ -303,5 +305,12 @@ public class MainModule extends AbstractModule
     public SidecarVersionProvider sidecarVersionProvider()
     {
         return new SidecarVersionProvider("/sidecar.version");
+    }
+
+    @Provides
+    @Singleton
+    public SidecarStats sidecarStats()
+    {
+        return SidecarStats.INSTANCE;
     }
 }

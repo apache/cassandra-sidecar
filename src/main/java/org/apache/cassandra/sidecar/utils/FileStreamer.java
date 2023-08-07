@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.utils;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
@@ -36,8 +37,9 @@ import org.apache.cassandra.sidecar.common.exceptions.RangeException;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.models.HttpResponse;
+import org.apache.cassandra.sidecar.stats.SSTableStats;
+import org.apache.cassandra.sidecar.stats.SidecarStats;
 
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
 import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
 
@@ -53,13 +55,16 @@ public class FileStreamer
     private final ExecutorPools executorPools;
     private final Configuration config;
     private final SidecarRateLimiter rateLimiter;
+    private final SSTableStats stats;
 
     @Inject
-    public FileStreamer(ExecutorPools executorPools, Configuration config, SidecarRateLimiter rateLimiter)
+    public FileStreamer(ExecutorPools executorPools, Configuration config, SidecarRateLimiter rateLimiter,
+                        SidecarStats stats)
     {
         this.executorPools = executorPools;
         this.config = config;
         this.rateLimiter = rateLimiter;
+        this.stats = stats.ssTableStats();
     }
 
     /**
@@ -123,6 +128,7 @@ public class FileStreamer
                                {
                                    LOGGER.debug("Streamed file {} successfully to client {}. Instance: {}", filename,
                                                 response.remoteAddress(), response.host());
+                                   stats.onBytesStreamed(fileLength);
                                    promise.complete();
                                })
                     .onFailure(promise::fail);

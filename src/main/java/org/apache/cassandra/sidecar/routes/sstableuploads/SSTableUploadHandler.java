@@ -39,6 +39,8 @@ import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.data.SSTableUploadRequest;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.stats.SSTableStats;
+import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableUploader;
 import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
@@ -57,6 +59,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
     private final SSTableUploader uploader;
     private final SSTableUploadsPathBuilder uploadPathBuilder;
     private final ConcurrencyLimiter limiter;
+    private final SSTableStats stats;
 
     /**
      * Constructs a handler with the provided params.
@@ -68,6 +71,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
      * @param uploadPathBuilder a class that provides SSTableUploads directories
      * @param executorPools     executor pools for blocking executions
      * @param validator         a validator instance to validate Cassandra-specific input
+     * @param sidecarStats      an interface holding all stats related to main sidecar process
      */
     @Inject
     protected SSTableUploadHandler(Vertx vertx,
@@ -76,7 +80,8 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                                    SSTableUploader uploader,
                                    SSTableUploadsPathBuilder uploadPathBuilder,
                                    ExecutorPools executorPools,
-                                   CassandraInputValidator validator)
+                                   CassandraInputValidator validator,
+                                   SidecarStats sidecarStats)
     {
         super(metadataFetcher, executorPools, validator);
         this.fs = vertx.fileSystem();
@@ -84,6 +89,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         this.uploader = uploader;
         this.uploadPathBuilder = uploadPathBuilder;
         this.limiter = new ConcurrencyLimiter(configuration::getConcurrentUploadsLimit);
+        this.stats = sidecarStats.ssTableStats();
     }
 
     /**
@@ -124,6 +130,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
             logger.info("Successfully uploaded SSTable component for request={}, remoteAddress={}, " +
                         "instance={}, sizeInBytes={}, serviceTimeMillis={}",
                         request, remoteAddress, host, fileProps.size(), serviceTimeMillis);
+            stats.onBytesUploaded(fileProps.size());
             context.json(new SSTableUploadResponse(request.uploadId(), fileProps.size(), serviceTimeMillis));
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));

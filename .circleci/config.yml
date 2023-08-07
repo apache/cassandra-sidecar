@@ -61,21 +61,21 @@ jobs:
   # Runs java 8 tests on a docker image
   java8:
     docker:
-     - image: circleci/openjdk:8-jdk-stretch
+      - image: circleci/openjdk:8-jdk-stretch
     resource_class: large
     steps:
-     - checkout
+      - checkout
 
-     - run: BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
-     - run: echo 'export DTEST_JAR=$(cd dtest-jars && find . -name 'dtest-4.1*.jar' -maxdepth 1)' >> "$BASH_ENV"
-     - run: ./gradlew --info check --stacktrace -Dcassandra.sidecar.versions_to_test="4.0,4.1"
+      - run: BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
+      - run: echo 'export DTEST_JAR=$(cd dtest-jars && find . -name 'dtest-4.1*.jar' -maxdepth 1)' >> "$BASH_ENV"
+      - run: ./gradlew --info check --stacktrace -Dcassandra.sidecar.versions_to_test="4.0,4.1"
 
-     - store_artifacts:
-         path: build/reports
-         destination: test-reports
+      - store_artifacts:
+          path: build/reports
+          destination: test-reports
 
-     - store_test_results:
-         path: build/test-results/
+      - store_test_results:
+          path: build/test-results/
 
   # Runs java 11 tests on a docker image
   java11:
