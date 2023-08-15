@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.SocketAddress;
@@ -97,17 +98,26 @@ public class HttpResponse
      */
     public Future<Void> sendFile(String fileName, long fileLength, HttpRange range)
     {
-        // notify client we support range requests
-        response.putHeader(HttpHeaderNames.ACCEPT_RANGES, "bytes");
+        // Defer setting headers in case of an error before sending the file
+        response.headersEndHandler(v -> {
+            // notify client we support range requests
+            response.putHeader(HttpHeaderNames.ACCEPT_RANGES, "bytes");
 
-        if (range.length() != fileLength)
-        {
-            setPartialContentStatus(range);
-        }
+            if (range.length() != fileLength)
+            {
+                setPartialContentStatus(range);
+            }
 
-        return response.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-                       .putHeader(HttpHeaderNames.CONTENT_LENGTH, Long.toString(range.length()))
-                       .sendFile(fileName, range.start(), range.length());
+            if (!response.headers().contains(HttpHeaders.CONTENT_TYPE))
+            {
+                response.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
+            }
+        });
+
+        return response.sendFile(fileName, range.start(), range.length())
+                       // reset the headersEndHandler on failure so we don't end up writing headers
+                       // when sendFile fails
+                       .onFailure(ignored -> response.headersEndHandler(null));
     }
 
     /**

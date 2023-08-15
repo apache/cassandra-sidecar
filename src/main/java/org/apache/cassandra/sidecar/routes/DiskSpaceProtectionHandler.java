@@ -76,7 +76,7 @@ public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
             return;
         }
 
-        float minimumPercentageRequired = config.ssTableUploadConfiguration().minimumSpacePercentageRequired();
+        float minimumPercentageRequired = config.sstableUploadConfiguration().minimumSpacePercentageRequired();
         if (minimumPercentageRequired == 0)
         {
             logger.info("Minimum disk space percentage protection is disabled. " +

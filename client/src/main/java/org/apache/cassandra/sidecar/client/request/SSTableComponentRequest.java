@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.client.request;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 
 /**
@@ -46,6 +47,18 @@ public class SSTableComponentRequest extends Request
                                    HttpRange range)
     {
         super(requestURI(keyspace, tableName, snapshotName, componentName));
+        this.range = range;
+    }
+
+    /**
+     * Constructs a Sidecar request with the given {@code requestURI}. Defaults to {@code ssl} enabled.
+     *
+     * @param fileInfo contains information about the file to stream
+     * @param range    the HTTP range for the request
+     */
+    public SSTableComponentRequest(ListSnapshotFilesResponse.FileInfo fileInfo, HttpRange range)
+    {
+        super(fileInfo.componentDownloadUrl());
         this.range = range;
     }
 

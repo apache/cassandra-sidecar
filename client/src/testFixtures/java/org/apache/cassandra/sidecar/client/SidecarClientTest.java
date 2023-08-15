@@ -42,6 +42,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -835,8 +837,9 @@ abstract class SidecarClientTest
         }
     }
 
-    @Test
-    void testStreamSSTableComponentWithNoRange() throws Exception
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testLegacyStreamSSTableComponentWithNoRange(boolean useLegacyApi) throws Exception
     {
         try (MockWebServer server = new MockWebServer())
         {
@@ -888,23 +891,40 @@ abstract class SidecarClientTest
                               .setBody(buffer);
             server.enqueue(response);
 
-            client.streamSSTableComponent(sidecarInstance,
-                                          "cycling",
-                                          "cyclist_name",
-                                          "2023.04.12",
-                                          "nb-203-big-Data.db",
-                                          null,
-                                          mockStreamConsumer);
+            String expectedPath;
+            if (useLegacyApi)
+            {
+                client.streamSSTableComponent(sidecarInstance,
+                                              "cycling",
+                                              "cyclist_name",
+                                              "2023.04.12",
+                                              "nb-203-big-Data.db",
+                                              null,
+                                              mockStreamConsumer);
+                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE
+                               .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                               .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
+                               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db");
+            }
+            else
+            {
+                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023,
+                                                                                                     server.getHostName(),
+                                                                                                     server.getPort(), 0,
+                                                                                                     "2023.04.12",
+                                                                                                     "cycling",
+                                                                                                     "cyclist_name",
+                                                                                                     "1234",
+                                                                                                     "nb-1-big-TOC.txt");
+                client.streamSSTableComponent(sidecarInstance, fileInfo, null, mockStreamConsumer);
+                expectedPath = fileInfo.componentDownloadUrl();
+            }
 
             assertThat(latch.await(1, TimeUnit.MINUTES)).isTrue();
 
             RecordedRequest request = server.takeRequest();
-            assertThat(request.getPath())
-            .isEqualTo(ApiEndpointsV1.COMPONENTS_ROUTE
-                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                       .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
-                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db"));
+            assertThat(request.getPath()).isEqualTo(expectedPath);
             assertThat(request.getHeader("User-Agent")).isEqualTo("cassandra-sidecar-test/0.0.1");
             assertThat(request.getHeader("range")).isNull();
 
@@ -925,8 +945,9 @@ abstract class SidecarClientTest
         }
     }
 
-    @Test
-    void testStreamSSTableComponentWithRange() throws Exception
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testStreamSSTableComponentWithRange(boolean useLegacyApi) throws Exception
     {
         try (MockWebServer server = new MockWebServer())
         {
@@ -967,23 +988,41 @@ abstract class SidecarClientTest
                               .setBody("TOC.txt\nSt");
             server.enqueue(response);
 
-            client.streamSSTableComponent(sidecarInstance,
-                                          "cycling",
-                                          "cyclist_name",
-                                          "2023.04.12",
-                                          "nb-203-big-Data.db",
-                                          HttpRange.of(10, 20),
-                                          mockStreamConsumer);
+            String expectedPath;
+            if (useLegacyApi)
+            {
+                client.streamSSTableComponent(sidecarInstance,
+                                              "cycling",
+                                              "cyclist_name",
+                                              "2023.04.12",
+                                              "nb-1-big-TOC.txt",
+                                              HttpRange.of(10, 20),
+                                              mockStreamConsumer);
+                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE
+                               .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                               .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
+                               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt");
+            }
+            else
+            {
+                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023,
+                                                                                                     server.getHostName(),
+                                                                                                     server.getPort(), 0,
+                                                                                                     "2023.04.12",
+                                                                                                     "cycling",
+                                                                                                     "cyclist_name",
+                                                                                                     "1234",
+                                                                                                     "nb-1-big-TOC.txt");
+
+                client.streamSSTableComponent(sidecarInstance, fileInfo, HttpRange.of(10, 20), mockStreamConsumer);
+                expectedPath = fileInfo.componentDownloadUrl();
+            }
 
             assertThat(latch.await(1, TimeUnit.MINUTES)).isTrue();
 
             RecordedRequest request = server.takeRequest();
-            assertThat(request.getPath())
-            .isEqualTo(ApiEndpointsV1.COMPONENTS_ROUTE
-                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                       .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
-                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db"));
+            assertThat(request.getPath()).isEqualTo(expectedPath);
             assertThat(request.getHeader("User-Agent")).isEqualTo("cassandra-sidecar-test/0.0.1");
             assertThat(request.getHeader("range")).isEqualTo("bytes=10-20");
 
@@ -997,8 +1036,9 @@ abstract class SidecarClientTest
         }
     }
 
-    @Test
-    void testStreamSSTableComponentFailsMidStream() throws Exception
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testStreamSSTableComponentFailsMidStream(boolean useLegacyApi) throws Exception
     {
         try (MockWebServer server = new MockWebServer())
         {
@@ -1050,31 +1090,50 @@ abstract class SidecarClientTest
                               .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY);
             server.enqueue(response);
 
-            client.streamSSTableComponent(sidecarInstance,
-                                          "cycling",
-                                          "cyclist_name",
-                                          "2023.04.12",
-                                          "nb-203-big-Data.db",
-                                          null,
-                                          mockStreamConsumer);
+            String expectedPath;
+            if (useLegacyApi)
+            {
+                client.streamSSTableComponent(sidecarInstance,
+                                              "cycling",
+                                              "cyclist_name",
+                                              "2023.04.12",
+                                              "nb-1-big-TOC.txt",
+                                              null,
+                                              mockStreamConsumer);
+                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE
+                               .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                               .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
+                               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt");
+            }
+            else
+            {
+
+                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023,
+                                                                                                     server.getHostName(),
+                                                                                                     server.getPort(), 0,
+                                                                                                     "2023.04.12",
+                                                                                                     "cycling",
+                                                                                                     "cyclist_name",
+                                                                                                     "1234",
+                                                                                                     "nb-1-big-TOC.txt");
+                client.streamSSTableComponent(sidecarInstance, fileInfo, null, mockStreamConsumer);
+                expectedPath = fileInfo.componentDownloadUrl();
+            }
 
             assertThat(latch.await(1, TimeUnit.MINUTES)).isTrue();
 
             RecordedRequest request = server.takeRequest();
-            assertThat(request.getPath())
-            .isEqualTo(ApiEndpointsV1.COMPONENTS_ROUTE
-                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                       .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
-                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db"));
+            assertThat(request.getPath()).isEqualTo(expectedPath);
             assertThat(request.getHeader("User-Agent")).isEqualTo("cassandra-sidecar-test/0.0.1");
             assertThat(request.getHeader("range")).isNull();
             assertThat(receivedBytes).hasSizeGreaterThan(0);
         }
     }
 
-    @Test
-    void testStreamSSTableComponentWithRetries() throws Exception
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testStreamSSTableComponentWithRetries(boolean useLegacyApi) throws Exception
     {
         try (MockWebServer server = new MockWebServer())
         {
@@ -1117,25 +1176,41 @@ abstract class SidecarClientTest
                                              .setBody("{\"error\":\"some error\"}"));
             server.enqueue(response);
 
-            client.streamSSTableComponent(sidecarInstance,
-                                          "cycling",
-                                          "cyclist_name",
-                                          "2023.04.12",
-                                          "nb-203-big-Data.db",
-                                          HttpRange.of(10, 20),
-                                          mockStreamConsumer);
-
+            String expectedPath;
+            if (useLegacyApi)
+            {
+                client.streamSSTableComponent(sidecarInstance,
+                                              "cycling",
+                                              "cyclist_name",
+                                              "2023.04.12",
+                                              "nb-1-big-TOC.txt",
+                                              HttpRange.of(10, 20),
+                                              mockStreamConsumer);
+                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE
+                               .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                               .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
+                               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt");
+            }
+            else
+            {
+                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023,
+                                                                                                     server.getHostName(),
+                                                                                                     server.getPort(), 0,
+                                                                                                     "2023.04.12",
+                                                                                                     "cycling",
+                                                                                                     "cyclist_name",
+                                                                                                     "1234",
+                                                                                                     "nb-1-big-TOC.txt");
+                client.streamSSTableComponent(sidecarInstance, fileInfo, HttpRange.of(10, 20), mockStreamConsumer);
+                expectedPath = fileInfo.componentDownloadUrl();
+            }
             assertThat(latch.await(1, TimeUnit.MINUTES)).isTrue();
 
             server.takeRequest(); // first 500
             server.takeRequest(); // second 500
             RecordedRequest request3 = server.takeRequest();
-            assertThat(request3.getPath())
-            .isEqualTo(ApiEndpointsV1.COMPONENTS_ROUTE
-                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                       .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
-                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db"));
+            assertThat(request3.getPath()).isEqualTo(expectedPath);
             assertThat(request3.getHeader("User-Agent")).isEqualTo("cassandra-sidecar-test/0.0.1");
             assertThat(request3.getHeader("range")).isEqualTo("bytes=10-20");
 
@@ -1293,7 +1368,8 @@ abstract class SidecarClientTest
 
     private void validateResponseServed(String expectedEndpointPath) throws InterruptedException
     {
-        validateResponseServed(expectedEndpointPath, req -> { });
+        validateResponseServed(expectedEndpointPath, req -> {
+        });
     }
 
     private void validateResponseServed(String expectedEndpointPath,

@@ -139,4 +139,11 @@ public interface StorageJmxOperations
      * @return {@code true} if gossip is running, {@code false} otherwise
      */
     boolean isGossipRunning();
+
+    /**
+     * Get the list of all data file locations from Cassandra's configuration
+     *
+     * @return String array of all locations
+     */
+    String[] getAllDataFileLocations();
 }

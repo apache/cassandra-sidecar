@@ -225,14 +225,14 @@ public class FileStreamer
         try
         {
             // sidecar does not support multiple ranges as of now
-            final HttpRange hr = HttpRange.parseHeader(rangeHeader, fileLength);
+            HttpRange hr = HttpRange.parseHeader(rangeHeader, fileLength);
             HttpRange intersect = fr.intersect(hr);
             LOGGER.debug("Calculated range {} for streaming", intersect);
             return Future.succeededFuture(intersect);
         }
         catch (IllegalArgumentException | RangeException | UnsupportedOperationException e)
         {
-            LOGGER.error(String.format("Failed to parse header '%s'", rangeHeader), e);
+            LOGGER.error("Failed to parse header '{}'", rangeHeader, e);
             return Future.failedFuture(new HttpException(REQUESTED_RANGE_NOT_SATISFIABLE.code()));
         }
     }

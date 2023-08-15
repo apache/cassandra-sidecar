@@ -120,7 +120,7 @@ class NodeSettingsHandlerTest
                   assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code());
                   JsonObject error = resp.result().bodyAsJsonObject();
                   assertThat(error.getString("status")).isEqualTo("Not Found");
-                  assertThat(error.getString("message")).isEqualTo("Instance id 10 not found");
+                  assertThat(error.getString("message")).isEqualTo("Instance id '10' not found");
                   context.completeNow();
               });
     }

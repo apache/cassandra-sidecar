@@ -104,7 +104,7 @@ public class TestModule extends AbstractModule
         TestServiceConfiguration.builder()
                                 .throttleConfiguration(throttleConfiguration)
                                 .schemaKeyspaceConfiguration(schemaKeyspaceConfiguration)
-                                .ssTableUploadConfiguration(uploadConfiguration)
+                                .sstableUploadConfiguration(uploadConfiguration)
                                 .build();
         RestoreJobConfiguration restoreJobConfiguration =
         RestoreJobConfigurationImpl.builder()

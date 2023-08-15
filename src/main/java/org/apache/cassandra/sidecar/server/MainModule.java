@@ -38,7 +38,6 @@ import com.google.inject.name.Named;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.dropwizard.Match;
 import io.vertx.ext.dropwizard.MatchType;
@@ -88,7 +87,6 @@ import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
-import org.apache.cassandra.sidecar.routes.SnapshotsHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.TimeSkewHandler;
 import org.apache.cassandra.sidecar.routes.TokenRangeReplicaMapHandler;
@@ -99,6 +97,9 @@ import org.apache.cassandra.sidecar.routes.restore.CreateRestoreSliceHandler;
 import org.apache.cassandra.sidecar.routes.restore.RestoreJobSummaryHandler;
 import org.apache.cassandra.sidecar.routes.restore.RestoreRequestValidationHandler;
 import org.apache.cassandra.sidecar.routes.restore.UpdateRestoreJobHandler;
+import org.apache.cassandra.sidecar.routes.snapshots.ClearSnapshotHandler;
+import org.apache.cassandra.sidecar.routes.snapshots.CreateSnapshotHandler;
+import org.apache.cassandra.sidecar.routes.snapshots.ListSnapshotHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableCleanupHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
@@ -167,7 +168,9 @@ public class MainModule extends AbstractModule
                               CassandraHealthHandler cassandraHealthHandler,
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
                               FileStreamHandler fileStreamHandler,
-                              SnapshotsHandler snapshotsHandler,
+                              ClearSnapshotHandler clearSnapshotHandler,
+                              CreateSnapshotHandler createSnapshotHandler,
+                              ListSnapshotHandler listSnapshotHandler,
                               SchemaHandler schemaHandler,
                               RingHandler ringHandler,
                               TokenRangeReplicaMapHandler tokenRangeHandler,
@@ -238,14 +241,20 @@ public class MainModule extends AbstractModule
 
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_SNAPSHOTS_ROUTE)
-              .handler(snapshotsHandler);
+              .handler(listSnapshotHandler);
 
-        router.route()
-              .method(HttpMethod.GET)
-              .method(HttpMethod.PUT)
-              .method(HttpMethod.DELETE)
-              .path(ApiEndpointsV1.SNAPSHOTS_ROUTE)
-              .handler(snapshotsHandler);
+        router.get(ApiEndpointsV1.SNAPSHOTS_ROUTE)
+              .handler(listSnapshotHandler);
+
+        router.delete(ApiEndpointsV1.SNAPSHOTS_ROUTE)
+              // Leverage the validateTableExistence. Currently, JMX does not validate for non-existent keyspace.
+              // Additionally, the current JMX implementation to clear snapshots does not support passing a table
+              // as a parameter.
+              .handler(validateTableExistence)
+              .handler(clearSnapshotHandler);
+
+        router.put(ApiEndpointsV1.SNAPSHOTS_ROUTE)
+              .handler(createSnapshotHandler);
 
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_ALL_KEYSPACES_SCHEMA_ROUTE)

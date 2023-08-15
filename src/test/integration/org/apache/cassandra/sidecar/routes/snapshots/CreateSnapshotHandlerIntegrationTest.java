@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.routes;
+package org.apache.cassandra.sidecar.routes.snapshots;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,7 +26,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,9 +50,10 @@ import org.apache.cassandra.testing.SimpleCassandraVersion;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 @ExtendWith(VertxExtension.class)
-class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
+class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 {
     @CassandraIntegrationTest
     void createSnapshotEndpointFailsWhenKeyspaceDoesNotExist(VertxTestContext context) throws InterruptedException
@@ -87,12 +87,8 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
                                                             CassandraTestContext cassandraTestContext)
     throws InterruptedException
     {
-        if (cassandraTestContext.version.compareTo(SimpleCassandraVersion.create(4, 1, 0)) < 0)
-        {
-            // TTL is only supported in Cassandra 4.1
-            context.completeNow();
-            return;
-        }
+        assumeThat(cassandraTestContext.version).as("TTL is only supported in Cassandra 4.1")
+                                                .isGreaterThanOrEqualTo(SimpleCassandraVersion.create(4, 1, 0));
 
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
@@ -301,83 +297,6 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    @CassandraIntegrationTest
-    void deleteSnapshotFailsWhenKeyspaceDoesNotExist(VertxTestContext context) throws InterruptedException
-    {
-        String testRoute = "/api/v1/keyspaces/non_existent/tables/testtable/snapshots/my-snapshot";
-        assertNotFoundOnDeleteSnapshot(context, testRoute);
-    }
-
-    @CassandraIntegrationTest
-    void deleteSnapshotFailsWhenTableDoesNotExist(VertxTestContext context)
-    throws InterruptedException
-    {
-        createTestKeyspace();
-        createTestTableAndPopulate();
-
-        String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non_existent/snapshots/my-snapshot";
-        assertNotFoundOnDeleteSnapshot(context, testRoute);
-    }
-
-    @CassandraIntegrationTest
-    void deleteSnapshotFailsWhenSnapshotDoesNotExist(VertxTestContext context)
-    throws InterruptedException
-    {
-        createTestKeyspace();
-        QualifiedTableName tableName = createTestTableAndPopulate();
-
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/non_existent",
-                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
-        assertNotFoundOnDeleteSnapshot(context, testRoute);
-    }
-
-    @CassandraIntegrationTest(numDataDirsPerInstance = 1)
-        // Set to > 1 to fail test
-    void testDeleteSnapshotEndpoint(VertxTestContext context)
-    throws InterruptedException
-    {
-        createTestKeyspace();
-        QualifiedTableName tableName = createTestTableAndPopulate();
-
-        WebClient client = WebClient.create(vertx);
-        String snapshotName = "my-snapshot" + UUID.randomUUID();
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s",
-                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName(),
-                                         snapshotName);
-
-        // first create the snapshot
-        client.put(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(
-              createResponse ->
-              context.verify(() -> {
-                  assertThat(createResponse.statusCode()).isEqualTo(OK.code());
-                  final List<Path> found =
-                  findChildFile(sidecarTestContext, "127.0.0.1", snapshotName);
-                  assertThat(found).isNotEmpty();
-
-                  // snapshot directory exists inside data directory
-                  assertThat(found).isNotEmpty();
-
-                  // then delete the snapshot
-                  client.delete(server.actualPort(), "127.0.0.1", testRoute)
-                        .expect(ResponsePredicate.SC_OK)
-                        .send(context.succeeding(
-                        deleteResponse ->
-                        context.verify(() ->
-                                       {
-                                           assertThat(deleteResponse.statusCode()).isEqualTo(OK.code());
-                                           final List<Path> found2 =
-                                           findChildFile(sidecarTestContext,
-                                                         "127.0.0.1", snapshotName);
-                                           assertThat(found2).isEmpty();
-                                           context.completeNow();
-                                       })));
-              })));
-        // wait until the test completes
-        assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
-    }
-
     private QualifiedTableName createTestTableAndPopulate(String tableNamePrefix)
     {
         QualifiedTableName tableName = createTestTable(tableNamePrefix,
@@ -400,16 +319,6 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('2', 'Saranya');");
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('3', 'Yifan');");
         return tableName;
-    }
-
-    private void assertNotFoundOnDeleteSnapshot(VertxTestContext context, String testRoute) throws InterruptedException
-    {
-        WebClient client = WebClient.create(vertx);
-        client.delete(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_NOT_FOUND)
-              .send(context.succeedingThenComplete());
-        // wait until test completes
-        assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
     static class SnapshotManifest

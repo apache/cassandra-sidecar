@@ -19,6 +19,9 @@
 package org.apache.cassandra.sidecar.routes;
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
@@ -38,6 +41,8 @@ import static io.netty.handler.codec.http.HttpResponseStatus.REQUEST_TIMEOUT;
  */
 public class JsonErrorHandler implements ErrorHandler
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(JsonErrorHandler.class);
+
     /**
      * Flag to enable/disable printing the full stack trace of exceptions.
      */
@@ -143,6 +148,7 @@ public class JsonErrorHandler implements ErrorHandler
             }
         }
         writeResponse(ctx, responseStatus.code(), payload);
+        LOGGER.error("Exception effectiveStatusCode={}", effectiveStatusCode, exception);
     }
 
     /**

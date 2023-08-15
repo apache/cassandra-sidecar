@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -50,4 +51,10 @@ public interface TableJmxOperations
                                    boolean invalidateCaches,
                                    boolean extendedVerify,
                                    boolean copyData);
+
+    /**
+     * @return a list of data paths for the Cassandra table
+     * @throws IOException when an error occurs reading the data paths
+     */
+    List<String> getDataPaths() throws IOException;
 }

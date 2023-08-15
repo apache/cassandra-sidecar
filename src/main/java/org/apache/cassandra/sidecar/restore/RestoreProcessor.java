@@ -86,7 +86,7 @@ public class RestoreProcessor implements PeriodicTask
         this.processMaxConcurrency = new ConcurrencyLimiter(() -> config.restoreJobConfiguration()
                                                                         .processMaxConcurrency());
         this.requiredUsableSpacePercentage
-        = config.serviceConfiguration().ssTableUploadConfiguration().minimumSpacePercentageRequired() / 100.0;
+        = config.serviceConfiguration().sstableUploadConfiguration().minimumSpacePercentageRequired() / 100.0;
         this.longRunningHandlerThresholdInSeconds = config.restoreJobConfiguration()
                                                           .restoreJobLongRunningHandlerThresholdSeconds();
         this.importer = importer;

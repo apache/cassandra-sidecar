@@ -132,7 +132,7 @@ class SidecarConfigurationTest
 
         assertThat(config.serviceConfiguration()).isNotNull();
         SSTableUploadConfiguration uploadConfiguration = config.serviceConfiguration()
-                                                               .ssTableUploadConfiguration();
+                                                               .sstableUploadConfiguration();
         assertThat(uploadConfiguration).isNotNull();
 
         assertThat(uploadConfiguration.concurrentUploadsLimit()).isEqualTo(80);
@@ -155,8 +155,8 @@ class SidecarConfigurationTest
 
         assertThat(config).isNotNull();
         assertThat(config.serviceConfiguration()).isNotNull();
-        assertThat(config.serviceConfiguration().ssTableUploadConfiguration()).isNotNull();
-        assertThat(config.serviceConfiguration().ssTableUploadConfiguration().filePermissions()).isEqualTo("rw-rw-rw-");
+        assertThat(config.serviceConfiguration().sstableUploadConfiguration()).isNotNull();
+        assertThat(config.serviceConfiguration().sstableUploadConfiguration().filePermissions()).isEqualTo("rw-rw-rw-");
     }
 
     @Test
@@ -190,7 +190,7 @@ class SidecarConfigurationTest
         assertThat(driverConfiguration).isNotNull();
         assertThat(driverConfiguration.localDc()).isEqualTo("dc1");
         List<InetSocketAddress> endpoints = Arrays.asList(new InetSocketAddress("127.0.0.1", 9042),
-                                                                  new InetSocketAddress("127.0.0.2", 9042));
+                                                          new InetSocketAddress("127.0.0.2", 9042));
         assertThat(driverConfiguration.contactPoints()).isEqualTo(endpoints);
         assertThat(driverConfiguration.numConnections()).isEqualTo(6);
     }
@@ -209,6 +209,16 @@ class SidecarConfigurationTest
         assertThat(configuration.replicationFactor()).isEqualTo(3);
         assertThat(configuration.createReplicationStrategyString())
         .isEqualTo("{'class':'SimpleStrategy', 'replication_factor':'3'}");
+    }
+
+    @Test
+    void testMissingSSTableSnapshotSection() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_missing_sstable_snapshot.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+
+        assertThat(config.serviceConfiguration()).isNotNull();
+        assertThat(config.serviceConfiguration().sstableSnapshotConfiguration()).isNull();
     }
 
     @Test
@@ -395,6 +405,15 @@ class SidecarConfigurationTest
         assertThat(trafficShaping.peakOutboundGlobalBandwidthBytesPerSecond()).isEqualTo(2000L);
         assertThat(trafficShaping.maxDelayToWaitMillis()).isEqualTo(2500L);
         assertThat(trafficShaping.checkIntervalForStatsMillis()).isEqualTo(3000L);
+
+        // SSTable snapshot configuration section
+        SSTableSnapshotConfiguration snapshotConfig = serviceConfiguration.sstableSnapshotConfiguration();
+
+        assertThat(snapshotConfig).isNotNull();
+
+        assertThat(snapshotConfig.snapshotListCacheConfiguration().enabled()).isTrue();
+        assertThat(snapshotConfig.snapshotListCacheConfiguration().maximumSize()).isEqualTo(450);
+        assertThat(snapshotConfig.snapshotListCacheConfiguration().expireAfterAccessMillis()).isEqualTo(350);
     }
 
     private void validateHealthCheckConfigurationFromYaml(HealthCheckConfiguration config)

@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -61,6 +62,16 @@ public class CassandraTableOperations implements TableOperations
                                            invalidateCaches,
                                            extendedVerify,
                                            copyData);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<String> getDataPaths(@NotNull String keyspace, @NotNull String table) throws IOException
+    {
+        return jmxClient.proxy(TableJmxOperations.class, tableMBeanName(keyspace, table))
+                        .getDataPaths();
     }
 
     String tableMBeanName(String keyspace, String tableName)

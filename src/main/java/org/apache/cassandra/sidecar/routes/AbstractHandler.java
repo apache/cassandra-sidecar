@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.common.data.Name;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -206,6 +207,16 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
         if (cause instanceof OperationUnavailableException)
         {
             return wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE, cause.getMessage(), cause);
+        }
+
+        if (cause instanceof NoSuchSidecarInstanceException)
+        {
+            return wrapHttpException(HttpResponseStatus.MISDIRECTED_REQUEST, cause.getMessage(), cause);
+        }
+
+        if (cause instanceof IllegalArgumentException)
+        {
+            return wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause.getMessage(), cause);
         }
 
         return wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, cause);

@@ -177,7 +177,7 @@ public abstract class AbstractHealthServiceTest
               {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
                   assertThat(response.body())
-                  .isEqualTo("{\"status\":\"Not Found\",\"code\":404,\"message\":\"Instance id 400 not found\"}");
+                  .isEqualTo("{\"status\":\"Not Found\",\"code\":404,\"message\":\"Instance id '400' not found\"}");
                   testContext.completeNow();
               })));
     }

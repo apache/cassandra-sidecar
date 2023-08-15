@@ -71,24 +71,64 @@ class StreamSSTableComponentRequestTest
         assertThat(req.snapshotName()).isEqualTo("snapshot");
         assertThat(req.componentName()).isEqualTo("data.db");
         assertThat(req.secondaryIndexName()).isNull();
+        assertThat(req.dataDirectoryIndex()).isNull();
         assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
                                              "snapshot='snapshot', secondaryIndexName='null', " +
-                                             "componentName='data.db'}");
+                                             "componentName='data.db', dataDirectoryIndex='null'}");
     }
 
     @Test
     void testValidRequestWithIndexName()
     {
         StreamSSTableComponentRequest req =
-        new StreamSSTableComponentRequest(new QualifiedTableName("ks", "table"), "snapshot", ".index", "data.db");
+        new StreamSSTableComponentRequest(new QualifiedTableName("ks", "table"), "snapshot", ".index", "data.db",
+                                          null, null);
 
         assertThat(req.keyspace()).isEqualTo("ks");
         assertThat(req.tableName()).isEqualTo("table");
         assertThat(req.snapshotName()).isEqualTo("snapshot");
         assertThat(req.secondaryIndexName()).isEqualTo(".index");
         assertThat(req.componentName()).isEqualTo("data.db");
+        assertThat(req.dataDirectoryIndex()).isNull();
         assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
                                              "snapshot='snapshot', secondaryIndexName='.index', " +
-                                             "componentName='data.db'}");
+                                             "componentName='data.db', dataDirectoryIndex='null'}");
+    }
+
+    @Test
+    void testValidRequestWithDataDirIndex()
+    {
+        StreamSSTableComponentRequest req =
+        new StreamSSTableComponentRequest(new QualifiedTableName("ks", "table"), "snapshot", ".index", "data.db",
+                                          null, 42);
+
+        assertThat(req.keyspace()).isEqualTo("ks");
+        assertThat(req.tableName()).isEqualTo("table");
+        assertThat(req.snapshotName()).isEqualTo("snapshot");
+        assertThat(req.secondaryIndexName()).isEqualTo(".index");
+        assertThat(req.componentName()).isEqualTo("data.db");
+        assertThat(req.dataDirectoryIndex()).isEqualTo(42);
+        assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
+                                             "snapshot='snapshot', secondaryIndexName='.index', " +
+                                             "componentName='data.db', dataDirectoryIndex='42'}");
+    }
+
+    @Test
+    void testValidRequestWithTableUuid()
+    {
+        StreamSSTableComponentRequest req =
+        new StreamSSTableComponentRequest(new QualifiedTableName("ks", "table"), "snapshot", ".index", "data.db",
+                                          "1245", 42);
+
+        assertThat(req.keyspace()).isEqualTo("ks");
+        assertThat(req.tableName()).isEqualTo("table");
+        assertThat(req.snapshotName()).isEqualTo("snapshot");
+        assertThat(req.secondaryIndexName()).isEqualTo(".index");
+        assertThat(req.componentName()).isEqualTo("data.db");
+        assertThat(req.tableUuid()).isEqualTo("1245");
+        assertThat(req.dataDirectoryIndex()).isEqualTo(42);
+        assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
+                                             "snapshot='snapshot', secondaryIndexName='.index', " +
+                                             "componentName='data.db', dataDirectoryIndex='42'}");
     }
 }

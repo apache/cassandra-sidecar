@@ -19,26 +19,12 @@
 package org.apache.cassandra.sidecar.config;
 
 /**
- * Configuration class that encapsulates parameters needed for Caches
+ * Configuration for the SSTable Snapshots functionality
  */
-public interface CacheConfiguration
+public interface SSTableSnapshotConfiguration
 {
     /**
-     * @return the configured amount of time in milliseconds after the entry's creation, the most recent
-     * replacement of its value, or its last access has elapsed to be considered an expired entry in the cache
+     * @return the configuration for the cache used for SSTable snapshot list of files
      */
-    long expireAfterAccessMillis();
-
-    /**
-     * @return the maximum number of entries the cache may contain
-     */
-    long maximumSize();
-
-    /**
-     * @return {@code true} if the cache is enabled, {@code false} otherwise
-     */
-    default boolean enabled()
-    {
-        return true;
-    }
+    CacheConfiguration snapshotListCacheConfiguration();
 }

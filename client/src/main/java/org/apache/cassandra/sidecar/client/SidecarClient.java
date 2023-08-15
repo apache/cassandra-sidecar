@@ -372,7 +372,10 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      * @param componentName  the name of the SSTable component
      * @param range          the HTTP range for the request
      * @param streamConsumer the object that consumes the stream
+     * @deprecated use {@link #streamSSTableComponent(SidecarInstance, ListSnapshotFilesResponse.FileInfo, HttpRange, StreamConsumer)}
+     * instead
      */
+    @Deprecated
     public void streamSSTableComponent(SidecarInstance instance,
                                        String keyspace,
                                        String table,
@@ -384,6 +387,27 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
         executor.streamRequest(requestBuilder()
                                .singleInstanceSelectionPolicy(instance)
                                .ssTableComponentRequest(keyspace, table, snapshotName, componentName, range)
+                               .build(), streamConsumer);
+    }
+
+    /**
+     * Streams the specified {@code range} of an SSTable {@code componentName} for the given {@code keyspace},
+     * {@code table} from an existing {@code snapshotName}, the stream is consumed by the
+     * {@link StreamConsumer consumer}.
+     *
+     * @param instance       the instance where the request will be executed
+     * @param fileInfo       contains information about the file to stream
+     * @param range          the HTTP range for the request
+     * @param streamConsumer the object that consumes the stream
+     */
+    public void streamSSTableComponent(SidecarInstance instance,
+                                       ListSnapshotFilesResponse.FileInfo fileInfo,
+                                       HttpRange range,
+                                       StreamConsumer streamConsumer)
+    {
+        executor.streamRequest(requestBuilder()
+                               .singleInstanceSelectionPolicy(instance)
+                               .ssTableComponentRequest(fileInfo, range)
                                .build(), streamConsumer);
     }
 

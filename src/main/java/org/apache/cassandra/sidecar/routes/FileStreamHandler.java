@@ -18,19 +18,24 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
+
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.vertx.core.Future;
-import io.vertx.core.file.FileProps;
-import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
 import org.apache.cassandra.sidecar.models.HttpResponse;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.RequestUtils;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
@@ -39,6 +44,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Handler for sending out files.
  */
+@Singleton
 public class FileStreamHandler extends AbstractHandler<String>
 {
     public static final String FILE_PATH_CONTEXT_KEY = "fileToTransfer";
@@ -61,14 +67,12 @@ public class FileStreamHandler extends AbstractHandler<String>
                                String localFile)
     {
         InstanceMetadata instanceMetadata = metadataFetcher.instance(host);
-        FileSystem fs = context.vertx().fileSystem();
-        fs.exists(localFile)
-          .compose(exists -> ensureValidFile(fs, localFile, exists))
-          .compose(fileProps -> fileStreamer.stream(new HttpResponse(httpRequest, context.response()),
-                                                    instanceMetadata.id(), localFile, fileProps.size(),
-                                                    httpRequest.getHeader(HttpHeaderNames.RANGE)))
-          .onSuccess(v -> logger.debug("Completed streaming file '{}'", localFile))
-          .onFailure(context::fail);
+        fileSize(context, localFile)
+        .compose(fileSize -> fileStreamer.stream(new HttpResponse(httpRequest, context.response()),
+                                                 instanceMetadata.id(), localFile, fileSize,
+                                                 httpRequest.getHeader(HttpHeaderNames.RANGE)))
+        .onSuccess(v -> logger.debug("Completed streaming file '{}'", localFile))
+        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, localFile));
     }
 
     @Override
@@ -77,40 +81,57 @@ public class FileStreamHandler extends AbstractHandler<String>
         return context.get(FILE_PATH_CONTEXT_KEY);
     }
 
-    /**
-     * Ensures that the file exists and is a non-empty regular file
-     *
-     * @param fs        The underlying filesystem
-     * @param localFile The path the file in the filesystem
-     * @param exists    Whether the file exists or not
-     * @return a succeeded future with the {@link FileProps}, or a failed future if the file does not exist;
-     * is not a regular file; or if the file is empty
-     */
-    private Future<FileProps> ensureValidFile(FileSystem fs, String localFile, Boolean exists)
+    @Override
+    protected void processFailure(Throwable cause,
+                                  RoutingContext context,
+                                  String host,
+                                  SocketAddress remoteAddress,
+                                  String localFile)
     {
-        if (!exists)
+        IOException fileNotFoundException = ThrowableUtils.getCause(cause, NoSuchFileException.class);
+
+        if (fileNotFoundException == null)
         {
-            logger.error("The requested file '{}' does not exist", localFile);
-            return Future.failedFuture(wrapHttpException(NOT_FOUND, "The requested file does not exist"));
+            // FileNotFoundException comes from the stream method
+            fileNotFoundException = ThrowableUtils.getCause(cause, FileNotFoundException.class);
         }
 
-        return fs.props(localFile)
-                 .compose(fileProps -> {
-                     if (fileProps == null || !fileProps.isRegularFile())
-                     {
-                         // File is not a regular file
-                         logger.error("The requested file '{}' does not exist", localFile);
-                         return Future.failedFuture(wrapHttpException(NOT_FOUND, "The requested file does not exist"));
-                     }
+        if (fileNotFoundException != null)
+        {
+            logger.error("The requested file '{}' does not exist", localFile);
+            context.fail(wrapHttpException(NOT_FOUND, "The requested file does not exist"));
+            return;
+        }
 
-                     if (fileProps.size() <= 0)
-                     {
-                         logger.error("The requested file '{}' has 0 size", localFile);
-                         return Future.failedFuture(wrapHttpException(REQUESTED_RANGE_NOT_SATISFIABLE,
-                                                                      "The requested file is empty"));
-                     }
+        super.processFailure(cause, context, host, remoteAddress, localFile);
+    }
 
-                     return Future.succeededFuture(fileProps);
-                 });
+    protected Future<Long> fileSize(RoutingContext context, String path)
+    {
+        Long fileSize = RequestUtils.parseLongQueryParam(context.request(), "size", null);
+        if (fileSize != null)
+        {
+            return Future.succeededFuture(fileSize);
+        }
+
+        return context.vertx().fileSystem().props(path)
+                      .compose(fileProps -> {
+                          if (fileProps == null || !fileProps.isRegularFile())
+                          {
+                              // File is not a regular file
+                              logger.error("The requested file '{}' does not exist", path);
+                              return Future.failedFuture(wrapHttpException(NOT_FOUND,
+                                                                           "The requested file does not exist"));
+                          }
+
+                          if (fileProps.size() <= 0)
+                          {
+                              logger.error("The requested file '{}' has 0 size", path);
+                              return Future.failedFuture(wrapHttpException(REQUESTED_RANGE_NOT_SATISFIABLE,
+                                                                           "The requested file is empty"));
+                          }
+
+                          return Future.succeededFuture(fileProps.size());
+                      });
     }
 }
