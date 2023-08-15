@@ -31,6 +31,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,7 +39,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
 {
     @Override
-    public SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig, ExecutorPools executorPools)
+    public SnapshotPathBuilder initialize(Vertx vertx, ServiceConfiguration serviceConfiguration,
+                                          InstancesConfig instancesConfig, ExecutorPools executorPools)
     {
         return new SnapshotPathBuilder(vertx, instancesConfig, validator, executorPools);
     }

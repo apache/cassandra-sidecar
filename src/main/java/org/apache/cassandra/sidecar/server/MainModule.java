@@ -94,9 +94,12 @@ import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableCleanupHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
 import org.apache.cassandra.sidecar.routes.validations.ValidateTableExistenceHandler;
+import org.apache.cassandra.sidecar.snapshots.CachedSnapshotPathBuilder;
+import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.stats.SidecarSchemaStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
+import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 
@@ -449,6 +452,17 @@ public class MainModule extends AbstractModule
     public SidecarStats sidecarStats()
     {
         return SidecarStats.INSTANCE;
+    }
+
+    @Provides
+    @Singleton
+    public SnapshotPathBuilder snapshotPathBuilder(Vertx vertx,
+                                                   ServiceConfiguration serviceConfiguration,
+                                                   InstancesConfig instancesConfig,
+                                                   CassandraInputValidator validator,
+                                                   ExecutorPools executorPools)
+    {
+        return new CachedSnapshotPathBuilder(vertx, serviceConfiguration, instancesConfig, validator, executorPools);
     }
 
     @Provides
