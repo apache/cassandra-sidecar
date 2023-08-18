@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.cluster.instance;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
@@ -41,7 +42,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         id = builder.id;
         host = builder.host;
         port = builder.port;
-        dataDirs = builder.dataDirs;
+        dataDirs = Collections.unmodifiableList(builder.dataDirs);
         stagingDir = builder.stagingDir;
         delegate = builder.delegate;
     }

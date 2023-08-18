@@ -106,16 +106,14 @@ public class MainModule extends AbstractModule
                .setIdleTimeout(conf.serviceConfiguration().requestIdleTimeoutMillis());
 
         SslConfiguration ssl = conf.sslConfiguration();
-        if (ssl != null)
+        if (ssl != null && ssl.enabled())
         {
             options.setKeyStoreOptions(new JksOptions()
                                        .setPath(ssl.keystore().path())
                                        .setPassword(ssl.keystore().password()))
                    .setSsl(ssl.enabled());
 
-            if (ssl.truststore() != null
-                && ssl.truststore().path() != null
-                && ssl.truststore().password() != null)
+            if (ssl.isTruststoreConfigured())
             {
                 options.setTrustStoreOptions(new JksOptions()
                                              .setPath(ssl.truststore().path())
