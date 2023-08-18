@@ -21,8 +21,8 @@
 import com.github.spotbugs.SpotBugsTask
 import org.nosphere.apache.rat.RatTask
 
-import java.nio.file.Paths
 import java.nio.file.Files
+import java.nio.file.Paths
 
 buildscript {
     dependencies {
@@ -53,7 +53,7 @@ plugins {
 }
 
 
-ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-5.1.jar" // trunk is currently 5.0.jar - update when trunk moves
+ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-5.1.jar" // trunk is currently 5.1.jar - update when trunk moves
 println("Using DTest jar: ${ext.dtestJar}")
 
 // Force checkstyle, rat, and spotBugs to run before test tasks for faster feedback
@@ -177,10 +177,11 @@ dependencies {
     implementation('ch.qos.logback:logback-core:1.2.3')
     implementation('ch.qos.logback:logback-classic:1.2.3')
 
-    implementation(group: 'org.apache.commons', name: 'commons-configuration2', version: '2.7')
+    implementation(group: 'org.apache.commons', name: 'commons-lang3', version: '3.13.0')
 
-    runtimeOnly group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
-    runtimeOnly group: 'org.yaml', name: 'snakeyaml', version: '1.26'
+    // Jackson for yaml-based configuration parsing
+    implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
+    implementation(group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: "${project.jacksonVersion}")
 
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 
@@ -213,7 +214,7 @@ dependencies {
         exclude group: 'junit', module: 'junit'
     }
     integrationTestImplementation(files("dtest-jars/${dtestJar}"))
-    integrationTestImplementation("org.apache.cassandra:dtest-api:0.0.15")
+    integrationTestImplementation("org.apache.cassandra:dtest-api:0.0.16")
     // Needed by the Cassandra dtest framework
     integrationTestImplementation("org.junit.vintage:junit-vintage-engine:${junitVersion}")
 }
@@ -425,6 +426,7 @@ rat {
 }
 
 integrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
+compileIntegrationTestJava.onlyIf { "true" != System.getenv("skipIntegrationTest") }
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia

@@ -38,7 +38,6 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.NodeSettings;
@@ -53,7 +52,6 @@ class NodeSettingsHandlerTest
     private static final String URI_WITH_INSTANCE_ID = NODE_SETTINGS_ROUTE + "?instanceId=%s";
 
     private Vertx vertx;
-    private Configuration config;
     private HttpServer server;
 
     @BeforeEach
@@ -62,10 +60,9 @@ class NodeSettingsHandlerTest
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);
-        config = injector.getInstance(Configuration.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), config.getHost(), context.succeedingThenComplete());
+        server.listen(0, "localhost", context.succeedingThenComplete());
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
@@ -86,7 +83,7 @@ class NodeSettingsHandlerTest
     public void validRequestWithoutInstanceId(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        client.get(config.getPort(), "localhost", NODE_SETTINGS_ROUTE)
+        client.get(server.actualPort(), "localhost", NODE_SETTINGS_ROUTE)
               .as(BodyCodec.buffer())
               .send(resp -> {
                   assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
@@ -102,7 +99,7 @@ class NodeSettingsHandlerTest
     public void validRequestWithInstanceId(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        client.get(config.getPort(), "localhost", String.format(URI_WITH_INSTANCE_ID, "1"))
+        client.get(server.actualPort(), "localhost", String.format(URI_WITH_INSTANCE_ID, "1"))
               .as(BodyCodec.buffer())
               .send(resp -> {
                   assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
@@ -118,7 +115,7 @@ class NodeSettingsHandlerTest
     public void validRequestWithInvalidInstanceId(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        client.get(config.getPort(), "localhost", String.format(URI_WITH_INSTANCE_ID, "10"))
+        client.get(server.actualPort(), "localhost", String.format(URI_WITH_INSTANCE_ID, "10"))
               .as(BodyCodec.buffer())
               .send(resp -> {
                   assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code());

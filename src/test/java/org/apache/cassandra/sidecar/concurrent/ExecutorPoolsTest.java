@@ -24,19 +24,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.Uninterruptibles;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.Configuration;
-import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Test {@link ExecutorPools}
@@ -45,18 +41,12 @@ public class ExecutorPoolsTest
 {
     private ExecutorPools pools;
     private Vertx vertx;
-    private Configuration mockConfiguration;
 
     @BeforeEach
     public void before()
     {
         vertx = Vertx.vertx();
-        mockConfiguration = mock(Configuration.class);
-        WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfiguration("test-pool", 10,
-                                                                             TimeUnit.SECONDS.toMillis(30));
-        when(mockConfiguration.serverWorkerPoolConfiguration()).thenReturn(workerPoolConf);
-        when(mockConfiguration.serverInternalWorkerPoolConfiguration()).thenReturn(workerPoolConf);
-        pools = new ExecutorPools(vertx, mockConfiguration);
+        pools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
     }
 
     @AfterEach
@@ -84,8 +74,11 @@ public class ExecutorPoolsTest
         class IntWrapper
         {
             int i = 0;
+
             void increment()
-            { i += 1; }
+            {
+                i += 1;
+            }
         }
 
         ExecutorPools.TaskExecutorPool pool = pools.internal();

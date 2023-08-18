@@ -16,33 +16,33 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.utils;
-
-import java.util.Set;
+package org.apache.cassandra.sidecar.config;
 
 /**
- * An interface to provide validation configuration parameters
+ * Encapsulates key or trust store option configurations
  */
-public interface ValidationConfiguration
+public interface KeyStoreConfiguration
 {
     /**
-     * @return a set of forbidden keyspaces
+     * @return the path to the store
      */
-    Set<String> forbiddenKeyspaces();
+    String path();
 
     /**
-     * @return a regular expression for an allowed pattern for directory names
-     * (i.e. keyspace directory name or table directory name)
+     * @return the password for the store
      */
-    String allowedPatternForDirectory();
+    String password();
 
     /**
-     * @return a regular expression for an allowed pattern for component names
+     * @return the type of the store
      */
-    String allowedPatternForComponentName();
+    String type();
 
     /**
-     * @return a regular expression to an allowed pattern for a subset of component names
+     * @return {@code true} if both {@link #path()} and {@link #password()} are provided
      */
-    String allowedPatternForRestrictedComponentName();
+    default boolean isConfigured()
+    {
+        return path() != null && password() != null;
+    }
 }

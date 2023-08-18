@@ -19,20 +19,22 @@
 
 package org.apache.cassandra.sidecar.client;
 
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+
 /**
  * Encapsulates configurations for the {@link SidecarClient}
  */
-public class SidecarConfig
+public class SidecarClientConfigImpl implements SidecarClientConfig
 {
-    private static final int DEFAULT_MAX_RETRIES = 3;
-    private static final long DEFAULT_RETRY_DELAY_MILLIS = 500L;
-    private static final long DEFAULT_MAX_RETRY_DELAY_MILLIS = 60_000L;
+    public static final int DEFAULT_MAX_RETRIES = 3;
+    public static final long DEFAULT_RETRY_DELAY_MILLIS = 500L;
+    public static final long DEFAULT_MAX_RETRY_DELAY_MILLIS = 60_000L;
 
-    private final int maxRetries;
-    private final long retryDelayMillis;
-    private final long maxRetryDelayMillis;
+    protected final int maxRetries;
+    protected final long retryDelayMillis;
+    protected final long maxRetryDelayMillis;
 
-    private SidecarConfig(Builder builder)
+    private SidecarClientConfigImpl(Builder builder)
     {
         maxRetries = builder.maxRetries;
         retryDelayMillis = builder.retryDelayMillis;
@@ -42,6 +44,7 @@ public class SidecarConfig
     /**
      * @return the maximum number of times to retry a request
      */
+    @Override
     public int maxRetries()
     {
         return maxRetries;
@@ -50,6 +53,7 @@ public class SidecarConfig
     /**
      * @return the initial amount of time to wait before retrying a failed request
      */
+    @Override
     public long retryDelayMillis()
     {
         return retryDelayMillis;
@@ -58,19 +62,35 @@ public class SidecarConfig
     /**
      * @return the maximum amount of time to wait before retrying a failed request
      */
+    @Override
     public long maxRetryDelayMillis()
     {
         return maxRetryDelayMillis;
     }
 
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
     /**
      * {@code SidecarConfig} builder static inner class.
      */
-    public static final class Builder
+    public static class Builder implements DataObjectBuilder<Builder, SidecarClientConfig>
     {
-        private int maxRetries = DEFAULT_MAX_RETRIES;
-        private long retryDelayMillis = DEFAULT_RETRY_DELAY_MILLIS;
-        private long maxRetryDelayMillis = DEFAULT_MAX_RETRY_DELAY_MILLIS;
+        protected int maxRetries = DEFAULT_MAX_RETRIES;
+        protected long retryDelayMillis = DEFAULT_RETRY_DELAY_MILLIS;
+        protected long maxRetryDelayMillis = DEFAULT_MAX_RETRY_DELAY_MILLIS;
+
+        protected Builder()
+        {
+        }
+
+        @Override
+        public Builder self()
+        {
+            return this;
+        }
 
         /**
          * Sets the {@code maxRetries} and returns a reference to this Builder enabling method chaining.
@@ -80,8 +100,7 @@ public class SidecarConfig
          */
         public Builder maxRetries(int maxRetries)
         {
-            this.maxRetries = maxRetries;
-            return this;
+            return update(b -> b.maxRetries = maxRetries);
         }
 
         /**
@@ -92,8 +111,7 @@ public class SidecarConfig
          */
         public Builder retryDelayMillis(long retryDelayMillis)
         {
-            this.retryDelayMillis = retryDelayMillis;
-            return this;
+            return update(b -> b.retryDelayMillis = retryDelayMillis);
         }
 
         /**
@@ -104,8 +122,7 @@ public class SidecarConfig
          */
         public Builder maxRetryDelayMillis(long maxRetryDelayMillis)
         {
-            this.maxRetryDelayMillis = maxRetryDelayMillis;
-            return this;
+            return update(b -> b.maxRetryDelayMillis = maxRetryDelayMillis);
         }
 
         /**
@@ -113,9 +130,10 @@ public class SidecarConfig
          *
          * @return a {@code SidecarConfig} built with parameters of this {@code SidecarConfig.Builder}
          */
-        public SidecarConfig build()
+        @Override
+        public SidecarClientConfig build()
         {
-            return new SidecarConfig(this);
+            return new SidecarClientConfigImpl(this);
         }
     }
 }

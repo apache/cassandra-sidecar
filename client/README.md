@@ -48,18 +48,18 @@ on how to instantiate the `SidecarClient` using vertx's implementation:
                                             .userAgent("sample-agent/0.0.1")
                                             .build();
 
-        SidecarConfig sidecarConfig = new SidecarConfig.Builder()
+        SidecarClientConfig clientConfig = new SidecarClientConfig.Builder()
                                       .maxRetries(10)
                                       .retryDelayMillis(200)
                                       .maxRetryDelayMillis(10_000)
                                       .build();
 
-        RetryPolicy defaultRetryPolicy = new ExponentialBackoffRetryPolicy(sidecarConfig.maxRetries(),
-                                                                           sidecarConfig.retryDelayMillis(),
-                                                                           sidecarConfig.maxRetryDelayMillis());
+        RetryPolicy defaultRetryPolicy = new ExponentialBackoffRetryPolicy(clientConfig.maxRetries(),
+                                                                           clientConfig.retryDelayMillis(),
+                                                                           clientConfig.maxRetryDelayMillis());
 
         VertxHttpClient vertxHttpClient = new VertxHttpClient(vertx, httpClientConfig);
         VertxRequestExecutor requestExecutor = new VertxRequestExecutor(vertxHttpClient);
         SimpleSidecarInstancesProvider instancesProvider = new SimpleSidecarInstancesProvider(new ArrayList<>(clusterConfig));
-        return new SidecarClient(instancesProvider, requestExecutor, sidecarConfig, defaultRetryPolicy);
+        return new SidecarClient(instancesProvider, requestExecutor, clientConfig, defaultRetryPolicy);
 ```

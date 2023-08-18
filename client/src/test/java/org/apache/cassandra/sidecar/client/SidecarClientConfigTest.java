@@ -24,14 +24,14 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link SidecarConfig}
+ * Unit tests for {@link SidecarClientConfig}
  */
-class SidecarConfigTest
+class SidecarClientConfigTest
 {
     @Test
     void testDefaults()
     {
-        SidecarConfig config = new SidecarConfig.Builder().build();
+        SidecarClientConfig config = SidecarClientConfigImpl.builder().build();
         assertThat(config.maxRetries()).isEqualTo(3);
         assertThat(config.retryDelayMillis()).isEqualTo(500L);
         assertThat(config.maxRetryDelayMillis()).isEqualTo(60_000L);
@@ -40,31 +40,32 @@ class SidecarConfigTest
     @Test
     void testMaxRetries()
     {
-        SidecarConfig config = new SidecarConfig.Builder().maxRetries(10).build();
+        SidecarClientConfig config = SidecarClientConfigImpl.builder().maxRetries(10).build();
         assertThat(config.maxRetries()).isEqualTo(10);
     }
 
     @Test
     void testRetryDelayMillis()
     {
-        SidecarConfig config = new SidecarConfig.Builder().retryDelayMillis(100).build();
+        SidecarClientConfig config = SidecarClientConfigImpl.builder().retryDelayMillis(100).build();
         assertThat(config.retryDelayMillis()).isEqualTo(100L);
     }
 
     @Test
     void testMaxRetryDelayMillis()
     {
-        SidecarConfig config = new SidecarConfig.Builder().maxRetryDelayMillis(5_100).build();
+        SidecarClientConfig config = SidecarClientConfigImpl.builder().maxRetryDelayMillis(5_100).build();
         assertThat(config.maxRetryDelayMillis()).isEqualTo(5_100L);
     }
 
     @Test
     void testAllOptions()
     {
-        SidecarConfig config = new SidecarConfig.Builder().maxRetries(10)
-                                                          .retryDelayMillis(100)
-                                                          .maxRetryDelayMillis(5_100)
-                                                          .build();
+        SidecarClientConfig config = SidecarClientConfigImpl.builder()
+                                                            .maxRetries(10)
+                                                            .retryDelayMillis(100)
+                                                            .maxRetryDelayMillis(5_100)
+                                                            .build();
         assertThat(config.maxRetries()).isEqualTo(10);
         assertThat(config.retryDelayMillis()).isEqualTo(100L);
         assertThat(config.maxRetryDelayMillis()).isEqualTo(5_100L);

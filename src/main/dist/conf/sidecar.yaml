@@ -23,7 +23,11 @@ cassandra_instances:
   - id: 1
     host: localhost1
     port: 9042
-    data_dirs: /ccm/test/node1/data0, /ccm/test/node1/data1
+    username: cassandra
+    password: cassandra
+    data_dirs:
+      - /ccm/test/node1/data0
+      - /ccm/test/node1/data1
     staging_dir: /ccm/test/node1/sstable-staging
     jmx_host: 127.0.0.1
     jmx_port: 7100
@@ -33,7 +37,11 @@ cassandra_instances:
   - id: 2
     host: localhost2
     port: 9042
-    data_dirs: /ccm/test/node2/data0, /ccm/test/node2/data1
+    username: cassandra
+    password: cassandra
+    data_dirs:
+      - /ccm/test/node2/data0
+      - /ccm/test/node2/data1
     staging_dir: /ccm/test/node2/sstable-staging
     jmx_host: 127.0.0.1
     jmx_port: 7200
@@ -43,7 +51,11 @@ cassandra_instances:
   - id: 3
     host: localhost3
     port: 9042
-    data_dirs: /ccm/test/node3/data0, /ccm/test/node3/data1
+    username: cassandra
+    password: cassandra
+    data_dirs:
+      - /ccm/test/node3/data0
+      - /ccm/test/node3/data1
     staging_dir: /ccm/test/node3/sstable-staging
     jmx_host: 127.0.0.1
     jmx_port: 7300
@@ -52,58 +64,58 @@ cassandra_instances:
 #    jmx_role_password:
 
 sidecar:
-  - host: 0.0.0.0
-  - port: 9043
-  - request_idle_timeout_millis: 300000 # this field expects integer value
-  - request_timeout_millis: 300000
-  - throttle:
-    - stream_requests_per_sec: 5000
-    - delay_sec: 5
-    - timeout_sec: 10
-  - sstable_upload:
-    - concurrent_upload_limit: 80
-    - min_free_space_percent: 10
-  - allowable_time_skew_in_minutes: 60
-  - sstable_import:
-    - poll_interval_millis: 100
-    - cache:
-        - expire_after_access_millis: 7200000 # 2 hours
-        - maximum_size: 10000
-  - worker_pools:
-    - service:
-      - name: "sidecar-worker-pool"
-      - size: 20
-      - max_execution_time_millis: 60000 # 60 seconds
-    - internal:
-      - name: "sidecar-internal-worker-pool"
-      - size: 20
-      - max_execution_time_millis: 300000 # 5 minutes
+  host: 0.0.0.0
+  port: 9043
+  request_idle_timeout_millis: 300000 # this field expects integer value
+  request_timeout_millis: 300000
+  throttle:
+    stream_requests_per_sec: 5000
+    delay_sec: 5
+    timeout_sec: 10
+  sstable_upload:
+    concurrent_upload_limit: 80
+    min_free_space_percent: 10
+  allowable_time_skew_in_minutes: 60
+  sstable_import:
+    poll_interval_millis: 100
+    cache:
+      expire_after_access_millis: 7200000 # 2 hours
+      maximum_size: 10000
+  worker_pools:
+    service:
+      name: "sidecar-worker-pool"
+      size: 20
+      max_execution_time_millis: 60000 # 60 seconds
+    internal:
+      name: "sidecar-internal-worker-pool"
+      size: 20
+      max_execution_time_millis: 900000 # 15 minutes
 
 #
 # Enable SSL configuration (Disabled by default)
 #
-#  - ssl:
-#      - enabled: true
-#      - keystore:
-#          - path: "path/to/keystore.p12"
-#          - password: password
-#      - truststore:
-#          - path: "path/to/truststore.p12"
-#          - password: password
+#  ssl:
+#    enabled: true
+#    keystore:
+#      path: "path/to/keystore.p12"
+#      password: password
+#    truststore:
+#      path: "path/to/truststore.p12"
+#      password: password
 
 
 healthcheck:
-  - poll_freq_millis: 30000
+  poll_freq_millis: 30000
 
 cassandra_input_validation:
-  - forbidden_keyspaces:
-      - system_schema
-      - system_traces
-      - system_distributed
-      - system
-      - system_auth
-      - system_views
-      - system_virtual_schema
-  - allowed_chars_for_directory: "[a-zA-Z0-9_-]+"
-  - allowed_chars_for_component_name: "[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)"
-  - allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(.db|TOC.txt)"
+  forbidden_keyspaces:
+    - system_schema
+    - system_traces
+    - system_distributed
+    - system
+    - system_auth
+    - system_views
+    - system_virtual_schema
+  allowed_chars_for_directory: "[a-zA-Z0-9_-]+"
+  allowed_chars_for_component_name: "[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)"
+  allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(.db|TOC.txt)"

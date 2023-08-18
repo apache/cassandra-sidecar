@@ -29,7 +29,6 @@ import io.vertx.core.Future;
 import io.vertx.core.file.FileProps;
 import io.vertx.core.file.FileSystem;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 
 /**

@@ -42,7 +42,6 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
@@ -64,7 +63,6 @@ public class GossipInfoHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(GossipInfoHandlerTest.class);
     Vertx vertx;
-    Configuration config;
     HttpServer server;
 
     @SuppressWarnings("DataFlowIssue")
@@ -78,9 +76,8 @@ public class GossipInfoHandlerTest
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(HttpServer.class);
-        config = injector.getInstance(Configuration.class);
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), config.getHost(), context.succeedingThenComplete());
+        server.listen(0, "127.0.0.1", context.succeedingThenComplete());
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
 
@@ -101,7 +98,7 @@ public class GossipInfoHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/gossip";
-        client.get(config.getPort(), config.getHost(), testRoute)
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -113,9 +110,9 @@ public class GossipInfoHandlerTest
                   assertThat(gossipInfo.heartbeat()).isEqualTo("242");
                   assertThat(gossipInfo.load()).isEqualTo("88971.0");
                   assertThat(gossipInfo.statusWithPort())
-                      .isEqualTo("NORMAL,-9223372036854775808");
+                  .isEqualTo("NORMAL,-9223372036854775808");
                   assertThat(gossipInfo.sstableVersions())
-                            .isEqualTo(Collections.singletonList("big-nb"));
+                  .isEqualTo(Collections.singletonList("big-nb"));
                   assertThat(gossipInfo.tokens()).isEqualTo("<hidden>");
                   context.completeNow();
               }));
@@ -149,11 +146,11 @@ public class GossipInfoHandlerTest
     }
 
     private static final String SAMPLE_GOSSIP_INFO =
-        "/127.0.0.1:7000\n" +
-        "  generation:1668100877\n" +
-        "  heartbeat:242\n" +
-        "  LOAD:211:88971.0\n" +
-        "  STATUS_WITH_PORT:19:NORMAL,-9223372036854775808\n" +
-        "  SSTABLE_VERSIONS:6:big-nb\n" +
-        "  TOKENS:18:<hidden>";
+    "/127.0.0.1:7000\n" +
+    "  generation:1668100877\n" +
+    "  heartbeat:242\n" +
+    "  LOAD:211:88971.0\n" +
+    "  STATUS_WITH_PORT:19:NORMAL,-9223372036854775808\n" +
+    "  SSTABLE_VERSIONS:6:big-nb\n" +
+    "  TOKENS:18:<hidden>";
 }

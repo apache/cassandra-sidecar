@@ -19,21 +19,22 @@
 package org.apache.cassandra.sidecar.config;
 
 /**
- * Values to configure worker pool
+ * Encapsulates configurations for the worker pool
  */
-public class WorkerPoolConfiguration
+public interface WorkerPoolConfiguration
 {
-    public final String workerPoolName;
-    public final int workerPoolSize;
-    // WorkerExecutor logs a warning if the blocking exeuction exceeds the max time configured.
-    // It does not abort the execution. The warning messages look like this.
-    // "Thread xxx has been blocked for yyy ms, time limit is zzz ms"
-    public final long workerMaxExecutionTimeMillis;
+    /**
+     * @return the name of the worker pool
+     */
+    String workerPoolName();
 
-    public WorkerPoolConfiguration(String workerPoolName, int workerPoolSize, long workerMaxExecutionTimeMillis)
-    {
-        this.workerPoolName = workerPoolName;
-        this.workerPoolSize = workerPoolSize;
-        this.workerMaxExecutionTimeMillis = workerMaxExecutionTimeMillis;
-    }
+    /**
+     * @return the size of the worker pool
+     */
+    int workerPoolSize();
+
+    /**
+     * @return the maximum execution time for the worker pool in milliseconds
+     */
+    long workerMaxExecutionTimeMillis();
 }

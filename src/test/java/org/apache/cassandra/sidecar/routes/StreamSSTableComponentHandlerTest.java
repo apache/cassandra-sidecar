@@ -40,7 +40,6 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 
@@ -64,7 +63,6 @@ public class StreamSSTableComponentHandlerTest
 
     private Vertx vertx;
     private HttpServer server;
-    private Configuration config;
 
     @BeforeEach
     void setUp() throws InterruptedException
@@ -72,10 +70,9 @@ public class StreamSSTableComponentHandlerTest
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);
-        config = injector.getInstance(Configuration.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), context.succeedingThenComplete());
+        server.listen(0, "localhost", context.succeedingThenComplete());
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
@@ -98,7 +95,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -112,7 +109,7 @@ public class StreamSSTableComponentHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/i_❤_u/tables/table/snapshots/snapshot/components/component-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
@@ -129,7 +126,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + forbiddenKeyspace + "/tables/table/snapshots/snapshot" +
                            "/components/component-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
                   assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
@@ -143,7 +140,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/random/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
                   context.completeNow();
@@ -156,7 +153,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/random/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
                   context.completeNow();
@@ -169,7 +166,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/system/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
                   assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
@@ -183,7 +180,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/k*s/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
@@ -197,7 +194,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data...db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
@@ -211,7 +208,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Digest.crc32d";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
@@ -224,7 +221,7 @@ public class StreamSSTableComponentHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/i_❤_u/snapshots/snap/components/component-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
@@ -240,7 +237,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/TestTable/snapshots/" +
                            invalidFileName + "/components/component-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
@@ -256,7 +253,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots/snap/components/" +
                            invalidComponentName;
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
                   assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
@@ -270,7 +267,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/TestTable/snapshots/TestSnapshot/components" +
                            "/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .putHeader("Range", "bytes=0-")
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
@@ -286,7 +283,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .putHeader("Range", "bytes=4-3")
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
@@ -300,7 +297,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .putHeader("Range", "bytes=5-9")
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
@@ -314,7 +311,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .putHeader("Range", "bytes=5-")
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
@@ -328,7 +325,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .putHeader("Range", "bytes=0-999999")
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
@@ -344,7 +341,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .putHeader("Range", "bytes=0-2") // 3 bytes streamed
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
@@ -360,7 +357,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .putHeader("Range", "bytes=-2") // last 2 bytes streamed
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
@@ -376,7 +373,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .putHeader("Range", "bytes=-5")
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -393,7 +390,7 @@ public class StreamSSTableComponentHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots" +
                            "/TestSnapshot/components/" + TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .putHeader("Range", "bits=0-2")
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
@@ -408,7 +405,7 @@ public class StreamSSTableComponentHandlerTest
         String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/" +
                            "snapshots/TestSnapshot/components/" +
                            TEST_KEYSPACE + "-" + TEST_TABLE + "-Data.db";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute + "?instanceId=2")
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute + "?instanceId=2")
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());

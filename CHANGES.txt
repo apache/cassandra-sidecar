@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Refactor Sidecar configuration (CASSANDRASC-69)
  * Add Client Methods for Obtaining Sidecar and Cassandra Health (CASSANDRASC-70)
  * Publish bytes streamed and written metrics (CASSANDRASC-68)
  * Extract the in-jvm dtest template for use in other projects (CASSANDRASC-55)

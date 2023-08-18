@@ -44,6 +44,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
@@ -62,7 +63,7 @@ public abstract class IntegrationTestBase
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     protected Vertx vertx;
     protected HttpServer server;
-    protected Configuration config;
+    protected InstancesConfig instancesConfig;
 
     protected static final String TEST_KEYSPACE = "testkeyspace";
     private static final String TEST_TABLE_PREFIX = "testtable";
@@ -76,14 +77,14 @@ public abstract class IntegrationTestBase
         Injector injector = Guice.createInjector(Modules
                                                  .override(new MainModule())
                                                  .with(new IntegrationTestModule(this.sidecarTestContext)));
+        instancesConfig = injector.getInstance(InstancesConfig.class);
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);
-        config = injector.getInstance(Configuration.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), config.getHost(), context.succeeding(p -> {
-            config.getInstancesConfig().instances()
-                  .forEach(instanceMetadata -> instanceMetadata.delegate().healthCheck());
+        server.listen(server.actualPort(), "127.0.0.1", context.succeeding(p -> {
+            instancesConfig.instances()
+                           .forEach(instanceMetadata -> instanceMetadata.delegate().healthCheck());
             context.completeNow();
         }));
 

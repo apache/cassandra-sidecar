@@ -36,20 +36,15 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
-import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
-import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.snapshot1Instance1Files;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.snapshot1Instance2Files;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests for searching snapshots
@@ -71,14 +66,8 @@ public class SnapshotSearchTest
         SnapshotUtils.initializeTmpDirectory(temporaryFolder);
         InstancesConfig mockInstancesConfig = mockInstancesConfig(rootDir);
 
-        ValidationConfiguration validationConfiguration = new TestValidationConfiguration();
-        CassandraInputValidator validator = new CassandraInputValidator(validationConfiguration);
-        Configuration configuration = mock(Configuration.class);
-        WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfiguration("test-pool", 10,
-                                                                             TimeUnit.SECONDS.toMillis(30));
-        when(configuration.serverWorkerPoolConfiguration()).thenReturn(workerPoolConf);
-        when(configuration.serverInternalWorkerPoolConfiguration()).thenReturn(workerPoolConf);
-        ExecutorPools executorPools = new ExecutorPools(vertx, configuration);
+        CassandraInputValidator validator = new CassandraInputValidator();
+        ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         instance = new SnapshotPathBuilder(vertx, mockInstancesConfig, validator, executorPools);
     }
 

@@ -25,6 +25,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -34,7 +35,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -44,11 +44,11 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.FileProps;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
 import org.apache.cassandra.sidecar.utils.BaseFileSystem;
+import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 
 /**
  * This class builds the snapshot path on a given host validating that it exists
@@ -419,12 +419,11 @@ public class SnapshotPathBuilder extends BaseFileSystem
                        .onFailure(promise::fail)
                        .onSuccess(ar -> {
                            String directory = IntStream.range(0, fileList.size())
-                                                       .mapToObj(i -> Pair.of(fileList.get(i),
-                                                                              ar.<FileProps>resultAt(i)))
-                                                       .filter(pair -> pair.getRight().isDirectory())
-                                                       .max(Comparator.comparingLong(pair -> pair.getRight()
+                                                       .mapToObj(i -> pair(fileList.get(i), ar.<FileProps>resultAt(i)))
+                                                       .filter(pair -> pair.getValue().isDirectory())
+                                                       .max(Comparator.comparingLong(pair -> pair.getValue()
                                                                                                  .lastModifiedTime()))
-                                                       .map(Pair::getLeft)
+                                                       .map(AbstractMap.SimpleEntry::getKey)
                                                        .orElse(null);
 
                            if (directory == null)
@@ -453,5 +452,10 @@ public class SnapshotPathBuilder extends BaseFileSystem
             this.path = path;
             this.size = size;
         }
+    }
+
+    private static <K, V> AbstractMap.SimpleEntry<K, V> pair(K key, V value)
+    {
+        return new AbstractMap.SimpleEntry<>(key, value);
     }
 }

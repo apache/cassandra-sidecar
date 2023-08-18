@@ -65,9 +65,9 @@ While setting up cassandra instance, make sure the data directories of cassandra
 Testing
 -------
 
-The test framework is set up to run 4.1 and 5.0 (Trunk) tests (see `TestVersionSupplier.java`) by default.  
+The test framework is set up to run 4.1 and 5.1 (Trunk) tests (see `TestVersionSupplier.java`) by default.
 You can change this via the Java property `cassandra.sidecar.versions_to_test` by supplying a comma-delimited string.
-For example, `-Dcassandra.sidecar.versions_to_test=4.0,4.1,5.0`.
+For example, `-Dcassandra.sidecar.versions_to_test=4.0,4.1,5.1`.
 
 CircleCI Testing
 -----------------

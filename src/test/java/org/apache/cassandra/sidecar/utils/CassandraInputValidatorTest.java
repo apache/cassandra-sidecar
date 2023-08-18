@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common;
+package org.apache.cassandra.sidecar.utils;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -38,7 +37,7 @@ public class CassandraInputValidatorTest
     @BeforeEach
     void setup()
     {
-        instance = new CassandraInputValidator(new TestValidationConfiguration());
+        instance = new CassandraInputValidator();
     }
 
     private void testCommon_invalidCharacters(String testName)

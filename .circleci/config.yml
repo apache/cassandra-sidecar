@@ -160,4 +160,3 @@ workflows:
           requires:
             - java8
             - java11
-

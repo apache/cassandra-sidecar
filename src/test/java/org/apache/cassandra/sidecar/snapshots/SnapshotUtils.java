@@ -117,18 +117,22 @@ public class SnapshotUtils
             delegate2 = new CassandraAdapterDelegate(versionProvider, cqlSessionProvider2, null, null);
         }
 
-        InstanceMetadataImpl localhost = new InstanceMetadataImpl(1,
-                                                                  "localhost",
-                                                                  9043,
-                                                                  Collections.singletonList(rootPath + "/d1"),
-                                                                  makeStagingDir(rootPath),
-                                                                  delegate1);
-        InstanceMetadataImpl localhost2 = new InstanceMetadataImpl(2,
-                                                                   "localhost2",
-                                                                   9043,
-                                                                   Collections.singletonList(rootPath + "/d2"),
-                                                                   makeStagingDir(rootPath),
-                                                                   delegate2);
+        InstanceMetadataImpl localhost = InstanceMetadataImpl.builder()
+                                                             .id(1)
+                                                             .host("localhost")
+                                                             .port(9043)
+                                                             .dataDirs(Collections.singletonList(rootPath + "/d1"))
+                                                             .stagingDir(makeStagingDir(rootPath))
+                                                             .delegate(delegate1)
+                                                             .build();
+        InstanceMetadataImpl localhost2 = InstanceMetadataImpl.builder()
+                                                              .id(2)
+                                                              .host("localhost2")
+                                                              .port(9043)
+                                                              .dataDirs(Collections.singletonList(rootPath + "/d2"))
+                                                              .stagingDir(makeStagingDir(rootPath))
+                                                              .delegate(delegate2)
+                                                              .build();
         List<InstanceMetadata> instanceMetas = Arrays.asList(localhost, localhost2);
         return new InstancesConfigImpl(instanceMetas, DnsResolver.DEFAULT);
     }

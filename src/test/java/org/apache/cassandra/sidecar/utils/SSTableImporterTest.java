@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,11 +30,12 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.SSTableImportConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -49,24 +49,25 @@ class SSTableImporterTest
 {
     private Vertx vertx;
     private InstanceMetadataFetcher mockMetadataFetcher;
-    private Configuration mockConfiguration;
     private TableOperations mockTableOperations1;
     private ExecutorPools executorPools;
     private SSTableUploadsPathBuilder mockUploadPathBuilder;
     private SSTableImporter importer;
+    private ServiceConfiguration serviceConfiguration;
 
     @BeforeEach
     public void setup() throws InterruptedException
     {
         vertx = Vertx.vertx();
+        serviceConfiguration = new ServiceConfigurationImpl(new SSTableImportConfigurationImpl(10));
+
         mockMetadataFetcher = mock(InstanceMetadataFetcher.class);
-        mockConfiguration = mock(Configuration.class);
         CassandraAdapterDelegate mockCassandraAdapterDelegate1 = mock(CassandraAdapterDelegate.class);
         CassandraAdapterDelegate mockCassandraAdapterDelegate2 = mock(CassandraAdapterDelegate.class);
         CassandraAdapterDelegate mockCassandraAdapterDelegate3 = mock(CassandraAdapterDelegate.class);
         mockTableOperations1 = mock(TableOperations.class);
         TableOperations mockTableOperations2 = mock(TableOperations.class);
-        when(mockConfiguration.getSSTableImportPollIntervalMillis()).thenReturn(10);
+
         when(mockMetadataFetcher.delegate("localhost")).thenReturn(mockCassandraAdapterDelegate1);
         when(mockMetadataFetcher.delegate("127.0.0.2")).thenReturn(mockCassandraAdapterDelegate2);
         when(mockMetadataFetcher.delegate("127.0.0.3")).thenReturn(mockCassandraAdapterDelegate3);
@@ -81,11 +82,7 @@ class SSTableImporterTest
         when(mockTableOperations2.importNewSSTables("ks", "tbl", "/dir", true, true,
                                                     true, true, true, true, false))
         .thenThrow(new RuntimeException("Exception during import"));
-        WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfiguration("test-pool", 10,
-                                                                             TimeUnit.SECONDS.toMillis(30));
-        when(mockConfiguration.serverWorkerPoolConfiguration()).thenReturn(workerPoolConf);
-        when(mockConfiguration.serverInternalWorkerPoolConfiguration()).thenReturn(workerPoolConf);
-        executorPools = new ExecutorPools(vertx, mockConfiguration);
+        executorPools = new ExecutorPools(vertx, serviceConfiguration);
         mockUploadPathBuilder = mock(SSTableUploadsPathBuilder.class);
 
         // since we are not actually creating any files for the test, we need to handle cleanup such that we don't
@@ -95,7 +92,7 @@ class SSTableImporterTest
         when(mockUploadPathBuilder.resolveUploadIdDirectory(anyString(), anyString()))
         .thenReturn(Future.failedFuture("fake-path"));
         when(mockUploadPathBuilder.isValidDirectory("fake-path")).thenReturn(Future.failedFuture("skip cleanup"));
-        importer = new SSTableImporter(vertx, mockMetadataFetcher, mockConfiguration, executorPools,
+        importer = new SSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools,
                                        mockUploadPathBuilder);
     }
 
@@ -204,8 +201,9 @@ class SSTableImporterTest
     @Test
     void testCancelImportSucceeds(VertxTestContext context)
     {
-        when(mockConfiguration.getSSTableImportPollIntervalMillis()).thenReturn(500);
-        SSTableImporter importer = new SSTableImporter(vertx, mockMetadataFetcher, mockConfiguration, executorPools,
+        serviceConfiguration = new ServiceConfigurationImpl(new SSTableImportConfigurationImpl(500));
+
+        SSTableImporter importer = new SSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools,
                                                        mockUploadPathBuilder);
         SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder()
                                                 .host("localhost")

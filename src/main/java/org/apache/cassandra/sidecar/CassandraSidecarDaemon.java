@@ -33,7 +33,11 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
+import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.utils.SslUtils;
 
 /**
@@ -46,17 +50,24 @@ public class CassandraSidecarDaemon
     private static final Logger logger = LoggerFactory.getLogger(CassandraSidecarDaemon.class);
     private final Vertx vertx;
     private final HttpServer server;
-    private final Configuration config;
-    private long healthCheckTimerId;
+    private final SidecarConfiguration config;
+    private final InstancesConfig instancesConfig;
     private final ExecutorPools executorPools;
 
+    private long healthCheckTimerId;
+
     @Inject
-    public CassandraSidecarDaemon(Vertx vertx, HttpServer server, Configuration config, ExecutorPools executorPools)
+    public CassandraSidecarDaemon(Vertx vertx,
+                                  HttpServer server,
+                                  SidecarConfiguration config,
+                                  InstancesConfig instancesConfig,
+                                  ExecutorPools executorPools)
     {
         this.vertx = vertx;
         this.server = server;
         this.config = config;
         this.executorPools = executorPools;
+        this.instancesConfig = instancesConfig;
     }
 
     public static void main(String[] args)
@@ -72,14 +83,17 @@ public class CassandraSidecarDaemon
     {
         banner(System.out);
         validate();
-        logger.info("Starting Cassandra Sidecar on {}:{}", config.getHost(), config.getPort());
-        server.listen(config.getPort(), config.getHost())
+
+        ServiceConfiguration service = config.serviceConfiguration();
+
+        logger.info("Starting Cassandra Sidecar on {}:{}", service.host(), service.port());
+        server.listen(service.port(), service.host())
               .onSuccess(p -> {
                   // Run a health check after start up
                   healthCheck();
                   // Configure the periodic timer to run subsequent health checks configured
                   // by the config.getHealthCheckFrequencyMillis() interval
-                  updateHealthChecker(config.getHealthCheckFrequencyMillis());
+                  updateHealthChecker(config.healthCheckConfiguration().checkIntervalMillis());
               });
     }
 
@@ -89,11 +103,10 @@ public class CassandraSidecarDaemon
         List<Future> closingFutures = new ArrayList<>();
         closingFutures.add(server.close());
         executorPools.internal().cancelTimer(healthCheckTimerId);
-        config.getInstancesConfig()
-              .instances()
-              .forEach(instance ->
-                       closingFutures.add(executorPools.internal()
-                                                       .executeBlocking(p -> instance.delegate().close())));
+        instancesConfig.instances()
+                       .forEach(instance ->
+                                closingFutures.add(executorPools.internal()
+                                                                .executeBlocking(p -> instance.delegate().close())));
 
         try
         {
@@ -126,17 +139,18 @@ public class CassandraSidecarDaemon
 
     private void validate()
     {
-        if (config.isSslEnabled())
+        SslConfiguration ssl = config.sslConfiguration();
+        if (ssl != null && ssl.enabled())
         {
             try
             {
-                if (config.getKeyStorePath() == null || config.getKeystorePassword() == null)
+                if (!ssl.isKeystoreConfigured())
                     throw new IllegalArgumentException("keyStorePath and keyStorePassword must be set if ssl enabled");
 
-                SslUtils.validateSslOpts(config.getKeyStorePath(), config.getKeystorePassword());
+                SslUtils.validateSslOpts(ssl.keystore().path(), ssl.keystore().password());
 
-                if (config.getTrustStorePath() != null && config.getTruststorePassword() != null)
-                    SslUtils.validateSslOpts(config.getTrustStorePath(), config.getTruststorePassword());
+                if (ssl.isTruststoreConfigured())
+                    SslUtils.validateSslOpts(ssl.truststore().path(), ssl.truststore().password());
             }
             catch (Exception e)
             {
@@ -166,15 +180,15 @@ public class CassandraSidecarDaemon
     }
 
     /**
-     * Checks the health of every instance configured in the {@link Configuration#getInstancesConfig()}.
+     * Checks the health of every instance configured in the {@link InstancesConfig}.
      * The health check is executed in a blocking thread to prevent the event-loop threads from blocking.
      */
     private void healthCheck()
     {
-        config.getInstancesConfig().instances()
-              .forEach(instanceMetadata ->
-                       executorPools.internal()
-                                    .executeBlocking(promise -> instanceMetadata.delegate().healthCheck()));
+        instancesConfig.instances()
+                       .forEach(instanceMetadata ->
+                                executorPools.internal()
+                                             .executeBlocking(promise -> instanceMetadata.delegate().healthCheck()));
     }
 }
 

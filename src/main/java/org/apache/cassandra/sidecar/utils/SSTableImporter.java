@@ -18,14 +18,15 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,10 +37,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -78,7 +79,7 @@ public class SSTableImporter
     @Inject
     SSTableImporter(Vertx vertx,
                     InstanceMetadataFetcher metadataFetcher,
-                    Configuration configuration,
+                    ServiceConfiguration configuration,
                     ExecutorPools executorPools,
                     SSTableUploadsPathBuilder uploadPathBuilder)
     {
@@ -88,7 +89,8 @@ public class SSTableImporter
         this.uploadPathBuilder = uploadPathBuilder;
         this.importQueuePerHost = new ConcurrentHashMap<>();
         executorPools.internal()
-                     .setPeriodic(configuration.getSSTableImportPollIntervalMillis(), this::processPendingImports);
+                     .setPeriodic(configuration.ssTableImportConfiguration().importIntervalMillis(),
+                                  this::processPendingImports);
     }
 
     /**
@@ -102,7 +104,7 @@ public class SSTableImporter
     {
         Promise<Void> promise = Promise.promise();
         importQueuePerHost.computeIfAbsent(key(options), this::initializeQueue)
-                          .offer(Pair.of(promise, options));
+                          .offer(new AbstractMap.SimpleEntry<>(promise, options));
         return promise.future();
     }
 
@@ -119,7 +121,7 @@ public class SSTableImporter
         boolean removed = false;
         if (queue != null)
         {
-            removed = queue.removeIf(tuple -> options.equals(tuple.getRight()));
+            removed = queue.removeIf(tuple -> options.equals(tuple.getValue()));
         }
 
         LOGGER.debug("Cancel import for options={} was {}removed", options, removed ? "" : "not ");
@@ -196,24 +198,26 @@ public class SSTableImporter
      */
     private void drainImportQueue(ImportQueue queue)
     {
+        int successCount = 0, failureCount = 0;
         while (!queue.isEmpty())
         {
-            Pair<Promise<Void>, ImportOptions> pair = queue.poll();
-            Promise<Void> promise = pair.getLeft();
-            ImportOptions options = pair.getRight();
+            LOGGER.info("Starting SSTable import session");
+            AbstractMap.SimpleEntry<Promise<Void>, ImportOptions> pair = queue.poll();
+            Promise<Void> promise = pair.getKey();
+            ImportOptions options = pair.getValue();
 
             CassandraAdapterDelegate cassandra = metadataFetcher.delegate(options.host);
             TableOperations tableOperations = cassandra.tableOperations();
 
             if (tableOperations == null)
             {
-                promise.fail(new HttpException(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
-                                               "Cassandra service is unavailable"));
+                promise.fail(HttpExceptions.cassandraServiceUnavailable());
             }
             else
             {
                 try
                 {
+                    long startTime = System.nanoTime();
                     List<String> failedDirectories =
                     tableOperations.importNewSSTables(options.keyspace,
                                                       options.tableName,
@@ -225,23 +229,38 @@ public class SSTableImporter
                                                       options.invalidateCaches,
                                                       options.extendedVerify,
                                                       options.copyData);
+                    long serviceTimeNanos = System.nanoTime() - startTime;
                     if (!failedDirectories.isEmpty())
                     {
+                        failureCount++;
+                        LOGGER.error("Failed to import SSTables with options={}, serviceTimeMillis={}, " +
+                                     "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos),
+                                     failedDirectories);
                         promise.fail(new HttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
                                                        "Failed to import from directories: " + failedDirectories));
                     }
                     else
                     {
+                        successCount++;
+                        LOGGER.info("Successfully imported SSTables with options={}, serviceTimeMillis={}",
+                                    options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
                         promise.complete();
                         cleanup(options);
                     }
                 }
                 catch (Exception exception)
                 {
+                    failureCount++;
                     LOGGER.error("Failed to import SSTables with options={}", options, exception);
                     promise.fail(exception);
                 }
             }
+        }
+
+        if (successCount > 0 || failureCount > 0)
+        {
+            LOGGER.info("Finished SSTable import session with successCount={}, failureCount={}",
+                        successCount, failureCount);
         }
     }
 
@@ -269,7 +288,7 @@ public class SSTableImporter
      * A {@link ConcurrentLinkedQueue} that allows for locking the queue while operating on it. The queue
      * must be unlocked once the operations are complete.
      */
-    static class ImportQueue extends ConcurrentLinkedQueue<Pair<Promise<Void>, ImportOptions>>
+    static class ImportQueue extends ConcurrentLinkedQueue<AbstractMap.SimpleEntry<Promise<Void>, ImportOptions>>
     {
         private final AtomicBoolean isQueueInUse = new AtomicBoolean(false);
 

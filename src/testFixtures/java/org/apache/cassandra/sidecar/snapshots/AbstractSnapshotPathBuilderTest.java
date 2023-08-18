@@ -32,23 +32,18 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
-import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
-import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
+import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -76,15 +71,7 @@ public abstract class AbstractSnapshotPathBuilderTest
     @BeforeEach
     protected void setup() throws IOException
     {
-        ValidationConfiguration validationConfiguration = new TestValidationConfiguration();
-        validator = new CassandraInputValidator(validationConfiguration);
-        Guice.createInjector(new AbstractModule()
-        {
-            protected void configure()
-            {
-                bind(ValidationConfiguration.class).toInstance(validationConfiguration);
-            }
-        });
+        validator = new CassandraInputValidator();
 
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         InstanceMetadata mockInstanceMeta = mock(InstanceMetadata.class);
@@ -145,12 +132,7 @@ public abstract class AbstractSnapshotPathBuilderTest
                            "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/nb-203-big-TOC.txt").createNewFile();
 
         vertx = Vertx.vertx();
-        Configuration configuration = mock(Configuration.class);
-        WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfiguration("test-pool", 10,
-                                                                             TimeUnit.SECONDS.toMillis(30));
-        when(configuration.serverWorkerPoolConfiguration()).thenReturn(workerPoolConf);
-        when(configuration.serverInternalWorkerPoolConfiguration()).thenReturn(workerPoolConf);
-        executorPools = new ExecutorPools(vertx, configuration);
+        executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         instance = initialize(vertx, mockInstancesConfig, executorPools);
     }
 

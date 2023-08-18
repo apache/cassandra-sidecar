@@ -53,7 +53,6 @@ public class ThrottleTest
     private static final Logger logger = LoggerFactory.getLogger(ThrottleTest.class);
     private Vertx vertx;
     private HttpServer server;
-    private Configuration config;
 
     @BeforeEach
     void setUp() throws InterruptedException
@@ -62,10 +61,9 @@ public class ThrottleTest
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);
-        config = injector.getInstance(Configuration.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), context.succeedingThenComplete());
+        server.listen(0, context.succeedingThenComplete());
 
         context.awaitCompletion(5, SECONDS);
     }
@@ -85,8 +83,10 @@ public class ThrottleTest
     @Test
     void testStreamRequestsThrottled() throws Exception
     {
-        String testRoute = "/keyspaces/TestKeyspace/tables/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots" +
-                "/TestSnapshot/components/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+        String testRoute = "/keyspaces/TestKeyspace" +
+                           "/tables/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b" +
+                           "/snapshots/TestSnapshot" +
+                           "/components/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
 
         for (int i = 0; i < 20; i++)
         {
@@ -107,21 +107,21 @@ public class ThrottleTest
     private void unblockingClientRequest(String route)
     {
         WebClient client = WebClient.create(vertx);
-        client.get(config.getPort(), "localhost", "/api/v1" + route)
-                .as(BodyCodec.buffer())
-                .send(resp ->
-                {
-                    // do nothing
-                });
+        client.get(server.actualPort(), "localhost", "/api/v1" + route)
+              .as(BodyCodec.buffer())
+              .send(resp ->
+                    {
+                        // do nothing
+                    });
     }
 
     private HttpResponse blockingClientRequest(String route) throws ExecutionException, InterruptedException
     {
         WebClient client = WebClient.create(vertx);
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        client.get(config.getPort(), "localhost", "/api/v1" + route)
-                .as(BodyCodec.buffer())
-                .send(resp -> future.complete(resp.result()));
+        client.get(server.actualPort(), "localhost", "/api/v1" + route)
+              .as(BodyCodec.buffer())
+              .send(resp -> future.complete(resp.result()));
         return future.get();
     }
 }

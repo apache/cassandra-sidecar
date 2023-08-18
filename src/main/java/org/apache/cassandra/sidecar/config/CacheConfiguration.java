@@ -21,24 +21,16 @@ package org.apache.cassandra.sidecar.config;
 /**
  * Configuration class that encapsulates parameters needed for Caches
  */
-public class CacheConfiguration
+public interface CacheConfiguration
 {
-    private final long expireAfterAccessMillis;
-    private final long maximumSize;
+    /**
+     * @return the configured amount of time in milliseconds after the entry's creation, the most recent
+     * replacement of its value, or its last access has elapsed to be considered an expired entry in the cache
+     */
+    long expireAfterAccessMillis();
 
-    public CacheConfiguration(long expireAfterAccessMillis, long maximumSize)
-    {
-        this.expireAfterAccessMillis = expireAfterAccessMillis;
-        this.maximumSize = maximumSize;
-    }
-
-    public long expireAfterAccessMillis()
-    {
-        return expireAfterAccessMillis;
-    }
-
-    public long maximumSize()
-    {
-        return maximumSize;
-    }
+    /**
+     * @return the maximum number of entries the cache may contain
+     */
+    long maximumSize();
 }

@@ -86,9 +86,9 @@ public class InstancesConfigImpl implements InstancesConfig
             catch (UnknownHostException e)
             {
                 NoSuchElementException error = new NoSuchElementException("Instance with host address "
-                                                      + host +
-                                                      " not found, and an error occurred when " +
-                                                      "attempting to resolve its IP address.");
+                                                                          + host +
+                                                                          " not found, and an error occurred when " +
+                                                                          "attempting to resolve its IP address.");
                 error.initCause(e);
                 throw error;
             }

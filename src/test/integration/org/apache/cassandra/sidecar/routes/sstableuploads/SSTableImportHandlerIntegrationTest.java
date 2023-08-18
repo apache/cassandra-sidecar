@@ -130,7 +130,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + tableName.keyspace()
                            + "/tables/" + tableName.tableName() + "/import";
         sendRequest(vertxTestContext,
-                    () -> client.put(config.getPort(), "127.0.0.1", testRoute),
+                    () -> client.put(server.actualPort(), "127.0.0.1", testRoute),
                     vertxTestContext.succeeding(response -> vertxTestContext.verify(() -> {
                         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                         assertThat(queryValues(sidecarTestContext, tableName))

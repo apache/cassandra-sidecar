@@ -20,12 +20,12 @@ package org.apache.cassandra.sidecar;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -45,11 +45,22 @@ import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
-import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
+import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
+import org.apache.cassandra.sidecar.config.InstanceConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
@@ -74,8 +85,6 @@ import org.apache.cassandra.sidecar.utils.TimeProvider;
  */
 public class MainModule extends AbstractModule
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MainModule.class);
-
     public static final Map<String, String> OK_STATUS = Collections.singletonMap("status", "OK");
     public static final Map<String, String> NOT_OK_STATUS = Collections.singletonMap("status", "NOT_OK");
 
@@ -91,24 +100,25 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public HttpServer vertxServer(Vertx vertx, Configuration conf, Router router)
+    public HttpServer vertxServer(Vertx vertx, SidecarConfiguration conf, Router router)
     {
         HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
         options.setIdleTimeoutUnit(TimeUnit.MILLISECONDS)
-               .setIdleTimeout(conf.getRequestIdleTimeoutMillis());
+               .setIdleTimeout(conf.serviceConfiguration().requestIdleTimeoutMillis());
 
-        if (conf.isSslEnabled())
+        SslConfiguration ssl = conf.sslConfiguration();
+        if (ssl != null && ssl.enabled())
         {
             options.setKeyStoreOptions(new JksOptions()
-                                       .setPath(conf.getKeyStorePath())
-                                       .setPassword(conf.getKeystorePassword()))
-                   .setSsl(conf.isSslEnabled());
+                                       .setPath(ssl.keystore().path())
+                                       .setPassword(ssl.keystore().password()))
+                   .setSsl(ssl.enabled());
 
-            if (conf.getTrustStorePath() != null && conf.getTruststorePassword() != null)
+            if (ssl.isTruststoreConfigured())
             {
                 options.setTrustStoreOptions(new JksOptions()
-                                             .setPath(conf.getTrustStorePath())
-                                             .setPassword(conf.getTruststorePassword()));
+                                             .setPath(ssl.truststore().path())
+                                             .setPassword(ssl.truststore().password()));
             }
         }
 
@@ -119,7 +129,7 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     public Router vertxRouter(Vertx vertx,
-                              Configuration conf,
+                              ServiceConfiguration conf,
                               CassandraHealthHandler cassandraHealthHandler,
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
                               FileStreamHandler fileStreamHandler,
@@ -138,7 +148,7 @@ public class MainModule extends AbstractModule
         Router router = Router.router(vertx);
         router.route()
               .handler(loggerHandler)
-              .handler(TimeoutHandler.create(conf.getRequestTimeoutMillis(),
+              .handler(TimeoutHandler.create(conf.requestTimeoutMillis(),
                                              HttpResponseStatus.REQUEST_TIMEOUT.code()));
 
         router.route()
@@ -222,29 +232,45 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Configuration configuration(CassandraVersionProvider cassandraVersionProvider,
-                                       SidecarVersionProvider sidecarVersionProvider,
-                                       DnsResolver dnsResolver) throws IOException
+    public SidecarConfiguration sidecarConfiguration() throws IOException
     {
         final String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
-        return YAMLSidecarConfiguration.of(confPath,
-                                           cassandraVersionProvider,
-                                           sidecarVersionProvider.sidecarVersion(),
-                                           dnsResolver);
+        return SidecarConfigurationImpl.readYamlConfiguration(confPath);
     }
 
     @Provides
     @Singleton
-    public InstancesConfig instancesConfig(Configuration configuration)
+    public ServiceConfiguration serviceConfiguration(SidecarConfiguration sidecarConfiguration)
     {
-        return configuration.getInstancesConfig();
+        return sidecarConfiguration.serviceConfiguration();
     }
 
     @Provides
     @Singleton
-    public ValidationConfiguration validationConfiguration(Configuration configuration)
+    public CassandraInputValidationConfiguration validationConfiguration(SidecarConfiguration configuration)
     {
-        return configuration.getValidationConfiguration();
+        return configuration.cassandraInputValidationConfiguration();
+    }
+
+    @Provides
+    @Singleton
+    public InstancesConfig instancesConfig(SidecarConfiguration configuration,
+                                           CassandraVersionProvider cassandraVersionProvider,
+                                           SidecarVersionProvider sidecarVersionProvider,
+                                           DnsResolver dnsResolver)
+    {
+        int healthCheckFrequencyMillis = configuration.healthCheckConfiguration().checkIntervalMillis();
+
+        List<InstanceMetadata> instanceMetadataList =
+        configuration.cassandraInstances()
+                     .stream()
+                     .map(cassandraInstance -> buildInstanceMetadata(cassandraInstance,
+                                                                     cassandraVersionProvider,
+                                                                     healthCheckFrequencyMillis,
+                                                                     sidecarVersionProvider.sidecarVersion()))
+                     .collect(Collectors.toList());
+
+        return new InstancesConfigImpl(instanceMetadataList, dnsResolver);
     }
 
     @Provides
@@ -259,9 +285,10 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarRateLimiter streamRequestRateLimiter(Configuration config)
+    public SidecarRateLimiter streamRequestRateLimiter(ServiceConfiguration config)
     {
-        return SidecarRateLimiter.create(config.getRateLimitStreamRequestsPerSecond());
+        return SidecarRateLimiter.create(config.throttleConfiguration()
+                                               .rateLimitStreamRequestsPerSecond());
     }
 
     @Provides
@@ -280,7 +307,7 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public ErrorHandler errorHandler(Vertx vertx)
+    public ErrorHandler errorHandler()
     {
         return new JsonErrorHandler();
     }
@@ -311,5 +338,43 @@ public class MainModule extends AbstractModule
     public SidecarStats sidecarStats()
     {
         return SidecarStats.INSTANCE;
+    }
+
+    /**
+     * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
+     * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
+     *
+     * @param cassandraInstance          the cassandra instance configuration
+     * @param versionProvider            a Cassandra version provider
+     * @param healthCheckFrequencyMillis the health check frequency configuration in milliseconds
+     * @param sidecarVersion             the version of the Sidecar from the current binary
+     * @return the build instance metadata object
+     */
+    private static InstanceMetadata buildInstanceMetadata(InstanceConfiguration cassandraInstance,
+                                                          CassandraVersionProvider versionProvider,
+                                                          int healthCheckFrequencyMillis,
+                                                          String sidecarVersion)
+    {
+        String host = cassandraInstance.host();
+        int port = cassandraInstance.port();
+
+        CQLSessionProvider session = new CQLSessionProvider(host, port, healthCheckFrequencyMillis);
+        JmxClient jmxClient = new JmxClient(cassandraInstance.jmxHost(),
+                                            cassandraInstance.jmxPort(),
+                                            cassandraInstance.jmxRole(),
+                                            cassandraInstance.jmxRolePassword(),
+                                            cassandraInstance.jmxSslEnabled());
+        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(versionProvider,
+                                                                         session,
+                                                                         jmxClient,
+                                                                         sidecarVersion);
+        return InstanceMetadataImpl.builder()
+                                   .id(cassandraInstance.id())
+                                   .host(host)
+                                   .port(port)
+                                   .dataDirs(cassandraInstance.dataDirs())
+                                   .stagingDir(cassandraInstance.stagingDir())
+                                   .delegate(delegate)
+                                   .build();
     }
 }

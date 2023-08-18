@@ -20,8 +20,8 @@ package org.apache.cassandra.sidecar.utils;
 
 import javax.inject.Inject;
 
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 
 /**
  * Determine the time skew info for clients' queries.
@@ -29,10 +29,10 @@ import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
 public class TimeSkewInfo
 {
     private final TimeProvider timeProvider;
-    private final Configuration configuration;
+    private final ServiceConfiguration configuration;
 
     @Inject
-    public TimeSkewInfo(TimeProvider timeProvider, Configuration configuration)
+    public TimeSkewInfo(TimeProvider timeProvider, ServiceConfiguration configuration)
     {
         this.timeProvider = timeProvider;
         this.configuration = configuration;

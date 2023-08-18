@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.utils;
+package org.apache.cassandra.sidecar.utils;
 
 import java.io.File;
 import java.util.Objects;
@@ -25,7 +25,10 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.handler.HttpException;
+import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Miscellaneous methods used for validation.
@@ -33,7 +36,7 @@ import org.jetbrains.annotations.NotNull;
 @Singleton
 public class CassandraInputValidator
 {
-    private final ValidationConfiguration validationConfiguration;
+    private final CassandraInputValidationConfiguration validationConfiguration;
 
     /**
      * Constructs a new object with the provided {@code validationConfiguration}
@@ -41,9 +44,15 @@ public class CassandraInputValidator
      * @param validationConfiguration a validation configuration
      */
     @Inject
-    public CassandraInputValidator(ValidationConfiguration validationConfiguration)
+    public CassandraInputValidator(CassandraInputValidationConfiguration validationConfiguration)
     {
         this.validationConfiguration = validationConfiguration;
+    }
+
+    @VisibleForTesting
+    public CassandraInputValidator()
+    {
+        this(new CassandraInputValidationConfigurationImpl());
     }
 
     /**
