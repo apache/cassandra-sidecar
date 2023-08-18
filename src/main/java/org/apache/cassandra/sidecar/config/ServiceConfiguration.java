@@ -62,7 +62,7 @@ public class ServiceConfiguration
         put(INTERNAL_POOL, WorkerPoolConfiguration.builder()
                                                   .workerPoolName("sidecar-internal-worker-pool")
                                                   .workerPoolSize(20)
-                                                  .workerMaxExecutionTimeMillis(TimeUnit.MINUTES.toMillis(5))
+                                                  .workerMaxExecutionTimeMillis(TimeUnit.MINUTES.toMillis(15))
                                                   .build());
     }});
 
