@@ -53,7 +53,7 @@ plugins {
 }
 
 
-ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-5.1.jar" // trunk is currently 5.0.jar - update when trunk moves
+ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-5.1.jar" // trunk is currently 5.1.jar - update when trunk moves
 println("Using DTest jar: ${ext.dtestJar}")
 
 // Force checkstyle, rat, and spotBugs to run before test tasks for faster feedback
