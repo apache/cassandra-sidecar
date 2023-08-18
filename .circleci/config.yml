@@ -66,7 +66,7 @@ jobs:
     steps:
      - checkout
 
-     - run: CASSANDRA_SHAS="d13b3ef61b9afbd04878c988c7b722507674228c 8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
+     - run: BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
      - run: echo 'export DTEST_JAR=$(find dtest-jars -name 'dtest-4.1*.jar' -type f -maxdepth 1 -exec basename {} \;)' >> "$BASH_ENV"
      - run: ./gradlew --info check --stacktrace -Dcassandra.sidecar.versions_to_test="4.0,4.1"
 
@@ -85,7 +85,7 @@ jobs:
     steps:
       - checkout
 
-      - run: CASSANDRA_SHAS="d13b3ef61b9afbd04878c988c7b722507674228c cbaef9094e83364e6812c65b8411ff7dbffaf9c6" BRANCHES="cassandra-4.0 trunk" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
+      - run: CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
       - run: echo 'export DTEST_JAR=$(find dtest-jars -name 'dtest-5.*.jar' -type f -maxdepth 1 -exec basename {} \;)' >> "$BASH_ENV"
       - run: ./gradlew --info check --stacktrace
 
@@ -160,4 +160,3 @@ workflows:
           requires:
             - java8
             - java11
-
