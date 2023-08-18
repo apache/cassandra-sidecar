@@ -32,8 +32,8 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -47,15 +47,16 @@ public class CacheFactory
     private final Cache<SSTableImporter.ImportOptions, Future<Void>> ssTableImportCache;
 
     @Inject
-    public CacheFactory(Configuration configuration, SSTableImporter ssTableImporter)
+    public CacheFactory(ServiceConfiguration configuration, SSTableImporter ssTableImporter)
     {
         this(configuration, ssTableImporter, Ticker.systemTicker());
     }
 
     @VisibleForTesting
-    CacheFactory(Configuration configuration, SSTableImporter ssTableImporter, Ticker ticker)
+    CacheFactory(ServiceConfiguration configuration, SSTableImporter ssTableImporter, Ticker ticker)
     {
-        this.ssTableImportCache = initSSTableImportCache(configuration.ssTableImportCacheConfiguration(),
+        this.ssTableImportCache = initSSTableImportCache(configuration.ssTableImportConfiguration()
+                                                                      .cacheConfiguration(),
                                                          ssTableImporter, ticker);
     }
 

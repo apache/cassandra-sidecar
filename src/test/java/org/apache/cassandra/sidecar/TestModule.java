@@ -34,11 +34,12 @@ import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.NodeSettings;
-import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
-import org.apache.cassandra.sidecar.config.CacheConfiguration;
-import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
+import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -57,32 +58,37 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Configuration configuration(InstancesConfig instancesConfig)
+    public SidecarConfiguration configuration()
     {
-        return abstractConfig(instancesConfig);
+        return abstractConfig();
     }
 
-    protected Configuration abstractConfig(InstancesConfig instancesConfig)
+    protected SidecarConfiguration abstractConfig()
     {
-        WorkerPoolConfiguration workPoolConf = new WorkerPoolConfiguration("test-pool", 10, 30000);
-        return new Configuration.Builder<>()
-               .setInstancesConfig(instancesConfig)
-               .setHost("127.0.0.1")
-               .setPort(6475)
-               .setHealthCheckFrequency(1000)
-               .setSslEnabled(false)
-               .setRateLimitStreamRequestsPerSecond(1)
-               .setThrottleDelayInSeconds(5)
-               .setThrottleTimeoutInSeconds(10)
-               .setAllowableSkewInMinutes(60)
-               .setRequestIdleTimeoutMillis(300_000)
-               .setRequestTimeoutMillis(300_000L)
-               .setConcurrentUploadsLimit(80)
-               .setMinSpacePercentRequiredForUploads(0)
-               .setSSTableImportCacheConfiguration(new CacheConfiguration(60_000, 100))
-               .setServerWorkerPoolConfiguration(workPoolConf)
-               .setServerInternalWorkerPoolConfiguration(workPoolConf)
-               .build();
+        ThrottleConfiguration throttleConfiguration = ThrottleConfiguration.builder()
+                                                                           .delayInSeconds(5)
+                                                                           .timeoutInSeconds(10)
+                                                                           .rateLimitStreamRequestsPerSecond(1)
+                                                                           .build();
+
+        SSTableUploadConfiguration uploadConfiguration = SSTableUploadConfiguration.builder()
+                                                                                   .minimumSpacePercentageRequired(0)
+                                                                                   .build();
+
+        ServiceConfiguration serviceConfiguration = ServiceConfiguration.builder()
+                                                                        .host("127.0.0.1")
+                                                                        .port(6475)
+                                                                        .ssTableUploadConfiguration(uploadConfiguration)
+                                                                        .throttleConfiguration(throttleConfiguration)
+                                                                        .build();
+
+        HealthCheckConfiguration healthCheckConfiguration = HealthCheckConfiguration.builder()
+                                                                                    .checkIntervalMillis(1000)
+                                                                                    .build();
+        return SidecarConfiguration.builder()
+                                   .healthCheckConfiguration(healthCheckConfiguration)
+                                   .serviceConfiguration(serviceConfiguration)
+                                   .build();
     }
 
     @Provides
@@ -116,7 +122,7 @@ public class TestModule extends AbstractModule
         if (isUp)
         {
             when(delegate.nodeSettings()).thenReturn(new NodeSettings(
-                    "testVersion", "testPartitioner", Collections.singletonMap("version", "testSidecar")));
+            "testVersion", "testPartitioner", Collections.singletonMap("version", "testSidecar")));
         }
         when(delegate.isUp()).thenReturn(isUp);
         when(instanceMeta.delegate()).thenReturn(delegate);
@@ -142,12 +148,5 @@ public class TestModule extends AbstractModule
         CassandraVersionProvider.Builder builder = new CassandraVersionProvider.Builder();
         builder.add(new MockCassandraFactory());
         return builder.build();
-    }
-
-    @Provides
-    @Singleton
-    public ValidationConfiguration validationConfiguration()
-    {
-        return new TestValidationConfiguration();
     }
 }

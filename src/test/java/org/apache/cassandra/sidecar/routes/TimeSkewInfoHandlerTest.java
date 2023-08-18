@@ -38,7 +38,6 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
@@ -57,7 +56,6 @@ class TimeSkewInfoHandlerTest
     private static final long TEST_TIMESTAMP = 12345L;
     private Vertx vertx;
     private HttpServer server;
-    private Configuration config;
 
     @BeforeEach
     public void setUp() throws InterruptedException
@@ -67,9 +65,8 @@ class TimeSkewInfoHandlerTest
                                                         .with(new TestModule(), customTimeProvider));
         this.vertx = injector.getInstance(Vertx.class);
         this.server = injector.getInstance(HttpServer.class);
-        this.config = injector.getInstance(Configuration.class);
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), context.succeedingThenComplete());
+        server.listen(0, "127.0.0.1", context.succeedingThenComplete());
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
@@ -91,7 +88,7 @@ class TimeSkewInfoHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/time-skew";
-        client.get(config.getPort(), "localhost", testRoute)
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());

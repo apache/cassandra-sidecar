@@ -31,16 +31,17 @@ import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.data.SSTableUploadResponse;
-import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.data.SSTableUploadRequest;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.stats.SSTableStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
+import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableUploader;
 import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
@@ -55,7 +56,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
 {
     private final FileSystem fs;
-    private final Configuration configuration;
+    private final SSTableUploadConfiguration configuration;
     private final SSTableUploader uploader;
     private final SSTableUploadsPathBuilder uploadPathBuilder;
     private final ConcurrencyLimiter limiter;
@@ -64,18 +65,18 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
     /**
      * Constructs a handler with the provided params.
      *
-     * @param vertx             the vertx instance
-     * @param configuration     configuration object holding config details of Sidecar
-     * @param metadataFetcher   the interface to retrieve metadata
-     * @param uploader          a class that uploads the components
-     * @param uploadPathBuilder a class that provides SSTableUploads directories
-     * @param executorPools     executor pools for blocking executions
-     * @param validator         a validator instance to validate Cassandra-specific input
-     * @param sidecarStats      an interface holding all stats related to main sidecar process
+     * @param vertx                the vertx instance
+     * @param serviceConfiguration configuration object holding config details of Sidecar
+     * @param metadataFetcher      the interface to retrieve metadata
+     * @param uploader             a class that uploads the components
+     * @param uploadPathBuilder    a class that provides SSTableUploads directories
+     * @param executorPools        executor pools for blocking executions
+     * @param validator            a validator instance to validate Cassandra-specific input
+     * @param sidecarStats         an interface holding all stats related to main sidecar process
      */
     @Inject
     protected SSTableUploadHandler(Vertx vertx,
-                                   Configuration configuration,
+                                   ServiceConfiguration serviceConfiguration,
                                    InstanceMetadataFetcher metadataFetcher,
                                    SSTableUploader uploader,
                                    SSTableUploadsPathBuilder uploadPathBuilder,
@@ -85,10 +86,10 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
     {
         super(metadataFetcher, executorPools, validator);
         this.fs = vertx.fileSystem();
-        this.configuration = configuration;
+        this.configuration = serviceConfiguration.ssTableUploadConfiguration();
         this.uploader = uploader;
         this.uploadPathBuilder = uploadPathBuilder;
-        this.limiter = new ConcurrencyLimiter(configuration::getConcurrentUploadsLimit);
+        this.limiter = new ConcurrencyLimiter(configuration::concurrentUploadsLimit);
         this.stats = sidecarStats.ssTableStats();
     }
 
@@ -204,14 +205,14 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
 
     /**
      * Ensures there is sufficient space available as per configured in the
-     * {@link Configuration#getMinSpacePercentRequiredForUpload()}.
+     * {@link SSTableUploadConfiguration#minimumSpacePercentageRequired()}.
      *
      * @param uploadDirectory the directory where the SSTables are uploaded
      * @return a succeeded future if there is sufficient space available, or failed future otherwise
      */
     private Future<String> ensureSufficientSpaceAvailable(String uploadDirectory)
     {
-        float minimumPercentageRequired = configuration.getMinSpacePercentRequiredForUpload();
+        float minimumPercentageRequired = configuration.minimumSpacePercentageRequired();
         if (minimumPercentageRequired == 0)
         {
             return Future.succeededFuture(uploadDirectory);

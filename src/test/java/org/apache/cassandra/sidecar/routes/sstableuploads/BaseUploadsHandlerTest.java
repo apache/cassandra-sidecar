@@ -47,13 +47,13 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.config.CacheConfiguration;
-import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
@@ -71,28 +71,41 @@ class BaseUploadsHandlerTest
     protected Vertx vertx;
     protected HttpServer server;
     protected WebClient client;
-    protected Configuration config;
     protected CassandraAdapterDelegate mockDelegate;
-    protected Configuration mockConfiguration;
+    protected SidecarConfiguration sidecarConfiguration;
     @TempDir
     protected File temporaryFolder;
+    protected SSTableUploadConfiguration mockSSTableUploadConfiguration;
 
     @BeforeEach
     void setup() throws InterruptedException
     {
         mockDelegate = mock(CassandraAdapterDelegate.class);
-        mockConfiguration = mock(Configuration.class);
-        TestModuleOverride testModuleOverride = new TestModuleOverride(mockDelegate, mockConfiguration);
+        TestModule testModule = new TestModule();
+        ServiceConfiguration serviceConfiguration = testModule.configuration().serviceConfiguration();
+        mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
+        when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
+        when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(0F);
+        sidecarConfiguration =
+        testModule.configuration()
+                  .unbuild()
+                  .serviceConfiguration(serviceConfiguration
+                                        .unbuild()
+                                        .requestIdleTimeoutMillis(500)
+                                        .requestTimeoutMillis(1000L)
+                                        .ssTableUploadConfiguration(mockSSTableUploadConfiguration)
+                                        .build())
+                  .build();
+        TestModuleOverride testModuleOverride = new TestModuleOverride(mockDelegate);
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
-                                                        .with(Modules.override(new TestModule())
+                                                        .with(Modules.override(testModule)
                                                                      .with(testModuleOverride)));
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);
-        config = injector.getInstance(Configuration.class);
         client = WebClient.create(vertx);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), config.getHost(), context.succeedingThenComplete());
+        server.listen(0, "localhost", context.succeedingThenComplete());
 
         Metadata mockMetadata = mock(Metadata.class);
         KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
@@ -154,12 +167,10 @@ class BaseUploadsHandlerTest
     class TestModuleOverride extends AbstractModule
     {
         private final CassandraAdapterDelegate delegate;
-        private final Configuration mockConfiguration;
 
-        TestModuleOverride(CassandraAdapterDelegate delegate, Configuration mockConfiguration)
+        TestModuleOverride(CassandraAdapterDelegate delegate)
         {
             this.delegate = delegate;
-            this.mockConfiguration = mockConfiguration;
         }
 
         @Provides
@@ -178,27 +189,9 @@ class BaseUploadsHandlerTest
 
         @Singleton
         @Provides
-        public Configuration abstractConfig(InstancesConfig instancesConfig)
+        public SidecarConfiguration configuration()
         {
-            when(mockConfiguration.getInstancesConfig()).thenReturn(instancesConfig);
-            when(mockConfiguration.getHost()).thenReturn("127.0.0.1");
-            when(mockConfiguration.getPort()).thenReturn(6475);
-            when(mockConfiguration.getHealthCheckFrequencyMillis()).thenReturn(1000);
-            when(mockConfiguration.isSslEnabled()).thenReturn(false);
-            when(mockConfiguration.getRateLimitStreamRequestsPerSecond()).thenReturn(1L);
-            when(mockConfiguration.getThrottleDelayInSeconds()).thenReturn(5L);
-            when(mockConfiguration.getThrottleTimeoutInSeconds()).thenReturn(10L);
-            when(mockConfiguration.getRequestIdleTimeoutMillis()).thenReturn(500);
-            when(mockConfiguration.getRequestTimeoutMillis()).thenReturn(1000L);
-            when(mockConfiguration.getSSTableImportPollIntervalMillis()).thenReturn(100);
-            when(mockConfiguration.ssTableImportCacheConfiguration()).thenReturn(new CacheConfiguration(60_000, 100));
-            when(mockConfiguration.getConcurrentUploadsLimit()).thenReturn(3);
-            when(mockConfiguration.getMinSpacePercentRequiredForUpload()).thenReturn(0F);
-            WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfiguration("test-pool", 10,
-                                                                                 TimeUnit.SECONDS.toMillis(30));
-            when(mockConfiguration.serverWorkerPoolConfiguration()).thenReturn(workerPoolConf);
-            when(mockConfiguration.serverInternalWorkerPoolConfiguration()).thenReturn(workerPoolConf);
-            return mockConfiguration;
+            return sidecarConfiguration;
         }
     }
 }

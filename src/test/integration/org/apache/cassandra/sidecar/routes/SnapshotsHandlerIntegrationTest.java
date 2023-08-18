@@ -46,7 +46,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/keyspaces/non-existent/tables/testtable/snapshots/my-snapshot";
-        client.put(config.getPort(), "127.0.0.1", testRoute)
+        client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeedingThenComplete());
         // wait until the test completes
@@ -61,7 +61,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
 
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non-existent/snapshots/my-snapshot";
-        client.put(config.getPort(), "127.0.0.1", testRoute)
+        client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeedingThenComplete());
         // wait until the test completes
@@ -78,7 +78,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         WebClient client = WebClient.create(vertx);
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          TEST_KEYSPACE, table);
-        client.put(config.getPort(), "127.0.0.1", testRoute)
+        client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response ->
                                        context.verify(() -> {
@@ -86,7 +86,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
 
                                            // creating the snapshot with the same name will return
                                            // a 409 (Conflict) status code
-                                           client.put(config.getPort(), "127.0.0.1", testRoute)
+                                           client.put(server.actualPort(), "127.0.0.1", testRoute)
                                                  .expect(ResponsePredicate.SC_CONFLICT)
                                                  .send(context.succeedingThenComplete());
                                        })));
@@ -104,7 +104,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         WebClient client = WebClient.create(vertx);
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          TEST_KEYSPACE, table);
-        client.put(config.getPort(), "127.0.0.1", testRoute)
+        client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -169,7 +169,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
                                          TEST_KEYSPACE, table, snapshotName);
 
         // first create the snapshot
-        client.put(config.getPort(), "127.0.0.1", testRoute)
+        client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(
               createResponse ->
@@ -183,7 +183,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
                   assertThat(found).isNotEmpty();
 
                   // then delete the snapshot
-                  client.delete(config.getPort(), "127.0.0.1", testRoute)
+                  client.delete(server.actualPort(), "127.0.0.1", testRoute)
                         .expect(ResponsePredicate.SC_OK)
                         .send(context.succeeding(
                         deleteResponse ->
@@ -216,7 +216,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     private void assertNotFoundOnDeleteSnapshot(VertxTestContext context, String testRoute) throws InterruptedException
     {
         WebClient client = WebClient.create(vertx);
-        client.delete(config.getPort(), "127.0.0.1", testRoute)
+        client.delete(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeedingThenComplete());
         // wait until test completes

@@ -18,22 +18,134 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import java.util.concurrent.TimeUnit;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+
 /**
- * Values to configure worker pool
+ * Encapsulates configurations for the worker pool
  */
 public class WorkerPoolConfiguration
 {
-    public final String workerPoolName;
-    public final int workerPoolSize;
-    // WorkerExecutor logs a warning if the blocking exeuction exceeds the max time configured.
+    @JsonProperty("name")
+    private final String workerPoolName;
+
+    @JsonProperty("size")
+    private final int workerPoolSize;
+
+    // WorkerExecutor logs a warning if the blocking execution exceeds the max time configured.
     // It does not abort the execution. The warning messages look like this.
     // "Thread xxx has been blocked for yyy ms, time limit is zzz ms"
-    public final long workerMaxExecutionTimeMillis;
+    @JsonProperty("max_execution_time_millis")
+    private final long workerMaxExecutionTimeMillis;
 
-    public WorkerPoolConfiguration(String workerPoolName, int workerPoolSize, long workerMaxExecutionTimeMillis)
+    public WorkerPoolConfiguration()
     {
-        this.workerPoolName = workerPoolName;
-        this.workerPoolSize = workerPoolSize;
-        this.workerMaxExecutionTimeMillis = workerMaxExecutionTimeMillis;
+        this.workerPoolName = null;
+        this.workerPoolSize = 20;
+        this.workerMaxExecutionTimeMillis = TimeUnit.SECONDS.toMillis(60);
+    }
+
+    protected WorkerPoolConfiguration(Builder builder)
+    {
+        workerPoolName = builder.workerPoolName;
+        workerPoolSize = builder.workerPoolSize;
+        workerMaxExecutionTimeMillis = builder.workerMaxExecutionTimeMillis;
+    }
+
+    /**
+     * @return the name of the worker pool
+     */
+    @JsonProperty("name")
+    public String workerPoolName()
+    {
+        return workerPoolName;
+    }
+
+    /**
+     * @return the size of the worker pool
+     */
+    @JsonProperty("size")
+    public int workerPoolSize()
+    {
+        return workerPoolSize;
+    }
+
+    /**
+     * @return the maximum execution time for the worker pool in milliseconds
+     */
+    @JsonProperty("max_execution_time_millis")
+    public long workerMaxExecutionTimeMillis()
+    {
+        return workerMaxExecutionTimeMillis;
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@code WorkerPoolConfiguration} builder static inner class.
+     */
+    public static class Builder implements DataObjectBuilder<Builder, WorkerPoolConfiguration>
+    {
+        private String workerPoolName;
+        private int workerPoolSize;
+        private long workerMaxExecutionTimeMillis;
+
+        protected Builder()
+        {
+        }
+
+        /**
+         * Sets the {@code workerPoolName} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param workerPoolName the {@code workerPoolName} to set
+         * @return a reference to this Builder
+         */
+        public Builder workerPoolName(String workerPoolName)
+        {
+            this.workerPoolName = workerPoolName;
+            return this;
+        }
+
+        /**
+         * Sets the {@code workerPoolSize} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param workerPoolSize the {@code workerPoolSize} to set
+         * @return a reference to this Builder
+         */
+        public Builder workerPoolSize(int workerPoolSize)
+        {
+            this.workerPoolSize = workerPoolSize;
+            return this;
+        }
+
+        /**
+         * Sets the {@code workerMaxExecutionTimeMillis} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param workerMaxExecutionTimeMillis the {@code workerMaxExecutionTimeMillis} to set
+         * @return a reference to this Builder
+         */
+        public Builder workerMaxExecutionTimeMillis(long workerMaxExecutionTimeMillis)
+        {
+            this.workerMaxExecutionTimeMillis = workerMaxExecutionTimeMillis;
+            return this;
+        }
+
+        /**
+         * Returns a {@code WorkerPoolConfiguration} built from the parameters previously set.
+         *
+         * @return a {@code WorkerPoolConfiguration} built with parameters of this
+         * {@code WorkerPoolConfiguration.Builder}
+         */
+        @Override
+        public WorkerPoolConfiguration build()
+        {
+            return new WorkerPoolConfiguration(this);
+        }
     }
 }

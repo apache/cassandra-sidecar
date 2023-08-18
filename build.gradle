@@ -21,8 +21,8 @@
 import com.github.spotbugs.SpotBugsTask
 import org.nosphere.apache.rat.RatTask
 
-import java.nio.file.Paths
 import java.nio.file.Files
+import java.nio.file.Paths
 
 buildscript {
     dependencies {
@@ -177,7 +177,11 @@ dependencies {
     implementation('ch.qos.logback:logback-core:1.2.3')
     implementation('ch.qos.logback:logback-classic:1.2.3')
 
-    implementation(group: 'org.apache.commons', name: 'commons-configuration2', version: '2.7')
+    implementation(group: 'org.apache.commons', name: 'commons-lang3', version: '3.13.0')
+
+    // Jackson for yaml-based configuration parsing
+    implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
+    implementation(group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: "${project.jacksonVersion}")
 
     runtimeOnly group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
     runtimeOnly group: 'org.yaml', name: 'snakeyaml', version: '1.26'

@@ -41,7 +41,7 @@ class GossipInfoHandlerIntegrationTest extends IntegrationTestBase
     {
         String testRoute = "/api/v1/cassandra/gossip";
         testWithClient(context, client -> {
-            client.get(config.getPort(), "127.0.0.1", testRoute)
+            client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
                       GossipInfoResponse gossipResponse = response.bodyAsJson(GossipInfoResponse.class);

@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.utils;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
@@ -32,16 +31,18 @@ import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.exceptions.RangeException;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.models.HttpResponse;
 import org.apache.cassandra.sidecar.stats.SSTableStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
 import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 /**
  * General handler for serving files
@@ -53,16 +54,18 @@ public class FileStreamer
     private static final long DEFAULT_RATE_LIMIT_STREAM_REQUESTS_PER_SECOND = Long.MAX_VALUE;
 
     private final ExecutorPools executorPools;
-    private final Configuration config;
+    private final ThrottleConfiguration config;
     private final SidecarRateLimiter rateLimiter;
     private final SSTableStats stats;
 
     @Inject
-    public FileStreamer(ExecutorPools executorPools, Configuration config, SidecarRateLimiter rateLimiter,
+    public FileStreamer(ExecutorPools executorPools,
+                        ServiceConfiguration config,
+                        SidecarRateLimiter rateLimiter,
                         SidecarStats stats)
     {
         this.executorPools = executorPools;
-        this.config = config;
+        this.config = config.throttleConfiguration();
         this.rateLimiter = rateLimiter;
         this.stats = stats.ssTableStats();
     }
@@ -162,7 +165,7 @@ public class FileStreamer
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Retry exhausted"));
         }
         else if ((microsToWait = rateLimiter.queryEarliestAvailable(0L))
-                 < TimeUnit.SECONDS.toMicros(config.getThrottleDelayInSeconds()))
+                 < TimeUnit.SECONDS.toMicros(config.delayInSeconds()))
         {
             microsToWait = Math.max(0, microsToWait);
 
@@ -187,7 +190,7 @@ public class FileStreamer
      */
     private boolean isRateLimited()
     {
-        return config.getRateLimitStreamRequestsPerSecond() != DEFAULT_RATE_LIMIT_STREAM_REQUESTS_PER_SECOND;
+        return config.rateLimitStreamRequestsPerSecond() != DEFAULT_RATE_LIMIT_STREAM_REQUESTS_PER_SECOND;
     }
 
     /**
@@ -196,7 +199,7 @@ public class FileStreamer
      */
     private boolean checkRetriesExhausted(Instant startTime)
     {
-        return startTime.plus(Duration.ofSeconds(config.getThrottleTimeoutInSeconds()))
+        return startTime.plus(Duration.ofSeconds(config.timeoutInSeconds()))
                         .isBefore(Instant.now());
     }
 

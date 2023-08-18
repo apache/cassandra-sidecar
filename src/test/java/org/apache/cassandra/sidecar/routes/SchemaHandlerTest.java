@@ -47,7 +47,6 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
@@ -69,7 +68,6 @@ class SchemaHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(SchemaHandlerTest.class);
     Vertx vertx;
-    Configuration config;
     HttpServer server;
     @TempDir
     File dataDir0;
@@ -87,9 +85,8 @@ class SchemaHandlerTest
                                                             .with(new SchemaHandlerTestModule())));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(HttpServer.class);
-        config = injector.getInstance(Configuration.class);
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), config.getHost(), context.succeedingThenComplete());
+        server.listen(0, "127.0.0.1", context.succeedingThenComplete());
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
 
@@ -110,7 +107,7 @@ class SchemaHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/schema/keyspaces";
-        client.get(config.getPort(), config.getHost(), testRoute)
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -127,7 +124,7 @@ class SchemaHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/schema/keyspaces/testKeyspace";
-        client.get(config.getPort(), config.getHost(), testRoute)
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -144,7 +141,7 @@ class SchemaHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/schema/keyspaces/nonExistent";
-        client.get(config.getPort(), config.getHost(), testRoute)
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());

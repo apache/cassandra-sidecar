@@ -18,15 +18,11 @@
 
 package org.apache.cassandra.sidecar.cluster.instance;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-
-import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
-import org.apache.cassandra.sidecar.common.JmxClient;
-import org.jetbrains.annotations.VisibleForTesting;
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 
 /**
  * Local implementation of InstanceMetadata.
@@ -40,34 +36,14 @@ public class InstanceMetadataImpl implements InstanceMetadata
     private final String stagingDir;
     private final CassandraAdapterDelegate delegate;
 
-    public InstanceMetadataImpl(int id,
-                                String host,
-                                int port,
-                                Iterable<String> dataDirs,
-                                String stagingDir,
-                                CQLSessionProvider sessionProvider,
-                                JmxClient jmxClient,
-                                CassandraVersionProvider versionProvider,
-                                String sidecarVersion)
+    protected InstanceMetadataImpl(Builder builder)
     {
-        this(id, host, port, dataDirs, stagingDir,
-             new CassandraAdapterDelegate(versionProvider, sessionProvider, jmxClient, sidecarVersion));
-    }
-
-    @VisibleForTesting
-    public InstanceMetadataImpl(int id,
-                                String host,
-                                int port,
-                                Iterable<String> dataDirs,
-                                String stagingDir,
-                                CassandraAdapterDelegate delegate)
-    {
-        this.id = id;
-        this.host = host;
-        this.port = port;
-        this.dataDirs = ImmutableList.copyOf(dataDirs);
-        this.stagingDir = stagingDir;
-        this.delegate = delegate;
+        id = builder.id;
+        host = builder.host;
+        port = builder.port;
+        dataDirs = builder.dataDirs;
+        stagingDir = builder.stagingDir;
+        delegate = builder.delegate;
     }
 
     @Override
@@ -106,4 +82,116 @@ public class InstanceMetadataImpl implements InstanceMetadata
         return delegate;
     }
 
+    public Builder unbuild()
+    {
+        return new Builder(this);
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@code InstanceMetadataImpl} builder static inner class.
+     */
+    public static class Builder implements DataObjectBuilder<Builder, InstanceMetadataImpl>
+    {
+        private int id;
+        private String host;
+        private int port;
+        private List<String> dataDirs;
+        private String stagingDir;
+        private CassandraAdapterDelegate delegate;
+
+        protected Builder()
+        {
+        }
+
+        protected Builder(InstanceMetadataImpl instanceMetadata)
+        {
+            id = instanceMetadata.id;
+            host = instanceMetadata.host;
+            port = instanceMetadata.port;
+            dataDirs = new ArrayList<>(instanceMetadata.dataDirs);
+            stagingDir = instanceMetadata.stagingDir;
+            delegate = instanceMetadata.delegate;
+        }
+
+        /**
+         * Sets the {@code id} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param id the {@code id} to set
+         * @return a reference to this Builder
+         */
+        public Builder id(int id)
+        {
+            return override(b -> b.id = id);
+        }
+
+        /**
+         * Sets the {@code host} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param host the {@code host} to set
+         * @return a reference to this Builder
+         */
+        public Builder host(String host)
+        {
+            return override(b -> b.host = host);
+        }
+
+        /**
+         * Sets the {@code port} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param port the {@code port} to set
+         * @return a reference to this Builder
+         */
+        public Builder port(int port)
+        {
+            return override(b -> b.port = port);
+        }
+
+        /**
+         * Sets the {@code dataDirs} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param dataDirs the {@code dataDirs} to set
+         * @return a reference to this Builder
+         */
+        public Builder dataDirs(List<String> dataDirs)
+        {
+            return override(b -> b.dataDirs = dataDirs);
+        }
+
+        /**
+         * Sets the {@code stagingDir} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param stagingDir the {@code stagingDir} to set
+         * @return a reference to this Builder
+         */
+        public Builder stagingDir(String stagingDir)
+        {
+            return override(b -> b.stagingDir = stagingDir);
+        }
+
+        /**
+         * Sets the {@code delegate} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param delegate the {@code delegate} to set
+         * @return a reference to this Builder
+         */
+        public Builder delegate(CassandraAdapterDelegate delegate)
+        {
+            return override(b -> b.delegate = delegate);
+        }
+
+        /**
+         * Returns a {@code InstanceMetadataImpl} built from the parameters previously set.
+         *
+         * @return a {@code InstanceMetadataImpl} built with parameters of this {@code InstanceMetadataImpl.Builder}
+         */
+        public InstanceMetadataImpl build()
+        {
+            return new InstanceMetadataImpl(this);
+        }
+    }
 }

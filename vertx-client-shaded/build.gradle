@@ -46,7 +46,7 @@ configurations {
 
 dependencies {
     shadow(group: 'org.slf4j', name: 'slf4j-api', version: "${project.slf4jVersion}")
-    shadow(group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.14.2')
+    shadow(group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: "${project.jacksonVersion}")
     api(project(':vertx-client'))
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.1'

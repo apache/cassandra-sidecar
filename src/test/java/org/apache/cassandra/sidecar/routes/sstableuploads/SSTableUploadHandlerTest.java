@@ -152,7 +152,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     @Test
     public void testFreeSpacePercentCheckNotPassed(VertxTestContext context) throws IOException
     {
-        when(mockConfiguration.getMinSpacePercentRequiredForUpload()).thenReturn(100F);
+        when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(100F);
 
         UUID uploadId = UUID.randomUUID();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", "",
@@ -163,7 +163,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     @Test
     public void testConcurrentUploadLimitExceeded(VertxTestContext context) throws IOException
     {
-        when(mockConfiguration.getConcurrentUploadsLimit()).thenReturn(0);
+        when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(0);
 
         UUID uploadId = UUID.randomUUID();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", "",
@@ -174,7 +174,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     @Test
     public void testPermitCleanup(VertxTestContext context) throws IOException, InterruptedException
     {
-        when(mockConfiguration.getConcurrentUploadsLimit()).thenReturn(1);
+        when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(1);
 
         UUID uploadId = UUID.randomUUID();
         CountDownLatch latch = new CountDownLatch(1);
@@ -242,7 +242,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + keyspace
                            + "/tables/" + tableName + "/components/" + targetFileName;
-        HttpRequest<Buffer> req = client.put(config.getPort(), "localhost", testRoute);
+        HttpRequest<Buffer> req = client.put(server.actualPort(), "localhost", testRoute);
         if (!expectedMd5.isEmpty())
         {
             req.putHeader(HttpHeaderNames.CONTENT_MD5.toString(), expectedMd5);

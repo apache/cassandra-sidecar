@@ -24,9 +24,9 @@ import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.config.CacheConfiguration;
-import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 
@@ -45,7 +45,7 @@ public class TestSslModule extends TestModule
     }
 
     @Override
-    public Configuration abstractConfig(InstancesConfig instancesConfig)
+    public SidecarConfiguration abstractConfig()
     {
         ClassLoader classLoader = TestSslModule.class.getClassLoader();
         Path keyStorePath = writeResourceToPath(classLoader, certPath, "certs/test.p12");
@@ -63,27 +63,21 @@ public class TestSslModule extends TestModule
             logger.error("Trust Store file not found in path={}", trustStorePath);
         }
 
-        WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfiguration("test-pool", 10,
-                                                                             30000);
+        SslConfiguration sslConfiguration =
+        SslConfiguration.builder()
+                        .enabled(true)
+                        .keystore(KeyStoreConfiguration.builder()
+                                                       .path(keyStorePath.toAbsolutePath().toString())
+                                                       .password(keyStorePassword)
+                                                       .build())
+                        .truststore(KeyStoreConfiguration.builder()
+                                                         .path(trustStorePath.toAbsolutePath().toString())
+                                                         .password(trustStorePassword)
+                                                         .build())
+                        .build();
 
-        return new Configuration.Builder<>()
-               .setInstancesConfig(instancesConfig)
-               .setHost("127.0.0.1")
-               .setPort(6475)
-               .setHealthCheckFrequency(1000)
-               .setKeyStorePath(keyStorePath.toAbsolutePath().toString())
-               .setKeyStorePassword(keyStorePassword)
-               .setTrustStorePath(trustStorePath.toAbsolutePath().toString())
-               .setTrustStorePassword(trustStorePassword)
-               .setSslEnabled(true)
-               .setRateLimitStreamRequestsPerSecond(1)
-               .setRequestIdleTimeoutMillis(300_000)
-               .setRequestTimeoutMillis(300_000L)
-               .setConcurrentUploadsLimit(80)
-               .setMinSpacePercentRequiredForUploads(0)
-               .setSSTableImportCacheConfiguration(new CacheConfiguration(60_000, 100))
-               .setServerWorkerPoolConfiguration(workerPoolConf)
-               .setServerInternalWorkerPoolConfiguration(workerPoolConf)
-               .build();
+        return super.abstractConfig().unbuild()
+                    .sslConfiguration(sslConfiguration)
+                    .build();
     }
 }

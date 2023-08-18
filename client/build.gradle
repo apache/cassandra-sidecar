@@ -66,7 +66,7 @@ configurations {
 
 dependencies {
     api(project(':common'))
-    implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.2')
+    implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
 
     compileOnly('org.jetbrains:annotations:23.0.0')

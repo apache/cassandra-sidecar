@@ -28,7 +28,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
-import org.apache.cassandra.sidecar.Configuration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 /**
@@ -45,10 +45,10 @@ public class ExecutorPools
     private final TaskExecutorPool internalTaskExecutors;
 
     @Inject
-    public ExecutorPools(Vertx vertx, Configuration configuraion)
+    public ExecutorPools(Vertx vertx, ServiceConfiguration configuration)
     {
-        this.taskExecutors = new TaskExecutorPool(vertx, configuraion.serverWorkerPoolConfiguration());
-        this.internalTaskExecutors = new TaskExecutorPool(vertx, configuraion.serverInternalWorkerPoolConfiguration());
+        this.taskExecutors = new TaskExecutorPool(vertx, configuration.serverWorkerPoolConfiguration());
+        this.internalTaskExecutors = new TaskExecutorPool(vertx, configuration.serverInternalWorkerPoolConfiguration());
     }
 
     /**
@@ -86,9 +86,9 @@ public class ExecutorPools
         private TaskExecutorPool(Vertx vertx, WorkerPoolConfiguration config)
         {
             this.vertx = vertx;
-            this.workerExecutor = vertx.createSharedWorkerExecutor(config.workerPoolName,
-                                                                   config.workerPoolSize,
-                                                                   config.workerMaxExecutionTimeMillis,
+            this.workerExecutor = vertx.createSharedWorkerExecutor(config.workerPoolName(),
+                                                                   config.workerPoolSize(),
+                                                                   config.workerMaxExecutionTimeMillis(),
                                                                    TimeUnit.MILLISECONDS);
         }
 

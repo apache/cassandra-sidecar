@@ -2,14 +2,14 @@
 # Cassandra SideCar configuration file
 #
 cassandra:
-  - host: localhost
-  - port: 9042
-  - data_dirs: /cassandra/d1/data, /cassandra/d2/data
-  - jmx_host: 127.0.0.1
-  - jmx_port: 7199
-  - jmx_role: controlRole
-  - jmx_role_password: controlPassword
-  - jmx_ssl_enabled: true
+  host: localhost
+  port: 9042
+  data_dirs: /cassandra/d1/data, /cassandra/d2/data
+  jmx_host: 127.0.0.1
+  jmx_port: 7199
+  jmx_role: controlRole
+  jmx_role_password: controlPassword
+  jmx_ssl_enabled: true
 
 cassandra_instances:
   - id: 1
@@ -32,13 +32,13 @@ cassandra_instances:
     jmx_ssl_enabled: true
 
 sidecar:
-  - host: 0.0.0.0
-  - port: 9043
-  - throttle:
-      - stream_requests_per_sec: 5000
-      - delay_sec: 5
-      - timeout_sec: 10
-  - allowable_time_skew_in_minutes: 60
+  host: 0.0.0.0
+  port: 9043
+  throttle:
+    stream_requests_per_sec: 5000
+    delay_sec: 5
+    timeout_sec: 10
+  allowable_time_skew_in_minutes: 60
 
 #
 # Enable SSL configuration (Disabled by default)
@@ -54,4 +54,4 @@ sidecar:
 
 
 healthcheck:
-  - poll_freq_millis: 30000
+  poll_freq_millis: 30000

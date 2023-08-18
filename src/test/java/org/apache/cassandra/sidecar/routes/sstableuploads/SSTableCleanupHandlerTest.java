@@ -47,7 +47,7 @@ public class SSTableCleanupHandlerTest extends BaseUploadsHandlerTest
 
         Path uploadRoot = createStagedUploadFiles(uploadId);
 
-        client.delete(config.getPort(), "localhost", testRoute)
+        client.delete(server.actualPort(), "localhost", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   context.verify(() -> {
@@ -61,7 +61,7 @@ public class SSTableCleanupHandlerTest extends BaseUploadsHandlerTest
     @Test
     void testCleanupUploadBadRequest(VertxTestContext context)
     {
-        client.delete(config.getPort(), "localhost", "/api/v1/uploads/1234")
+        client.delete(server.actualPort(), "localhost", "/api/v1/uploads/1234")
               .expect(ResponsePredicate.SC_BAD_REQUEST)
               .send(context.succeeding(response -> context.verify(() -> {
                   JsonObject error = response.bodyAsJsonObject();
@@ -81,7 +81,7 @@ public class SSTableCleanupHandlerTest extends BaseUploadsHandlerTest
         UUID uploadId = UUID.randomUUID();
         String testRoute = String.format("/api/v1/uploads/%s", uploadId);
 
-        client.delete(config.getPort(), "localhost", testRoute)
+        client.delete(server.actualPort(), "localhost", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeeding(response -> context.completeNow()));
     }

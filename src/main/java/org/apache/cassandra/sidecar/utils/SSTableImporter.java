@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,10 +36,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -78,7 +78,7 @@ public class SSTableImporter
     @Inject
     SSTableImporter(Vertx vertx,
                     InstanceMetadataFetcher metadataFetcher,
-                    Configuration configuration,
+                    ServiceConfiguration configuration,
                     ExecutorPools executorPools,
                     SSTableUploadsPathBuilder uploadPathBuilder)
     {
@@ -88,7 +88,8 @@ public class SSTableImporter
         this.uploadPathBuilder = uploadPathBuilder;
         this.importQueuePerHost = new ConcurrentHashMap<>();
         executorPools.internal()
-                     .setPeriodic(configuration.getSSTableImportPollIntervalMillis(), this::processPendingImports);
+                     .setPeriodic(configuration.ssTableImportConfiguration().importIntervalMillis(),
+                                  this::processPendingImports);
     }
 
     /**
@@ -102,7 +103,7 @@ public class SSTableImporter
     {
         Promise<Void> promise = Promise.promise();
         importQueuePerHost.computeIfAbsent(key(options), this::initializeQueue)
-                          .offer(Pair.of(promise, options));
+                          .offer(new AbstractMap.SimpleEntry<>(promise, options));
         return promise.future();
     }
 
@@ -119,7 +120,7 @@ public class SSTableImporter
         boolean removed = false;
         if (queue != null)
         {
-            removed = queue.removeIf(tuple -> options.equals(tuple.getRight()));
+            removed = queue.removeIf(tuple -> options.equals(tuple.getValue()));
         }
 
         LOGGER.debug("Cancel import for options={} was {}removed", options, removed ? "" : "not ");
@@ -198,9 +199,9 @@ public class SSTableImporter
     {
         while (!queue.isEmpty())
         {
-            Pair<Promise<Void>, ImportOptions> pair = queue.poll();
-            Promise<Void> promise = pair.getLeft();
-            ImportOptions options = pair.getRight();
+            AbstractMap.SimpleEntry<Promise<Void>, ImportOptions> pair = queue.poll();
+            Promise<Void> promise = pair.getKey();
+            ImportOptions options = pair.getValue();
 
             CassandraAdapterDelegate cassandra = metadataFetcher.delegate(options.host);
             TableOperations tableOperations = cassandra.tableOperations();
@@ -269,7 +270,7 @@ public class SSTableImporter
      * A {@link ConcurrentLinkedQueue} that allows for locking the queue while operating on it. The queue
      * must be unlocked once the operations are complete.
      */
-    static class ImportQueue extends ConcurrentLinkedQueue<Pair<Promise<Void>, ImportOptions>>
+    static class ImportQueue extends ConcurrentLinkedQueue<AbstractMap.SimpleEntry<Promise<Void>, ImportOptions>>
     {
         private final AtomicBoolean isQueueInUse = new AtomicBoolean(false);
 

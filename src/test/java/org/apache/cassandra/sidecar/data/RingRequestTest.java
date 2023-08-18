@@ -18,13 +18,7 @@
 
 package org.apache.cassandra.sidecar.data;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import org.apache.cassandra.sidecar.common.TestValidationConfiguration;
-import org.apache.cassandra.sidecar.common.utils.ValidationConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,19 +27,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RingRequestTest
 {
-    @BeforeEach
-    void setup()
-    {
-        Guice.createInjector(new AbstractModule()
-        {
-            protected void configure()
-            {
-                bind(ValidationConfiguration.class).to(TestValidationConfiguration.class);
-                requestStaticInjection(RingRequest.class);
-            }
-        });
-    }
-
     @Test
     void testEmptyConstructor()
     {

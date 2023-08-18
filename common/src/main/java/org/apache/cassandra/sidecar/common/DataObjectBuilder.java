@@ -16,33 +16,45 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.utils;
+package org.apache.cassandra.sidecar.common;
 
-import java.util.Set;
+import java.util.function.Consumer;
 
 /**
- * An interface to provide validation configuration parameters
+ * Interface to build data objects
+ *
+ * @param <T> type of builder
+ * @param <R> type of result from build
  */
-public interface ValidationConfiguration
+public interface DataObjectBuilder<T extends DataObjectBuilder<?, ?>, R>
 {
     /**
-     * @return a set of forbidden keyspaces
+     * Self typing
+     *
+     * @return type of implementor class
      */
-    Set<String> forbiddenKeyspaces();
+    @SuppressWarnings("unchecked")
+    default T self()
+    {
+        return (T) this;
+    }
 
     /**
-     * @return a regular expression for an allowed pattern for directory names
-     * (i.e. keyspace directory name or table directory name)
+     * Build into data object of type R
+     *
+     * @return data object type
      */
-    String allowedPatternForDirectory();
+    R build();
 
     /**
-     * @return a regular expression for an allowed pattern for component names
+     * Overrides fields in builder
+     *
+     * @param mutation function to mutate fields
+     * @return builder itself for chained invocation
      */
-    String allowedPatternForComponentName();
-
-    /**
-     * @return a regular expression to an allowed pattern for a subset of component names
-     */
-    String allowedPatternForRestrictedComponentName();
+    default T override(Consumer<? super T> mutation)
+    {
+        mutation.accept(self());
+        return self();
+    }
 }

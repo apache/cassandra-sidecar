@@ -1,0 +1,34 @@
+#
+# Cassandra SideCar configuration file
+#
+cassandra:
+  host: localhost
+  port: 9042
+  data_dirs: /cassandra/d1/data, /cassandra/d2/data
+  jmx_host: 127.0.0.1
+  jmx_port: 7199
+  jmx_role: controlRole
+  jmx_role_password: controlPassword
+  jmx_ssl_enabled: true
+
+sidecar:
+  host: 0.0.0.0
+  port: 1234
+  request_idle_timeout_millis: 500000 # this field expects integer value
+  request_timeout_millis: 1200000
+  throttle:
+    stream_requests_per_sec: 80
+    delay_sec: 7
+    timeout_sec: 21
+  allowable_time_skew_in_minutes: 89
+  sstable_import:
+    poll_interval_millis: 50
+
+cassandra_input_validation:
+  forbidden_keyspaces:
+    - a
+    - b
+    - c
+  allowed_chars_for_directory: "[a-z]+"
+  allowed_chars_for_component_name: "(.db|.cql|.json|.crc32|TOC.txt)"
+  allowed_chars_for_restricted_component_name: "(.db|TOC.txt)"

@@ -59,7 +59,6 @@ import static org.mockito.Mockito.verify;
 public class LoggerHandlerInjectionTest
 {
     private Vertx vertx;
-    private Configuration config;
     private final Logger logger = mock(Logger.class);
     private HttpServer server;
     private FakeLoggerHandler loggerHandler;
@@ -73,14 +72,13 @@ public class LoggerHandlerInjectionTest
                                                         .with(binder -> binder.bind(LoggerHandler.class)
                                                                               .toInstance(loggerHandler)));
         vertx = injector.getInstance(Vertx.class);
-        config = injector.getInstance(Configuration.class);
         Router router = injector.getInstance(Router.class);
 
         router.get("/fake-route").handler(promise -> promise.json("done"));
 
         VertxTestContext context = new VertxTestContext();
         server = injector.getInstance(HttpServer.class);
-        server.listen(config.getPort(), context.succeedingThenComplete());
+        server.listen(0, context.succeedingThenComplete());
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
@@ -110,7 +108,7 @@ public class LoggerHandlerInjectionTest
             verify(logger, times(1)).info("{}", HttpResponseStatus.OK.code());
             testContext.completeNow();
         });
-        client.get(config.getPort(), "localhost", "/fake-route")
+        client.get(server.actualPort(), "localhost", "/fake-route")
               .as(BodyCodec.string()).ssl(false)
               .send(testContext.succeeding(responseVerifier));
     }

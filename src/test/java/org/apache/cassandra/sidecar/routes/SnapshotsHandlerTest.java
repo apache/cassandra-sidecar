@@ -46,7 +46,6 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
@@ -69,7 +68,6 @@ public class SnapshotsHandlerTest
     private static final Logger logger = LoggerFactory.getLogger(SnapshotsHandlerTest.class);
     private Vertx vertx;
     private HttpServer server;
-    private Configuration config;
     @TempDir
     File temporaryFolder;
 
@@ -81,10 +79,9 @@ public class SnapshotsHandlerTest
                                                                      .with(new ListSnapshotTestModule())));
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);
-        config = injector.getInstance(Configuration.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(config.getPort(), config.getHost(), context.succeedingThenComplete());
+        server.listen(0, "localhost", context.succeedingThenComplete());
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
         SnapshotUtils.initializeTmpDirectory(temporaryFolder);
@@ -126,7 +123,7 @@ public class SnapshotsHandlerTest
                                                "table1-1234",
                                                "2.db");
 
-        client.get(config.getPort(), "localhost", testRoute)
+        client.get(server.actualPort(), "localhost", testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   ListSnapshotFilesResponse resp = response.bodyAsJson(ListSnapshotFilesResponse.class);
@@ -171,7 +168,7 @@ public class SnapshotsHandlerTest
                                                "table1-1234",
                                                "2.db");
 
-        client.get(config.getPort(), "localhost", testRoute)
+        client.get(server.actualPort(), "localhost", testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   ListSnapshotFilesResponse resp = response.bodyAsJson(ListSnapshotFilesResponse.class);
@@ -186,7 +183,7 @@ public class SnapshotsHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1-1234/snapshots/snapshotInvalid";
-        client.get(config.getPort(), "localhost", testRoute)
+        client.get(server.actualPort(), "localhost", testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
                   assertThat(response.statusMessage()).isEqualTo(NOT_FOUND.reasonPhrase());
@@ -199,7 +196,7 @@ public class SnapshotsHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/i_❤_u/tables/table/snapshots/snapshot";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
@@ -215,7 +212,7 @@ public class SnapshotsHandlerTest
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/" + forbiddenKeyspace + "/tables/table/snapshots/snapshot";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
@@ -228,7 +225,7 @@ public class SnapshotsHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/keyspaces/ks/tables/i_❤_u/snapshots/snapshot";
-        client.get(config.getPort(), "localhost", "/api/v1" + testRoute)
+        client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());

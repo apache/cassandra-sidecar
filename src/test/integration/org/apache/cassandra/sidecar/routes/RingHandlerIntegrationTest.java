@@ -52,7 +52,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
     {
         String testRoute = "/api/v1/cassandra/ring";
         testWithClient(context, client -> {
-            client.get(config.getPort(), "127.0.0.1", testRoute)
+            client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
                       assertRingResponseOK(response, sidecarTestContext);
@@ -90,7 +90,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
     {
         String testRoute = "/api/v1/cassandra/ring/keyspaces/" + keyspace;
         testWithClient(context, client -> {
-            client.get(config.getPort(), "127.0.0.1", testRoute)
+            client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .send(context.succeeding(verifier));
         });
     }

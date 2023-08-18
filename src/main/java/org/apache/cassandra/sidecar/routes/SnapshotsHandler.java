@@ -35,17 +35,17 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.exceptions.NodeBootstrappingException;
 import org.apache.cassandra.sidecar.common.exceptions.SnapshotAlreadyExistsException;
-import org.apache.cassandra.sidecar.common.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.snapshots.SnapshotDirectory;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
+import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.RequestUtils;
 
@@ -84,11 +84,11 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
 {
     private static final String INCLUDE_SECONDARY_INDEX_FILES = "includeSecondaryIndexFiles";
     private final SnapshotPathBuilder builder;
-    private final Configuration configuration;
+    private final ServiceConfiguration configuration;
 
     @Inject
     public SnapshotsHandler(SnapshotPathBuilder builder,
-                            Configuration configuration,
+                            ServiceConfiguration configuration,
                             InstanceMetadataFetcher metadataFetcher,
                             CassandraInputValidator validator,
                             ExecutorPools executorPools)
@@ -197,7 +197,7 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
                                                     List<SnapshotPathBuilder.SnapshotFile> fileList)
     {
         ListSnapshotFilesResponse response = new ListSnapshotFilesResponse();
-        int sidecarPort = configuration.getPort();
+        int sidecarPort = configuration.port();
         SnapshotDirectory directory = SnapshotDirectory.of(snapshotDirectory);
         int dataDirectoryIndex = dataDirectoryIndex(host, directory.dataDirectory);
         int offset = snapshotDirectory.length() + 1;
