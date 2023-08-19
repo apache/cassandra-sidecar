@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -208,13 +209,13 @@ public class SSTableImporter
 
             if (tableOperations == null)
             {
-                promise.fail(new HttpException(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
-                                               "Cassandra service is unavailable"));
+                promise.fail(HttpExceptions.cassandraServiceUnavailable());
             }
             else
             {
                 try
                 {
+                    long startTime = System.nanoTime();
                     List<String> failedDirectories =
                     tableOperations.importNewSSTables(options.keyspace,
                                                       options.tableName,
@@ -226,13 +227,19 @@ public class SSTableImporter
                                                       options.invalidateCaches,
                                                       options.extendedVerify,
                                                       options.copyData);
+                    long elapsedNanos = System.nanoTime() - startTime;
                     if (!failedDirectories.isEmpty())
                     {
+                        LOGGER.error("Failed to import SSTables with options={}, elapsedTimeMilliseconds={}, " +
+                                     "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(elapsedNanos),
+                                     failedDirectories);
                         promise.fail(new HttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
                                                        "Failed to import from directories: " + failedDirectories));
                     }
                     else
                     {
+                        LOGGER.info("Successfully imported SSTables with options={}, elapsedTimeMilliseconds={}",
+                                    options, TimeUnit.NANOSECONDS.toMillis(elapsedNanos));
                         promise.complete();
                         cleanup(options);
                     }

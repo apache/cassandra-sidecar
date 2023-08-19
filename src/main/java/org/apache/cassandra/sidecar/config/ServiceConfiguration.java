@@ -107,7 +107,7 @@ public class ServiceConfiguration
         workerPoolsConfiguration = DEFAULT_WORKER_POOLS_CONFIGURATION;
     }
 
-    private ServiceConfiguration(Builder builder)
+    protected ServiceConfiguration(Builder<?> builder)
     {
         host = builder.host;
         port = builder.port;
@@ -228,30 +228,30 @@ public class ServiceConfiguration
     }
 
     @VisibleForTesting
-    public Builder unbuild()
+    public Builder<?> unbuild()
     {
-        return new Builder(this);
+        return new Builder<>(this);
     }
 
-    public static Builder builder()
+    public static Builder<?> builder()
     {
-        return new Builder();
+        return new Builder<>();
     }
 
     /**
      * {@code ServiceConfiguration} builder static inner class.
      */
-    public static class Builder implements DataObjectBuilder<Builder, ServiceConfiguration>
+    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, ServiceConfiguration>
     {
-        private String host = DEFAULT_HOST;
-        private int port = DEFAULT_PORT;
-        private int requestIdleTimeoutMillis = DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS;
-        private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT_MILLIS;
-        private int allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
-        private ThrottleConfiguration throttleConfiguration = new ThrottleConfiguration();
-        private SSTableUploadConfiguration ssTableUploadConfiguration = new SSTableUploadConfiguration();
-        private SSTableImportConfiguration ssTableImportConfiguration = new SSTableImportConfiguration();
-        private Map<String, WorkerPoolConfiguration> workerPoolsConfiguration = new HashMap<>();
+        protected String host = DEFAULT_HOST;
+        protected int port = DEFAULT_PORT;
+        protected int requestIdleTimeoutMillis = DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS;
+        protected long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT_MILLIS;
+        protected int allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
+        protected ThrottleConfiguration throttleConfiguration = new ThrottleConfiguration();
+        protected SSTableUploadConfiguration ssTableUploadConfiguration = new SSTableUploadConfiguration();
+        protected SSTableImportConfiguration ssTableImportConfiguration = new SSTableImportConfiguration();
+        protected Map<String, WorkerPoolConfiguration> workerPoolsConfiguration = new HashMap<>();
 
         protected Builder()
         {
@@ -278,7 +278,7 @@ public class ServiceConfiguration
          * @param host the {@code host} to set
          * @return a reference to this Builder
          */
-        public Builder host(String host)
+        public T host(String host)
         {
             return override(b -> b.host = host);
         }
@@ -289,7 +289,7 @@ public class ServiceConfiguration
          * @param port the {@code port} to set
          * @return a reference to this Builder
          */
-        public Builder port(int port)
+        public T port(int port)
         {
             return override(b -> b.port = port);
         }
@@ -300,7 +300,7 @@ public class ServiceConfiguration
          * @param requestIdleTimeoutMillis the {@code requestIdleTimeoutMillis} to set
          * @return a reference to this Builder
          */
-        public Builder requestIdleTimeoutMillis(int requestIdleTimeoutMillis)
+        public T requestIdleTimeoutMillis(int requestIdleTimeoutMillis)
         {
             return override(b -> b.requestIdleTimeoutMillis = requestIdleTimeoutMillis);
         }
@@ -311,7 +311,7 @@ public class ServiceConfiguration
          * @param requestTimeoutMillis the {@code requestTimeoutMillis} to set
          * @return a reference to this Builder
          */
-        public Builder requestTimeoutMillis(long requestTimeoutMillis)
+        public T requestTimeoutMillis(long requestTimeoutMillis)
         {
             return override(b -> b.requestTimeoutMillis = requestTimeoutMillis);
         }
@@ -322,7 +322,7 @@ public class ServiceConfiguration
          * @param allowableSkewInMinutes the {@code allowableSkewInMinutes} to set
          * @return a reference to this Builder
          */
-        public Builder allowableSkewInMinutes(int allowableSkewInMinutes)
+        public T allowableSkewInMinutes(int allowableSkewInMinutes)
         {
             return override(b -> b.allowableSkewInMinutes = allowableSkewInMinutes);
         }
@@ -333,7 +333,7 @@ public class ServiceConfiguration
          * @param throttleConfiguration the {@code throttleConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder throttleConfiguration(ThrottleConfiguration throttleConfiguration)
+        public T throttleConfiguration(ThrottleConfiguration throttleConfiguration)
         {
             return override(b -> b.throttleConfiguration = throttleConfiguration);
         }
@@ -344,7 +344,7 @@ public class ServiceConfiguration
          * @param ssTableUploadConfiguration the {@code ssTableUploadConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder ssTableUploadConfiguration(SSTableUploadConfiguration ssTableUploadConfiguration)
+        public T ssTableUploadConfiguration(SSTableUploadConfiguration ssTableUploadConfiguration)
         {
             return override(b -> b.ssTableUploadConfiguration = ssTableUploadConfiguration);
         }
@@ -355,7 +355,7 @@ public class ServiceConfiguration
          * @param ssTableImportConfiguration the {@code ssTableImportConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder ssTableImportConfiguration(SSTableImportConfiguration ssTableImportConfiguration)
+        public T ssTableImportConfiguration(SSTableImportConfiguration ssTableImportConfiguration)
         {
             return override(b -> b.ssTableImportConfiguration = ssTableImportConfiguration);
         }
@@ -366,11 +366,10 @@ public class ServiceConfiguration
          * @param workerPoolsConfiguration the {@code workerPoolsConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder workerPoolsConfiguration(Map<String, WorkerPoolConfiguration> workerPoolsConfiguration)
+        public T workerPoolsConfiguration(Map<String, WorkerPoolConfiguration> workerPoolsConfiguration)
         {
             return override(b -> b.workerPoolsConfiguration = workerPoolsConfiguration);
         }
-
 
         /**
          * Sets the {@link #SERVICE_POOL} configuration to {@code workerPoolConfiguration} and returns a
@@ -379,7 +378,7 @@ public class ServiceConfiguration
          * @param workerPoolConfiguration the {@code workerPoolConfiguration} to set for the {@link #SERVICE_POOL}
          * @return a reference to this Builder
          */
-        public Builder servicePoolConfiguration(WorkerPoolConfiguration workerPoolConfiguration)
+        public T servicePoolConfiguration(WorkerPoolConfiguration workerPoolConfiguration)
         {
             workerPoolsConfiguration.put(SERVICE_POOL, workerPoolConfiguration);
             return self();
@@ -392,7 +391,7 @@ public class ServiceConfiguration
          * @param workerPoolConfiguration the {@code workerPoolConfiguration} to set for the {@link #INTERNAL_POOL}
          * @return a reference to this Builder
          */
-        public Builder internalPoolConfiguration(WorkerPoolConfiguration workerPoolConfiguration)
+        public T internalPoolConfiguration(WorkerPoolConfiguration workerPoolConfiguration)
         {
             workerPoolsConfiguration.put(INTERNAL_POOL, workerPoolConfiguration);
             return self();

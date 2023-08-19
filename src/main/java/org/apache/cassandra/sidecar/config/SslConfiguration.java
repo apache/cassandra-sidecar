@@ -42,7 +42,7 @@ public class SslConfiguration
         this.truststore = null;
     }
 
-    protected SslConfiguration(Builder builder)
+    protected SslConfiguration(Builder<?> builder)
     {
         enabled = builder.enabled;
         keystore = builder.keystore;
@@ -94,19 +94,19 @@ public class SslConfiguration
         return truststore;
     }
 
-    public static Builder builder()
+    public static Builder<?> builder()
     {
-        return new Builder();
+        return new Builder<>();
     }
 
     /**
      * {@code SslConfiguration} builder static inner class.
      */
-    public static class Builder implements DataObjectBuilder<Builder, SslConfiguration>
+    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, SslConfiguration>
     {
-        private boolean enabled = false;
-        private KeyStoreConfiguration keystore;
-        private KeyStoreConfiguration truststore;
+        protected boolean enabled = false;
+        protected KeyStoreConfiguration keystore;
+        protected KeyStoreConfiguration truststore;
 
         protected Builder()
         {
@@ -118,10 +118,9 @@ public class SslConfiguration
          * @param enabled the {@code enabled} to set
          * @return a reference to this Builder
          */
-        public Builder enabled(boolean enabled)
+        public T enabled(boolean enabled)
         {
-            this.enabled = enabled;
-            return this;
+            return override(b -> b.enabled = enabled);
         }
 
         /**
@@ -130,10 +129,9 @@ public class SslConfiguration
          * @param keystore the {@code keystore} to set
          * @return a reference to this Builder
          */
-        public Builder keystore(KeyStoreConfiguration keystore)
+        public T keystore(KeyStoreConfiguration keystore)
         {
-            this.keystore = keystore;
-            return this;
+            return override(b -> b.keystore = keystore);
         }
 
         /**
@@ -142,10 +140,9 @@ public class SslConfiguration
          * @param truststore the {@code truststore} to set
          * @return a reference to this Builder
          */
-        public Builder truststore(KeyStoreConfiguration truststore)
+        public T truststore(KeyStoreConfiguration truststore)
         {
-            this.truststore = truststore;
-            return this;
+            return override((T b) -> b.truststore = truststore);
         }
 
         /**
