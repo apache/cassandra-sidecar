@@ -198,8 +198,10 @@ public class SSTableImporter
      */
     private void drainImportQueue(ImportQueue queue)
     {
+        int successCount = 0, failureCount = 0;
         while (!queue.isEmpty())
         {
+            LOGGER.info("Starting SSTable import session");
             AbstractMap.SimpleEntry<Promise<Void>, ImportOptions> pair = queue.poll();
             Promise<Void> promise = pair.getKey();
             ImportOptions options = pair.getValue();
@@ -227,29 +229,38 @@ public class SSTableImporter
                                                       options.invalidateCaches,
                                                       options.extendedVerify,
                                                       options.copyData);
-                    long elapsedNanos = System.nanoTime() - startTime;
+                    long serviceTimeNanos = System.nanoTime() - startTime;
                     if (!failedDirectories.isEmpty())
                     {
-                        LOGGER.error("Failed to import SSTables with options={}, elapsedTimeMilliseconds={}, " +
-                                     "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(elapsedNanos),
+                        failureCount++;
+                        LOGGER.error("Failed to import SSTables with options={}, serviceTimeMillis={}, " +
+                                     "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos),
                                      failedDirectories);
                         promise.fail(new HttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
                                                        "Failed to import from directories: " + failedDirectories));
                     }
                     else
                     {
-                        LOGGER.info("Successfully imported SSTables with options={}, elapsedTimeMilliseconds={}",
-                                    options, TimeUnit.NANOSECONDS.toMillis(elapsedNanos));
+                        successCount++;
+                        LOGGER.info("Successfully imported SSTables with options={}, serviceTimeMillis={}",
+                                    options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
                         promise.complete();
                         cleanup(options);
                     }
                 }
                 catch (Exception exception)
                 {
+                    failureCount++;
                     LOGGER.error("Failed to import SSTables with options={}", options, exception);
                     promise.fail(exception);
                 }
             }
+        }
+
+        if (successCount > 0 || failureCount > 0)
+        {
+            LOGGER.info("Finished SSTable import session with successCount={}, failureCount={}",
+                        successCount, failureCount);
         }
     }
 
