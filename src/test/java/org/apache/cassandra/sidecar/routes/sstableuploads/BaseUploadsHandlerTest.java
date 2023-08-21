@@ -54,6 +54,8 @@ import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
@@ -87,15 +89,15 @@ class BaseUploadsHandlerTest
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
         when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(0F);
         sidecarConfiguration =
-        testModule.configuration()
-                  .unbuild()
-                  .serviceConfiguration(serviceConfiguration
-                                        .unbuild()
-                                        .requestIdleTimeoutMillis(500)
-                                        .requestTimeoutMillis(1000L)
-                                        .ssTableUploadConfiguration(mockSSTableUploadConfiguration)
-                                        .build())
-                  .build();
+        ((SidecarConfigurationImpl) testModule.configuration())
+        .unbuild()
+        .serviceConfiguration(((ServiceConfigurationImpl) serviceConfiguration)
+                              .unbuild()
+                              .requestIdleTimeoutMillis(500)
+                              .requestTimeoutMillis(1000L)
+                              .ssTableUploadConfiguration(mockSSTableUploadConfiguration)
+                              .build())
+        .build();
         TestModuleOverride testModuleOverride = new TestModuleOverride(mockDelegate);
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(Modules.override(testModule)

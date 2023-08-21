@@ -33,8 +33,9 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.impl.SSTableImportConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -59,11 +60,11 @@ class SSTableImporterTest
     {
         vertx = Vertx.vertx();
         serviceConfiguration =
-        ServiceConfiguration.builder()
-                            .ssTableImportConfiguration(SSTableImportConfiguration.builder()
-                                                                                  .importIntervalMillis(10)
-                                                                                  .build())
-                            .build();
+        ServiceConfigurationImpl.builder()
+                                .ssTableImportConfiguration(SSTableImportConfigurationImpl.builder()
+                                                                                          .importIntervalMillis(10)
+                                                                                          .build())
+                                .build();
 
         mockMetadataFetcher = mock(InstanceMetadataFetcher.class);
         CassandraAdapterDelegate mockCassandraAdapterDelegate1 = mock(CassandraAdapterDelegate.class);
@@ -206,11 +207,11 @@ class SSTableImporterTest
     void testCancelImportSucceeds(VertxTestContext context)
     {
         serviceConfiguration =
-        ServiceConfiguration.builder()
-                            .ssTableImportConfiguration(SSTableImportConfiguration.builder()
-                                                                                  .importIntervalMillis(500)
-                                                                                  .build())
-                            .build();
+        ServiceConfigurationImpl.builder()
+                                .ssTableImportConfiguration(SSTableImportConfigurationImpl.builder()
+                                                                                          .importIntervalMillis(500)
+                                                                                          .build())
+                                .build();
 
         SSTableImporter importer = new SSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools,
                                                        mockUploadPathBuilder);

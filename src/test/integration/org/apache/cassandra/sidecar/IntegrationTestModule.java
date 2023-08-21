@@ -26,6 +26,10 @@ import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
+import org.apache.cassandra.sidecar.config.impl.SSTableUploadConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.ThrottleConfigurationImpl;
 import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
 
 /**
@@ -51,22 +55,22 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public SidecarConfiguration configuration()
     {
-        ThrottleConfiguration throttleConfiguration = ThrottleConfiguration.builder()
-                                                                           .rateLimitStreamRequestsPerSecond(1000L)
-                                                                           .build();
+        ThrottleConfiguration throttleConfiguration = ThrottleConfigurationImpl.builder()
+                                                                               .rateLimitStreamRequestsPerSecond(1000L)
+                                                                               .build();
 
         SSTableUploadConfiguration ssTableUploadConfiguration =
-        SSTableUploadConfiguration.builder()
-                                  .minimumSpacePercentageRequired(0).build();
+        SSTableUploadConfigurationImpl.builder()
+                                      .minimumSpacePercentageRequired(0).build();
         ServiceConfiguration serviceConfiguration =
-        ServiceConfiguration.builder()
-                            .host("127.0.0.1")
-                            .throttleConfiguration(throttleConfiguration)
-                            .ssTableUploadConfiguration(ssTableUploadConfiguration)
-                            .build();
+        ServiceConfigurationImpl.builder()
+                                .host("127.0.0.1")
+                                .throttleConfiguration(throttleConfiguration)
+                                .ssTableUploadConfiguration(ssTableUploadConfiguration)
+                                .build();
 
-        return SidecarConfiguration.builder()
-                                   .serviceConfiguration(serviceConfiguration)
-                                   .build();
+        return SidecarConfigurationImpl.builder()
+                                       .serviceConfiguration(serviceConfiguration)
+                                       .build();
     }
 }

@@ -26,6 +26,7 @@ import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
+import org.apache.cassandra.sidecar.config.impl.CassandraInputValidationConfigurationImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -51,7 +52,7 @@ public class CassandraInputValidator
     @VisibleForTesting
     public CassandraInputValidator()
     {
-        this(new CassandraInputValidationConfiguration());
+        this(new CassandraInputValidationConfigurationImpl());
     }
 
     /**

@@ -29,7 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,7 +46,7 @@ public class ExecutorPoolsTest
     public void before()
     {
         vertx = Vertx.vertx();
-        pools = new ExecutorPools(vertx, ServiceConfiguration.builder().build());
+        pools = new ExecutorPools(vertx, ServiceConfigurationImpl.builder().build());
     }
 
     @AfterEach

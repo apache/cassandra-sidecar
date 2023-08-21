@@ -34,6 +34,9 @@ import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.impl.CacheConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.SSTableImportConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -54,19 +57,19 @@ class CacheFactoryTest
         fakeTicker = new FakeTicker();
 
         CacheConfiguration ssTableImportCacheConfiguration =
-        CacheConfiguration.builder()
-                          .expireAfterAccessMillis(SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS_MILLIS) // 2 hours
-                          .maximumSize(SSTABLE_IMPORT_CACHE_MAX_SIZE)
-                          .build();
+        CacheConfigurationImpl.builder()
+                              .expireAfterAccessMillis(SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS_MILLIS) // 2 hours
+                              .maximumSize(SSTABLE_IMPORT_CACHE_MAX_SIZE)
+                              .build();
 
         SSTableImportConfiguration ssTableImportConfiguration =
-        SSTableImportConfiguration.builder()
-                                  .cacheConfiguration(ssTableImportCacheConfiguration)
-                                  .build();
+        SSTableImportConfigurationImpl.builder()
+                                      .cacheConfiguration(ssTableImportCacheConfiguration)
+                                      .build();
         ServiceConfiguration serviceConfiguration =
-        ServiceConfiguration.builder()
-                            .ssTableImportConfiguration(ssTableImportConfiguration)
-                            .build();
+        ServiceConfigurationImpl.builder()
+                                .ssTableImportConfiguration(ssTableImportConfiguration)
+                                .build();
         SSTableImporter mockSSTableImporter = mock(SSTableImporter.class);
         cacheFactory = new CacheFactory(serviceConfiguration, mockSSTableImporter, fakeTicker::read);
     }
@@ -85,8 +88,8 @@ class CacheFactoryTest
         Void result1 = ssTableImportCacheEntry(cache, type1Options1, mock(Void.class));
         Void type2Result1 = ssTableImportCacheEntry(cache, type2Options1, mock(Void.class));
 
-        assertThat(result1).isNotNull();
-        assertThat(result1).isNotSameAs(type2Result1);
+        assertThat(result1).isNotNull()
+                           .isNotSameAs(type2Result1);
 
         // advance ticker 1 minute
         fakeTicker.advance(1, TimeUnit.MINUTES);

@@ -40,7 +40,7 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -132,7 +132,7 @@ public abstract class AbstractSnapshotPathBuilderTest
                            "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/nb-203-big-TOC.txt").createNewFile();
 
         vertx = Vertx.vertx();
-        executorPools = new ExecutorPools(vertx, ServiceConfiguration.builder().build());
+        executorPools = new ExecutorPools(vertx, ServiceConfigurationImpl.builder().build());
         instance = initialize(vertx, mockInstancesConfig, executorPools);
     }
 

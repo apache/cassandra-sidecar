@@ -60,6 +60,7 @@ import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.config.impl.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
@@ -234,7 +235,7 @@ public class MainModule extends AbstractModule
     public SidecarConfiguration sidecarConfiguration() throws IOException
     {
         final String confPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
-        return SidecarConfiguration.readYamlConfiguration(confPath);
+        return SidecarConfigurationImpl.readYamlConfiguration(confPath);
     }
 
     @Provides

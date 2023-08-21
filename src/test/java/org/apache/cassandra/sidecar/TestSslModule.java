@@ -24,9 +24,10 @@ import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.config.impl.KeyStoreConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.SslConfigurationImpl;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 
@@ -45,7 +46,7 @@ public class TestSslModule extends TestModule
     }
 
     @Override
-    public SidecarConfiguration abstractConfig()
+    public SidecarConfigurationImpl abstractConfig()
     {
         ClassLoader classLoader = TestSslModule.class.getClassLoader();
         Path keyStorePath = writeResourceToPath(classLoader, certPath, "certs/test.p12");
@@ -64,17 +65,17 @@ public class TestSslModule extends TestModule
         }
 
         SslConfiguration sslConfiguration =
-        SslConfiguration.builder()
-                        .enabled(true)
-                        .keystore(KeyStoreConfiguration.builder()
-                                                       .path(keyStorePath.toAbsolutePath().toString())
-                                                       .password(keyStorePassword)
-                                                       .build())
-                        .truststore(KeyStoreConfiguration.builder()
-                                                         .path(trustStorePath.toAbsolutePath().toString())
-                                                         .password(trustStorePassword)
-                                                         .build())
-                        .build();
+        SslConfigurationImpl.builder()
+                            .enabled(true)
+                            .keystore(KeyStoreConfigurationImpl.builder()
+                                                               .path(keyStorePath.toAbsolutePath().toString())
+                                                               .password(keyStorePassword)
+                                                               .build())
+                            .truststore(KeyStoreConfigurationImpl.builder()
+                                                                 .path(trustStorePath.toAbsolutePath().toString())
+                                                                 .password(trustStorePassword)
+                                                                 .build())
+                            .build();
 
         return super.abstractConfig().unbuild()
                     .sslConfiguration(sslConfiguration)

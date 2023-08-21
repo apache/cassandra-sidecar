@@ -24,6 +24,8 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import org.apache.cassandra.sidecar.config.impl.SidecarConfigurationImpl;
+
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,7 +41,7 @@ class SidecarConfigurationTest
     void testSidecarConfiguration() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_multiple_instances.yaml");
-        SidecarConfiguration config = SidecarConfiguration.readYamlConfiguration(yamlPath);
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         validateMultipleInstancesSidecarConfiguration(config, false);
     }
 
@@ -47,7 +49,7 @@ class SidecarConfigurationTest
     void testLegacySidecarYAMLFormatWithSingleInstance() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_single_instance.yaml");
-        SidecarConfiguration config = SidecarConfiguration.readYamlConfiguration(yamlPath);
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         validateSingleInstanceSidecarConfiguration(config);
     }
 
@@ -55,7 +57,7 @@ class SidecarConfigurationTest
     void testReadAllowableTimeSkew() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_custom_allowable_time_skew.yaml");
-        SidecarConfiguration config = SidecarConfiguration.readYamlConfiguration(yamlPath);
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(config.serviceConfiguration()).isNotNull();
         assertThat(config.serviceConfiguration().allowableSkewInMinutes()).isEqualTo(1);
     }
@@ -64,7 +66,7 @@ class SidecarConfigurationTest
     void testReadingSingleInstanceSectionOverMultipleInstances() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_with_single_multiple_instances.yaml");
-        SidecarConfiguration configuration = SidecarConfiguration.readYamlConfiguration(yamlPath);
+        SidecarConfiguration configuration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(configuration.cassandraInstances()).isNotNull().hasSize(1);
 
         InstanceConfiguration i1 = configuration.cassandraInstances().get(0);
@@ -76,7 +78,7 @@ class SidecarConfigurationTest
     void testReadingCassandraInputValidation() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_validation_configuration.yaml");
-        SidecarConfiguration configuration = SidecarConfiguration.readYamlConfiguration(yamlPath);
+        SidecarConfiguration configuration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         CassandraInputValidationConfiguration validationConfiguration =
         configuration.cassandraInputValidationConfiguration();
 
@@ -92,7 +94,7 @@ class SidecarConfigurationTest
     void testUploadsConfiguration() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_multiple_instances.yaml");
-        SidecarConfiguration config = SidecarConfiguration.readYamlConfiguration(yamlPath);
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
 
         assertThat(config.serviceConfiguration()).isNotNull();
         SSTableUploadConfiguration uploadConfiguration = config.serviceConfiguration()
@@ -107,7 +109,7 @@ class SidecarConfigurationTest
     void testSslConfiguration() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_ssl.yaml");
-        SidecarConfiguration config = SidecarConfiguration.readYamlConfiguration(yamlPath);
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         validateMultipleInstancesSidecarConfiguration(config, true);
     }
 

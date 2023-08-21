@@ -40,6 +40,11 @@ import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
+import org.apache.cassandra.sidecar.config.impl.HealthCheckConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.SSTableUploadConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.impl.ThrottleConfigurationImpl;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -63,32 +68,34 @@ public class TestModule extends AbstractModule
         return abstractConfig();
     }
 
-    protected SidecarConfiguration abstractConfig()
+    protected SidecarConfigurationImpl abstractConfig()
     {
-        ThrottleConfiguration throttleConfiguration = ThrottleConfiguration.builder()
-                                                                           .delayInSeconds(5)
-                                                                           .timeoutInSeconds(10)
-                                                                           .rateLimitStreamRequestsPerSecond(1)
-                                                                           .build();
+        ThrottleConfiguration throttleConfiguration = ThrottleConfigurationImpl.builder()
+                                                                               .delayInSeconds(5)
+                                                                               .timeoutInSeconds(10)
+                                                                               .rateLimitStreamRequestsPerSecond(1)
+                                                                               .build();
 
-        SSTableUploadConfiguration uploadConfiguration = SSTableUploadConfiguration.builder()
-                                                                                   .minimumSpacePercentageRequired(0)
-                                                                                   .build();
+        SSTableUploadConfiguration uploadConfiguration =
+        SSTableUploadConfigurationImpl.builder()
+                                      .minimumSpacePercentageRequired(0)
+                                      .build();
 
-        ServiceConfiguration serviceConfiguration = ServiceConfiguration.builder()
-                                                                        .host("127.0.0.1")
-                                                                        .port(6475)
-                                                                        .ssTableUploadConfiguration(uploadConfiguration)
-                                                                        .throttleConfiguration(throttleConfiguration)
-                                                                        .build();
+        ServiceConfiguration serviceConfiguration =
+        ServiceConfigurationImpl.builder()
+                                .host("127.0.0.1")
+                                .port(6475)
+                                .ssTableUploadConfiguration(uploadConfiguration)
+                                .throttleConfiguration(throttleConfiguration)
+                                .build();
 
-        HealthCheckConfiguration healthCheckConfiguration = HealthCheckConfiguration.builder()
-                                                                                    .checkIntervalMillis(1000)
-                                                                                    .build();
-        return SidecarConfiguration.builder()
-                                   .healthCheckConfiguration(healthCheckConfiguration)
-                                   .serviceConfiguration(serviceConfiguration)
-                                   .build();
+        HealthCheckConfiguration healthCheckConfiguration = HealthCheckConfigurationImpl.builder()
+                                                                                        .checkIntervalMillis(1000)
+                                                                                        .build();
+        return SidecarConfigurationImpl.builder()
+                                       .healthCheckConfiguration(healthCheckConfiguration)
+                                       .serviceConfiguration(serviceConfiguration)
+                                       .build();
     }
 
     @Provides
