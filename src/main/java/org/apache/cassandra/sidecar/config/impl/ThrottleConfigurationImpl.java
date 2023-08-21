@@ -104,7 +104,7 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
          */
         public T rateLimitStreamRequestsPerSecond(long rateLimitStreamRequestsPerSecond)
         {
-            return override(b -> b.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond);
+            return update(b -> b.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond);
         }
 
         /**
@@ -115,7 +115,7 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
          */
         public T timeoutInSeconds(long timeoutInSeconds)
         {
-            return override(b -> b.timeoutInSeconds = timeoutInSeconds);
+            return update(b -> b.timeoutInSeconds = timeoutInSeconds);
         }
 
         /**
@@ -126,7 +126,7 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
          */
         public T delayInSeconds(long delayInSeconds)
         {
-            return override(b -> b.delayInSeconds = delayInSeconds);
+            return update(b -> b.delayInSeconds = delayInSeconds);
         }
 
         /**

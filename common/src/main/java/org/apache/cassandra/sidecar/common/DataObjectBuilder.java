@@ -47,12 +47,12 @@ public interface DataObjectBuilder<T extends DataObjectBuilder<?, ?>, R>
     R build();
 
     /**
-     * Overrides fields in builder
+     * Updates a field in the builder
      *
      * @param mutation function to mutate fields
      * @return builder itself for chained invocation
      */
-    default T override(Consumer<? super T> mutation)
+    default T update(Consumer<? super T> mutation)
     {
         mutation.accept(self());
         return self();

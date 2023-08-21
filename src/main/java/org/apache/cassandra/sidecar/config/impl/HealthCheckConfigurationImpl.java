@@ -78,7 +78,7 @@ public class HealthCheckConfigurationImpl implements HealthCheckConfiguration
          */
         public T checkIntervalMillis(int checkIntervalMillis)
         {
-            return override(b -> b.checkIntervalMillis = checkIntervalMillis);
+            return update(b -> b.checkIntervalMillis = checkIntervalMillis);
         }
 
         /**

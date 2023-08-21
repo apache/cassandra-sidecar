@@ -104,7 +104,7 @@ public class SSTableImportConfigurationImpl implements SSTableImportConfiguratio
          */
         public T importIntervalMillis(int importIntervalMillis)
         {
-            return override(b -> b.importIntervalMillis = importIntervalMillis);
+            return update(b -> b.importIntervalMillis = importIntervalMillis);
         }
 
         /**
@@ -115,7 +115,7 @@ public class SSTableImportConfigurationImpl implements SSTableImportConfiguratio
          */
         public T cacheConfiguration(CacheConfiguration cacheConfiguration)
         {
-            return override(b -> b.cacheConfiguration = cacheConfiguration);
+            return update(b -> b.cacheConfiguration = cacheConfiguration);
         }
 
         /**

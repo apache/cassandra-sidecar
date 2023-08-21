@@ -249,7 +249,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
          */
         public T cassandraInstances(InstanceConfiguration... cassandraInstances)
         {
-            return override(b -> b.cassandraInstances = Arrays.asList(cassandraInstances));
+            return update(b -> b.cassandraInstances = Arrays.asList(cassandraInstances));
         }
 
         /**
@@ -260,7 +260,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
          */
         public T cassandraInstances(List<InstanceConfiguration> cassandraInstances)
         {
-            return override(b -> b.cassandraInstances = cassandraInstances);
+            return update(b -> b.cassandraInstances = cassandraInstances);
         }
 
         /**
@@ -271,7 +271,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
          */
         public T serviceConfiguration(ServiceConfiguration serviceConfiguration)
         {
-            return override(b -> b.serviceConfiguration = serviceConfiguration);
+            return update(b -> b.serviceConfiguration = serviceConfiguration);
         }
 
         /**
@@ -282,7 +282,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
          */
         public T sslConfiguration(SslConfiguration sslConfiguration)
         {
-            return override(b -> b.sslConfiguration = sslConfiguration);
+            return update(b -> b.sslConfiguration = sslConfiguration);
         }
 
         /**
@@ -293,7 +293,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
          */
         public T healthCheckConfiguration(HealthCheckConfiguration healthCheckConfiguration)
         {
-            return override(b -> b.healthCheckConfiguration = healthCheckConfiguration);
+            return update(b -> b.healthCheckConfiguration = healthCheckConfiguration);
         }
 
         /**
@@ -306,7 +306,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public T cassandraInputValidationConfiguration(CassandraInputValidationConfiguration
                                                        cassandraInputValidationConfiguration)
         {
-            return override(b -> b.cassandraInputValidationConfiguration = cassandraInputValidationConfiguration);
+            return update(b -> b.cassandraInputValidationConfiguration = cassandraInputValidationConfiguration);
         }
 
         /**

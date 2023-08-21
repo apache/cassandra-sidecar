@@ -150,7 +150,7 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
          */
         public Builder forbiddenKeyspaces(Set<String> forbiddenKeyspaces)
         {
-            return override(b -> b.forbiddenKeyspaces = forbiddenKeyspaces);
+            return update(b -> b.forbiddenKeyspaces = forbiddenKeyspaces);
         }
 
         /**
@@ -161,7 +161,7 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
          */
         public Builder allowedPatternForDirectory(String allowedPatternForDirectory)
         {
-            return override(b -> b.allowedPatternForDirectory = allowedPatternForDirectory);
+            return update(b -> b.allowedPatternForDirectory = allowedPatternForDirectory);
         }
 
         /**
@@ -173,7 +173,7 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
          */
         public Builder allowedPatternForComponentName(String allowedPatternForComponentName)
         {
-            return override(b -> b.allowedPatternForComponentName = allowedPatternForComponentName);
+            return update(b -> b.allowedPatternForComponentName = allowedPatternForComponentName);
         }
 
         /**
@@ -185,7 +185,7 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
          */
         public Builder allowedPatternForRestrictedComponentName(String allowedPatternForRestrictedComponentName)
         {
-            return override(b -> b.allowedPatternForRestrictedComponentName = allowedPatternForRestrictedComponentName);
+            return update(b -> b.allowedPatternForRestrictedComponentName = allowedPatternForRestrictedComponentName);
         }
 
         /**

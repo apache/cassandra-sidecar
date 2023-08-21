@@ -110,7 +110,7 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
          */
         public T concurrentUploadsLimit(int concurrentUploadsLimit)
         {
-            return override(b -> b.concurrentUploadsLimit = concurrentUploadsLimit);
+            return update(b -> b.concurrentUploadsLimit = concurrentUploadsLimit);
         }
 
         /**
@@ -122,7 +122,7 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
          */
         public T minimumSpacePercentageRequired(float minimumSpacePercentageRequired)
         {
-            return override(b -> b.minimumSpacePercentageRequired = minimumSpacePercentageRequired);
+            return update(b -> b.minimumSpacePercentageRequired = minimumSpacePercentageRequired);
         }
 
         /**

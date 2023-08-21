@@ -86,7 +86,7 @@ public class CacheConfigurationImpl implements CacheConfiguration
          */
         public Builder expireAfterAccessMillis(long expireAfterAccessMillis)
         {
-            return override(b -> b.expireAfterAccessMillis = expireAfterAccessMillis);
+            return update(b -> b.expireAfterAccessMillis = expireAfterAccessMillis);
         }
 
         /**
@@ -97,7 +97,7 @@ public class CacheConfigurationImpl implements CacheConfiguration
          */
         public Builder maximumSize(long maximumSize)
         {
-            return override(b -> b.maximumSize = maximumSize);
+            return update(b -> b.maximumSize = maximumSize);
         }
 
         /**

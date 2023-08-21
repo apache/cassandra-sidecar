@@ -256,7 +256,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T id(int id)
         {
-            return override(b -> b.id = id);
+            return update(b -> b.id = id);
         }
 
         /**
@@ -267,7 +267,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T host(String host)
         {
-            return override(b -> b.host = host);
+            return update(b -> b.host = host);
         }
 
         /**
@@ -278,7 +278,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T port(int port)
         {
-            return override(b -> b.port = port);
+            return update(b -> b.port = port);
         }
 
         /**
@@ -289,7 +289,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T username(String username)
         {
-            return override(b -> b.username = username);
+            return update(b -> b.username = username);
         }
 
         /**
@@ -300,7 +300,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T password(String password)
         {
-            return override(b -> b.password = password);
+            return update(b -> b.password = password);
         }
 
         /**
@@ -311,7 +311,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T dataDirs(String... dataDirs)
         {
-            return override(b -> b.dataDirs = Arrays.asList(dataDirs));
+            return update(b -> b.dataDirs = Arrays.asList(dataDirs));
         }
 
         /**
@@ -322,7 +322,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T dataDirs(List<String> dataDirs)
         {
-            return override(b -> b.dataDirs = dataDirs);
+            return update(b -> b.dataDirs = dataDirs);
         }
 
         /**
@@ -333,7 +333,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T stagingDir(String stagingDir)
         {
-            return override(b -> b.stagingDir = stagingDir);
+            return update(b -> b.stagingDir = stagingDir);
         }
 
         /**
@@ -344,7 +344,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T jmxHost(String jmxHost)
         {
-            return override(b -> b.jmxHost = jmxHost);
+            return update(b -> b.jmxHost = jmxHost);
         }
 
         /**
@@ -355,7 +355,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T jmxPort(int jmxPort)
         {
-            return override(b -> b.jmxPort = jmxPort);
+            return update(b -> b.jmxPort = jmxPort);
         }
 
         /**
@@ -366,7 +366,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T jmxSslEnabled(boolean jmxSslEnabled)
         {
-            return override(b -> b.jmxSslEnabled = jmxSslEnabled);
+            return update(b -> b.jmxSslEnabled = jmxSslEnabled);
         }
 
         /**
@@ -377,7 +377,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T jmxRole(String jmxRole)
         {
-            return override(b -> b.jmxRole = jmxRole);
+            return update(b -> b.jmxRole = jmxRole);
         }
 
         /**
@@ -388,7 +388,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
          */
         public T jmxRolePassword(String jmxRolePassword)
         {
-            return override(b -> b.jmxRolePassword = jmxRolePassword);
+            return update(b -> b.jmxRolePassword = jmxRolePassword);
         }
 
         /**

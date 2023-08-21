@@ -112,7 +112,7 @@ public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
          */
         public T workerPoolName(String workerPoolName)
         {
-            return override(b -> b.workerPoolName = workerPoolName);
+            return update(b -> b.workerPoolName = workerPoolName);
         }
 
         /**
@@ -123,7 +123,7 @@ public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
          */
         public T workerPoolSize(int workerPoolSize)
         {
-            return override(b -> b.workerPoolSize = workerPoolSize);
+            return update(b -> b.workerPoolSize = workerPoolSize);
         }
 
         /**
@@ -135,7 +135,7 @@ public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
          */
         public T workerMaxExecutionTimeMillis(long workerMaxExecutionTimeMillis)
         {
-            return override(b -> b.workerMaxExecutionTimeMillis = workerMaxExecutionTimeMillis);
+            return update(b -> b.workerMaxExecutionTimeMillis = workerMaxExecutionTimeMillis);
         }
 
         /**

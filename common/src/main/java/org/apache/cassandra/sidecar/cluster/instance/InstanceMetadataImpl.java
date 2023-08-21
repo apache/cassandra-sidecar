@@ -127,7 +127,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          */
         public Builder id(int id)
         {
-            return override(b -> b.id = id);
+            return update(b -> b.id = id);
         }
 
         /**
@@ -138,7 +138,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          */
         public Builder host(String host)
         {
-            return override(b -> b.host = host);
+            return update(b -> b.host = host);
         }
 
         /**
@@ -149,7 +149,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          */
         public Builder port(int port)
         {
-            return override(b -> b.port = port);
+            return update(b -> b.port = port);
         }
 
         /**
@@ -160,7 +160,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          */
         public Builder dataDirs(List<String> dataDirs)
         {
-            return override(b -> b.dataDirs = dataDirs);
+            return update(b -> b.dataDirs = dataDirs);
         }
 
         /**
@@ -171,7 +171,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          */
         public Builder stagingDir(String stagingDir)
         {
-            return override(b -> b.stagingDir = stagingDir);
+            return update(b -> b.stagingDir = stagingDir);
         }
 
         /**
@@ -182,7 +182,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          */
         public Builder delegate(CassandraAdapterDelegate delegate)
         {
-            return override(b -> b.delegate = delegate);
+            return update(b -> b.delegate = delegate);
         }
 
         /**

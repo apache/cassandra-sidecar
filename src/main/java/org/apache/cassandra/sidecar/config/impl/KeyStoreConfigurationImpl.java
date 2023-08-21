@@ -109,7 +109,7 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
          */
         public T path(String path)
         {
-            return override(b -> b.path = path);
+            return update(b -> b.path = path);
         }
 
         /**
@@ -120,7 +120,7 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
          */
         public T password(String password)
         {
-            return override(b -> b.password = password);
+            return update(b -> b.password = password);
         }
 
         /**
@@ -131,7 +131,7 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
          */
         public T type(String type)
         {
-            return override(b -> b.type = type);
+            return update(b -> b.type = type);
         }
 
         /**

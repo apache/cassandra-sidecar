@@ -276,7 +276,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          */
         public T host(String host)
         {
-            return override(b -> b.host = host);
+            return update(b -> b.host = host);
         }
 
         /**
@@ -287,7 +287,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          */
         public T port(int port)
         {
-            return override(b -> b.port = port);
+            return update(b -> b.port = port);
         }
 
         /**
@@ -298,7 +298,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          */
         public T requestIdleTimeoutMillis(int requestIdleTimeoutMillis)
         {
-            return override(b -> b.requestIdleTimeoutMillis = requestIdleTimeoutMillis);
+            return update(b -> b.requestIdleTimeoutMillis = requestIdleTimeoutMillis);
         }
 
         /**
@@ -309,7 +309,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          */
         public T requestTimeoutMillis(long requestTimeoutMillis)
         {
-            return override(b -> b.requestTimeoutMillis = requestTimeoutMillis);
+            return update(b -> b.requestTimeoutMillis = requestTimeoutMillis);
         }
 
         /**
@@ -320,7 +320,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          */
         public T allowableSkewInMinutes(int allowableSkewInMinutes)
         {
-            return override(b -> b.allowableSkewInMinutes = allowableSkewInMinutes);
+            return update(b -> b.allowableSkewInMinutes = allowableSkewInMinutes);
         }
 
         /**
@@ -331,7 +331,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          */
         public T throttleConfiguration(ThrottleConfiguration throttleConfiguration)
         {
-            return override(b -> b.throttleConfiguration = throttleConfiguration);
+            return update(b -> b.throttleConfiguration = throttleConfiguration);
         }
 
         /**
@@ -342,7 +342,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          */
         public T ssTableUploadConfiguration(SSTableUploadConfiguration ssTableUploadConfiguration)
         {
-            return override(b -> b.ssTableUploadConfiguration = ssTableUploadConfiguration);
+            return update(b -> b.ssTableUploadConfiguration = ssTableUploadConfiguration);
         }
 
         /**
@@ -353,7 +353,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          */
         public T ssTableImportConfiguration(SSTableImportConfiguration ssTableImportConfiguration)
         {
-            return override(b -> b.ssTableImportConfiguration = ssTableImportConfiguration);
+            return update(b -> b.ssTableImportConfiguration = ssTableImportConfiguration);
         }
 
         /**
@@ -364,7 +364,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          */
         public T workerPoolsConfiguration(Map<String, WorkerPoolConfiguration> workerPoolsConfiguration)
         {
-            return override(b -> b.workerPoolsConfiguration = workerPoolsConfiguration);
+            return update(b -> b.workerPoolsConfiguration = workerPoolsConfiguration);
         }
 
         /**

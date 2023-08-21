@@ -79,8 +79,8 @@ sidecar:
   sstable_import:
     poll_interval_millis: 100
     cache:
-        expire_after_access_millis: 7200000 # 2 hours
-        maximum_size: 10000
+      expire_after_access_millis: 7200000 # 2 hours
+      maximum_size: 10000
   worker_pools:
     service:
       name: "sidecar-worker-pool"

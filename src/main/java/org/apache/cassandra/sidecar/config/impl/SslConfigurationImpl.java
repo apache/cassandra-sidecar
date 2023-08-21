@@ -128,7 +128,7 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public T enabled(boolean enabled)
         {
-            return override(b -> b.enabled = enabled);
+            return update(b -> b.enabled = enabled);
         }
 
         /**
@@ -139,7 +139,7 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public T keystore(KeyStoreConfiguration keystore)
         {
-            return override(b -> b.keystore = keystore);
+            return update(b -> b.keystore = keystore);
         }
 
         /**
@@ -150,7 +150,7 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public T truststore(KeyStoreConfiguration truststore)
         {
-            return override((T b) -> b.truststore = truststore);
+            return update((T b) -> b.truststore = truststore);
         }
 
         /**
