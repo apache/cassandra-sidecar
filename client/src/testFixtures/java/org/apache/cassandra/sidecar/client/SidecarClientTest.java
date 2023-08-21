@@ -58,6 +58,7 @@ import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
+import org.apache.cassandra.sidecar.common.data.HealthResponse;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
@@ -73,6 +74,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
 abstract class SidecarClientTest
@@ -106,6 +108,72 @@ abstract class SidecarClientTest
             server.shutdown();
         }
         client.close();
+    }
+
+    @Test
+    void testSidecarHealthOk() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                .setResponseCode(200)
+                .setHeader("content-type", "application/json")
+                .setBody("{\"status\":\"OK\"}");
+        enqueue(response);
+
+        HealthResponse result = client.sidecarHealth().get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualToIgnoringCase("OK");
+        assertThat(result.isOk()).isTrue();
+
+        validateResponseServed(ApiEndpointsV1.HEALTH_ROUTE);
+    }
+
+    @Test
+    void testSidecarHealthNotOk() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                .setResponseCode(503)
+                .setHeader("content-type", "application/json")
+                .setBody("{\"status\":\"NOT_OK\"}");
+        enqueue(response);
+
+        assertThatThrownBy(() -> client.sidecarHealth().get(30, TimeUnit.SECONDS))
+                .isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(RetriesExhaustedException.class);
+
+        validateResponseServed(ApiEndpointsV1.HEALTH_ROUTE);
+    }
+
+    @Test
+    void testCassandraHealthOk() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                .setResponseCode(200)
+                .setHeader("content-type", "application/json")
+                .setBody("{\"status\":\"OK\"}");
+        enqueue(response);
+
+        HealthResponse result = client.cassandraHealth().get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualToIgnoringCase("OK");
+        assertThat(result.isOk()).isTrue();
+
+        validateResponseServed(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE);
+    }
+
+    @Test
+    void testCassandraHealthNotOk() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                .setResponseCode(503)
+                .setHeader("content-type", "application/json")
+                .setBody("{\"status\":\"NOT_OK\"}");
+        enqueue(response);
+
+        assertThatThrownBy(() -> client.cassandraHealth().get(30, TimeUnit.SECONDS))
+                .isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(RetriesExhaustedException.class);
+
+        validateResponseServed(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE);
     }
 
     @Test

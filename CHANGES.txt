@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add Client Methods for Obtaining Sidecar and Cassandra Health (CASSANDRASC-70)
  * Publish bytes streamed and written metrics (CASSANDRASC-68)
  * Extract the in-jvm dtest template for use in other projects (CASSANDRASC-55)
  * Fix relocation of native libraries for vertx-client-shaded (CASSANDRASC-67)
