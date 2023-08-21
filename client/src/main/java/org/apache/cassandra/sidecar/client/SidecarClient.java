@@ -28,12 +28,14 @@ import org.slf4j.LoggerFactory;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.cassandra.sidecar.client.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.client.retry.IgnoreConflictRetryPolicy;
+import org.apache.cassandra.sidecar.client.retry.OncePerInstanceRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RunnableOnStatusCodeRetryPolicy;
 import org.apache.cassandra.sidecar.client.selection.InstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.RandomInstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
+import org.apache.cassandra.sidecar.common.data.HealthResponse;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.data.SSTableImportResponse;
@@ -66,6 +68,32 @@ public class SidecarClient implements AutoCloseable
                       .instanceSelectionPolicy(new RandomInstanceSelectionPolicy(instancesProvider))
                       .retryPolicy(defaultRetryPolicy);
         executor = requestExecutor;
+    }
+
+    /**
+     * Executes the Sidecar health request using the configured selection policy and with no retries
+     *
+     * @return a completable future of the Sidecar health response
+     */
+    public CompletableFuture<HealthResponse> sidecarHealth()
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                .sidecarHealthRequest()
+                .retryPolicy(new OncePerInstanceRetryPolicy())
+                .build());
+    }
+
+    /**
+     * Executes the Cassandra health request using the configured selection policy and with no retries
+     *
+     * @return a completable future of the Cassandra health response
+     */
+    public CompletableFuture<HealthResponse> cassandraHealth()
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                .cassandraHealthRequest()
+                .retryPolicy(new OncePerInstanceRetryPolicy())
+                .build());
     }
 
     /**

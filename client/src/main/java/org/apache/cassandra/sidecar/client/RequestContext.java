@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.cassandra.sidecar.client.request.CassandraHealthRequest;
 import org.apache.cassandra.sidecar.client.request.CleanSSTableUploadSessionRequest;
 import org.apache.cassandra.sidecar.client.request.ClearSnapshotRequest;
 import org.apache.cassandra.sidecar.client.request.CreateSnapshotRequest;
@@ -33,6 +34,7 @@ import org.apache.cassandra.sidecar.client.request.Request;
 import org.apache.cassandra.sidecar.client.request.RingRequest;
 import org.apache.cassandra.sidecar.client.request.SSTableComponentRequest;
 import org.apache.cassandra.sidecar.client.request.SchemaRequest;
+import org.apache.cassandra.sidecar.client.request.SidecarHealthRequest;
 import org.apache.cassandra.sidecar.client.request.TimeSkewRequest;
 import org.apache.cassandra.sidecar.client.request.UploadSSTableRequest;
 import org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy;
@@ -48,6 +50,8 @@ import org.apache.cassandra.sidecar.common.utils.HttpRange;
  */
 public class RequestContext
 {
+    protected static final SidecarHealthRequest SIDECAR_HEALTH_REQUEST = new SidecarHealthRequest();
+    protected static final CassandraHealthRequest CASSANDRA_HEALTH_REQUEST = new CassandraHealthRequest();
     protected static final SchemaRequest FULL_SCHEMA_REQUEST = new SchemaRequest();
     protected static final TimeSkewRequest TIME_SKEW_REQUEST = new TimeSkewRequest();
     protected static final NodeSettingsRequest NODE_SETTINGS_REQUEST = new NodeSettingsRequest();
@@ -171,6 +175,28 @@ public class RequestContext
         {
             this.retryPolicy = retryPolicy;
             return this;
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link SidecarHealthRequest}
+         * and returns a reference to this Builder enabling method chaining
+         *
+         * @return a reference to this Builder
+         */
+        public Builder sidecarHealthRequest()
+        {
+            return request(SIDECAR_HEALTH_REQUEST);
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link CassandraHealthRequest}
+         * and returns a reference to this Builder enabling method chaining
+         *
+         * @return a reference to this Builder
+         */
+        public Builder cassandraHealthRequest()
+        {
+            return request(CASSANDRA_HEALTH_REQUEST);
         }
 
         /**
