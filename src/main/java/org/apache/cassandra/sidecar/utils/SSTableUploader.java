@@ -20,8 +20,6 @@ package org.apache.cassandra.sidecar.utils;
 
 import java.io.File;
 import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.util.EnumSet;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
