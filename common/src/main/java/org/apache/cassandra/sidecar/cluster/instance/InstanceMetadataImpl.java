@@ -90,6 +90,8 @@ public class InstanceMetadataImpl implements InstanceMetadata
 
     /**
      * {@code InstanceMetadataImpl} builder static inner class.
+     *
+     * @param <T> the type of the builder
      */
     public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, InstanceMetadataImpl>
     {
