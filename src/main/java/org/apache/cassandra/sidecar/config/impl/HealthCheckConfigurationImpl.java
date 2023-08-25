@@ -19,8 +19,8 @@
 package org.apache.cassandra.sidecar.config.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Configuration for the health checks
@@ -31,16 +31,17 @@ public class HealthCheckConfigurationImpl implements HealthCheckConfiguration
     public static final int DEFAULT_CHECK_INTERVAL_MILLIS = 30000;
 
     @JsonProperty(value = POLL_FREQ_MILLIS_PROPERTY, defaultValue = DEFAULT_CHECK_INTERVAL_MILLIS + "")
-    private final int checkIntervalMillis;
+    protected final int checkIntervalMillis;
 
     public HealthCheckConfigurationImpl()
     {
-        checkIntervalMillis = DEFAULT_CHECK_INTERVAL_MILLIS;
+        this(DEFAULT_CHECK_INTERVAL_MILLIS);
     }
 
-    protected HealthCheckConfigurationImpl(Builder<?> builder)
+    @VisibleForTesting
+    public HealthCheckConfigurationImpl(int checkIntervalMillis)
     {
-        checkIntervalMillis = builder.checkIntervalMillis;
+        this.checkIntervalMillis = checkIntervalMillis;
     }
 
     /**
@@ -51,46 +52,5 @@ public class HealthCheckConfigurationImpl implements HealthCheckConfiguration
     public int checkIntervalMillis()
     {
         return checkIntervalMillis;
-    }
-
-    public static Builder<?> builder()
-    {
-        return new Builder<>();
-    }
-
-    /**
-     * {@code HealthCheckConfigurationImpl} builder static inner class.
-     * @param <T> the builder type
-     */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, HealthCheckConfigurationImpl>
-    {
-        protected int checkIntervalMillis = DEFAULT_CHECK_INTERVAL_MILLIS;
-
-        protected Builder()
-        {
-        }
-
-        /**
-         * Sets the {@code checkIntervalMillis} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param checkIntervalMillis the {@code checkIntervalMillis} to set
-         * @return a reference to this Builder
-         */
-        public T checkIntervalMillis(int checkIntervalMillis)
-        {
-            return update(b -> b.checkIntervalMillis = checkIntervalMillis);
-        }
-
-        /**
-         * Returns a {@code HealthCheckConfiguration} built from the parameters previously set.
-         *
-         * @return a {@code HealthCheckConfiguration} built with parameters of this
-         * {@code HealthCheckConfiguration.Builder}
-         */
-        @Override
-        public HealthCheckConfigurationImpl build()
-        {
-            return new HealthCheckConfigurationImpl(this);
-        }
     }
 }

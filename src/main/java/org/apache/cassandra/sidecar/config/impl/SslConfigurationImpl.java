@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.config.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 
@@ -29,26 +28,26 @@ import org.apache.cassandra.sidecar.config.SslConfiguration;
 public class SslConfigurationImpl implements SslConfiguration
 {
     @JsonProperty("enabled")
-    private final boolean enabled;
+    protected final boolean enabled;
 
     @JsonProperty("keystore")
-    private final KeyStoreConfiguration keystore;
+    protected final KeyStoreConfiguration keystore;
 
     @JsonProperty("truststore")
-    private final KeyStoreConfiguration truststore;
+    protected final KeyStoreConfiguration truststore;
 
     public SslConfigurationImpl()
     {
-        this.enabled = false;
-        this.keystore = null;
-        this.truststore = null;
+        this(false, null, null);
     }
 
-    protected SslConfigurationImpl(Builder<?> builder)
+    public SslConfigurationImpl(boolean enabled,
+                                KeyStoreConfiguration keystore,
+                                KeyStoreConfiguration truststore)
     {
-        enabled = builder.enabled;
-        keystore = builder.keystore;
-        truststore = builder.truststore;
+        this.enabled = enabled;
+        this.keystore = keystore;
+        this.truststore = truststore;
     }
 
     /**
@@ -99,69 +98,5 @@ public class SslConfigurationImpl implements SslConfiguration
     public KeyStoreConfiguration truststore()
     {
         return truststore;
-    }
-
-    public static Builder<?> builder()
-    {
-        return new Builder<>();
-    }
-
-    /**
-     * {@code SslConfigurationImpl} builder static inner class.
-     * @param <T> the builder type
-     */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, SslConfigurationImpl>
-    {
-        protected boolean enabled = false;
-        protected KeyStoreConfiguration keystore;
-        protected KeyStoreConfiguration truststore;
-
-        protected Builder()
-        {
-        }
-
-        /**
-         * Sets the {@code enabled} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param enabled the {@code enabled} to set
-         * @return a reference to this Builder
-         */
-        public T enabled(boolean enabled)
-        {
-            return update(b -> b.enabled = enabled);
-        }
-
-        /**
-         * Sets the {@code keystore} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param keystore the {@code keystore} to set
-         * @return a reference to this Builder
-         */
-        public T keystore(KeyStoreConfiguration keystore)
-        {
-            return update(b -> b.keystore = keystore);
-        }
-
-        /**
-         * Sets the {@code truststore} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param truststore the {@code truststore} to set
-         * @return a reference to this Builder
-         */
-        public T truststore(KeyStoreConfiguration truststore)
-        {
-            return update((T b) -> b.truststore = truststore);
-        }
-
-        /**
-         * Returns a {@code SslConfigurationImpl} built from the parameters previously set.
-         *
-         * @return a {@code SslConfigurationImpl} built with parameters of this {@code SslConfigurationImpl.Builder}
-         */
-        @Override
-        public SslConfigurationImpl build()
-        {
-            return new SslConfigurationImpl(this);
-        }
     }
 }

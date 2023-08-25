@@ -132,7 +132,7 @@ public abstract class AbstractSnapshotPathBuilderTest
                            "/snapshots/this_is_a_valid_snapshot_name_i_❤_u/nb-203-big-TOC.txt").createNewFile();
 
         vertx = Vertx.vertx();
-        executorPools = new ExecutorPools(vertx, ServiceConfigurationImpl.builder().build());
+        executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         instance = initialize(vertx, mockInstancesConfig, executorPools);
     }
 

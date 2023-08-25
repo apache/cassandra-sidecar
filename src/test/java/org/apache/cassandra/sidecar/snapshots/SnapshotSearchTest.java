@@ -67,7 +67,7 @@ public class SnapshotSearchTest
         InstancesConfig mockInstancesConfig = mockInstancesConfig(rootDir);
 
         CassandraInputValidator validator = new CassandraInputValidator();
-        ExecutorPools executorPools = new ExecutorPools(vertx, ServiceConfigurationImpl.builder().build());
+        ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         instance = new SnapshotPathBuilder(vertx, mockInstancesConfig, validator, executorPools);
     }
 

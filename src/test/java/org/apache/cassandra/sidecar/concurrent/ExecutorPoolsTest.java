@@ -46,7 +46,7 @@ public class ExecutorPoolsTest
     public void before()
     {
         vertx = Vertx.vertx();
-        pools = new ExecutorPools(vertx, ServiceConfigurationImpl.builder().build());
+        pools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
     }
 
     @AfterEach

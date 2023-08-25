@@ -37,7 +37,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
     private final String stagingDir;
     private final CassandraAdapterDelegate delegate;
 
-    protected InstanceMetadataImpl(Builder builder)
+    protected InstanceMetadataImpl(Builder<?> builder)
     {
         id = builder.id;
         host = builder.host;
@@ -83,27 +83,22 @@ public class InstanceMetadataImpl implements InstanceMetadata
         return delegate;
     }
 
-    public Builder unbuild()
+    public static Builder<?> builder()
     {
-        return new Builder(this);
-    }
-
-    public static Builder builder()
-    {
-        return new Builder();
+        return new Builder<>();
     }
 
     /**
      * {@code InstanceMetadataImpl} builder static inner class.
      */
-    public static class Builder implements DataObjectBuilder<Builder, InstanceMetadataImpl>
+    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, InstanceMetadataImpl>
     {
-        private int id;
-        private String host;
-        private int port;
-        private List<String> dataDirs;
-        private String stagingDir;
-        private CassandraAdapterDelegate delegate;
+        protected int id;
+        protected String host;
+        protected int port;
+        protected List<String> dataDirs;
+        protected String stagingDir;
+        protected CassandraAdapterDelegate delegate;
 
         protected Builder()
         {
@@ -125,7 +120,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          * @param id the {@code id} to set
          * @return a reference to this Builder
          */
-        public Builder id(int id)
+        public T id(int id)
         {
             return update(b -> b.id = id);
         }
@@ -136,7 +131,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          * @param host the {@code host} to set
          * @return a reference to this Builder
          */
-        public Builder host(String host)
+        public T host(String host)
         {
             return update(b -> b.host = host);
         }
@@ -147,7 +142,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          * @param port the {@code port} to set
          * @return a reference to this Builder
          */
-        public Builder port(int port)
+        public T port(int port)
         {
             return update(b -> b.port = port);
         }
@@ -158,7 +153,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          * @param dataDirs the {@code dataDirs} to set
          * @return a reference to this Builder
          */
-        public Builder dataDirs(List<String> dataDirs)
+        public T dataDirs(List<String> dataDirs)
         {
             return update(b -> b.dataDirs = dataDirs);
         }
@@ -169,7 +164,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          * @param stagingDir the {@code stagingDir} to set
          * @return a reference to this Builder
          */
-        public Builder stagingDir(String stagingDir)
+        public T stagingDir(String stagingDir)
         {
             return update(b -> b.stagingDir = stagingDir);
         }
@@ -180,7 +175,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          * @param delegate the {@code delegate} to set
          * @return a reference to this Builder
          */
-        public Builder delegate(CassandraAdapterDelegate delegate)
+        public T delegate(CassandraAdapterDelegate delegate)
         {
             return update(b -> b.delegate = delegate);
         }

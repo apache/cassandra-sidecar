@@ -55,22 +55,11 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public SidecarConfiguration configuration()
     {
-        ThrottleConfiguration throttleConfiguration = ThrottleConfigurationImpl.builder()
-                                                                               .rateLimitStreamRequestsPerSecond(1000L)
-                                                                               .build();
-
-        SSTableUploadConfiguration ssTableUploadConfiguration =
-        SSTableUploadConfigurationImpl.builder()
-                                      .minimumSpacePercentageRequired(0).build();
-        ServiceConfiguration serviceConfiguration =
-        ServiceConfigurationImpl.builder()
-                                .host("127.0.0.1")
-                                .throttleConfiguration(throttleConfiguration)
-                                .ssTableUploadConfiguration(ssTableUploadConfiguration)
-                                .build();
-
-        return SidecarConfigurationImpl.builder()
-                                       .serviceConfiguration(serviceConfiguration)
-                                       .build();
+        ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(1000L);
+        SSTableUploadConfiguration ssTableUploadConfiguration = new SSTableUploadConfigurationImpl(0F);
+        ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl("127.0.0.1",
+                                                                                 throttleConfiguration,
+                                                                                 ssTableUploadConfiguration);
+        return new SidecarConfigurationImpl(serviceConfiguration);
     }
 }

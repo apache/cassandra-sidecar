@@ -107,7 +107,7 @@ public class SnapshotsHandlerTest
         ListSnapshotFilesResponse.FileInfo fileInfoExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
                                                "localhost",
-                                               6475,
+                                               9043,
                                                0,
                                                "snapshot1",
                                                "keyspace1",
@@ -116,7 +116,7 @@ public class SnapshotsHandlerTest
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
                                                "localhost",
-                                               6475,
+                                               9043,
                                                0,
                                                "snapshot1",
                                                "keyspace1",
@@ -143,7 +143,7 @@ public class SnapshotsHandlerTest
         List<ListSnapshotFilesResponse.FileInfo> fileInfoExpected = Arrays.asList(
         new ListSnapshotFilesResponse.FileInfo(11,
                                                "localhost",
-                                               6475,
+                                               9043,
                                                0,
                                                "snapshot1",
                                                "keyspace1",
@@ -151,7 +151,7 @@ public class SnapshotsHandlerTest
                                                "1.db"),
         new ListSnapshotFilesResponse.FileInfo(0,
                                                "localhost",
-                                               6475,
+                                               9043,
                                                0,
                                                "snapshot1",
                                                "keyspace1",

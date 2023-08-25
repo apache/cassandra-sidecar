@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.impl.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.impl.SSTableUploadConfigurationImpl;
@@ -70,32 +71,18 @@ public class TestModule extends AbstractModule
 
     protected SidecarConfigurationImpl abstractConfig()
     {
-        ThrottleConfiguration throttleConfiguration = ThrottleConfigurationImpl.builder()
-                                                                               .delayInSeconds(5)
-                                                                               .timeoutInSeconds(10)
-                                                                               .rateLimitStreamRequestsPerSecond(1)
-                                                                               .build();
+        return abstractConfig(null);
+    }
 
-        SSTableUploadConfiguration uploadConfiguration =
-        SSTableUploadConfigurationImpl.builder()
-                                      .minimumSpacePercentageRequired(0)
-                                      .build();
-
-        ServiceConfiguration serviceConfiguration =
-        ServiceConfigurationImpl.builder()
-                                .host("127.0.0.1")
-                                .port(6475)
-                                .ssTableUploadConfiguration(uploadConfiguration)
-                                .throttleConfiguration(throttleConfiguration)
-                                .build();
-
-        HealthCheckConfiguration healthCheckConfiguration = HealthCheckConfigurationImpl.builder()
-                                                                                        .checkIntervalMillis(1000)
-                                                                                        .build();
-        return SidecarConfigurationImpl.builder()
-                                       .healthCheckConfiguration(healthCheckConfiguration)
-                                       .serviceConfiguration(serviceConfiguration)
-                                       .build();
+    protected SidecarConfigurationImpl abstractConfig(SslConfiguration sslConfiguration)
+    {
+        ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(1, 10, 5);
+        SSTableUploadConfiguration uploadConfiguration = new SSTableUploadConfigurationImpl(0F);
+        ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl("127.0.0.1",
+                                                                                 throttleConfiguration,
+                                                                                 uploadConfiguration);
+        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(1000);
+        return new SidecarConfigurationImpl(serviceConfiguration, sslConfiguration, healthCheckConfiguration);
     }
 
     @Provides

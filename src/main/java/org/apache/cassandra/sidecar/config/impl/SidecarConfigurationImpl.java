@@ -21,8 +21,6 @@ package org.apache.cassandra.sidecar.config.impl;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,7 +29,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
@@ -44,7 +41,6 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
-import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Configuration for this Sidecar process
@@ -53,41 +49,64 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
 {
     @Deprecated
     @JsonProperty(value = "cassandra")
-    private final InstanceConfiguration cassandraInstance;
+    protected final InstanceConfiguration cassandraInstance;
 
     @JsonProperty(value = "cassandra_instances")
-    private final List<InstanceConfiguration> cassandraInstances;
+    protected final List<InstanceConfiguration> cassandraInstances;
 
     @JsonProperty(value = "sidecar", required = true)
-    private final ServiceConfiguration serviceConfiguration;
+    protected final ServiceConfiguration serviceConfiguration;
 
     @JsonProperty("ssl")
-    private final SslConfiguration sslConfiguration;
+    protected final SslConfiguration sslConfiguration;
 
     @JsonProperty("healthcheck")
-    private final HealthCheckConfiguration healthCheckConfiguration;
+    protected final HealthCheckConfiguration healthCheckConfiguration;
 
     @JsonProperty("cassandra_input_validation")
-    private final CassandraInputValidationConfiguration cassandraInputValidationConfiguration;
+    protected final CassandraInputValidationConfiguration cassandraInputValidationConfiguration;
 
     public SidecarConfigurationImpl()
     {
-        this.cassandraInstance = null;
-        this.cassandraInstances = Collections.emptyList();
-        this.serviceConfiguration = new ServiceConfigurationImpl();
-        this.sslConfiguration = null;
-        this.healthCheckConfiguration = new HealthCheckConfigurationImpl();
-        this.cassandraInputValidationConfiguration = new CassandraInputValidationConfigurationImpl();
+        this(Collections.emptyList(),
+             new ServiceConfigurationImpl(),
+             null /* sslConfiguration */,
+             new HealthCheckConfigurationImpl(),
+             new CassandraInputValidationConfigurationImpl());
     }
 
-    protected SidecarConfigurationImpl(Builder<?> builder)
+    public SidecarConfigurationImpl(ServiceConfiguration serviceConfiguration)
     {
-        cassandraInstance = null;
-        cassandraInstances = Collections.unmodifiableList(builder.cassandraInstances);
-        serviceConfiguration = builder.serviceConfiguration;
-        sslConfiguration = builder.sslConfiguration;
-        healthCheckConfiguration = builder.healthCheckConfiguration;
-        cassandraInputValidationConfiguration = builder.cassandraInputValidationConfiguration;
+        this(Collections.emptyList(),
+             serviceConfiguration,
+             null /* sslConfiguration */,
+             new HealthCheckConfigurationImpl(),
+             new CassandraInputValidationConfigurationImpl());
+    }
+
+    public SidecarConfigurationImpl(ServiceConfiguration serviceConfiguration,
+                                    SslConfiguration sslConfiguration,
+                                    HealthCheckConfiguration healthCheckConfiguration)
+    {
+        this(Collections.emptyList(),
+             serviceConfiguration,
+             sslConfiguration,
+             healthCheckConfiguration,
+             new CassandraInputValidationConfigurationImpl());
+    }
+
+    public SidecarConfigurationImpl(List<InstanceConfiguration> cassandraInstances,
+                                    ServiceConfiguration serviceConfiguration,
+                                    SslConfiguration sslConfiguration,
+                                    HealthCheckConfiguration healthCheckConfiguration,
+                                    CassandraInputValidationConfiguration cassandraInputValidationConfiguration)
+    {
+        this.cassandraInstance = null;
+        this.cassandraInstances = Collections.unmodifiableList(cassandraInstances);
+        this.serviceConfiguration = serviceConfiguration;
+        this.sslConfiguration = sslConfiguration;
+        this.healthCheckConfiguration = healthCheckConfiguration;
+        this.cassandraInputValidationConfiguration = cassandraInputValidationConfiguration;
     }
 
     /**
@@ -160,17 +179,6 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return cassandraInputValidationConfiguration;
     }
 
-    @VisibleForTesting
-    public Builder<?> unbuild()
-    {
-        return new Builder<>(this);
-    }
-
-    public static Builder<?> builder()
-    {
-        return new Builder<>();
-    }
-
     public static SidecarConfigurationImpl readYamlConfiguration(String yamlConfigurationPath) throws IOException
     {
         return readYamlConfiguration(Paths.get(yamlConfigurationPath));
@@ -211,113 +219,5 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
                               .registerModule(simpleModule);
 
         return mapper.readValue(yamlConfigurationPath.toFile(), SidecarConfigurationImpl.class);
-    }
-
-    /**
-     * {@code SidecarConfigurationImpl} builder static inner class.
-     *
-     * @param <T> the builder type
-     */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, SidecarConfigurationImpl>
-    {
-        protected List<InstanceConfiguration> cassandraInstances = new ArrayList<>();
-        protected ServiceConfiguration serviceConfiguration;
-        protected SslConfiguration sslConfiguration;
-        protected HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl();
-        protected CassandraInputValidationConfiguration cassandraInputValidationConfiguration
-        = new CassandraInputValidationConfigurationImpl();
-
-        protected Builder()
-        {
-        }
-
-        protected Builder(SidecarConfigurationImpl configuration)
-        {
-            cassandraInstances = configuration.cassandraInstances;
-            serviceConfiguration = configuration.serviceConfiguration;
-            sslConfiguration = configuration.sslConfiguration;
-            healthCheckConfiguration = configuration.healthCheckConfiguration;
-            cassandraInputValidationConfiguration = configuration.cassandraInputValidationConfiguration;
-        }
-
-        /**
-         * Sets the {@code cassandraInstances} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param cassandraInstances the {@code cassandraInstances} to set
-         * @return a reference to this Builder
-         */
-        public T cassandraInstances(InstanceConfiguration... cassandraInstances)
-        {
-            return update(b -> b.cassandraInstances = Arrays.asList(cassandraInstances));
-        }
-
-        /**
-         * Sets the {@code cassandraInstances} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param cassandraInstances the {@code cassandraInstances} to set
-         * @return a reference to this Builder
-         */
-        public T cassandraInstances(List<InstanceConfiguration> cassandraInstances)
-        {
-            return update(b -> b.cassandraInstances = cassandraInstances);
-        }
-
-        /**
-         * Sets the {@code serviceConfiguration} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param serviceConfiguration the {@code serviceConfiguration} to set
-         * @return a reference to this Builder
-         */
-        public T serviceConfiguration(ServiceConfiguration serviceConfiguration)
-        {
-            return update(b -> b.serviceConfiguration = serviceConfiguration);
-        }
-
-        /**
-         * Sets the {@code sslConfiguration} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param sslConfiguration the {@code sslConfiguration} to set
-         * @return a reference to this Builder
-         */
-        public T sslConfiguration(SslConfiguration sslConfiguration)
-        {
-            return update(b -> b.sslConfiguration = sslConfiguration);
-        }
-
-        /**
-         * Sets the {@code healthCheckConfiguration} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param healthCheckConfiguration the {@code healthCheckConfiguration} to set
-         * @return a reference to this Builder
-         */
-        public T healthCheckConfiguration(HealthCheckConfiguration healthCheckConfiguration)
-        {
-            return update(b -> b.healthCheckConfiguration = healthCheckConfiguration);
-        }
-
-        /**
-         * Sets the {@code cassandraInputValidationConfiguration} and returns a reference to this Builder enabling
-         * method chaining.
-         *
-         * @param cassandraInputValidationConfiguration the {@code cassandraInputValidationConfiguration} to set
-         * @return a reference to this Builder
-         */
-        public T cassandraInputValidationConfiguration(CassandraInputValidationConfiguration
-                                                       cassandraInputValidationConfiguration)
-        {
-            return update(b -> b.cassandraInputValidationConfiguration = cassandraInputValidationConfiguration);
-        }
-
-        /**
-         * Returns a {@code SidecarConfigurationImpl} built from the parameters previously set.
-         *
-         * @return a {@code SidecarConfigurationImpl} built with parameters of this
-         * {@code SidecarConfigurationImpl.Builder}
-         */
-        @Override
-        public SidecarConfigurationImpl build()
-        {
-            return new SidecarConfigurationImpl(this);
-        }
     }
 }

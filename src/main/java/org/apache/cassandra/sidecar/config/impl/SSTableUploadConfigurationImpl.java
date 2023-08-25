@@ -19,9 +19,7 @@
 package org.apache.cassandra.sidecar.config.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
-import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Configuration for SSTable component uploads on this service
@@ -33,23 +31,32 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
     public static final String MIN_FREE_SPACE_PERCENT_PROPERTY = "min_free_space_percent";
     public static final float DEFAULT_MIN_FREE_SPACE_PERCENT = 10;
 
-
     @JsonProperty(value = CONCURRENT_UPLOAD_LIMIT_PROPERTY, defaultValue = DEFAULT_CONCURRENT_UPLOAD_LIMIT + "")
-    private final int concurrentUploadsLimit;
+    protected final int concurrentUploadsLimit;
 
     @JsonProperty(value = MIN_FREE_SPACE_PERCENT_PROPERTY, defaultValue = DEFAULT_MIN_FREE_SPACE_PERCENT + "")
-    private final float minimumSpacePercentageRequired;
+    protected final float minimumSpacePercentageRequired;
 
     public SSTableUploadConfigurationImpl()
     {
-        concurrentUploadsLimit = DEFAULT_CONCURRENT_UPLOAD_LIMIT;
-        minimumSpacePercentageRequired = DEFAULT_MIN_FREE_SPACE_PERCENT;
+        this(DEFAULT_CONCURRENT_UPLOAD_LIMIT, DEFAULT_MIN_FREE_SPACE_PERCENT);
     }
 
-    protected SSTableUploadConfigurationImpl(Builder<?> builder)
+    public SSTableUploadConfigurationImpl(int concurrentUploadsLimit)
     {
-        concurrentUploadsLimit = builder.concurrentUploadsLimit;
-        minimumSpacePercentageRequired = builder.minimumSpacePercentageRequired;
+        this(concurrentUploadsLimit, DEFAULT_MIN_FREE_SPACE_PERCENT);
+    }
+
+    public SSTableUploadConfigurationImpl(float minimumSpacePercentageRequired)
+    {
+        this(DEFAULT_CONCURRENT_UPLOAD_LIMIT, minimumSpacePercentageRequired);
+    }
+
+    public SSTableUploadConfigurationImpl(int concurrentUploadsLimit,
+                                          float minimumSpacePercentageRequired)
+    {
+        this.concurrentUploadsLimit = concurrentUploadsLimit;
+        this.minimumSpacePercentageRequired = minimumSpacePercentageRequired;
     }
 
     /**
@@ -70,71 +77,5 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
     public float minimumSpacePercentageRequired()
     {
         return minimumSpacePercentageRequired;
-    }
-
-    @VisibleForTesting
-    public Builder<?> unbuild()
-    {
-        return new Builder<>(this);
-    }
-
-    public static Builder<?> builder()
-    {
-        return new Builder<>();
-    }
-
-    /**
-     * {@code SSTableUploadConfigurationImpl} builder static inner class.
-     * @param <T> the builder type
-     */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, SSTableUploadConfigurationImpl>
-    {
-        protected int concurrentUploadsLimit = DEFAULT_CONCURRENT_UPLOAD_LIMIT;
-        protected float minimumSpacePercentageRequired = DEFAULT_MIN_FREE_SPACE_PERCENT;
-
-        protected Builder()
-        {
-        }
-
-        protected Builder(SSTableUploadConfigurationImpl configuration)
-        {
-            concurrentUploadsLimit = configuration.concurrentUploadsLimit;
-            minimumSpacePercentageRequired = configuration.minimumSpacePercentageRequired;
-        }
-
-        /**
-         * Sets the {@code concurrentUploadsLimit} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param concurrentUploadsLimit the {@code concurrentUploadsLimit} to set
-         * @return a reference to this Builder
-         */
-        public T concurrentUploadsLimit(int concurrentUploadsLimit)
-        {
-            return update(b -> b.concurrentUploadsLimit = concurrentUploadsLimit);
-        }
-
-        /**
-         * Sets the {@code minimumSpacePercentageRequired} and returns a reference to this Builder enabling
-         * method chaining.
-         *
-         * @param minimumSpacePercentageRequired the {@code minimumSpacePercentageRequired} to set
-         * @return a reference to this Builder
-         */
-        public T minimumSpacePercentageRequired(float minimumSpacePercentageRequired)
-        {
-            return update(b -> b.minimumSpacePercentageRequired = minimumSpacePercentageRequired);
-        }
-
-        /**
-         * Returns a {@code SSTableUploadConfigurationImpl} built from the parameters previously set.
-         *
-         * @return a {@code SSTableUploadConfigurationImpl} built with parameters of this
-         * {@code SSTableUploadConfigurationImpl.Builder}
-         */
-        @Override
-        public SSTableUploadConfigurationImpl build()
-        {
-            return new SSTableUploadConfigurationImpl(this);
-        }
     }
 }

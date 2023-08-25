@@ -59,12 +59,7 @@ class SSTableImporterTest
     public void setup() throws InterruptedException
     {
         vertx = Vertx.vertx();
-        serviceConfiguration =
-        ServiceConfigurationImpl.builder()
-                                .ssTableImportConfiguration(SSTableImportConfigurationImpl.builder()
-                                                                                          .importIntervalMillis(10)
-                                                                                          .build())
-                                .build();
+        serviceConfiguration = new ServiceConfigurationImpl(new SSTableImportConfigurationImpl(10));
 
         mockMetadataFetcher = mock(InstanceMetadataFetcher.class);
         CassandraAdapterDelegate mockCassandraAdapterDelegate1 = mock(CassandraAdapterDelegate.class);
@@ -206,12 +201,7 @@ class SSTableImporterTest
     @Test
     void testCancelImportSucceeds(VertxTestContext context)
     {
-        serviceConfiguration =
-        ServiceConfigurationImpl.builder()
-                                .ssTableImportConfiguration(SSTableImportConfigurationImpl.builder()
-                                                                                          .importIntervalMillis(500)
-                                                                                          .build())
-                                .build();
+        serviceConfiguration = new ServiceConfigurationImpl(new SSTableImportConfigurationImpl(500));
 
         SSTableImporter importer = new SSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools,
                                                        mockUploadPathBuilder);

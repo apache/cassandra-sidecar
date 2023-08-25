@@ -21,8 +21,8 @@ package org.apache.cassandra.sidecar.config.impl;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Configuration class that encapsulates parameters needed for Caches
@@ -30,21 +30,22 @@ import org.apache.cassandra.sidecar.config.CacheConfiguration;
 public class CacheConfigurationImpl implements CacheConfiguration
 {
     @JsonProperty("expire_after_access_millis")
-    private final long expireAfterAccessMillis;
+    protected final long expireAfterAccessMillis;
 
     @JsonProperty("maximum_size")
-    private final long maximumSize;
+    protected final long maximumSize;
 
     public CacheConfigurationImpl()
     {
-        expireAfterAccessMillis = TimeUnit.HOURS.toMillis(1);
-        maximumSize = 100;
+        this(TimeUnit.HOURS.toMillis(1), 100);
     }
 
-    protected CacheConfigurationImpl(Builder builder)
+    @VisibleForTesting
+    public CacheConfigurationImpl(long expireAfterAccessMillis,
+                                  long maximumSize)
     {
-        expireAfterAccessMillis = builder.expireAfterAccessMillis;
-        maximumSize = builder.maximumSize;
+        this.expireAfterAccessMillis = expireAfterAccessMillis;
+        this.maximumSize = maximumSize;
     }
 
     @Override
@@ -59,56 +60,5 @@ public class CacheConfigurationImpl implements CacheConfiguration
     public long maximumSize()
     {
         return maximumSize;
-    }
-
-    public static Builder builder()
-    {
-        return new Builder();
-    }
-
-    /**
-     * {@code CacheConfiguration} builder static inner class.
-     */
-    public static class Builder implements DataObjectBuilder<Builder, CacheConfigurationImpl>
-    {
-        private long expireAfterAccessMillis = TimeUnit.HOURS.toMillis(1);
-        private long maximumSize = 100;
-
-        protected Builder()
-        {
-        }
-
-        /**
-         * Sets the {@code expireAfterAccessMillis} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param expireAfterAccessMillis the {@code expireAfterAccessMillis} to set
-         * @return a reference to this Builder
-         */
-        public Builder expireAfterAccessMillis(long expireAfterAccessMillis)
-        {
-            return update(b -> b.expireAfterAccessMillis = expireAfterAccessMillis);
-        }
-
-        /**
-         * Sets the {@code maximumSize} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param maximumSize the {@code maximumSize} to set
-         * @return a reference to this Builder
-         */
-        public Builder maximumSize(long maximumSize)
-        {
-            return update(b -> b.maximumSize = maximumSize);
-        }
-
-        /**
-         * Returns a {@code CacheConfiguration} built from the parameters previously set.
-         *
-         * @return a {@code CacheConfiguration} built with parameters of this {@code CacheConfiguration.Builder}
-         */
-        @Override
-        public CacheConfigurationImpl build()
-        {
-            return new CacheConfigurationImpl(this);
-        }
     }
 }

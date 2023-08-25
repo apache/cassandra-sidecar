@@ -57,19 +57,12 @@ class CacheFactoryTest
         fakeTicker = new FakeTicker();
 
         CacheConfiguration ssTableImportCacheConfiguration =
-        CacheConfigurationImpl.builder()
-                              .expireAfterAccessMillis(SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS_MILLIS) // 2 hours
-                              .maximumSize(SSTABLE_IMPORT_CACHE_MAX_SIZE)
-                              .build();
+        new CacheConfigurationImpl(SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS_MILLIS, // 2 hours
+                                   SSTABLE_IMPORT_CACHE_MAX_SIZE);
 
         SSTableImportConfiguration ssTableImportConfiguration =
-        SSTableImportConfigurationImpl.builder()
-                                      .cacheConfiguration(ssTableImportCacheConfiguration)
-                                      .build();
-        ServiceConfiguration serviceConfiguration =
-        ServiceConfigurationImpl.builder()
-                                .ssTableImportConfiguration(ssTableImportConfiguration)
-                                .build();
+        new SSTableImportConfigurationImpl(ssTableImportCacheConfiguration);
+        ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl(ssTableImportConfiguration);
         SSTableImporter mockSSTableImporter = mock(SSTableImporter.class);
         cacheFactory = new CacheFactory(serviceConfiguration, mockSSTableImporter, fakeTicker::read);
     }

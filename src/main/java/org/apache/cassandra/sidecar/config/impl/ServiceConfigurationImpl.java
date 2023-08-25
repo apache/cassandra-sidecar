@@ -24,13 +24,11 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
-import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Configuration for the Sidecar Service and configuration of the REST endpoints in the service
@@ -54,18 +52,11 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     protected static final Map<String, WorkerPoolConfiguration> DEFAULT_WORKER_POOLS_CONFIGURATION
     = Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
     {{
-        put(SERVICE_POOL, WorkerPoolConfigurationImpl.builder()
-                                                     .workerPoolName("sidecar-worker-pool")
-                                                     .workerPoolSize(20)
-                                                     .workerMaxExecutionTimeMillis(TimeUnit.SECONDS.toMillis(60))
-                                                     .build());
+        put(SERVICE_POOL, new WorkerPoolConfigurationImpl("sidecar-worker-pool", 20,
+                                                          TimeUnit.SECONDS.toMillis(60)));
 
-
-        put(INTERNAL_POOL, WorkerPoolConfigurationImpl.builder()
-                                                      .workerPoolName("sidecar-internal-worker-pool")
-                                                      .workerPoolSize(20)
-                                                      .workerMaxExecutionTimeMillis(TimeUnit.MINUTES.toMillis(15))
-                                                      .build());
+        put(INTERNAL_POOL, new WorkerPoolConfigurationImpl("sidecar-internal-worker-pool", 20,
+                                                           TimeUnit.MINUTES.toMillis(15)));
     }});
 
 
@@ -73,59 +64,111 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     protected final String host;
 
     @JsonProperty(value = PORT_PROPERTY, defaultValue = DEFAULT_PORT + "")
-    private final int port;
+    protected final int port;
 
     @JsonProperty(value = REQUEST_IDLE_TIMEOUT_MILLIS_PROPERTY, defaultValue = DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS + "")
-    private final int requestIdleTimeoutMillis;
+    protected final int requestIdleTimeoutMillis;
 
     @JsonProperty(value = REQUEST_TIMEOUT_MILLIS_PROPERTY, defaultValue = DEFAULT_REQUEST_TIMEOUT_MILLIS + "")
-    private final long requestTimeoutMillis;
+    protected final long requestTimeoutMillis;
 
     @JsonProperty(value = ALLOWABLE_SKEW_IN_MINUTES_PROPERTY, defaultValue = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES + "")
-    private final int allowableSkewInMinutes;
+    protected final int allowableSkewInMinutes;
 
     @JsonProperty(value = THROTTLE_PROPERTY, required = true)
-    private final ThrottleConfiguration throttleConfiguration;
+    protected final ThrottleConfiguration throttleConfiguration;
 
     @JsonProperty(value = SSTABLE_UPLOAD_PROPERTY, required = true)
-    private final SSTableUploadConfiguration ssTableUploadConfiguration;
+    protected final SSTableUploadConfiguration ssTableUploadConfiguration;
 
     @JsonProperty(value = SSTABLE_IMPORT_PROPERTY, required = true)
-    private final SSTableImportConfiguration ssTableImportConfiguration;
+    protected final SSTableImportConfiguration ssTableImportConfiguration;
 
     @JsonProperty(value = WORKER_POOLS_PROPERTY, required = true)
-    private final Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration;
+    protected final Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration;
 
     public ServiceConfigurationImpl()
     {
-        host = DEFAULT_HOST;
-        port = DEFAULT_PORT;
-        requestIdleTimeoutMillis = DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS;
-        requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT_MILLIS;
-        allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
-        throttleConfiguration = new ThrottleConfigurationImpl();
-        ssTableUploadConfiguration = new SSTableUploadConfigurationImpl();
-        ssTableImportConfiguration = new SSTableImportConfigurationImpl();
-        workerPoolsConfiguration = DEFAULT_WORKER_POOLS_CONFIGURATION;
+        this(DEFAULT_HOST,
+             DEFAULT_PORT,
+             DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS,
+             DEFAULT_REQUEST_TIMEOUT_MILLIS,
+             DEFAULT_ALLOWABLE_SKEW_IN_MINUTES,
+             new ThrottleConfigurationImpl(),
+             new SSTableUploadConfigurationImpl(),
+             new SSTableImportConfigurationImpl(),
+             DEFAULT_WORKER_POOLS_CONFIGURATION);
     }
 
-    protected ServiceConfigurationImpl(Builder<?> builder)
+    public ServiceConfigurationImpl(SSTableImportConfiguration ssTableImportConfiguration)
     {
-        host = builder.host;
-        port = builder.port;
-        requestIdleTimeoutMillis = builder.requestIdleTimeoutMillis;
-        requestTimeoutMillis = builder.requestTimeoutMillis;
-        allowableSkewInMinutes = builder.allowableSkewInMinutes;
-        throttleConfiguration = builder.throttleConfiguration;
-        ssTableUploadConfiguration = builder.ssTableUploadConfiguration;
-        ssTableImportConfiguration = builder.ssTableImportConfiguration;
-        if (builder.workerPoolsConfiguration == null || builder.workerPoolsConfiguration.isEmpty())
+        this(DEFAULT_HOST,
+             DEFAULT_PORT,
+             DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS,
+             DEFAULT_REQUEST_TIMEOUT_MILLIS,
+             DEFAULT_ALLOWABLE_SKEW_IN_MINUTES,
+             new ThrottleConfigurationImpl(),
+             new SSTableUploadConfigurationImpl(),
+             ssTableImportConfiguration,
+             DEFAULT_WORKER_POOLS_CONFIGURATION);
+    }
+
+    public ServiceConfigurationImpl(String host,
+                                    ThrottleConfiguration throttleConfiguration,
+                                    SSTableUploadConfiguration ssTableUploadConfiguration)
+    {
+        this(host,
+             DEFAULT_PORT,
+             DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS,
+             DEFAULT_REQUEST_TIMEOUT_MILLIS,
+             DEFAULT_ALLOWABLE_SKEW_IN_MINUTES,
+             throttleConfiguration,
+             ssTableUploadConfiguration,
+             new SSTableImportConfigurationImpl(),
+             DEFAULT_WORKER_POOLS_CONFIGURATION);
+    }
+
+    public ServiceConfigurationImpl(int requestIdleTimeoutMillis,
+                                    long requestTimeoutMillis,
+                                    SSTableUploadConfiguration ssTableUploadConfiguration)
+    {
+
+        this(DEFAULT_HOST,
+             DEFAULT_PORT,
+             requestIdleTimeoutMillis,
+             requestTimeoutMillis,
+             DEFAULT_ALLOWABLE_SKEW_IN_MINUTES,
+             new ThrottleConfigurationImpl(),
+             ssTableUploadConfiguration,
+             new SSTableImportConfigurationImpl(),
+             DEFAULT_WORKER_POOLS_CONFIGURATION);
+    }
+
+    public ServiceConfigurationImpl(String host,
+                                    int port,
+                                    int requestIdleTimeoutMillis,
+                                    long requestTimeoutMillis,
+                                    int allowableSkewInMinutes,
+                                    ThrottleConfiguration throttleConfiguration,
+                                    SSTableUploadConfiguration ssTableUploadConfiguration,
+                                    SSTableImportConfiguration ssTableImportConfiguration,
+                                    Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration)
+    {
+        this.host = host;
+        this.port = port;
+        this.requestIdleTimeoutMillis = requestIdleTimeoutMillis;
+        this.requestTimeoutMillis = requestTimeoutMillis;
+        this.allowableSkewInMinutes = allowableSkewInMinutes;
+        this.throttleConfiguration = throttleConfiguration;
+        this.ssTableUploadConfiguration = ssTableUploadConfiguration;
+        this.ssTableImportConfiguration = ssTableImportConfiguration;
+        if (workerPoolsConfiguration == null || workerPoolsConfiguration.isEmpty())
         {
-            workerPoolsConfiguration = DEFAULT_WORKER_POOLS_CONFIGURATION;
+            this.workerPoolsConfiguration = DEFAULT_WORKER_POOLS_CONFIGURATION;
         }
         else
         {
-            workerPoolsConfiguration = builder.workerPoolsConfiguration;
+            this.workerPoolsConfiguration = workerPoolsConfiguration;
         }
     }
 
@@ -220,189 +263,5 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration()
     {
         return workerPoolsConfiguration;
-    }
-
-    @VisibleForTesting
-    public Builder<?> unbuild()
-    {
-        return new Builder<>(this);
-    }
-
-    public static Builder<?> builder()
-    {
-        return new Builder<>();
-    }
-
-    /**
-     * {@code ServiceConfigurationImpl} builder static inner class.
-     * @param <T> the builder type
-     */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, ServiceConfigurationImpl>
-    {
-        protected String host = DEFAULT_HOST;
-        protected int port = DEFAULT_PORT;
-        protected int requestIdleTimeoutMillis = DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS;
-        protected long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT_MILLIS;
-        protected int allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
-        protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
-        protected SSTableUploadConfiguration ssTableUploadConfiguration = new SSTableUploadConfigurationImpl();
-        protected SSTableImportConfiguration ssTableImportConfiguration = new SSTableImportConfigurationImpl();
-        protected Map<String, WorkerPoolConfiguration> workerPoolsConfiguration = new HashMap<>();
-
-        protected Builder()
-        {
-        }
-
-        @SuppressWarnings("unchecked")
-        protected Builder(ServiceConfigurationImpl serviceConfiguration)
-        {
-            host = serviceConfiguration.host;
-            port = serviceConfiguration.port;
-            requestIdleTimeoutMillis = serviceConfiguration.requestIdleTimeoutMillis;
-            requestTimeoutMillis = serviceConfiguration.requestTimeoutMillis;
-            allowableSkewInMinutes = serviceConfiguration.allowableSkewInMinutes;
-            throttleConfiguration = serviceConfiguration.throttleConfiguration;
-            ssTableUploadConfiguration = serviceConfiguration.ssTableUploadConfiguration;
-            ssTableImportConfiguration = serviceConfiguration.ssTableImportConfiguration;
-            workerPoolsConfiguration = (Map<String, WorkerPoolConfiguration>)
-                                       serviceConfiguration.workerPoolsConfiguration;
-        }
-
-        /**
-         * Sets the {@code host} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param host the {@code host} to set
-         * @return a reference to this Builder
-         */
-        public T host(String host)
-        {
-            return update(b -> b.host = host);
-        }
-
-        /**
-         * Sets the {@code port} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param port the {@code port} to set
-         * @return a reference to this Builder
-         */
-        public T port(int port)
-        {
-            return update(b -> b.port = port);
-        }
-
-        /**
-         * Sets the {@code requestIdleTimeoutMillis} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param requestIdleTimeoutMillis the {@code requestIdleTimeoutMillis} to set
-         * @return a reference to this Builder
-         */
-        public T requestIdleTimeoutMillis(int requestIdleTimeoutMillis)
-        {
-            return update(b -> b.requestIdleTimeoutMillis = requestIdleTimeoutMillis);
-        }
-
-        /**
-         * Sets the {@code requestTimeoutMillis} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param requestTimeoutMillis the {@code requestTimeoutMillis} to set
-         * @return a reference to this Builder
-         */
-        public T requestTimeoutMillis(long requestTimeoutMillis)
-        {
-            return update(b -> b.requestTimeoutMillis = requestTimeoutMillis);
-        }
-
-        /**
-         * Sets the {@code allowableSkewInMinutes} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param allowableSkewInMinutes the {@code allowableSkewInMinutes} to set
-         * @return a reference to this Builder
-         */
-        public T allowableSkewInMinutes(int allowableSkewInMinutes)
-        {
-            return update(b -> b.allowableSkewInMinutes = allowableSkewInMinutes);
-        }
-
-        /**
-         * Sets the {@code throttleConfiguration} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param throttleConfiguration the {@code throttleConfiguration} to set
-         * @return a reference to this Builder
-         */
-        public T throttleConfiguration(ThrottleConfiguration throttleConfiguration)
-        {
-            return update(b -> b.throttleConfiguration = throttleConfiguration);
-        }
-
-        /**
-         * Sets the {@code ssTableUploadConfiguration} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param ssTableUploadConfiguration the {@code ssTableUploadConfiguration} to set
-         * @return a reference to this Builder
-         */
-        public T ssTableUploadConfiguration(SSTableUploadConfiguration ssTableUploadConfiguration)
-        {
-            return update(b -> b.ssTableUploadConfiguration = ssTableUploadConfiguration);
-        }
-
-        /**
-         * Sets the {@code ssTableImportConfiguration} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param ssTableImportConfiguration the {@code ssTableImportConfiguration} to set
-         * @return a reference to this Builder
-         */
-        public T ssTableImportConfiguration(SSTableImportConfiguration ssTableImportConfiguration)
-        {
-            return update(b -> b.ssTableImportConfiguration = ssTableImportConfiguration);
-        }
-
-        /**
-         * Sets the {@code workerPoolsConfiguration} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param workerPoolsConfiguration the {@code workerPoolsConfiguration} to set
-         * @return a reference to this Builder
-         */
-        public T workerPoolsConfiguration(Map<String, WorkerPoolConfiguration> workerPoolsConfiguration)
-        {
-            return update(b -> b.workerPoolsConfiguration = workerPoolsConfiguration);
-        }
-
-        /**
-         * Sets the {@link #SERVICE_POOL} configuration to {@code workerPoolConfiguration} and returns a
-         * reference to this Builder enabling method chaining.
-         *
-         * @param workerPoolConfiguration the {@code workerPoolConfiguration} to set for the {@link #SERVICE_POOL}
-         * @return a reference to this Builder
-         */
-        public T servicePoolConfiguration(WorkerPoolConfiguration workerPoolConfiguration)
-        {
-            workerPoolsConfiguration.put(SERVICE_POOL, workerPoolConfiguration);
-            return self();
-        }
-
-        /**
-         * Sets the {@link #INTERNAL_POOL} configuration to {@code workerPoolConfiguration} and returns a
-         * reference to this Builder enabling method chaining.
-         *
-         * @param workerPoolConfiguration the {@code workerPoolConfiguration} to set for the {@link #INTERNAL_POOL}
-         * @return a reference to this Builder
-         */
-        public T internalPoolConfiguration(WorkerPoolConfiguration workerPoolConfiguration)
-        {
-            workerPoolsConfiguration.put(INTERNAL_POOL, workerPoolConfiguration);
-            return self();
-        }
-
-        /**
-         * Returns a {@code ServiceConfigurationImpl} built from the parameters previously set.
-         *
-         * @return a {@code ServiceConfigurationImpl} built with parameters of this
-         * {@code ServiceConfigurationImpl.Builder}
-         */
-        @Override
-        public ServiceConfigurationImpl build()
-        {
-            return new ServiceConfigurationImpl(this);
-        }
     }
 }

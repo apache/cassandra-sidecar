@@ -18,12 +18,10 @@
 
 package org.apache.cassandra.sidecar.config.impl;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 
 /**
@@ -32,46 +30,46 @@ import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 public class InstanceConfigurationImpl implements InstanceConfiguration
 {
     @JsonProperty("id")
-    private final int id;
+    protected final int id;
 
     @JsonProperty("host")
-    private final String host;
+    protected final String host;
 
     @JsonProperty("port")
-    private final int port;
+    protected final int port;
 
     @JsonProperty("username")
-    private final String username;
+    protected final String username;
 
     @JsonProperty("password")
-    private final String password;
+    protected final String password;
 
     @JsonProperty("data_dirs")
-    private final List<String> dataDirs;
+    protected final List<String> dataDirs;
 
     @JsonProperty("staging_dir")
-    private final String stagingDir;
+    protected final String stagingDir;
 
     @JsonProperty("jmx_host")
-    private final String jmxHost;
+    protected final String jmxHost;
 
     @JsonProperty("jmx_port")
-    private final int jmxPort;
+    protected final int jmxPort;
 
     @JsonProperty("jmx_ssl_enabled")
-    private final boolean jmxSslEnabled;
+    protected final boolean jmxSslEnabled;
 
     @JsonProperty("jmx_role")
-    private final String jmxRole;
+    protected final String jmxRole;
 
     @JsonProperty("jmx_role_password")
-    private final String jmxRolePassword;
+    protected final String jmxRolePassword;
 
     public InstanceConfigurationImpl()
     {
         this.id = 0;
         this.host = null;
-        this.port = 0;
+        this.port = 9042;
         this.username = null;
         this.password = null;
         this.dataDirs = null;
@@ -83,20 +81,31 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
         this.jmxRolePassword = null;
     }
 
-    protected InstanceConfigurationImpl(Builder<?> builder)
+    protected InstanceConfigurationImpl(int id,
+                                        String host,
+                                        int port,
+                                        String username,
+                                        String password,
+                                        List<String> dataDirs,
+                                        String stagingDir,
+                                        String jmxHost,
+                                        int jmxPort,
+                                        boolean jmxSslEnabled,
+                                        String jmxRole,
+                                        String jmxRolePassword)
     {
-        id = builder.id;
-        host = builder.host;
-        port = builder.port;
-        username = builder.username;
-        password = builder.password;
-        dataDirs = Collections.unmodifiableList(builder.dataDirs);
-        stagingDir = builder.stagingDir;
-        jmxHost = builder.jmxHost;
-        jmxPort = builder.jmxPort;
-        jmxSslEnabled = builder.jmxSslEnabled;
-        jmxRole = builder.jmxRole;
-        jmxRolePassword = builder.jmxRolePassword;
+        this.id = id;
+        this.host = host;
+        this.port = port;
+        this.username = username;
+        this.password = password;
+        this.dataDirs = Collections.unmodifiableList(dataDirs);
+        this.stagingDir = stagingDir;
+        this.jmxHost = jmxHost;
+        this.jmxPort = jmxPort;
+        this.jmxSslEnabled = jmxSslEnabled;
+        this.jmxRole = jmxRole;
+        this.jmxRolePassword = jmxRolePassword;
     }
 
     /**
@@ -217,190 +226,5 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
     public String jmxRolePassword()
     {
         return jmxRolePassword;
-    }
-
-    public static Builder<?> builder()
-    {
-        return new Builder<>();
-    }
-
-    /**
-     * {@code InstanceConfigurationImpl} builder static inner class.
-     *
-     * @param <T> the builder type
-     */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, InstanceConfigurationImpl>
-    {
-        protected int id;
-        protected String host;
-        protected int port;
-        protected String username;
-        protected String password;
-        protected List<String> dataDirs;
-        protected String stagingDir;
-        protected String jmxHost;
-        protected int jmxPort;
-        protected boolean jmxSslEnabled;
-        protected String jmxRole;
-        protected String jmxRolePassword;
-
-        protected Builder()
-        {
-        }
-
-        /**
-         * Sets the {@code id} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param id the {@code id} to set
-         * @return a reference to this Builder
-         */
-        public T id(int id)
-        {
-            return update(b -> b.id = id);
-        }
-
-        /**
-         * Sets the {@code host} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param host the {@code host} to set
-         * @return a reference to this Builder
-         */
-        public T host(String host)
-        {
-            return update(b -> b.host = host);
-        }
-
-        /**
-         * Sets the {@code port} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param port the {@code port} to set
-         * @return a reference to this Builder
-         */
-        public T port(int port)
-        {
-            return update(b -> b.port = port);
-        }
-
-        /**
-         * Sets the {@code username} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param username the {@code username} to set
-         * @return a reference to this Builder
-         */
-        public T username(String username)
-        {
-            return update(b -> b.username = username);
-        }
-
-        /**
-         * Sets the {@code password} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param password the {@code password} to set
-         * @return a reference to this Builder
-         */
-        public T password(String password)
-        {
-            return update(b -> b.password = password);
-        }
-
-        /**
-         * Sets the {@code dataDirs} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param dataDirs the {@code dataDirs} to set
-         * @return a reference to this Builder
-         */
-        public T dataDirs(String... dataDirs)
-        {
-            return update(b -> b.dataDirs = Arrays.asList(dataDirs));
-        }
-
-        /**
-         * Sets the {@code dataDirs} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param dataDirs the {@code dataDirs} to set
-         * @return a reference to this Builder
-         */
-        public T dataDirs(List<String> dataDirs)
-        {
-            return update(b -> b.dataDirs = dataDirs);
-        }
-
-        /**
-         * Sets the {@code stagingDir} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param stagingDir the {@code stagingDir} to set
-         * @return a reference to this Builder
-         */
-        public T stagingDir(String stagingDir)
-        {
-            return update(b -> b.stagingDir = stagingDir);
-        }
-
-        /**
-         * Sets the {@code jmxHost} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param jmxHost the {@code jmxHost} to set
-         * @return a reference to this Builder
-         */
-        public T jmxHost(String jmxHost)
-        {
-            return update(b -> b.jmxHost = jmxHost);
-        }
-
-        /**
-         * Sets the {@code jmxPort} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param jmxPort the {@code jmxPort} to set
-         * @return a reference to this Builder
-         */
-        public T jmxPort(int jmxPort)
-        {
-            return update(b -> b.jmxPort = jmxPort);
-        }
-
-        /**
-         * Sets the {@code jmxSslEnabled} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param jmxSslEnabled the {@code jmxSslEnabled} to set
-         * @return a reference to this Builder
-         */
-        public T jmxSslEnabled(boolean jmxSslEnabled)
-        {
-            return update(b -> b.jmxSslEnabled = jmxSslEnabled);
-        }
-
-        /**
-         * Sets the {@code jmxRole} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param jmxRole the {@code jmxRole} to set
-         * @return a reference to this Builder
-         */
-        public T jmxRole(String jmxRole)
-        {
-            return update(b -> b.jmxRole = jmxRole);
-        }
-
-        /**
-         * Sets the {@code jmxRolePassword} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param jmxRolePassword the {@code jmxRolePassword} to set
-         * @return a reference to this Builder
-         */
-        public T jmxRolePassword(String jmxRolePassword)
-        {
-            return update(b -> b.jmxRolePassword = jmxRolePassword);
-        }
-
-        /**
-         * Returns a {@code InstanceConfigurationImpl} built from the parameters previously set.
-         *
-         * @return a {@code InstanceConfigurationImpl} built with parameters of this
-         * {@code InstanceConfigurationImpl.Builder}
-         */
-        @Override
-        public InstanceConfigurationImpl build()
-        {
-            return new InstanceConfigurationImpl(this);
-        }
     }
 }

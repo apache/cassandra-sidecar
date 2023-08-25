@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.config.impl;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 
@@ -34,28 +33,34 @@ public class SSTableImportConfigurationImpl implements SSTableImportConfiguratio
     public static final int DEFAULT_POLL_INTERVAL_MILLIS = 100;
     public static final String CACHE_PROPERTY = "cache";
     protected static final CacheConfiguration DEFAULT_CACHE_CONFIGURATION =
-    CacheConfigurationImpl.builder()
-                          .expireAfterAccessMillis(TimeUnit.HOURS.toMillis(2))
-                          .maximumSize(10_000)
-                          .build();
-
+    new CacheConfigurationImpl(TimeUnit.HOURS.toMillis(2), 10_000);
 
     @JsonProperty(value = POLL_INTERVAL_MILLIS_PROPERTY, defaultValue = DEFAULT_POLL_INTERVAL_MILLIS + "")
-    private final int importIntervalMillis;
+    protected final int importIntervalMillis;
 
     @JsonProperty(value = CACHE_PROPERTY)
-    private final CacheConfiguration cacheConfiguration;
+    protected final CacheConfiguration cacheConfiguration;
 
     public SSTableImportConfigurationImpl()
     {
-        importIntervalMillis = DEFAULT_POLL_INTERVAL_MILLIS;
-        cacheConfiguration = DEFAULT_CACHE_CONFIGURATION;
+        this(DEFAULT_POLL_INTERVAL_MILLIS, DEFAULT_CACHE_CONFIGURATION);
     }
 
-    protected SSTableImportConfigurationImpl(Builder<?> builder)
+    public SSTableImportConfigurationImpl(CacheConfiguration cacheConfiguration)
     {
-        importIntervalMillis = builder.importIntervalMillis;
-        cacheConfiguration = builder.cacheConfiguration;
+        this(DEFAULT_POLL_INTERVAL_MILLIS, cacheConfiguration);
+    }
+
+    public SSTableImportConfigurationImpl(int importIntervalMillis)
+    {
+        this(importIntervalMillis, DEFAULT_CACHE_CONFIGURATION);
+    }
+
+    public SSTableImportConfigurationImpl(int importIntervalMillis,
+                                          CacheConfiguration cacheConfiguration)
+    {
+        this.importIntervalMillis = importIntervalMillis;
+        this.cacheConfiguration = cacheConfiguration;
     }
 
     /**
@@ -76,58 +81,5 @@ public class SSTableImportConfigurationImpl implements SSTableImportConfiguratio
     public CacheConfiguration cacheConfiguration()
     {
         return cacheConfiguration;
-    }
-
-    public static Builder<?> builder()
-    {
-        return new Builder<>();
-    }
-
-    /**
-     * {@code SSTableImportConfigurationImpl} builder static inner class.
-     * @param <T> the builder type
-     */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, SSTableImportConfigurationImpl>
-    {
-        protected int importIntervalMillis = DEFAULT_POLL_INTERVAL_MILLIS;
-        protected CacheConfiguration cacheConfiguration = DEFAULT_CACHE_CONFIGURATION;
-
-        protected Builder()
-        {
-        }
-
-        /**
-         * Sets the {@code importIntervalMillis} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param importIntervalMillis the {@code importIntervalMillis} to set
-         * @return a reference to this Builder
-         */
-        public T importIntervalMillis(int importIntervalMillis)
-        {
-            return update(b -> b.importIntervalMillis = importIntervalMillis);
-        }
-
-        /**
-         * Sets the {@code cacheConfiguration} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param cacheConfiguration the {@code cacheConfiguration} to set
-         * @return a reference to this Builder
-         */
-        public T cacheConfiguration(CacheConfiguration cacheConfiguration)
-        {
-            return update(b -> b.cacheConfiguration = cacheConfiguration);
-        }
-
-        /**
-         * Returns a {@code SSTableImportConfigurationImpl} built from the parameters previously set.
-         *
-         * @return a {@code SSTableImportConfigurationImpl} built with parameters of this
-         * {@code SSTableImportConfigurationImpl.Builder}
-         */
-        @Override
-        public SSTableImportConfigurationImpl build()
-        {
-            return new SSTableImportConfigurationImpl(this);
-        }
     }
 }

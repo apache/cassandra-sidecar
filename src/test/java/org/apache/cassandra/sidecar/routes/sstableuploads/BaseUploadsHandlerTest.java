@@ -52,7 +52,6 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
-import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.impl.SidecarConfigurationImpl;
@@ -84,20 +83,11 @@ class BaseUploadsHandlerTest
     {
         mockDelegate = mock(CassandraAdapterDelegate.class);
         TestModule testModule = new TestModule();
-        ServiceConfiguration serviceConfiguration = testModule.configuration().serviceConfiguration();
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
         when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(0F);
         sidecarConfiguration =
-        ((SidecarConfigurationImpl) testModule.configuration())
-        .unbuild()
-        .serviceConfiguration(((ServiceConfigurationImpl) serviceConfiguration)
-                              .unbuild()
-                              .requestIdleTimeoutMillis(500)
-                              .requestTimeoutMillis(1000L)
-                              .ssTableUploadConfiguration(mockSSTableUploadConfiguration)
-                              .build())
-        .build();
+        new SidecarConfigurationImpl(new ServiceConfigurationImpl(500, 1000L, mockSSTableUploadConfiguration));
         TestModuleOverride testModuleOverride = new TestModuleOverride(mockDelegate);
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(Modules.override(testModule)

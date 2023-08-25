@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.config.impl;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 /**
@@ -30,29 +29,29 @@ import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
 {
     @JsonProperty("name")
-    private final String workerPoolName;
+    protected final String workerPoolName;
 
     @JsonProperty("size")
-    private final int workerPoolSize;
+    protected final int workerPoolSize;
 
     // WorkerExecutor logs a warning if the blocking execution exceeds the max time configured.
     // It does not abort the execution. The warning messages look like this.
     // "Thread xxx has been blocked for yyy ms, time limit is zzz ms"
     @JsonProperty("max_execution_time_millis")
-    private final long workerMaxExecutionTimeMillis;
+    protected final long workerMaxExecutionTimeMillis;
 
     public WorkerPoolConfigurationImpl()
     {
-        this.workerPoolName = null;
-        this.workerPoolSize = 20;
-        this.workerMaxExecutionTimeMillis = TimeUnit.SECONDS.toMillis(60);
+        this(null, 20, TimeUnit.SECONDS.toMillis(60));
     }
 
-    protected WorkerPoolConfigurationImpl(Builder<?> builder)
+    public WorkerPoolConfigurationImpl(String workerPoolName,
+                                       int workerPoolSize,
+                                       long workerMaxExecutionTimeMillis)
     {
-        workerPoolName = builder.workerPoolName;
-        workerPoolSize = builder.workerPoolSize;
-        workerMaxExecutionTimeMillis = builder.workerMaxExecutionTimeMillis;
+        this.workerPoolName = workerPoolName;
+        this.workerPoolSize = workerPoolSize;
+        this.workerMaxExecutionTimeMillis = workerMaxExecutionTimeMillis;
     }
 
     /**
@@ -83,71 +82,5 @@ public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
     public long workerMaxExecutionTimeMillis()
     {
         return workerMaxExecutionTimeMillis;
-    }
-
-    public static Builder<?> builder()
-    {
-        return new Builder<>();
-    }
-
-    /**
-     * {@code WorkerPoolConfigurationImpl} builder static inner class.
-     * @param <T> the builder type
-     */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, WorkerPoolConfigurationImpl>
-    {
-        protected String workerPoolName;
-        protected int workerPoolSize;
-        protected long workerMaxExecutionTimeMillis;
-
-        protected Builder()
-        {
-        }
-
-        /**
-         * Sets the {@code workerPoolName} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param workerPoolName the {@code workerPoolName} to set
-         * @return a reference to this Builder
-         */
-        public T workerPoolName(String workerPoolName)
-        {
-            return update(b -> b.workerPoolName = workerPoolName);
-        }
-
-        /**
-         * Sets the {@code workerPoolSize} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param workerPoolSize the {@code workerPoolSize} to set
-         * @return a reference to this Builder
-         */
-        public T workerPoolSize(int workerPoolSize)
-        {
-            return update(b -> b.workerPoolSize = workerPoolSize);
-        }
-
-        /**
-         * Sets the {@code workerMaxExecutionTimeMillis} and returns a reference to this Builder enabling
-         * method chaining.
-         *
-         * @param workerMaxExecutionTimeMillis the {@code workerMaxExecutionTimeMillis} to set
-         * @return a reference to this Builder
-         */
-        public T workerMaxExecutionTimeMillis(long workerMaxExecutionTimeMillis)
-        {
-            return update(b -> b.workerMaxExecutionTimeMillis = workerMaxExecutionTimeMillis);
-        }
-
-        /**
-         * Returns a {@code WorkerPoolConfigurationImpl} built from the parameters previously set.
-         *
-         * @return a {@code WorkerPoolConfigurationImpl} built with parameters of this
-         * {@code WorkerPoolConfigurationImpl.Builder}
-         */
-        @Override
-        public WorkerPoolConfigurationImpl build()
-        {
-            return new WorkerPoolConfigurationImpl(this);
-        }
     }
 }

@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.config.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 
 /**
@@ -30,26 +29,29 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
     public static final String DEFAULT_TYPE = "JKS";
 
     @JsonProperty("path")
-    private final String path;
+    protected final String path;
 
     @JsonProperty("password")
-    private final String password;
+    protected final String password;
 
     @JsonProperty(value = "type", defaultValue = DEFAULT_TYPE)
-    private final String type;
+    protected final String type;
 
     public KeyStoreConfigurationImpl()
     {
-        this.path = null;
-        this.password = null;
-        this.type = DEFAULT_TYPE;
+        this(null, null, DEFAULT_TYPE);
     }
 
-    protected KeyStoreConfigurationImpl(Builder<?> builder)
+    public KeyStoreConfigurationImpl(String path, String password)
     {
-        path = builder.path;
-        password = builder.password;
-        type = builder.type;
+        this(path, password, DEFAULT_TYPE);
+    }
+
+    public KeyStoreConfigurationImpl(String path, String password, String type)
+    {
+        this.path = path;
+        this.password = password;
+        this.type = type;
     }
 
     /**
@@ -80,70 +82,5 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
     public String type()
     {
         return type;
-    }
-
-    public static Builder<?> builder()
-    {
-        return new Builder<>();
-    }
-
-    /**
-     * {@code KeyStoreConfigurationImpl} builder static inner class.
-     * @param <T> the builder type
-     */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, KeyStoreConfigurationImpl>
-    {
-        protected String path;
-        protected String password;
-        protected String type = DEFAULT_TYPE;
-
-        protected Builder()
-        {
-        }
-
-        /**
-         * Sets the {@code path} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param path the {@code path} to set
-         * @return a reference to this Builder
-         */
-        public T path(String path)
-        {
-            return update(b -> b.path = path);
-        }
-
-        /**
-         * Sets the {@code password} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param password the {@code password} to set
-         * @return a reference to this Builder
-         */
-        public T password(String password)
-        {
-            return update(b -> b.password = password);
-        }
-
-        /**
-         * Sets the {@code type} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param type the {@code type} to set
-         * @return a reference to this Builder
-         */
-        public T type(String type)
-        {
-            return update(b -> b.type = type);
-        }
-
-        /**
-         * Returns a {@code KeyStoreConfigurationImpl} built from the parameters previously set.
-         *
-         * @return a {@code KeyStoreConfigurationImpl} built with parameters of this
-         * {@code KeyStoreConfigurationImpl.Builder}
-         */
-        @Override
-        public KeyStoreConfigurationImpl build()
-        {
-            return new KeyStoreConfigurationImpl(this);
-        }
     }
 }

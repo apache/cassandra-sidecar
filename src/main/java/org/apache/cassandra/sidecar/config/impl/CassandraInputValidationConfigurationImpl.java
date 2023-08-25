@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 
 /**
@@ -66,18 +65,21 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
 
     public CassandraInputValidationConfigurationImpl()
     {
-        forbiddenKeyspaces = DEFAULT_FORBIDDEN_KEYSPACES;
-        allowedPatternForDirectory = DEFAULT_ALLOWED_CHARS_FOR_DIRECTORY;
-        allowedPatternForComponentName = DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME;
-        allowedPatternForRestrictedComponentName = DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME;
+        this(DEFAULT_FORBIDDEN_KEYSPACES,
+             DEFAULT_ALLOWED_CHARS_FOR_DIRECTORY,
+             DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME,
+             DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME);
     }
 
-    protected CassandraInputValidationConfigurationImpl(Builder builder)
+    public CassandraInputValidationConfigurationImpl(Set<String> forbiddenKeyspaces,
+                                                     String allowedPatternForDirectory,
+                                                     String allowedPatternForComponentName,
+                                                     String allowedPatternForRestrictedComponentName)
     {
-        forbiddenKeyspaces = builder.forbiddenKeyspaces;
-        allowedPatternForDirectory = builder.allowedPatternForDirectory;
-        allowedPatternForComponentName = builder.allowedPatternForComponentName;
-        allowedPatternForRestrictedComponentName = builder.allowedPatternForRestrictedComponentName;
+        this.forbiddenKeyspaces = forbiddenKeyspaces;
+        this.allowedPatternForDirectory = allowedPatternForDirectory;
+        this.allowedPatternForComponentName = allowedPatternForComponentName;
+        this.allowedPatternForRestrictedComponentName = allowedPatternForRestrictedComponentName;
     }
 
     /**
@@ -121,83 +123,5 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     public String allowedPatternForRestrictedComponentName()
     {
         return allowedPatternForRestrictedComponentName;
-    }
-
-    public static Builder builder()
-    {
-        return new Builder();
-    }
-
-    /**
-     * {@code CassandraInputValidationConfiguration} builder static inner class.
-     */
-    public static class Builder implements DataObjectBuilder<Builder, CassandraInputValidationConfigurationImpl>
-    {
-        private Set<String> forbiddenKeyspaces = DEFAULT_FORBIDDEN_KEYSPACES;
-        private String allowedPatternForDirectory = DEFAULT_ALLOWED_CHARS_FOR_DIRECTORY;
-        private String allowedPatternForComponentName = DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME;
-        private String allowedPatternForRestrictedComponentName = DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME;
-
-        protected Builder()
-        {
-        }
-
-        /**
-         * Sets the {@code forbiddenKeyspaces} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param forbiddenKeyspaces the {@code forbiddenKeyspaces} to set
-         * @return a reference to this Builder
-         */
-        public Builder forbiddenKeyspaces(Set<String> forbiddenKeyspaces)
-        {
-            return update(b -> b.forbiddenKeyspaces = forbiddenKeyspaces);
-        }
-
-        /**
-         * Sets the {@code allowedPatternForDirectory} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param allowedPatternForDirectory the {@code allowedPatternForDirectory} to set
-         * @return a reference to this Builder
-         */
-        public Builder allowedPatternForDirectory(String allowedPatternForDirectory)
-        {
-            return update(b -> b.allowedPatternForDirectory = allowedPatternForDirectory);
-        }
-
-        /**
-         * Sets the {@code allowedPatternForComponentName} and returns a reference to this Builder enabling method
-         * chaining.
-         *
-         * @param allowedPatternForComponentName the {@code allowedPatternForComponentName} to set
-         * @return a reference to this Builder
-         */
-        public Builder allowedPatternForComponentName(String allowedPatternForComponentName)
-        {
-            return update(b -> b.allowedPatternForComponentName = allowedPatternForComponentName);
-        }
-
-        /**
-         * Sets the {@code allowedPatternForRestrictedComponentName} and returns a reference to this Builder
-         * enabling method chaining.
-         *
-         * @param allowedPatternForRestrictedComponentName the {@code allowedPatternForRestrictedComponentName} to set
-         * @return a reference to this Builder
-         */
-        public Builder allowedPatternForRestrictedComponentName(String allowedPatternForRestrictedComponentName)
-        {
-            return update(b -> b.allowedPatternForRestrictedComponentName = allowedPatternForRestrictedComponentName);
-        }
-
-        /**
-         * Returns a {@code CassandraInputValidationConfiguration} built from the parameters previously set.
-         *
-         * @return a {@code CassandraInputValidationConfiguration} built with parameters of this
-         * {@code CassandraInputValidationConfiguration.Builder}
-         */
-        @Override
-        public CassandraInputValidationConfigurationImpl build()
-        {
-            return new CassandraInputValidationConfigurationImpl(this);
-        }
     }
 }

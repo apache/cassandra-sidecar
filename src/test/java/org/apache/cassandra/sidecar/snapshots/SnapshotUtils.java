@@ -125,13 +125,14 @@ public class SnapshotUtils
                                                              .stagingDir(makeStagingDir(rootPath))
                                                              .delegate(delegate1)
                                                              .build();
-        InstanceMetadataImpl localhost2 = localhost.unbuild()
-                                                   .id(2)
-                                                   .host("localhost2")
-                                                   .port(9043)
-                                                   .dataDirs(Collections.singletonList(rootPath + "/d2"))
-                                                   .delegate(delegate2)
-                                                   .build();
+        InstanceMetadataImpl localhost2 = InstanceMetadataImpl.builder()
+                                                              .id(2)
+                                                              .host("localhost2")
+                                                              .port(9043)
+                                                              .dataDirs(Collections.singletonList(rootPath + "/d2"))
+                                                              .stagingDir(makeStagingDir(rootPath))
+                                                              .delegate(delegate2)
+                                                              .build();
         List<InstanceMetadata> instanceMetas = Arrays.asList(localhost, localhost2);
         return new InstancesConfigImpl(instanceMetas, DnsResolver.DEFAULT);
     }

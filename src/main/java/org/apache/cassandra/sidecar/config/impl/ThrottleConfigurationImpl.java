@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.config.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 
 /**
@@ -43,16 +42,25 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
 
     public ThrottleConfigurationImpl()
     {
-        this.rateLimitStreamRequestsPerSecond = DEFAULT_STREAM_REQUESTS_PER_SEC;
-        this.timeoutInSeconds = DEFAULT_TIMEOUT_SEC;
-        this.delayInSeconds = DEFAULT_DELAY_SEC;
+        this(DEFAULT_STREAM_REQUESTS_PER_SEC,
+             DEFAULT_TIMEOUT_SEC,
+             DEFAULT_DELAY_SEC);
     }
 
-    protected ThrottleConfigurationImpl(Builder<?> builder)
+    public ThrottleConfigurationImpl(long rateLimitStreamRequestsPerSecond)
     {
-        rateLimitStreamRequestsPerSecond = builder.rateLimitStreamRequestsPerSecond;
-        timeoutInSeconds = builder.timeoutInSeconds;
-        delayInSeconds = builder.delayInSeconds;
+        this(rateLimitStreamRequestsPerSecond,
+             DEFAULT_TIMEOUT_SEC,
+             DEFAULT_DELAY_SEC);
+    }
+
+    public ThrottleConfigurationImpl(long rateLimitStreamRequestsPerSecond,
+                                     long timeoutInSeconds,
+                                     long delayInSeconds)
+    {
+        this.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond;
+        this.timeoutInSeconds = timeoutInSeconds;
+        this.delayInSeconds = delayInSeconds;
     }
 
     @Override
@@ -74,71 +82,5 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
     public long delayInSeconds()
     {
         return delayInSeconds;
-    }
-
-    public static Builder<?> builder()
-    {
-        return new Builder<>();
-    }
-
-    /**
-     * {@code ThrottleConfigurationImpl} builder static inner class.
-     * @param <T> the builder type
-     */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, ThrottleConfigurationImpl>
-    {
-        protected long rateLimitStreamRequestsPerSecond = DEFAULT_STREAM_REQUESTS_PER_SEC;
-        protected long timeoutInSeconds = DEFAULT_TIMEOUT_SEC;
-        protected long delayInSeconds = DEFAULT_DELAY_SEC;
-
-        protected Builder()
-        {
-        }
-
-        /**
-         * Sets the {@code rateLimitStreamRequestsPerSecond} and returns a reference to this Builder enabling
-         * method chaining.
-         *
-         * @param rateLimitStreamRequestsPerSecond the {@code rateLimitStreamRequestsPerSecond} to set
-         * @return a reference to this Builder
-         */
-        public T rateLimitStreamRequestsPerSecond(long rateLimitStreamRequestsPerSecond)
-        {
-            return update(b -> b.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond);
-        }
-
-        /**
-         * Sets the {@code timeoutInSeconds} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param timeoutInSeconds the {@code timeoutInSeconds} to set
-         * @return a reference to this Builder
-         */
-        public T timeoutInSeconds(long timeoutInSeconds)
-        {
-            return update(b -> b.timeoutInSeconds = timeoutInSeconds);
-        }
-
-        /**
-         * Sets the {@code delayInSeconds} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param delayInSeconds the {@code delayInSeconds} to set
-         * @return a reference to this Builder
-         */
-        public T delayInSeconds(long delayInSeconds)
-        {
-            return update(b -> b.delayInSeconds = delayInSeconds);
-        }
-
-        /**
-         * Returns a {@code ThrottleConfigurationImpl} built from the parameters previously set.
-         *
-         * @return a {@code ThrottleConfigurationImpl} built with parameters of this
-         * {@code ThrottleConfigurationImpl.Builder}
-         */
-        @Override
-        public ThrottleConfigurationImpl build()
-        {
-            return new ThrottleConfigurationImpl(this);
-        }
     }
 }
