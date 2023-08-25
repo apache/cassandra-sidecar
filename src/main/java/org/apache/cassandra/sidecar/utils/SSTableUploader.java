@@ -67,19 +67,21 @@ public class SSTableUploader
      * @param uploadDirectory   the absolute path to the upload directory in the target {@code fs}
      * @param componentFileName the file name of the component
      * @param expectedChecksum  for verifying upload integrity, passed in through request
+     * @param filePermissions   specifies the posix file permissions used to create the SSTable file
      * @return path of SSTable component to which data was uploaded
      */
     public Future<String> uploadComponent(ReadStream<Buffer> readStream,
                                           String uploadDirectory,
                                           String componentFileName,
-                                          String expectedChecksum)
+                                          String expectedChecksum,
+                                          String filePermissions)
     {
 
         String targetPath = StringUtils.removeEnd(uploadDirectory, File.separator)
                             + File.separatorChar + componentFileName;
 
         return fs.mkdirs(uploadDirectory) // ensure the parent directory is created
-                 .compose(v -> createTempFile(uploadDirectory, componentFileName)) // create a temporary file
+                 .compose(v -> createTempFile(uploadDirectory, componentFileName, filePermissions))
                  .compose(tempFilePath -> streamAndVerify(readStream, tempFilePath, expectedChecksum))
                  .compose(verifiedTempFilePath -> moveAtomicallyWithFallBack(verifiedTempFilePath, targetPath));
     }
@@ -102,11 +104,12 @@ public class SSTableUploader
                  }); // stream to file
     }
 
-    private Future<String> createTempFile(String uploadDirectory, String componentFileName)
+    private Future<String> createTempFile(String uploadDirectory, String componentFileName, String permissions)
     {
-        LOGGER.debug("Creating temp file in directory={} with name={}{}",
-                     uploadDirectory, componentFileName, DEFAULT_TEMP_SUFFIX);
-        return fs.createTempFile(uploadDirectory, componentFileName, DEFAULT_TEMP_SUFFIX, /* perms */ (String) null);
+        LOGGER.debug("Creating temp file in directory={} with name={}{}, permissions={}",
+                     uploadDirectory, componentFileName, DEFAULT_TEMP_SUFFIX, permissions);
+
+        return fs.createTempFile(uploadDirectory, componentFileName, DEFAULT_TEMP_SUFFIX, permissions);
     }
 
     private Future<String> moveAtomicallyWithFallBack(String source, String target)
