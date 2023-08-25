@@ -23,7 +23,14 @@ package org.apache.cassandra.sidecar.config;
  */
 public interface CacheConfiguration
 {
+    /**
+     * @return the configured amount of time in milliseconds after the entry's creation, the most recent
+     * replacement of its value, or its last access has elapsed to be considered an expired entry in the cache
+     */
     long expireAfterAccessMillis();
 
+    /**
+     * @return the maximum number of entries the cache may contain
+     */
     long maximumSize();
 }
