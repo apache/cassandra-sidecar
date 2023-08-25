@@ -123,8 +123,11 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         .compose(validRequest -> uploadPathBuilder.resolveStagingDirectory(host))
         .compose(this::ensureSufficientSpaceAvailable)
         .compose(v -> uploadPathBuilder.build(host, request))
-        .compose(uploadDirectory -> uploader.uploadComponent(httpRequest, uploadDirectory, request.component(),
-                                                             request.expectedChecksum()))
+        .compose(uploadDirectory -> uploader.uploadComponent(httpRequest,
+                                                             uploadDirectory,
+                                                             request.component(),
+                                                             request.expectedChecksum(),
+                                                             configuration.filePermissions()))
         .compose(fs::props)
         .onSuccess(fileProps -> {
             long serviceTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeInNanos);

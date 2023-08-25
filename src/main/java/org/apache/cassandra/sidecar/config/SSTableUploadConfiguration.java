@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import java.nio.file.attribute.PosixFilePermission;
+
 /**
  * Configuration for SSTable component uploads on this service
  */
@@ -32,4 +34,15 @@ public interface SSTableUploadConfiguration
      * @return the configured minimum space percentage required for an SSTable component upload
      */
     float minimumSpacePercentageRequired();
+
+    /**
+     * Returns the String representation of a set of posix file permissions used during an SSTable file upload.
+     * When an SSTable file is created the specified permissions will be used to create the file.
+     * For example, the String {@code rw-r--r--} represents the set of permissions
+     * {@link PosixFilePermission#OWNER_READ}, {@link PosixFilePermission#OWNER_WRITE},
+     * {@link PosixFilePermission#GROUP_READ}, and {@link PosixFilePermission#OTHERS_READ}.
+     *
+     * @return the String representation of a set of posix file permissions used during an SSTable file upload
+     */
+    String filePermissions();
 }

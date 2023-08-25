@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +46,15 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 
+import static java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE;
+import static java.nio.file.attribute.PosixFilePermission.GROUP_READ;
+import static java.nio.file.attribute.PosixFilePermission.GROUP_WRITE;
+import static java.nio.file.attribute.PosixFilePermission.OTHERS_EXECUTE;
+import static java.nio.file.attribute.PosixFilePermission.OTHERS_READ;
+import static java.nio.file.attribute.PosixFilePermission.OTHERS_WRITE;
+import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE;
+import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
+import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -187,6 +198,42 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         // checking if permits were released after bad requests
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", "",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.OK.code(), false);
+    }
+
+    @Test
+    public void testFilePermissionOnUpload(VertxTestContext context) throws IOException
+    {
+        String uploadId = UUID.randomUUID().toString();
+        when(mockSSTableUploadConfiguration.filePermissions()).thenReturn("rwxr-xr-x");
+
+        sendUploadRequestAndVerify(null, context, uploadId, "ks", "tbl", "without-md5.db", "",
+                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.OK.code(),
+                                   false, response -> {
+
+            Path path = temporaryFolder.toPath()
+                                       .resolve("staging")
+                                       .resolve(uploadId)
+                                       .resolve("ks")
+                                       .resolve("tbl")
+                                       .resolve("without-md5.db");
+
+            try
+            {
+                Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(path);
+                assertThat(permissions).contains(OWNER_READ,
+                                                 OWNER_WRITE,
+                                                 OWNER_EXECUTE,
+                                                 GROUP_READ,
+                                                 GROUP_EXECUTE,
+                                                 OTHERS_READ,
+                                                 OTHERS_EXECUTE);
+                assertThat(permissions).doesNotContain(GROUP_WRITE, OTHERS_WRITE);
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     private void sendUploadRequestAndVerify(VertxTestContext context,

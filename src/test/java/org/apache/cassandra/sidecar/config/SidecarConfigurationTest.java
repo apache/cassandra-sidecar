@@ -24,10 +24,12 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 
 /**
  * Tests reading Sidecar {@link SidecarConfiguration} from YAML files
@@ -111,6 +113,28 @@ class SidecarConfigurationTest
         Path yamlPath = yaml("config/sidecar_ssl.yaml");
         SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         validateMultipleInstancesSidecarConfiguration(config, true);
+    }
+
+    @Test
+    void testFilePermissions() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_file_permissions.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+
+        assertThat(config).isNotNull();
+        assertThat(config.serviceConfiguration()).isNotNull();
+        assertThat(config.serviceConfiguration().ssTableUploadConfiguration()).isNotNull();
+        assertThat(config.serviceConfiguration().ssTableUploadConfiguration().filePermissions()).isEqualTo("rw-rw-rw-");
+    }
+
+    @Test
+    void testInvalidFilePermissions()
+    {
+        Path yamlPath = yaml("config/sidecar_invalid_file_permissions.yaml");
+        assertThatExceptionOfType(JsonMappingException.class)
+        .isThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
+        .withRootCauseInstanceOf(IllegalArgumentException.class)
+        .withMessageContaining("Invalid file_permissions configuration=\"not-valid\"");
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
