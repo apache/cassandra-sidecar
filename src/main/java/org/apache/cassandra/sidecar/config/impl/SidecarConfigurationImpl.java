@@ -206,7 +206,6 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
 
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
                               .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
-                              .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
                               .configure(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS, true)
                               .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                               .registerModule(simpleModule);
