@@ -57,13 +57,13 @@ public class SidecarClient implements AutoCloseable
 
     public SidecarClient(SidecarInstancesProvider instancesProvider,
                          RequestExecutor requestExecutor,
-                         SidecarConfig sidecarConfig,
+                         SidecarClientConfig sidecarClientConfig,
                          RetryPolicy defaultRetryPolicy)
     {
         this.defaultRetryPolicy = defaultRetryPolicy;
-        ignoreConflictRetryPolicy = new IgnoreConflictRetryPolicy(sidecarConfig.maxRetries(),
-                                                                  sidecarConfig.retryDelayMillis(),
-                                                                  sidecarConfig.maxRetryDelayMillis());
+        ignoreConflictRetryPolicy = new IgnoreConflictRetryPolicy(sidecarClientConfig.maxRetries(),
+                                                                  sidecarClientConfig.retryDelayMillis(),
+                                                                  sidecarClientConfig.maxRetryDelayMillis());
         baseBuilder = new RequestContext.Builder()
                       .instanceSelectionPolicy(new RandomInstanceSelectionPolicy(instancesProvider))
                       .retryPolicy(defaultRetryPolicy);

@@ -40,18 +40,18 @@ public class VertxSidecarClientTest extends SidecarClientTest
                                             .userAgent("cassandra-sidecar-test/0.0.1")
                                             .build();
 
-        SidecarConfig sidecarConfig = new SidecarConfig.Builder().maxRetries(instances.size())
-                                                                 .retryDelayMillis(50)
-                                                                 .maxRetryDelayMillis(100)
-                                                                 .build();
+        SidecarClientConfig sidecarClientConfig = new SidecarClientConfig.Builder().maxRetries(instances.size())
+                                                                                   .retryDelayMillis(50)
+                                                                                   .maxRetryDelayMillis(100)
+                                                                                   .build();
 
-        RetryPolicy defaultRetryPolicy = new ExponentialBackoffRetryPolicy(sidecarConfig.maxRetries(),
-                                                                           sidecarConfig.retryDelayMillis(),
-                                                                           sidecarConfig.maxRetryDelayMillis());
+        RetryPolicy defaultRetryPolicy = new ExponentialBackoffRetryPolicy(sidecarClientConfig.maxRetries(),
+                                                                           sidecarClientConfig.retryDelayMillis(),
+                                                                           sidecarClientConfig.maxRetryDelayMillis());
 
         VertxHttpClient vertxHttpClient = new VertxHttpClient(vertx, httpClientConfig);
         VertxRequestExecutor requestExecutor = new VertxRequestExecutor(vertxHttpClient);
         SimpleSidecarInstancesProvider instancesProvider = new SimpleSidecarInstancesProvider(instances);
-        return new SidecarClient(instancesProvider, requestExecutor, sidecarConfig, defaultRetryPolicy);
+        return new SidecarClient(instancesProvider, requestExecutor, sidecarClientConfig, defaultRetryPolicy);
     }
 }

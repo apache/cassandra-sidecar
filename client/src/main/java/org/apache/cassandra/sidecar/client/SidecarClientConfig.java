@@ -22,7 +22,7 @@ package org.apache.cassandra.sidecar.client;
 /**
  * Encapsulates configurations for the {@link SidecarClient}
  */
-public class SidecarConfig
+public class SidecarClientConfig
 {
     private static final int DEFAULT_MAX_RETRIES = 3;
     private static final long DEFAULT_RETRY_DELAY_MILLIS = 500L;
@@ -32,7 +32,7 @@ public class SidecarConfig
     private final long retryDelayMillis;
     private final long maxRetryDelayMillis;
 
-    private SidecarConfig(Builder builder)
+    private SidecarClientConfig(Builder builder)
     {
         maxRetries = builder.maxRetries;
         retryDelayMillis = builder.retryDelayMillis;
@@ -113,9 +113,9 @@ public class SidecarConfig
          *
          * @return a {@code SidecarConfig} built with parameters of this {@code SidecarConfig.Builder}
          */
-        public SidecarConfig build()
+        public SidecarClientConfig build()
         {
-            return new SidecarConfig(this);
+            return new SidecarClientConfig(this);
         }
     }
 }
