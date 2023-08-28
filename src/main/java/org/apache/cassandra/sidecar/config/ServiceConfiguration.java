@@ -29,7 +29,7 @@ public interface ServiceConfiguration
     String INTERNAL_POOL = "internal";
 
     /**
-     * Sidecar's HTTP REST API listen address
+     * @return Sidecar's HTTP REST API listen address
      */
     String host();
 
@@ -47,7 +47,7 @@ public interface ServiceConfiguration
     int requestIdleTimeoutMillis();
 
     /**
-     * Determines if a response will timeout if the response has not been written after a certain time.
+     * @return the amount of time in millis when a response is considered as timed-out after data has not been written
      */
     long requestTimeoutMillis();
 
