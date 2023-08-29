@@ -18,7 +18,8 @@
 #
 
 set -xe
-BRANCHES=${BRANCHES:-cassandra-4.0 trunk}
+BRANCHES=( ${BRANCHES:-cassandra-4.0 trunk} )
+CASSANDRA_SHAS_ARRAY=( ${CASSANDRA_SHAS} )
 REPO=${REPO:-"https://github.com/apache/cassandra.git"}
 SCRIPT_DIR=$( dirname -- "$( readlink -f -- "$0"; )"; )
 DTEST_JAR_DIR="$(dirname "${SCRIPT_DIR}/")/dtest-jars"
@@ -31,17 +32,33 @@ mkdir -p ~/.ssh
 REPO_HOST=$(get_hostname "${REPO}")
 ssh-keyscan "${REPO_HOST}" >> ~/.ssh/known_hosts || true
 
-for branch in $BRANCHES; do
+for index in "${!BRANCHES[@]}"; do
   cd "${BUILD_DIR}"
+  branch=${BRANCHES[$index]}
+  sha=${CASSANDRA_SHAS_ARRAY[$index]}
+  echo "index ${index} branch ${branch} sha ${sha}"
   # check out the correct cassandra version:
   if [ ! -d "${branch}" ] ; then
-    git clone --depth 1 --single-branch --branch "${branch}" "${REPO}" "${branch}"
-    cd "${branch}"
+    if [ -n "${sha}" ] ; then
+      mkdir -p "${branch}"
+      cd "${branch}"
+      git init
+      git remote add upstream "${REPO}"
+      git fetch --depth=1 upstream "${sha}"
+      git reset --hard FETCH_HEAD
+    else
+      git clone --depth 1 --single-branch --branch "${branch}" "${REPO}" "${branch}"
+      cd "${branch}"
+    fi
   else
     cd "${branch}"
-    git pull
+    if [ -z "${sha}" ] ; then
+      git pull
+    fi
   fi
-  git checkout "${branch}"
+  if [ -z "${sha}" ] ; then
+    git checkout "${branch}"
+  fi
   git clean -fd
   CASSANDRA_VERSION=$(cat build.xml | grep 'property name="base.version"' | awk -F "\"" '{print $4}')
   # Loop to prevent failure due to maven-ant-tasks not downloading a jar.
