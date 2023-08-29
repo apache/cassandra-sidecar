@@ -85,7 +85,6 @@ public class MainModule extends AbstractModule
     {
         return Vertx.vertx(new VertxOptions().setMetricsOptions(new DropwizardMetricsOptions()
                                                                 .setEnabled(true)
-                                                                .setRegistryName("cassandra-sidecar-metrics-registry")
                                                                 .setJmxEnabled(true)
                                                                 .setJmxDomain("cassandra-sidecar-metrics")));
     }
