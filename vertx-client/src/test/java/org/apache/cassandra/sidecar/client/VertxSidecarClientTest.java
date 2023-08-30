@@ -40,10 +40,11 @@ public class VertxSidecarClientTest extends SidecarClientTest
                                             .userAgent("cassandra-sidecar-test/0.0.1")
                                             .build();
 
-        SidecarClientConfig sidecarClientConfig = new SidecarClientConfig.Builder().maxRetries(instances.size())
-                                                                                   .retryDelayMillis(50)
-                                                                                   .maxRetryDelayMillis(100)
-                                                                                   .build();
+        SidecarClientConfig sidecarClientConfig = SidecarClientConfigImpl.builder()
+                                                                         .maxRetries(instances.size())
+                                                                         .retryDelayMillis(50)
+                                                                         .maxRetryDelayMillis(100)
+                                                                         .build();
 
         RetryPolicy defaultRetryPolicy = new ExponentialBackoffRetryPolicy(sidecarClientConfig.maxRetries(),
                                                                            sidecarClientConfig.retryDelayMillis(),
