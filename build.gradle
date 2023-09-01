@@ -429,6 +429,7 @@ rat {
 }
 
 integrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
+compileIntegrationTestJava.onlyIf { "true" != System.getenv("skipIntegrationTest") }
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia
