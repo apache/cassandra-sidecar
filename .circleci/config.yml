@@ -61,7 +61,7 @@ jobs:
   # Runs java 8 tests on a docker image
   unit_java8:
     docker:
-     - image: circleci/openjdk:8-jdk-stretch
+     - image: cimg/openjdk:8.0
     environment:
       skipIntegrationTest: true
     steps:
@@ -110,7 +110,7 @@ jobs:
   # Runs java 11 tests on a docker image
   unit_java11:
     docker:
-      - image: circleci/openjdk:11-jdk-stretch
+      - image: cimg/openjdk:11.0
     environment:
       skipIntegrationTest: true
     steps:
