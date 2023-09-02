@@ -59,15 +59,13 @@ commands:
 
 jobs:
   # Runs java 8 tests on a docker image
-  java8:
+  unit_java8:
     docker:
      - image: circleci/openjdk:8-jdk-stretch
-    resource_class: large
+    environment:
+      skipIntegrationTest: true
     steps:
      - checkout
-
-     - run: CASSANDRA_SHAS="d13b3ef61b9afbd04878c988c7b722507674228c 8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
-     - run: echo 'export DTEST_JAR=$(find dtest-jars -name 'dtest-4.1*.jar' -type f -maxdepth 1 -exec basename {} \;)' >> "$BASH_ENV"
      - run: ./gradlew --info check --stacktrace -Dcassandra.sidecar.versions_to_test="4.0,4.1"
 
      - store_artifacts:
@@ -77,17 +75,95 @@ jobs:
      - store_test_results:
          path: build/test-results/
 
+  integration_cassandra_40_java8:
+    docker:
+     - image: circleci/openjdk:8-jdk-stretch
+    steps:
+     - checkout
+
+     - run: CASSANDRA_SHAS="d13b3ef61b9afbd04878c988c7b722507674228c" BRANCHES="cassandra-4.0" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
+     - run: ./gradlew -PdtestVersion=4.0.12 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+
+     - store_artifacts:
+         path: build/reports
+         destination: test-reports
+
+     - store_test_results:
+         path: build/test-results/
+
+  integration_cassandra_41_java8:
+    docker:
+     - image: circleci/openjdk:8-jdk-stretch
+    steps:
+     - checkout
+
+     - run: CASSANDRA_SHAS="8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.1" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
+     - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.1" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+
+     - store_artifacts:
+         path: build/reports
+         destination: test-reports
+
+     - store_test_results:
+         path: build/test-results/
+
   # Runs java 11 tests on a docker image
-  java11:
+  unit_java11:
+    docker:
+      - image: circleci/openjdk:11-jdk-stretch
+    environment:
+      skipIntegrationTest: true
+    steps:
+      - checkout
+      - run: ./gradlew --info check -x integrationTest --stacktrace
+
+      - store_artifacts:
+          path: build/reports
+          destination: test-reports
+
+      - store_test_results:
+          path: build/test-results/
+
+  integration_cassandra_40_java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
     resource_class: large
     steps:
       - checkout
+      - run: CASSANDRA_SHAS="d13b3ef61b9afbd04878c988c7b722507674228c" BRANCHES="cassandra-4.0" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
+      - run: ./gradlew -PdtestVersion=4.0.12 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
-      - run: CASSANDRA_SHAS="d13b3ef61b9afbd04878c988c7b722507674228c cbaef9094e83364e6812c65b8411ff7dbffaf9c6" BRANCHES="cassandra-4.0 trunk" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
-      - run: echo 'export DTEST_JAR=$(find dtest-jars -name 'dtest-5.*.jar' -type f -maxdepth 1 -exec basename {} \;)' >> "$BASH_ENV"
-      - run: ./gradlew --info check --stacktrace
+      - store_artifacts:
+          path: build/reports
+          destination: test-reports
+
+      - store_test_results:
+          path: build/test-results/
+
+  integration_cassandra_50_java11:
+    docker:
+      - image: circleci/openjdk:11-jdk-stretch
+    resource_class: large
+    steps:
+      - checkout
+      - run: CASSANDRA_SHAS="410018ab165b54c378648d52fb4ec815c557e80e" BRANCHES="cassandra-5.0" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
+      - run: ./gradlew -PdtestVersion=5.0.0 -Dcassandra.sidecar.versions_to_test="5.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+
+      - store_artifacts:
+          path: build/reports
+          destination: test-reports
+
+      - store_test_results:
+          path: build/test-results/
+
+  integration_cassandra_trunk_java11:
+    docker:
+      - image: circleci/openjdk:11-jdk-stretch
+    resource_class: large
+    steps:
+      - checkout
+      - run: CASSANDRA_SHAS="cbaef9094e83364e6812c65b8411ff7dbffaf9c6" BRANCHES="trunk" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
+      - run: ./gradlew -PdtestVersion=5.0-alpha1 -Dcassandra.sidecar.versions_to_test="5.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -138,25 +214,65 @@ workflows:
   version: 2
   build-and-test:
     jobs:
-      - java8
-      - java11
+      - unit_java8
+      - integration_cassandra_40_java8:
+          requires:
+            - unit_java8
+      - integration_cassandra_41_java8:
+          requires:
+            - unit_java8
+      - unit_java11
+      - integration_cassandra_40_java11:
+          requires:
+            - unit_java11
+      - integration_cassandra_50_java11:
+          requires:
+            - unit_java11
+      - integration_cassandra_trunk_java11:
+          requires:
+            - unit_java11
       - docs_build:
           requires:
-            - java8
-            - java11
+            - unit_java8
+            - integration_cassandra_40_java8
+            - integration_cassandra_41_java8
+            - unit_java11
+            - integration_cassandra_40_java11
+            - integration_cassandra_50_java11
+            - integration_cassandra_trunk_java11
       - docker_build:
           requires:
-            - java8
-            - java11
+            - unit_java8
+            - integration_cassandra_40_java8
+            - integration_cassandra_41_java8
+            - unit_java11
+            - integration_cassandra_40_java11
+            - integration_cassandra_50_java11
+            - integration_cassandra_trunk_java11
       - rpm_build_install:
           requires:
-            - java8
-            - java11
+            - unit_java8
+            - integration_cassandra_40_java8
+            - integration_cassandra_41_java8
+            - unit_java11
+            - integration_cassandra_40_java11
+            - integration_cassandra_50_java11
+            - integration_cassandra_trunk_java11
       - deb_build_install:
           requires:
-            - java8
-            - java11
+            - unit_java8
+            - integration_cassandra_40_java8
+            - integration_cassandra_41_java8
+            - unit_java11
+            - integration_cassandra_40_java11
+            - integration_cassandra_50_java11
+            - integration_cassandra_trunk_java11
       - docker_build:
           requires:
-            - java8
-            - java11
+            - unit_java8
+            - integration_cassandra_40_java8
+            - integration_cassandra_41_java8
+            - unit_java11
+            - integration_cassandra_40_java11
+            - integration_cassandra_50_java11
+            - integration_cassandra_trunk_java11
