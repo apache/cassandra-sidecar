@@ -426,9 +426,9 @@ rat {
     reportDir.set(file("build/reports/rat"))
 }
 
-//compileIntegrationTestJava.onlyIf { "true" != System.getenv("skipIntegrationTest") }
-//checkstyleIntegrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
-//spotbugsIntegrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
+compileIntegrationTestJava.onlyIf { "true" != System.getenv("skipIntegrationTest") }
+checkstyleIntegrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
+spotbugsIntegrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia
