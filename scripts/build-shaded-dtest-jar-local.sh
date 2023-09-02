@@ -20,7 +20,7 @@
 set -xe
 
 ARTIFACT_NAME=cassandra-dtest
-REPO_DIR="$(pwd)/out"
+REPO_DIR="${M2_HOME:-${HOME}/.m2/repository}"
 SCRIPT_DIR=$( dirname -- "$( readlink -f -- "$0"; )"; )
 CASSANDRA_VERSION=$(cat build.xml | grep 'property name="base.version"' | awk -F "\"" '{print $4}')
 GIT_HASH=$(git rev-parse --short HEAD)
@@ -53,5 +53,15 @@ ant dtest-jar -Dno-checkstyle=true
                      -DoutputFilePath="${DTEST_JAR_DIR}/dtest-${CASSANDRA_VERSION}.jar" \
                      -Drelocation.prefix="shaded-${GIT_HASH}"                           \
                      --no-snapshot-updates --update-snapshots
+
+# Install the shaded version
+"${SCRIPT_DIR}/mvnw" install:install-file                                     \
+                     -Dfile="${DTEST_JAR_DIR}/dtest-${CASSANDRA_VERSION}.jar" \
+                     -DgroupId=org.apache.cassandra                           \
+                     -DartifactId="${DTEST_ARTIFACT_ID}-all"                  \
+                     -Dversion="${CASSANDRA_VERSION}"                         \
+                     -Dpackaging=jar                                          \
+                     -DgeneratePom=true                                       \
+                     -DlocalRepositoryPath="${REPO_DIR}"
 
 set +xe

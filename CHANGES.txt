@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Split unit tests and integration tests in CircleCI config (CASSANDRASC-72)
  * Allow configuring permissions for uploaded SSTables (CASSANDRASC-71)
  * Refactor Sidecar configuration (CASSANDRASC-69)
  * Add Client Methods for Obtaining Sidecar and Cassandra Health (CASSANDRASC-70)

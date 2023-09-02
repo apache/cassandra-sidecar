@@ -18,12 +18,24 @@
 #
 
 set -xe
-BRANCHES=( ${BRANCHES:-cassandra-4.0 trunk} )
-CASSANDRA_SHAS_ARRAY=( ${CASSANDRA_SHAS} )
+CANDIDATE_BRANCHES=(
+  "cassandra-4.0:d13b3ef61b9afbd04878c988c7b722507674228c"
+  "cassandra-4.1:8666265521c97a5e726c9d38762028a14325e4dc"
+  "cassandra-5.0:410018ab165b54c378648d52fb4ec815c557e80e"
+  "trunk:cbaef9094e83364e6812c65b8411ff7dbffaf9c6"
+)
+BRANCHES=( ${BRANCHES:-cassandra-4.0 cassandra-4.1 cassandra-5.0 trunk} )
+echo ${BRANCHES[*]}
 REPO=${REPO:-"https://github.com/apache/cassandra.git"}
 SCRIPT_DIR=$( dirname -- "$( readlink -f -- "$0"; )"; )
 DTEST_JAR_DIR="$(dirname "${SCRIPT_DIR}/")/dtest-jars"
 BUILD_DIR="${DTEST_JAR_DIR}/build"
+
+if [[ "x$CLEAN" != "x" ]]; then
+  echo "Clean up $DTEST_JAR_DIR"
+  rm -rf $DTEST_JAR_DIR
+fi
+
 source "$SCRIPT_DIR/functions.sh"
 mkdir -p "${BUILD_DIR}"
 
@@ -32,10 +44,17 @@ mkdir -p ~/.ssh
 REPO_HOST=$(get_hostname "${REPO}")
 ssh-keyscan "${REPO_HOST}" >> ~/.ssh/known_hosts || true
 
-for index in "${!BRANCHES[@]}"; do
+for index in "${!CANDIDATE_BRANCHES[@]}"; do
   cd "${BUILD_DIR}"
-  branch=${BRANCHES[$index]}
-  sha=${CASSANDRA_SHAS_ARRAY[$index]}
+  branchSha=(${CANDIDATE_BRANCHES[$index]//:/ })
+  branch=${branchSha[0]}
+  sha=${branchSha[1]}
+
+  if ! [[ "${BRANCHES[@]}" =~ "$branch" ]]; then
+    echo "branch ${branch} is not selected to build. The selected branches are ${BRANCHES[*]}"
+    continue
+  fi
+
   echo "index ${index} branch ${branch} sha ${sha}"
   # check out the correct cassandra version:
   if [ ! -d "${branch}" ] ; then
