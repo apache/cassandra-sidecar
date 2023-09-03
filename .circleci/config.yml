@@ -81,7 +81,7 @@ jobs:
     steps:
      - checkout
 
-     - run: CASSANDRA_SHAS="d13b3ef61b9afbd04878c988c7b722507674228c" BRANCHES="cassandra-4.0" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
+     - run: CASSANDRA_SHAS="d13b3ef61b9afbd04878c988c7b722507674228c" BRANCHES="cassandra-4.0" scripts/build-dtest-jars.sh
      - run: ./gradlew -PdtestVersion=4.0.12 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
      - store_artifacts:
@@ -97,7 +97,7 @@ jobs:
     steps:
      - checkout
 
-     - run: CASSANDRA_SHAS="8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.1" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
+     - run: CASSANDRA_SHAS="8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.1" scripts/build-dtest-jars.sh
      - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.1" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
      - store_artifacts:
@@ -127,6 +127,8 @@ jobs:
   integration_cassandra_40_java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
+    environment:
+      M2_HOME: "/home/circleci/.m2/repository/"
     resource_class: large
     steps:
       - checkout
