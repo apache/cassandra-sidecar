@@ -81,7 +81,7 @@ jobs:
     steps:
      - checkout
      # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
-     - run: CASSANDRA_SHAS="8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.1" scripts/build-dtest-jars.sh
+     - run: CASSANDRA_SHAS="d13b3ef61b9afbd04878c988c7b722507674228c 8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
      - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
      - store_artifacts:
@@ -126,11 +126,10 @@ jobs:
   integration_cassandra_40_java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
-    resource_class: large
     steps:
       - checkout
       # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
-      - run: CASSANDRA_SHAS="8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.1" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
+      - run: CASSANDRA_SHAS="d13b3ef61b9afbd04878c988c7b722507674228c 8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.0 cassandra-4.1" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
       - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
@@ -143,7 +142,6 @@ jobs:
   integration_cassandra_50_java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
-    resource_class: large
     steps:
       - checkout
       - run: CASSANDRA_SHAS="410018ab165b54c378648d52fb4ec815c557e80e" BRANCHES="cassandra-5.0" scripts/build-dtest-jars.sh
@@ -159,7 +157,6 @@ jobs:
   integration_cassandra_trunk_java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
-    resource_class: large
     steps:
       - checkout
       - run: CASSANDRA_SHAS="cbaef9094e83364e6812c65b8411ff7dbffaf9c6" BRANCHES="trunk" scripts/build-dtest-jars.sh
