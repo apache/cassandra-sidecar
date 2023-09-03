@@ -127,8 +127,6 @@ jobs:
   integration_cassandra_40_java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
-    environment:
-      M2_HOME: "/home/circleci/.m2/repository/"
     resource_class: large
     steps:
       - checkout
