@@ -147,7 +147,7 @@ jobs:
     steps:
       - checkout
       - run: CASSANDRA_SHAS="410018ab165b54c378648d52fb4ec815c557e80e" BRANCHES="cassandra-5.0" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
-      - run: ./gradlew -PdtestVersion=5.0.0 -Dcassandra.sidecar.versions_to_test="5.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - run: ./gradlew -PdtestVersion=5.0-alpha1 -Dcassandra.sidecar.versions_to_test="5.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -163,7 +163,7 @@ jobs:
     steps:
       - checkout
       - run: CASSANDRA_SHAS="cbaef9094e83364e6812c65b8411ff7dbffaf9c6" BRANCHES="trunk" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
-      - run: ./gradlew -PdtestVersion=5.0-alpha1 -Dcassandra.sidecar.versions_to_test="5.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - run: ./gradlew -PdtestVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
