@@ -82,7 +82,7 @@ jobs:
      - checkout
      # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
      - run: CASSANDRA_SHAS="8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.1" scripts/build-dtest-jars.sh
-     - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test=4.0 --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+     - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
      - store_artifacts:
          path: build/reports
@@ -131,7 +131,7 @@ jobs:
       - checkout
       # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
       - run: CASSANDRA_SHAS="8666265521c97a5e726c9d38762028a14325e4dc" BRANCHES="cassandra-4.1" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
-      - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test=4.0 --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
