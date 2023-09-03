@@ -183,9 +183,6 @@ dependencies {
     implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
     implementation(group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: "${project.jacksonVersion}")
 
-    runtimeOnly group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
-    runtimeOnly group: 'org.yaml', name: 'snakeyaml', version: '1.26'
-
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
