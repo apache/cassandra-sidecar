@@ -116,6 +116,13 @@ public class InstanceMetadataImpl implements InstanceMetadata
             delegate = instanceMetadata.delegate;
         }
 
+        @SuppressWarnings("unchecked")
+        @Override
+        public T self()
+        {
+            return (T) this;
+        }
+
         /**
          * Sets the {@code id} and returns a reference to this Builder enabling method chaining.
          *
@@ -187,6 +194,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          *
          * @return a {@code InstanceMetadataImpl} built with parameters of this {@code InstanceMetadataImpl.Builder}
          */
+        @Override
         public InstanceMetadataImpl build()
         {
             return new InstanceMetadataImpl(this);

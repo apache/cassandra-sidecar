@@ -33,11 +33,7 @@ public interface DataObjectBuilder<T extends DataObjectBuilder<?, ?>, R>
      *
      * @return type of implementor class
      */
-    @SuppressWarnings("unchecked")
-    default T self()
-    {
-        return (T) this;
-    }
+    T self();
 
     /**
      * Build into data object of type R

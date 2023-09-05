@@ -88,6 +88,13 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
         {
         }
 
+        @SuppressWarnings("unchecked")
+        @Override
+        public T self()
+        {
+            return (T) this;
+        }
+
         /**
          * Sets the {@code maxRetries} and returns a reference to this Builder enabling method chaining.
          *
