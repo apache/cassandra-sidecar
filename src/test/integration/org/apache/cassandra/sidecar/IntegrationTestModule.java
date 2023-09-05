@@ -26,10 +26,10 @@ import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
-import org.apache.cassandra.sidecar.config.impl.SSTableUploadConfigurationImpl;
-import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
-import org.apache.cassandra.sidecar.config.impl.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.config.impl.ThrottleConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SSTableUploadConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.ThrottleConfigurationImpl;
 import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
 
 /**

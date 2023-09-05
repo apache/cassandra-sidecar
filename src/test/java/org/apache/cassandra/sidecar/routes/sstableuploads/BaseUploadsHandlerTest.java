@@ -53,8 +53,8 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
-import org.apache.cassandra.sidecar.config.impl.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;

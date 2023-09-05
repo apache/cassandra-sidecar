@@ -34,9 +34,9 @@ import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.config.impl.CacheConfigurationImpl;
-import org.apache.cassandra.sidecar.config.impl.SSTableImportConfigurationImpl;
-import org.apache.cassandra.sidecar.config.impl.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SSTableImportConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

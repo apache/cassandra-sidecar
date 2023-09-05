@@ -25,9 +25,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.config.SslConfiguration;
-import org.apache.cassandra.sidecar.config.impl.KeyStoreConfigurationImpl;
-import org.apache.cassandra.sidecar.config.impl.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.config.impl.SslConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 

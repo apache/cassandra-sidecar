@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.config.impl;
+package org.apache.cassandra.sidecar.config.yaml;
 
 import java.io.IOException;
 import java.nio.file.Path;
