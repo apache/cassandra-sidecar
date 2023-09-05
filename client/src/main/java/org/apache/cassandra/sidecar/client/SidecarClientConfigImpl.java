@@ -34,7 +34,7 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
     protected final long retryDelayMillis;
     protected final long maxRetryDelayMillis;
 
-    private SidecarClientConfigImpl(Builder<?> builder)
+    private SidecarClientConfigImpl(Builder builder)
     {
         maxRetries = builder.maxRetries;
         retryDelayMillis = builder.retryDelayMillis;
@@ -68,17 +68,15 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
         return maxRetryDelayMillis;
     }
 
-    public static Builder<?> builder()
+    public static Builder builder()
     {
-        return new Builder<>();
+        return new Builder();
     }
 
     /**
      * {@code SidecarConfig} builder static inner class.
-     *
-     * @param <T> the type of the Builder class
      */
-    public static class Builder<T extends Builder<?>> implements DataObjectBuilder<T, SidecarClientConfig>
+    public static class Builder implements DataObjectBuilder<Builder, SidecarClientConfig>
     {
         protected int maxRetries = DEFAULT_MAX_RETRIES;
         protected long retryDelayMillis = DEFAULT_RETRY_DELAY_MILLIS;
@@ -88,11 +86,10 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
         {
         }
 
-        @SuppressWarnings("unchecked")
         @Override
-        public T self()
+        public Builder self()
         {
-            return (T) this;
+            return this;
         }
 
         /**
@@ -101,7 +98,7 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
          * @param maxRetries the {@code maxRetries} to set
          * @return a reference to this Builder
          */
-        public T maxRetries(int maxRetries)
+        public Builder maxRetries(int maxRetries)
         {
             return update(b -> b.maxRetries = maxRetries);
         }
@@ -112,7 +109,7 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
          * @param retryDelayMillis the {@code retryDelayMillis} to set
          * @return a reference to this Builder
          */
-        public T retryDelayMillis(long retryDelayMillis)
+        public Builder retryDelayMillis(long retryDelayMillis)
         {
             return update(b -> b.retryDelayMillis = retryDelayMillis);
         }
@@ -123,7 +120,7 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
          * @param maxRetryDelayMillis the {@code maxRetryDelayMillis} to set
          * @return a reference to this Builder
          */
-        public T maxRetryDelayMillis(long maxRetryDelayMillis)
+        public Builder maxRetryDelayMillis(long maxRetryDelayMillis)
         {
             return update(b -> b.maxRetryDelayMillis = maxRetryDelayMillis);
         }
