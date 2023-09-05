@@ -45,12 +45,12 @@ public interface DataObjectBuilder<T extends DataObjectBuilder<?, ?>, R>
     /**
      * Updates a field in the builder
      *
-     * @param mutation function to mutate fields
+     * @param updater function to mutate fields
      * @return builder itself for chained invocation
      */
-    default T update(Consumer<? super T> mutation)
+    default T update(Consumer<? super T> updater)
     {
-        mutation.accept(self());
+        updater.accept(self());
         return self();
     }
 }
