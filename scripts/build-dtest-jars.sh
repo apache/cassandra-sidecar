@@ -19,7 +19,7 @@
 
 set -xe
 BRANCHES=( ${BRANCHES:-cassandra-4.0 trunk} )
-CASSANDRA_SHAS_ARRAY=( ${CASSANDRA_SHAS} )
+CASSANDRA_SHAS_ARRAY=( ${CASSANDRA_SHAS:-d13b3ef61b9afbd04878c988c7b722507674228c cbaef9094e83364e6812c65b8411ff7dbffaf9c6} )
 REPO=${REPO:-"https://github.com/apache/cassandra.git"}
 SCRIPT_DIR=$( dirname -- "$( readlink -f -- "$0"; )"; )
 DTEST_JAR_DIR="$(dirname "${SCRIPT_DIR}/")/dtest-jars"
