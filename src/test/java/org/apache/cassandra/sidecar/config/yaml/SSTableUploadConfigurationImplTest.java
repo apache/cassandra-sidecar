@@ -43,7 +43,7 @@ class SSTableUploadConfigurationImplTest
     {
         assertThatIllegalArgumentException()
         .isThrownBy(() -> new SSTableUploadConfigurationImpl(value))
-        .withMessage("Invalid filePermissions configuration=\"" + value + "\"");
+        .withMessage("Invalid file_permissions configuration=\"" + value + "\"");
     }
 
     @ParameterizedTest(name = "{index} => valid permission string \"{0}\"")
