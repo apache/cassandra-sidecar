@@ -78,6 +78,10 @@ jobs:
   integration_cassandra_40_java8:
     docker:
      - image: circleci/openjdk:8-jdk-stretch
+    environment:
+      INTEGRATION_MAX_PARALLEL_FORKS: 1
+      INTEGRATION_MAX_HEAP_SIZE: "6g"
+    resource_class: large
     steps:
      - checkout
      # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
@@ -94,6 +98,10 @@ jobs:
   integration_cassandra_41_java8:
     docker:
      - image: circleci/openjdk:8-jdk-stretch
+    environment:
+      INTEGRATION_MAX_PARALLEL_FORKS: 1
+      INTEGRATION_MAX_HEAP_SIZE: "6g"
+    resource_class: large
     steps:
      - checkout
      - run: BRANCHES="cassandra-4.1" scripts/build-dtest-jars.sh
@@ -126,6 +134,10 @@ jobs:
   integration_cassandra_40_java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
+    environment:
+      INTEGRATION_MAX_PARALLEL_FORKS: 1
+      INTEGRATION_MAX_HEAP_SIZE: "6g"
+    resource_class: large
     steps:
       - checkout
       # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
@@ -142,10 +154,14 @@ jobs:
   integration_cassandra_50_java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
+    environment:
+      INTEGRATION_MAX_PARALLEL_FORKS: 1
+      INTEGRATION_MAX_HEAP_SIZE: "6g"
+    resource_class: large
     steps:
       - checkout
       - run: BRANCHES="cassandra-5.0" scripts/build-dtest-jars.sh
-      - run: ./gradlew -PdtestVersion=5.0-alpha1 -Dcassandra.sidecar.versions_to_test="5.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - run: ./gradlew -PdtestVersion=5.0-alpha2 -Dcassandra.sidecar.versions_to_test="5.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -157,6 +173,10 @@ jobs:
   integration_cassandra_trunk_java11:
     docker:
       - image: circleci/openjdk:11-jdk-stretch
+    environment:
+      INTEGRATION_MAX_PARALLEL_FORKS: 1
+      INTEGRATION_MAX_HEAP_SIZE: "6g"
+    resource_class: large
     steps:
       - checkout
       - run: BRANCHES="trunk" scripts/build-dtest-jars.sh

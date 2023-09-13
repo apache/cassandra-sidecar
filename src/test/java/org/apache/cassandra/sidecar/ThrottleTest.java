@@ -57,7 +57,6 @@ public class ThrottleTest
     @BeforeEach
     void setUp() throws InterruptedException
     {
-
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
         server = injector.getInstance(HttpServer.class);
         vertx = injector.getInstance(Vertx.class);

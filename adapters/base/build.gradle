@@ -17,6 +17,8 @@
  * under the License.
  */
 
+import java.nio.file.Paths
+
 plugins {
     id 'java-library'
     id 'idea'
@@ -36,6 +38,14 @@ repositories {
 
 test {
     useJUnitPlatform()
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+    reports {
+        junitXml.enabled = true
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "adapters-base").toFile()
+        println("Destination directory for adapters-base tests: ${destDir}")
+        junitXml.destination = destDir
+        html.enabled = true
+    }
 }
 
 dependencies {

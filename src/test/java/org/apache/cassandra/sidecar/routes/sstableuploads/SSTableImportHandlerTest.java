@@ -82,7 +82,8 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                   JsonObject error = response.bodyAsJsonObject();
                   assertThat(error.getInteger("code")).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
                   assertThat(error.getString("status")).isEqualTo("Bad Request");
-                  assertThat(error.getString("message")).isEqualTo("Invalid characters in keyspace: _n$ks_");
+                  assertThat(error.getString("message"))
+                  .isEqualTo("Invalid characters in keyspace: _n$ks_");
                   context.completeNow();
               })));
     }
@@ -98,7 +99,8 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                   JsonObject error = response.bodyAsJsonObject();
                   assertThat(error.getInteger("code")).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
                   assertThat(error.getString("status")).isEqualTo("Bad Request");
-                  assertThat(error.getString("message")).isEqualTo("Invalid characters in table name: _n$t_valid_");
+                  assertThat(error.getString("message"))
+                  .isEqualTo("Invalid characters in table name: _n$t_valid_");
                   context.completeNow();
               })));
     }

@@ -116,4 +116,22 @@ public interface StorageJmxOperations
      * @param keyspaceNames an optional list of keyspaces
      */
     void clearSnapshot(String tag, String... keyspaceNames);
+
+    /**
+     * Retrieve the list of node endpoints by token range for the given keyspace
+     *
+     * @param keyspace the keyspace in Cassandra
+     * @return Returns a mapping of token range (represented by the first two entries in the key) to
+     * a list of endpoints
+     */
+    Map<List<String>, List<String>> getRangeToEndpointWithPortMap(String keyspace);
+
+    /**
+     * Retrieve the list of pending node endpoints by token range for the given keyspace
+     *
+     * @param keyspace the keyspace in Cassandra
+     * @return Returns a mapping of token range (represented by the first two entries in the key) to
+     * a list of endpoints
+     */
+    Map<List<String>, List<String>> getPendingRangeToEndpointWithPortMap(String keyspace);
 }

@@ -91,7 +91,9 @@ sidecar:
       name: "sidecar-internal-worker-pool"
       size: 20
       max_execution_time_millis: 900000 # 15 minutes
-
+  jmx:
+    max_retries: 42
+    retry_delay_millis: 1234
 #
 # Enable SSL configuration (Disabled by default)
 #

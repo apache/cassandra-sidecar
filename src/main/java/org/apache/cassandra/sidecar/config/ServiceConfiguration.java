@@ -91,4 +91,9 @@ public interface ServiceConfiguration
     {
         return workerPoolsConfiguration().get(INTERNAL_POOL);
     }
+
+    /**
+     * @return the system-wide JMX configuration settings
+     */
+    JmxConfiguration jmxConfiguration();
 }

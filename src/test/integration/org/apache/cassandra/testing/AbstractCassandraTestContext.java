@@ -18,32 +18,58 @@
 
 package org.apache.cassandra.testing;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.shared.ShutdownException;
 
 /**
  * The base class for all CassandraTestContext implementations
  */
 public abstract class AbstractCassandraTestContext implements AutoCloseable
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractCassandraTestContext.class);
+
     public final SimpleCassandraVersion version;
     protected UpgradeableCluster cluster;
 
-    public AbstractCassandraTestContext(SimpleCassandraVersion version, UpgradeableCluster cluster)
+    public CassandraIntegrationTest annotation;
+
+    public AbstractCassandraTestContext(SimpleCassandraVersion version,
+                                        UpgradeableCluster cluster,
+                                        CassandraIntegrationTest annotation)
     {
         this.version = version;
         this.cluster = cluster;
+        this.annotation = annotation;
     }
 
-    public AbstractCassandraTestContext(SimpleCassandraVersion version)
+    public AbstractCassandraTestContext(SimpleCassandraVersion version,
+                                        CassandraIntegrationTest annotation)
     {
         this.version = version;
+        this.annotation = annotation;
     }
 
-    public void close() throws Exception
+    public UpgradeableCluster cluster()
+    {
+        return cluster;
+    }
+
+    @Override
+    public void close()
     {
         if (cluster != null)
         {
-            cluster.close();
+            try
+            {
+                cluster.close();
+            }
+            catch (ShutdownException shutdownException)
+            {
+                LOGGER.warn("Encountered shutdown exception which closing the cluster", shutdownException);
+            }
         }
     }
 }

@@ -29,9 +29,10 @@ public class CassandraTestContext extends AbstractCassandraTestContext
 {
 
     public CassandraTestContext(SimpleCassandraVersion version,
-                                UpgradeableCluster cluster)
+                                UpgradeableCluster cluster,
+                                CassandraIntegrationTest annotation)
     {
-        super(version, cluster);
+        super(version, cluster, annotation);
     }
 
     @Override

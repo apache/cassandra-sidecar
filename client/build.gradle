@@ -42,6 +42,7 @@ test {
     testLogging {
         events "passed", "skipped", "failed"
     }
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     reports {
         junitXml.enabled = true
         def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "client").toFile()

@@ -18,9 +18,7 @@
 
 package org.apache.cassandra.sidecar.testing;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -45,55 +43,49 @@ import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
-import org.apache.cassandra.testing.CassandraTestContext;
+import org.apache.cassandra.testing.AbstractCassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Passed to integration tests.
  */
-public class CassandraSidecarTestContext extends CassandraTestContext
+public class CassandraSidecarTestContext implements AutoCloseable
 {
     public final SimpleCassandraVersion version;
-    public final UpgradeableCluster cluster;
-    public final InstancesConfig instancesConfig;
+    private final CassandraVersionProvider versionProvider;
+    private final DnsResolver dnsResolver;
+    private final AbstractCassandraTestContext abstractCassandraTestContext;
+    public InstancesConfig instancesConfig;
     private List<CQLSessionProvider> sessionProviders;
     private List<JmxClient> jmxClients;
     private static final SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
+    private final List<InstanceConfigListener> instanceConfigListeners;
 
-    private CassandraSidecarTestContext(SimpleCassandraVersion version,
-                                        UpgradeableCluster cluster,
+    private CassandraSidecarTestContext(AbstractCassandraTestContext abstractCassandraTestContext,
+                                        SimpleCassandraVersion version,
                                         CassandraVersionProvider versionProvider,
-                                        DnsResolver dnsResolver) throws IOException
+                                        DnsResolver dnsResolver)
     {
-        super(org.apache.cassandra.testing.SimpleCassandraVersion.create(version.major,
-                                                                         version.minor,
-                                                                         version.patch), cluster);
+        this.instanceConfigListeners = new ArrayList<>();
+        this.abstractCassandraTestContext = abstractCassandraTestContext;
         this.version = version;
-        this.cluster = cluster;
-        this.sessionProviders = new ArrayList<>();
-        this.jmxClients = new ArrayList<>();
-        this.instancesConfig = buildInstancesConfig(versionProvider, dnsResolver);
+        this.versionProvider = versionProvider;
+        this.dnsResolver = dnsResolver;
     }
 
-    public static CassandraSidecarTestContext from(CassandraTestContext cassandraTestContext, DnsResolver dnsResolver)
+    public static CassandraSidecarTestContext from(AbstractCassandraTestContext cassandraTestContext,
+                                                   DnsResolver dnsResolver)
     {
         org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
         SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major,
                                                                              rootVersion.minor,
                                                                              rootVersion.patch);
         CassandraVersionProvider versionProvider = cassandraVersionProvider(dnsResolver);
-        try
-        {
-            return new CassandraSidecarTestContext(versionParsed,
-                                                   cassandraTestContext.getCluster(),
-                                                   versionProvider,
-                                                   dnsResolver);
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException(e);
-        }
+        return new CassandraSidecarTestContext(cassandraTestContext,
+                                               versionParsed,
+                                               versionProvider,
+                                               dnsResolver);
     }
 
     public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
@@ -102,10 +94,117 @@ public class CassandraSidecarTestContext extends CassandraTestContext
                .add(new CassandraFactory(dnsResolver, svp.sidecarVersion())).build();
     }
 
-    private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider,
-                                                 DnsResolver dnsResolver) throws IOException
+    public void registerInstanceConfigListener(InstanceConfigListener listener)
     {
+        this.instanceConfigListeners.add(listener);
+    }
+
+    public AbstractCassandraTestContext cassandraTestContext()
+    {
+        return abstractCassandraTestContext;
+    }
+
+    public boolean isClusterBuilt()
+    {
+        return abstractCassandraTestContext.cluster() != null;
+    }
+
+    public UpgradeableCluster cluster()
+    {
+        UpgradeableCluster cluster = abstractCassandraTestContext.cluster();
+        if (cluster == null)
+        {
+            throw new RuntimeException("The cluster must be built before it can be used");
+        }
+        return cluster;
+    }
+
+    public InstancesConfig instancesConfig()
+    {
+        if (instancesConfig == null
+            || instancesConfig.instances().size() != cluster().size()) // rebuild instances config if cluster changed
+        {
+            // clean-up any open sessions or client resources
+            close();
+            setInstancesConfig();
+        }
+        return this.instancesConfig;
+    }
+
+    public Session session()
+    {
+        return session(0);
+    }
+
+    public Session session(int instance)
+    {
+        if (sessionProviders == null)
+        {
+            setInstancesConfig();
+        }
+        return this.sessionProviders.get(instance).localCql();
+    }
+
+    @Override
+    public String toString()
+    {
+        return "CassandraTestContext{" +
+               ", version=" + version +
+               ", cluster=" + abstractCassandraTestContext.cluster() +
+               '}';
+    }
+
+    @Override
+    public void close()
+    {
+        if (sessionProviders != null)
+        {
+            sessionProviders.forEach(CQLSessionProvider::close);
+        }
+        if (instancesConfig != null)
+        {
+            instancesConfig.instances().forEach(instance -> instance.delegate().close());
+        }
+    }
+
+    public JmxClient jmxClient()
+    {
+        return jmxClient(0);
+    }
+
+    private JmxClient jmxClient(int instance)
+    {
+        if (jmxClients == null)
+        {
+            setInstancesConfig();
+        }
+        return jmxClients.get(instance);
+    }
+
+    /**
+     * A listener for {@link InstancesConfig} state changes
+     */
+    public interface InstanceConfigListener
+    {
+        void onInstancesConfigChange(InstancesConfig instancesConfig);
+    }
+
+    private void setInstancesConfig()
+    {
+        this.instancesConfig = buildInstancesConfig(versionProvider, dnsResolver);
+        for (InstanceConfigListener listener : instanceConfigListeners)
+        {
+            listener.onInstancesConfigChange(this.instancesConfig);
+        }
+    }
+
+    private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider,
+                                                 DnsResolver dnsResolver)
+    {
+        UpgradeableCluster cluster = cluster();
         List<InstanceMetadata> metadata = new ArrayList<>();
+        sessionProviders = new ArrayList<>();
+        jmxClients = new ArrayList<>();
         for (int i = 0; i < cluster.size(); i++)
         {
             IUpgradeableInstance instance = cluster.get(i + 1); // 1-based indexing to match node names;
@@ -116,17 +215,18 @@ public class CassandraSidecarTestContext extends CassandraTestContext
                                                                            nativeTransportPort);
             CQLSessionProvider sessionProvider = new CQLSessionProvider(address, new NettyOptions());
             this.sessionProviders.add(sessionProvider);
-            JmxClient jmxClient = new JmxClient(hostName, config.jmxPort());
+            // The in-jvm dtest framework sometimes returns a cluster before all the jmx infrastructure is initialized.
+            // In these cases, we want to wait longer than the default retry/delay settings to connect.
+            JmxClient jmxClient = new JmxClient(hostName, config.jmxPort(), null, null, false, 20, 1000L);
             this.jmxClients.add(jmxClient);
 
             String[] dataDirectories = (String[]) config.get("data_file_directories");
             // Use the parent of the first data directory as the staging directory
             Path dataDirParentPath = Paths.get(dataDirectories[0]).getParent();
-            assertThat(dataDirParentPath).isNotNull()
-                                         .exists();
+            // If the cluster has not started yet, the node's root directory doesn't exist yet
+            assertThat(dataDirParentPath).isNotNull();
             Path stagingPath = dataDirParentPath.resolve("staging");
-            String uploadsStagingDirectory = stagingPath.toFile().getAbsolutePath();
-            Files.createDirectories(stagingPath);
+            String stagingDir = stagingPath.toFile().getAbsolutePath();
             CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(versionProvider,
                                                                              sessionProvider,
                                                                              jmxClient,
@@ -136,7 +236,7 @@ public class CassandraSidecarTestContext extends CassandraTestContext
                                              .host(config.broadcastAddress().getAddress().getHostAddress())
                                              .port(nativeTransportPort)
                                              .dataDirs(Arrays.asList(dataDirectories))
-                                             .stagingDir(uploadsStagingDirectory)
+                                             .stagingDir(stagingDir)
                                              .delegate(delegate)
                                              .build());
         }
@@ -153,47 +253,5 @@ public class CassandraSidecarTestContext extends CassandraTestContext
         {
             return defaultValue;
         }
-    }
-
-
-    public InstancesConfig getInstancesConfig()
-    {
-        return this.instancesConfig;
-    }
-
-    public Session session()
-    {
-        return session(0);
-    }
-
-    public Session session(int instance)
-    {
-        return this.sessionProviders.get(instance).localCql();
-    }
-
-    @Override
-    public String toString()
-    {
-        return "CassandraTestContext{" +
-               ", version=" + version +
-               ", cluster=" + cluster +
-               '}';
-    }
-
-    @Override
-    public void close()
-    {
-        sessionProviders.forEach(CQLSessionProvider::close);
-        instancesConfig.instances().forEach(instance -> instance.delegate().close());
-    }
-
-    public JmxClient jmxClient()
-    {
-        return jmxClient(0);
-    }
-
-    private JmxClient jmxClient(int instance)
-    {
-        return jmxClients.get(instance);
     }
 }

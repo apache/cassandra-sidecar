@@ -41,6 +41,7 @@ import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.data.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.data.SchemaResponse;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
+import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 
 /**
@@ -188,6 +189,24 @@ public class SidecarClient implements AutoCloseable
                                             .instanceSelectionPolicy(instanceSelectionPolicy)
                                             .timeSkewRequest()
                                             .build());
+    }
+
+    /**
+     * Executes the token-range replicas request using the default retry policy and configured selection policy
+     *
+     * @param instances the list of Sidecar instances to try for this request
+     * @param keyspace  the keyspace in Cassandra
+     * @return a completable future of the token-range replicas
+     */
+    public CompletableFuture<TokenRangeReplicasResponse> tokenRangeReplicas(List<? extends SidecarInstance> instances,
+                                                                            String keyspace)
+    {
+        SidecarInstancesProvider instancesProvider = new SimpleSidecarInstancesProvider(instances);
+        InstanceSelectionPolicy instanceSelectionPolicy = new RandomInstanceSelectionPolicy(instancesProvider);
+        return executeRequestAsync(requestBuilder()
+                                   .instanceSelectionPolicy(instanceSelectionPolicy)
+                                   .tokenRangeReplicasRequest(keyspace)
+                                   .build());
     }
 
     /**

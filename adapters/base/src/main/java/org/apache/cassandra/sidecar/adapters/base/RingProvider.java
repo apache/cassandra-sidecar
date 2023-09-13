@@ -29,6 +29,8 @@ import com.google.common.net.HostAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeState;
+import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeStatus;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
@@ -46,12 +48,6 @@ public class RingProvider
     private static final Logger LOGGER = LoggerFactory.getLogger(RingProvider.class);
     private static final String UNKNOWN_SHORT = "?";
     private static final String UNKNOWN = "Unknown";
-    private static final String STATUS_UP = "Up";
-    private static final String STATUS_DOWN = "Down";
-    private static final String STATE_JOINING = "Joining";
-    private static final String STATE_LEAVING = "Leaving";
-    private static final String STATE_MOVING = "Moving";
-    private static final String STATE_NORMAL = "Normal";
     private static final String DECIMAL_FORMAT = "##0.00%";
 
     protected final JmxClient jmxClient;
@@ -171,9 +167,9 @@ public class RingProvider
         String of(String endpoint)
         {
             if (liveNodes.contains(endpoint))
-                return STATUS_UP;
+                return NodeStatus.UP.displayName();
             if (deadNodes.contains(endpoint))
-                return STATUS_DOWN;
+                return NodeStatus.DOWN.displayName();
             return UNKNOWN_SHORT;
         }
     }
@@ -183,7 +179,7 @@ public class RingProvider
      */
     static class State
     {
-        private final Set<String> joiningNodes;
+        protected final Set<String> joiningNodes;
         private final Set<String> leavingNodes;
         private final Set<String> movingNodes;
 
@@ -197,12 +193,12 @@ public class RingProvider
         String of(String endpoint)
         {
             if (joiningNodes.contains(endpoint))
-                return STATE_JOINING;
+                return NodeState.JOINING.displayName();
             else if (leavingNodes.contains(endpoint))
-                return STATE_LEAVING;
+                return NodeState.LEAVING.displayName();
             else if (movingNodes.contains(endpoint))
-                return STATE_MOVING;
-            return STATE_NORMAL;
+                return NodeState.MOVING.displayName();
+            return NodeState.NORMAL.displayName();
         }
     }
 

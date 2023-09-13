@@ -32,10 +32,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class DelegateTest extends IntegrationTestBase
 {
-    @CassandraIntegrationTest
+    @CassandraIntegrationTest(jmx = false)
     void testCorrectVersionIsEnabled()
     {
-        CassandraAdapterDelegate delegate = sidecarTestContext.getInstancesConfig().instances().get(0).delegate();
+        CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig().instances().get(0).delegate();
         SimpleCassandraVersion version = delegate.version();
         assertThat(version).isNotNull();
         assertThat(version.major).isEqualTo(sidecarTestContext.version.major);
@@ -43,16 +43,16 @@ class DelegateTest extends IntegrationTestBase
         assertThat(version).isGreaterThanOrEqualTo(sidecarTestContext.version);
     }
 
-    @CassandraIntegrationTest
+    @CassandraIntegrationTest(jmx = false)
     void testHealthCheck() throws InterruptedException
     {
-        CassandraAdapterDelegate delegate = sidecarTestContext.getInstancesConfig().instances().get(0).delegate();
+        CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig().instances().get(0).delegate();
 
         delegate.healthCheck();
 
         assertThat(delegate.isUp()).as("health check succeeds").isTrue();
 
-        NodeToolResult nodetoolResult = sidecarTestContext.cluster.get(1).nodetoolResult("disablebinary");
+        NodeToolResult nodetoolResult = sidecarTestContext.cluster().get(1).nodetoolResult("disablebinary");
         assertThat(nodetoolResult.getRc())
         .withFailMessage("Failed to disable binary:\nstdout:" + nodetoolResult.getStdout()
                          + "\nstderr: " + nodetoolResult.getStderr())
@@ -72,7 +72,7 @@ class DelegateTest extends IntegrationTestBase
         }
         assertThat(delegate.isUp()).as("health check fails after binary has been disabled").isFalse();
 
-        sidecarTestContext.cluster.get(1).nodetool("enablebinary");
+        sidecarTestContext.cluster().get(1).nodetool("enablebinary");
 
         TimeUnit.SECONDS.sleep(1);
         delegate.healthCheck();

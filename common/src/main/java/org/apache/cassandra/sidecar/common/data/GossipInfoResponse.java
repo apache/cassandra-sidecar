@@ -54,6 +54,33 @@ import static org.apache.cassandra.sidecar.common.data.GossipInfoResponse.Gossip
 public class GossipInfoResponse extends HashMap<String, GossipInfoResponse.GossipInfo>
 {
     /**
+     * Overrides the {@link #get(Object)} method. The gossip info keys usually start with the format
+     * {@code /ip:port}. Some clients may be unaware of the preceding {@code slash}, and lookups can
+     * fail. This method attempts to lookup the value by prepending the {@code slash} at the beginning.
+     * If the lookup fails, it defaults to the original behavior.
+     *
+     * @param key the key whose associated value is to be returned
+     * @return {@link GossipInfo}
+     */
+    @Override
+    public GossipInfo get(Object key)
+    {
+        if (key instanceof String)
+        {
+            String keyAsString = (String) key;
+            if (keyAsString.length() > 0 && keyAsString.charAt(0) != '/')
+            {
+                GossipInfo value = super.get("/" + key);
+                if (value != null)
+                {
+                    return value;
+                }
+            }
+        }
+        return super.get(key);
+    }
+
+    /**
      * Data accessor for reading Gossip states
      */
     public static class GossipInfo extends HashMap<String, String>

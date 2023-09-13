@@ -370,7 +370,7 @@ that defines the source file coding standards.
 To import the formatting configuration run the following gradle task:
 
 ```shell
-./gradlew copyCodeStyle
+./gradlew idea
 ```
 
 This will install the style settings into the `.idea` directory located at the root of the project directory.

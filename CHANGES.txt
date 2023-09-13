@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Adds endpoint to serve read/write replica-sets by token-ranges (CASSANDRASC-60)
  * Split unit tests and integration tests in CircleCI config (CASSANDRASC-72)
  * Allow configuring permissions for uploaded SSTables (CASSANDRASC-71)
  * Refactor Sidecar configuration (CASSANDRASC-69)

@@ -65,7 +65,6 @@ public class GossipInfoHandlerTest
     Vertx vertx;
     HttpServer server;
 
-    @SuppressWarnings("DataFlowIssue")
     @BeforeEach
     void before() throws InterruptedException
     {
