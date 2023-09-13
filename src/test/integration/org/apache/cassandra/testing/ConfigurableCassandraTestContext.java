@@ -30,15 +30,16 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 public class ConfigurableCassandraTestContext extends AbstractCassandraTestContext
 {
     public static final String BUILT_CLUSTER_CANNOT_BE_CONFIGURED_ERROR =
-        "Cannot configure a cluster after it is built. Please set the buildCluster annotation attribute to false, "
-        + "and do not call `getCluster` before calling this method.";
+    "Cannot configure a cluster after it is built. Please set the buildCluster annotation attribute to false, "
+    + "and do not call `getCluster` before calling this method.";
 
     private final UpgradeableCluster.Builder builder;
 
     public ConfigurableCassandraTestContext(SimpleCassandraVersion version,
-                                            UpgradeableCluster.Builder builder)
+                                            UpgradeableCluster.Builder builder,
+                                            CassandraIntegrationTest annotation)
     {
-        super(version);
+        super(version, annotation);
         this.builder = builder;
     }
 
@@ -54,7 +55,7 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
     }
 
     public UpgradeableCluster configureAndStartCluster(Consumer<UpgradeableCluster.Builder> configurator)
-        throws IOException
+    throws IOException
     {
         cluster = configureCluster(configurator);
         cluster.startup();

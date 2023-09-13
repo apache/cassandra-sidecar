@@ -65,6 +65,7 @@ import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.data.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.data.SchemaResponse;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
+import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
@@ -321,6 +322,45 @@ abstract class SidecarClientTest
         assertThat(result.currentTime).isEqualTo(5555555);
 
         validateResponseServed(ApiEndpointsV1.TIME_SKEW_ROUTE);
+    }
+
+    @Test
+    public void testTokenRangeReplicasFromReplicaSet() throws Exception
+    {
+        String keyspace = "test";
+        String nodeWithPort = "127.0.0.1:7000";
+        String expectedRangeStart = "-9223372036854775808";
+        String expectedRangeEnd = "9223372036854775807";
+        String tokenRangeReplicasAsString = "{\"replicaState\":{" +
+                                            "\"127.0.0.1:7000\":\"NORMAL\"}," +
+                                            "\"writeReplicas\":[{\"start\":\"-9223372036854775808\"," +
+                                            "\"end\":\"9223372036854775807\",\"replicasByDatacenter\":" +
+                                            "{\"datacenter1\":[\"127.0.0.1:7000\"]}}],\"readReplicas\":" +
+                                            "[{\"start\":\"-9223372036854775808\",\"end\":\"9223372036854775807\"," +
+                                            "\"replicasByDatacenter\":{\"datacenter1\":[\"127.0.0.1:7000\"]}}]}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(tokenRangeReplicasAsString);
+        enqueue(response);
+
+        TokenRangeReplicasResponse result = client.tokenRangeReplicas(instances.subList(1, 2), keyspace)
+                                                  .get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.writeReplicas()).hasSize(1);
+        TokenRangeReplicasResponse.ReplicaInfo writeReplica = result.writeReplicas().get(0);
+        assertThat(writeReplica.start()).isEqualTo(expectedRangeStart);
+        assertThat(writeReplica.end()).isEqualTo(expectedRangeEnd);
+        assertThat(writeReplica.replicasByDatacenter()).containsKey("datacenter1");
+        assertThat(writeReplica.replicasByDatacenter().get("datacenter1")).containsExactly(nodeWithPort);
+        assertThat(result.readReplicas()).hasSize(1);
+        TokenRangeReplicasResponse.ReplicaInfo readReplica = result.readReplicas().get(0);
+        assertThat(readReplica.start()).isEqualTo(expectedRangeStart);
+        assertThat(readReplica.end()).isEqualTo(expectedRangeEnd);
+        assertThat(readReplica.replicasByDatacenter()).containsKey("datacenter1");
+        assertThat(readReplica.replicasByDatacenter().get("datacenter1")).containsExactly(nodeWithPort);
+        assertThat(result.replicaState()).hasSize(1);
+        assertThat(result.replicaState().get(nodeWithPort)).isEqualTo("NORMAL");
+
+        validateResponseServed(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE.replaceAll(
+        ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace));
     }
 
     @Test

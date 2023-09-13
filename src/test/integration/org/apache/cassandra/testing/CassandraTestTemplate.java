@@ -19,6 +19,7 @@
 package org.apache.cassandra.testing;
 
 import java.lang.reflect.AnnotatedElement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +41,7 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.distributed.shared.Versions;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 
 
 /**
@@ -54,7 +56,6 @@ import org.apache.cassandra.distributed.shared.Versions;
  */
 public class CassandraTestTemplate implements TestTemplateInvocationContextProvider
 {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraTestTemplate.class);
 
     private AbstractCassandraTestContext cassandraTestContext;
@@ -148,34 +149,21 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                 int nodesPerDc = annotation.nodesPerDc();
                 int dcCount = annotation.numDcs();
                 int newNodesPerDc = annotation.newNodesPerDc(); // if the test wants to add more nodes later
+                Preconditions.checkArgument(newNodesPerDc >= 0,
+                                            "newNodesPerDc cannot be a negative number");
+                int originalNodeCount = nodesPerDc * dcCount;
                 int finalNodeCount = dcCount * (nodesPerDc + newNodesPerDc);
                 Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(),
                                                                                   Semver.SemverType.LOOSE));
                 SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.version());
 
                 UpgradeableCluster.Builder clusterBuilder =
-                    UpgradeableCluster.build(nodesPerDc * dcCount)
-                                      .withVersion(requestedVersion)
-                                      .withDCs(dcCount)
-                                      .withDataDirCount(annotation.numDataDirsPerInstance())
-                                      .withConfig(config -> {
-                                      if (annotation.nativeTransport())
-                                      {
-                                          config.with(Feature.NATIVE_PROTOCOL);
-                                      }
-                                      if (annotation.jmx())
-                                      {
-                                          config.with(Feature.JMX);
-                                      }
-                                      if (annotation.gossip())
-                                      {
-                                          config.with(Feature.GOSSIP);
-                                      }
-                                      if (annotation.network())
-                                      {
-                                          config.with(Feature.NETWORK);
-                                      }
-                                  });
+                UpgradeableCluster.build(originalNodeCount)
+                                  .withDynamicPortAllocation(true) // to allow parallel test runs
+                                  .withVersion(requestedVersion)
+                                  .withDCs(dcCount)
+                                  .withDataDirCount(annotation.numDataDirsPerInstance())
+                                  .withConfig(config -> annotationToFeatureList(annotation).forEach(config::with));
                 TokenSupplier tokenSupplier = TokenSupplier.evenlyDistributedTokens(finalNodeCount,
                                                                                     clusterBuilder.getTokenCount());
                 clusterBuilder.withTokenSupplier(tokenSupplier);
@@ -187,11 +175,13 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     {
                         cluster.startup();
                     }
-                    cassandraTestContext = new CassandraTestContext(versionParsed, cluster);
+                    cassandraTestContext = new CassandraTestContext(versionParsed, cluster, annotation);
                 }
                 else
                 {
-                    cassandraTestContext = new ConfigurableCassandraTestContext(versionParsed, clusterBuilder);
+                    cassandraTestContext = new ConfigurableCassandraTestContext(versionParsed,
+                                                                                clusterBuilder,
+                                                                                annotation);
                 }
                 LOGGER.info("Testing {} against in-jvm dtest cluster", version);
                 LOGGER.info("Created Cassandra test context {}", cassandraTestContext);
@@ -214,6 +204,35 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         }
 
         /**
+         * Builds a list of configured {@link Feature features} requested in the {@link CassandraIntegrationTest}
+         * annotation.
+         *
+         * @param annotation the configured annotation
+         * @return a list of configured {@link Feature features}
+         */
+        private List<Feature> annotationToFeatureList(CassandraIntegrationTest annotation)
+        {
+            List<Feature> configuredFeatures = new ArrayList<>();
+            if (annotation.nativeTransport())
+            {
+                configuredFeatures.add(Feature.NATIVE_PROTOCOL);
+            }
+            if (annotation.jmx())
+            {
+                configuredFeatures.add(Feature.JMX);
+            }
+            if (annotation.gossip())
+            {
+                configuredFeatures.add(Feature.GOSSIP);
+            }
+            if (annotation.network())
+            {
+                configuredFeatures.add(Feature.NETWORK);
+            }
+            return configuredFeatures;
+        }
+
+        /**
          * Required for Junit to know the CassandraTestContext can be used in these tests
          *
          * @return a {@link ParameterResolver}
@@ -228,10 +247,14 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                 {
                     Class<?> parameterType = parameterContext.getParameter().getType();
                     CassandraIntegrationTest annotation =
-                        getCassandraIntegrationTestAnnotation(extensionContext, false);
+                    getCassandraIntegrationTestAnnotation(extensionContext, false);
                     if (annotation == null)
                     {
                         return false;
+                    }
+                    if (parameterType.equals(AbstractCassandraTestContext.class))
+                    {
+                        return true;
                     }
                     if (annotation.buildCluster())
                     {

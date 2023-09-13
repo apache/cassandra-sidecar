@@ -77,12 +77,12 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         // Test the import SSTable endpoint by importing data that was originally truncated.
         // Verify by querying the table contains all the results before truncation and after truncation.
 
-        Session session = maybeGetSession(sidecarTestContext);
-        createTestKeyspace(sidecarTestContext);
+        Session session = maybeGetSession();
+        createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate(sidecarTestContext, Arrays.asList("a", "b"));
 
         // create a snapshot called <tableName>-snapshot for tbl1
-        UpgradeableCluster cluster = sidecarTestContext.cluster;
+        UpgradeableCluster cluster = sidecarTestContext.cluster();
         final String snapshotStdout = cluster.get(1).nodetoolResult("snapshot",
                                                                     "--tag", tableName.tableName() + "-snapshot",
                                                                     "--table", tableName.tableName(),
@@ -101,7 +101,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         // verification happens in the host system. When calling import we use the same directory, but the
         // directory does not exist inside the cluster. For that reason we need to do the following to
         // ensure "import" finds the path inside the cluster
-        String uploadStagingDir = sidecarTestContext.getInstancesConfig()
+        String uploadStagingDir = sidecarTestContext.instancesConfig()
                                                     .instanceFromHost("127.0.0.1").stagingDir();
         final String stagingPathInContainer = uploadStagingDir + File.separator + uploadId
                                               + File.separator + tableName.keyspace()
@@ -121,7 +121,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         }
 
         // Now truncate the contents of the table
-        truncateAndVerify(sidecarTestContext, tableName);
+        truncateAndVerify(tableName);
 
         // Add new data (c, d) to table
         populateTable(session, tableName, Arrays.asList("c", "d"));
@@ -133,7 +133,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
                     () -> client.put(server.actualPort(), "127.0.0.1", testRoute),
                     vertxTestContext.succeeding(response -> vertxTestContext.verify(() -> {
                         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                        assertThat(queryValues(sidecarTestContext, tableName))
+                        assertThat(queryValues(tableName))
                         .containsAll(Arrays.asList("a", "b", "c", "d"));
                         vertxTestContext.completeNow();
                     })));
@@ -159,11 +159,10 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
                        })));
     }
 
-    private void truncateAndVerify(CassandraSidecarTestContext cassandraTestContext,
-                                   QualifiedTableName qualifiedTableName)
+    private void truncateAndVerify(QualifiedTableName qualifiedTableName)
     throws InterruptedException
     {
-        Session session = maybeGetSession(cassandraTestContext);
+        Session session = maybeGetSession();
         session.execute("TRUNCATE TABLE " + qualifiedTableName);
 
         while (true)
@@ -175,9 +174,9 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         }
     }
 
-    private List<String> queryValues(CassandraSidecarTestContext cassandraTestContext, QualifiedTableName tableName)
+    private List<String> queryValues(QualifiedTableName tableName)
     {
-        Session session = maybeGetSession(cassandraTestContext);
+        Session session = maybeGetSession();
         return session.execute("SELECT id FROM " + tableName)
                       .all()
                       .stream()
@@ -188,9 +187,9 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
     private QualifiedTableName createTestTableAndPopulate(CassandraSidecarTestContext cassandraTestContext,
                                                           List<String> values)
     {
-        QualifiedTableName tableName = createTestTable(cassandraTestContext,
-                                                       "CREATE TABLE IF NOT EXISTS %s (id text, PRIMARY KEY(id));");
-        Session session = maybeGetSession(cassandraTestContext);
+        QualifiedTableName tableName = createTestTable(
+        "CREATE TABLE IF NOT EXISTS %s (id text, PRIMARY KEY(id));");
+        Session session = maybeGetSession();
         populateTable(session, tableName, values);
         return tableName;
     }

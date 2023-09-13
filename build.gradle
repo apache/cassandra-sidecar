@@ -54,6 +54,12 @@ plugins {
 
 println("Using DTest jar: ${dtestVersion}")
 
+def integrationMaxHeapSize = System.getenv("INTEGRATION_MAX_HEAP_SIZE") ?: "8g"
+println("Using ${integrationMaxHeapSize} maxHeapSize")
+
+def integrationMaxParallelForks = (System.getenv("INTEGRATION_MAX_PARALLEL_FORKS") ?: "4") as int
+println("Using ${integrationMaxParallelForks} maxParallelForks")
+
 // Force checkstyle, rat, and spotBugs to run before test tasks for faster feedback
 def codeCheckTasks = task("codeCheckTasks")
 
@@ -342,7 +348,8 @@ tasks.register("integrationTest", Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
     shouldRunAfter test
     forkEvery = 1 // DTest framework tends to have issues without forkEvery test class
-    maxHeapSize = "8g"
+    maxHeapSize = integrationMaxHeapSize
+    maxParallelForks = integrationMaxParallelForks
 }
 
 // copy the user documentation to the final build

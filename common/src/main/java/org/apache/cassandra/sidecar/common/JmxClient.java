@@ -26,6 +26,7 @@ import java.rmi.server.RMISocketFactory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import javax.management.JMX;
@@ -40,6 +41,11 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import javax.rmi.ssl.SslRMIClientSocketFactory;
 
+import com.google.common.util.concurrent.Uninterruptibles;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -51,6 +57,7 @@ public class JmxClient implements NotificationListener, Closeable
     public static final String JMX_PROTOCOL = "rmi";
     public static final String JMX_URL_PATH_FORMAT = "/jndi/rmi://%s:%d/jmxrmi";
     public static final String REGISTRY_CONTEXT_SOCKET_FACTORY = "com.sun.jndi.rmi.factory.socket";
+    private static final Logger LOGGER = LoggerFactory.getLogger(JmxClient.class);
     private final JMXServiceURL jmxServiceURL;
     private MBeanServerConnection mBeanServerConnection;
     private boolean connected = false;
@@ -58,6 +65,8 @@ public class JmxClient implements NotificationListener, Closeable
     private final Supplier<String> roleSupplier;
     private final Supplier<String> passwordSupplier;
     private final BooleanSupplier enableSslSupplier;
+    private final int jmxConnectionMaxRetries;
+    private final long jmxConnectionRetryDelayMillis;
 
     /**
      * Creates a new client with the provided {@code host} and {@code port}.
@@ -82,6 +91,24 @@ public class JmxClient implements NotificationListener, Closeable
     public JmxClient(String host, int port, String role, String password, boolean enableSSl)
     {
         this(buildJmxServiceURL(host, port), () -> role, () -> password, () -> enableSSl);
+    }
+
+    /**
+     * Creates a new client with the provided parameters
+     *
+     * @param host                       the host of the JMX service
+     * @param port                       the port of the JMX service
+     * @param role                       the JMX role used for authentication
+     * @param password                   the JMX role password used for authentication
+     * @param enableSSl                  true if SSL is enabled for JMX, false otherwise
+     * @param connectionMaxRetries       the maximum number of connection retries before failing to connect
+     * @param connectionRetryDelayMillis the number of milliseconds to delay between connection retries
+     */
+    public JmxClient(String host, int port, String role, String password,
+                     boolean enableSSl, int connectionMaxRetries, long connectionRetryDelayMillis)
+    {
+        this(buildJmxServiceURL(host, port), () -> role, () -> password, () -> enableSSl,
+             connectionMaxRetries, connectionRetryDelayMillis);
     }
 
     @VisibleForTesting
@@ -110,10 +137,22 @@ public class JmxClient implements NotificationListener, Closeable
                      Supplier<String> passwordSupplier,
                      BooleanSupplier enableSslSupplier)
     {
+        this(jmxServiceURL, roleSupplier, passwordSupplier, enableSslSupplier, 20, 1000);
+    }
+
+    public JmxClient(JMXServiceURL jmxServiceURL,
+                     Supplier<String> roleSupplier,
+                     Supplier<String> passwordSupplier,
+                     BooleanSupplier enableSslSupplier,
+                     int jmxConnectionMaxRetries,
+                     long jmxConnectionRetryDelayMillis)
+    {
         this.jmxServiceURL = Objects.requireNonNull(jmxServiceURL, "jmxServiceURL is required");
         this.roleSupplier = Objects.requireNonNull(roleSupplier, "roleSupplier is required");
         this.passwordSupplier = Objects.requireNonNull(passwordSupplier, "passwordSupplier is required");
         this.enableSslSupplier = Objects.requireNonNull(enableSslSupplier, "enableSslSupplier is required");
+        this.jmxConnectionMaxRetries = jmxConnectionMaxRetries;
+        this.jmxConnectionRetryDelayMillis = jmxConnectionRetryDelayMillis;
     }
 
     /**
@@ -158,32 +197,57 @@ public class JmxClient implements NotificationListener, Closeable
 
     private void connect()
     {
-        try
+        int attempts = 1;
+        int maxAttempts = jmxConnectionMaxRetries;
+        Throwable lastThrown = null;
+        while (attempts <= maxAttempts)
         {
-            jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, buildJmxEnv());
-            jmxConnector.addConnectionNotificationListener(this, null, null);
-            mBeanServerConnection = jmxConnector.getMBeanServerConnection();
-            connected = true;
+            try
+            {
+                connectInternal(attempts);
+                return;
+            }
+            // Unrecoverable errors
+            catch (SecurityException securityException)
+            {
+                // If we can't connect because we have bad credentials, don't retry
+                connected = false;
+                String errorMessage = securityException.getMessage() != null
+                                      ? securityException.getMessage()
+                                      : "JMX Authentication failed";
+                throw new JmxAuthenticationException(errorMessage, securityException);
+            }
+            catch (RuntimeException runtimeException)
+            {
+                // catch exceptions coming from the lambdas and wrap them in a JmxAuthenticationException
+                throw new JmxAuthenticationException(runtimeException);
+            }
+            // Anything else is recoverable so we should retry.
+            catch (Throwable t)
+            {
+                lastThrown = t;
+                if (attempts < maxAttempts)
+                {
+                    LOGGER.info("Could not connect to JMX on {} after {} attempts. Will retry.",
+                                jmxServiceURL, attempts, t);
+                    Uninterruptibles.sleepUninterruptibly(jmxConnectionRetryDelayMillis, TimeUnit.MILLISECONDS);
+                }
+                attempts++;
+            }
         }
-        catch (IOException iox)
-        {
-            connected = false;
-            throw new RuntimeException(String.format("Failed to connect to JMX endpoint %s", jmxServiceURL),
-                                       iox);
-        }
-        catch (SecurityException securityException)
-        {
-            connected = false;
-            String errorMessage = securityException.getMessage() != null
-                                  ? securityException.getMessage()
-                                  : "JMX Authentication failed";
-            throw new JmxAuthenticationException(errorMessage, securityException);
-        }
-        catch (RuntimeException runtimeException)
-        {
-            // catch exceptions coming from the lambdas and wrap them in a JmxAuthenticationException
-            throw new JmxAuthenticationException(runtimeException);
-        }
+        String error = "Failed to connect to JMX, which was unreachable after " + attempts + " attempts.";
+        LOGGER.error(error, lastThrown);
+        throw new RuntimeException(error, lastThrown);
+    }
+
+    private void connectInternal(int currentAttempt) throws IOException
+    {
+        jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, buildJmxEnv());
+        jmxConnector.addConnectionNotificationListener(this, null, null);
+        mBeanServerConnection = jmxConnector.getMBeanServerConnection();
+        connected = true;
+        LOGGER.info("Connected to JMX server at {} after {} attempt(s)",
+                    jmxServiceURL, currentAttempt);
     }
 
     @Override
@@ -259,12 +323,17 @@ public class JmxClient implements NotificationListener, Closeable
     }
 
     @Override
-    public synchronized void close() throws IOException
+    public void close() throws IOException
     {
-        JMXConnector connector = jmxConnector;
+        JMXConnector connector;
+        synchronized (this)
+        {
+            connector = jmxConnector;
+            jmxConnector = null;
+            connected = false;
+        }
         if (connector != null)
         {
-            jmxConnector = null;
             connector.close();
         }
     }

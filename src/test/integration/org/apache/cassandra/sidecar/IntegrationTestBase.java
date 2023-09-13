@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,6 +32,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
@@ -49,7 +51,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
-import org.apache.cassandra.testing.CassandraTestContext;
+import org.apache.cassandra.testing.AbstractCassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -67,13 +69,15 @@ public abstract class IntegrationTestBase
 
     protected static final String TEST_KEYSPACE = "testkeyspace";
     private static final String TEST_TABLE_PREFIX = "testtable";
+
+    protected static final int DEFAULT_RF = 3;
     private static final AtomicInteger TEST_TABLE_ID = new AtomicInteger(0);
     protected CassandraSidecarTestContext sidecarTestContext;
 
     @BeforeEach
-    void setup(CassandraTestContext cassandraTestContext) throws InterruptedException
+    void setup(AbstractCassandraTestContext cassandraTestContext) throws InterruptedException
     {
-        this.sidecarTestContext = CassandraSidecarTestContext.from(cassandraTestContext, DnsResolver.DEFAULT);
+        sidecarTestContext = CassandraSidecarTestContext.from(cassandraTestContext, DnsResolver.DEFAULT);
         Injector injector = Guice.createInjector(Modules
                                                  .override(new MainModule())
                                                  .with(new IntegrationTestModule(this.sidecarTestContext)));
@@ -83,8 +87,11 @@ public abstract class IntegrationTestBase
 
         VertxTestContext context = new VertxTestContext();
         server.listen(server.actualPort(), "127.0.0.1", context.succeeding(p -> {
-            instancesConfig.instances()
-                           .forEach(instanceMetadata -> instanceMetadata.delegate().healthCheck());
+            if (sidecarTestContext.isClusterBuilt())
+            {
+                healthCheck(instancesConfig);
+            }
+            sidecarTestContext.registerInstanceConfigListener(instances -> healthCheck(instances));
             context.completeNow();
         }));
 
@@ -111,32 +118,38 @@ public abstract class IntegrationTestBase
         tester.accept(client);
 
         // wait until the test completes
-        assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
+        assertThat(context.awaitCompletion(2, TimeUnit.MINUTES)).isTrue();
     }
 
-    protected void createTestKeyspace(CassandraSidecarTestContext cassandraTestContext)
+    protected void createTestKeyspace()
     {
-        Session session = maybeGetSession(cassandraTestContext);
-
-        session.execute(
-        "CREATE KEYSPACE " + TEST_KEYSPACE +
-        " WITH REPLICATION = { 'class' : 'org.apache.cassandra.locator.SimpleStrategy', 'replication_factor': '1' }" +
-        " AND DURABLE_WRITES = true;"
-        );
+        createTestKeyspace(ImmutableMap.of("datacenter1", 1));
     }
 
-    protected QualifiedTableName createTestTable(CassandraSidecarTestContext cassandraTestContext,
-                                                 String createTableStatement)
+    protected void createTestKeyspace(Map<String, Integer> rf)
     {
-        Session session = maybeGetSession(cassandraTestContext);
+        Session session = maybeGetSession();
+        session.execute("CREATE KEYSPACE " + TEST_KEYSPACE +
+                        " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " + generateRfString(rf) + " };");
+    }
+
+    private String generateRfString(Map<String, Integer> dcToRf)
+    {
+        return dcToRf.entrySet().stream().map(e -> String.format("'%s':%d", e.getKey(), e.getValue()))
+                     .collect(Collectors.joining(","));
+    }
+
+    protected QualifiedTableName createTestTable(String createTableStatement)
+    {
+        Session session = maybeGetSession();
         QualifiedTableName tableName = uniqueTestTableFullName();
         session.execute(String.format(createTableStatement, tableName));
         return tableName;
     }
 
-    protected Session maybeGetSession(CassandraSidecarTestContext cassandraTestContext)
+    protected Session maybeGetSession()
     {
-        Session session = cassandraTestContext.session();
+        Session session = sidecarTestContext.session();
         assertThat(session).isNotNull();
         return session;
     }
@@ -148,7 +161,7 @@ public abstract class IntegrationTestBase
 
     public List<Path> findChildFile(CassandraSidecarTestContext context, String hostname, String target)
     {
-        InstanceMetadata instanceConfig = context.getInstancesConfig().instanceFromHost(hostname);
+        InstanceMetadata instanceConfig = context.instancesConfig().instanceFromHost(hostname);
         List<String> parentDirectories = instanceConfig.dataDirs();
 
         return parentDirectories.stream().flatMap(s -> findChildFile(Paths.get(s), target).stream())
@@ -167,5 +180,11 @@ public abstract class IntegrationTestBase
         {
             return Collections.emptyList();
         }
+    }
+
+    private void healthCheck(InstancesConfig instancesConfig)
+    {
+        instancesConfig.instances()
+                       .forEach(instanceMetadata -> instanceMetadata.delegate().healthCheck());
     }
 }

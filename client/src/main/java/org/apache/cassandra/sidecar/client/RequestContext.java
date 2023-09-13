@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.client.request.SSTableComponentRequest;
 import org.apache.cassandra.sidecar.client.request.SchemaRequest;
 import org.apache.cassandra.sidecar.client.request.SidecarHealthRequest;
 import org.apache.cassandra.sidecar.client.request.TimeSkewRequest;
+import org.apache.cassandra.sidecar.client.request.TokenRangeReplicasRequest;
 import org.apache.cassandra.sidecar.client.request.UploadSSTableRequest;
 import org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.NoRetryPolicy;
@@ -231,6 +232,18 @@ public class RequestContext
         public Builder timeSkewRequest()
         {
             return request(TIME_SKEW_REQUEST);
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link TokenRangeReplicasRequest} and returns a reference to this Builder
+         * enabling method chaining.
+         *
+         * @param keyspace the keyspace in Cassandra
+         * @return a reference to this Builder
+         */
+        public Builder tokenRangeReplicasRequest(String keyspace)
+        {
+            return request(new TokenRangeReplicasRequest(keyspace));
         }
 
         /**

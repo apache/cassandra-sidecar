@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -87,6 +88,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = WORKER_POOLS_PROPERTY, required = true)
     protected final Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration;
 
+    @JsonProperty("jmx")
+    protected final JmxConfiguration jmxConfiguration;
+
     public ServiceConfigurationImpl()
     {
         this(DEFAULT_HOST,
@@ -97,7 +101,8 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
              new ThrottleConfigurationImpl(),
              new SSTableUploadConfigurationImpl(),
              new SSTableImportConfigurationImpl(),
-             DEFAULT_WORKER_POOLS_CONFIGURATION);
+             DEFAULT_WORKER_POOLS_CONFIGURATION,
+             new JmxConfigurationImpl());
     }
 
     public ServiceConfigurationImpl(SSTableImportConfiguration ssTableImportConfiguration)
@@ -110,12 +115,14 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
              new ThrottleConfigurationImpl(),
              new SSTableUploadConfigurationImpl(),
              ssTableImportConfiguration,
-             DEFAULT_WORKER_POOLS_CONFIGURATION);
+             DEFAULT_WORKER_POOLS_CONFIGURATION,
+             new JmxConfigurationImpl());
     }
 
     public ServiceConfigurationImpl(String host,
                                     ThrottleConfiguration throttleConfiguration,
-                                    SSTableUploadConfiguration ssTableUploadConfiguration)
+                                    SSTableUploadConfiguration ssTableUploadConfiguration,
+                                    JmxConfiguration jmxConfiguration)
     {
         this(host,
              DEFAULT_PORT,
@@ -125,7 +132,8 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
              throttleConfiguration,
              ssTableUploadConfiguration,
              new SSTableImportConfigurationImpl(),
-             DEFAULT_WORKER_POOLS_CONFIGURATION);
+             DEFAULT_WORKER_POOLS_CONFIGURATION,
+             jmxConfiguration);
     }
 
     public ServiceConfigurationImpl(int requestIdleTimeoutMillis,
@@ -141,7 +149,8 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
              new ThrottleConfigurationImpl(),
              ssTableUploadConfiguration,
              new SSTableImportConfigurationImpl(),
-             DEFAULT_WORKER_POOLS_CONFIGURATION);
+             DEFAULT_WORKER_POOLS_CONFIGURATION,
+             new JmxConfigurationImpl());
     }
 
     public ServiceConfigurationImpl(String host,
@@ -152,7 +161,8 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
                                     ThrottleConfiguration throttleConfiguration,
                                     SSTableUploadConfiguration ssTableUploadConfiguration,
                                     SSTableImportConfiguration ssTableImportConfiguration,
-                                    Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration)
+                                    Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration,
+                                    JmxConfiguration jmxConfiguration)
     {
         this.host = host;
         this.port = port;
@@ -162,6 +172,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         this.throttleConfiguration = throttleConfiguration;
         this.ssTableUploadConfiguration = ssTableUploadConfiguration;
         this.ssTableImportConfiguration = ssTableImportConfiguration;
+        this.jmxConfiguration = jmxConfiguration;
         if (workerPoolsConfiguration == null || workerPoolsConfiguration.isEmpty())
         {
             this.workerPoolsConfiguration = DEFAULT_WORKER_POOLS_CONFIGURATION;
@@ -170,6 +181,20 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         {
             this.workerPoolsConfiguration = workerPoolsConfiguration;
         }
+    }
+
+    public ServiceConfigurationImpl(String host)
+    {
+        this(host,
+             DEFAULT_PORT,
+             DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS,
+             DEFAULT_REQUEST_TIMEOUT_MILLIS,
+             DEFAULT_ALLOWABLE_SKEW_IN_MINUTES,
+             new ThrottleConfigurationImpl(),
+             new SSTableUploadConfigurationImpl(),
+             new SSTableImportConfigurationImpl(),
+             DEFAULT_WORKER_POOLS_CONFIGURATION,
+             new JmxConfigurationImpl());
     }
 
     /**
@@ -264,4 +289,15 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     {
         return workerPoolsConfiguration;
     }
+
+    /**
+     * @return the general JMX configuration options (not per-instance)
+     */
+    @Override
+    @JsonProperty("jmx")
+    public JmxConfiguration jmxConfiguration()
+    {
+        return jmxConfiguration;
+    }
+
 }

@@ -39,7 +39,10 @@ sidecar:
     delay_sec: 5
     timeout_sec: 10
   allowable_time_skew_in_minutes: 60
-
+  jmx:
+    connection:
+      max_retries: 40
+      retry_delay_millis: 2000
 #
 # Enable SSL configuration (Disabled by default)
 #

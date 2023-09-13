@@ -126,13 +126,21 @@ public class CQLSessionProvider
         return localSession;
     }
 
-    public synchronized void close()
+    public Session close()
     {
+        Session localSession;
+        synchronized (this)
+        {
+            localSession = this.localSession;
+            this.localSession = null;
+        }
+
         if (localSession != null)
         {
             try
             {
                 localSession.getCluster().closeAsync().get(1, TimeUnit.MINUTES);
+                localSession.closeAsync().get(1, TimeUnit.MINUTES);
             }
             catch (InterruptedException e)
             {
@@ -146,8 +154,8 @@ public class CQLSessionProvider
             {
                 throw propagateCause(e);
             }
-            localSession = null;
         }
+        return localSession;
     }
 
     static RuntimeException propagateCause(ExecutionException e)

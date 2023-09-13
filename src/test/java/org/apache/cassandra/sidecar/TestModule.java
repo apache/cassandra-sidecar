@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.JmxConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SSTableUploadConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
@@ -80,7 +81,8 @@ public class TestModule extends AbstractModule
         SSTableUploadConfiguration uploadConfiguration = new SSTableUploadConfigurationImpl(0F);
         ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl("127.0.0.1",
                                                                                  throttleConfiguration,
-                                                                                 uploadConfiguration);
+                                                                                 uploadConfiguration,
+                                                                                 new JmxConfigurationImpl());
         HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(1000);
         return new SidecarConfigurationImpl(serviceConfiguration, sslConfiguration, healthCheckConfiguration);
     }

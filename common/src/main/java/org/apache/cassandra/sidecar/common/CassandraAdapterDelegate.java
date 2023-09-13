@@ -47,6 +47,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateListener
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
+
     private final String sidecarVersion;
     private final CassandraVersionProvider versionProvider;
     private final CQLSessionProvider cqlSessionProvider;
@@ -54,8 +56,6 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private SimpleCassandraVersion currentVersion;
     private ICassandraAdapter adapter;
     private volatile NodeSettings nodeSettings = null;
-
-    private static final Logger logger = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
     private final AtomicBoolean registered = new AtomicBoolean(false);
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
 
@@ -107,7 +107,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
         else
         {
-            logger.debug("Skipping health check because there's an active check at the moment");
+            LOGGER.debug("Skipping health check because there's an active check at the moment");
         }
     }
 
@@ -116,7 +116,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         Session activeSession = cqlSessionProvider.localCql();
         if (activeSession == null)
         {
-            logger.info("No local CQL session is available. Cassandra is down presumably.");
+            LOGGER.info("No local CQL session is available. Cassandra is down presumably.");
             nodeSettings = null;
             return;
         }
@@ -141,14 +141,14 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 adapter = versionProvider.cassandra(releaseVersion)
                                          .create(cqlSessionProvider, jmxClient);
                 nodeSettings = newNodeSettings;
-                logger.info("Cassandra version change detected (from={} to={}). New adapter loaded={}",
+                LOGGER.info("Cassandra version change detected (from={} to={}). New adapter loaded={}",
                             previousVersion, currentVersion, adapter);
             }
-            logger.debug("Cassandra version {}", releaseVersion);
+            LOGGER.debug("Cassandra version {}", releaseVersion);
         }
         catch (IllegalArgumentException | NoHostAvailableException e)
         {
-            logger.error("Unexpected error connecting to Cassandra instance.", e);
+            LOGGER.error("Unexpected error connecting to Cassandra instance.", e);
             // The cassandra node is down.
             // Unregister the host listener and nullify the session in order to get a new object.
             nodeSettings = null;
@@ -240,21 +240,19 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     public void close()
     {
-        Session activeSession = cqlSessionProvider.localCql();
+        nodeSettings = null;
+        Session activeSession = cqlSessionProvider.close();
         if (activeSession != null)
         {
             maybeUnregisterHostListener(activeSession);
-            cqlSessionProvider.close();
         }
-        nodeSettings = null;
         try
         {
             jmxClient.close();
         }
         catch (IOException e)
         {
-            // Can't throw unchecked exceptions here, so wrap and rethrow
-            throw new RuntimeException(e);
+            LOGGER.warn("Unable to close JMX client", e);
         }
     }
 

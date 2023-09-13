@@ -93,6 +93,28 @@ class SidecarConfigurationTest
     }
 
     @Test
+    void testReadingJmxConfiguration() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_multiple_instances.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+        assertThat(config.serviceConfiguration().jmxConfiguration()).isNotNull();
+        JmxConfiguration jmxConfiguration = config.serviceConfiguration().jmxConfiguration();
+        assertThat(jmxConfiguration.maxRetries()).isEqualTo(42);
+        assertThat(jmxConfiguration.retryDelayMillis()).isEqualTo(1234L);
+    }
+
+    @Test
+    void testReadingBlankJmxConfigurationReturnsDefaults() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_missing_jmx.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+        assertThat(config.serviceConfiguration().jmxConfiguration()).isNotNull();
+        JmxConfiguration jmxConfiguration = config.serviceConfiguration().jmxConfiguration();
+        assertThat(jmxConfiguration.maxRetries()).isEqualTo(3);
+        assertThat(jmxConfiguration.retryDelayMillis()).isEqualTo(200L);
+    }
+
+    @Test
     void testUploadsConfiguration() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_multiple_instances.yaml");

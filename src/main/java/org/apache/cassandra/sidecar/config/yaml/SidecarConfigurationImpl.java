@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
+import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
@@ -210,7 +211,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
                                     .addAbstractTypeMapping(ThrottleConfiguration.class,
                                                             ThrottleConfigurationImpl.class)
                                     .addAbstractTypeMapping(WorkerPoolConfiguration.class,
-                                                            WorkerPoolConfigurationImpl.class);
+                                                            WorkerPoolConfigurationImpl.class)
+                                    .addAbstractTypeMapping(JmxConfiguration.class,
+                                                            JmxConfigurationImpl.class);
 
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
                               .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)

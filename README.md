@@ -49,6 +49,18 @@ The build script supports two parameters:
 Remove any versions you may not want to test with. We recommend at least the latest (released) 4.X series and `trunk`.
 See Testing for more details on how to choose which Cassandra versions to use while testing.
 
+For multi-node in-jvm dtests, network aliases will need to be setup for each Cassandra node. The tests assume each node's 
+ip address is 127.0.0.x, where x is the node id. 
+
+For example if you populated your cluster with 3 nodes, create interfaces for 127.0.0.2 and 127.0.0.3 (the first node of course uses 127.0.0.1).
+
+### macOS network aliases
+To get up and running, create a temporary alias for every node except the first:
+
+```
+ for i in {2..20}; do sudo ifconfig lo0 alias "127.0.0.${i}"; done
+```
+
 Getting started: Running The Sidecar
 --------------------------------------
 

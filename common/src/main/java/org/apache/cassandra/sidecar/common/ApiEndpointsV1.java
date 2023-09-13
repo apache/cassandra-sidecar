@@ -78,6 +78,8 @@ public final class ApiEndpointsV1
     public static final String GOSSIP_INFO_ROUTE = API_V1 + CASSANDRA + "/gossip";
     public static final String TIME_SKEW_ROUTE = API_V1 + "/time-skew";
 
+    public static final String KEYSPACE_TOKEN_MAPPING_ROUTE = API_V1 + PER_KEYSPACE + "/token-range-replicas";
+
     private ApiEndpointsV1()
     {
         throw new IllegalStateException(getClass() + " is a constants container and shall not be instantiated");
