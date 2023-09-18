@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.common.net.HostAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,8 @@ import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse.ReplicaInfo;
+import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse.ReplicaMetadata;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.GossipInfoParser;
 import org.jetbrains.annotations.NotNull;
 
@@ -52,17 +55,21 @@ import static org.apache.cassandra.sidecar.adapters.base.TokenRangeReplicas.gene
  */
 public class TokenRangeReplicaProvider
 {
+
     private interface KeyspaceToRangeMappingFunc extends Function<String, Map<List<String>, List<String>>>
     {
     }
 
     protected final JmxClient jmxClient;
+    private final DnsResolver dnsResolver;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenRangeReplicaProvider.class);
 
-    public TokenRangeReplicaProvider(JmxClient jmxClient)
+    public TokenRangeReplicaProvider(JmxClient jmxClient, DnsResolver dnsResolver)
     {
+
         this.jmxClient = jmxClient;
+        this.dnsResolver = dnsResolver;
     }
 
     public TokenRangeReplicasResponse tokenRangeReplicas(String keyspace, Partitioner partitioner)
@@ -87,11 +94,11 @@ public class TokenRangeReplicaProvider
         List<ReplicaInfo> writeReplicas = writeReplicasFromPendingRanges(allTokenRangeReplicas, hostToDatacenter);
 
         List<ReplicaInfo> readReplicas = readReplicasFromReplicaMapping(naturalTokenRangeReplicas, hostToDatacenter);
-        Map<String, String> replicaToStateMap = replicaToStateMap(allTokenRangeReplicas, storage);
+        List<ReplicaMetadata> replicaMetadata = getReplicaMetadata(allTokenRangeReplicas, storage, hostToDatacenter);
 
-        return new TokenRangeReplicasResponse(replicaToStateMap,
-                                              writeReplicas,
-                                              readReplicas);
+        return new TokenRangeReplicasResponse(writeReplicas,
+                                              readReplicas,
+                                              replicaMetadata);
     }
 
     private List<TokenRangeReplicas> getTokenRangeReplicas(String rangeType, String keyspace, Partitioner partitioner,
@@ -115,22 +122,46 @@ public class TokenRangeReplicaProvider
                               .collect(toList());
     }
 
-    private Map<String, String> replicaToStateMap(List<TokenRangeReplicas> replicaSet, StorageJmxOperations storage)
+    private List<ReplicaMetadata> getReplicaMetadata(List<TokenRangeReplicas> replicaSet,
+                                                     StorageJmxOperations storage,
+                                                     Map<String, String> hostToDatacenter)
     {
         List<String> joiningNodes = storage.getJoiningNodesWithPort();
         List<String> leavingNodes = storage.getLeavingNodesWithPort();
         List<String> movingNodes = storage.getMovingNodesWithPort();
 
+        List<String> liveNodes = storage.getLiveNodesWithPort();
+        List<String> deadNodes = storage.getUnreachableNodesWithPort();
+
+
         String rawGossipInfo = getRawGossipInfo();
         GossipInfoResponse gossipInfo = GossipInfoParser.parse(rawGossipInfo);
 
         StateWithReplacement state = new StateWithReplacement(joiningNodes, leavingNodes, movingNodes, gossipInfo);
+        RingProvider.Status status = new RingProvider.Status(liveNodes, deadNodes);
 
         return replicaSet.stream()
                          .map(TokenRangeReplicas::replicaSet)
                          .flatMap(Collection::stream)
                          .distinct()
-                         .collect(Collectors.toMap(Function.identity(), state::of));
+                         .map(replica -> {
+                             try
+                             {
+                                 HostAndPort hap = HostAndPort.fromString(replica);
+                                 return new ReplicaMetadata(state.of(replica),
+                                                            status.of(replica),
+                                                            dnsResolver.reverseResolve(hap.getHost()),
+                                                            hap.getHost(),
+                                                            hap.getPort(),
+                                                            hostToDatacenter.get(replica));
+                             }
+                             catch (UnknownHostException e)
+                             {
+                                 throw new RuntimeException(
+                                 String.format("Failed to resolve fqdn for replica %s ", replica), e);
+                             }
+                         })
+                         .collect(Collectors.toList());
     }
 
     protected EndpointSnitchJmxOperations initializeEndpointProxy()
@@ -210,10 +241,9 @@ public class TokenRangeReplicaProvider
         Map<String, List<String>> dcReplicaMapping = new HashMap<>();
 
         replicas.stream()
-            .filter(hostToDatacenter::containsKey)
-            .forEach(item ->
-                     dcReplicaMapping.computeIfAbsent(hostToDatacenter.get(item), v -> new ArrayList<>())
-                                     .add(item));
+                .filter(hostToDatacenter::containsKey)
+                .forEach(item -> dcReplicaMapping.computeIfAbsent(hostToDatacenter.get(item), v -> new ArrayList<>())
+                                                 .add(item));
         return dcReplicaMapping;
     }
 

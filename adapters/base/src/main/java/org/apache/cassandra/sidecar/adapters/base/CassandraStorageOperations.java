@@ -49,20 +49,16 @@ public class CassandraStorageOperations implements StorageOperations
     protected final TokenRangeReplicaProvider tokenRangeReplicaProvider;
 
     /**
-     * Creates a new instance with the provided {@link JmxClient}
+     * Creates a new instance with the provided {@link JmxClient} and {@link DnsResolver}
      *
      * @param jmxClient the JMX client used to communicate with the Cassandra instance
+     * @param dnsResolver the DNS resolver used to lookup replicas
      */
     public CassandraStorageOperations(JmxClient jmxClient, DnsResolver dnsResolver)
     {
-        this(jmxClient, new RingProvider(jmxClient, dnsResolver));
-    }
-
-    public CassandraStorageOperations(JmxClient jmxClient, RingProvider ringProvider)
-    {
         this.jmxClient = jmxClient;
-        this.ringProvider = ringProvider;
-        this.tokenRangeReplicaProvider = new TokenRangeReplicaProvider(jmxClient);
+        this.ringProvider = new RingProvider(jmxClient, dnsResolver);
+        this.tokenRangeReplicaProvider =  new TokenRangeReplicaProvider(jmxClient, dnsResolver);
     }
 
     /**

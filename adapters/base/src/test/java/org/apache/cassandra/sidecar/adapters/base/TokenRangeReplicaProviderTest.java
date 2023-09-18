@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,8 +33,10 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
@@ -56,20 +60,24 @@ public class TokenRangeReplicaProviderTest
                                                                               "127.0.0.4:7000");
     public static final String TEST_KEYSPACE = "test_keyspace";
 
+    private static final String TEST_HOSTNAME = "Hostname";
+
     StorageJmxOperations storageOperations;
     EndpointSnitchJmxOperations endpointOperations;
     ClusterMembershipJmxOperations clusterMembershipOperations;
     JmxClient jmxClient;
+    DnsResolver dnsResolver;
     TokenRangeReplicaProvider instance;
 
     @BeforeEach
-    void setup()
+    void setup() throws UnknownHostException
     {
         storageOperations = mock(StorageJmxOperations.class);
         endpointOperations = mock(EndpointSnitchJmxOperations.class);
         clusterMembershipOperations = mock(ClusterMembershipJmxOperations.class);
         jmxClient = mock(JmxClient.class);
-        instance = new TokenRangeReplicaProvider(jmxClient);
+        dnsResolver = mock(DnsResolver.class);
+        instance = new TokenRangeReplicaProvider(jmxClient, dnsResolver);
 
         when(jmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService"))
         .thenReturn(storageOperations);
@@ -77,6 +85,7 @@ public class TokenRangeReplicaProviderTest
         .thenReturn(endpointOperations);
         when(jmxClient.proxy(ClusterMembershipJmxOperations.class, "org.apache.cassandra.net:type=FailureDetector"))
         .thenReturn(clusterMembershipOperations);
+        when(dnsResolver.reverseResolve(any())).thenReturn(TEST_HOSTNAME);
     }
 
     @Test
@@ -89,6 +98,8 @@ public class TokenRangeReplicaProviderTest
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
         when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
         when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
+        when(storageOperations.getLiveNodesWithPort()).thenReturn(TEST_ENDPOINTS1);
+        when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
         when(clusterMembershipOperations.getAllEndpointStatesWithPort()).thenReturn("");
 
         TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Random);
@@ -99,10 +110,24 @@ public class TokenRangeReplicaProviderTest
         // Single DC
         assertThat(result.readReplicas().get(0).replicasByDatacenter().size()).isEqualTo(1);
         assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
-        assertThat(result.replicaState().size()).isEqualTo(3);
-        assertThat(result.replicaState().get("127.0.0.1:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.2:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.3:7000")).isEqualTo("Normal");
+        assertThat(result.replicaMetadata().size()).isEqualTo(3);
+        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadata = filterReplicaMetadata(result.replicaMetadata(),
+                                                                                        "127.0.0.1", 7000);
+        assertThat(nodeMetadata.state()).isEqualTo("Normal");
+        assertThat(nodeMetadata.status()).isEqualTo("Up");
+        assertThat(nodeMetadata.datacenter()).isEqualTo(TEST_DC1);
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
+                   .state()).isEqualTo("Normal");
+    }
+
+    private TokenRangeReplicasResponse.ReplicaMetadata filterReplicaMetadata(
+    List<TokenRangeReplicasResponse.ReplicaMetadata> replicaMetadata, String address, int port)
+    {
+        return replicaMetadata.stream()
+                              .filter(r -> (r.address().equals(address) && r.port() == port))
+                              .findFirst().get();
     }
 
     @Test
@@ -111,11 +136,16 @@ public class TokenRangeReplicaProviderTest
         Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
         readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
         readReplicaMappings.put(TOKEN_RANGE2, TEST_ENDPOINTS2);
+        List<String> allLiveNodes = Stream.concat(TEST_ENDPOINTS1.stream(), TEST_ENDPOINTS2.stream())
+                                          .collect(Collectors.toList());
+        when(storageOperations.getLiveNodesWithPort()).thenReturn(allLiveNodes);
+        when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
 
         when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
         when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
         when(storageOperations.getLeavingNodesWithPort()).thenReturn(Arrays.asList("128.0.0.1:7000", "127.0.0.2:7000"));
+        when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
         when(clusterMembershipOperations.getAllEndpointStatesWithPort()).thenReturn(generateSampleGossip("NORMAL",
                                                                                                          "LEAVING",
                                                                                                          "NORMAL",
@@ -137,12 +167,25 @@ public class TokenRangeReplicaProviderTest
         assertThat(result.readReplicas().get(1).replicasByDatacenter().size()).isEqualTo(1);
         assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
         assertThat(result.readReplicas().get(1).replicasByDatacenter().get(TEST_DC2)).containsAll(TEST_ENDPOINTS2);
-        assertThat(result.replicaState().size()).isEqualTo(5);
-        assertThat(result.replicaState().get("127.0.0.1:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.2:7000")).isEqualTo("Leaving");
-        assertThat(result.replicaState().get("127.0.0.3:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("128.0.0.1:7000")).isEqualTo("Leaving");
-        assertThat(result.replicaState().get("128.0.0.2:7000")).isEqualTo("Normal");
+        assertThat(result.replicaMetadata().size()).isEqualTo(5);
+        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadataDc1 = filterReplicaMetadata(result.replicaMetadata(),
+                                                                                        "127.0.0.1", 7000);
+        assertThat(nodeMetadataDc1.state()).isEqualTo("Normal");
+        assertThat(nodeMetadataDc1.status()).isEqualTo("Up");
+        assertThat(nodeMetadataDc1.datacenter()).isEqualTo(TEST_DC1);
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
+                   .state()).isEqualTo("Leaving");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
+                   .state()).isEqualTo("Normal");
+
+        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadatDc2 = filterReplicaMetadata(result.replicaMetadata(),
+                                                                                        "128.0.0.1", 7000);
+        assertThat(nodeMetadatDc2.state()).isEqualTo("Leaving");
+        assertThat(nodeMetadatDc2.status()).isEqualTo("Up");
+        assertThat(nodeMetadatDc2.datacenter()).isEqualTo(TEST_DC2);
+
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.2", 7000)
+                   .state()).isEqualTo("Normal");
     }
 
     @Test
@@ -151,6 +194,10 @@ public class TokenRangeReplicaProviderTest
         Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
         readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
         readReplicaMappings.put(TOKEN_RANGE2, TEST_MULTI_DC_ENDPOINTS);
+        List<String> allLiveNodes = Stream.concat(TEST_ENDPOINTS1.stream(), TEST_MULTI_DC_ENDPOINTS.stream())
+                                          .collect(Collectors.toList());
+        when(storageOperations.getLiveNodesWithPort()).thenReturn(allLiveNodes);
+        when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
 
         when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
@@ -181,12 +228,19 @@ public class TokenRangeReplicaProviderTest
         assertThat(replicaInfoWithMultipleDCs.replicasByDatacenter().size()).isEqualTo(2);
         assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
         assertThat(result.readReplicas().get(1).replicasByDatacenter().get(TEST_DC2)).containsAll(TEST_ENDPOINTS2);
-        assertThat(result.replicaState().get("127.0.0.1:7000")).isEqualTo("Leaving");
-        assertThat(result.replicaState().get("127.0.0.2:7000")).isEqualTo("Leaving");
-        assertThat(result.replicaState().get("127.0.0.3:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.4:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("128.0.0.1:7000")).isEqualTo("Leaving");
-        assertThat(result.replicaState().get("128.0.0.2:7000")).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
+                   .state()).isEqualTo("Leaving");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
+                   .state()).isEqualTo("Leaving");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.4", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.1", 7000)
+                   .state()).isEqualTo("Leaving");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.2", 7000)
+                   .state()).isEqualTo("Normal");
+
     }
 
     @Test
@@ -197,6 +251,10 @@ public class TokenRangeReplicaProviderTest
 
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
         writeReplicaMappings.put(TOKEN_RANGE2, TEST_ENDPOINTS2);
+
+        when(storageOperations.getLiveNodesWithPort()).thenReturn(TEST_ENDPOINTS1);
+        when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
+
 
         when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
         when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
@@ -218,11 +276,17 @@ public class TokenRangeReplicaProviderTest
         assertThat(result.readReplicas().size()).isEqualTo(1);
         assertThat(result.readReplicas().get(0).replicasByDatacenter().size()).isEqualTo(1);
         assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
-        assertThat(result.replicaState().get("127.0.0.1:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.2:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.3:7000")).isEqualTo("Leaving");
-        assertThat(result.replicaState().get("128.0.0.1:7000")).isEqualTo("Leaving");
-        assertThat(result.replicaState().get("128.0.0.2:7000")).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
+                   .state()).isEqualTo("Leaving");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.1", 7000)
+                   .state()).isEqualTo("Leaving");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.2", 7000)
+                   .state()).isEqualTo("Normal");
+
     }
 
     @Test
@@ -238,6 +302,8 @@ public class TokenRangeReplicaProviderTest
         );
         Map<List<String>, List<String>> pendingRangeToEndpointWithPortMap = Collections.emptyMap();
 
+        when(storageOperations.getLiveNodesWithPort()).thenReturn(TEST_ENDPOINTS1);
+        when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
         when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
         when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
         .thenReturn(pendingRangeToEndpointWithPortMap);
@@ -258,9 +324,12 @@ public class TokenRangeReplicaProviderTest
                                        Long.toString(Long.MAX_VALUE))).isTrue();
         assertThat(validateRangeExists(result.writeReplicas(), "3074457345618258602",
                                        Long.toString(Long.MAX_VALUE))).isTrue();
-        assertThat(result.replicaState().get("127.0.0.1:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.2:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.3:7000")).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
+                   .state()).isEqualTo("Normal");
     }
 
     @Test
@@ -276,13 +345,15 @@ public class TokenRangeReplicaProviderTest
         );
         Map<List<String>, List<String>> pendingRangeToEndpointWithPortMap = ImmutableMap.of(
         Arrays.asList("6148914691236517204", "9223372036854775807"),
-//        Arrays.asList("3074457345618258602", "6148914691236517204"),
         Collections.singletonList("127.0.0.4:7000"),
         Arrays.asList("-3074457345618258603", "3074457345618258602"),
         Collections.singletonList("127.0.0.4:7000"),
         Arrays.asList("-9223372036854775808", "-3074457345618258603"),
         Collections.singletonList("127.0.0.4:7000")
         );
+
+        when(storageOperations.getLiveNodesWithPort()).thenReturn(TEST_ENDPOINTS1);
+        when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
 
         when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
         when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
@@ -309,10 +380,14 @@ public class TokenRangeReplicaProviderTest
         // Existing read replicas wrap-around range ends at "maxToken"
         assertThat(validateRangeExists(result.readReplicas(), "3074457345618258602",
                                        Long.toString(Long.MAX_VALUE))).isTrue();
-        assertThat(result.replicaState().get("127.0.0.1:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.2:7000")).isEqualTo("Leaving");
-        assertThat(result.replicaState().get("127.0.0.3:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.4:7000")).isEqualTo("Leaving");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
+                   .state()).isEqualTo("Leaving");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.4", 7000)
+                   .state()).isEqualTo("Leaving");
     }
 
     @Test
@@ -329,6 +404,10 @@ public class TokenRangeReplicaProviderTest
         Arrays.asList("127.0.0.2:7000", "127.0.0.3:7000", "127.0.0.4:7000")
         );
         Map<List<String>, List<String>> pendingRangeToEndpointWithPortMap = Collections.emptyMap();
+
+        when(storageOperations.getLiveNodesWithPort())
+        .thenReturn(Arrays.asList("127.0.0.1:7000", "127.0.0.2:7000", "127.0.0.3:7000", "127.0.0.4:7000"));
+        when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
 
         when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
         when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
@@ -351,10 +430,16 @@ public class TokenRangeReplicaProviderTest
                                        Long.toString(Long.MAX_VALUE))).isTrue();
         assertThat(validateRangeExists(result.writeReplicas(), "6148914691236517204",
                                        Long.toString(Long.MAX_VALUE))).isTrue();
-        assertThat(result.replicaState().get("127.0.0.1:7000")).isEqualTo("Leaving");
-        assertThat(result.replicaState().get("127.0.0.2:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.3:7000")).isEqualTo("Normal");
-        assertThat(result.replicaState().get("127.0.0.4:7000")).isEqualTo("Replacing");
+
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
+                   .state()).isEqualTo("Leaving");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
+                   .state()).isEqualTo("Normal");
+        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.4", 7000)
+                   .state()).isEqualTo("Replacing");
+
     }
 
     private boolean validateRangeExists(List<TokenRangeReplicasResponse.ReplicaInfo> ranges, String start, String end)

@@ -89,13 +89,13 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
 
     protected void validateNodeStates(TokenRangeReplicasResponse mappingResponse,
                                       Set<String> dcReplication,
-                                      Function<Integer, String> statusFunction)
+                                      Function<Integer, String> stateFunction)
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         int expectedReplicas = (annotation.nodesPerDc() + annotation.newNodesPerDc()) * dcReplication.size();
 
         AbstractCassandraTestContext cassandraTestContext = sidecarTestContext.cassandraTestContext();
-        assertThat(mappingResponse.replicaState().size()).isEqualTo(expectedReplicas);
+        assertThat(mappingResponse.replicaMetadata().size()).isEqualTo(expectedReplicas);
         for (int i = 1; i <= cassandraTestContext.cluster().size(); i++)
         {
             IInstanceConfig config = cassandraTestContext.cluster().get(i).config();
@@ -105,8 +105,11 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
                 String ipAndPort = config.broadcastAddress().getAddress().getHostAddress() + ":"
                                    + config.broadcastAddress().getPort();
 
-                String expectedStatus = statusFunction.apply(i);
-                assertThat(mappingResponse.replicaState().get(ipAndPort)).isEqualTo(expectedStatus);
+                String expectedStatus = stateFunction.apply(i);
+                assertThat(filterReplicaMetadata(mappingResponse.replicaMetadata(),
+                                                 config.broadcastAddress().getAddress().getHostAddress(),
+                                                 config.broadcastAddress().getPort()).state())
+                .isEqualTo(expectedStatus);
             }
         }
     }
@@ -250,6 +253,15 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
             }
         }
     }
+
+    private TokenRangeReplicasResponse.ReplicaMetadata filterReplicaMetadata(
+    List<TokenRangeReplicasResponse.ReplicaMetadata> replicaMetadata, String address, int port)
+    {
+        return replicaMetadata.stream()
+                              .filter(r -> (r.address().equals(address) && r.port() == port))
+                              .findFirst().get();
+    }
+
 
     void retrieveMappingWithKeyspace(VertxTestContext context, String keyspace,
                                      Handler<HttpResponse<Buffer>> verifier) throws Exception

@@ -328,11 +328,18 @@ abstract class SidecarClientTest
     public void testTokenRangeReplicasFromReplicaSet() throws Exception
     {
         String keyspace = "test";
-        String nodeWithPort = "127.0.0.1:7000";
+        String nodeAddress = "127.0.0.1";
+        int port = 7000;
+        String nodeWithPort = nodeAddress + ":" + port;
         String expectedRangeStart = "-9223372036854775808";
         String expectedRangeEnd = "9223372036854775807";
-        String tokenRangeReplicasAsString = "{\"replicaState\":{" +
-                                            "\"127.0.0.1:7000\":\"NORMAL\"}," +
+        String tokenRangeReplicasAsString = "{\"replicaMetadata\":[{" +
+                                            "\"state\":\"Normal\"," +
+                                            "\"status\":\"Up\"," +
+                                            "\"fqdn\":\"localhost\"," +
+                                            "\"address\":\"127.0.0.1\"," +
+                                            "\"port\":7000," +
+                                            "\"datacenter\":\"datacenter1\"}]," +
                                             "\"writeReplicas\":[{\"start\":\"-9223372036854775808\"," +
                                             "\"end\":\"9223372036854775807\",\"replicasByDatacenter\":" +
                                             "{\"datacenter1\":[\"127.0.0.1:7000\"]}}],\"readReplicas\":" +
@@ -356,8 +363,18 @@ abstract class SidecarClientTest
         assertThat(readReplica.end()).isEqualTo(expectedRangeEnd);
         assertThat(readReplica.replicasByDatacenter()).containsKey("datacenter1");
         assertThat(readReplica.replicasByDatacenter().get("datacenter1")).containsExactly(nodeWithPort);
-        assertThat(result.replicaState()).hasSize(1);
-        assertThat(result.replicaState().get(nodeWithPort)).isEqualTo("NORMAL");
+        assertThat(result.replicaMetadata()).hasSize(1);
+        TokenRangeReplicasResponse.ReplicaMetadata instanceMetadata =
+        result.replicaMetadata().stream()
+              .filter(r -> r.address().equals(nodeAddress) && r.port() == port)
+              .findFirst()
+              .get();
+        assertThat(instanceMetadata.state()).isEqualTo("Normal");
+        assertThat(instanceMetadata.status()).isEqualTo("Up");
+        assertThat(instanceMetadata.address()).isEqualTo("127.0.0.1");
+        assertThat(instanceMetadata.port()).isEqualTo(7000);
+        assertThat(instanceMetadata.fqdn()).isEqualTo("localhost");
+        assertThat(instanceMetadata.datacenter()).isEqualTo("datacenter1");
 
         validateResponseServed(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE.replaceAll(
         ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace));

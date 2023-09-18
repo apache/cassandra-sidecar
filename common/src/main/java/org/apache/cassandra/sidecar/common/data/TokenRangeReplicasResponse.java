@@ -29,33 +29,34 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class TokenRangeReplicasResponse
 {
-    private final Map<String, String> replicaState;
     private final List<ReplicaInfo> writeReplicas;
     private final List<ReplicaInfo> readReplicas;
+
+    private final List<ReplicaMetadata> replicaMetadata;
 
     /**
      * Constructs token range replicas response object with given params.
      *
-     * @param replicaState  mapping replica to it's state information
      * @param writeReplicas list of write replicas {@link ReplicaInfo} instances breakdown by token range
      * @param readReplicas  list of read replica {@link ReplicaInfo} instances breakdown by token range
+     * @param replicaMetadata  mapping replica to it's state and status information
      */
-    public TokenRangeReplicasResponse(@JsonProperty("replicaState") Map<String, String> replicaState,
-                                      @JsonProperty("writeReplicas") List<ReplicaInfo> writeReplicas,
-                                      @JsonProperty("readReplicas") List<ReplicaInfo> readReplicas)
+    public TokenRangeReplicasResponse(@JsonProperty("writeReplicas") List<ReplicaInfo> writeReplicas,
+                                      @JsonProperty("readReplicas") List<ReplicaInfo> readReplicas,
+                                      @JsonProperty("replicaMetadata") List<ReplicaMetadata> replicaMetadata)
     {
-        this.replicaState = replicaState;
         this.writeReplicas = writeReplicas;
         this.readReplicas = readReplicas;
+        this.replicaMetadata = replicaMetadata;
     }
 
     /**
-     * @return the replica to state information mapping
+     * @return metadata associated with each replica
      */
-    @JsonProperty("replicaState")
-    public Map<String, String> replicaState()
+    @JsonProperty("replicaMetadata")
+    public List<ReplicaMetadata> replicaMetadata()
     {
-        return replicaState;
+        return replicaMetadata;
     }
 
     /**
@@ -151,6 +152,104 @@ public class TokenRangeReplicasResponse
                    "start='" + start + '\'' +
                    ", end='" + end + '\'' +
                    ", replicasByDatacenter=" + replicasByDatacenter +
+                   '}';
+        }
+    }
+
+    /**
+     * Class representing metadata associated with replica instances
+     */
+    public static class ReplicaMetadata
+    {
+        private final String state;
+        private final String status;
+        private final String fqdn;
+        private final String address;
+        private final int port;
+        private final String datacenter;
+
+        public ReplicaMetadata(@JsonProperty("state") String state,
+                               @JsonProperty("status") String status,
+                               @JsonProperty("fqdn") String fqdn,
+                               @JsonProperty("address") String address,
+                               @JsonProperty("port") int port,
+                               @JsonProperty("datacenter") String datacenter)
+        {
+            this.state = state;
+            this.status = status;
+            this.fqdn = fqdn;
+            this.address = address;
+            this.port = port;
+            this.datacenter = datacenter;
+        }
+
+        /**
+         * @return the node state. eg. NORMAL, JOINING, LEAVING, etc.
+         */
+        @JsonProperty("state")
+        public String state()
+        {
+            return state;
+        }
+
+        /**
+         * @return the node status. eg. UP, DOWN
+         */
+        @JsonProperty("status")
+        public String status()
+        {
+            return status;
+        }
+
+        /**
+         * @return FQDN of the node
+         */
+        @JsonProperty("fqdn")
+        public String fqdn()
+        {
+            return fqdn;
+        }
+
+        /**
+         * @return IP address of the node
+         */
+        @JsonProperty("address")
+        public String address()
+        {
+            return address;
+        }
+
+        /**
+         * @return port number of the node as specified by the replica-set returned
+         */
+        @JsonProperty("port")
+        public int port()
+        {
+            return port;
+        }
+
+        /**
+         * @return datacenter address of the node
+         */
+        @JsonProperty("datacenter")
+        public String datacenter()
+        {
+            return datacenter;
+        }
+
+
+        /**
+         * {@inheritDoc}
+         */
+        public String toString()
+        {
+            return "ReplicaMetadata{" +
+                   "state='" + state + '\'' +
+                   ", status='" + status + '\'' +
+                   ", fqdn='" + fqdn + '\'' +
+                   ", address='" + address + '\'' +
+                   ", port='" + port + '\'' +
+                   ", datacenter='" + datacenter + '\'' +
                    '}';
         }
     }
