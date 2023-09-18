@@ -356,8 +356,12 @@ abstract class SidecarClientTest
         assertThat(readReplica.end()).isEqualTo(expectedRangeEnd);
         assertThat(readReplica.replicasByDatacenter()).containsKey("datacenter1");
         assertThat(readReplica.replicasByDatacenter().get("datacenter1")).containsExactly(nodeWithPort);
-        assertThat(result.replicaState()).hasSize(1);
-        assertThat(result.replicaState().get(nodeWithPort)).isEqualTo("NORMAL");
+        assertThat(result.replicaMetadata()).hasSize(1);
+        assertThat(result.replicaMetadata()
+                         .stream()
+                         .filter(r -> r.address().equals(nodeWithPort))
+                         .findFirst()
+                         .get()).isEqualTo("NORMAL");
 
         validateResponseServed(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE.replaceAll(
         ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace));

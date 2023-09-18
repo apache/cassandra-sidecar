@@ -55,14 +55,18 @@ public class CassandraStorageOperations implements StorageOperations
      */
     public CassandraStorageOperations(JmxClient jmxClient, DnsResolver dnsResolver)
     {
-        this(jmxClient, new RingProvider(jmxClient, dnsResolver));
+        this(jmxClient,
+             new RingProvider(jmxClient, dnsResolver),
+             new TokenRangeReplicaProvider(jmxClient, dnsResolver));
     }
 
-    public CassandraStorageOperations(JmxClient jmxClient, RingProvider ringProvider)
+    public CassandraStorageOperations(JmxClient jmxClient,
+                                      RingProvider ringProvider,
+                                      TokenRangeReplicaProvider tokenRangeProvider)
     {
         this.jmxClient = jmxClient;
         this.ringProvider = ringProvider;
-        this.tokenRangeReplicaProvider = new TokenRangeReplicaProvider(jmxClient);
+        this.tokenRangeReplicaProvider = tokenRangeProvider;
     }
 
     /**
