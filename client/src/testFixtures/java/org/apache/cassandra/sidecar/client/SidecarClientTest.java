@@ -334,7 +334,7 @@ abstract class SidecarClientTest
         String tokenRangeReplicasAsString = "{\"replicaMetadata\":[{" +
                                             "\"state\":\"Normal\"," +
                                             "\"status\":\"Up\"," +
-                                            "\"name\":\"localhost\"," +
+                                            "\"fqdn\":\"localhost\"," +
                                             "\"address\":\"127.0.0.1:7000\"," +
                                             "\"datacenter\":\"datacenter1\"}]," +
                                             "\"writeReplicas\":[{\"start\":\"-9223372036854775808\"," +
@@ -369,7 +369,7 @@ abstract class SidecarClientTest
         assertThat(instanceMetadata.state()).isEqualTo("Normal");
         assertThat(instanceMetadata.status()).isEqualTo("Up");
         assertThat(instanceMetadata.address()).isEqualTo("127.0.0.1:7000");
-        assertThat(instanceMetadata.name()).isEqualTo("localhost");
+        assertThat(instanceMetadata.fqdn()).isEqualTo("localhost");
         assertThat(instanceMetadata.datacenter()).isEqualTo("datacenter1");
 
         validateResponseServed(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE.replaceAll(

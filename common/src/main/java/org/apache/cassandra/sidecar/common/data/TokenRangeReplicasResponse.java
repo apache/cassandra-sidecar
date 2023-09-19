@@ -163,19 +163,19 @@ public class TokenRangeReplicasResponse
     {
         private final String state;
         private final String status;
-        private final String name;
+        private final String fqdn;
         private final String address;
         private final String datacenter;
 
         public ReplicaMetadata(@JsonProperty("state") String state,
                                @JsonProperty("status") String status,
-                               @JsonProperty("name") String name,
+                               @JsonProperty("fqdn") String fqdn,
                                @JsonProperty("address") String address,
                                @JsonProperty("datacenter") String datacenter)
         {
             this.state = state;
             this.status = status;
-            this.name = name;
+            this.fqdn = fqdn;
             this.address = address;
             this.datacenter = datacenter;
         }
@@ -201,10 +201,10 @@ public class TokenRangeReplicasResponse
         /**
          * @return FQDN of the node
          */
-        @JsonProperty("name")
-        public String name()
+        @JsonProperty("fqdn")
+        public String fqdn()
         {
-            return name;
+            return fqdn;
         }
 
         /**
@@ -234,7 +234,7 @@ public class TokenRangeReplicasResponse
             return "ReplicaMetadata{" +
                    "state='" + state + '\'' +
                    ", status='" + status + '\'' +
-                   ", name='" + name + '\'' +
+                   ", fqdn='" + fqdn + '\'' +
                    ", address='" + address + '\'' +
                    ", datacenter='" + datacenter + '\'' +
                    '}';
