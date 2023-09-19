@@ -335,7 +335,8 @@ abstract class SidecarClientTest
                                             "\"state\":\"Normal\"," +
                                             "\"status\":\"Up\"," +
                                             "\"name\":\"localhost\"," +
-                                            "\"address\":\"127.0.0.1:7000\"}]," +
+                                            "\"address\":\"127.0.0.1:7000\"," +
+                                            "\"datacenter\":\"datacenter1\"}]," +
                                             "\"writeReplicas\":[{\"start\":\"-9223372036854775808\"," +
                                             "\"end\":\"9223372036854775807\",\"replicasByDatacenter\":" +
                                             "{\"datacenter1\":[\"127.0.0.1:7000\"]}}],\"readReplicas\":" +
@@ -369,6 +370,7 @@ abstract class SidecarClientTest
         assertThat(instanceMetadata.status()).isEqualTo("Up");
         assertThat(instanceMetadata.address()).isEqualTo("127.0.0.1:7000");
         assertThat(instanceMetadata.name()).isEqualTo("localhost");
+        assertThat(instanceMetadata.datacenter()).isEqualTo("datacenter1");
 
         validateResponseServed(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE.replaceAll(
         ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace));

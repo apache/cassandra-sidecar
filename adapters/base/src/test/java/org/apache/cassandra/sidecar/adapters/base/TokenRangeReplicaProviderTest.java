@@ -115,6 +115,7 @@ public class TokenRangeReplicaProviderTest
                                                                                         "127.0.0.1:7000");
         assertThat(nodeMetadata.state()).isEqualTo("Normal");
         assertThat(nodeMetadata.status()).isEqualTo("Up");
+        assertThat(nodeMetadata.datacenter()).isEqualTo(TEST_DC1);
         assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2:7000")
                    .state()).isEqualTo("Normal");
         assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3:7000")
@@ -166,14 +167,22 @@ public class TokenRangeReplicaProviderTest
         assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
         assertThat(result.readReplicas().get(1).replicasByDatacenter().get(TEST_DC2)).containsAll(TEST_ENDPOINTS2);
         assertThat(result.replicaMetadata().size()).isEqualTo(5);
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1:7000")
-                   .state()).isEqualTo("Normal");
+        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadataDc1 = filterReplicaMetadata(result.replicaMetadata(),
+                                                                                        "127.0.0.1:7000");
+        assertThat(nodeMetadataDc1.state()).isEqualTo("Normal");
+        assertThat(nodeMetadataDc1.status()).isEqualTo("Up");
+        assertThat(nodeMetadataDc1.datacenter()).isEqualTo(TEST_DC1);
         assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2:7000")
                    .state()).isEqualTo("Leaving");
         assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3:7000")
                    .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.1:7000")
-                   .state()).isEqualTo("Leaving");
+
+        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadatDc2 = filterReplicaMetadata(result.replicaMetadata(),
+                                                                                        "128.0.0.1:7000");
+        assertThat(nodeMetadatDc2.state()).isEqualTo("Leaving");
+        assertThat(nodeMetadatDc2.status()).isEqualTo("Up");
+        assertThat(nodeMetadatDc2.datacenter()).isEqualTo(TEST_DC2);
+
         assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.2:7000")
                    .state()).isEqualTo("Normal");
     }

@@ -93,7 +93,7 @@ public class TokenRangeReplicaProvider
         List<ReplicaInfo> writeReplicas = writeReplicasFromPendingRanges(allTokenRangeReplicas, hostToDatacenter);
 
         List<ReplicaInfo> readReplicas = readReplicasFromReplicaMapping(naturalTokenRangeReplicas, hostToDatacenter);
-        List<ReplicaMetadata> replicaMetadata = getReplicaMetadata(allTokenRangeReplicas, storage);
+        List<ReplicaMetadata> replicaMetadata = getReplicaMetadata(allTokenRangeReplicas, storage, hostToDatacenter);
 
         return new TokenRangeReplicasResponse(writeReplicas,
                                               readReplicas,
@@ -121,7 +121,9 @@ public class TokenRangeReplicaProvider
                               .collect(toList());
     }
 
-    private List<ReplicaMetadata> getReplicaMetadata(List<TokenRangeReplicas> replicaSet, StorageJmxOperations storage)
+    private List<ReplicaMetadata> getReplicaMetadata(List<TokenRangeReplicas> replicaSet,
+                                                     StorageJmxOperations storage,
+                                                     Map<String, String> hostToDatacenter)
     {
         List<String> joiningNodes = storage.getJoiningNodesWithPort();
         List<String> leavingNodes = storage.getLeavingNodesWithPort();
@@ -141,7 +143,11 @@ public class TokenRangeReplicaProvider
                          .map(TokenRangeReplicas::replicaSet)
                          .flatMap(Collection::stream)
                          .distinct()
-                         .map(r -> new ReplicaMetadata(state.of(r), status.of(r), resolveReplica(r), r))
+                         .map(r -> new ReplicaMetadata(state.of(r),
+                                                       status.of(r),
+                                                       resolveReplica(r),
+                                                       r,
+                                                       hostToDatacenter.get(r)))
                          .collect(Collectors.toList());
 
     }
@@ -239,10 +245,9 @@ public class TokenRangeReplicaProvider
         Map<String, List<String>> dcReplicaMapping = new HashMap<>();
 
         replicas.stream()
-            .filter(hostToDatacenter::containsKey)
-            .forEach(item ->
-                     dcReplicaMapping.computeIfAbsent(hostToDatacenter.get(item), v -> new ArrayList<>())
-                                     .add(item));
+                .filter(hostToDatacenter::containsKey)
+                .forEach(item -> dcReplicaMapping.computeIfAbsent(hostToDatacenter.get(item), v -> new ArrayList<>())
+                                                 .add(item));
         return dcReplicaMapping;
     }
 
