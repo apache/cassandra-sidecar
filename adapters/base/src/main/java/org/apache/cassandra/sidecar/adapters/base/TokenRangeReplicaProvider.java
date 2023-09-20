@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.common.net.HostAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -143,26 +144,27 @@ public class TokenRangeReplicaProvider
                          .map(TokenRangeReplicas::replicaSet)
                          .flatMap(Collection::stream)
                          .distinct()
-                         .map(r -> new ReplicaMetadata(state.of(r),
-                                                       status.of(r),
-                                                       resolveReplica(r),
-                                                       r,
-                                                       hostToDatacenter.get(r)))
+                         .map(replica -> new ReplicaMetadata(state.of(replica),
+                                                       status.of(replica),
+                                                       resolveReplica(replica),
+                                                       replica,
+                                                       hostToDatacenter.get(replica)))
                          .collect(Collectors.toList());
 
     }
 
-    private String resolveReplica(String r)
+    private String resolveReplica(String replicaIpAndPort)
     {
         String hostName;
         try
         {
-            hostName = dnsResolver.reverseResolve(r.split(":")[0]);
+            HostAndPort replicaHostPort = HostAndPort.fromString(replicaIpAndPort);
+            hostName = dnsResolver.reverseResolve(replicaHostPort.getHost());
         }
         catch (Exception e)
         {
             // Swallow exception to not fail-fast on DNS resolution failure
-            LOGGER.warn("Failed to resolve hostname for instance {}: {}", r, e);
+            LOGGER.error("Failed to resolve hostname for instance {}", replicaIpAndPort, e);
             hostName = "";
         }
         return hostName;
