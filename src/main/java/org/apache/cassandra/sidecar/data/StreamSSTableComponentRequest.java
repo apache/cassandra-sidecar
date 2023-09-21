@@ -74,7 +74,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
         if (component == null)
         {
             component = context.pathParam("*");
-            LOGGER.warn("Legacy client requests detected for component={}", component);
+            LOGGER.warn("Legacy client request detected for component={}", component);
             component = Objects.requireNonNull(component, "path cannot be null").replaceFirst("components/", "");
         }
         // Decode slash to support streaming index files
