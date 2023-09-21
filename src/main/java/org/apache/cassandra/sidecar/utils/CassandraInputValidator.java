@@ -162,6 +162,8 @@ public class CassandraInputValidator
                 throw HttpExceptions.wrapHttpException(HttpResponseStatus.BAD_REQUEST,
                                                        "Invalid index component name: " + componentName);
 
+            // validate the index directory
+            validatePattern(split[0].substring(1), "index");
             if (!split[1].matches(regex))
                 throw HttpExceptions.wrapHttpException(HttpResponseStatus.BAD_REQUEST,
                                                        "Invalid component name: " + componentName);
@@ -175,6 +177,14 @@ public class CassandraInputValidator
         return componentName;
     }
 
+    /**
+     * Returns {@code true} if the provided {@code componentName} is a secondary index SSTable component,
+     * {@code false} otherwise.
+     *
+     * @param componentName the name of the SSTable component
+     * @return {@code true} if the provided {@code componentName} is a secondary index SSTable component,
+     * {@code false} otherwise.
+     */
     private boolean isIndexComponent(@NotNull String componentName)
     {
         return componentName.startsWith(".") && componentName.contains("/");

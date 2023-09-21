@@ -20,6 +20,9 @@ package org.apache.cassandra.sidecar.data;
 
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.SSTableComponent;
@@ -32,6 +35,8 @@ import org.jetbrains.annotations.VisibleForTesting;
  */
 public class StreamSSTableComponentRequest extends SSTableComponent
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StreamSSTableComponentRequest.class);
+
     private final String snapshotName;
 
     /**
@@ -65,8 +70,15 @@ public class StreamSSTableComponentRequest extends SSTableComponent
 
     public static StreamSSTableComponentRequest from(QualifiedTableName qualifiedTableName, RoutingContext context)
     {
+        String component = context.pathParam("component");
+        if (component == null)
+        {
+            component = context.pathParam("*");
+            LOGGER.warn("Legacy client requests detected for component={}", component);
+            component = Objects.requireNonNull(component, "path cannot be null").replaceFirst("components/", "");
+        }
         // Decode slash to support streaming index files
-        String componentName = HttpEncodings.decodeSSTableComponent(context.pathParam("component"));
+        String componentName = HttpEncodings.decodeSSTableComponent(component);
         return new StreamSSTableComponentRequest(qualifiedTableName,
                                                  context.pathParam("snapshot"),
                                                  componentName);

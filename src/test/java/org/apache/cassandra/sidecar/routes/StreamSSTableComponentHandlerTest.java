@@ -246,7 +246,8 @@ public class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "i_❤_u.db", "this-is-not-allowed.jar", "../../../etc/passwd.db" })
+    @ValueSource(strings = { "i_❤_u.db", "this-is-not-allowed.jar", "../../../etc/passwd.db",
+                             "../not-an-index-file-Data.db" })
     void failsWhenComponentNameContainsInvalidCharacters(String invalidComponentName)
     {
         VertxTestContext context = new VertxTestContext();
