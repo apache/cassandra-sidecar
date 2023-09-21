@@ -55,6 +55,11 @@ public final class ApiEndpointsV1
     public static final String SNAPSHOTS_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_SNAPSHOT;
     // Replaces DEPRECATED_COMPONENTS_ROUTE
     public static final String COMPONENTS_ROUTE = SNAPSHOTS_ROUTE + PER_COMPONENT;
+    /**
+     * @deprecated can be removed when all clients are on a version that encodes the component name
+     */
+    @Deprecated
+    public static final String COMPONENTS_WITH_LEGACY_INDEX_ROUTE_SUPPORT = SNAPSHOTS_ROUTE + "/*";
 
     @Deprecated
     public static final String DEPRECATED_ALL_KEYSPACES_SCHEMA_ROUTE = API_V1 + "/schema/keyspaces";

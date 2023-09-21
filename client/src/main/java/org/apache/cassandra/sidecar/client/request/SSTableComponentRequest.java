@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.client.request;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.utils.HttpEncodings;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 
 /**
@@ -85,6 +86,7 @@ public class SSTableComponentRequest extends Request
                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
                .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshot)
-               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, component);
+               // Encode slash to HTML encoding to support streaming index files
+               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, HttpEncodings.encodeSSTableComponent(component));
     }
 }

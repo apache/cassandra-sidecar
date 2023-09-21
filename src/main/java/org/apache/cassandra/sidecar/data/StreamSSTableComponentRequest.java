@@ -20,8 +20,10 @@ package org.apache.cassandra.sidecar.data;
 
 import java.util.Objects;
 
+import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.SSTableComponent;
+import org.apache.cassandra.sidecar.common.utils.HttpEncodings;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -59,6 +61,15 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     {
         super(qualifiedTableName, componentName);
         this.snapshotName = Objects.requireNonNull(snapshotName, "snapshotName must not be null");
+    }
+
+    public static StreamSSTableComponentRequest from(QualifiedTableName qualifiedTableName, RoutingContext context)
+    {
+        // Decode slash to support streaming index files
+        String componentName = HttpEncodings.decodeSSTableComponent(context.pathParam("component"));
+        return new StreamSSTableComponentRequest(qualifiedTableName,
+                                                 context.pathParam("snapshot"),
+                                                 componentName);
     }
 
     /**

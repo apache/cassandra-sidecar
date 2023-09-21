@@ -181,6 +181,13 @@ public class MainModule extends AbstractModule
               .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
+        // This route is added to support old clients that are not sending the
+        // component route encoded as a path parameter. This route should be
+        // removed in the future, potentially in the next major release version.
+        router.get(ApiEndpointsV1.COMPONENTS_WITH_LEGACY_INDEX_ROUTE_SUPPORT)
+              .handler(streamSSTableComponentHandler)
+              .handler(fileStreamHandler);
+
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_SNAPSHOTS_ROUTE)
               .handler(snapshotsHandler);

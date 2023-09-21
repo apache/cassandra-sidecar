@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.routes;
 
 
 import java.nio.file.NoSuchFileException;
+import java.util.Objects;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -64,43 +65,32 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
                                SocketAddress remoteAddress,
                                StreamSSTableComponentRequest request)
     {
-        validate(request)
-        .compose(validParams ->
-                 snapshotPathBuilder.build(host, validParams)
-                                    .onSuccess(path -> {
-                                        logger.debug("StreamSSTableComponentHandler handled {} for client {}. "
-                                                     + "Instance: {}", path, remoteAddress, host);
-                                        context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
-                                               .next();
-                                    }))
-        .onFailure(cause -> {
-            String errMsg =
-            "StreamSSTableComponentHandler failed for request: {} from: {}. Instance: {}";
-            logger.error(errMsg, request, remoteAddress, host, cause);
-            if (cause instanceof NoSuchFileException)
-            {
-                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
-            }
-            else
-            {
-                context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid request for " + request));
-            }
-        });
+        snapshotPathBuilder.build(host, request)
+                           .onSuccess(path -> {
+                               logger.debug("StreamSSTableComponentHandler handled {} for client {}. "
+                                            + "Instance: {}", path, remoteAddress, host);
+                               context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
+                                      .next();
+                           })
+                           .onFailure(cause -> {
+                               String errMsg =
+                               "StreamSSTableComponentHandler failed for request: {} from: {}. Instance: {}";
+                               logger.error(errMsg, request, remoteAddress, host, cause);
+                               if (cause instanceof NoSuchFileException)
+                               {
+                                   context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
+                               }
+                               else
+                               {
+                                   context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                                                  "Invalid request for " + request));
+                               }
+                           });
     }
 
     @Override
     protected StreamSSTableComponentRequest extractParamsOrThrow(RoutingContext context)
     {
-        return new StreamSSTableComponentRequest(qualifiedTableName(context),
-                                                 context.pathParam("snapshot"),
-                                                 context.pathParam("component")
-        );
-    }
-
-    private Future<StreamSSTableComponentRequest> validate(StreamSSTableComponentRequest request)
-    {
-        validator.validateComponentName(request.componentName());
-        validator.validateSnapshotName(request.snapshotName());
-        return Future.succeededFuture(request);
+        return StreamSSTableComponentRequest.from(qualifiedTableName(context), context);
     }
 }

@@ -153,10 +153,31 @@ public class CassandraInputValidator
     private String validateComponentNameByRegex(String componentName, String regex)
     {
         Objects.requireNonNull(componentName, "componentName must not be null");
-        if (!componentName.matches(regex))
-            throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
-                                    "Invalid component name: " + componentName);
+
+        if (isIndexComponent(componentName))
+        {
+            String[] split = componentName.split("/");
+
+            if (split.length != 2)
+                throw HttpExceptions.wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                                       "Invalid index component name: " + componentName);
+
+            if (!split[1].matches(regex))
+                throw HttpExceptions.wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                                       "Invalid component name: " + componentName);
+        }
+        else
+        {
+            if (!componentName.matches(regex))
+                throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
+                                        "Invalid component name: " + componentName);
+        }
         return componentName;
+    }
+
+    private boolean isIndexComponent(@NotNull String componentName)
+    {
+        return componentName.startsWith(".") && componentName.contains("/");
     }
 
     /**
