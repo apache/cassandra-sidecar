@@ -166,7 +166,7 @@ public class CassandraInputValidator
      * @param name  a name for the exception
      * @throws HttpException when the {@code input} does not match the pattern
      */
-    private void validatePattern(String input, String name)
+    public void validatePattern(String input, String name)
     {
         if (!input.matches(validationConfiguration.allowedPatternForDirectory()))
             throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),

@@ -181,6 +181,11 @@ public class MainModule extends AbstractModule
               .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
+        // Support for routes that want to stream SStable index components
+        router.get(ApiEndpointsV1.COMPONENTS_WITH_SECONDARY_INDEX_ROUTE_SUPPORT)
+              .handler(streamSSTableComponentHandler)
+              .handler(fileStreamHandler);
+
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_SNAPSHOTS_ROUTE)
               .handler(snapshotsHandler);

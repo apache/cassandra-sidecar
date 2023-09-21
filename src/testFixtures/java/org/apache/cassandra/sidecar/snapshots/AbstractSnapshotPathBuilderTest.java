@@ -44,7 +44,9 @@ import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
+import org.assertj.core.api.InstanceOfAssertFactories;
 
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.from;
@@ -150,8 +152,7 @@ public abstract class AbstractSnapshotPathBuilderTest
 
     @ParameterizedTest
     @ValueSource(strings = { "i_❤_u.db", "this-is-not-allowed.jar", "cql-is-not-allowed-here.cql",
-                             "json-is-not-allowed-here.json", "crc32-is-not-allowed-here.crc32",
-                             "../../../etc/passwd.db" })
+                             "json-is-not-allowed-here.json", "crc32-is-not-allowed-here.crc32" })
     void failsWhenComponentNameContainsInvalidCharacters(String invalidComponentName)
     {
         assertThatThrownBy(() -> instance.build("localhost",
@@ -164,6 +165,53 @@ public abstract class AbstractSnapshotPathBuilderTest
         .returns(HttpResponseStatus.BAD_REQUEST.code(), from(t -> ((HttpException) t).getStatusCode()))
         .returns("Invalid component name: " + invalidComponentName, from(t -> ((HttpException) t)
                                                                               .getPayload()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "f@o-Data.db", ".s./../../etc/passwd.db", "../../../bad-Data.db" })
+    void failsWhenIndexComponentNameContainsInvalidCharacters(String invalidComponentName)
+    {
+        assertThatThrownBy(() -> instance.build("localhost",
+                                                new StreamSSTableComponentRequest("ks",
+                                                                                  "table",
+                                                                                  "snapshot",
+                                                                                  ".index",
+                                                                                  invalidComponentName)))
+        .isInstanceOf(HttpException.class)
+        .hasMessageContaining("Bad Request")
+        .returns(HttpResponseStatus.BAD_REQUEST.code(), from(t -> ((HttpException) t).getStatusCode()))
+        .returns("Invalid component name: " + invalidComponentName, from(t -> ((HttpException) t)
+                                                                              .getPayload()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "", "does_not_start_with_dot" })
+    void failsWhenIndexNameIsInvalid(String invalidIndexName)
+    {
+        assertThatThrownBy(() -> instance.build("localhost",
+                                                new StreamSSTableComponentRequest("ks",
+                                                                                  "table",
+                                                                                  "snapshot",
+                                                                                  invalidIndexName,
+                                                                                  "component.db")))
+        .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { ".", "../bad-Data.db", ".f@o/bad-Data.db", ".bl@h/bad-TOC.txt" })
+    void failsWhenIndexNameContainsInvalidCharacters(String invalidIndexName)
+    {
+        assertThatThrownBy(() -> instance.build("localhost",
+                                                new StreamSSTableComponentRequest("ks",
+                                                                                  "table",
+                                                                                  "snapshot",
+                                                                                  invalidIndexName,
+                                                                                  "component.db")))
+        .isInstanceOf(HttpException.class)
+        .hasMessageContaining("Bad Request")
+        .returns(HttpResponseStatus.BAD_REQUEST.code(), from(t -> ((HttpException) t).getStatusCode()))
+        .extracting(from(t -> ((HttpException) t).getPayload()), as(InstanceOfAssertFactories.STRING))
+        .contains("Invalid characters in secondary index: ");
     }
 
     @Test

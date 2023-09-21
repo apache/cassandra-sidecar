@@ -20,8 +20,10 @@ package org.apache.cassandra.sidecar.data;
 
 import java.util.Objects;
 
+import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.SSTableComponent;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -43,7 +45,23 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     @VisibleForTesting
     public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName, String componentName)
     {
-        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, componentName);
+        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, null, componentName);
+    }
+
+    /**
+     * Constructor for the holder class
+     *
+     * @param keyspace      the keyspace in Cassandra
+     * @param tableName     the table name in Cassandra
+     * @param snapshotName  the name of the snapshot
+     * @param secondaryIndexName the name of the secondary index for the SSTable component
+     * @param componentName the name of the SSTable component
+     */
+    @VisibleForTesting
+    public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName,
+                                         String secondaryIndexName, String componentName)
+    {
+        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, secondaryIndexName, componentName);
     }
 
     /**
@@ -51,14 +69,28 @@ public class StreamSSTableComponentRequest extends SSTableComponent
      *
      * @param qualifiedTableName the qualified table name in Cassandra
      * @param snapshotName       the name of the snapshot
+     * @param secondaryIndexName the name of the secondary index for the SSTable component
      * @param componentName      the name of the SSTable component
      */
     public StreamSSTableComponentRequest(QualifiedTableName qualifiedTableName,
                                          String snapshotName,
+                                         @Nullable String secondaryIndexName,
                                          String componentName)
     {
-        super(qualifiedTableName, componentName);
+        super(qualifiedTableName, secondaryIndexName, componentName);
         this.snapshotName = Objects.requireNonNull(snapshotName, "snapshotName must not be null");
+    }
+
+    public static StreamSSTableComponentRequest from(QualifiedTableName qualifiedTableName, RoutingContext context)
+    {
+        String snapshotName = context.pathParam("snapshot");
+        String secondaryIndexName = context.pathParam("index");
+        String componentName = context.pathParam("component");
+
+        return new StreamSSTableComponentRequest(qualifiedTableName,
+                                                 snapshotName,
+                                                 secondaryIndexName,
+                                                 componentName);
     }
 
     /**
@@ -78,6 +110,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
                "keyspace='" + keyspace() + '\'' +
                ", tableName='" + tableName() + '\'' +
                ", snapshot='" + snapshotName + '\'' +
+               ", secondaryIndexName='" + secondaryIndexName() + '\'' +
                ", componentName='" + componentName() + '\'' +
                '}';
     }

@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Fix unable to stream secondary index files (CASSANDRASC-74)
  * Updates token-ranges endpoint to return additional instance metadata (CASSANDRASC-73)
  * Shade Jackson completely to prevent incompatibility issues (CASSANDRASC-75)
  * Adds endpoint to serve read/write replica-sets by token-ranges (CASSANDRASC-60)

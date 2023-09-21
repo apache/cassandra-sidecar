@@ -111,7 +111,7 @@ public class CassandraSidecarDaemon
         try
         {
             // Some closing action is executed on the executorPool (which is closed when closing vertx).
-            // Reflecting the dependncy below.
+            // Reflecting the dependency below.
 
             CompositeFuture.all(closingFutures)
                            .onComplete(v -> vertx.close()).toCompletionStage()

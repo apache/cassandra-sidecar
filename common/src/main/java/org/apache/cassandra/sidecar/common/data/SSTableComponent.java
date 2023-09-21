@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.common.data;
 
 import java.util.Objects;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Represents an SSTable component that includes a keyspace, table name and component name
  */
@@ -27,16 +29,22 @@ public class SSTableComponent
 {
     private final QualifiedTableName qualifiedTableName;
     private final String componentName;
+    @Nullable
+    private final String secondaryIndexName;
 
     /**
      * Constructor for the holder class
      *
      * @param qualifiedTableName the qualified table name in Cassandra
+     * @param secondaryIndexName the name of the secondary index for the SSTable component
      * @param componentName      the name of the SSTable component
      */
-    public SSTableComponent(QualifiedTableName qualifiedTableName, String componentName)
+    public SSTableComponent(QualifiedTableName qualifiedTableName,
+                            @Nullable String secondaryIndexName,
+                            String componentName)
     {
         this.qualifiedTableName = Objects.requireNonNull(qualifiedTableName, "qualifiedTableName must not be null");
+        this.secondaryIndexName = secondaryIndexName;
         this.componentName = Objects.requireNonNull(componentName, "componentName must not be null");
     }
 
@@ -62,6 +70,15 @@ public class SSTableComponent
     public String tableName()
     {
         return qualifiedTableName.tableName();
+    }
+
+    /**
+     * @return the secondary index name when the SSTable component is an index component, {@code null} otherwise
+     */
+    @Nullable
+    public String secondaryIndexName()
+    {
+        return secondaryIndexName;
     }
 
     /**

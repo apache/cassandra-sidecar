@@ -24,7 +24,6 @@ import java.nio.file.NoSuchFileException;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
@@ -44,7 +43,6 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTableComponentRequest>
 {
     private final SnapshotPathBuilder snapshotPathBuilder;
-    private final CassandraInputValidator validator;
 
     @Inject
     public StreamSSTableComponentHandler(InstanceMetadataFetcher metadataFetcher,
@@ -54,7 +52,6 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     {
         super(metadataFetcher, executorPools, validator);
         this.snapshotPathBuilder = snapshotPathBuilder;
-        this.validator = validator;
     }
 
     @Override
@@ -64,43 +61,32 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
                                SocketAddress remoteAddress,
                                StreamSSTableComponentRequest request)
     {
-        validate(request)
-        .compose(validParams ->
-                 snapshotPathBuilder.build(host, validParams)
-                                    .onSuccess(path -> {
-                                        logger.debug("StreamSSTableComponentHandler handled {} for client {}. "
-                                                     + "Instance: {}", path, remoteAddress, host);
-                                        context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
-                                               .next();
-                                    }))
-        .onFailure(cause -> {
-            String errMsg =
-            "StreamSSTableComponentHandler failed for request: {} from: {}. Instance: {}";
-            logger.error(errMsg, request, remoteAddress, host, cause);
-            if (cause instanceof NoSuchFileException)
-            {
-                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
-            }
-            else
-            {
-                context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid request for " + request));
-            }
-        });
+        snapshotPathBuilder.build(host, request)
+                           .onSuccess(path -> {
+                               logger.debug("StreamSSTableComponentHandler handled {} for client {}. "
+                                            + "Instance: {}", path, remoteAddress, host);
+                               context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
+                                      .next();
+                           })
+                           .onFailure(cause -> {
+                               String errMsg =
+                               "StreamSSTableComponentHandler failed for request: {} from: {}. Instance: {}";
+                               logger.error(errMsg, request, remoteAddress, host, cause);
+                               if (cause instanceof NoSuchFileException)
+                               {
+                                   context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
+                               }
+                               else
+                               {
+                                   context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                                                  "Invalid request for " + request));
+                               }
+                           });
     }
 
     @Override
     protected StreamSSTableComponentRequest extractParamsOrThrow(RoutingContext context)
     {
-        return new StreamSSTableComponentRequest(qualifiedTableName(context),
-                                                 context.pathParam("snapshot"),
-                                                 context.pathParam("component")
-        );
-    }
-
-    private Future<StreamSSTableComponentRequest> validate(StreamSSTableComponentRequest request)
-    {
-        validator.validateComponentName(request.componentName());
-        validator.validateSnapshotName(request.snapshotName());
-        return Future.succeededFuture(request);
+        return StreamSSTableComponentRequest.from(qualifiedTableName(context), context);
     }
 }

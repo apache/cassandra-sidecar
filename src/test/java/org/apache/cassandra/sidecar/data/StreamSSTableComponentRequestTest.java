@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.data;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -28,7 +30,8 @@ class StreamSSTableComponentRequestTest
     @Test
     void failsWhenKeyspaceIsNull()
     {
-        assertThatThrownBy(() -> new StreamSSTableComponentRequest(null, "table", "snapshot", "component"))
+        String keyspace = null;
+        assertThatThrownBy(() -> new StreamSSTableComponentRequest(keyspace, "table", "snapshot", "component"))
         .isInstanceOf(NullPointerException.class)
         .hasMessageContaining("keyspace must not be null");
     }
@@ -67,7 +70,25 @@ class StreamSSTableComponentRequestTest
         assertThat(req.tableName()).isEqualTo("table");
         assertThat(req.snapshotName()).isEqualTo("snapshot");
         assertThat(req.componentName()).isEqualTo("data.db");
+        assertThat(req.secondaryIndexName()).isNull();
         assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
-                                             "snapshot='snapshot', componentName='data.db'}");
+                                             "snapshot='snapshot', secondaryIndexName='null', " +
+                                             "componentName='data.db'}");
+    }
+
+    @Test
+    void testValidRequestWithIndexName()
+    {
+        StreamSSTableComponentRequest req =
+        new StreamSSTableComponentRequest(new QualifiedTableName("ks", "table"), "snapshot", ".index", "data.db");
+
+        assertThat(req.keyspace()).isEqualTo("ks");
+        assertThat(req.tableName()).isEqualTo("table");
+        assertThat(req.snapshotName()).isEqualTo("snapshot");
+        assertThat(req.secondaryIndexName()).isEqualTo(".index");
+        assertThat(req.componentName()).isEqualTo("data.db");
+        assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
+                                             "snapshot='snapshot', secondaryIndexName='.index', " +
+                                             "componentName='data.db'}");
     }
 }
