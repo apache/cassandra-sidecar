@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Shade Jackson completely to prevent incompatibility issues (CASSANDRASC-75)
  * Adds endpoint to serve read/write replica-sets by token-ranges (CASSANDRASC-60)
  * Split unit tests and integration tests in CircleCI config (CASSANDRASC-72)
  * Allow configuring permissions for uploaded SSTables (CASSANDRASC-71)

@@ -80,13 +80,13 @@ jobs:
      - image: circleci/openjdk:8-jdk-stretch
     environment:
       INTEGRATION_MAX_PARALLEL_FORKS: 1
-      INTEGRATION_MAX_HEAP_SIZE: "6g"
+      INTEGRATION_MAX_HEAP_SIZE: "4G"
     resource_class: large
     steps:
      - checkout
      # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
      - run: BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
-     - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+     - run: ./gradlew --no-daemon -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
      - store_artifacts:
          path: build/reports
@@ -100,12 +100,12 @@ jobs:
      - image: circleci/openjdk:8-jdk-stretch
     environment:
       INTEGRATION_MAX_PARALLEL_FORKS: 1
-      INTEGRATION_MAX_HEAP_SIZE: "6g"
+      INTEGRATION_MAX_HEAP_SIZE: "4G"
     resource_class: large
     steps:
      - checkout
      - run: BRANCHES="cassandra-4.1" scripts/build-dtest-jars.sh
-     - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.1" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+     - run: ./gradlew --no-daemon -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.1" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
      - store_artifacts:
          path: build/reports
@@ -136,13 +136,13 @@ jobs:
       - image: circleci/openjdk:11-jdk-stretch
     environment:
       INTEGRATION_MAX_PARALLEL_FORKS: 1
-      INTEGRATION_MAX_HEAP_SIZE: "6g"
+      INTEGRATION_MAX_HEAP_SIZE: "4G"
     resource_class: large
     steps:
       - checkout
       # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
       - run: BRANCHES="cassandra-4.0 cassandra-4.1" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
-      - run: ./gradlew -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - run: ./gradlew --no-daemon -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -156,12 +156,12 @@ jobs:
       - image: circleci/openjdk:11-jdk-stretch
     environment:
       INTEGRATION_MAX_PARALLEL_FORKS: 1
-      INTEGRATION_MAX_HEAP_SIZE: "6g"
+      INTEGRATION_MAX_HEAP_SIZE: "4G"
     resource_class: large
     steps:
       - checkout
       - run: BRANCHES="cassandra-5.0" scripts/build-dtest-jars.sh
-      - run: ./gradlew -PdtestVersion=5.0-alpha2 -Dcassandra.sidecar.versions_to_test="5.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - run: ./gradlew --no-daemon -PdtestVersion=5.0-alpha2 -Dcassandra.sidecar.versions_to_test="5.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -175,12 +175,12 @@ jobs:
       - image: circleci/openjdk:11-jdk-stretch
     environment:
       INTEGRATION_MAX_PARALLEL_FORKS: 1
-      INTEGRATION_MAX_HEAP_SIZE: "6g"
+      INTEGRATION_MAX_HEAP_SIZE: "4G"
     resource_class: large
     steps:
       - checkout
       - run: BRANCHES="trunk" scripts/build-dtest-jars.sh
-      - run: ./gradlew -PdtestVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - run: ./gradlew --no-daemon -PdtestVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports

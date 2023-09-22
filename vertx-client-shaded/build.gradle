@@ -46,7 +46,6 @@ configurations {
 
 dependencies {
     shadow(group: 'org.slf4j', name: 'slf4j-api', version: "${project.slf4jVersion}")
-    shadow(group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: "${project.jacksonVersion}")
     api(project(':vertx-client'))
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.1'
@@ -68,8 +67,9 @@ tasks.named('test') {
 // Relocating a Package
 shadowJar {
     archiveClassifier.set('')
-    relocate 'com.fasterxml.jackson.core', 'o.a.c.sidecar.client.shaded.com.fasterxml.jackson.core'
-    relocate 'com.fasterxml.jackson.databind', 'o.a.c.sidecar.client.shaded.com.fasterxml.jackson.databind'
+    // Our use of Jackson should be an implementation detail - shade everything so no matter what
+    // version of Jackson is available in the classpath we don't break consumers of the client
+    relocate 'com.fasterxml.jackson', 'o.a.c.sidecar.client.shaded.com.fasterxml.jackson'
     relocate 'io.netty', 'o.a.c.sidecar.client.shaded.io.netty'
     relocate 'io.vertx', 'o.a.c.sidecar.client.shaded.io.vertx'
     relocate 'META-INF/native/libnetty', 'META-INF/native/libo_a_c_sidecar_client_shaded_netty'
@@ -79,10 +79,6 @@ shadowJar {
 
     dependencies {
         exclude(dependency('org.slf4j:.*:.*'))
-        // Exclude the jackson-annotations dependency so that extension clients can keep annotating POJOs
-        // without the need to use shadow annotations. For example, they can continue using
-        // com.fasterxml.jackson.annotation.JsonProperty.
-        exclude(dependency('com.fasterxml.jackson.core:jackson-annotations:.*'))
     }
 }
 
