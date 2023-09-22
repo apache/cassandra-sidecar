@@ -20,12 +20,10 @@ package org.apache.cassandra.sidecar.routes;
 
 
 import java.nio.file.NoSuchFileException;
-import java.util.Objects;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
