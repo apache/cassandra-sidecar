@@ -30,7 +30,6 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.google.common.net.HostAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -144,30 +143,22 @@ public class TokenRangeReplicaProvider
                          .map(TokenRangeReplicas::replicaSet)
                          .flatMap(Collection::stream)
                          .distinct()
-                         .map(replica -> new ReplicaMetadata(state.of(replica),
-                                                       status.of(replica),
-                                                       resolveReplica(replica),
-                                                       replica,
-                                                       hostToDatacenter.get(replica)))
+                         .map(replica -> {
+                             try
+                             {
+                                 return new ReplicaMetadata(state.of(replica),
+                                                            status.of(replica),
+                                                            dnsResolver.reverseResolve(replica),
+                                                            replica,
+                                                            hostToDatacenter.get(replica));
+                             }
+                             catch (UnknownHostException e)
+                             {
+                                 throw new RuntimeException(
+                                 String.format("Failed to resolve fqdn for replica %s ", replica), e);
+                             }
+                         })
                          .collect(Collectors.toList());
-
-    }
-
-    private String resolveReplica(String replicaIpAndPort)
-    {
-        String hostName;
-        try
-        {
-            HostAndPort replicaHostPort = HostAndPort.fromString(replicaIpAndPort);
-            hostName = dnsResolver.reverseResolve(replicaHostPort.getHost());
-        }
-        catch (Exception e)
-        {
-            // Swallow exception to not fail-fast on DNS resolution failure
-            LOGGER.error("Failed to resolve hostname for instance {}", replicaIpAndPort, e);
-            hostName = "";
-        }
-        return hostName;
     }
 
     protected EndpointSnitchJmxOperations initializeEndpointProxy()
