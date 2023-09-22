@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.common.net.HostAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,9 +147,10 @@ public class TokenRangeReplicaProvider
                          .map(replica -> {
                              try
                              {
+                                 HostAndPort hap = HostAndPort.fromString(replica);
                                  return new ReplicaMetadata(state.of(replica),
                                                             status.of(replica),
-                                                            dnsResolver.reverseResolve(replica),
+                                                            dnsResolver.reverseResolve(hap.getHost()),
                                                             replica,
                                                             hostToDatacenter.get(replica));
                              }
