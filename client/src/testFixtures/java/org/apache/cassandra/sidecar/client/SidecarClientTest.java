@@ -328,14 +328,17 @@ abstract class SidecarClientTest
     public void testTokenRangeReplicasFromReplicaSet() throws Exception
     {
         String keyspace = "test";
-        String nodeWithPort = "127.0.0.1:7000";
+        String nodeAddress = "127.0.0.1";
+        int port = 7000;
+        String nodeWithPort = nodeAddress + ":" + port;
         String expectedRangeStart = "-9223372036854775808";
         String expectedRangeEnd = "9223372036854775807";
         String tokenRangeReplicasAsString = "{\"replicaMetadata\":[{" +
                                             "\"state\":\"Normal\"," +
                                             "\"status\":\"Up\"," +
                                             "\"fqdn\":\"localhost\"," +
-                                            "\"address\":\"127.0.0.1:7000\"," +
+                                            "\"address\":\"127.0.0.1\"," +
+                                            "\"port\":7000," +
                                             "\"datacenter\":\"datacenter1\"}]," +
                                             "\"writeReplicas\":[{\"start\":\"-9223372036854775808\"," +
                                             "\"end\":\"9223372036854775807\",\"replicasByDatacenter\":" +
@@ -363,12 +366,13 @@ abstract class SidecarClientTest
         assertThat(result.replicaMetadata()).hasSize(1);
         TokenRangeReplicasResponse.ReplicaMetadata instanceMetadata =
         result.replicaMetadata().stream()
-              .filter(r -> r.address().equals(nodeWithPort))
+              .filter(r -> r.address().equals(nodeAddress) && r.port() == port)
               .findFirst()
               .get();
         assertThat(instanceMetadata.state()).isEqualTo("Normal");
         assertThat(instanceMetadata.status()).isEqualTo("Up");
-        assertThat(instanceMetadata.address()).isEqualTo("127.0.0.1:7000");
+        assertThat(instanceMetadata.address()).isEqualTo("127.0.0.1");
+        assertThat(instanceMetadata.port()).isEqualTo(7000);
         assertThat(instanceMetadata.fqdn()).isEqualTo("localhost");
         assertThat(instanceMetadata.datacenter()).isEqualTo("datacenter1");
 

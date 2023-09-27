@@ -165,18 +165,21 @@ public class TokenRangeReplicasResponse
         private final String status;
         private final String fqdn;
         private final String address;
+        private final int port;
         private final String datacenter;
 
         public ReplicaMetadata(@JsonProperty("state") String state,
                                @JsonProperty("status") String status,
                                @JsonProperty("fqdn") String fqdn,
                                @JsonProperty("address") String address,
+                               @JsonProperty("port") int port,
                                @JsonProperty("datacenter") String datacenter)
         {
             this.state = state;
             this.status = status;
             this.fqdn = fqdn;
             this.address = address;
+            this.port = port;
             this.datacenter = datacenter;
         }
 
@@ -217,6 +220,15 @@ public class TokenRangeReplicasResponse
         }
 
         /**
+         * @return port number of the node as specified by the replica-set returned
+         */
+        @JsonProperty("port")
+        public int port()
+        {
+            return port;
+        }
+
+        /**
          * @return datacenter address of the node
          */
         @JsonProperty("datacenter")
@@ -236,6 +248,7 @@ public class TokenRangeReplicasResponse
                    ", status='" + status + '\'' +
                    ", fqdn='" + fqdn + '\'' +
                    ", address='" + address + '\'' +
+                   ", port='" + port + '\'' +
                    ", datacenter='" + datacenter + '\'' +
                    '}';
         }

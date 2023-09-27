@@ -106,7 +106,9 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
                                    + config.broadcastAddress().getPort();
 
                 String expectedStatus = stateFunction.apply(i);
-                assertThat(filterReplicaMetadata(mappingResponse.replicaMetadata(), ipAndPort).state())
+                assertThat(filterReplicaMetadata(mappingResponse.replicaMetadata(),
+                                                 config.broadcastAddress().getAddress().getHostAddress(),
+                                                 config.broadcastAddress().getPort()).state())
                 .isEqualTo(expectedStatus);
             }
         }
@@ -253,10 +255,11 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
     }
 
     private TokenRangeReplicasResponse.ReplicaMetadata filterReplicaMetadata(
-    List<TokenRangeReplicasResponse.ReplicaMetadata> replicaMetadata,
-    String replicaAddress)
+    List<TokenRangeReplicasResponse.ReplicaMetadata> replicaMetadata, String address, int port)
     {
-        return replicaMetadata.stream().filter(r -> r.address().equals(replicaAddress)).findFirst().get();
+        return replicaMetadata.stream()
+                              .filter(r -> (r.address().equals(address) && r.port() == port))
+                              .findFirst().get();
     }
 
 

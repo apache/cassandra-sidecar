@@ -151,7 +151,8 @@ public class TokenRangeReplicaProvider
                                  return new ReplicaMetadata(state.of(replica),
                                                             status.of(replica),
                                                             dnsResolver.reverseResolve(hap.getHost()),
-                                                            replica,
+                                                            hap.getHost(),
+                                                            hap.getPort(),
                                                             hostToDatacenter.get(replica));
                              }
                              catch (UnknownHostException e)
