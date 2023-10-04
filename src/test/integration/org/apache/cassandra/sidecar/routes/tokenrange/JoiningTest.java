@@ -59,8 +59,8 @@ public class JoiningTest extends JoiningBaseTest
         ClusterUtils.awaitRingState(instance, newInstance, "Normal");
 
         retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
-            TokenRangeReplicasResponse mappingResponse = response.bodyAsJson(TokenRangeReplicasResponse.class);
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+            TokenRangeReplicasResponse mappingResponse = response.bodyAsJson(TokenRangeReplicasResponse.class);
             assertMappingResponseOK(mappingResponse, DEFAULT_RF, Collections.singleton("datacenter1"));
             context.completeNow();
         });

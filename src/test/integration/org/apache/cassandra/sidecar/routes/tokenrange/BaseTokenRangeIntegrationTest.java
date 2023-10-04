@@ -267,10 +267,8 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
                                      Handler<HttpResponse<Buffer>> verifier) throws Exception
     {
         String testRoute = "/api/v1/keyspaces/" + keyspace + "/token-range-replicas";
-        testWithClient(context, client -> {
-            client.get(server.actualPort(), "127.0.0.1", testRoute)
-                  .send(context.succeeding(verifier));
-        });
+        testWithClient(context, client -> client.get(server.actualPort(), "127.0.0.1", testRoute)
+                                            .send(context.succeeding(verifier)));
     }
 
     void assertMappingResponseOK(TokenRangeReplicasResponse mappingResponse,

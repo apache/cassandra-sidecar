@@ -121,7 +121,11 @@ public class JmxClientTest
     public void testCanCallMethodWithoutEntireInterface() throws IOException
     {
         List<String> result;
-        try (JmxClient client = new JmxClient(serviceURL, "controlRole", "password"))
+        try (JmxClient client = JmxClient.builder()
+                                         .jmxServiceURL(serviceURL)
+                                         .role("controlRole")
+                                         .password("password")
+                                         .build())
         {
             result = client.proxy(Import.class, objectName)
                            .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
@@ -137,7 +141,11 @@ public class JmxClientTest
         importMBean.shouldSucceed = false;
         HashSet<String> srcPaths;
         List<String> failedDirs;
-        try (JmxClient client = new JmxClient(serviceURL, "controlRole", "password"))
+        try (JmxClient client = JmxClient.builder()
+                                         .jmxServiceURL(serviceURL)
+                                         .role("controlRole")
+                                         .password("password")
+                                         .build())
         {
             srcPaths = Sets.newHashSet("foo", "bar");
             failedDirs = client.proxy(Import.class, objectName)
@@ -152,7 +160,7 @@ public class JmxClientTest
     @Test
     public void testCallWithoutCredentialsFails() throws IOException
     {
-        try (JmxClient client = new JmxClient(serviceURL))
+        try (JmxClient client = JmxClient.builder().jmxServiceURL(serviceURL).build())
         {
             assertThatExceptionOfType(JmxAuthenticationException.class)
             .isThrownBy(() ->
@@ -175,8 +183,10 @@ public class JmxClientTest
         Supplier<String> roleSupplier = () -> {
             throw new IllegalStateException(errorMessage);
         };
-        testSupplierThrows(errorMessage,
-                           new JmxClient(serviceURL, roleSupplier, () -> "password", () -> false));
+        testSupplierThrows(errorMessage, JmxClient.builder()
+                                                  .jmxServiceURL(serviceURL)
+                                                  .roleSupplier(roleSupplier)
+                                                  .build());
     }
 
     @Test
@@ -186,8 +196,11 @@ public class JmxClientTest
         Supplier<String> passwordSupplier = () -> {
             throw new IllegalStateException(errorMessage);
         };
-        testSupplierThrows(errorMessage,
-                           new JmxClient(serviceURL, () -> "controlRole", passwordSupplier, () -> false));
+        testSupplierThrows(errorMessage, JmxClient.builder()
+                                                  .jmxServiceURL(serviceURL)
+                                                  .roleSupplier(() -> "controlRole")
+                                                  .passwordSupplier(passwordSupplier)
+                                                  .build());
     }
 
     @Test
@@ -197,8 +210,12 @@ public class JmxClientTest
         BooleanSupplier enableSslSupplier = () -> {
             throw new IllegalStateException(errorMessage);
         };
-        testSupplierThrows(errorMessage,
-                           new JmxClient(serviceURL, () -> "controlRole", () -> "password", enableSslSupplier));
+        testSupplierThrows(errorMessage, JmxClient.builder()
+                                                  .jmxServiceURL(serviceURL)
+                                                  .roleSupplier(() -> "controlRole")
+                                                  .passwordSupplier(() -> "password")
+                                                  .enableSslSupplier(enableSslSupplier)
+                                                  .build());
     }
 
     @Test
@@ -214,7 +231,11 @@ public class JmxClientTest
             }
             return "password";
         };
-        try (JmxClient client = new JmxClient(serviceURL, () -> "controlRole", passwordSupplier, () -> false))
+        try (JmxClient client = JmxClient.builder()
+                                         .jmxServiceURL(serviceURL)
+                                         .roleSupplier(() -> "controlRole")
+                                         .passwordSupplier(passwordSupplier)
+                                         .build())
         {
             // First attempt fails
             assertThatExceptionOfType(JmxAuthenticationException.class)
@@ -242,7 +263,11 @@ public class JmxClientTest
     public void testDisconnectReconnect() throws Exception
     {
         List<String> result;
-        try (JmxClient client = new JmxClient(serviceURL, "controlRole", "password"))
+        try (JmxClient client = JmxClient.builder()
+                                         .jmxServiceURL(serviceURL)
+                                         .role("controlRole")
+                                         .password("password")
+                                         .build())
         {
             assertThat(client.isConnected()).isFalse();
             result = client.proxy(Import.class, objectName)
@@ -268,7 +293,11 @@ public class JmxClientTest
     @Test
     public void testLotsOfProxies() throws IOException
     {
-        try (JmxClient client = new JmxClient(serviceURL, "controlRole", "password"))
+        try (JmxClient client = JmxClient.builder()
+                                         .jmxServiceURL(serviceURL)
+                                         .role("controlRole")
+                                         .password("password")
+                                         .build())
         {
             for (int i = 0; i < PROXIES_TO_TEST; i++)
             {
@@ -285,7 +314,12 @@ public class JmxClientTest
     @Test
     public void testConstructorWithHostPort() throws IOException
     {
-        try (JmxClient client = new JmxClient("127.0.0.1", port, () -> "controlRole", () -> "password", () -> false))
+        try (JmxClient client = JmxClient.builder()
+                                         .host("127.0.0.1")
+                                         .port(port)
+                                         .roleSupplier(() -> "controlRole")
+                                         .passwordSupplier(() -> "password")
+                                         .build())
         {
             List<String> result = client.proxy(Import.class, objectName)
                                         .importNewSSTables(Sets.newHashSet("foo", "bar"), true,

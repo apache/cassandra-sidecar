@@ -28,15 +28,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
-import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -90,14 +91,15 @@ public class SnapshotUtils
                    .setLastModified(System.currentTimeMillis() + 2_000_000)).isTrue();
     }
 
-    public static InstancesConfig mockInstancesConfig(String rootPath)
+    public static InstancesConfig mockInstancesConfig(Vertx vertx, String rootPath)
     {
         CQLSessionProvider mockSession1 = mock(CQLSessionProvider.class);
         CQLSessionProvider mockSession2 = mock(CQLSessionProvider.class);
-        return mockInstancesConfig(rootPath, null, null, mockSession1, mockSession2);
+        return mockInstancesConfig(vertx, rootPath, null, null, mockSession1, mockSession2);
     }
 
-    public static InstancesConfig mockInstancesConfig(String rootPath,
+    public static InstancesConfig mockInstancesConfig(Vertx vertx,
+                                                      String rootPath,
                                                       CassandraAdapterDelegate delegate1,
                                                       CassandraAdapterDelegate delegate2,
                                                       CQLSessionProvider cqlSessionProvider1,
@@ -109,12 +111,12 @@ public class SnapshotUtils
 
         if (delegate1 == null)
         {
-            delegate1 = new CassandraAdapterDelegate(versionProvider, cqlSessionProvider1, null, null);
+            delegate1 = new CassandraAdapterDelegate(vertx, 1, versionProvider, cqlSessionProvider1, null, null);
         }
 
         if (delegate2 == null)
         {
-            delegate2 = new CassandraAdapterDelegate(versionProvider, cqlSessionProvider2, null, null);
+            delegate2 = new CassandraAdapterDelegate(vertx, 2, versionProvider, cqlSessionProvider2, null, null);
         }
 
         InstanceMetadataImpl localhost = InstanceMetadataImpl.builder()

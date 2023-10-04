@@ -41,21 +41,21 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
+import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.stubbing.Answer;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -72,7 +72,7 @@ class RingHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(RingHandlerTest.class);
     Vertx vertx;
-    HttpServer server;
+    Server server;
 
     @BeforeEach
     void before() throws InterruptedException
@@ -82,18 +82,19 @@ class RingHandlerTest
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
-        server = injector.getInstance(HttpServer.class);
+        server = injector.getInstance(Server.class);
         VertxTestContext context = new VertxTestContext();
-        server.listen(0, "127.0.0.1", context.succeedingThenComplete());
+        server.start()
+              .onSuccess(s -> context.completeNow())
+              .onFailure(context::failNow);
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
 
     @AfterEach
     void after() throws InterruptedException
     {
-        final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> closeLatch.countDown());
-        vertx.close();
+        CountDownLatch closeLatch = new CountDownLatch(1);
+        server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else

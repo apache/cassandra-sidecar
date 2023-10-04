@@ -103,6 +103,9 @@ public class JmxClientTest
     {
         IUpgradeableInstance instance = context.getCluster().getFirstRunningInstance();
         IInstanceConfig config = instance.config();
-        return new JmxClient(config.broadcastAddress().getAddress().getHostAddress(), config.jmxPort());
+        return JmxClient.builder()
+                        .host(config.broadcastAddress().getAddress().getHostAddress())
+                        .port(config.jmxPort())
+                        .build();
     }
 }

@@ -68,13 +68,23 @@ sidecar:
   port: 9043
   request_idle_timeout_millis: 300000 # this field expects integer value
   request_timeout_millis: 300000
+  tcp_keep_alive: false
+  accept_backlog: 1024
+  server_verticle_instances: 1
   throttle:
     stream_requests_per_sec: 5000
     delay_sec: 5
     timeout_sec: 10
+  traffic_shaping:
+    inbound_global_bandwidth_bps: 500
+    outbound_global_bandwidth_bps: 1500
+    peak_outbound_global_bandwidth_bps: 2000
+    max_delay_to_wait_millis: 2500
+    check_interval_for_stats_millis: 3000
   sstable_upload:
     concurrent_upload_limit: 80
     min_free_space_percent: 10
+    # file_permissions: "rw-r--r--" # when not specified, the default file permissions are owner read & write, group & others read
   allowable_time_skew_in_minutes: 60
   sstable_import:
     poll_interval_millis: 100
@@ -89,22 +99,30 @@ sidecar:
     internal:
       name: "sidecar-internal-worker-pool"
       size: 20
-      max_execution_time_millis: 300000 # 5 minutes
+      max_execution_time_millis: 900000 # 15 minutes
+  jmx:
+    max_retries: 3
+    retry_delay_millis: 200
 
 #
 # Enable SSL configuration (Disabled by default)
 #
 ssl:
   enabled: true
+  use_openssl: false
+  handshake_timeout_sec: 25
+  client_auth: REQUEST # valid options are NONE, REQUEST, REQUIRED
   keystore:
     path: "path/to/keystore.p12"
     password: password
+    check_interval_sec: 300
   truststore:
     path: "path/to/truststore.p12"
     password: password
 
 
 healthcheck:
+  initial_delay_millis: 100
   poll_freq_millis: 30000
 
 cassandra_input_validation:

@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
@@ -40,23 +40,32 @@ import com.datastax.driver.core.TableMetadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 
+import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_CHECK_INTERVAL;
+import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT;
+import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_MAX_DELAY_TIME;
+import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
+import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -70,34 +79,55 @@ class BaseUploadsHandlerTest
 {
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
     protected Vertx vertx;
-    protected HttpServer server;
+    protected Server server;
     protected WebClient client;
     protected CassandraAdapterDelegate mockDelegate;
     protected SidecarConfiguration sidecarConfiguration;
     @TempDir
-    protected File temporaryFolder;
+    protected Path temporaryPath;
+    protected String canonicalTemporaryPath;
     protected SSTableUploadConfiguration mockSSTableUploadConfiguration;
+    protected TrafficShapingConfiguration trafficShapingConfiguration;
+    protected SidecarRateLimiter ingressFileRateLimiter;
 
     @BeforeEach
-    void setup() throws InterruptedException
+    void setup() throws InterruptedException, IOException
     {
+        canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
         mockDelegate = mock(CassandraAdapterDelegate.class);
         TestModule testModule = new TestModule();
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
         when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(0F);
-        sidecarConfiguration =
-        new SidecarConfigurationImpl(new ServiceConfigurationImpl(500, 1000L, mockSSTableUploadConfiguration));
+        trafficShapingConfiguration = mock(TrafficShapingConfiguration.class);
+        when(trafficShapingConfiguration.inboundGlobalBandwidthBytesPerSecond()).thenReturn(512 * 1024L);
+        when(trafficShapingConfiguration.outboundGlobalBandwidthBytesPerSecond())
+        .thenReturn(DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT);
+        when(trafficShapingConfiguration.peakOutboundGlobalBandwidthBytesPerSecond())
+        .thenReturn(DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT);
+        when(trafficShapingConfiguration.maxDelayToWaitMillis()).thenReturn(DEFAULT_MAX_DELAY_TIME);
+        when(trafficShapingConfiguration.checkIntervalForStatsMillis()).thenReturn(DEFAULT_CHECK_INTERVAL);
+        when(trafficShapingConfiguration.inboundGlobalFileBandwidthBytesPerSecond())
+        .thenReturn(DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT);
+        ServiceConfiguration serviceConfiguration =
+        ServiceConfigurationImpl.builder()
+                                .requestIdleTimeoutMillis(500)
+                                .requestTimeoutMillis(TimeUnit.SECONDS.toMillis(30))
+                                .ssTableUploadConfiguration(mockSSTableUploadConfiguration)
+                                .trafficShapingConfiguration(trafficShapingConfiguration)
+                                .build();
+        sidecarConfiguration = SidecarConfigurationImpl.builder()
+                                                       .serviceConfiguration(serviceConfiguration)
+                                                       .build();
         TestModuleOverride testModuleOverride = new TestModuleOverride(mockDelegate);
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(Modules.override(testModule)
                                                                      .with(testModuleOverride)));
-        server = injector.getInstance(HttpServer.class);
+        server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
         client = WebClient.create(vertx);
-
-        VertxTestContext context = new VertxTestContext();
-        server.listen(0, "localhost", context.succeedingThenComplete());
+        ingressFileRateLimiter = injector.getInstance(Key.get(SidecarRateLimiter.class,
+                                                              Names.named("IngressFileRateLimiter")));
 
         Metadata mockMetadata = mock(Metadata.class);
         KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
@@ -106,6 +136,11 @@ class BaseUploadsHandlerTest
         when(mockMetadata.getKeyspace("ks").getTable("tbl")).thenReturn(mockTableMetadata);
         when(mockDelegate.metadata()).thenReturn(mockMetadata);
 
+        VertxTestContext context = new VertxTestContext();
+        server.start()
+              .onSuccess(s -> context.completeNow())
+              .onFailure(context::failNow);
+
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
 
@@ -113,10 +148,9 @@ class BaseUploadsHandlerTest
     void tearDown() throws InterruptedException
     {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> closeLatch.countDown());
-        vertx.close();
+        server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
-            logger.info("Close event received before timeout.");
+            logger.debug("Close event received before timeout.");
         else
             logger.error("Close event timed out.");
     }
@@ -134,7 +168,7 @@ class BaseUploadsHandlerTest
      */
     protected Path createStagedUploadFiles(UUID uploadId) throws IOException
     {
-        Path stagedUpload = Paths.get(SnapshotUtils.makeStagingDir(temporaryFolder.getCanonicalPath()))
+        Path stagedUpload = Paths.get(SnapshotUtils.makeStagingDir(canonicalTemporaryPath))
                                  .resolve(uploadId.toString())
                                  .resolve("ks")
                                  .resolve("table");
@@ -167,9 +201,9 @@ class BaseUploadsHandlerTest
 
         @Provides
         @Singleton
-        public InstancesConfig instancesConfig() throws IOException
+        public InstancesConfig instancesConfig(Vertx vertx)
         {
-            return mockInstancesConfig(temporaryFolder.getCanonicalPath(), delegate, delegate, null, null);
+            return mockInstancesConfig(vertx, canonicalTemporaryPath, delegate, delegate, null, null);
         }
 
         @Singleton

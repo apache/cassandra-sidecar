@@ -27,21 +27,37 @@ import org.jetbrains.annotations.VisibleForTesting;
  */
 public class HealthCheckConfigurationImpl implements HealthCheckConfiguration
 {
+    public static final String INITIAL_DELAY_MILLIS_PROPERTY = "initial_delay_millis";
+    public static final int DEFAULT_INITIAL_DELAY_MILLIS = 0;
+
     public static final String POLL_FREQ_MILLIS_PROPERTY = "poll_freq_millis";
     public static final int DEFAULT_CHECK_INTERVAL_MILLIS = 30000;
+
+    @JsonProperty(value = INITIAL_DELAY_MILLIS_PROPERTY, defaultValue = DEFAULT_INITIAL_DELAY_MILLIS + "")
+    protected final int initialDelayMillis;
 
     @JsonProperty(value = POLL_FREQ_MILLIS_PROPERTY, defaultValue = DEFAULT_CHECK_INTERVAL_MILLIS + "")
     protected final int checkIntervalMillis;
 
     public HealthCheckConfigurationImpl()
     {
-        this(DEFAULT_CHECK_INTERVAL_MILLIS);
+        this(DEFAULT_INITIAL_DELAY_MILLIS, DEFAULT_CHECK_INTERVAL_MILLIS);
     }
 
     @VisibleForTesting
-    public HealthCheckConfigurationImpl(int checkIntervalMillis)
+    public HealthCheckConfigurationImpl(int initialDelayMillis, int checkIntervalMillis)
     {
+        this.initialDelayMillis = initialDelayMillis;
         this.checkIntervalMillis = checkIntervalMillis;
+    }
+
+    /**
+     * @return the initial delay for the first health check, in milliseconds
+     */
+    @Override
+    public int initialDelayMillis()
+    {
+        return initialDelayMillis;
     }
 
     /**

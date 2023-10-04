@@ -24,6 +24,11 @@ package org.apache.cassandra.sidecar.config;
 public interface HealthCheckConfiguration
 {
     /**
+     * @return the initial delay for the first health check, in milliseconds
+     */
+    int initialDelayMillis();
+
+    /**
      * @return the interval, in milliseconds, in which the health checks will be performed
      */
     int checkIntervalMillis();

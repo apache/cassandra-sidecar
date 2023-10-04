@@ -24,11 +24,13 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
+import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 /**
@@ -44,12 +46,20 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final int DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS = 300000;
     public static final String REQUEST_TIMEOUT_MILLIS_PROPERTY = "request_timeout_millis";
     public static final long DEFAULT_REQUEST_TIMEOUT_MILLIS = 300000L;
+    public static final String TCP_KEEP_ALIVE_PROPERTY = "tcp_keep_alive";
+    public static final boolean DEFAULT_TCP_KEEP_ALIVE = false;
+    public static final String ACCEPT_BACKLOG_PROPERTY = "accept_backlog";
+    public static final int DEFAULT_ACCEPT_BACKLOG = 1024;
     public static final String ALLOWABLE_SKEW_IN_MINUTES_PROPERTY = "allowable_time_skew_in_minutes";
     public static final int DEFAULT_ALLOWABLE_SKEW_IN_MINUTES = 60;
+    private static final String SERVER_VERTICLE_INSTANCES_PROPERTY = "server_verticle_instances";
+    private static final int DEFAULT_SERVER_VERTICLE_INSTANCES = 1;
     public static final String THROTTLE_PROPERTY = "throttle";
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
     public static final String WORKER_POOLS_PROPERTY = "worker_pools";
+    private static final String JMX_PROPERTY = "jmx";
+    private static final String TRAFFIC_SHAPING_PROPERTY = "traffic_shaping";
     protected static final Map<String, WorkerPoolConfiguration> DEFAULT_WORKER_POOLS_CONFIGURATION
     = Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
     {{
@@ -73,8 +83,17 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = REQUEST_TIMEOUT_MILLIS_PROPERTY, defaultValue = DEFAULT_REQUEST_TIMEOUT_MILLIS + "")
     protected final long requestTimeoutMillis;
 
+    @JsonProperty(value = TCP_KEEP_ALIVE_PROPERTY, defaultValue = DEFAULT_TCP_KEEP_ALIVE + "")
+    protected final boolean tcpKeepAlive;
+
+    @JsonProperty(value = ACCEPT_BACKLOG_PROPERTY, defaultValue = DEFAULT_ACCEPT_BACKLOG + "")
+    protected final int acceptBacklog;
+
     @JsonProperty(value = ALLOWABLE_SKEW_IN_MINUTES_PROPERTY, defaultValue = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES + "")
     protected final int allowableSkewInMinutes;
+
+    @JsonProperty(value = SERVER_VERTICLE_INSTANCES_PROPERTY, defaultValue = DEFAULT_SERVER_VERTICLE_INSTANCES + "")
+    protected final int serverVerticleInstances;
 
     @JsonProperty(value = THROTTLE_PROPERTY, required = true)
     protected final ThrottleConfiguration throttleConfiguration;
@@ -88,117 +107,45 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = WORKER_POOLS_PROPERTY, required = true)
     protected final Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration;
 
-    @JsonProperty("jmx")
+    @JsonProperty(value = JMX_PROPERTY)
     protected final JmxConfiguration jmxConfiguration;
 
+    @JsonProperty(value = TRAFFIC_SHAPING_PROPERTY)
+    protected final TrafficShapingConfiguration trafficShapingConfiguration;
+
+    /**
+     * Constructs a new {@link ServiceConfigurationImpl} with the default values
+     */
     public ServiceConfigurationImpl()
     {
-        this(DEFAULT_HOST,
-             DEFAULT_PORT,
-             DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS,
-             DEFAULT_REQUEST_TIMEOUT_MILLIS,
-             DEFAULT_ALLOWABLE_SKEW_IN_MINUTES,
-             new ThrottleConfigurationImpl(),
-             new SSTableUploadConfigurationImpl(),
-             new SSTableImportConfigurationImpl(),
-             DEFAULT_WORKER_POOLS_CONFIGURATION,
-             new JmxConfigurationImpl());
-    }
-
-    public ServiceConfigurationImpl(SSTableImportConfiguration ssTableImportConfiguration)
-    {
-        this(DEFAULT_HOST,
-             DEFAULT_PORT,
-             DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS,
-             DEFAULT_REQUEST_TIMEOUT_MILLIS,
-             DEFAULT_ALLOWABLE_SKEW_IN_MINUTES,
-             new ThrottleConfigurationImpl(),
-             new SSTableUploadConfigurationImpl(),
-             ssTableImportConfiguration,
-             DEFAULT_WORKER_POOLS_CONFIGURATION,
-             new JmxConfigurationImpl());
-    }
-
-    public ServiceConfigurationImpl(String host,
-                                    ThrottleConfiguration throttleConfiguration,
-                                    SSTableUploadConfiguration ssTableUploadConfiguration,
-                                    JmxConfiguration jmxConfiguration)
-    {
-        this(host,
-             DEFAULT_PORT,
-             DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS,
-             DEFAULT_REQUEST_TIMEOUT_MILLIS,
-             DEFAULT_ALLOWABLE_SKEW_IN_MINUTES,
-             throttleConfiguration,
-             ssTableUploadConfiguration,
-             new SSTableImportConfigurationImpl(),
-             DEFAULT_WORKER_POOLS_CONFIGURATION,
-             jmxConfiguration);
-    }
-
-    public ServiceConfigurationImpl(int requestIdleTimeoutMillis,
-                                    long requestTimeoutMillis,
-                                    SSTableUploadConfiguration ssTableUploadConfiguration)
-    {
-
-        this(DEFAULT_HOST,
-             DEFAULT_PORT,
-             requestIdleTimeoutMillis,
-             requestTimeoutMillis,
-             DEFAULT_ALLOWABLE_SKEW_IN_MINUTES,
-             new ThrottleConfigurationImpl(),
-             ssTableUploadConfiguration,
-             new SSTableImportConfigurationImpl(),
-             DEFAULT_WORKER_POOLS_CONFIGURATION,
-             new JmxConfigurationImpl());
-    }
-
-    public ServiceConfigurationImpl(String host,
-                                    int port,
-                                    int requestIdleTimeoutMillis,
-                                    long requestTimeoutMillis,
-                                    int allowableSkewInMinutes,
-                                    ThrottleConfiguration throttleConfiguration,
-                                    SSTableUploadConfiguration ssTableUploadConfiguration,
-                                    SSTableImportConfiguration ssTableImportConfiguration,
-                                    Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration,
-                                    JmxConfiguration jmxConfiguration)
-    {
-        this.host = host;
-        this.port = port;
-        this.requestIdleTimeoutMillis = requestIdleTimeoutMillis;
-        this.requestTimeoutMillis = requestTimeoutMillis;
-        this.allowableSkewInMinutes = allowableSkewInMinutes;
-        this.throttleConfiguration = throttleConfiguration;
-        this.ssTableUploadConfiguration = ssTableUploadConfiguration;
-        this.ssTableImportConfiguration = ssTableImportConfiguration;
-        this.jmxConfiguration = jmxConfiguration;
-        if (workerPoolsConfiguration == null || workerPoolsConfiguration.isEmpty())
-        {
-            this.workerPoolsConfiguration = DEFAULT_WORKER_POOLS_CONFIGURATION;
-        }
-        else
-        {
-            this.workerPoolsConfiguration = workerPoolsConfiguration;
-        }
-    }
-
-    public ServiceConfigurationImpl(String host)
-    {
-        this(host,
-             DEFAULT_PORT,
-             DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS,
-             DEFAULT_REQUEST_TIMEOUT_MILLIS,
-             DEFAULT_ALLOWABLE_SKEW_IN_MINUTES,
-             new ThrottleConfigurationImpl(),
-             new SSTableUploadConfigurationImpl(),
-             new SSTableImportConfigurationImpl(),
-             DEFAULT_WORKER_POOLS_CONFIGURATION,
-             new JmxConfigurationImpl());
+        this(builder());
     }
 
     /**
-     * Sidecar's HTTP REST API listen address
+     * Constructs a new {@link ServiceConfigurationImpl} with the configured {@link Builder}
+     *
+     * @param builder the builder object
+     */
+    protected ServiceConfigurationImpl(Builder builder)
+    {
+        host = builder.host;
+        port = builder.port;
+        requestIdleTimeoutMillis = builder.requestIdleTimeoutMillis;
+        requestTimeoutMillis = builder.requestTimeoutMillis;
+        tcpKeepAlive = builder.tcpKeepAlive;
+        acceptBacklog = builder.acceptBacklog;
+        allowableSkewInMinutes = builder.allowableSkewInMinutes;
+        serverVerticleInstances = builder.serverVerticleInstances;
+        throttleConfiguration = builder.throttleConfiguration;
+        ssTableUploadConfiguration = builder.ssTableUploadConfiguration;
+        ssTableImportConfiguration = builder.ssTableImportConfiguration;
+        workerPoolsConfiguration = builder.workerPoolsConfiguration;
+        jmxConfiguration = builder.jmxConfiguration;
+        trafficShapingConfiguration = builder.trafficShapingConfiguration;
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = HOST_PROPERTY, defaultValue = DEFAULT_HOST)
@@ -208,7 +155,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     }
 
     /**
-     * @return Sidecar's HTTP REST API port
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = PORT_PROPERTY, defaultValue = DEFAULT_PORT + "")
@@ -218,10 +165,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     }
 
     /**
-     * Determines if a connection will timeout and be closed if no data is received nor sent within the timeout.
-     * Zero means don't timeout.
-     *
-     * @return the configured idle timeout value
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = REQUEST_IDLE_TIMEOUT_MILLIS_PROPERTY, defaultValue = DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS + "")
@@ -231,7 +175,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     }
 
     /**
-     * Determines if a response will timeout if the response has not been written after a certain time.
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = REQUEST_TIMEOUT_MILLIS_PROPERTY, defaultValue = DEFAULT_REQUEST_TIMEOUT_MILLIS + "")
@@ -241,7 +185,27 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     }
 
     /**
-     * @return the maximum time skew allowed between the server and the client
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = TCP_KEEP_ALIVE_PROPERTY, defaultValue = DEFAULT_TCP_KEEP_ALIVE + "")
+    public boolean tcpKeepAlive()
+    {
+        return tcpKeepAlive;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = ACCEPT_BACKLOG_PROPERTY, defaultValue = DEFAULT_ACCEPT_BACKLOG + "")
+    public int acceptBacklog()
+    {
+        return acceptBacklog;
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = ALLOWABLE_SKEW_IN_MINUTES_PROPERTY, defaultValue = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES + "")
@@ -251,7 +215,17 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     }
 
     /**
-     * @return the throttling configuration
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = SERVER_VERTICLE_INSTANCES_PROPERTY, defaultValue = DEFAULT_SERVER_VERTICLE_INSTANCES + "")
+    public int serverVerticleInstances()
+    {
+        return serverVerticleInstances;
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = THROTTLE_PROPERTY, required = true)
@@ -261,7 +235,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     }
 
     /**
-     * @return the configuration for SSTable component uploads on this service
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = SSTABLE_UPLOAD_PROPERTY, required = true)
@@ -271,7 +245,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     }
 
     /**
-     * @return the configuration for the SSTable Import functionality
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = SSTABLE_IMPORT_PROPERTY, required = true)
@@ -281,7 +255,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     }
 
     /**
-     * @return the configured worker pools for the service
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = WORKER_POOLS_PROPERTY, required = true)
@@ -291,13 +265,226 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     }
 
     /**
-     * @return the general JMX configuration options (not per-instance)
+     * {@inheritDoc}
      */
     @Override
-    @JsonProperty("jmx")
+    @JsonProperty(value = JMX_PROPERTY)
     public JmxConfiguration jmxConfiguration()
     {
         return jmxConfiguration;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = TRAFFIC_SHAPING_PROPERTY)
+    public TrafficShapingConfiguration trafficShapingConfiguration()
+    {
+        return trafficShapingConfiguration;
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@code ServiceConfigurationImpl} builder static inner class.
+     */
+    public static class Builder implements DataObjectBuilder<Builder, ServiceConfigurationImpl>
+    {
+        protected String host = DEFAULT_HOST;
+        protected int port = DEFAULT_PORT;
+        protected int requestIdleTimeoutMillis = DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS;
+        protected long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT_MILLIS;
+        protected boolean tcpKeepAlive = DEFAULT_TCP_KEEP_ALIVE;
+        protected int acceptBacklog = DEFAULT_ACCEPT_BACKLOG;
+        protected int allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
+        protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
+        protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
+        protected SSTableUploadConfiguration ssTableUploadConfiguration = new SSTableUploadConfigurationImpl();
+        protected SSTableImportConfiguration ssTableImportConfiguration = new SSTableImportConfigurationImpl();
+        protected Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration =
+        DEFAULT_WORKER_POOLS_CONFIGURATION;
+        protected JmxConfiguration jmxConfiguration = new JmxConfigurationImpl();
+        protected TrafficShapingConfiguration trafficShapingConfiguration = new TrafficShapingConfigurationImpl();
+
+        private Builder()
+        {
+        }
+
+        @Override
+        public Builder self()
+        {
+            return this;
+        }
+
+        /**
+         * Sets the {@code host} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param host the {@code host} to set
+         * @return a reference to this Builder
+         */
+        public Builder host(String host)
+        {
+            return update(b -> b.host = host);
+        }
+
+        /**
+         * Sets the {@code port} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param port the {@code port} to set
+         * @return a reference to this Builder
+         */
+        public Builder port(int port)
+        {
+            return update(b -> b.port = port);
+        }
+
+        /**
+         * Sets the {@code requestIdleTimeoutMillis} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param requestIdleTimeoutMillis the {@code requestIdleTimeoutMillis} to set
+         * @return a reference to this Builder
+         */
+        public Builder requestIdleTimeoutMillis(int requestIdleTimeoutMillis)
+        {
+            return update(b -> b.requestIdleTimeoutMillis = requestIdleTimeoutMillis);
+        }
+
+        /**
+         * Sets the {@code requestTimeoutMillis} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param requestTimeoutMillis the {@code requestTimeoutMillis} to set
+         * @return a reference to this Builder
+         */
+        public Builder requestTimeoutMillis(long requestTimeoutMillis)
+        {
+            return update(b -> b.requestTimeoutMillis = requestTimeoutMillis);
+        }
+
+        /**
+         * Sets the {@code tcpKeepAlive} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param tcpKeepAlive the {@code tcpKeepAlive} to set
+         * @return a reference to this Builder
+         */
+        public Builder tcpKeepAlive(boolean tcpKeepAlive)
+        {
+            return update(b -> b.tcpKeepAlive = tcpKeepAlive);
+        }
+
+        /**
+         * Sets the {@code acceptBacklog} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param acceptBacklog the {@code acceptBacklog} to set
+         * @return a reference to this Builder
+         */
+        public Builder acceptBacklog(int acceptBacklog)
+        {
+            return update(b -> b.acceptBacklog = acceptBacklog);
+        }
+
+        /**
+         * Sets the {@code allowableSkewInMinutes} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param allowableSkewInMinutes the {@code allowableSkewInMinutes} to set
+         * @return a reference to this Builder
+         */
+        public Builder allowableSkewInMinutes(int allowableSkewInMinutes)
+        {
+            return update(b -> b.allowableSkewInMinutes = allowableSkewInMinutes);
+        }
+
+        /**
+         * Sets the {@code serverVerticleInstances} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param serverVerticleInstances the {@code serverVerticleInstances} to set
+         * @return a reference to this Builder
+         */
+        public Builder serverVerticleInstances(int serverVerticleInstances)
+        {
+            return update(b -> b.serverVerticleInstances = serverVerticleInstances);
+        }
+
+        /**
+         * Sets the {@code throttleConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param throttleConfiguration the {@code throttleConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder throttleConfiguration(ThrottleConfiguration throttleConfiguration)
+        {
+            return update(b -> b.throttleConfiguration = throttleConfiguration);
+        }
+
+        /**
+         * Sets the {@code ssTableUploadConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param ssTableUploadConfiguration the {@code ssTableUploadConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder ssTableUploadConfiguration(SSTableUploadConfiguration ssTableUploadConfiguration)
+        {
+            return update(b -> b.ssTableUploadConfiguration = ssTableUploadConfiguration);
+        }
+
+        /**
+         * Sets the {@code ssTableImportConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param ssTableImportConfiguration the {@code ssTableImportConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder ssTableImportConfiguration(SSTableImportConfiguration ssTableImportConfiguration)
+        {
+            return update(b -> b.ssTableImportConfiguration = ssTableImportConfiguration);
+        }
+
+        /**
+         * Sets the {@code workerPoolsConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param workerPoolsConfiguration the {@code workerPoolsConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder workerPoolsConfiguration(Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration)
+        {
+            return update(b -> b.workerPoolsConfiguration = workerPoolsConfiguration);
+        }
+
+        /**
+         * Sets the {@code jmxConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param jmxConfiguration the {@code jmxConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder jmxConfiguration(JmxConfiguration jmxConfiguration)
+        {
+            return update(b -> b.jmxConfiguration = jmxConfiguration);
+        }
+
+        /**
+         * Sets the {@code trafficShapingConfiguration} and returns a reference to this Builder enabling method
+         * chaining.
+         *
+         * @param trafficShapingConfiguration the {@code trafficShapingConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder trafficShapingConfiguration(TrafficShapingConfiguration trafficShapingConfiguration)
+        {
+            return update(b -> b.trafficShapingConfiguration = trafficShapingConfiguration);
+        }
+
+        /**
+         * Returns a {@code ServiceConfigurationImpl} built from the parameters previously set.
+         *
+         * @return a {@code ServiceConfigurationImpl} built with parameters of this
+         * {@code ServiceConfigurationImpl.Builder}
+         */
+        @Override
+        public ServiceConfigurationImpl build()
+        {
+            return new ServiceConfigurationImpl(this);
+        }
+    }
 }

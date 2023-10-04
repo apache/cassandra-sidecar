@@ -38,7 +38,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -140,79 +139,77 @@ public class SnapshotPathBuilder extends BaseFileSystem
               logger.debug("Found {} files in snapshot directory '{}'", list.size(), snapshotDirectory);
 
               // Prepare futures to get properties for all the files from listing the snapshot directory
-              //noinspection rawtypes
-              List<Future> futures = list.stream()
-                                         .map(fs::props)
-                                         .collect(Collectors.toList());
+              List<Future<FileProps>> futures = list.stream()
+                                                    .map(fs::props)
+                                                    .collect(Collectors.toList());
 
-              CompositeFuture.all(futures)
-                             .onFailure(cause -> {
-                                 logger.debug("Failed to get FileProps", cause);
-                                 promise.fail(cause);
-                             })
-                             .onSuccess(ar -> {
+              Future.all(futures)
+                    .onFailure(cause -> {
+                        logger.debug("Failed to get FileProps", cause);
+                        promise.fail(cause);
+                    })
+                    .onSuccess(ar -> {
 
-                                 // Create a pair of path/fileProps for every regular file
-                                 List<SnapshotFile> snapshotList =
-                                 IntStream.range(0, list.size())
-                                          .filter(i -> ar.<FileProps>resultAt(i).isRegularFile())
-                                          .mapToObj(i -> {
-                                              long size = ar.<FileProps>resultAt(i).size();
-                                              return new SnapshotFile(list.get(i),
-                                                                      size);
-                                          })
-                                          .collect(Collectors.toList());
+                        // Create a pair of path/fileProps for every regular file
+                        List<SnapshotFile> snapshotList =
+                        IntStream.range(0, list.size())
+                                 .filter(i -> ar.<FileProps>resultAt(i).isRegularFile())
+                                 .mapToObj(i -> {
+                                     long size = ar.<FileProps>resultAt(i).size();
+                                     return new SnapshotFile(list.get(i),
+                                                             size);
+                                 })
+                                 .collect(Collectors.toList());
 
 
-                                 if (!includeSecondaryIndexFiles)
-                                 {
-                                     // We are done if we don't include secondary index files
-                                     promise.complete(snapshotList);
-                                     return;
-                                 }
+                        if (!includeSecondaryIndexFiles)
+                        {
+                            // We are done if we don't include secondary index files
+                            promise.complete(snapshotList);
+                            return;
+                        }
 
-                                 // Find index directories and prepare futures listing the snapshot directory
-                                 //noinspection rawtypes
-                                 List<Future> idxListFutures =
-                                 IntStream.range(0, list.size())
-                                          .filter(i -> {
-                                              if (ar.<FileProps>resultAt(i).isDirectory())
-                                              {
-                                                  Path path = Paths.get(list.get(i));
-                                                  int count = path.getNameCount();
-                                                  return count > 0
-                                                         && path.getName(count - 1)
-                                                                .toString()
-                                                                .startsWith(".");
-                                              }
-                                              return false;
-                                          })
-                                          .mapToObj(i -> listSnapshotDirectory(list.get(i), false))
-                                          .collect(Collectors.toList());
-                                 if (idxListFutures.isEmpty())
-                                 {
-                                     // If there are no secondary index directories we are done
-                                     promise.complete(snapshotList);
-                                     return;
-                                 }
-                                 logger.debug("Found {} index directories in the '{}' snapshot",
-                                              idxListFutures.size(), snapshotDirectory);
-                                 // if we have index directories, list them all
-                                 CompositeFuture.all(idxListFutures)
-                                                .onFailure(promise::fail)
-                                                .onSuccess(idx -> {
-                                                    //noinspection unchecked
-                                                    List<SnapshotFile> idxPropList =
-                                                    idx.list()
-                                                       .stream()
-                                                       .flatMap(l -> ((List<SnapshotFile>) l).stream())
-                                                       .collect(Collectors.toList());
+                        // Find index directories and prepare futures listing the snapshot directory
+                        List<Future<List<SnapshotFile>>> idxListFutures =
+                        IntStream.range(0, list.size())
+                                 .filter(i -> {
+                                     if (ar.<FileProps>resultAt(i).isDirectory())
+                                     {
+                                         Path path = Paths.get(list.get(i));
+                                         int count = path.getNameCount();
+                                         return count > 0
+                                                && path.getName(count - 1)
+                                                       .toString()
+                                                       .startsWith(".");
+                                     }
+                                     return false;
+                                 })
+                                 .mapToObj(i -> listSnapshotDirectory(list.get(i), false))
+                                 .collect(Collectors.toList());
+                        if (idxListFutures.isEmpty())
+                        {
+                            // If there are no secondary index directories we are done
+                            promise.complete(snapshotList);
+                            return;
+                        }
+                        logger.debug("Found {} index directories in the '{}' snapshot",
+                                     idxListFutures.size(), snapshotDirectory);
+                        // if we have index directories, list them all
+                        Future.all(idxListFutures)
+                              .onFailure(promise::fail)
+                              .onSuccess(idx -> {
+                                  //noinspection unchecked
+                                  List<SnapshotFile> idxPropList =
+                                  idx.list()
+                                     .stream()
+                                     .flatMap(l -> ((List<SnapshotFile>) l).stream())
+                                     .collect(Collectors.toList());
 
-                                                    // aggregate the results and return the full list
-                                                    snapshotList.addAll(idxPropList);
-                                                    promise.complete(snapshotList);
-                                                });
-                             });
+                                  // aggregate the results and return the full list
+                                  snapshotList.addAll(idxPropList);
+                                  promise.complete(snapshotList);
+                              });
+                    });
           });
         return promise.future();
     }
@@ -421,39 +418,38 @@ public class SnapshotPathBuilder extends BaseFileSystem
      */
     protected Future<String> lastModifiedTableDirectory(List<String> fileList, String tableName)
     {
-        if (fileList.size() == 0)
+        if (fileList.isEmpty())
         {
             String errMsg = String.format("Table '%s' does not exist", tableName);
             return Future.failedFuture(new NoSuchFileException(errMsg));
         }
 
-        //noinspection rawtypes
-        List<Future> futures = fileList.stream()
-                                       .map(fs::props)
-                                       .collect(Collectors.toList());
+        List<Future<FileProps>> futures = fileList.stream()
+                                                  .map(fs::props)
+                                                  .collect(Collectors.toList());
 
         Promise<String> promise = Promise.promise();
-        CompositeFuture.all(futures)
-                       .onFailure(promise::fail)
-                       .onSuccess(ar -> {
-                           String directory = IntStream.range(0, fileList.size())
-                                                       .mapToObj(i -> pair(fileList.get(i), ar.<FileProps>resultAt(i)))
-                                                       .filter(pair -> pair.getValue().isDirectory())
-                                                       .max(Comparator.comparingLong(pair -> pair.getValue()
-                                                                                                 .lastModifiedTime()))
-                                                       .map(AbstractMap.SimpleEntry::getKey)
-                                                       .orElse(null);
+        Future.all(futures)
+              .onFailure(promise::fail)
+              .onSuccess(ar -> {
+                  String directory = IntStream.range(0, fileList.size())
+                                              .mapToObj(i -> pair(fileList.get(i), ar.<FileProps>resultAt(i)))
+                                              .filter(pair -> pair.getValue().isDirectory())
+                                              .max(Comparator.comparingLong(pair -> pair.getValue()
+                                                                                        .lastModifiedTime()))
+                                              .map(AbstractMap.SimpleEntry::getKey)
+                                              .orElse(null);
 
-                           if (directory == null)
-                           {
-                               String errMsg = String.format("Table '%s' does not exist", tableName);
-                               promise.fail(new NoSuchFileException(errMsg));
-                           }
-                           else
-                           {
-                               promise.complete(directory);
-                           }
-                       });
+                  if (directory == null)
+                  {
+                      String errMsg = String.format("Table '%s' does not exist", tableName);
+                      promise.fail(new NoSuchFileException(errMsg));
+                  }
+                  else
+                  {
+                      promise.complete(directory);
+                  }
+              });
         return promise.future();
     }
 

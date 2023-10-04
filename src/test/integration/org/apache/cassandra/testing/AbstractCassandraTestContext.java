@@ -62,6 +62,7 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
     {
         if (cluster != null)
         {
+            LOGGER.info("Closing cluster={}", cluster);
             try
             {
                 cluster.close();

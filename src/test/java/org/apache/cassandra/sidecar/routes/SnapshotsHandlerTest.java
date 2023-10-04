@@ -18,8 +18,8 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -42,14 +42,14 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
@@ -67,32 +67,35 @@ public class SnapshotsHandlerTest
 {
     private static final Logger logger = LoggerFactory.getLogger(SnapshotsHandlerTest.class);
     private Vertx vertx;
-    private HttpServer server;
+    private Server server;
     @TempDir
-    File temporaryFolder;
+    Path temporaryPath;
+    String canonicalTemporaryPath;
 
     @BeforeEach
     public void setup() throws InterruptedException, IOException
     {
+        canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(Modules.override(new TestModule())
                                                                      .with(new ListSnapshotTestModule())));
-        server = injector.getInstance(HttpServer.class);
+        server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(0, "localhost", context.succeedingThenComplete());
+        server.start()
+              .onSuccess(s -> context.completeNow())
+              .onFailure(context::failNow);
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
-        SnapshotUtils.initializeTmpDirectory(temporaryFolder);
+        SnapshotUtils.initializeTmpDirectory(temporaryPath.toFile());
     }
 
     @AfterEach
     void tearDown() throws InterruptedException
     {
-        final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> closeLatch.countDown());
-        vertx.close();
+        CountDownLatch closeLatch = new CountDownLatch(1);
+        server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else
@@ -107,7 +110,7 @@ public class SnapshotsHandlerTest
         ListSnapshotFilesResponse.FileInfo fileInfoExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
                                                "localhost",
-                                               9043,
+                                               0,
                                                0,
                                                "snapshot1",
                                                "keyspace1",
@@ -116,7 +119,7 @@ public class SnapshotsHandlerTest
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
                                                "localhost",
-                                               9043,
+                                               0,
                                                0,
                                                "snapshot1",
                                                "keyspace1",
@@ -143,7 +146,7 @@ public class SnapshotsHandlerTest
         List<ListSnapshotFilesResponse.FileInfo> fileInfoExpected = Arrays.asList(
         new ListSnapshotFilesResponse.FileInfo(11,
                                                "localhost",
-                                               9043,
+                                               0,
                                                0,
                                                "snapshot1",
                                                "keyspace1",
@@ -151,7 +154,7 @@ public class SnapshotsHandlerTest
                                                "1.db"),
         new ListSnapshotFilesResponse.FileInfo(0,
                                                "localhost",
-                                               9043,
+                                               0,
                                                0,
                                                "snapshot1",
                                                "keyspace1",
@@ -237,9 +240,9 @@ public class SnapshotsHandlerTest
     {
         @Provides
         @Singleton
-        public InstancesConfig instancesConfig() throws IOException
+        public InstancesConfig instancesConfig(Vertx vertx)
         {
-            return mockInstancesConfig(temporaryFolder.getCanonicalPath());
+            return mockInstancesConfig(vertx, canonicalTemporaryPath);
         }
     }
 }

@@ -18,7 +18,13 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+
+import io.vertx.core.net.SocketAddress;
+import io.vertx.core.net.impl.SocketAddressImpl;
 
 /**
  * Configuration for the Sidecar Service and configuration of the REST endpoints in the service
@@ -32,6 +38,18 @@ public interface ServiceConfiguration
      * @return Sidecar's HTTP REST API listen address
      */
     String host();
+
+    /**
+     * Returns a list of socket addresses where the Sidecar process will bind and listen for connections. Defaults to
+     * the configured {@link #host()} and {@link #port()}.
+     *
+     * @return a list of socket addresses where Sidecar will listen
+     */
+    default List<SocketAddress> listenSocketAddresses()
+    {
+        return Collections.singletonList(
+        new SocketAddressImpl(port(), Objects.requireNonNull(host(), "host must be provided")));
+    }
 
     /**
      * @return Sidecar's HTTP REST API port
@@ -52,9 +70,24 @@ public interface ServiceConfiguration
     long requestTimeoutMillis();
 
     /**
+     * @return {@code true} if TCP keep alive is enabled, {@code false} otherwise
+     */
+    boolean tcpKeepAlive();
+
+    /**
+     * @return the number of connections in the backlog that the incoming queue will hold
+     */
+    int acceptBacklog();
+
+    /**
      * @return the maximum time skew allowed between the server and the client
      */
     int allowableSkewInMinutes();
+
+    /**
+     * @return the number of vertx verticle instances that should be deployed
+     */
+    int serverVerticleInstances();
 
     /**
      * @return the throttling configuration
@@ -96,4 +129,9 @@ public interface ServiceConfiguration
      * @return the system-wide JMX configuration settings
      */
     JmxConfiguration jmxConfiguration();
+
+    /**
+     * @return the configuration for the global inbound and outbound traffic shaping options
+     */
+    TrafficShapingConfiguration trafficShapingConfiguration();
 }

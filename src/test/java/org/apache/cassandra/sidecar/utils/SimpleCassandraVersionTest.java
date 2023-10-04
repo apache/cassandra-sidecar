@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common;
+package org.apache.cassandra.sidecar.utils;
 
 import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 

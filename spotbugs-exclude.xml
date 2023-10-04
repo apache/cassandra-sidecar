@@ -43,12 +43,13 @@
             <Class name="org.apache.cassandra.sidecar.concurrent.ExecutorPools$TaskExecutorPool" />
             <Class name="org.apache.cassandra.sidecar.CassandraSidecarDaemon" />
             <Class name="org.apache.cassandra.sidecar.utils.SSTableImporter" />
+            <Class name="org.apache.cassandra.sidecar.tasks.HealthCheckPeriodicTask" />
         </Or>
     </Match>
 
     <!-- Ignore GC call in CassandraTestTemplate as we want to GC after cluster shutdown -->
     <Match>
-        <Class name="org.apache.cassandra.sidecar.testing.CassandraTestTemplate" />
+        <Class name="org.apache.cassandra.sidecar.test.CassandraTestTemplate" />
         <Bug pattern="DM_GC" />
     </Match>
 

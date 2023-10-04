@@ -65,11 +65,16 @@ public class TestSslModule extends TestModule
         }
 
         SslConfiguration sslConfiguration =
-        new SslConfigurationImpl(true,
-                                 new KeyStoreConfigurationImpl(keyStorePath.toAbsolutePath().toString(),
-                                                               keyStorePassword),
-                                 new KeyStoreConfigurationImpl(trustStorePath.toAbsolutePath().toString(),
-                                                               trustStorePassword));
+        SslConfigurationImpl.builder()
+                            .enabled(true)
+                            .useOpenSsl(true)
+                            .handshakeTimeoutInSeconds(10L)
+                            .clientAuth("NONE")
+                            .keystore(new KeyStoreConfigurationImpl(keyStorePath.toAbsolutePath().toString(),
+                                                                    keyStorePassword))
+                            .truststore(new KeyStoreConfigurationImpl(trustStorePath.toAbsolutePath().toString(),
+                                                                      trustStorePassword))
+                            .build();
 
         return super.abstractConfig(sslConfiguration);
     }

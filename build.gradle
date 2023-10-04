@@ -127,6 +127,7 @@ startScripts {
 
 run {
     confFile = "file:" + File.separator + File.separator + "$projectDir/conf/sidecar.yaml"
+    println "Sidecar configuration file $confFile"
     jvmArgs = ["-Dsidecar.logdir=./logs",
                "-Dsidecar.config=" + confFile,
                "-Dlogback.configurationFile=./conf/logback.xml",

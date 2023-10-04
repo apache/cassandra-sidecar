@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.testing;
+package org.apache.cassandra.sidecar.test;
 
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
@@ -27,22 +27,23 @@ import java.util.List;
 
 import com.datastax.driver.core.NettyOptions;
 import com.datastax.driver.core.Session;
+import io.vertx.core.Vertx;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.shared.JMXUtil;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
-import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.SimpleCassandraVersion;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,17 +57,20 @@ public class CassandraSidecarTestContext implements AutoCloseable
     private final CassandraVersionProvider versionProvider;
     private final DnsResolver dnsResolver;
     private final AbstractCassandraTestContext abstractCassandraTestContext;
+    private final Vertx vertx;
     public InstancesConfig instancesConfig;
     private List<CQLSessionProvider> sessionProviders;
     private List<JmxClient> jmxClients;
     private static final SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
     private final List<InstanceConfigListener> instanceConfigListeners;
 
-    private CassandraSidecarTestContext(AbstractCassandraTestContext abstractCassandraTestContext,
+    private CassandraSidecarTestContext(Vertx vertx,
+                                        AbstractCassandraTestContext abstractCassandraTestContext,
                                         SimpleCassandraVersion version,
                                         CassandraVersionProvider versionProvider,
                                         DnsResolver dnsResolver)
     {
+        this.vertx = vertx;
         this.instanceConfigListeners = new ArrayList<>();
         this.abstractCassandraTestContext = abstractCassandraTestContext;
         this.version = version;
@@ -74,7 +78,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
         this.dnsResolver = dnsResolver;
     }
 
-    public static CassandraSidecarTestContext from(AbstractCassandraTestContext cassandraTestContext,
+    public static CassandraSidecarTestContext from(Vertx vertx,
+                                                   AbstractCassandraTestContext cassandraTestContext,
                                                    DnsResolver dnsResolver)
     {
         org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
@@ -82,7 +87,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                                                              rootVersion.minor,
                                                                              rootVersion.patch);
         CassandraVersionProvider versionProvider = cassandraVersionProvider(dnsResolver);
-        return new CassandraSidecarTestContext(cassandraTestContext,
+        return new CassandraSidecarTestContext(vertx,
+                                               cassandraTestContext,
                                                versionParsed,
                                                versionProvider,
                                                dnsResolver);
@@ -142,7 +148,9 @@ public class CassandraSidecarTestContext implements AutoCloseable
         {
             setInstancesConfig();
         }
-        return this.sessionProviders.get(instance).localCql();
+        CQLSessionProvider cqlSessionProvider = sessionProviders.get(instance);
+        assertThat(cqlSessionProvider).as("cqlSessionProvider for instance=" + instance).isNotNull();
+        return cqlSessionProvider.localCql();
     }
 
     @Override
@@ -217,7 +225,12 @@ public class CassandraSidecarTestContext implements AutoCloseable
             this.sessionProviders.add(sessionProvider);
             // The in-jvm dtest framework sometimes returns a cluster before all the jmx infrastructure is initialized.
             // In these cases, we want to wait longer than the default retry/delay settings to connect.
-            JmxClient jmxClient = new JmxClient(hostName, config.jmxPort(), null, null, false, 20, 1000L);
+            JmxClient jmxClient = JmxClient.builder()
+                                           .host(hostName)
+                                           .port(config.jmxPort())
+                                           .connectionMaxRetries(20)
+                                           .connectionRetryDelayMillis(1000L)
+                                           .build();
             this.jmxClients.add(jmxClient);
 
             String[] dataDirectories = (String[]) config.get("data_file_directories");
@@ -227,7 +240,9 @@ public class CassandraSidecarTestContext implements AutoCloseable
             assertThat(dataDirParentPath).isNotNull();
             Path stagingPath = dataDirParentPath.resolve("staging");
             String stagingDir = stagingPath.toFile().getAbsolutePath();
-            CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(versionProvider,
+            CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
+                                                                             i + 1,
+                                                                             versionProvider,
                                                                              sessionProvider,
                                                                              jmxClient,
                                                                              "1.0-TEST");

@@ -18,8 +18,8 @@
 
 package org.apache.cassandra.sidecar.snapshots;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -53,7 +53,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class SnapshotSearchTest
 {
     @TempDir
-    File temporaryFolder;
+    Path temporaryFolder;
 
     SnapshotPathBuilder instance;
     Vertx vertx = Vertx.vertx();
@@ -62,9 +62,9 @@ public class SnapshotSearchTest
     @BeforeEach
     public void setup() throws IOException
     {
-        rootDir = temporaryFolder.getCanonicalPath();
-        SnapshotUtils.initializeTmpDirectory(temporaryFolder);
-        InstancesConfig mockInstancesConfig = mockInstancesConfig(rootDir);
+        rootDir = temporaryFolder.toFile().getCanonicalPath();
+        SnapshotUtils.initializeTmpDirectory(temporaryFolder.toFile());
+        InstancesConfig mockInstancesConfig = mockInstancesConfig(vertx, rootDir);
 
         CassandraInputValidator validator = new CassandraInputValidator();
         ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
@@ -126,15 +126,13 @@ public class SnapshotSearchTest
         Collections.sort(snapshotDirectories);
         assertThat(snapshotDirectories).isEqualTo(expectedDirectories);
 
-        //noinspection rawtypes
-        List<Future> futures = snapshotDirectories.stream()
-                                                  .map(directory -> instance
-                                                                    .listSnapshotDirectory(directory,
-                                                                                           includeSecondaryIndexFiles))
-                                                  .collect(Collectors.toList());
+        List<Future<List<SnapshotPathBuilder.SnapshotFile>>> futures =
+        snapshotDirectories.stream()
+                           .map(directory -> instance.listSnapshotDirectory(directory, includeSecondaryIndexFiles))
+                           .collect(Collectors.toList());
 
         VertxTestContext compositeFutureContext = new VertxTestContext();
-        CompositeFuture ar = CompositeFuture.all(futures);
+        CompositeFuture ar = Future.all(futures);
         ar.onComplete(compositeFutureContext.succeedingThenComplete());
         assertThat(compositeFutureContext.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         assertThat(compositeFutureContext.failed()).isFalse();

@@ -64,8 +64,7 @@ class ReplacementMultiDCTest extends ReplacementBaseTest
     throws Exception
     {
         BBHelperReplacementsMultiDC.reset();
-        UpgradeableCluster cluster = getMultiDCCluster(BBHelperReplacementsMultiDC::install, cassandraTestContext,
-                                                       builder -> builder.withDynamicPortAllocation(false));
+        UpgradeableCluster cluster = getMultiDCCluster(BBHelperReplacementsMultiDC::install, cassandraTestContext);
 
         List<IUpgradeableInstance> nodesToRemove = Arrays.asList(cluster.get(3), cluster.get(cluster.size()));
         runReplacementTestScenario(context,

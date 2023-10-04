@@ -51,7 +51,6 @@ import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
 public class FileStreamer
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(FileStreamer.class);
-    private static final long DEFAULT_RATE_LIMIT_STREAM_REQUESTS_PER_SECOND = Long.MAX_VALUE;
 
     private final ExecutorPools executorPools;
     private final ThrottleConfiguration config;
@@ -121,7 +120,7 @@ public class FileStreamer
                                 Instant startTime,
                                 Promise<Void> promise)
     {
-        if (!isRateLimited() || acquire(response, filename, fileLength, range, startTime, promise))
+        if (acquire(response, filename, fileLength, range, startTime, promise))
         {
             // Stream data if rate limiting is disabled or if we acquire
             LOGGER.debug("Streaming range {} for file {} to client {}. Instance: {}", range, filename,
@@ -183,14 +182,6 @@ public class FileStreamer
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Ask client to retry later"));
         }
         return false;
-    }
-
-    /**
-     * @return true if this request is rate-limited, false otherwise
-     */
-    private boolean isRateLimited()
-    {
-        return config.rateLimitStreamRequestsPerSecond() != DEFAULT_RATE_LIMIT_STREAM_REQUESTS_PER_SECOND;
     }
 
     /**

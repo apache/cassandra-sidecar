@@ -16,11 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common;
+package org.apache.cassandra.sidecar.utils;
 
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.cassandra.sidecar.common.ICassandraFactory;
+import org.apache.cassandra.sidecar.common.MinimumVersion;
 
 /**
  * Implements versioning used in Cassandra and CQL.
