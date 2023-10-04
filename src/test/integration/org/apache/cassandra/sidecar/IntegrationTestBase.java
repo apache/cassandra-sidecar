@@ -43,14 +43,15 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
-import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
+import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.server.Server;
+import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,8 +65,7 @@ public abstract class IntegrationTestBase
 {
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     protected Vertx vertx;
-    protected HttpServer server;
-    protected InstancesConfig instancesConfig;
+    protected Server server;
 
     protected static final String TEST_KEYSPACE = "testkeyspace";
     private static final String TEST_TABLE_PREFIX = "testtable";
@@ -77,23 +77,21 @@ public abstract class IntegrationTestBase
     @BeforeEach
     void setup(AbstractCassandraTestContext cassandraTestContext) throws InterruptedException
     {
-        sidecarTestContext = CassandraSidecarTestContext.from(cassandraTestContext, DnsResolver.DEFAULT);
-        Injector injector = Guice.createInjector(Modules
-                                                 .override(new MainModule())
-                                                 .with(new IntegrationTestModule(this.sidecarTestContext)));
-        instancesConfig = injector.getInstance(InstancesConfig.class);
-        server = injector.getInstance(HttpServer.class);
+        IntegrationTestModule integrationTestModule = new IntegrationTestModule();
+        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(integrationTestModule));
         vertx = injector.getInstance(Vertx.class);
+        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT);
+        integrationTestModule.setCassandraTestContext(sidecarTestContext);
+
+        server = injector.getInstance(Server.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(server.actualPort(), "127.0.0.1", context.succeeding(p -> {
-            if (sidecarTestContext.isClusterBuilt())
-            {
-                healthCheck(instancesConfig);
-            }
-            sidecarTestContext.registerInstanceConfigListener(instances -> healthCheck(instances));
-            context.completeNow();
-        }));
+        server.start()
+              .onSuccess(s -> {
+                  sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
+                  context.completeNow();
+              })
+              .onFailure(context::failNow);
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
@@ -101,9 +99,8 @@ public abstract class IntegrationTestBase
     @AfterEach
     void tearDown() throws InterruptedException
     {
-        final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> closeLatch.countDown());
-        vertx.close();
+        CountDownLatch closeLatch = new CountDownLatch(1);
+        server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else

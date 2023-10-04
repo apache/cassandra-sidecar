@@ -31,16 +31,16 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
+import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
 
 /**
  * Provides the basic dependencies for integration tests
  */
 public class IntegrationTestModule extends AbstractModule
 {
-    private final CassandraSidecarTestContext cassandraTestContext;
+    private CassandraSidecarTestContext cassandraTestContext;
 
-    public IntegrationTestModule(CassandraSidecarTestContext cassandraTestContext)
+    public void setCassandraTestContext(CassandraSidecarTestContext cassandraTestContext)
     {
         this.cassandraTestContext = cassandraTestContext;
     }
@@ -49,24 +49,17 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public InstancesConfig instancesConfig()
     {
-        return new WrapperInstancesConfig(cassandraTestContext);
+        return new WrapperInstancesConfig();
     }
 
-    static class WrapperInstancesConfig implements InstancesConfig
+    class WrapperInstancesConfig implements InstancesConfig
     {
-        private final CassandraSidecarTestContext cassandraTestContext;
-
-        WrapperInstancesConfig(CassandraSidecarTestContext cassandraTestContext)
-        {
-            this.cassandraTestContext = cassandraTestContext;
-        }
-
         /**
          * @return metadata of instances owned by the sidecar
          */
         public List<InstanceMetadata> instances()
         {
-            if (cassandraTestContext.isClusterBuilt())
+            if (cassandraTestContext != null && cassandraTestContext.isClusterBuilt())
                 return cassandraTestContext.instancesConfig().instances();
             return Collections.emptyList();
         }
@@ -100,7 +93,10 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public SidecarConfiguration configuration()
     {
-        ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl("127.0.0.1");
-        return new SidecarConfigurationImpl(serviceConfiguration);
+        ServiceConfiguration conf = ServiceConfigurationImpl.builder()
+                                                            .host("127.0.0.1")
+                                                            .port(0) // let the test find an available port
+                                                            .build();
+        return new SidecarConfigurationImpl(conf);
     }
 }

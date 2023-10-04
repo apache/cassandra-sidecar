@@ -66,6 +66,9 @@ public class TestSslModule extends TestModule
 
         SslConfiguration sslConfiguration =
         new SslConfigurationImpl(true,
+                                 true,
+                                 10L,
+                                 "NONE",
                                  new KeyStoreConfigurationImpl(keyStorePath.toAbsolutePath().toString(),
                                                                keyStorePassword),
                                  new KeyStoreConfigurationImpl(trustStorePath.toAbsolutePath().toString(),

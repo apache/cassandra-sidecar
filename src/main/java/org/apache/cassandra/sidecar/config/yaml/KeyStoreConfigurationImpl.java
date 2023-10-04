@@ -26,8 +26,6 @@ import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
  */
 public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
 {
-    public static final String DEFAULT_TYPE = "JKS";
-
     @JsonProperty("path")
     protected final String path;
 
@@ -37,21 +35,25 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
     @JsonProperty(value = "type", defaultValue = DEFAULT_TYPE)
     protected final String type;
 
+    @JsonProperty(value = "check_interval_sec", defaultValue = DEFAULT_CHECK_INTERVAL_SECONDS + "")
+    protected final int checkIntervalInSeconds;
+
     public KeyStoreConfigurationImpl()
     {
-        this(null, null, DEFAULT_TYPE);
+        this(null, null, DEFAULT_TYPE, DEFAULT_CHECK_INTERVAL_SECONDS);
     }
 
     public KeyStoreConfigurationImpl(String path, String password)
     {
-        this(path, password, DEFAULT_TYPE);
+        this(path, password, DEFAULT_TYPE, DEFAULT_CHECK_INTERVAL_SECONDS);
     }
 
-    public KeyStoreConfigurationImpl(String path, String password, String type)
+    public KeyStoreConfigurationImpl(String path, String password, String type, int checkIntervalInSeconds)
     {
         this.path = path;
         this.password = password;
         this.type = type;
+        this.checkIntervalInSeconds = checkIntervalInSeconds;
     }
 
     /**
@@ -78,9 +80,19 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
      * @return the type of the store
      */
     @Override
-    @JsonProperty("type")
+    @JsonProperty(value = "type", defaultValue = DEFAULT_TYPE)
     public String type()
     {
         return type;
+    }
+
+    /**
+     * @return the interval, in seconds, in which the key store will be checked for changes in the filesystem
+     */
+    @Override
+    @JsonProperty(value = "check_interval_sec", defaultValue = DEFAULT_CHECK_INTERVAL_SECONDS + "")
+    public int checkIntervalInSeconds()
+    {
+        return checkIntervalInSeconds;
     }
 }

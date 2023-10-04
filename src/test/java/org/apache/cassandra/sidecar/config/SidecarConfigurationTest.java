@@ -26,6 +26,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.assertj.core.api.Condition;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -159,6 +160,17 @@ class SidecarConfigurationTest
         .withMessageContaining("Invalid file_permissions configuration=\"not-valid\"");
     }
 
+    @Test
+    void testInvalidClientAuth()
+    {
+        Path yamlPath = yaml("config/sidecar_invalid_client_auth.yaml");
+        assertThatExceptionOfType(JsonMappingException.class)
+        .isThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
+        .withRootCauseInstanceOf(IllegalArgumentException.class)
+        .withMessageContaining("Invalid client_auth configuration=\"notvalid\", " +
+                               "valid values are (NONE,REQUEST,REQUIRED)");
+    }
+
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
     {
         assertThat(config.cassandraInstances()).isNotNull().hasSize(1);
@@ -186,8 +198,7 @@ class SidecarConfigurationTest
         assertThat(config.sslConfiguration()).isNull();
 
         // health check configuration
-        assertThat(config.healthCheckConfiguration()).isNotNull();
-        assertThat(config.healthCheckConfiguration().checkIntervalMillis()).isEqualTo(30_000);
+        validateHealthCheckConfiguration(config.healthCheckConfiguration());
 
         // cassandra input validation configuration
         validateDefaultCassandraInputValidationConfiguration(config.cassandraInputValidationConfiguration());
@@ -252,8 +263,7 @@ class SidecarConfigurationTest
         }
 
         // health check configuration
-        assertThat(config.healthCheckConfiguration()).isNotNull();
-        assertThat(config.healthCheckConfiguration().checkIntervalMillis()).isEqualTo(30_000);
+        validateHealthCheckConfiguration(config.healthCheckConfiguration());
 
         // cassandra input validation configuration
         validateDefaultCassandraInputValidationConfiguration(config.cassandraInputValidationConfiguration());
@@ -263,10 +273,12 @@ class SidecarConfigurationTest
     {
         assertThat(serviceConfiguration).isNotNull();
         assertThat(serviceConfiguration.host()).isEqualTo("0.0.0.0");
-        assertThat(serviceConfiguration.port()).isEqualTo(9043);
+        assertThat(serviceConfiguration.port()).is(new Condition<>(port -> port == 9043 || port == 0, "port"));
         assertThat(serviceConfiguration.requestIdleTimeoutMillis()).isEqualTo(300000);
         assertThat(serviceConfiguration.requestTimeoutMillis()).isEqualTo(300000);
         assertThat(serviceConfiguration.allowableSkewInMinutes()).isEqualTo(60);
+        assertThat(serviceConfiguration.tcpKeepAlive()).isFalse();
+        assertThat(serviceConfiguration.acceptBacklog()).isEqualTo(1024);
 
         // service configuration throttling
         ThrottleConfiguration throttle = serviceConfiguration.throttleConfiguration();
@@ -275,6 +287,22 @@ class SidecarConfigurationTest
         assertThat(throttle.rateLimitStreamRequestsPerSecond()).isEqualTo(5000);
         assertThat(throttle.delayInSeconds()).isEqualTo(5);
         assertThat(throttle.timeoutInSeconds()).isEqualTo(10);
+
+        // validate traffic shaping options
+        TrafficShapingConfiguration trafficShaping = serviceConfiguration.trafficShapingConfiguration();
+        assertThat(trafficShaping).isNotNull();
+        assertThat(trafficShaping.inboundGlobalBandwidthBytesPerSecond()).isEqualTo(500L);
+        assertThat(trafficShaping.outboundGlobalBandwidthBytesPerSecond()).isEqualTo(1500L);
+        assertThat(trafficShaping.peakOutboundGlobalBandwidthBytesPerSecond()).isEqualTo(2000L);
+        assertThat(trafficShaping.maxDelayToWaitMillis()).isEqualTo(2500L);
+        assertThat(trafficShaping.checkIntervalForStatsMillis()).isEqualTo(3000L);
+    }
+
+    private void validateHealthCheckConfiguration(HealthCheckConfiguration config)
+    {
+        assertThat(config).isNotNull();
+        assertThat(config.initialDelayMillis()).isEqualTo(100);
+        assertThat(config.checkIntervalMillis()).isEqualTo(30_000);
     }
 
     void validateDefaultCassandraInputValidationConfiguration(CassandraInputValidationConfiguration config)
@@ -297,12 +325,19 @@ class SidecarConfigurationTest
     {
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isTrue();
+        assertThat(config.useOpenSSL()).isFalse();
+        assertThat(config.handshakeTimeoutInSeconds()).isEqualTo(25L);
+        assertThat(config.clientAuth()).isEqualTo("REQUEST");
         assertThat(config.keystore()).isNotNull();
         assertThat(config.keystore().path()).isEqualTo("path/to/keystore.p12");
         assertThat(config.keystore().password()).isEqualTo("password");
+        assertThat(config.keystore().reloadStore()).isTrue();
+        assertThat(config.keystore().checkIntervalInSeconds()).isEqualTo(300);
         assertThat(config.truststore()).isNotNull();
         assertThat(config.truststore().path()).isEqualTo("path/to/truststore.p12");
         assertThat(config.truststore().password()).isEqualTo("password");
+        assertThat(config.truststore().reloadStore()).isFalse();
+        assertThat(config.truststore().checkIntervalInSeconds()).isEqualTo(-1);
     }
 
     private Path yaml(String resourceName)

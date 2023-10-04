@@ -42,12 +42,11 @@ import javax.management.remote.JMXServiceURL;
 import javax.rmi.ssl.SslRMIClientSocketFactory;
 
 import com.google.common.util.concurrent.Uninterruptibles;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
-import org.jetbrains.annotations.VisibleForTesting;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 
 /**
  * A simple wrapper around a JMX connection that makes it easier to get proxy instances.
@@ -65,94 +64,34 @@ public class JmxClient implements NotificationListener, Closeable
     private final Supplier<String> roleSupplier;
     private final Supplier<String> passwordSupplier;
     private final BooleanSupplier enableSslSupplier;
-    private final int jmxConnectionMaxRetries;
-    private final long jmxConnectionRetryDelayMillis;
+    private final int connectionMaxRetries;
+    private final long connectionRetryDelayMillis;
+
 
     /**
-     * Creates a new client with the provided {@code host} and {@code port}.
+     * Creates a new JMX client with {@link Builder} options.
      *
-     * @param host the host of the JMX service
-     * @param port the port of the JMX service
+     * @param builder the builder options
      */
-    public JmxClient(String host, int port)
+    private JmxClient(Builder builder)
     {
-        this(host, port, null, null, false);
-    }
-
-    /**
-     * Creates a new client with the provided parameters
-     *
-     * @param host      the host of the JMX service
-     * @param port      the port of the JMX service
-     * @param role      the JMX role used for authentication
-     * @param password  the JMX role password used for authentication
-     * @param enableSSl true if SSL is enabled for JMX, false otherwise
-     */
-    public JmxClient(String host, int port, String role, String password, boolean enableSSl)
-    {
-        this(buildJmxServiceURL(host, port), () -> role, () -> password, () -> enableSSl);
-    }
-
-    /**
-     * Creates a new client with the provided parameters
-     *
-     * @param host                       the host of the JMX service
-     * @param port                       the port of the JMX service
-     * @param role                       the JMX role used for authentication
-     * @param password                   the JMX role password used for authentication
-     * @param enableSSl                  true if SSL is enabled for JMX, false otherwise
-     * @param connectionMaxRetries       the maximum number of connection retries before failing to connect
-     * @param connectionRetryDelayMillis the number of milliseconds to delay between connection retries
-     */
-    public JmxClient(String host, int port, String role, String password,
-                     boolean enableSSl, int connectionMaxRetries, long connectionRetryDelayMillis)
-    {
-        this(buildJmxServiceURL(host, port), () -> role, () -> password, () -> enableSSl,
-             connectionMaxRetries, connectionRetryDelayMillis);
-    }
-
-    @VisibleForTesting
-    JmxClient(JMXServiceURL jmxServiceURL)
-    {
-        this(jmxServiceURL, () -> null, () -> null, () -> false);
-    }
-
-    @VisibleForTesting
-    JmxClient(JMXServiceURL jmxServiceURL, String role, String password)
-    {
-        this(jmxServiceURL, () -> role, () -> password, () -> false);
-    }
-
-    public JmxClient(String host,
-                     int port,
-                     Supplier<String> roleSupplier,
-                     Supplier<String> passwordSupplier,
-                     BooleanSupplier enableSslSupplier)
-    {
-        this(buildJmxServiceURL(host, port), roleSupplier, passwordSupplier, enableSslSupplier);
-    }
-
-    public JmxClient(JMXServiceURL jmxServiceURL,
-                     Supplier<String> roleSupplier,
-                     Supplier<String> passwordSupplier,
-                     BooleanSupplier enableSslSupplier)
-    {
-        this(jmxServiceURL, roleSupplier, passwordSupplier, enableSslSupplier, 20, 1000);
-    }
-
-    public JmxClient(JMXServiceURL jmxServiceURL,
-                     Supplier<String> roleSupplier,
-                     Supplier<String> passwordSupplier,
-                     BooleanSupplier enableSslSupplier,
-                     int jmxConnectionMaxRetries,
-                     long jmxConnectionRetryDelayMillis)
-    {
-        this.jmxServiceURL = Objects.requireNonNull(jmxServiceURL, "jmxServiceURL is required");
-        this.roleSupplier = Objects.requireNonNull(roleSupplier, "roleSupplier is required");
-        this.passwordSupplier = Objects.requireNonNull(passwordSupplier, "passwordSupplier is required");
-        this.enableSslSupplier = Objects.requireNonNull(enableSslSupplier, "enableSslSupplier is required");
-        this.jmxConnectionMaxRetries = jmxConnectionMaxRetries;
-        this.jmxConnectionRetryDelayMillis = jmxConnectionRetryDelayMillis;
+        if (builder.jmxServiceURL != null)
+        {
+            jmxServiceURL = builder.jmxServiceURL;
+        }
+        else
+        {
+            jmxServiceURL = buildJmxServiceURL(Objects.requireNonNull(builder.host, "host is required"),
+                                               builder.port);
+        }
+        Objects.requireNonNull(jmxServiceURL, "jmxServiceUrl is required");
+        roleSupplier = Objects.requireNonNull(builder.roleSupplier, "roleSupplier is required");
+        passwordSupplier = Objects.requireNonNull(builder.passwordSupplier, "passwordSupplier is required");
+        enableSslSupplier = Objects.requireNonNull(builder.enableSslSupplier, "enableSslSupplier is required");
+        Preconditions.checkArgument(builder.connectionMaxRetries > 0,
+                                    "connectionMaxRetries must be a positive integer");
+        connectionMaxRetries = builder.connectionMaxRetries;
+        connectionRetryDelayMillis = builder.connectionRetryDelayMillis;
     }
 
     /**
@@ -198,7 +137,7 @@ public class JmxClient implements NotificationListener, Closeable
     private void connect()
     {
         int attempts = 1;
-        int maxAttempts = jmxConnectionMaxRetries;
+        int maxAttempts = connectionMaxRetries;
         Throwable lastThrown = null;
         while (attempts <= maxAttempts)
         {
@@ -230,7 +169,7 @@ public class JmxClient implements NotificationListener, Closeable
                 {
                     LOGGER.info("Could not connect to JMX on {} after {} attempts. Will retry.",
                                 jmxServiceURL, attempts, t);
-                    Uninterruptibles.sleepUninterruptibly(jmxConnectionRetryDelayMillis, TimeUnit.MILLISECONDS);
+                    Uninterruptibles.sleepUninterruptibly(connectionRetryDelayMillis, TimeUnit.MILLISECONDS);
                 }
                 attempts++;
             }
@@ -353,5 +292,169 @@ public class JmxClient implements NotificationListener, Closeable
 
         // Use square brackets to surround IPv6 addresses to fix CASSANDRA-7669 and CASSANDRA-17581
         return "[" + host + "]";
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@code JmxClient} builder static inner class.
+     */
+    public static final class Builder implements DataObjectBuilder<Builder, JmxClient>
+    {
+        private JMXServiceURL jmxServiceURL;
+        private String host;
+        private int port;
+        private Supplier<String> roleSupplier = () -> null;
+        private Supplier<String> passwordSupplier = () -> null;
+        private BooleanSupplier enableSslSupplier = () -> false;
+        private int connectionMaxRetries = 3;
+        private long connectionRetryDelayMillis = 200;
+
+        private Builder()
+        {
+        }
+
+        @Override
+        public Builder self()
+        {
+            return this;
+        }
+
+        /**
+         * Sets the {@code host} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param host the {@code host} to set
+         * @return a reference to this Builder
+         */
+        public Builder host(String host)
+        {
+            return update(b -> b.host = host);
+        }
+
+        /**
+         * Sets the {@code port} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param port the {@code port} to set
+         * @return a reference to this Builder
+         */
+        public Builder port(int port)
+        {
+            return update(b -> b.port = port);
+        }
+
+        /**
+         * Sets the {@code jmxServiceURL} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param jmxServiceURL the {@code jmxServiceURL} to set
+         * @return a reference to this Builder
+         */
+        public Builder jmxServiceURL(JMXServiceURL jmxServiceURL)
+        {
+            return update(b -> b.jmxServiceURL = jmxServiceURL);
+        }
+
+        /**
+         * Sets the {@code roleSupplier} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param roleSupplier the {@code roleSupplier} to set
+         * @return a reference to this Builder
+         */
+        public Builder roleSupplier(Supplier<String> roleSupplier)
+        {
+            return update(b -> b.roleSupplier = Objects.requireNonNull(roleSupplier,
+                                                                       "roleSupplier must be provided"));
+        }
+
+        /**
+         * Sets the {@code roleSupplier} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param role the {@code role} to set
+         * @return a reference to this Builder
+         */
+        public Builder role(String role)
+        {
+            return update(b -> b.roleSupplier = () -> role);
+        }
+
+        /**
+         * Sets the {@code passwordSupplier} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param passwordSupplier the {@code passwordSupplier} to set
+         * @return a reference to this Builder
+         */
+        public Builder passwordSupplier(Supplier<String> passwordSupplier)
+        {
+            return update(b -> b.passwordSupplier = Objects.requireNonNull(passwordSupplier,
+                                                                           "passwordSupplier must be provided"));
+        }
+
+        /**
+         * Sets the {@code passwordSupplier} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param password the {@code password} to set
+         * @return a reference to this Builder
+         */
+        public Builder password(String password)
+        {
+            return update(b -> b.passwordSupplier = () -> password);
+        }
+
+        /**
+         * Sets the {@code enableSslSupplier} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param enableSslSupplier the {@code enableSslSupplier} to set
+         * @return a reference to this Builder
+         */
+        public Builder enableSslSupplier(BooleanSupplier enableSslSupplier)
+        {
+            return update(b -> b.enableSslSupplier = enableSslSupplier);
+        }
+
+        /**
+         * Sets the {@code enableSslSupplier} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param enableSsl the {@code enableSsl} to set
+         * @return a reference to this Builder
+         */
+        public Builder enableSsl(boolean enableSsl)
+        {
+            return update(b -> b.enableSslSupplier = () -> enableSsl);
+        }
+
+        /**
+         * Sets the {@code connectionMaxRetries} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param connectionMaxRetries the {@code connectionMaxRetries} to set
+         * @return a reference to this Builder
+         */
+        public Builder connectionMaxRetries(int connectionMaxRetries)
+        {
+            return update(b -> b.connectionMaxRetries = connectionMaxRetries);
+        }
+
+        /**
+         * Sets the {@code connectionRetryDelayMillis} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param connectionRetryDelayMillis the {@code connectionRetryDelayMillis} to set
+         * @return a reference to this Builder
+         */
+        public Builder connectionRetryDelayMillis(long connectionRetryDelayMillis)
+        {
+            return update(b -> b.connectionRetryDelayMillis = connectionRetryDelayMillis);
+        }
+
+        /**
+         * Returns a {@code JmxClient} built from the parameters previously set.
+         *
+         * @return a {@code JmxClient} built with parameters of this {@code JmxClient.Builder}
+         */
+        @Override
+        public JmxClient build()
+        {
+            return new JmxClient(this);
+        }
     }
 }

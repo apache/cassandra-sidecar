@@ -18,7 +18,11 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.vertx.core.http.ClientAuth;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 
@@ -27,8 +31,22 @@ import org.apache.cassandra.sidecar.config.SslConfiguration;
  */
 public class SslConfigurationImpl implements SslConfiguration
 {
+    public static final boolean DEFAULT_SSL_ENABLED = false;
+    public static final boolean DEFAULT_USE_OPEN_SSL = true;
+    public static final long DEFAULT_HANDSHAKE_TIMEOUT_SECONDS = 10L;
+    public static final String DEFAULT_CLIENT_AUTH = "NONE";
+
+
     @JsonProperty("enabled")
     protected final boolean enabled;
+
+    @JsonProperty(value = "use_openssl", defaultValue = "true")
+    protected final boolean useOpenSsl;
+
+    @JsonProperty(value = "handshake_timeout_sec", defaultValue = "10")
+    protected final long handshakeTimeoutInSeconds;
+
+    protected String clientAuth;
 
     @JsonProperty("keystore")
     protected final KeyStoreConfiguration keystore;
@@ -38,20 +56,31 @@ public class SslConfigurationImpl implements SslConfiguration
 
     public SslConfigurationImpl()
     {
-        this(false, null, null);
+        this(DEFAULT_SSL_ENABLED,
+             DEFAULT_USE_OPEN_SSL,
+             DEFAULT_HANDSHAKE_TIMEOUT_SECONDS,
+             DEFAULT_CLIENT_AUTH,
+             null,
+             null);
     }
 
     public SslConfigurationImpl(boolean enabled,
+                                boolean useOpenSsl,
+                                long handshakeTimeoutInSeconds,
+                                String clientAuth,
                                 KeyStoreConfiguration keystore,
                                 KeyStoreConfiguration truststore)
     {
         this.enabled = enabled;
+        this.useOpenSsl = useOpenSsl;
+        this.handshakeTimeoutInSeconds = handshakeTimeoutInSeconds;
+        this.clientAuth = clientAuth;
         this.keystore = keystore;
         this.truststore = truststore;
     }
 
     /**
-     * @return {@code true} if SSL is enabled, {@code false} otherwise
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty("enabled")
@@ -61,17 +90,54 @@ public class SslConfigurationImpl implements SslConfiguration
     }
 
     /**
-     * @return {@code true} if the keystore is configured, and the {@link KeyStoreConfiguration#path()} and
-     * {@link KeyStoreConfiguration#password()} parameters are provided
+     * {@inheritDoc}
      */
     @Override
-    public boolean isKeystoreConfigured()
+    @JsonProperty(value = "use_openssl", defaultValue = "true")
+    public boolean useOpenSSL()
     {
-        return keystore != null && keystore.isConfigured();
+        return useOpenSsl;
     }
 
     /**
-     * @return the configuration for the keystore
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = "handshake_timeout_sec", defaultValue = "10")
+    public long handshakeTimeoutInSeconds()
+    {
+        return handshakeTimeoutInSeconds;
+    }
+
+    @Override
+    @JsonProperty(value = "client_auth", defaultValue = "NONE")
+    public String clientAuth()
+    {
+        return clientAuth;
+    }
+
+    @JsonProperty(value = "client_auth", defaultValue = "NONE")
+    public void setClientAuth(String clientAuth)
+    {
+        this.clientAuth = clientAuth;
+        try
+        {
+            // forces a validation of the input
+            this.clientAuth = ClientAuth.valueOf(clientAuth).name();
+        }
+        catch (IllegalArgumentException exception)
+        {
+            String errorMessage = String.format("Invalid client_auth configuration=\"%s\", valid values are (%s)",
+                                                clientAuth,
+                                                Arrays.stream(ClientAuth.values())
+                                                      .map(Enum::name)
+                                                      .collect(Collectors.joining(",")));
+            throw new IllegalArgumentException(errorMessage);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty("keystore")
@@ -81,17 +147,16 @@ public class SslConfigurationImpl implements SslConfiguration
     }
 
     /**
-     * @return {@code true} if the truststore is configured, and the {@link KeyStoreConfiguration#path()} and
-     * {@link KeyStoreConfiguration#password()} parameters are provided
+     * {@inheritDoc}
      */
     @Override
-    public boolean isTruststoreConfigured()
+    public boolean isTrustStoreConfigured()
     {
         return truststore != null && truststore.isConfigured();
     }
 
     /**
-     * @return the configuration for the truststore
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty("truststore")

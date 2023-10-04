@@ -21,19 +21,24 @@ package org.apache.cassandra.sidecar.utils;
 import java.io.File;
 import java.nio.file.AtomicMoveNotSupportedException;
 
+import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.CopyOptions;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.core.streams.ReadStream;
+import io.vertx.core.streams.WriteStream;
 
 /**
  * A class that handles SSTable Uploads
@@ -46,18 +51,23 @@ public class SSTableUploader
 
     private final FileSystem fs;
     private final ChecksumVerifier checksumVerifier;
+    private final SidecarRateLimiter rateLimiter;
 
     /**
      * Constructs an instance of {@link SSTableUploader} with provided params for uploading an SSTable component.
      *
      * @param vertx            Vertx reference
      * @param checksumVerifier verifier for checking integrity of upload
+     * @param rateLimiter      rate limiter for uploading SSTable components
      */
     @Inject
-    public SSTableUploader(Vertx vertx, ChecksumVerifier checksumVerifier)
+    public SSTableUploader(Vertx vertx,
+                           ChecksumVerifier checksumVerifier,
+                           @Named("IngressFileRateLimiter") SidecarRateLimiter rateLimiter)
     {
         this.fs = vertx.fileSystem();
         this.checksumVerifier = checksumVerifier;
+        this.rateLimiter = rateLimiter;
     }
 
     /**
@@ -98,6 +108,7 @@ public class SSTableUploader
     {
         LOGGER.debug("Uploading data to={}", tempFilename);
         return fs.open(tempFilename, new OpenOptions()) // open the temp file
+                 .map(file -> rateLimiter.isRateLimited() ? new RateLimitedWriteStream(rateLimiter, file) : file)
                  .compose(file -> {
                      readStream.resume();
                      return readStream.pipeTo(file);
@@ -151,5 +162,83 @@ public class SSTableUploader
             i++;
         }
         return false;
+    }
+
+
+    /**
+     * A {@link WriteStream} implementation that supports rate limiting.
+     */
+    public static class RateLimitedWriteStream implements WriteStream<Buffer>
+    {
+        private final SidecarRateLimiter limiter;
+        private final WriteStream<Buffer> delegate;
+
+        public RateLimitedWriteStream(SidecarRateLimiter limiter, WriteStream<Buffer> delegate)
+        {
+            this.limiter = limiter;
+            this.delegate = delegate;
+        }
+
+        @Override
+        public WriteStream<Buffer> exceptionHandler(Handler<Throwable> handler)
+        {
+            return delegate.exceptionHandler(handler);
+        }
+
+        @Override
+        public Future<Void> write(Buffer data)
+        {
+            limiter.acquire(data.length()); // apply backpressure on the received bytes
+            return delegate.write(data);
+        }
+
+        @Override
+        public void write(Buffer data, Handler<AsyncResult<Void>> handler)
+        {
+            limiter.acquire(data.length()); // apply backpressure on the received bytes
+            delegate.write(data, handler);
+        }
+
+        @Override
+        public Future<Void> end()
+        {
+            return delegate.end();
+        }
+
+        @Override
+        public void end(Handler<AsyncResult<Void>> handler)
+        {
+            delegate.end(handler);
+        }
+
+        @Override
+        public Future<Void> end(Buffer data)
+        {
+            return delegate.end(data);
+        }
+
+        @Override
+        public void end(Buffer data, Handler<AsyncResult<Void>> handler)
+        {
+            delegate.end(data, handler);
+        }
+
+        @Override
+        public WriteStream<Buffer> setWriteQueueMaxSize(int maxSize)
+        {
+            return delegate.setWriteQueueMaxSize(maxSize);
+        }
+
+        @Override
+        public boolean writeQueueFull()
+        {
+            return delegate.writeQueueFull();
+        }
+
+        @Override
+        public WriteStream<Buffer> drainHandler(Handler<Void> handler)
+        {
+            return delegate.drainHandler(handler);
+        }
     }
 }

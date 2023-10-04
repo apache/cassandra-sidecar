@@ -62,7 +62,10 @@ class CacheFactoryTest
 
         SSTableImportConfiguration ssTableImportConfiguration =
         new SSTableImportConfigurationImpl(ssTableImportCacheConfiguration);
-        ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl(ssTableImportConfiguration);
+        ServiceConfiguration serviceConfiguration =
+        ServiceConfigurationImpl.builder()
+                                .ssTableImportConfiguration(ssTableImportConfiguration)
+                                .build();
         SSTableImporter mockSSTableImporter = mock(SSTableImporter.class);
         cacheFactory = new CacheFactory(serviceConfiguration, mockSSTableImporter, fakeTicker::read);
     }

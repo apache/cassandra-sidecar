@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,6 +27,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -45,6 +47,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
+import org.assertj.core.data.Percentage;
 
 import static java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE;
 import static java.nio.file.attribute.PosixFilePermission.GROUP_READ;
@@ -62,7 +65,7 @@ import static org.mockito.Mockito.when;
  * Tests for the {@link SSTableUploadHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
+class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
 {
     private static final String FILE_TO_BE_UPLOADED =
     "./src/test/resources/instance1/data/TestKeyspace/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots"
@@ -130,7 +133,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     }
 
     @Test
-    public void testInvalidUploadId(VertxTestContext context) throws IOException
+    void testInvalidUploadId(VertxTestContext context) throws IOException
     {
         sendUploadRequestAndVerify(null, context, "foo", "ks", "tbl", "with-lesser-content-length.db", "",
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
@@ -139,11 +142,11 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             assertThat(error.getString("status")).isEqualTo("Bad Request");
             assertThat(error.getInteger("code")).isEqualTo(400);
             assertThat(error.getString("message")).isEqualTo("Invalid upload id is supplied, uploadId=foo");
-        });
+        }, FILE_TO_BE_UPLOADED);
     }
 
     @Test
-    public void testInvalidKeyspace(VertxTestContext context) throws IOException
+    void testInvalidKeyspace(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
         sendUploadRequestAndVerify(context, uploadId, "invalidKeyspace", "tbl", "with-lesser-content-length.db", "",
@@ -152,7 +155,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     }
 
     @Test
-    public void testInvalidTable(VertxTestContext context) throws IOException
+    void testInvalidTable(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
         sendUploadRequestAndVerify(context, uploadId, "ks", "invalidTableName", "with-lesser-content-length.db", "",
@@ -161,7 +164,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     }
 
     @Test
-    public void testFreeSpacePercentCheckNotPassed(VertxTestContext context) throws IOException
+    void testFreeSpacePercentCheckNotPassed(VertxTestContext context) throws IOException
     {
         when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(100F);
 
@@ -172,7 +175,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     }
 
     @Test
-    public void testConcurrentUploadLimitExceeded(VertxTestContext context) throws IOException
+    void testConcurrentUploadLimitExceeded(VertxTestContext context) throws IOException
     {
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(0);
 
@@ -183,7 +186,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     }
 
     @Test
-    public void testPermitCleanup(VertxTestContext context) throws IOException, InterruptedException
+    void testPermitCleanup(VertxTestContext context) throws IOException, InterruptedException
     {
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(1);
 
@@ -201,7 +204,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     }
 
     @Test
-    public void testFilePermissionOnUpload(VertxTestContext context) throws IOException
+    void testFilePermissionOnUpload(VertxTestContext context) throws IOException
     {
         String uploadId = UUID.randomUUID().toString();
         when(mockSSTableUploadConfiguration.filePermissions()).thenReturn("rwxr-xr-x");
@@ -210,12 +213,11 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.OK.code(),
                                    false, response -> {
 
-            Path path = temporaryFolder.toPath()
-                                       .resolve("staging")
-                                       .resolve(uploadId)
-                                       .resolve("ks")
-                                       .resolve("tbl")
-                                       .resolve("without-md5.db");
+            Path path = temporaryPath.resolve("staging")
+                                     .resolve(uploadId)
+                                     .resolve("ks")
+                                     .resolve("tbl")
+                                     .resolve("without-md5.db");
 
             try
             {
@@ -233,7 +235,26 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             {
                 throw new RuntimeException(e);
             }
-        });
+        }, FILE_TO_BE_UPLOADED);
+    }
+
+    @Test
+    void testRateLimitedUpload(VertxTestContext context) throws IOException
+    {
+        Path largeFilePath = prepareTestFile(temporaryPath, "1MB-File-Data.db", 1024 * 1024); // 1MB
+
+        long startTime = System.nanoTime();
+        String uploadId = UUID.randomUUID().toString();
+        sendUploadRequestAndVerify(null, context, uploadId, "ks", "tbl", "1MB-File-Data.db", "",
+                                   Files.size(largeFilePath), HttpResponseStatus.OK.code(),
+                                   false, response -> {
+
+            // SSTable upload should take around 4 seconds (256 KB/s for a 1MB file)
+            long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+            assertThat(response).isNotNull();
+            assertThat(elapsedMillis).isCloseTo(TimeUnit.SECONDS.toMillis(4),
+                                                Percentage.withPercentage(5));
+        }, largeFilePath.toString());
     }
 
     private void sendUploadRequestAndVerify(VertxTestContext context,
@@ -271,7 +292,8 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                    fileLength,
                                    expectedRetCode,
                                    expectTimeout,
-                                   null);
+                                   null,
+                                   FILE_TO_BE_UPLOADED);
     }
 
     private void sendUploadRequestAndVerify(CountDownLatch latch,
@@ -284,7 +306,8 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                             long fileLength,
                                             int expectedRetCode,
                                             boolean expectTimeout,
-                                            Consumer<HttpResponse<Buffer>> responseValidator)
+                                            Consumer<HttpResponse<Buffer>> responseValidator,
+                                            String fileToBeUploaded)
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + keyspace
@@ -299,7 +322,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             req.putHeader(HttpHeaderNames.CONTENT_LENGTH.toString(), Long.toString(fileLength));
         }
 
-        AsyncFile fd = vertx.fileSystem().openBlocking(FILE_TO_BE_UPLOADED, new OpenOptions().setRead(true));
+        AsyncFile fd = vertx.fileSystem().openBlocking(fileToBeUploaded, new OpenOptions().setRead(true));
         req.sendStream(fd, response ->
         {
             if (expectTimeout)
@@ -320,7 +343,7 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
 
             if (expectedRetCode == HttpResponseStatus.OK.code())
             {
-                Path targetFilePath = Paths.get(SnapshotUtils.makeStagingDir(temporaryFolder.getAbsolutePath()),
+                Path targetFilePath = Paths.get(SnapshotUtils.makeStagingDir(canonicalTemporaryPath),
                                                 uploadId, keyspace, tableName, targetFileName);
                 assertThat(Files.exists(targetFilePath)).isTrue();
             }
@@ -335,5 +358,25 @@ public class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             }
             client.close();
         });
+    }
+
+    static Path prepareTestFile(Path directory, String fileName, long sizeInBytes) throws IOException
+    {
+        Path filePath = directory.resolve(fileName);
+        Files.deleteIfExists(filePath);
+
+        byte[] buffer = new byte[1024];
+        try (OutputStream outputStream = Files.newOutputStream(filePath))
+        {
+            int written = 0;
+            while (written < sizeInBytes)
+            {
+                ThreadLocalRandom.current().nextBytes(buffer);
+                int toWrite = (int) Math.min(buffer.length, sizeInBytes - written);
+                outputStream.write(buffer, 0, toWrite);
+                written += toWrite;
+            }
+        }
+        return filePath;
     }
 }

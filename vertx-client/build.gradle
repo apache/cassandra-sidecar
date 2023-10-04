@@ -49,12 +49,9 @@ configurations {
     all*.exclude(group: 'ch.qos.logback')
 }
 
-// TODO: The vertx version differs from the version the server uses because the version used by the server does not
-//       support configuring daemon threads. There's a pending action on updating vertx's version for the server and
-//       keep them in sync.
 dependencies {
     api(project(':client'))
-    api(group: 'io.vertx', name: 'vertx-web-client', version: '4.4.1') {
+    api(group: 'io.vertx', name: 'vertx-web-client', version: "${project.vertxVersion}") {
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
     }
     implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.61.Final')  // for openSSL
@@ -77,7 +74,7 @@ dependencies {
 
     testImplementation(testFixtures(project(':client')))
 
-    testImplementation("io.vertx:vertx-junit5:4.4.1")
+    testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
     testImplementation("org.assertj:assertj-core:3.24.2")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${project.junitVersion}")
     testImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")

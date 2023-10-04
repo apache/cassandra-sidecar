@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common;
+package org.apache.cassandra.sidecar.utils;
 
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import org.apache.cassandra.sidecar.common.ICassandraFactory;
 import org.jetbrains.annotations.VisibleForTesting;
 
 

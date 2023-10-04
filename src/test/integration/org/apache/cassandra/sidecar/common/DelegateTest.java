@@ -18,18 +18,35 @@
 
 package org.apache.cassandra.sidecar.common;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
+import java.util.stream.IntStream;
 
-import com.datastax.driver.core.exceptions.TransportException;
+import com.google.common.collect.ImmutableSet;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.api.NodeToolResult;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
+import org.apache.cassandra.sidecar.utils.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Ensures the Delegate works correctly
  */
+@ExtendWith(VertxExtension.class)
 class DelegateTest extends IntegrationTestBase
 {
     @CassandraIntegrationTest(jmx = false)
@@ -44,39 +61,69 @@ class DelegateTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest(jmx = false)
-    void testHealthCheck() throws InterruptedException
+    void testHealthCheck(VertxTestContext context)
     {
-        CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig().instances().get(0).delegate();
+        EventBus eventBus = vertx.eventBus();
+        Checkpoint cqlReady = context.checkpoint(2);
+        Checkpoint cqlDisconnected = context.checkpoint();
 
-        delegate.healthCheck();
+        MessageConsumer<JsonObject> cqlReadyConsumer = eventBus.localConsumer(ON_CASSANDRA_CQL_READY);
 
-        assertThat(delegate.isUp()).as("health check succeeds").isTrue();
+        cqlReadyConsumer.handler((Message<JsonObject> message) -> {
+            cqlReadyConsumer.unregister();
+            int instanceId = message.body().getInteger("cassandraInstanceId");
 
-        NodeToolResult nodetoolResult = sidecarTestContext.cluster().get(1).nodetoolResult("disablebinary");
-        assertThat(nodetoolResult.getRc())
-        .withFailMessage("Failed to disable binary:\nstdout:" + nodetoolResult.getStdout()
-                         + "\nstderr: " + nodetoolResult.getStderr())
-        .isEqualTo(0);
+            CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
+                                                                  .instanceFromId(instanceId)
+                                                                  .delegate();
+            assertThat(delegate.isUp()).as("health check succeeds").isTrue();
+            cqlReady.flag();
 
-        for (int i = 0; i < 10; i++)
-        {
-            try
-            {
-                delegate.healthCheck();
-                break;
-            }
-            catch (TransportException tex)
-            {
-                Thread.sleep(1000); // Give the delegate some time to recover
-            }
-        }
-        assertThat(delegate.isUp()).as("health check fails after binary has been disabled").isFalse();
+            // Disable binary
+            NodeToolResult nodetoolResult = sidecarTestContext.cluster().get(1).nodetoolResult("disablebinary");
+            assertThat(nodetoolResult.getRc())
+            .withFailMessage("Failed to disable binary:\nstdout:" + nodetoolResult.getStdout()
+                             + "\nstderr: " + nodetoolResult.getStderr())
+            .isEqualTo(0);
+        });
 
-        sidecarTestContext.cluster().get(1).nodetool("enablebinary");
 
-        TimeUnit.SECONDS.sleep(1);
-        delegate.healthCheck();
+        eventBus.localConsumer(ON_CASSANDRA_CQL_DISCONNECTED, (Message<JsonObject> message) -> {
+            int instanceId = message.body().getInteger("cassandraInstanceId");
 
-        assertThat(delegate.isUp()).as("health check succeeds after binary has been enabled").isTrue();
+            CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
+                                                                  .instanceFromId(instanceId)
+                                                                  .delegate();
+
+            assertThat(delegate.isUp()).as("health check fails after binary has been disabled").isFalse();
+            cqlDisconnected.flag();
+
+            eventBus.localConsumer(ON_CASSANDRA_CQL_READY, (Message<JsonObject> reconnectMessage) -> {
+                assertThat(delegate.isUp()).as("health check succeeds after binary has been enabled")
+                                           .isTrue();
+                cqlReady.flag();
+            });
+
+            sidecarTestContext.cluster().get(1).nodetool("enablebinary");
+        });
+    }
+
+    @CassandraIntegrationTest(jmx = false, nodesPerDc = 3)
+    void testAllInstancesHealthCheck(VertxTestContext context)
+    {
+        EventBus eventBus = vertx.eventBus();
+        Checkpoint cqlReady = context.checkpoint(3);
+        Checkpoint allCqlReady = context.checkpoint();
+
+        Set<Integer> expectedCassandraInstanceIds = ImmutableSet.of(1, 2, 3);
+        eventBus.localConsumer(ON_CASSANDRA_CQL_READY, message -> cqlReady.flag());
+        eventBus.localConsumer(ON_ALL_CASSANDRA_CQL_READY, (Message<JsonObject> message) -> {
+            JsonArray cassandraInstanceIds = message.body().getJsonArray("cassandraInstanceIds");
+            assertThat(cassandraInstanceIds).hasSize(3);
+            assertThat(IntStream.rangeClosed(1, cassandraInstanceIds.size()))
+            .allMatch(expectedCassandraInstanceIds::contains);
+
+            allCqlReady.flag();
+        });
     }
 }

@@ -25,13 +25,9 @@ import java.util.List;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import io.vertx.core.Vertx;
-import io.vertx.core.file.FileSystem;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
@@ -42,11 +38,12 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.JmxConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SSTableUploadConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ThrottleConfigurationImpl;
+import org.apache.cassandra.sidecar.utils.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -79,11 +76,14 @@ public class TestModule extends AbstractModule
     {
         ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(1, 10, 5);
         SSTableUploadConfiguration uploadConfiguration = new SSTableUploadConfigurationImpl(0F);
-        ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl("127.0.0.1",
-                                                                                 throttleConfiguration,
-                                                                                 uploadConfiguration,
-                                                                                 new JmxConfigurationImpl());
-        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(1000);
+        ServiceConfiguration serviceConfiguration =
+        ServiceConfigurationImpl.builder()
+                                .host("127.0.0.1")
+                                .port(0) // let the test find an available port
+                                .throttleConfiguration(throttleConfiguration)
+                                .ssTableUploadConfiguration(uploadConfiguration)
+                                .build();
+        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(200, 1000);
         return new SidecarConfigurationImpl(serviceConfiguration, sslConfiguration, healthCheckConfiguration);
     }
 
@@ -123,13 +123,6 @@ public class TestModule extends AbstractModule
         when(delegate.isUp()).thenReturn(isUp);
         when(instanceMeta.delegate()).thenReturn(delegate);
         return instanceMeta;
-    }
-
-    @Provides
-    @Singleton
-    public FileSystem fileSystem(Vertx vertx)
-    {
-        return vertx.fileSystem();
     }
 
     /**

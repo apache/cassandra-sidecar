@@ -20,7 +20,8 @@ package org.apache.cassandra.sidecar.cluster.instance;
 
 import java.util.List;
 
-import org.apache.cassandra.sidecar.common.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.utils.CassandraAdapterDelegate;
+
 
 /**
  * Metadata of an instance

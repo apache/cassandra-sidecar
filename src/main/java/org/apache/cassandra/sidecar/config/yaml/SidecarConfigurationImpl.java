@@ -19,6 +19,8 @@
 package org.apache.cassandra.sidecar.config.yaml;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -41,6 +43,7 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
+import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 /**
@@ -182,7 +185,14 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
 
     public static SidecarConfigurationImpl readYamlConfiguration(String yamlConfigurationPath) throws IOException
     {
-        return readYamlConfiguration(Paths.get(yamlConfigurationPath));
+        try
+        {
+            return readYamlConfiguration(Paths.get(new URI(yamlConfigurationPath)));
+        }
+        catch (URISyntaxException e)
+        {
+            throw new IOException("Invalid URI: " + yamlConfigurationPath, e);
+        }
     }
 
     public static SidecarConfigurationImpl readYamlConfiguration(Path yamlConfigurationPath) throws IOException
@@ -213,7 +223,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
                                     .addAbstractTypeMapping(WorkerPoolConfiguration.class,
                                                             WorkerPoolConfigurationImpl.class)
                                     .addAbstractTypeMapping(JmxConfiguration.class,
-                                                            JmxConfigurationImpl.class);
+                                                            JmxConfigurationImpl.class)
+                                    .addAbstractTypeMapping(TrafficShapingConfiguration.class,
+                                                            TrafficShapingConfigurationImpl.class);
 
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
                               .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)

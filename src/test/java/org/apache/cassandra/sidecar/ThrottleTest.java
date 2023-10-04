@@ -34,12 +34,13 @@ import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.server.Server;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,27 +53,27 @@ public class ThrottleTest
 {
     private static final Logger logger = LoggerFactory.getLogger(ThrottleTest.class);
     private Vertx vertx;
-    private HttpServer server;
+    private Server server;
 
     @BeforeEach
     void setUp() throws InterruptedException
     {
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
-        server = injector.getInstance(HttpServer.class);
+        server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(0, context.succeedingThenComplete());
-
+        server.start()
+              .onSuccess(s -> context.completeNow())
+              .onFailure(context::failNow);
         context.awaitCompletion(5, SECONDS);
     }
 
     @AfterEach
     void tearDown() throws InterruptedException
     {
-        final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> closeLatch.countDown());
-        vertx.close();
+        CountDownLatch closeLatch = new CountDownLatch(1);
+        server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, SECONDS))
             logger.info("Close event received before timeout.");
         else

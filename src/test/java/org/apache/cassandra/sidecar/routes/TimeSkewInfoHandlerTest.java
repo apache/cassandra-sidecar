@@ -33,14 +33,14 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
+import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -55,7 +55,7 @@ class TimeSkewInfoHandlerTest
     private static final Logger logger = LoggerFactory.getLogger(StreamSSTableComponentHandlerTest.class);
     private static final long TEST_TIMESTAMP = 12345L;
     private Vertx vertx;
-    private HttpServer server;
+    private Server server;
 
     @BeforeEach
     public void setUp() throws InterruptedException
@@ -64,9 +64,11 @@ class TimeSkewInfoHandlerTest
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(new TestModule(), customTimeProvider));
         this.vertx = injector.getInstance(Vertx.class);
-        this.server = injector.getInstance(HttpServer.class);
+        this.server = injector.getInstance(Server.class);
         VertxTestContext context = new VertxTestContext();
-        server.listen(0, "127.0.0.1", context.succeedingThenComplete());
+        server.start()
+              .onSuccess(s -> context.completeNow())
+              .onFailure(context::failNow);
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
@@ -74,9 +76,8 @@ class TimeSkewInfoHandlerTest
     @AfterEach
     void tearDown() throws InterruptedException
     {
-        final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> closeLatch.countDown());
-        vertx.close();
+        CountDownLatch closeLatch = new CountDownLatch(1);
+        server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else

@@ -71,7 +71,6 @@ public class BasicRetryPolicy extends RetryPolicy
         this.retryDelayMillis = retryDelayMillis;
     }
 
-
     /**
      * {@inheritDoc}
      */

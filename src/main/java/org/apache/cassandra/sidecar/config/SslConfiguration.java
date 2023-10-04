@@ -29,6 +29,29 @@ public interface SslConfiguration
     boolean enabled();
 
     /**
+     * Returns {@code true} if the OpenSSL engine should be used, {@code false} otherwise. The OpenSSL engine
+     * will only be enabled if the native libraries for OpenSSL have been loaded correctly.
+     *
+     * @return {@code true} if the OpenSSL engine should be used, {@code false} otherwise
+     */
+    boolean useOpenSSL();
+
+    /**
+     * @return the configuration for the SSL handshake timeout in seconds
+     */
+    long handshakeTimeoutInSeconds();
+
+    /**
+     * Returns the client authentication mode. Valid values are {@code NONE}, {@code REQUEST}, and {@code REQUIRED}.
+     * When the authentication mode is set to {@code REQUIRED} then server will require the SSL certificate to be
+     * presented, otherwise it won't accept the request. When the authentication mode is set to {@code REQUEST}, the
+     * certificate is optional.
+     *
+     * @return the client authentication mode
+     */
+    String clientAuth();
+
+    /**
      * @return {@code true} if the keystore is configured, and the {@link KeyStoreConfiguration#path()} and
      * {@link KeyStoreConfiguration#password()} parameters are provided
      */
@@ -46,7 +69,7 @@ public interface SslConfiguration
      * @return {@code true} if the truststore is configured, and the {@link KeyStoreConfiguration#path()} and
      * {@link KeyStoreConfiguration#password()} parameters are provided
      */
-    default boolean isTruststoreConfigured()
+    default boolean isTrustStoreConfigured()
     {
         return truststore() != null && truststore().isConfigured();
     }

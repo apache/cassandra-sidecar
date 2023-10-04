@@ -32,15 +32,15 @@ import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.MainModule;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.NodeSettings;
+import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.server.Server;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.NODE_SETTINGS_ROUTE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,17 +52,19 @@ class NodeSettingsHandlerTest
     private static final String URI_WITH_INSTANCE_ID = NODE_SETTINGS_ROUTE + "?instanceId=%s";
 
     private Vertx vertx;
-    private HttpServer server;
+    private Server server;
 
     @BeforeEach
     void setUp() throws InterruptedException
     {
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
-        server = injector.getInstance(HttpServer.class);
+        server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
         VertxTestContext context = new VertxTestContext();
-        server.listen(0, "localhost", context.succeedingThenComplete());
+        server.start()
+              .onSuccess(s -> context.completeNow())
+              .onFailure(context::failNow);
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
@@ -70,9 +72,8 @@ class NodeSettingsHandlerTest
     @AfterEach
     void tearDown() throws InterruptedException
     {
-        final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close(res -> closeLatch.countDown());
-        vertx.close();
+        CountDownLatch closeLatch = new CountDownLatch(1);
+        server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else

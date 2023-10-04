@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.concurrent;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import com.google.inject.Inject;
@@ -119,9 +120,45 @@ public class ExecutorPools
         public long setPeriodic(long delay, Handler<Long> handler, boolean ordered)
         {
             return vertx.setPeriodic(delay,
-                                     id -> workerExecutor.executeBlocking(promise -> {
+                                     id -> workerExecutor.executeBlocking(() -> {
                                          handler.handle(id);
-                                         promise.complete();
+                                         return id;
+                                     }, ordered));
+        }
+
+        /**
+         * Set a periodic timer to fire every {@code delay} milliseconds with initial delay, at which point
+         * {@code handler} will be called with the id of the timer.
+         *
+         * @param initialDelay the initial delay in milliseconds
+         * @param delay        the delay in milliseconds, after which the timer will fire
+         * @param handler      the handler that will be called with the timer ID when the timer fires
+         * @return the unique ID of the timer
+         */
+        public long setPeriodic(long initialDelay, long delay, Handler<Long> handler)
+        {
+            return setPeriodic(initialDelay, delay, handler, false);
+        }
+
+        /**
+         * Set a periodic timer to fire every {@code delay} milliseconds with initial delay, at which point
+         * {@code handler} will be called with the id of the timer.
+         *
+         * @param initialDelay the initial delay in milliseconds
+         * @param delay        the delay in milliseconds, after which the timer will fire
+         * @param handler      the handler that will be called with the timer ID when the timer fires
+         * @param ordered      if true then executeBlocking is called several times on the same context, the
+         *                     executions for that context will be executed serially, not in parallel. if false
+         *                     then they will be no ordering guarantees
+         * @return the unique ID of the timer
+         */
+        public long setPeriodic(long initialDelay, long delay, Handler<Long> handler, boolean ordered)
+        {
+            return vertx.setPeriodic(initialDelay,
+                                     delay,
+                                     id -> workerExecutor.executeBlocking(() -> {
+                                         handler.handle(id);
+                                         return id;
                                      }, ordered));
         }
 
@@ -135,7 +172,11 @@ public class ExecutorPools
          */
         public long setTimer(long delay, Handler<Long> handler)
         {
-            return vertx.setTimer(delay, id -> workerExecutor.executeBlocking(promise -> handler.handle(id), false));
+            return vertx.setTimer(delay, id ->
+                                         workerExecutor.executeBlocking(() -> {
+                                             handler.handle(id);
+                                             return id;
+                                         }, false));
         }
 
         /**
@@ -151,7 +192,10 @@ public class ExecutorPools
          */
         public long setTimer(long delay, Handler<Long> handler, boolean ordered)
         {
-            return vertx.setTimer(delay, id -> workerExecutor.executeBlocking(promise -> handler.handle(id), ordered));
+            return vertx.setTimer(delay, id -> workerExecutor.executeBlocking(() -> {
+                handler.handle(id);
+                return id;
+            }, ordered));
         }
 
         /**
@@ -176,6 +220,12 @@ public class ExecutorPools
         @Override
         public <T> Future<T> executeBlocking(Handler<Promise<T>> blockingCodeHandler,
                                              boolean ordered)
+        {
+            return workerExecutor.executeBlocking(blockingCodeHandler, ordered);
+        }
+
+        @Override
+        public <T> Future<T> executeBlocking(Callable<T> blockingCodeHandler, boolean ordered)
         {
             return workerExecutor.executeBlocking(blockingCodeHandler, ordered);
         }

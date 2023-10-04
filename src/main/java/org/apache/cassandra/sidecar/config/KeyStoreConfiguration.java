@@ -23,6 +23,9 @@ package org.apache.cassandra.sidecar.config;
  */
 public interface KeyStoreConfiguration
 {
+    String DEFAULT_TYPE = "JKS";
+    int DEFAULT_CHECK_INTERVAL_SECONDS = -1;
+
     /**
      * @return the path to the store
      */
@@ -37,6 +40,22 @@ public interface KeyStoreConfiguration
      * @return the type of the store
      */
     String type();
+
+    /**
+     * Returns the interval, in seconds, in which the key store will be checked for filesystem changes. Setting
+     * this value to 0 or negative will disable reloading the store.
+     *
+     * @return the interval, in seconds, in which the key store will be checked for changes in the filesystem
+     */
+    int checkIntervalInSeconds();
+
+    /**
+     * @return {@code true} if the key store will be reloaded if a change is detected, {@code false} otherwise
+     */
+    default boolean reloadStore()
+    {
+        return checkIntervalInSeconds() > 0;
+    }
 
     /**
      * @return {@code true} if both {@link #path()} and {@link #password()} are provided

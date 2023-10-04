@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar;
+package org.apache.cassandra.sidecar.server;
 
 import org.junit.jupiter.api.Test;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
