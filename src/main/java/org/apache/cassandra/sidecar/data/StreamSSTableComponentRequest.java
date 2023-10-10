@@ -20,13 +20,10 @@ package org.apache.cassandra.sidecar.data;
 
 import java.util.Objects;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.SSTableComponent;
-import org.apache.cassandra.sidecar.common.utils.HttpEncodings;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -35,8 +32,6 @@ import org.jetbrains.annotations.VisibleForTesting;
  */
 public class StreamSSTableComponentRequest extends SSTableComponent
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(StreamSSTableComponentRequest.class);
-
     private final String snapshotName;
 
     /**
@@ -50,7 +45,23 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     @VisibleForTesting
     public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName, String componentName)
     {
-        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, componentName);
+        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, null, componentName);
+    }
+
+    /**
+     * Constructor for the holder class
+     *
+     * @param keyspace      the keyspace in Cassandra
+     * @param tableName     the table name in Cassandra
+     * @param snapshotName  the name of the snapshot
+     * @param indexName     the name of the index for the SSTable component
+     * @param componentName the name of the SSTable component
+     */
+    @VisibleForTesting
+    public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName, String indexName,
+                                         String componentName)
+    {
+        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, indexName, componentName);
     }
 
     /**
@@ -64,23 +75,41 @@ public class StreamSSTableComponentRequest extends SSTableComponent
                                          String snapshotName,
                                          String componentName)
     {
-        super(qualifiedTableName, componentName);
+        this(qualifiedTableName, snapshotName, null, componentName);
+    }
+
+    /**
+     * Constructor for the holder class
+     *
+     * @param qualifiedTableName the qualified table name in Cassandra
+     * @param snapshotName       the name of the snapshot
+     * @param indexName          the name of the index for the SSTable component
+     * @param componentName      the name of the SSTable component
+     */
+    public StreamSSTableComponentRequest(QualifiedTableName qualifiedTableName,
+                                         String snapshotName,
+                                         @Nullable String indexName,
+                                         String componentName)
+    {
+        super(qualifiedTableName, indexName, componentName);
         this.snapshotName = Objects.requireNonNull(snapshotName, "snapshotName must not be null");
     }
 
     public static StreamSSTableComponentRequest from(QualifiedTableName qualifiedTableName, RoutingContext context)
     {
-        String component = context.pathParam("component");
-        if (component == null)
+        String snapshotName = context.pathParam("snapshot");
+        String indexName = context.pathParam("index");
+        String componentName = context.pathParam("component");
+
+        if (indexName == null)
         {
-            component = context.pathParam("*");
-            LOGGER.warn("Legacy client request detected for component={}", component);
-            component = Objects.requireNonNull(component, "path cannot be null").replaceFirst("components/", "");
+            return new StreamSSTableComponentRequest(qualifiedTableName,
+                                                     snapshotName,
+                                                     componentName);
         }
-        // Decode slash to support streaming index files
-        String componentName = HttpEncodings.decodeSSTableComponent(component);
         return new StreamSSTableComponentRequest(qualifiedTableName,
-                                                 context.pathParam("snapshot"),
+                                                 snapshotName,
+                                                 indexName,
                                                  componentName);
     }
 
@@ -101,6 +130,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
                "keyspace='" + keyspace() + '\'' +
                ", tableName='" + tableName() + '\'' +
                ", snapshot='" + snapshotName + '\'' +
+               ", indexName='" + indexName() + '\'' +
                ", componentName='" + componentName() + '\'' +
                '}';
     }

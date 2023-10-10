@@ -44,11 +44,13 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.FileProps;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
 import org.apache.cassandra.sidecar.utils.BaseFileSystem;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * This class builds the snapshot path on a given host validating that it exists
@@ -94,7 +96,9 @@ public class SnapshotPathBuilder extends BaseFileSystem
         return dataDirectories(host)
                .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
                .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.tableName()))
-               .compose(tableDirectory -> findComponent(tableDirectory, request.snapshotName(),
+               .compose(tableDirectory -> findComponent(tableDirectory,
+                                                        request.snapshotName(),
+                                                        request.indexName(),
                                                         request.componentName()));
     }
 
@@ -283,6 +287,13 @@ public class SnapshotPathBuilder extends BaseFileSystem
         validator.validateTableName(request.tableName());
         validator.validateSnapshotName(request.snapshotName());
         // Only allow .db and TOC.txt components here
+        String indexName = request.indexName();
+        if (indexName != null)
+        {
+            Preconditions.checkArgument(!indexName.isEmpty(), "indexName cannot be empty");
+            Preconditions.checkArgument(indexName.charAt(0) == '.', "Invalid index name");
+            validator.validatePattern(indexName.substring(1), "index");
+        }
         validator.validateRestrictedComponentName(request.componentName());
     }
 
@@ -377,14 +388,21 @@ public class SnapshotPathBuilder extends BaseFileSystem
      *
      * @param baseDirectory the base directory where we search the table directory
      * @param snapshotName  the name of the snapshot
+     * @param indexName     the name of the index (if provided)
      * @param componentName the name of the component
      * @return the path to the component if it's valid, a failure otherwise
      */
-    protected Future<String> findComponent(String baseDirectory, String snapshotName, String componentName)
+    protected Future<String> findComponent(String baseDirectory, String snapshotName, @Nullable String indexName,
+                                           String componentName)
     {
-        String componentFilename = StringUtils.removeEnd(baseDirectory, File.separator) +
-                                   File.separator + SNAPSHOTS_DIR_NAME + File.separator + snapshotName +
-                                   File.separator + componentName;
+        StringBuilder sb = new StringBuilder(StringUtils.removeEnd(baseDirectory, File.separator))
+                           .append(File.separator).append(SNAPSHOTS_DIR_NAME)
+                           .append(File.separator).append(snapshotName);
+        if (indexName != null)
+        {
+            sb.append(File.separator).append(indexName);
+        }
+        String componentFilename = sb.append(File.separator).append(componentName).toString();
 
         return isValidFilename(componentFilename)
                .recover(t -> {

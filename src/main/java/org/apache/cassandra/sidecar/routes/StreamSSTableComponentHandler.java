@@ -43,7 +43,6 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTableComponentRequest>
 {
     private final SnapshotPathBuilder snapshotPathBuilder;
-    private final CassandraInputValidator validator;
 
     @Inject
     public StreamSSTableComponentHandler(InstanceMetadataFetcher metadataFetcher,
@@ -53,7 +52,6 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     {
         super(metadataFetcher, executorPools, validator);
         this.snapshotPathBuilder = snapshotPathBuilder;
-        this.validator = validator;
     }
 
     @Override

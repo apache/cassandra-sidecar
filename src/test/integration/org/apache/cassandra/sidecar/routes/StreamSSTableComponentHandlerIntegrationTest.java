@@ -41,7 +41,6 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.utils.HttpEncodings;
 import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
@@ -51,24 +50,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
 {
-    // Old clients will not encode the file name. In order for the server to support unencoded file names,
-    // it needs to handle more routes. This test makes sure the route is properly configured for the server.
-    @CassandraIntegrationTest
-    void testStreamIncludingIndexFilesOldClientCompatibility(VertxTestContext context) throws InterruptedException
-    {
-        runTestScenario(context, false);
-    }
-
-    // New clients will encode the file name in the request, this should be handled by the existing route.
-    // New clients are incompatible with old servers, however. But this is fine because the old server is
-    // anyway unable to stream index files.
     @CassandraIntegrationTest
     void testStreamIncludingIndexFiles(VertxTestContext context) throws InterruptedException
     {
-        runTestScenario(context, true);
+        runTestScenario(context);
     }
 
-    private void runTestScenario(VertxTestContext context, boolean encodeFileName) throws InterruptedException
+    private void runTestScenario(VertxTestContext context) throws InterruptedException
     {
         createTestKeyspace();
         QualifiedTableName table = createTestTableAndPopulate(sidecarTestContext);
@@ -104,7 +92,7 @@ class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
             // Stream all the files including index files
             for (ListSnapshotFilesResponse.FileInfo fileInfo : filesToStream)
             {
-                futures.add(streamSSTableComponent(client, fileInfo, encodeFileName));
+                futures.add(streamSSTableComponent(client, fileInfo));
             }
 
             CompositeFuture.all(futures)
@@ -145,25 +133,12 @@ class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
     }
 
     Future<HttpResponse<Buffer>> streamSSTableComponent(WebClient client,
-                                                        ListSnapshotFilesResponse.FileInfo fileInfo,
-                                                        boolean encodeFileName)
+                                                        ListSnapshotFilesResponse.FileInfo fileInfo)
     {
         String route = "/keyspaces/" + fileInfo.keySpaceName +
                        "/tables/" + fileInfo.tableName +
                        "/snapshots/" + fileInfo.snapshotName +
-                       "/components/";
-
-        if (encodeFileName)
-        {
-            // New clients will encode the fileName
-            route += HttpEncodings.encodeSSTableComponent(fileInfo.fileName);
-        }
-        else
-        {
-            // Old clients will use the URL that includes the .index/filename
-            // This requires special handling by the server
-            route += fileInfo.fileName;
-        }
+                       "/components/" + fileInfo.fileName;
 
         return client.get(server.actualPort(), "localhost", "/api/v1" + route)
                      .expect(ResponsePredicate.SC_OK)

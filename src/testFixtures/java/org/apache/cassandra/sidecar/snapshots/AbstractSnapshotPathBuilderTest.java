@@ -168,30 +168,45 @@ public abstract class AbstractSnapshotPathBuilderTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "../../../etc/passwd.db", "../../../bad-Data.db" })
+    @ValueSource(strings = { "f@o-Data.db", ".s./../../etc/passwd.db", "../../../bad-Data.db" })
     void failsWhenIndexComponentNameContainsInvalidCharacters(String invalidComponentName)
     {
         assertThatThrownBy(() -> instance.build("localhost",
                                                 new StreamSSTableComponentRequest("ks",
                                                                                   "table",
                                                                                   "snapshot",
+                                                                                  ".index",
                                                                                   invalidComponentName)))
         .isInstanceOf(HttpException.class)
         .hasMessageContaining("Bad Request")
         .returns(HttpResponseStatus.BAD_REQUEST.code(), from(t -> ((HttpException) t).getStatusCode()))
-        .returns("Invalid index component name: " + invalidComponentName, from(t -> ((HttpException) t)
-                                                                                    .getPayload()));
+        .returns("Invalid component name: " + invalidComponentName, from(t -> ((HttpException) t)
+                                                                              .getPayload()));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "../bad-Data.db", ".f@o/bad-Data.db", ".bl@h/bad-TOC.txt" })
-    void failsWhenIndexNameContainsInvalidCharacters(String invalidComponentName)
+    @ValueSource(strings = { "", "does_not_start_with_dot" })
+    void failsWhenIndexNameIsInvalid(String invalidIndexName)
     {
         assertThatThrownBy(() -> instance.build("localhost",
                                                 new StreamSSTableComponentRequest("ks",
                                                                                   "table",
                                                                                   "snapshot",
-                                                                                  invalidComponentName)))
+                                                                                  invalidIndexName,
+                                                                                  "component.db")))
+        .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { ".", "../bad-Data.db", ".f@o/bad-Data.db", ".bl@h/bad-TOC.txt" })
+    void failsWhenIndexNameContainsInvalidCharacters(String invalidIndexName)
+    {
+        assertThatThrownBy(() -> instance.build("localhost",
+                                                new StreamSSTableComponentRequest("ks",
+                                                                                  "table",
+                                                                                  "snapshot",
+                                                                                  invalidIndexName,
+                                                                                  "component.db")))
         .isInstanceOf(HttpException.class)
         .hasMessageContaining("Bad Request")
         .returns(HttpResponseStatus.BAD_REQUEST.code(), from(t -> ((HttpException) t).getStatusCode()))

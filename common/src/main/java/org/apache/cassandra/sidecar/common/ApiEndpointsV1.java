@@ -32,12 +32,14 @@ public final class ApiEndpointsV1
     public static final String TABLE_PATH_PARAM = ":table";
     public static final String SNAPSHOT_PATH_PARAM = ":snapshot";
     public static final String COMPONENT_PATH_PARAM = ":component";
+    public static final String INDEX_PATH_PARAM = ":index";
     public static final String UPLOAD_ID_PATH_PARAM = ":uploadId";
 
     public static final String PER_KEYSPACE = "/keyspaces/" + KEYSPACE_PATH_PARAM;
     public static final String PER_TABLE = "/tables/" + TABLE_PATH_PARAM;
     public static final String PER_SNAPSHOT = "/snapshots/" + SNAPSHOT_PATH_PARAM;
     public static final String PER_COMPONENT = "/components/" + COMPONENT_PATH_PARAM;
+    public static final String PER_INDEX = "/components/" + INDEX_PATH_PARAM;
     public static final String PER_UPLOAD = "/uploads/" + UPLOAD_ID_PATH_PARAM;
 
     public static final String HEALTH_ROUTE = API_V1 + HEALTH;
@@ -55,11 +57,8 @@ public final class ApiEndpointsV1
     public static final String SNAPSHOTS_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_SNAPSHOT;
     // Replaces DEPRECATED_COMPONENTS_ROUTE
     public static final String COMPONENTS_ROUTE = SNAPSHOTS_ROUTE + PER_COMPONENT;
-    /**
-     * @deprecated can be removed when all clients are on a version that encodes the component name
-     */
-    @Deprecated
-    public static final String COMPONENTS_WITH_LEGACY_INDEX_ROUTE_SUPPORT = SNAPSHOTS_ROUTE + "/*";
+    public static final String COMPONENTS_WITH_INDEX_ROUTE_SUPPORT = SNAPSHOTS_ROUTE + PER_INDEX
+                                                                     + "/" + COMPONENT_PATH_PARAM;
 
     @Deprecated
     public static final String DEPRECATED_ALL_KEYSPACES_SCHEMA_ROUTE = API_V1 + "/schema/keyspaces";

@@ -153,41 +153,10 @@ public class CassandraInputValidator
     private String validateComponentNameByRegex(String componentName, String regex)
     {
         Objects.requireNonNull(componentName, "componentName must not be null");
-
-        if (isIndexComponent(componentName))
-        {
-            String[] split = componentName.split("/");
-
-            if (split.length != 2)
-                throw HttpExceptions.wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                                       "Invalid index component name: " + componentName);
-
-            // validate the index directory
-            validatePattern(split[0].substring(1), "index");
-            if (!split[1].matches(regex))
-                throw HttpExceptions.wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                                       "Invalid component name: " + componentName);
-        }
-        else
-        {
-            if (!componentName.matches(regex))
-                throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
-                                        "Invalid component name: " + componentName);
-        }
+        if (!componentName.matches(regex))
+            throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
+                                    "Invalid component name: " + componentName);
         return componentName;
-    }
-
-    /**
-     * Returns {@code true} if the provided {@code componentName} is a secondary index SSTable component,
-     * {@code false} otherwise.
-     *
-     * @param componentName the name of the SSTable component
-     * @return {@code true} if the provided {@code componentName} is a secondary index SSTable component,
-     * {@code false} otherwise.
-     */
-    private boolean isIndexComponent(@NotNull String componentName)
-    {
-        return componentName.startsWith(".") && componentName.contains("/");
     }
 
     /**
@@ -197,7 +166,7 @@ public class CassandraInputValidator
      * @param name  a name for the exception
      * @throws HttpException when the {@code input} does not match the pattern
      */
-    private void validatePattern(String input, String name)
+    public void validatePattern(String input, String name)
     {
         if (!input.matches(validationConfiguration.allowedPatternForDirectory()))
             throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
