@@ -69,20 +69,6 @@ public class StreamSSTableComponentRequest extends SSTableComponent
      *
      * @param qualifiedTableName the qualified table name in Cassandra
      * @param snapshotName       the name of the snapshot
-     * @param componentName      the name of the SSTable component
-     */
-    public StreamSSTableComponentRequest(QualifiedTableName qualifiedTableName,
-                                         String snapshotName,
-                                         String componentName)
-    {
-        this(qualifiedTableName, snapshotName, null, componentName);
-    }
-
-    /**
-     * Constructor for the holder class
-     *
-     * @param qualifiedTableName the qualified table name in Cassandra
-     * @param snapshotName       the name of the snapshot
      * @param indexName          the name of the index for the SSTable component
      * @param componentName      the name of the SSTable component
      */
@@ -101,12 +87,6 @@ public class StreamSSTableComponentRequest extends SSTableComponent
         String indexName = context.pathParam("index");
         String componentName = context.pathParam("component");
 
-        if (indexName == null)
-        {
-            return new StreamSSTableComponentRequest(qualifiedTableName,
-                                                     snapshotName,
-                                                     componentName);
-        }
         return new StreamSSTableComponentRequest(qualifiedTableName,
                                                  snapshotName,
                                                  indexName,

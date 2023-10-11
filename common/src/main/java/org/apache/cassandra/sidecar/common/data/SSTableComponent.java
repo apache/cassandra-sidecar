@@ -36,17 +36,6 @@ public class SSTableComponent
      * Constructor for the holder class
      *
      * @param qualifiedTableName the qualified table name in Cassandra
-     * @param componentName      the name of the SSTable component
-     */
-    public SSTableComponent(QualifiedTableName qualifiedTableName, String componentName)
-    {
-        this(qualifiedTableName, null, componentName);
-    }
-
-    /**
-     * Constructor for the holder class
-     *
-     * @param qualifiedTableName the qualified table name in Cassandra
      * @param indexName          the name of the index for the SSTable component
      * @param componentName      the name of the SSTable component
      */
