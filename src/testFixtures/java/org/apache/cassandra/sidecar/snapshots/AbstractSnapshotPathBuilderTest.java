@@ -211,7 +211,7 @@ public abstract class AbstractSnapshotPathBuilderTest
         .hasMessageContaining("Bad Request")
         .returns(HttpResponseStatus.BAD_REQUEST.code(), from(t -> ((HttpException) t).getStatusCode()))
         .extracting(from(t -> ((HttpException) t).getPayload()), as(InstanceOfAssertFactories.STRING))
-        .contains("Invalid characters in index: ");
+        .contains("Invalid characters in secondary index: ");
     }
 
     @Test

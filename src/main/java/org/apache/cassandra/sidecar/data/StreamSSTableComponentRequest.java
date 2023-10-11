@@ -54,14 +54,14 @@ public class StreamSSTableComponentRequest extends SSTableComponent
      * @param keyspace      the keyspace in Cassandra
      * @param tableName     the table name in Cassandra
      * @param snapshotName  the name of the snapshot
-     * @param indexName     the name of the index for the SSTable component
+     * @param secondaryIndexName the name of the secondary index for the SSTable component
      * @param componentName the name of the SSTable component
      */
     @VisibleForTesting
-    public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName, String indexName,
-                                         String componentName)
+    public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName,
+                                         String secondaryIndexName, String componentName)
     {
-        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, indexName, componentName);
+        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, secondaryIndexName, componentName);
     }
 
     /**
@@ -69,27 +69,27 @@ public class StreamSSTableComponentRequest extends SSTableComponent
      *
      * @param qualifiedTableName the qualified table name in Cassandra
      * @param snapshotName       the name of the snapshot
-     * @param indexName          the name of the index for the SSTable component
+     * @param secondaryIndexName the name of the secondary index for the SSTable component
      * @param componentName      the name of the SSTable component
      */
     public StreamSSTableComponentRequest(QualifiedTableName qualifiedTableName,
                                          String snapshotName,
-                                         @Nullable String indexName,
+                                         @Nullable String secondaryIndexName,
                                          String componentName)
     {
-        super(qualifiedTableName, indexName, componentName);
+        super(qualifiedTableName, secondaryIndexName, componentName);
         this.snapshotName = Objects.requireNonNull(snapshotName, "snapshotName must not be null");
     }
 
     public static StreamSSTableComponentRequest from(QualifiedTableName qualifiedTableName, RoutingContext context)
     {
         String snapshotName = context.pathParam("snapshot");
-        String indexName = context.pathParam("index");
+        String secondaryIndexName = context.pathParam("index");
         String componentName = context.pathParam("component");
 
         return new StreamSSTableComponentRequest(qualifiedTableName,
                                                  snapshotName,
-                                                 indexName,
+                                                 secondaryIndexName,
                                                  componentName);
     }
 
@@ -110,7 +110,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
                "keyspace='" + keyspace() + '\'' +
                ", tableName='" + tableName() + '\'' +
                ", snapshot='" + snapshotName + '\'' +
-               ", indexName='" + indexName() + '\'' +
+               ", secondaryIndexName='" + secondaryIndexName() + '\'' +
                ", componentName='" + componentName() + '\'' +
                '}';
     }

@@ -70,9 +70,10 @@ class StreamSSTableComponentRequestTest
         assertThat(req.tableName()).isEqualTo("table");
         assertThat(req.snapshotName()).isEqualTo("snapshot");
         assertThat(req.componentName()).isEqualTo("data.db");
-        assertThat(req.indexName()).isNull();
+        assertThat(req.secondaryIndexName()).isNull();
         assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
-                                             "snapshot='snapshot', indexName='null', componentName='data.db'}");
+                                             "snapshot='snapshot', secondaryIndexName='null', " +
+                                             "componentName='data.db'}");
     }
 
     @Test
@@ -84,9 +85,10 @@ class StreamSSTableComponentRequestTest
         assertThat(req.keyspace()).isEqualTo("ks");
         assertThat(req.tableName()).isEqualTo("table");
         assertThat(req.snapshotName()).isEqualTo("snapshot");
-        assertThat(req.indexName()).isEqualTo(".index");
+        assertThat(req.secondaryIndexName()).isEqualTo(".index");
         assertThat(req.componentName()).isEqualTo("data.db");
         assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
-                                             "snapshot='snapshot', indexName='.index', componentName='data.db'}");
+                                             "snapshot='snapshot', secondaryIndexName='.index', " +
+                                             "componentName='data.db'}");
     }
 }

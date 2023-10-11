@@ -30,19 +30,21 @@ public class SSTableComponent
     private final QualifiedTableName qualifiedTableName;
     private final String componentName;
     @Nullable
-    private final String indexName;
+    private final String secondaryIndexName;
 
     /**
      * Constructor for the holder class
      *
      * @param qualifiedTableName the qualified table name in Cassandra
-     * @param indexName          the name of the index for the SSTable component
+     * @param secondaryIndexName the name of the secondary index for the SSTable component
      * @param componentName      the name of the SSTable component
      */
-    public SSTableComponent(QualifiedTableName qualifiedTableName, @Nullable String indexName, String componentName)
+    public SSTableComponent(QualifiedTableName qualifiedTableName,
+                            @Nullable String secondaryIndexName,
+                            String componentName)
     {
         this.qualifiedTableName = Objects.requireNonNull(qualifiedTableName, "qualifiedTableName must not be null");
-        this.indexName = indexName;
+        this.secondaryIndexName = secondaryIndexName;
         this.componentName = Objects.requireNonNull(componentName, "componentName must not be null");
     }
 
@@ -71,12 +73,12 @@ public class SSTableComponent
     }
 
     /**
-     * @return the index name when the SSTable component is an index component, {@code null} otherwise
+     * @return the secondary index name when the SSTable component is an index component, {@code null} otherwise
      */
     @Nullable
-    public String indexName()
+    public String secondaryIndexName()
     {
-        return indexName;
+        return secondaryIndexName;
     }
 
     /**
