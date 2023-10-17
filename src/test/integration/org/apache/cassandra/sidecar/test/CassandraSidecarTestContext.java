@@ -148,7 +148,9 @@ public class CassandraSidecarTestContext implements AutoCloseable
         {
             setInstancesConfig();
         }
-        return this.sessionProviders.get(instance).localCql();
+        CQLSessionProvider cqlSessionProvider = sessionProviders.get(instance);
+        assertThat(cqlSessionProvider).as("cqlSessionProvider for instance=" + instance).isNotNull();
+        return cqlSessionProvider.localCql();
     }
 
     @Override

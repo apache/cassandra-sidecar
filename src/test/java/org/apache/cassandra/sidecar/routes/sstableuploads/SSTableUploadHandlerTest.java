@@ -239,8 +239,10 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     }
 
     @Test
-    void testRateLimitedUpload(VertxTestContext context) throws IOException
+    void testRateLimitedByIngressFileRateLimiterUpload(VertxTestContext context) throws IOException
     {
+        // upper-bound configured to 512 KBps in BaseUploadsHandlerTest#setup
+        ingressFileRateLimiter.rate(256 * 1024L); // 256 KBps
         Path largeFilePath = prepareTestFile(temporaryPath, "1MB-File-Data.db", 1024 * 1024); // 1MB
 
         long startTime = System.nanoTime();
@@ -253,6 +255,28 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
             assertThat(response).isNotNull();
             assertThat(elapsedMillis).isCloseTo(TimeUnit.SECONDS.toMillis(4),
+                                                Percentage.withPercentage(5));
+        }, largeFilePath.toString());
+    }
+
+    @Test
+    void testRateLimitedByGlobalLimiterUpload(VertxTestContext context) throws IOException
+    {
+        // upper-bound configured to 512 KBps in BaseUploadsHandlerTest#setup
+        // 1024 KBps Should not take effect, upper-bounded by global rate limiting
+        ingressFileRateLimiter.rate(1024 * 1024L);
+        Path largeFilePath = prepareTestFile(temporaryPath, "1MB-File-Data.db", 1024 * 1024); // 1MB
+
+        long startTime = System.nanoTime();
+        String uploadId = UUID.randomUUID().toString();
+        sendUploadRequestAndVerify(null, context, uploadId, "ks", "tbl", "1MB-File-Data.db", "",
+                                   Files.size(largeFilePath), HttpResponseStatus.OK.code(),
+                                   false, response -> {
+
+            // SSTable upload should take around 2 seconds (512 KB/s for a 1MB file)
+            long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+            assertThat(response).isNotNull();
+            assertThat(elapsedMillis).isCloseTo(TimeUnit.SECONDS.toMillis(2),
                                                 Percentage.withPercentage(5));
         }, largeFilePath.toString());
     }

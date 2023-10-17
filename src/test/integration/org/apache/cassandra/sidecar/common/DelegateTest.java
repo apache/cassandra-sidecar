@@ -55,7 +55,7 @@ class DelegateTest extends IntegrationTestBase
         EventBus eventBus = vertx.eventBus();
         Checkpoint cqlReady = context.checkpoint();
 
-        eventBus.localConsumer(ON_CASSANDRA_CQL_DISCONNECTED, (Message<JsonObject> message) -> {
+        eventBus.localConsumer(ON_CASSANDRA_CQL_READY, (Message<JsonObject> message) -> {
             int instanceId = message.body().getInteger("cassandraInstanceId");
 
             CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()

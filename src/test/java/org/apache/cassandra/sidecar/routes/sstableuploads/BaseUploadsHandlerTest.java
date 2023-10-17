@@ -27,6 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
@@ -39,8 +40,10 @@ import com.datastax.driver.core.TableMetadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
@@ -53,17 +56,16 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 import org.apache.cassandra.sidecar.utils.CassandraAdapterDelegate;
 
-import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_CHECK_INTERVAL;
-import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_INBOUND_GLOBAL_BANDWIDTH_LIMIT;
-import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_MAX_DELAY_TIME;
-import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
-import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
+import static org.apache.cassandra.sidecar.config.TrafficShapingConfiguration.DEFAULT_CHECK_INTERVAL;
+import static org.apache.cassandra.sidecar.config.TrafficShapingConfiguration.DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT;
+import static org.apache.cassandra.sidecar.config.TrafficShapingConfiguration.DEFAULT_MAX_DELAY_TIME;
+import static org.apache.cassandra.sidecar.config.TrafficShapingConfiguration.DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
+import static org.apache.cassandra.sidecar.config.TrafficShapingConfiguration.DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -85,6 +87,8 @@ class BaseUploadsHandlerTest
     protected Path temporaryPath;
     protected String canonicalTemporaryPath;
     protected SSTableUploadConfiguration mockSSTableUploadConfiguration;
+    protected TrafficShapingConfiguration trafficShapingConfiguration;
+    protected SidecarRateLimiter ingressFileRateLimiter;
 
     @BeforeEach
     void setup() throws InterruptedException, IOException
@@ -95,13 +99,16 @@ class BaseUploadsHandlerTest
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
         when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(0F);
-        TrafficShapingConfiguration trafficShapingConfiguration =
-        new TrafficShapingConfigurationImpl(DEFAULT_INBOUND_GLOBAL_BANDWIDTH_LIMIT,
-                                            DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT,
-                                            DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT,
-                                            DEFAULT_MAX_DELAY_TIME,
-                                            DEFAULT_CHECK_INTERVAL,
-                                            256 * 1024L);  // 256 KBps
+        trafficShapingConfiguration = mock(TrafficShapingConfiguration.class);
+        when(trafficShapingConfiguration.inboundGlobalBandwidthBytesPerSecond()).thenReturn(512 * 1024L);
+        when(trafficShapingConfiguration.outboundGlobalBandwidthBytesPerSecond())
+        .thenReturn(DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT);
+        when(trafficShapingConfiguration.peakOutboundGlobalBandwidthBytesPerSecond())
+        .thenReturn(DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT);
+        when(trafficShapingConfiguration.maxDelayToWaitMillis()).thenReturn(DEFAULT_MAX_DELAY_TIME);
+        when(trafficShapingConfiguration.checkIntervalForStatsMillis()).thenReturn(DEFAULT_CHECK_INTERVAL);
+        when(trafficShapingConfiguration.inboundGlobalFileBandwidthBytesPerSecond())
+        .thenReturn(DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT);
         ServiceConfiguration serviceConfiguration =
         ServiceConfigurationImpl.builder()
                                 .requestIdleTimeoutMillis(500)
@@ -118,6 +125,8 @@ class BaseUploadsHandlerTest
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
         client = WebClient.create(vertx);
+        ingressFileRateLimiter = injector.getInstance(Key.get(SidecarRateLimiter.class,
+                                                              Names.named("IngressFileRateLimiter")));
 
         VertxTestContext context = new VertxTestContext();
         server.start()
