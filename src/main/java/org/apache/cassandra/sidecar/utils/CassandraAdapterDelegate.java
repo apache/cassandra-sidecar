@@ -99,17 +99,25 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     private void maybeRegisterHostListener(@NotNull Session session)
     {
-        if (registered.compareAndSet(false, true))
+        if (!registered.get())
         {
-            session.getCluster().register(this);
+            Cluster cluster = session.getCluster();
+            if (!cluster.isClosed() && registered.compareAndSet(false, true))
+            {
+                cluster.register(this);
+            }
         }
     }
 
     private void maybeUnregisterHostListener(@NotNull Session session)
     {
-        if (registered.compareAndSet(true, false))
+        if (registered.get())
         {
-            session.getCluster().unregister(this);
+            Cluster cluster = session.getCluster();
+            if (!cluster.isClosed() && registered.compareAndSet(true, false))
+            {
+                cluster.unregister(this);
+            }
         }
     }
 

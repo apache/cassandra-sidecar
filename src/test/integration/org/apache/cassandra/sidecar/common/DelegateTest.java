@@ -50,14 +50,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DelegateTest extends IntegrationTestBase
 {
     @CassandraIntegrationTest(jmx = false)
-    void testCorrectVersionIsEnabled()
+    void testCorrectVersionIsEnabled(VertxTestContext context)
     {
-        CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig().instances().get(0).delegate();
-        SimpleCassandraVersion version = delegate.version();
-        assertThat(version).isNotNull();
-        assertThat(version.major).isEqualTo(sidecarTestContext.version.major);
-        assertThat(version.minor).isEqualTo(sidecarTestContext.version.minor);
-        assertThat(version).isGreaterThanOrEqualTo(sidecarTestContext.version);
+        EventBus eventBus = vertx.eventBus();
+        Checkpoint cqlReady = context.checkpoint();
+
+        eventBus.localConsumer(ON_CASSANDRA_CQL_DISCONNECTED, (Message<JsonObject> message) -> {
+            int instanceId = message.body().getInteger("cassandraInstanceId");
+
+            CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
+                                                                  .instanceFromId(instanceId)
+                                                                  .delegate();
+            SimpleCassandraVersion version = delegate.version();
+            assertThat(version).isNotNull();
+            assertThat(version.major).isEqualTo(sidecarTestContext.version.major);
+            assertThat(version.minor).isEqualTo(sidecarTestContext.version.minor);
+            assertThat(version).isGreaterThanOrEqualTo(sidecarTestContext.version);
+            cqlReady.flag();
+        });
     }
 
     @CassandraIntegrationTest(jmx = false)
