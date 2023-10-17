@@ -99,7 +99,7 @@ public class IntegrationTestModule extends AbstractModule
                                                             .host("127.0.0.1")
                                                             .port(0) // let the test find an available port
                                                             .build();
-        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(200, 500);
+        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(50, 500);
         return new SidecarConfigurationImpl(conf, null, healthCheckConfiguration);
     }
 }

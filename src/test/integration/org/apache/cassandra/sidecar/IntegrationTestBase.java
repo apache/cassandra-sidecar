@@ -43,6 +43,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
@@ -52,8 +54,10 @@ import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
+import org.apache.cassandra.sidecar.utils.CassandraAdapterDelegate;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -111,8 +115,23 @@ public abstract class IntegrationTestBase
     protected void testWithClient(VertxTestContext context, Consumer<WebClient> tester) throws Exception
     {
         WebClient client = WebClient.create(vertx);
+        CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
+                                                              .instanceFromId(1)
+                                                              .delegate();
 
-        tester.accept(client);
+        if (delegate.isUp())
+        {
+            tester.accept(client);
+        }
+        else
+        {
+            vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY, (Message<JsonObject> message) -> {
+                if (message.body().getInteger("cassandraInstanceId") == 1)
+                {
+                    tester.accept(client);
+                }
+            });
+        }
 
         // wait until the test completes
         assertThat(context.awaitCompletion(2, TimeUnit.MINUTES)).isTrue();
