@@ -27,8 +27,10 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
@@ -97,6 +99,7 @@ public class IntegrationTestModule extends AbstractModule
                                                             .host("127.0.0.1")
                                                             .port(0) // let the test find an available port
                                                             .build();
-        return new SidecarConfigurationImpl(conf);
+        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(200, 500);
+        return new SidecarConfigurationImpl(conf, null, healthCheckConfiguration);
     }
 }
