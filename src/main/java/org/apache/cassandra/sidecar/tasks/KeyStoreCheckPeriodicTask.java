@@ -87,7 +87,7 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
                                  "lastModifiedTime={}", keyStorePath, previousLastModifiedTime,
                                  props.lastModifiedTime());
 
-                     server.updateSSLOptions()
+                     server.updateSSLOptions(props.lastModifiedTime())
                            .onSuccess(v -> {
                                lastModifiedTime = props.lastModifiedTime();
                                LOGGER.info("Completed reloading certificates from path={}", keyStorePath);

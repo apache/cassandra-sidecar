@@ -84,7 +84,11 @@ public class TestModule extends AbstractModule
                                 .ssTableUploadConfiguration(uploadConfiguration)
                                 .build();
         HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(200, 1000);
-        return new SidecarConfigurationImpl(serviceConfiguration, sslConfiguration, healthCheckConfiguration);
+        return SidecarConfigurationImpl.builder()
+                                       .serviceConfiguration(serviceConfiguration)
+                                       .sslConfiguration(sslConfiguration)
+                                       .healthCheckConfiguration(healthCheckConfiguration)
+                                       .build();
     }
 
     @Provides

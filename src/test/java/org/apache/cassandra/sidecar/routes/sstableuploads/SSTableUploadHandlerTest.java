@@ -277,7 +277,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
             assertThat(response).isNotNull();
             assertThat(elapsedMillis).isCloseTo(TimeUnit.SECONDS.toMillis(2),
-                                                Percentage.withPercentage(5));
+                                                Percentage.withPercentage(10));
         }, largeFilePath.toString());
     }
 

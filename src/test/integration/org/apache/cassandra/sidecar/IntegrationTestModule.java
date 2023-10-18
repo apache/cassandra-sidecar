@@ -100,6 +100,9 @@ public class IntegrationTestModule extends AbstractModule
                                                             .port(0) // let the test find an available port
                                                             .build();
         HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(50, 500);
-        return new SidecarConfigurationImpl(conf, null, healthCheckConfiguration);
+        return SidecarConfigurationImpl.builder()
+                                       .serviceConfiguration(conf)
+                                       .healthCheckConfiguration(healthCheckConfiguration)
+                                       .build();
     }
 }

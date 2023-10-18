@@ -25,7 +25,11 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.util.Objects;
+import java.util.function.Function;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.X509KeyManager;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.net.JksOptions;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.PfxOptions;
@@ -71,7 +75,7 @@ public class SslUtils
         }
     }
 
-    public static void setKeyStoreConfiguration(SSLOptions options, KeyStoreConfiguration keystore)
+    public static void setKeyStoreConfiguration(SSLOptions options, KeyStoreConfiguration keystore, long timestamp)
     {
         KeyCertOptions keyCertOptions;
         switch (keystore.type())
@@ -87,7 +91,7 @@ public class SslUtils
             default:
                 throw new UnsupportedOperationException("KeyStore with type " + keystore.type() + " is not supported");
         }
-        options.setKeyCertOptions(keyCertOptions);
+        options.setKeyCertOptions(new WrappedKeyCertOptions(timestamp, keyCertOptions));
     }
 
     public static void setTrustStoreConfiguration(SSLOptions options, KeyStoreConfiguration truststore)
@@ -108,5 +112,66 @@ public class SslUtils
                                                         + " is not supported");
         }
         options.setTrustOptions(keyCertOptions);
+    }
+
+    /**
+     * Vertx makes a determination on whether the SSL context should be reloaded based on whether the
+     * {@link SSLOptions} have changed. This means that if the keystore certificate file changed but the file
+     * name remains the same, the SSL context is not considered to have been changed.
+     *
+     * <p>This class allows for us to keep track of the last modified timestamp of the underlying file, and if
+     * the underlying file changes, we propagate that information to the {@link SSLOptions} via the equality method in
+     * this class. When the old timestamp and new timestamp differ, we'll force the SSL context reloading in vertx.
+     */
+    static class WrappedKeyCertOptions implements KeyCertOptions
+    {
+        private final long timestamp;
+        private final KeyCertOptions delegate;
+
+        WrappedKeyCertOptions(long timestamp, KeyCertOptions delegate)
+        {
+            this.timestamp = timestamp;
+            this.delegate = delegate;
+        }
+
+        @Override
+        public KeyCertOptions copy()
+        {
+            return new WrappedKeyCertOptions(timestamp, delegate.copy());
+        }
+
+        @Override
+        public KeyManagerFactory getKeyManagerFactory(Vertx vertx) throws Exception
+        {
+            return delegate.getKeyManagerFactory(vertx);
+        }
+
+        @Override
+        public Function<String, X509KeyManager> keyManagerMapper(Vertx vertx) throws Exception
+        {
+            return delegate.keyManagerMapper(vertx);
+        }
+
+        @Override
+        public Function<String, KeyManagerFactory> keyManagerFactoryMapper(Vertx vertx) throws Exception
+        {
+            return delegate.keyManagerFactoryMapper(vertx);
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            WrappedKeyCertOptions that = (WrappedKeyCertOptions) o;
+            return timestamp == that.timestamp
+                   && Objects.equals(delegate, that.delegate);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(timestamp, delegate);
+        }
     }
 }

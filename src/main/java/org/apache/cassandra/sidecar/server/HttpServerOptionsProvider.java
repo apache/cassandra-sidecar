@@ -70,9 +70,7 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
         SslConfiguration ssl = configuration.sslConfiguration();
         if (ssl != null && ssl.enabled())
         {
-            options.setSslHandshakeTimeout(ssl.handshakeTimeoutInSeconds())
-                   .setSslHandshakeTimeoutUnit(SECONDS)
-                   .setClientAuth(ClientAuth.valueOf(ssl.clientAuth()))
+            options.setClientAuth(ClientAuth.valueOf(ssl.clientAuth()))
                    .setSsl(true);
 
             if (ssl.useOpenSSL() && OpenSSLEngineOptions.isAvailable())
@@ -85,8 +83,7 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
                 LOGGER.warn("OpenSSL not enabled, using JDK for TLS");
             }
 
-            configureKeyStore(options.getSslOptions(), ssl);
-            configureTrustStore(options.getSslOptions(), ssl);
+            configureSSLOptions(options.getSslOptions(), ssl, 0);
         }
 
         options.setTrafficShapingOptions(buildTrafficShapingOptions(serviceConf.trafficShapingConfiguration()));
@@ -94,14 +91,31 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
     }
 
     /**
+     * Configures the SSL options for the server
+     *
+     * @param options   the SSL options
+     * @param ssl       the SSL configuration
+     * @param timestamp a timestamp for the keystore file for when the file was last changed, or 0 for the startup value
+     */
+    protected void configureSSLOptions(SSLOptions options, SslConfiguration ssl, long timestamp)
+    {
+        options.setSslHandshakeTimeout(ssl.handshakeTimeoutInSeconds())
+               .setSslHandshakeTimeoutUnit(SECONDS);
+
+        configureKeyStore(options, ssl, timestamp);
+        configureTrustStore(options, ssl);
+    }
+
+    /**
      * Configures the key store
      *
-     * @param options the SSL options
-     * @param ssl     the SSL configuration
+     * @param options   the SSL options
+     * @param ssl       the SSL configuration
+     * @param timestamp a timestamp for the keystore file for when the file was last changed, or 0 for the startup value
      */
-    protected void configureKeyStore(SSLOptions options, SslConfiguration ssl)
+    protected void configureKeyStore(SSLOptions options, SslConfiguration ssl, long timestamp)
     {
-        SslUtils.setKeyStoreConfiguration(options, ssl.keystore());
+        SslUtils.setKeyStoreConfiguration(options, ssl.keystore(), timestamp);
     }
 
     /**

@@ -159,13 +159,18 @@ public class Server
                      .onSuccess(f -> LOGGER.info("Successfully stopped Cassandra Sidecar"));
     }
 
-    public Future<CompositeFuture> updateSSLOptions()
+    /**
+     * Updates the SSL Options for all servers in all the deployed verticle instances with the {@code timestamp}
+     * of the updated file
+     *
+     * @param timestamp the timestamp of the updated file
+     * @return a future to indicate the update was successfully completed
+     */
+    public Future<CompositeFuture> updateSSLOptions(long timestamp)
     {
         SSLOptions options = new SSLOptions();
-        // Sets the updated key store configuration to the SSLOptions object
-        optionsProvider.configureKeyStore(options, sidecarConfiguration.sslConfiguration());
-        // Sets the updated trust store configuration to the SSLOptions object
-        optionsProvider.configureTrustStore(options, sidecarConfiguration.sslConfiguration());
+        // Sets the updated SSL options
+        optionsProvider.configureSSLOptions(options, sidecarConfiguration.sslConfiguration(), timestamp);
         // Updates the SSL options of all the deployed verticles
         List<Future<CompositeFuture>> updateFutures =
         deployedServerVerticles.stream()
@@ -245,8 +250,8 @@ public class Server
         SslConfiguration ssl = sidecarConfiguration.sslConfiguration();
         if (ssl == null
             || !ssl.enabled()
-            || !ssl.truststore().isConfigured()
-            || !ssl.truststore().reloadStore())
+            || !ssl.keystore().isConfigured()
+            || !ssl.keystore().reloadStore())
         {
             return;
         }

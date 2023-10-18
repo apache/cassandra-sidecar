@@ -116,8 +116,9 @@ class BaseUploadsHandlerTest
                                 .ssTableUploadConfiguration(mockSSTableUploadConfiguration)
                                 .trafficShapingConfiguration(trafficShapingConfiguration)
                                 .build();
-        sidecarConfiguration =
-        new SidecarConfigurationImpl(serviceConfiguration);
+        sidecarConfiguration = SidecarConfigurationImpl.builder()
+                                                       .serviceConfiguration(serviceConfiguration)
+                                                       .build();
         TestModuleOverride testModuleOverride = new TestModuleOverride(mockDelegate);
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(Modules.override(testModule)
@@ -128,17 +129,17 @@ class BaseUploadsHandlerTest
         ingressFileRateLimiter = injector.getInstance(Key.get(SidecarRateLimiter.class,
                                                               Names.named("IngressFileRateLimiter")));
 
-        VertxTestContext context = new VertxTestContext();
-        server.start()
-              .onSuccess(s -> context.completeNow())
-              .onFailure(context::failNow);
-
         Metadata mockMetadata = mock(Metadata.class);
         KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
         TableMetadata mockTableMetadata = mock(TableMetadata.class);
         when(mockMetadata.getKeyspace("ks")).thenReturn(mockKeyspaceMetadata);
         when(mockMetadata.getKeyspace("ks").getTable("tbl")).thenReturn(mockTableMetadata);
         when(mockDelegate.metadata()).thenReturn(mockMetadata);
+
+        VertxTestContext context = new VertxTestContext();
+        server.start()
+              .onSuccess(s -> context.completeNow())
+              .onFailure(context::failNow);
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }

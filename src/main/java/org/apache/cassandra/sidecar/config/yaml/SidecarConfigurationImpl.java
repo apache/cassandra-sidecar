@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
@@ -72,45 +73,17 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
 
     public SidecarConfigurationImpl()
     {
-        this(Collections.emptyList(),
-             new ServiceConfigurationImpl(),
-             null /* sslConfiguration */,
-             new HealthCheckConfigurationImpl(),
-             new CassandraInputValidationConfigurationImpl());
+        this(builder());
     }
 
-    public SidecarConfigurationImpl(ServiceConfiguration serviceConfiguration)
+    protected SidecarConfigurationImpl(Builder builder)
     {
-        this(Collections.emptyList(),
-             serviceConfiguration,
-             null /* sslConfiguration */,
-             new HealthCheckConfigurationImpl(),
-             new CassandraInputValidationConfigurationImpl());
-    }
-
-    public SidecarConfigurationImpl(ServiceConfiguration serviceConfiguration,
-                                    SslConfiguration sslConfiguration,
-                                    HealthCheckConfiguration healthCheckConfiguration)
-    {
-        this(Collections.emptyList(),
-             serviceConfiguration,
-             sslConfiguration,
-             healthCheckConfiguration,
-             new CassandraInputValidationConfigurationImpl());
-    }
-
-    public SidecarConfigurationImpl(List<InstanceConfiguration> cassandraInstances,
-                                    ServiceConfiguration serviceConfiguration,
-                                    SslConfiguration sslConfiguration,
-                                    HealthCheckConfiguration healthCheckConfiguration,
-                                    CassandraInputValidationConfiguration cassandraInputValidationConfiguration)
-    {
-        this.cassandraInstance = null;
-        this.cassandraInstances = Collections.unmodifiableList(cassandraInstances);
-        this.serviceConfiguration = serviceConfiguration;
-        this.sslConfiguration = sslConfiguration;
-        this.healthCheckConfiguration = healthCheckConfiguration;
-        this.cassandraInputValidationConfiguration = cassandraInputValidationConfiguration;
+        cassandraInstance = builder.cassandraInstance;
+        cassandraInstances = builder.cassandraInstances;
+        serviceConfiguration = builder.serviceConfiguration;
+        sslConfiguration = builder.sslConfiguration;
+        healthCheckConfiguration = builder.healthCheckConfiguration;
+        cassandraInputValidationConfiguration = builder.cassandraInputValidationConfiguration;
     }
 
     /**
@@ -234,5 +207,113 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
                               .registerModule(simpleModule);
 
         return mapper.readValue(yamlConfigurationPath.toFile(), SidecarConfigurationImpl.class);
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@code SidecarConfigurationImpl} builder static inner class.
+     */
+    public static class Builder implements DataObjectBuilder<Builder, SidecarConfigurationImpl>
+    {
+        private InstanceConfiguration cassandraInstance;
+        private List<InstanceConfiguration> cassandraInstances;
+        private ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl();
+        private SslConfiguration sslConfiguration = null;
+        private HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl();
+        private CassandraInputValidationConfiguration cassandraInputValidationConfiguration
+        = new CassandraInputValidationConfigurationImpl();
+
+        protected Builder()
+        {
+        }
+
+        @Override
+        public Builder self()
+        {
+            return this;
+        }
+
+        /**
+         * Sets the {@code cassandraInstance} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param cassandraInstance the {@code cassandraInstance} to set
+         * @return a reference to this Builder
+         */
+        public Builder cassandraInstance(InstanceConfiguration cassandraInstance)
+        {
+            return update(b -> b.cassandraInstance = cassandraInstance);
+        }
+
+        /**
+         * Sets the {@code cassandraInstances} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param cassandraInstances the {@code cassandraInstances} to set
+         * @return a reference to this Builder
+         */
+        public Builder cassandraInstances(List<InstanceConfiguration> cassandraInstances)
+        {
+            return update(b -> b.cassandraInstances = cassandraInstances);
+        }
+
+        /**
+         * Sets the {@code serviceConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param serviceConfiguration the {@code serviceConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder serviceConfiguration(ServiceConfiguration serviceConfiguration)
+        {
+            return update(b -> b.serviceConfiguration = serviceConfiguration);
+        }
+
+        /**
+         * Sets the {@code sslConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param sslConfiguration the {@code sslConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder sslConfiguration(SslConfiguration sslConfiguration)
+        {
+            return update(b -> b.sslConfiguration = sslConfiguration);
+        }
+
+        /**
+         * Sets the {@code healthCheckConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param healthCheckConfiguration the {@code healthCheckConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder healthCheckConfiguration(HealthCheckConfiguration healthCheckConfiguration)
+        {
+            return update(b -> b.healthCheckConfiguration = healthCheckConfiguration);
+        }
+
+        /**
+         * Sets the {@code cassandraInputValidationConfiguration} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param configuration the {@code cassandraInputValidationConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder cassandraInputValidationConfiguration(CassandraInputValidationConfiguration configuration)
+        {
+            return update(b -> b.cassandraInputValidationConfiguration = configuration);
+        }
+
+        /**
+         * Returns a {@code SidecarConfigurationImpl} built from the parameters previously set.
+         *
+         * @return a {@code SidecarConfigurationImpl} built with parameters of this
+         * {@code SidecarConfigurationImpl.Builder}
+         */
+        @Override
+        public SidecarConfigurationImpl build()
+        {
+            return new SidecarConfigurationImpl(this);
+        }
     }
 }

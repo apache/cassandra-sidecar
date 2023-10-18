@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.core.http.ClientAuth;
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 
@@ -56,27 +57,17 @@ public class SslConfigurationImpl implements SslConfiguration
 
     public SslConfigurationImpl()
     {
-        this(DEFAULT_SSL_ENABLED,
-             DEFAULT_USE_OPEN_SSL,
-             DEFAULT_HANDSHAKE_TIMEOUT_SECONDS,
-             DEFAULT_CLIENT_AUTH,
-             null,
-             null);
+        this(builder());
     }
 
-    public SslConfigurationImpl(boolean enabled,
-                                boolean useOpenSsl,
-                                long handshakeTimeoutInSeconds,
-                                String clientAuth,
-                                KeyStoreConfiguration keystore,
-                                KeyStoreConfiguration truststore)
+    protected SslConfigurationImpl(Builder builder)
     {
-        this.enabled = enabled;
-        this.useOpenSsl = useOpenSsl;
-        this.handshakeTimeoutInSeconds = handshakeTimeoutInSeconds;
-        this.clientAuth = clientAuth;
-        this.keystore = keystore;
-        this.truststore = truststore;
+        enabled = builder.enabled;
+        useOpenSsl = builder.useOpenSsl;
+        handshakeTimeoutInSeconds = builder.handshakeTimeoutInSeconds;
+        setClientAuth(builder.clientAuth);
+        keystore = builder.keystore;
+        truststore = builder.truststore;
     }
 
     /**
@@ -163,5 +154,116 @@ public class SslConfigurationImpl implements SslConfiguration
     public KeyStoreConfiguration truststore()
     {
         return truststore;
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@code SslConfigurationImpl} builder static inner class.
+     */
+    public static class Builder implements DataObjectBuilder<Builder, SslConfigurationImpl>
+    {
+        private boolean enabled = DEFAULT_SSL_ENABLED;
+        private boolean useOpenSsl = DEFAULT_USE_OPEN_SSL;
+        private long handshakeTimeoutInSeconds = DEFAULT_HANDSHAKE_TIMEOUT_SECONDS;
+        private String clientAuth = DEFAULT_CLIENT_AUTH;
+        private KeyStoreConfiguration keystore = null;
+        private KeyStoreConfiguration truststore = null;
+
+        protected Builder()
+        {
+        }
+
+        @Override
+        public Builder self()
+        {
+            return this;
+        }
+
+        /**
+         * Sets the {@code enabled} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param enabled the {@code enabled} to set
+         * @return a reference to this Builder
+         */
+        public Builder enabled(boolean enabled)
+        {
+            this.enabled = enabled;
+            return this;
+        }
+
+        /**
+         * Sets the {@code useOpenSsl} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param useOpenSsl the {@code useOpenSsl} to set
+         * @return a reference to this Builder
+         */
+        public Builder useOpenSsl(boolean useOpenSsl)
+        {
+            this.useOpenSsl = useOpenSsl;
+            return this;
+        }
+
+        /**
+         * Sets the {@code handshakeTimeoutInSeconds} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param handshakeTimeoutInSeconds the {@code handshakeTimeoutInSeconds} to set
+         * @return a reference to this Builder
+         */
+        public Builder handshakeTimeoutInSeconds(long handshakeTimeoutInSeconds)
+        {
+            this.handshakeTimeoutInSeconds = handshakeTimeoutInSeconds;
+            return this;
+        }
+
+        /**
+         * Sets the {@code clientAuth} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param clientAuth the {@code clientAuth} to set
+         * @return a reference to this Builder
+         */
+        public Builder clientAuth(String clientAuth)
+        {
+            this.clientAuth = clientAuth;
+            return this;
+        }
+
+        /**
+         * Sets the {@code keystore} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param keystore the {@code keystore} to set
+         * @return a reference to this Builder
+         */
+        public Builder keystore(KeyStoreConfiguration keystore)
+        {
+            this.keystore = keystore;
+            return this;
+        }
+
+        /**
+         * Sets the {@code truststore} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param truststore the {@code truststore} to set
+         * @return a reference to this Builder
+         */
+        public Builder truststore(KeyStoreConfiguration truststore)
+        {
+            this.truststore = truststore;
+            return this;
+        }
+
+        /**
+         * Returns a {@code SslConfigurationImpl} built from the parameters previously set.
+         *
+         * @return a {@code SslConfigurationImpl} built with parameters of this {@code SslConfigurationImpl.Builder}
+         */
+        @Override
+        public SslConfigurationImpl build()
+        {
+            return new SslConfigurationImpl(this);
+        }
     }
 }
