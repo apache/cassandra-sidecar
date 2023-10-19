@@ -127,7 +127,7 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
                 List<Integer> nodeNums = newNodes.stream().map(i -> i.config().num()).collect(Collectors.toList());
                 validateNodeStates(mappingResponse,
                                    dcReplication,
-                                   nodeNumber -> nodeNums.contains(nodeNumber) ? "Joining" : "Normal");
+                                   nodeNumber -> nodeNums.contains(nodeNumber) ? "Replacing" : "Normal");
 
                 int nodeCount = annotation.nodesPerDc() * annotation.numDcs();
                 validateTokenRanges(mappingResponse, generateExpectedRanges(nodeCount));
