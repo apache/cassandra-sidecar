@@ -285,7 +285,9 @@ public class TokenRangeReplicaProvider
                 {
                     LOGGER.debug("Found gossipInfoEntry={}", gossipInfoEntry);
                     String hostStatus = gossipInfoEntry.status();
-                    if (hostStatus != null && hostStatus.startsWith("BOOT_REPLACE,"))
+                    String hostStatusWithPort = gossipInfoEntry.statusWithPort();
+                    if ((hostStatus != null && hostStatus.startsWith("BOOT_REPLACE,")) ||
+                        (hostStatusWithPort != null && hostStatusWithPort.startsWith("BOOT_REPLACE,")))
                     {
                         return NodeState.REPLACING.displayName();
                     }
