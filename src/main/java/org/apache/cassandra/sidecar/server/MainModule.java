@@ -27,9 +27,6 @@ import java.util.stream.Collectors;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -94,7 +91,6 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_
  */
 public class MainModule extends AbstractModule
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MainModule.class);
     public static final Map<String, String> OK_STATUS = Collections.singletonMap("status", "OK");
     public static final Map<String, String> NOT_OK_STATUS = Collections.singletonMap("status", "NOT_OK");
 
@@ -167,10 +163,7 @@ public class MainModule extends AbstractModule
         // Add custom routers
         // Provides a simple REST endpoint to determine if Sidecar is available
         router.get(ApiEndpointsV1.HEALTH_ROUTE)
-              .handler(context -> {
-                  LOGGER.info("OK");
-                  context.json(OK_STATUS);
-              });
+              .handler(context -> context.json(OK_STATUS));
 
         router.get(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE)
               .handler(cassandraHealthHandler);
