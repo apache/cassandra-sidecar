@@ -375,22 +375,11 @@ class ServerSSLTest
                   {
                       int finalI = i;
                       futureList.add(validateHealthEndpoint(client).onComplete(ar -> {
-                          if (ar.succeeded())
-                          {
-                              context.failNow("The health endpoint request number " + finalI + " was expected " +
-                                              "to fail with the expired cert");
-                              return;
-                          }
-                          try
-                          {
-                              assertThat(ar.cause()).isNotNull()
-                                                    .isInstanceOf(SSLHandshakeException.class)
-                                                    .hasMessageContaining("Failed to create SSL connection");
-                          }
-                          catch (Throwable e)
-                          {
-                              context.failNow(e);
-                          }
+                          assertThat(ar.cause()).as("The health endpoint request number " + finalI +
+                                                    " is expected to fail with the expired server cert")
+                                                .isNotNull()
+                                                .isInstanceOf(SSLHandshakeException.class)
+                                                .hasMessageContaining("Failed to create SSL connection");
                       }));
                   }
                   return Future.all(futureList)
