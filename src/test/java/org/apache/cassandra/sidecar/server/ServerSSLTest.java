@@ -377,7 +377,7 @@ class ServerSSLTest
                       futureList.add(validateHealthEndpoint(client).onComplete(ar -> {
                           if (ar.succeeded())
                           {
-                              context.failNow("The health endpoint request number " + finalI + "was expected " +
+                              context.failNow("The health endpoint request number " + finalI + " was expected " +
                                               "to fail with the expired cert");
                               return;
                           }
