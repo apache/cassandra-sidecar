@@ -29,12 +29,14 @@ public interface SslConfiguration
     boolean enabled();
 
     /**
-     * Returns {@code true} if the OpenSSL engine should be used, {@code false} otherwise. The OpenSSL engine
-     * will only be enabled if the native libraries for OpenSSL have been loaded correctly.
+     * Returns {@code true} if the OpenSSL engine should be preferred, {@code false} otherwise.
+     *
+     * <br><b>Note:</b> The OpenSSL engine will only be enabled if the native libraries for OpenSSL have
+     * been loaded correctly.
      *
      * @return {@code true} if the OpenSSL engine should be used, {@code false} otherwise
      */
-    boolean useOpenSSL();
+    boolean preferOpenSSL();
 
     /**
      * @return the configuration for the SSL handshake timeout in seconds

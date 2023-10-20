@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.server.Server;
@@ -74,7 +75,7 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
     }
 
     @Override
-    public void execute()
+    public void execute(Promise<Void> promise)
     {
         LOGGER.info("Running periodic key store checker");
         String keyStorePath = configuration.keystore().path();
@@ -91,12 +92,22 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
                            .onSuccess(v -> {
                                lastModifiedTime = props.lastModifiedTime();
                                LOGGER.info("Completed reloading certificates from path={}", keyStorePath);
+                               promise.complete(); // propagate successful completion
                            })
-                           .onFailure(throwable -> LOGGER.error("Failed to reload certificate from path={}",
-                                                                keyStorePath, throwable));
+                           .onFailure(cause -> {
+                               LOGGER.error("Failed to reload certificate from path={}", keyStorePath, cause);
+                               promise.fail(cause);
+                           });
+                 }
+                 else
+                 {
+                     promise.complete(); // make sure to fulfill the promise
                  }
              })
-             .onFailure(error -> LOGGER.warn("Unable to retrieve props for path={}", keyStorePath, error));
+             .onFailure(error -> {
+                 LOGGER.warn("Unable to retrieve props for path={}", keyStorePath, error);
+                 promise.fail(error);
+             });
     }
 
     protected void maybeRecordLastModifiedTime()

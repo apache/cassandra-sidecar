@@ -85,7 +85,7 @@ public class SslConfigurationImpl implements SslConfiguration
      */
     @Override
     @JsonProperty(value = "use_openssl", defaultValue = "true")
-    public boolean useOpenSSL()
+    public boolean preferOpenSSL()
     {
         return useOpenSsl;
     }

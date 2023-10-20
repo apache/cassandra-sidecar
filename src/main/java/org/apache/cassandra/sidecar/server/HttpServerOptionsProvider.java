@@ -73,7 +73,7 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
             options.setClientAuth(ClientAuth.valueOf(ssl.clientAuth()))
                    .setSsl(true);
 
-            if (ssl.useOpenSSL() && OpenSSLEngineOptions.isAvailable())
+            if (ssl.preferOpenSSL() && OpenSSLEngineOptions.isAvailable())
             {
                 LOGGER.info("Using OpenSSL for encryption");
                 options.setSslEngineOptions(new OpenSSLEngineOptions().setSessionCacheEnabled(true));

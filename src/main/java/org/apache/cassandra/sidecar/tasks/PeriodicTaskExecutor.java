@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.Closeable;
 import io.vertx.core.Promise;
 import io.vertx.core.impl.ConcurrentHashSet;
@@ -33,6 +35,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 /**
  * This class manages the scheduling and execution of {@link PeriodicTask}s.
  */
+@Singleton
 public class PeriodicTaskExecutor implements Closeable
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeriodicTaskExecutor.class);
@@ -41,6 +44,7 @@ public class PeriodicTaskExecutor implements Closeable
     private final Set<PeriodicTaskKey> activeTasks = new ConcurrentHashSet<>();
     private final ExecutorPools.TaskExecutorPool internalPool;
 
+    @Inject
     public PeriodicTaskExecutor(ExecutorPools executorPools)
     {
         this.internalPool = executorPools.internal();
@@ -131,18 +135,19 @@ public class PeriodicTaskExecutor implements Closeable
             return;
         }
 
+        Promise<Void> promise = Promise.promise();
+
         try
         {
-            periodicTask.execute();
+            periodicTask.execute(promise);
         }
         catch (Throwable throwable)
         {
             LOGGER.warn("Periodic task failed to execute. task={}", periodicTask.name(), throwable);
+            promise.tryFail(throwable);
         }
-        finally
-        {
-            activeTasks.remove(key);
-        }
+
+        promise.future().onComplete(res -> activeTasks.remove(key));
     }
 
     // A simple wrapper that implements equals and hashcode,

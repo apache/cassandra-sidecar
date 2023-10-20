@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.utils;
+package org.apache.cassandra.sidecar.cluster;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -41,9 +41,13 @@ import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.TableOperations;
-import org.apache.cassandra.sidecar.server.SidecarServerEvents;
+import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 
 
 /**
@@ -308,7 +312,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     {
         JsonObject connectMessage = new JsonObject()
                                     .put("cassandraInstanceId", cassandraInstanceId);
-        vertx.eventBus().publish(SidecarServerEvents.ON_CASSANDRA_CQL_READY, connectMessage);
+        vertx.eventBus().publish(ON_CASSANDRA_CQL_READY.address(), connectMessage);
         LOGGER.info("CQL connected to cassandraInstanceId={}", cassandraInstanceId);
     }
 
@@ -320,7 +324,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         {
             JsonObject disconnectMessage = new JsonObject()
                                            .put("cassandraInstanceId", cassandraInstanceId);
-            vertx.eventBus().publish(SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED, disconnectMessage);
+            vertx.eventBus().publish(ON_CASSANDRA_CQL_DISCONNECTED.address(), disconnectMessage);
             LOGGER.info("CQL disconnection from cassandraInstanceId={}", cassandraInstanceId);
         }
     }

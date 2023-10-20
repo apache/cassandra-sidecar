@@ -325,7 +325,7 @@ class SidecarConfigurationTest
     {
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isTrue();
-        assertThat(config.useOpenSSL()).isFalse();
+        assertThat(config.preferOpenSSL()).isFalse();
         assertThat(config.handshakeTimeoutInSeconds()).isEqualTo(25L);
         assertThat(config.clientAuth()).isEqualTo("REQUEST");
         assertThat(config.keystore()).isNotNull();

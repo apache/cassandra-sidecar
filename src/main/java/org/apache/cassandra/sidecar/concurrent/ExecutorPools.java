@@ -119,11 +119,7 @@ public class ExecutorPools
          */
         public long setPeriodic(long delay, Handler<Long> handler, boolean ordered)
         {
-            return vertx.setPeriodic(delay,
-                                     id -> workerExecutor.executeBlocking(() -> {
-                                         handler.handle(id);
-                                         return id;
-                                     }, ordered));
+            return setPeriodic(delay, delay, handler, ordered);
         }
 
         /**
@@ -173,10 +169,7 @@ public class ExecutorPools
         public long setTimer(long delay, Handler<Long> handler)
         {
             return vertx.setTimer(delay, id ->
-                                         workerExecutor.executeBlocking(() -> {
-                                             handler.handle(id);
-                                             return id;
-                                         }, false));
+                                         workerExecutor.executeBlocking(promise -> handler.handle(id), false));
         }
 
         /**

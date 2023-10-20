@@ -33,61 +33,46 @@ class SidecarRateLimiterTest
         // Creates a SidecarRateLimiter that is enabled
         SidecarRateLimiter enabledRateLimiter = SidecarRateLimiter.create(100);
         assertThat(enabledRateLimiter).isNotNull();
-        assertThat(enabledRateLimiter.isRateLimited()).isTrue();
         assertThat(enabledRateLimiter.rate()).isEqualTo(100);
         assertThat(enabledRateLimiter.tryAcquire()).isTrue();
         enabledRateLimiter.rate(150);
-        assertThat(enabledRateLimiter.doGetRate()).isEqualTo(150);
+        assertThat(enabledRateLimiter.rate()).isEqualTo(150);
         assertThat(enabledRateLimiter.queryEarliestAvailable(0)).isGreaterThan(0);
 
         // Creates a SidecarRateLimiter that is disabled
         SidecarRateLimiter disabledRateLimiter = SidecarRateLimiter.create(-1);
         assertThat(disabledRateLimiter).isNotNull();
-        assertThat(disabledRateLimiter.isRateLimited()).isFalse();
         assertThat(disabledRateLimiter.rate()).isEqualTo(0);
         assertThat(disabledRateLimiter.queryEarliestAvailable(1000L)).isEqualTo(0);
     }
 
     @Test
-    void testDisableRateLimiting()
-    {
-        SidecarRateLimiter rateLimiter = SidecarRateLimiter.create(100);
-        assertThat(rateLimiter.isRateLimited()).isTrue();
-
-        rateLimiter.disableRateLimiting();
-        assertThat(rateLimiter.isRateLimited()).isFalse();
-    }
-
-    @Test
     void testDisableRateLimitingBySettingRate()
     {
-        SidecarRateLimiter rateLimiter = SidecarRateLimiter.create(100);
-        assertThat(rateLimiter.isRateLimited()).isTrue();
+        SidecarRateLimiter rateLimiter = SidecarRateLimiter.create(1);
+        rateLimiter.acquire(2); // reserve some permits
+        assertThat(rateLimiter.tryAcquire()).isFalse();
+        assertThat(rateLimiter.acquire(2)).isGreaterThan(0.0);
 
         rateLimiter.rate(-1);
-        assertThat(rateLimiter.isRateLimited()).isFalse();
-
-        rateLimiter.doSetRate(100, 0);
-        assertThat(rateLimiter.isRateLimited()).isTrue();
-
-        rateLimiter.doSetRate(-1, 0);
-        assertThat(rateLimiter.isRateLimited()).isFalse();
+        assertThat(rateLimiter.tryAcquire()).isTrue();
+        rateLimiter.acquire(2000); // reserve some permits
+        assertThat(rateLimiter.acquire(2000)).isEqualTo(0.0);
     }
 
     @Test
     void testEnableRateLimitingBySettingRate()
     {
         SidecarRateLimiter rateLimiter = SidecarRateLimiter.create(-1);
-        assertThat(rateLimiter.isRateLimited()).isFalse();
+        rateLimiter.acquire(2000); // reserve some permits
+        assertThat(rateLimiter.tryAcquire()).isTrue();
+        assertThat(rateLimiter.acquire(2000)).isEqualTo(0.0);
+        assertThat(rateLimiter.tryAcquire()).isTrue();
 
-        rateLimiter.rate(500);
-        assertThat(rateLimiter.isRateLimited()).isTrue();
-
-        rateLimiter.doSetRate(-1, 0);
-        assertThat(rateLimiter.isRateLimited()).isFalse();
-
-        rateLimiter.doSetRate(500, 0);
-        assertThat(rateLimiter.isRateLimited()).isTrue();
+        rateLimiter.rate(1);
+        rateLimiter.acquire(2); // reserve some permits
+        assertThat(rateLimiter.tryAcquire()).isFalse();
+        assertThat(rateLimiter.acquire(2)).isGreaterThan(0.0);
     }
 
     @Test
@@ -97,12 +82,5 @@ class SidecarRateLimiterTest
         assertThat(rateLimiter.acquire(0)).isEqualTo(0);
         assertThat(rateLimiter.acquire(5)).isEqualTo(0);
         assertThat(rateLimiter.acquire(500)).isNotEqualTo(0);
-    }
-
-    @Test
-    void testReserveZeroPermitsDoesNotThrow()
-    {
-        SidecarRateLimiter rateLimiter = SidecarRateLimiter.create(100);
-        assertThat(rateLimiter.reserve(0)).isEqualTo(0);
     }
 }

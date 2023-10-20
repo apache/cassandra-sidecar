@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
@@ -56,7 +57,7 @@ class PeriodicTaskExecutorTest
             }
 
             @Override
-            public void execute()
+            public void execute(Promise<Void> promise)
             {
                 if (failuresCount.incrementAndGet() == totalFailures)
                 {

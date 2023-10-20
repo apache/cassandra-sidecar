@@ -26,17 +26,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
-import org.apache.cassandra.sidecar.utils.CassandraAdapterDelegate;
 import org.mockito.stubbing.Answer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,7 +70,7 @@ class HealthCheckPeriodicTaskTest
 
         Vertx vertx = Vertx.vertx();
         ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
-        healthCheck = new HealthCheckPeriodicTask(mockConfiguration, mockInstancesConfig, executorPools);
+        healthCheck = new HealthCheckPeriodicTask(vertx, mockConfiguration, mockInstancesConfig, executorPools);
     }
 
     @Test
@@ -88,7 +89,9 @@ class HealthCheckPeriodicTaskTest
         List<InstanceMetadata> mockInstanceMetadata =
         buildMockInstanceMetadata(healthCheckCheckPoint, numberOfInstances);
         when(mockInstancesConfig.instances()).thenReturn(mockInstanceMetadata);
-        healthCheck.execute();
+        Promise<Void> promise = Promise.promise();
+        healthCheck.execute(promise);
+        promise.future().onComplete(context.succeedingThenComplete());
     }
 
     @Test
@@ -102,7 +105,9 @@ class HealthCheckPeriodicTaskTest
         when(mockInstance.delegate()).thenThrow(new RuntimeException());
         mockInstanceMetadata.add(3, mockInstance);
         when(mockInstancesConfig.instances()).thenReturn(mockInstanceMetadata);
-        healthCheck.execute();
+        Promise<Void> promise = Promise.promise();
+        healthCheck.execute(promise);
+        promise.future().onComplete(context.succeedingThenComplete());
     }
 
     @Test
@@ -118,7 +123,9 @@ class HealthCheckPeriodicTaskTest
         doThrow(new RuntimeException()).when(mockDelegate).healthCheck();
         mockInstanceMetadata.add(3, mockInstance);
         when(mockInstancesConfig.instances()).thenReturn(mockInstanceMetadata);
-        healthCheck.execute();
+        Promise<Void> promise = Promise.promise();
+        healthCheck.execute(promise);
+        promise.future().onComplete(context.succeedingThenComplete());
     }
 
     private List<InstanceMetadata> buildMockInstanceMetadata(Checkpoint healthCheckCheckPoint, int numberOfInstances)

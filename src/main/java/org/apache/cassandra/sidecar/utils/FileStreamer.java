@@ -120,7 +120,7 @@ public class FileStreamer
                                 Instant startTime,
                                 Promise<Void> promise)
     {
-        if (!rateLimiter.isRateLimited() || acquire(response, filename, fileLength, range, startTime, promise))
+        if (acquire(response, filename, fileLength, range, startTime, promise))
         {
             // Stream data if rate limiting is disabled or if we acquire
             LOGGER.debug("Streaming range {} for file {} to client {}. Instance: {}", range, filename,

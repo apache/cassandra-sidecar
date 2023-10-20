@@ -34,7 +34,6 @@ import com.google.inject.name.Named;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.web.Router;
@@ -43,6 +42,7 @@ import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -52,7 +52,6 @@ import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
@@ -75,16 +74,10 @@ import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableCleanupHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
-import org.apache.cassandra.sidecar.tasks.HealthCheckPeriodicTask;
-import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
-import org.apache.cassandra.sidecar.utils.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.MD5ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
-
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_START;
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
  * Provides main binding for more complex Guice dependencies
@@ -235,19 +228,6 @@ public class MainModule extends AbstractModule
               .handler(nodeSettingsHandler);
 
         return router;
-    }
-
-    @Provides
-    @Singleton
-    public PeriodicTaskExecutor periodicTaskExecutor(Vertx vertx,
-                                                     ExecutorPools executorPools,
-                                                     HealthCheckPeriodicTask healthCheckTask)
-    {
-        EventBus eventBus = vertx.eventBus();
-        PeriodicTaskExecutor executor = new PeriodicTaskExecutor(executorPools);
-        eventBus.localConsumer(ON_SERVER_START, message -> executor.schedule(healthCheckTask));
-        eventBus.localConsumer(ON_SERVER_STOP, message -> executor.unschedule(healthCheckTask));
-        return executor;
     }
 
     @Provides

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.utils;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.jetbrains.annotations.Nullable;

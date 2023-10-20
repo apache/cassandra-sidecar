@@ -47,6 +47,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
@@ -54,7 +55,6 @@ import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
-import org.apache.cassandra.sidecar.utils.CassandraAdapterDelegate;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
@@ -125,7 +125,7 @@ public abstract class IntegrationTestBase
         }
         else
         {
-            vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY, (Message<JsonObject> message) -> {
+            vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
                 if (message.body().getInteger("cassandraInstanceId") == 1)
                 {
                     tester.accept(client);

@@ -78,7 +78,7 @@ sidecar:
   traffic_shaping:
     inbound_global_bandwidth_bps: 0               # 0 implies unthrottled, the inbound bandwidth in bytes per second
     outbound_global_bandwidth_bps: 0              # 0 implies unthrottled, the outbound bandwidth in bytes per second
-    peak_outbound_global_bandwidth_bps: 419430400 # 400 Mbps, the peak outbound bandwidth in bytes per second
+    peak_outbound_global_bandwidth_bps: 419430400 # the peak outbound bandwidth in bytes per second. The default is 400 mebibytes per second
     max_delay_to_wait_millis: 15000               # 15 seconds
     check_interval_for_stats_millis: 1000         # 1 second
     inbound_global_file_bandwidth_bps: 0          # 0 implies unthrottled, the inbound bandwidth allocated for incoming files in bytes per second, upper-bounded by inbound_global_bandwidth_bps

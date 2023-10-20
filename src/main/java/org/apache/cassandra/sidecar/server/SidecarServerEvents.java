@@ -18,23 +18,6 @@
 
 package org.apache.cassandra.sidecar.server;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
-import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.eventbus.MessageConsumer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-
 /**
  * Defines the {@link io.vertx.core.eventbus.EventBus} addresses where different notifications will be published
  * during Sidecar startup/shutdown, as well as CQL connection availability.
@@ -55,77 +38,41 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
  * <p>
  * However, implementers should choose to implement methods assuming no guarantees to the event sequence.
  */
-@Singleton
-public class SidecarServerEvents
+public enum SidecarServerEvents
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SidecarServerEvents.class);
-
     /**
      * The {@link io.vertx.core.eventbus.EventBus} address where server start events will be published. Server start
      * will be published whenever Sidecar has successfully started and is ready listening for requests.
      */
-    public static final String ON_SERVER_START = SidecarServerEvents.class.getName() + ".ON_SERVER_START";
+    ON_SERVER_START,
 
     /**
      * The {@link io.vertx.core.eventbus.EventBus} address where server stop/shutdown events will be published.
      * Server stop events will be published whenever Sidecar is stopping or shutting down.
      */
-    public static final String ON_SERVER_STOP = SidecarServerEvents.class.getName() + ".ON_SERVER_STOP";
+    ON_SERVER_STOP,
 
     /**
      * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a CQL connection for
      * a given instance has been established. The instance identifier will be passed as part of the message.
      */
-    public static final String ON_CASSANDRA_CQL_READY = SidecarServerEvents.class.getName() + ".ON_CASSANDRA_CQL_READY";
+    ON_CASSANDRA_CQL_READY,
 
     /**
      * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a CQL connection for
      * a given instance has been disconnected. The instance identifier will be passed as part of the message.
      */
-    public static final String ON_CASSANDRA_CQL_DISCONNECTED = SidecarServerEvents.class.getName()
-                                                               + ".ON_CASSANDRA_CQL_DISCONNECTED";
+    ON_CASSANDRA_CQL_DISCONNECTED,
 
     /**
      * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when all CQL connections
      * for the Sidecar-managed Cassandra instances are available.
      */
-    public static final String ON_ALL_CASSANDRA_CQL_READY = SidecarServerEvents.class.getName()
-                                                            + ".ON_ALL_CASSANDRA_CQL_READY";
+    ON_ALL_CASSANDRA_CQL_READY,
+    ;
 
-    private final EventBus eventBus;
-    private final Set<Integer> cqlReadyInstanceIds = Collections.synchronizedSet(new HashSet<>());
-
-    @Inject
-    public SidecarServerEvents(Vertx vertx, InstancesConfig instancesConfig)
+    public String address()
     {
-        eventBus = vertx.eventBus();
-        MessageConsumer<JsonObject> cqlReadyConsumer = eventBus.localConsumer(ON_CASSANDRA_CQL_READY);
-        cqlReadyConsumer.handler(message -> {
-            cqlReadyInstanceIds.add(message.body().getInteger("cassandraInstanceId"));
-
-            boolean isCqlReadyOnAllInstances = instancesConfig.instances().stream()
-                                                              .map(InstanceMetadata::id)
-                                                              .allMatch(cqlReadyInstanceIds::contains);
-            if (isCqlReadyOnAllInstances)
-            {
-                cqlReadyConsumer.unregister(); // stop listening to CQL ready events
-                notifyAllCassandraCqlAreReady();
-                LOGGER.info("CQL is ready for all Cassandra instances. {}", cqlReadyInstanceIds);
-            }
-        });
-    }
-
-    /**
-     * Constructs the notification message containing all the Cassandra instance IDs and publishes the message
-     * notifying consumers that all the CQL connections are available.
-     */
-    private void notifyAllCassandraCqlAreReady()
-    {
-        JsonArray cassandraInstanceIds = new JsonArray();
-        cqlReadyInstanceIds.forEach(cassandraInstanceIds::add);
-        JsonObject allReadyMessage = new JsonObject()
-                                     .put("cassandraInstanceIds", cassandraInstanceIds);
-
-        eventBus.publish(ON_ALL_CASSANDRA_CQL_READY, allReadyMessage);
+        return SidecarServerEvents.class.getName() + "." + name();
     }
 }

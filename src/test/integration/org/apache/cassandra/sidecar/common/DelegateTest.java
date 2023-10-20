@@ -34,7 +34,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.api.NodeToolResult;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
-import org.apache.cassandra.sidecar.utils.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
@@ -55,7 +55,7 @@ class DelegateTest extends IntegrationTestBase
         EventBus eventBus = vertx.eventBus();
         Checkpoint cqlReady = context.checkpoint();
 
-        eventBus.localConsumer(ON_CASSANDRA_CQL_READY, (Message<JsonObject> message) -> {
+        eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
             int instanceId = message.body().getInteger("cassandraInstanceId");
 
             CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
@@ -77,7 +77,7 @@ class DelegateTest extends IntegrationTestBase
         Checkpoint cqlReady = context.checkpoint(2);
         Checkpoint cqlDisconnected = context.checkpoint();
 
-        MessageConsumer<JsonObject> cqlReadyConsumer = eventBus.localConsumer(ON_CASSANDRA_CQL_READY);
+        MessageConsumer<JsonObject> cqlReadyConsumer = eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address());
 
         cqlReadyConsumer.handler((Message<JsonObject> message) -> {
             cqlReadyConsumer.unregister();
@@ -98,7 +98,7 @@ class DelegateTest extends IntegrationTestBase
         });
 
 
-        eventBus.localConsumer(ON_CASSANDRA_CQL_DISCONNECTED, (Message<JsonObject> message) -> {
+        eventBus.localConsumer(ON_CASSANDRA_CQL_DISCONNECTED.address(), (Message<JsonObject> message) -> {
             int instanceId = message.body().getInteger("cassandraInstanceId");
 
             CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
@@ -108,7 +108,7 @@ class DelegateTest extends IntegrationTestBase
             assertThat(delegate.isUp()).as("health check fails after binary has been disabled").isFalse();
             cqlDisconnected.flag();
 
-            eventBus.localConsumer(ON_CASSANDRA_CQL_READY, (Message<JsonObject> reconnectMessage) -> {
+            eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> reconnectMessage) -> {
                 assertThat(delegate.isUp()).as("health check succeeds after binary has been enabled")
                                            .isTrue();
                 cqlReady.flag();
@@ -126,8 +126,8 @@ class DelegateTest extends IntegrationTestBase
         Checkpoint allCqlReady = context.checkpoint();
 
         Set<Integer> expectedCassandraInstanceIds = ImmutableSet.of(1, 2, 3);
-        eventBus.localConsumer(ON_CASSANDRA_CQL_READY, message -> cqlReady.flag());
-        eventBus.localConsumer(ON_ALL_CASSANDRA_CQL_READY, (Message<JsonObject> message) -> {
+        eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), message -> cqlReady.flag());
+        eventBus.localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
             JsonArray cassandraInstanceIds = message.body().getJsonArray("cassandraInstanceIds");
             assertThat(cassandraInstanceIds).hasSize(3);
             assertThat(IntStream.rangeClosed(1, cassandraInstanceIds.size()))

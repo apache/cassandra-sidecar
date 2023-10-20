@@ -74,8 +74,8 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint serverStopped = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START, message -> serverStarted.flag());
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP, message -> serverStopped.flag());
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
@@ -90,8 +90,8 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint(2);
         Checkpoint serverStopped = context.checkpoint(2);
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START, message -> serverStarted.flag());
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP, message -> serverStopped.flag());
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
@@ -109,8 +109,8 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint serverStopped = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START, message -> serverStarted.flag());
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP, message -> serverStopped.flag());
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
@@ -125,8 +125,8 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint serverStopped = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START, message -> serverStarted.flag());
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP, message -> serverStopped.flag());
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)

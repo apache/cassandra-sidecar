@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.vertx.core.net.SocketAddress;
+import io.vertx.core.net.impl.SocketAddressImpl;
+
 /**
  * Configuration for the Sidecar Service and configuration of the REST endpoints in the service
  */
@@ -38,30 +41,20 @@ public interface ServiceConfiguration
 
     /**
      * Returns a list of interfaces where the Sidecar process will bind and listen for connections. Defaults to
-     * the configured {@link #host()}.
+     * the configured {@link #host()} and {@link #port()}.
      *
      * @return a list of interfaces where Sidecar will listen
      */
-    default List<String> listenInterfaces()
+    default List<SocketAddress> listenSocketAddresses()
     {
-        return Collections.singletonList(Objects.requireNonNull(host(), "host must be provided"));
+        return Collections.singletonList(
+        new SocketAddressImpl(port(), Objects.requireNonNull(host(), "host must be provided")));
     }
 
     /**
      * @return Sidecar's HTTP REST API port
      */
     int port();
-
-    /**
-     * Returns a list of ports where the Sidecar process will bind and listen for connections. Defaults to
-     * the configured {@link #port()}
-     *
-     * @return a list of ports where Sidecar will listen
-     */
-    default List<Integer> ports()
-    {
-        return Collections.singletonList(port());
-    }
 
     /**
      * Determines if a connection will timeout and be closed if no data is received nor sent within the timeout.

@@ -20,8 +20,11 @@ package org.apache.cassandra.sidecar.server;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
@@ -35,18 +38,27 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SSLOptions;
 import io.vertx.ext.web.Router;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.tasks.HealthCheckPeriodicTask;
 import org.apache.cassandra.sidecar.tasks.KeyStoreCheckPeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.utils.SslUtils;
 import org.jetbrains.annotations.VisibleForTesting;
+
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 
 /**
  * The Sidecar {@link Server} class that manages the start and stop lifecycle of the service
@@ -62,8 +74,9 @@ public class Server
     protected final Router router;
     protected final PeriodicTaskExecutor periodicTaskExecutor;
     protected final HttpServerOptionsProvider optionsProvider;
-    protected final SidecarServerEvents serverEvents;
     protected final List<ServerVerticle> deployedServerVerticles = new CopyOnWriteArrayList<>();
+    // Keeps track of all the Cassandra instance identifiers where CQL is ready
+    private final Set<Integer> cqlReadyInstanceIds = Collections.synchronizedSet(new HashSet<>());
 
     @Inject
     public Server(Vertx vertx,
@@ -72,8 +85,7 @@ public class Server
                   InstancesConfig instancesConfig,
                   ExecutorPools executorPools,
                   PeriodicTaskExecutor periodicTaskExecutor,
-                  HttpServerOptionsProvider optionsProvider,
-                  SidecarServerEvents serverEvents)
+                  HttpServerOptionsProvider optionsProvider)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -82,7 +94,6 @@ public class Server
         this.router = router;
         this.periodicTaskExecutor = periodicTaskExecutor;
         this.optionsProvider = optionsProvider;
-        this.serverEvents = serverEvents;
     }
 
     /**
@@ -107,8 +118,8 @@ public class Server
                         deployedServerVerticles.add(serverVerticle);
                         return serverVerticle;
                     }, deploymentOptions)
-                    .compose(this::notifyServerStart)
-                    .onSuccess(s -> maybeStartPeriodicKeyStoreChangedCheckerTask());
+                    .compose(this::scheduleInternalPeriodicTasks)
+                    .compose(this::notifyServerStart);
     }
 
     /**
@@ -195,13 +206,13 @@ public class Server
     protected Future<String> notifyServerStart(String deploymentId)
     {
         LOGGER.info("Successfully started Cassandra Sidecar");
-        vertx.eventBus().publish(serverEvents.ON_SERVER_START, deploymentId);
+        vertx.eventBus().publish(SidecarServerEvents.ON_SERVER_START.address(), deploymentId);
         return Future.succeededFuture(deploymentId);
     }
 
     protected Future<Void> notifyServerStopping(String deploymentId)
     {
-        vertx.eventBus().publish(serverEvents.ON_SERVER_STOP, deploymentId);
+        vertx.eventBus().publish(SidecarServerEvents.ON_SERVER_STOP.address(), deploymentId);
         return Future.succeededFuture();
     }
 
@@ -242,10 +253,31 @@ public class Server
     }
 
     /**
+     * Schedules internal {@link org.apache.cassandra.sidecar.tasks.PeriodicTask}s.
+     *
+     * @param deploymentId the deployment ID
+     * @return a succeeded future with the deployment ID of the server
+     */
+    protected Future<String> scheduleInternalPeriodicTasks(String deploymentId)
+    {
+        periodicTaskExecutor.schedule(new HealthCheckPeriodicTask(vertx,
+                                                                  sidecarConfiguration,
+                                                                  instancesConfig,
+                                                                  executorPools));
+        maybeScheduleKeyStoreCheckPeriodicTask();
+
+        MessageConsumer<JsonObject> cqlReadyConsumer = vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address());
+        cqlReadyConsumer.handler(message -> onCqlReady(cqlReadyConsumer, message));
+
+
+        return Future.succeededFuture(deploymentId);
+    }
+
+    /**
      * When the SSL configuration is provided and enabled it schedules a periodic task to check for changes
      * in the keystore file.
      */
-    protected void maybeStartPeriodicKeyStoreChangedCheckerTask()
+    protected void maybeScheduleKeyStoreCheckPeriodicTask()
     {
         SslConfiguration ssl = sidecarConfiguration.sslConfiguration();
         if (ssl == null
@@ -259,5 +291,41 @@ public class Server
         // the checks for the keystore changes are initialized here because we need a reference to the
         // server to be able to update the SSL options
         periodicTaskExecutor.schedule(new KeyStoreCheckPeriodicTask(vertx, this, ssl));
+    }
+
+    /**
+     * Handles CQL ready events. When all the expected CQL connections are ready, notifies to the
+     * {@link SidecarServerEvents#ON_ALL_CASSANDRA_CQL_READY} address.
+     *
+     * @param cqlReadyConsumer the consumer
+     * @param message          the received message
+     */
+    protected void onCqlReady(MessageConsumer<JsonObject> cqlReadyConsumer, Message<JsonObject> message)
+    {
+        cqlReadyInstanceIds.add(message.body().getInteger("cassandraInstanceId"));
+
+        boolean isCqlReadyOnAllInstances = instancesConfig.instances().stream()
+                                                          .map(InstanceMetadata::id)
+                                                          .allMatch(cqlReadyInstanceIds::contains);
+        if (isCqlReadyOnAllInstances)
+        {
+            cqlReadyConsumer.unregister(); // stop listening to CQL ready events
+            notifyAllCassandraCqlAreReady();
+            LOGGER.info("CQL is ready for all Cassandra instances. {}", cqlReadyInstanceIds);
+        }
+    }
+
+    /**
+     * Constructs the notification message containing all the Cassandra instance IDs and publishes the message
+     * notifying consumers that all the CQL connections are available.
+     */
+    protected void notifyAllCassandraCqlAreReady()
+    {
+        JsonArray cassandraInstanceIds = new JsonArray();
+        cqlReadyInstanceIds.forEach(cassandraInstanceIds::add);
+        JsonObject allReadyMessage = new JsonObject()
+                                     .put("cassandraInstanceIds", cassandraInstanceIds);
+
+        vertx.eventBus().publish(ON_ALL_CASSANDRA_CQL_READY.address(), allReadyMessage);
     }
 }

@@ -108,7 +108,7 @@ public class SSTableUploader
     {
         LOGGER.debug("Uploading data to={}", tempFilename);
         return fs.open(tempFilename, new OpenOptions()) // open the temp file
-                 .map(file -> rateLimiter.isRateLimited() ? new RateLimitedWriteStream(rateLimiter, file) : file)
+                 .map(file -> new RateLimitedWriteStream(rateLimiter, file))
                  .compose(file -> {
                      readStream.resume();
                      return readStream.pipeTo(file);

@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.tasks;
 
 import java.util.concurrent.TimeUnit;
 
+import io.vertx.core.Promise;
+
 /**
  * An interface that defines a periodic task that will be executed during the lifecycle of Cassandra Sidecar
  */
@@ -58,7 +60,7 @@ public interface PeriodicTask
      * Defines the task body.
      * The method can be considered as executing in a single thread.
      */
-    void execute();
+    void execute(Promise<Void> promise);
 
     /**
      * Register the periodic task executor at the task. By default, it is no-op.

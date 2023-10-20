@@ -80,7 +80,7 @@ public class CassandraVersionProvider
      * @throws IllegalArgumentException if the provided string does not
      *                                  represent a version
      */
-    ICassandraFactory cassandra(String requestedVersion)
+    public ICassandraFactory cassandra(String requestedVersion)
     {
         SimpleCassandraVersion version = SimpleCassandraVersion.create(requestedVersion);
         return cassandra(version);

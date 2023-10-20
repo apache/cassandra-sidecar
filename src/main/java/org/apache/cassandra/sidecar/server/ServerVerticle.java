@@ -32,6 +32,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.SSLOptions;
+import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.Router;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -73,31 +74,23 @@ public class ServerVerticle extends AbstractVerticle
     {
         ServiceConfiguration serviceConf = sidecarConfiguration.serviceConfiguration();
 
-        List<String> listenInterfaces = serviceConf.listenInterfaces();
-        List<Integer> ports = serviceConf.ports();
-        LOGGER.info("Deploying Cassandra Sidecar server verticle on hosts={} ports={}", listenInterfaces, ports);
-        List<Future<HttpServer>> futures = new ArrayList<>();
-        for (String host : listenInterfaces)
-        {
-            for (int port : ports)
-            {
-                futures.add(vertx.createHttpServer(options)
-                                 .requestHandler(router)
-                                 .listen(port, host));
-            }
-        }
+        List<SocketAddress> listenSocketAddresses = serviceConf.listenSocketAddresses();
+        LOGGER.info("Deploying Cassandra Sidecar server verticle on socket addresses={}", listenSocketAddresses);
+        List<Future<HttpServer>> futures = listenSocketAddresses.stream()
+                                                                .map(socketAddress -> vertx.createHttpServer(options)
+                                                                                           .requestHandler(router)
+                                                                                           .listen(socketAddress))
+                                                                .collect(Collectors.toList());
         Future.all(futures)
               .onSuccess((CompositeFuture startedServerFuture) -> {
                   deployedServers = new ArrayList<>(startedServerFuture.list());
-                  LOGGER.info("Successfully deployed Cassandra Sidecar server verticle on hosts={} ports={}",
-                              listenInterfaces, deployedServers.stream()
-                                                               .map(HttpServer::actualPort)
-                                                               .collect(Collectors.toList()));
+                  LOGGER.info("Successfully deployed Cassandra Sidecar server verticle on socket addresses={}",
+                              listenSocketAddresses);
                   startPromise.complete(); // notify that server started successfully
               })
               .onFailure(cause -> {
-                  LOGGER.error("Failed to deploy Cassandra Sidecar verticle failed on hosts={} ports={}",
-                               listenInterfaces, ports, cause);
+                  LOGGER.error("Failed to deploy Cassandra Sidecar verticle failed on socket addresses={}",
+                               listenSocketAddresses, cause);
                   startPromise.fail(cause); // propagate failure to deploying class
               });
     }

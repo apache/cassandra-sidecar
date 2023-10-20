@@ -18,7 +18,6 @@
 
 package com.google.common.util.concurrent;
 
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -56,26 +55,13 @@ public class SidecarRateLimiter
         return new SidecarRateLimiter(permitsPerSecond);
     }
 
-    /**
-     * @return {@code true} if rate-limiting is enabled, {@code false} otherwise
-     */
-    public boolean isRateLimited()
-    {
-        return ref.get() != null;
-    }
+    // Attention: Hack to expose the package private method queryEarliestAvailable
 
     /**
-     * Disables rate limiting
-     */
-    public void disableRateLimiting()
-    {
-        ref.set(null);
-    }
-
-    // Delegated methods
-
-    /**
-     * Returns the earliest time permits will become available. Returns 0 if disabled
+     * Returns the earliest time permits will become available. Returns 0 if disabled.
+     *
+     * <br><b>Note:</b> this is a hack to expose the package private method
+     * {@link RateLimiter#queryEarliestAvailable(long)}
      *
      * @param nowMicros current time in micros
      * @return earliest time permits will become available
@@ -87,9 +73,9 @@ public class SidecarRateLimiter
     }
 
     /**
-     * Tries to reserve 1 permit, if not available immediately returns false. Returns true if rate-limiting is disabled
+     * Acquires a permit if it can be acquired immediately without delay.
      *
-     * @return {@code true} if the permit was acquired, {@code false} otherwise
+     * @return {@code true} if the permit was acquired or rate limiting is disabled, {@code false} otherwise
      */
     public boolean tryAcquire()
     {
@@ -122,45 +108,34 @@ public class SidecarRateLimiter
         }
         else
         {
-            disableRateLimiting();
+            ref.set(null);
         }
     }
 
-    public void doSetRate(double permitsPerSecond, long nowMicros)
-    {
-        RateLimiter rateLimiter = ref.get();
-
-        if (permitsPerSecond > 0.0)
-        {
-            if (rateLimiter == null)
-            {
-                RateLimiter limiter = RateLimiter.create(permitsPerSecond);
-                limiter.doSetRate(permitsPerSecond, nowMicros);
-                ref.compareAndSet(null, limiter);
-            }
-            else
-            {
-                rateLimiter.doSetRate(permitsPerSecond, nowMicros);
-            }
-        }
-        else
-        {
-            disableRateLimiting();
-        }
-    }
-
+    /**
+     * Returns the stable rate (as {@code permits per seconds}) with which this {@code SidecarRateLimiter} is
+     * configured with. The initial value of this is the same as the {@code permitsPerSecond} argument passed in
+     * the factory method that produced this {@code SidecarRateLimiter}, and it is only updated after invocations
+     * to {@linkplain #rate(double)}. If rate-limiting has been disabled, then returns {@code 0} to indicate that
+     * no rate limiting has been configured.
+     *
+     * @return the stable rate configured in the rate limiter, or {@code 0} when rate limiting is disabled
+     */
     public double rate()
     {
         RateLimiter rateLimiter = ref.get();
         return rateLimiter != null ? rateLimiter.getRate() : 0;
     }
 
-    public double doGetRate()
-    {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter != null ? rateLimiter.doGetRate() : 0;
-    }
-
+    /**
+     * Acquires a single permit from this {@code SidecarRateLimiter}, blocking until the request can be
+     * granted. Tells the amount of time slept, if any. When rate-limiting is disabled, it will return {@code 0.0}
+     * to indicate that no amount of time was spent sleeping.
+     *
+     * <p>This method is equivalent to {@code acquire(1)}.
+     *
+     * @return time spent sleeping to enforce rate, in seconds; 0.0 if not rate-limited
+     */
     @CanIgnoreReturnValue
     public double acquire()
     {
@@ -168,46 +143,20 @@ public class SidecarRateLimiter
         return rateLimiter != null ? rateLimiter.acquire() : 0;
     }
 
+    /**
+     * Acquires the given number of permits from this {@code RateLimiter}, blocking until the request
+     * can be granted. Tells the amount of time slept, if any. When rate-limiting is disabled, it will return
+     * {@code 0.0} to indicate that no amount of time was spent sleeping. As opposed to the delegating class,
+     * {@code 0} or negative are allowed permit values, and it will result in essentially disabling rate-limiting
+     * and the method will return {@code 0.0} to indicate that no amount of time was spent sleeping.
+     *
+     * @param permits the number of permits to acquire
+     * @return time spent sleeping to enforce rate, in seconds; 0.0 if not rate-limited
+     */
     @CanIgnoreReturnValue
     public double acquire(int permits)
     {
         RateLimiter rateLimiter = ref.get();
         return rateLimiter != null && permits > 0 ? rateLimiter.acquire(permits) : 0;
-    }
-
-    public long reserve(int permits)
-    {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter != null && permits > 0 ? rateLimiter.reserve(permits) : 0;
-    }
-
-    public boolean tryAcquire(long timeout, TimeUnit unit)
-    {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter == null || rateLimiter.tryAcquire(timeout, unit);
-    }
-
-    public boolean tryAcquire(int permits)
-    {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter == null || rateLimiter.tryAcquire(permits);
-    }
-
-    public boolean tryAcquire(int permits, long timeout, TimeUnit unit)
-    {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter == null || rateLimiter.tryAcquire(permits, timeout, unit);
-    }
-
-    public long reserveAndGetWaitLength(int permits, long nowMicros)
-    {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter != null ? rateLimiter.reserveAndGetWaitLength(permits, nowMicros) : 0;
-    }
-
-    public long reserveEarliestAvailable(int permits, long nowMicros)
-    {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter != null ? rateLimiter.reserveEarliestAvailable(permits, nowMicros) : 0;
     }
 }
