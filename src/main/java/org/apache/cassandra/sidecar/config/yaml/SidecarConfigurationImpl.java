@@ -34,6 +34,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
+import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
@@ -59,9 +60,11 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @JsonProperty(value = "cassandra_instances")
     protected final List<InstanceConfiguration> cassandraInstances;
 
+    @JsonProperty(value = "driver_parameters")
+    protected final DriverConfiguration driverConfiguration;
+
     @JsonProperty(value = "sidecar", required = true)
     protected final ServiceConfiguration serviceConfiguration;
-
     @JsonProperty("ssl")
     protected final SslConfiguration sslConfiguration;
 
@@ -84,6 +87,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         sslConfiguration = builder.sslConfiguration;
         healthCheckConfiguration = builder.healthCheckConfiguration;
         cassandraInputValidationConfiguration = builder.cassandraInputValidationConfiguration;
+        driverConfiguration = builder.driverConfiguration;
     }
 
     /**
@@ -146,6 +150,13 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return healthCheckConfiguration;
     }
 
+    @Override
+    @JsonProperty("driver_parameters")
+    public DriverConfiguration driverConfiguration()
+    {
+        return driverConfiguration;
+    }
+
     /**
      * @return the configuration for Cassandra input validation
      */
@@ -198,7 +209,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
                                     .addAbstractTypeMapping(JmxConfiguration.class,
                                                             JmxConfigurationImpl.class)
                                     .addAbstractTypeMapping(TrafficShapingConfiguration.class,
-                                                            TrafficShapingConfigurationImpl.class);
+                                                            TrafficShapingConfigurationImpl.class)
+                                    .addAbstractTypeMapping(DriverConfiguration.class,
+                                                            DriverConfigurationImpl.class);
 
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
                               .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
@@ -226,6 +239,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         private HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl();
         private CassandraInputValidationConfiguration cassandraInputValidationConfiguration
         = new CassandraInputValidationConfigurationImpl();
+        private DriverConfiguration driverConfiguration = new DriverConfigurationImpl();
 
         protected Builder()
         {
@@ -290,6 +304,18 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder healthCheckConfiguration(HealthCheckConfiguration healthCheckConfiguration)
         {
             return update(b -> b.healthCheckConfiguration = healthCheckConfiguration);
+        }
+
+        /**
+         * Sets the {@code driverConfiguration} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param driverConfiguration the {@code driverConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder driverConfiguration(DriverConfiguration driverConfiguration)
+        {
+            return update(b -> b.driverConfiguration = driverConfiguration);
         }
 
         /**

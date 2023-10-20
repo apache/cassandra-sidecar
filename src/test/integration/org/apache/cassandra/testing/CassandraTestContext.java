@@ -39,7 +39,7 @@ public class CassandraTestContext extends AbstractCassandraTestContext
     public String toString()
     {
         return "CassandraTestContext{"
-               + ", version=" + version
+               + "version=" + version
                + ", cluster=" + cluster
                + '}';
     }

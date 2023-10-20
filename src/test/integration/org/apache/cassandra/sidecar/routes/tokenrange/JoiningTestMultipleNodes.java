@@ -58,7 +58,7 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 @ExtendWith(VertxExtension.class)
 public class JoiningTestMultipleNodes extends JoiningBaseTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 3, newNodesPerDc = 2, network = true, gossip = true, buildCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 3, newNodesPerDc = 2, network = true, buildCluster = false)
     void retrieveMappingWithMultipleJoiningNodes(VertxTestContext context,
                                                  ConfigurableCassandraTestContext cassandraTestContext)
     throws Exception

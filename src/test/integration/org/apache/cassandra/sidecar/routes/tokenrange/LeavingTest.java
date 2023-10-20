@@ -55,7 +55,7 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
 @ExtendWith(VertxExtension.class)
 class LeavingTest extends LeavingBaseTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 5, network = true, gossip = true, buildCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 5, network = true, buildCluster = false)
     void retrieveMappingWithKeyspaceLeavingNode(VertxTestContext context,
                                                 ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {
@@ -69,7 +69,7 @@ class LeavingTest extends LeavingBaseTest
                                generateExpectedRangeMappingSingleLeavingNode());
     }
 
-    @CassandraIntegrationTest(nodesPerDc = 5, network = true, gossip = true, buildCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 5, network = true, buildCluster = false)
     void retrieveMappingWithMultipleLeavingNodes(VertxTestContext context,
                                                  ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {
@@ -83,7 +83,7 @@ class LeavingTest extends LeavingBaseTest
                                generateExpectedRangeMappingMultipleLeavingNodes());
     }
 
-    @CassandraIntegrationTest(nodesPerDc = 6, network = true, gossip = true, buildCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 6, network = true, buildCluster = false)
     void retrieveMappingHalveClusterSize(VertxTestContext context,
                                          ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {

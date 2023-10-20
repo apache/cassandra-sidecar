@@ -205,7 +205,7 @@ class BaseUploadsHandlerTest
         @Singleton
         public InstancesConfig instancesConfig(Vertx vertx)
         {
-            return mockInstancesConfig(vertx, canonicalTemporaryPath, delegate, delegate, null, null);
+            return mockInstancesConfig(vertx, canonicalTemporaryPath, delegate, null);
         }
 
         @Singleton

@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.common;
 
 import java.net.InetSocketAddress;
-import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -28,16 +28,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.NettyOptions;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.DriverInternalError;
 import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
+import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.ReconnectionPolicy;
-import com.datastax.driver.core.policies.RoundRobinPolicy;
-import com.datastax.driver.core.policies.WhiteListPolicy;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -47,65 +45,63 @@ import org.jetbrains.annotations.Nullable;
 public class CQLSessionProvider
 {
     private static final Logger logger = LoggerFactory.getLogger(CQLSessionProvider.class);
+    private final List<InetSocketAddress> contactPoints;
+    private final int numConnections;
+    private final String localDc;
 
     @Nullable
-    private Session localSession;
-    private final InetSocketAddress inet;
-    private final WhiteListPolicy wlp;
+    private Session session;
     private final NettyOptions nettyOptions;
-    private final QueryOptions queryOptions;
     private final ReconnectionPolicy reconnectionPolicy;
+    private final List<InetSocketAddress> localInstances;
 
-    public CQLSessionProvider(String host, int port, int healthCheckInterval)
+    public CQLSessionProvider(List<InetSocketAddress> contactPoints,
+                              List<InetSocketAddress> localInstances,
+                              int healthCheckFrequencyMillis,
+                              String localDc,
+                              int numConnections,
+                              NettyOptions options)
     {
-        // this was originally using unresolved Inet addresses, but it would fail when trying to
-        // connect to a docker container
-        logger.info("Connecting to {} on port {}", host, port);
-        inet = new InetSocketAddress(host, port);
-
-        wlp = new WhiteListPolicy(new RoundRobinPolicy(), Collections.singletonList(inet));
-        this.nettyOptions = new NettyOptions();
-        this.queryOptions = new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE);
-        this.reconnectionPolicy = new ExponentialReconnectionPolicy(1000, healthCheckInterval);
-    }
-
-    public CQLSessionProvider(InetSocketAddress target, NettyOptions options)
-    {
-        inet = target;
-        wlp = new WhiteListPolicy(new RoundRobinPolicy(), Collections.singletonList(inet));
+        this.contactPoints = contactPoints;
+        this.localInstances = localInstances;
+        this.localDc = localDc;
+        this.numConnections = numConnections;
         this.nettyOptions = options;
-        this.queryOptions = new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE);
-        reconnectionPolicy = new ExponentialReconnectionPolicy(100, 1000);
+        this.reconnectionPolicy = new ExponentialReconnectionPolicy(500, healthCheckFrequencyMillis);
     }
 
     /**
-     * Provides a Session connected only to the local node from configuration. If null it means the connection was
-     * not able to be established. The session still might throw a NoHostAvailableException if the local host goes
-     * offline or otherwise unavailable.
+     * Provides a Session connected to the cluster. If null it means the connection was
+     * could not be established. The session still might throw a NoHostAvailableException if the
+     * cluster is otherwise unreachable.
      *
      * @return Session
      */
     @Nullable
-    public synchronized Session localCql()
+    public synchronized Session get()
     {
         Cluster cluster = null;
         try
         {
-            if (localSession == null)
+            if (session == null)
             {
-                logger.info("Connecting to {}", inet);
+                logger.info("Connecting to cluster using contact points {}", contactPoints);
+
+                LoadBalancingPolicy lbp = new SidecarLoadBalancingPolicy(localInstances, localDc, numConnections);
+                // Prevent spurious reconnects of ignored down nodes on `onUp` events
+                QueryOptions queryOptions = new QueryOptions().setReprepareOnUp(false);
                 cluster = Cluster.builder()
-                                 .addContactPointsWithPorts(inet)
-                                 .withLoadBalancingPolicy(wlp)
-                                 .withQueryOptions(queryOptions)
+                                 .addContactPointsWithPorts(contactPoints)
                                  .withReconnectionPolicy(reconnectionPolicy)
                                  .withoutMetrics()
+                                 .withLoadBalancingPolicy(lbp)
+                                 .withQueryOptions(queryOptions)
                                  // tests can create a lot of these Cluster objects, to avoid creating HWTs and
                                  // event thread pools for each we have the override
                                  .withNettyOptions(nettyOptions)
                                  .build();
-                localSession = cluster.connect();
-                logger.info("Successfully connected to Cassandra instance!");
+                session = cluster.connect();
+                logger.info("Successfully connected to Cassandra!");
             }
         }
         catch (Exception e)
@@ -123,7 +119,7 @@ public class CQLSessionProvider
                 }
             }
         }
-        return localSession;
+        return session;
     }
 
     public Session close()
@@ -131,8 +127,8 @@ public class CQLSessionProvider
         Session localSession;
         synchronized (this)
         {
-            localSession = this.localSession;
-            this.localSession = null;
+            localSession = this.session;
+            this.session = null;
         }
 
         if (localSession != null)

@@ -72,6 +72,10 @@ jobs:
          path: build/reports
          destination: test-reports
 
+     - store_artifacts:
+         path: build/test-results/
+         destination: test-results
+
      - store_test_results:
          path: build/test-results/
 
@@ -92,6 +96,10 @@ jobs:
          path: build/reports
          destination: test-reports
 
+     - store_artifacts:
+         path: build/test-results/
+         destination: test-results
+
      - store_test_results:
          path: build/test-results/
 
@@ -110,6 +118,10 @@ jobs:
      - store_artifacts:
          path: build/reports
          destination: test-reports
+
+     - store_artifacts:
+         path: build/test-results/
+         destination: test-results
 
      - store_test_results:
          path: build/test-results/
@@ -148,6 +160,10 @@ jobs:
           path: build/reports
           destination: test-reports
 
+      - store_artifacts:
+          path: build/test-results/
+          destination: test-results
+
       - store_test_results:
           path: build/test-results/
 
@@ -167,6 +183,10 @@ jobs:
           path: build/reports
           destination: test-reports
 
+      - store_artifacts:
+          path: build/test-results/
+          destination: test-results
+
       - store_test_results:
           path: build/test-results/
 
@@ -185,6 +205,10 @@ jobs:
       - store_artifacts:
           path: build/reports
           destination: test-reports
+
+      - store_artifacts:
+          path: build/test-results/
+          destination: test-results
 
       - store_test_results:
           path: build/test-results/

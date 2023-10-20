@@ -159,7 +159,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
                 UpgradeableCluster.Builder clusterBuilder =
                 UpgradeableCluster.build(originalNodeCount)
-                                  .withDynamicPortAllocation(true) // to allow parallel test runs
+//                                  .withDynamicPortAllocation(true) // to allow parallel test runs
                                   .withVersion(requestedVersion)
                                   .withDCs(dcCount)
                                   .withDataDirCount(annotation.numDataDirsPerInstance())
@@ -307,8 +307,13 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         System.setProperty("cassandra.consistent.simultaneousmoves.allow", "true");
         // End gossip delay settings
         // Set the location of dtest jars
-        System.setProperty("cassandra.test.dtest_jar_path", "dtest-jars");
+        System.setProperty("cassandra.test.dtest_jar_path",
+                           System.getProperty("cassandra.test.dtest_jar_path", "dtest-jars"));
         // Disable tcnative in netty as it can cause jni issues and logs lots errors
         System.setProperty("cassandra.disable_tcactive_openssl", "true");
+        // As we enable gossip by default, make the checks happen faster
+        System.setProperty("cassandra.gossip_settle_min_wait_ms", "500"); // Default 5000
+        System.setProperty("cassandra.gossip_settle_interval_ms", "250"); // Default 1000
+        System.setProperty("cassandra.gossip_settle_poll_success_required", "6"); // Default 3
     }
 }

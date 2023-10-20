@@ -55,7 +55,7 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
 class LeavingTestMultiDC extends LeavingBaseTest
 {
     @CassandraIntegrationTest(
-    nodesPerDc = 5, numDcs = 2, network = true, gossip = true, buildCluster = false)
+    nodesPerDc = 5, numDcs = 2, network = true, buildCluster = false)
     void retrieveMappingWithLeavingNodesMultiDC(VertxTestContext context,
                                                 ConfigurableCassandraTestContext cassandraTestContext)
     throws Exception

@@ -94,29 +94,23 @@ public class SnapshotUtils
     public static InstancesConfig mockInstancesConfig(Vertx vertx, String rootPath)
     {
         CQLSessionProvider mockSession1 = mock(CQLSessionProvider.class);
-        CQLSessionProvider mockSession2 = mock(CQLSessionProvider.class);
-        return mockInstancesConfig(vertx, rootPath, null, null, mockSession1, mockSession2);
+        return mockInstancesConfig(vertx, rootPath, null, mockSession1);
     }
 
     public static InstancesConfig mockInstancesConfig(Vertx vertx,
                                                       String rootPath,
-                                                      CassandraAdapterDelegate delegate1,
-                                                      CassandraAdapterDelegate delegate2,
-                                                      CQLSessionProvider cqlSessionProvider1,
-                                                      CQLSessionProvider cqlSessionProvider2)
+                                                      CassandraAdapterDelegate delegate,
+                                                      CQLSessionProvider cqlSessionProvider1)
     {
         CassandraVersionProvider.Builder versionProviderBuilder = new CassandraVersionProvider.Builder();
         versionProviderBuilder.add(new MockCassandraFactory());
         CassandraVersionProvider versionProvider = versionProviderBuilder.build();
+        String stagingDir = makeStagingDir(rootPath);
 
-        if (delegate1 == null)
+        if (delegate == null)
         {
-            delegate1 = new CassandraAdapterDelegate(vertx, 1, versionProvider, cqlSessionProvider1, null, null);
-        }
-
-        if (delegate2 == null)
-        {
-            delegate2 = new CassandraAdapterDelegate(vertx, 2, versionProvider, cqlSessionProvider2, null, null);
+            delegate = new CassandraAdapterDelegate(vertx, 1, versionProvider, cqlSessionProvider1, null, null,
+                                                     "localhost1", 9042);
         }
 
         InstanceMetadataImpl localhost = InstanceMetadataImpl.builder()
@@ -124,16 +118,16 @@ public class SnapshotUtils
                                                              .host("localhost")
                                                              .port(9043)
                                                              .dataDirs(Collections.singletonList(rootPath + "/d1"))
-                                                             .stagingDir(makeStagingDir(rootPath))
-                                                             .delegate(delegate1)
+                                                             .stagingDir(stagingDir)
+                                                             .delegate(delegate)
                                                              .build();
         InstanceMetadataImpl localhost2 = InstanceMetadataImpl.builder()
                                                               .id(2)
                                                               .host("localhost2")
                                                               .port(9043)
                                                               .dataDirs(Collections.singletonList(rootPath + "/d2"))
-                                                              .stagingDir(makeStagingDir(rootPath))
-                                                              .delegate(delegate2)
+                                                              .stagingDir(stagingDir)
+                                                              .delegate(delegate)
                                                               .build();
         List<InstanceMetadata> instanceMetas = Arrays.asList(localhost, localhost2);
         return new InstancesConfigImpl(instanceMetas, DnsResolver.DEFAULT);

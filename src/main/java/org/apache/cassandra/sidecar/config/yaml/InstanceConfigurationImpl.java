@@ -81,7 +81,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
         this.jmxRolePassword = null;
     }
 
-    protected InstanceConfigurationImpl(int id,
+    public InstanceConfigurationImpl(int id,
                                         String host,
                                         int port,
                                         String username,

@@ -55,7 +55,7 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
 @ExtendWith(VertxExtension.class)
 class MovingMultiDCTest extends MovingBaseTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 5, numDcs = 2, network = true, gossip = true, buildCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 5, numDcs = 2, network = true, buildCluster = false)
     void retrieveMappingWhileMovingNodeMultiDC(VertxTestContext context,
                                                ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {

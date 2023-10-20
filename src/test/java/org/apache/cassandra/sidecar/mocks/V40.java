@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.mocks;
 
+import java.net.InetSocketAddress;
+
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.ICassandraFactory;
@@ -31,7 +33,9 @@ import org.apache.cassandra.sidecar.common.MinimumVersion;
 public class V40 implements ICassandraFactory
 {
     @Override
-    public ICassandraAdapter create(CQLSessionProvider session, JmxClient jmxClient)
+    public ICassandraAdapter create(CQLSessionProvider session,
+                                    JmxClient jmxClient,
+                                    InetSocketAddress localNativeTransportAddress)
     {
         return null;
     }

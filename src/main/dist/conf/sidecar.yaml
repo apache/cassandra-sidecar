@@ -126,6 +126,12 @@ sidecar:
 #      path: "path/to/truststore.p12"
 #      password: password
 
+driver_parameters:
+  contact_points:
+    - "127.0.0.1:9042"
+    - "127.0.0.2:9042"
+  num_connections: 6
+  local_dc: dc1
 
 healthcheck:
   initial_delay_millis: 0

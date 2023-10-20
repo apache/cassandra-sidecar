@@ -18,13 +18,17 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.net.InetSocketAddress;
+
 /**
  *
  */
 public class MockCassandraFactory implements ICassandraFactory
 {
     @Override
-    public ICassandraAdapter create(CQLSessionProvider session, JmxClient jmxClient)
+    public ICassandraAdapter create(CQLSessionProvider session,
+                                    JmxClient jmxClient,
+                                    InetSocketAddress localNativeTransportAddress)
     {
         return null;
     }

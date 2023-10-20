@@ -19,7 +19,10 @@
 package org.apache.cassandra.sidecar.config;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -170,6 +173,21 @@ class SidecarConfigurationTest
         .withRootCauseInstanceOf(IllegalArgumentException.class)
         .withMessageContaining("Invalid client_auth configuration=\"notvalid\", " +
                                "valid values are (NONE,REQUEST,REQUIRED)");
+    }
+
+    @Test
+    void testDriverParameters() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_driver_params.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+
+        DriverConfiguration driverConfiguration = config.driverConfiguration();
+        assertThat(driverConfiguration).isNotNull();
+        assertThat(driverConfiguration.localDc()).isEqualTo("dc1");
+        List<InetSocketAddress> endpoints = Arrays.asList(new InetSocketAddress("127.0.0.1", 9042),
+                                                                  new InetSocketAddress("127.0.0.2", 9042));
+        assertThat(driverConfiguration.contactPoints()).isEqualTo(endpoints);
+        assertThat(driverConfiguration.numConnections()).isEqualTo(6);
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)

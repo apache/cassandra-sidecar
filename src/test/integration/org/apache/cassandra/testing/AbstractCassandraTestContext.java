@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.testing;
 
+import java.util.Objects;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,10 +69,24 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
             {
                 cluster.close();
             }
-            catch (ShutdownException shutdownException)
+            // ShutdownException may be thrown from a different classloader, and therefore the standard
+            // `catch (ShutdownException)` won't always work - compare the canonical names instead.
+            catch (Throwable t)
             {
-                LOGGER.warn("Encountered shutdown exception which closing the cluster", shutdownException);
+                if (Objects.equals(t.getClass().getCanonicalName(), ShutdownException.class.getCanonicalName()))
+                {
+                    LOGGER.warn("Encountered shutdown exception which closing the cluster", t);
+                }
+                else
+                {
+                    throw t;
+                }
             }
         }
+    }
+
+    public int clusterSize()
+    {
+        return annotation.numDcs() * annotation.nodesPerDc();
     }
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar;
+package org.apache.cassandra.sidecar.testing;
 
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +33,6 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -60,6 +59,7 @@ public class IntegrationTestModule extends AbstractModule
         /**
          * @return metadata of instances owned by the sidecar
          */
+        @Override
         @NotNull
         public List<InstanceMetadata> instances()
         {

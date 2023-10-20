@@ -16,27 +16,39 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.mocks;
+package org.apache.cassandra.sidecar.config.yaml;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.cassandra.sidecar.common.CQLSessionProvider;
-import org.apache.cassandra.sidecar.common.ICassandraAdapter;
-import org.apache.cassandra.sidecar.common.ICassandraFactory;
-import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.MinimumVersion;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.config.DriverConfiguration;
 
 /**
- * Placeholder for 4.1
+ * The driver configuration to use when connecting to Cassandra
  */
-@MinimumVersion("4.1.0")
-public class V41 implements ICassandraFactory
+public class DriverConfigurationImpl implements DriverConfiguration
 {
-    @Override
-    public ICassandraAdapter create(CQLSessionProvider session,
-                                    JmxClient jmxClient,
-                                    InetSocketAddress localNativeTransportAddress)
+    private final List<InetSocketAddress> contactPoints = new ArrayList<>();
+    private String localDc;
+    private int numConnections;
+
+    @JsonProperty("contact_points")
+    public List<InetSocketAddress> contactPoints()
     {
-        return null;
+        return contactPoints;
+    }
+
+    @JsonProperty("num_connections")
+    public int numConnections()
+    {
+        return numConnections;
+    }
+
+    @JsonProperty("local_dc")
+    public String localDc()
+    {
+        return localDc;
     }
 }

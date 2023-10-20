@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar;
+package org.apache.cassandra.sidecar.testing;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -33,8 +34,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +60,6 @@ import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
-import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
@@ -70,25 +72,29 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public abstract class IntegrationTestBase
 {
+    protected static final String TEST_KEYSPACE = "testkeyspace";
+    protected static final int DEFAULT_RF = 3;
+    private static final String TEST_TABLE_PREFIX = "testtable";
+    private static final AtomicInteger TEST_TABLE_ID = new AtomicInteger(0);
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     protected Vertx vertx;
     protected Server server;
     protected WebClient client;
-
-    protected static final String TEST_KEYSPACE = "testkeyspace";
-    private static final String TEST_TABLE_PREFIX = "testtable";
-
-    protected static final int DEFAULT_RF = 3;
-    private static final AtomicInteger TEST_TABLE_ID = new AtomicInteger(0);
     protected CassandraSidecarTestContext sidecarTestContext;
+    protected Injector injector;
 
     @BeforeEach
-    void setup(AbstractCassandraTestContext cassandraTestContext) throws InterruptedException
+    void setup(AbstractCassandraTestContext cassandraTestContext, TestInfo testInfo) throws InterruptedException
     {
         IntegrationTestModule integrationTestModule = new IntegrationTestModule();
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(integrationTestModule));
+        System.setProperty("cassandra.testtag", testInfo.getTestClass().get().getCanonicalName());
+        System.setProperty("suitename", testInfo.getDisplayName() + ": " + cassandraTestContext.version);
+        int clusterSize = cassandraTestContext.clusterSize();
+        injector = Guice.createInjector(Modules.override(new MainModule()).with(integrationTestModule));
         vertx = injector.getInstance(Vertx.class);
-        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT);
+        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
+                                                              getNumInstancesToManage(clusterSize));
+
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);
@@ -108,15 +114,28 @@ public abstract class IntegrationTestBase
         server.start()
               .onSuccess(s -> {
                   sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
-                  if (!sidecarTestContext.isClusterBuilt())
-                  {
-                      context.completeNow();
-                  }
+                  // Give everything a moment to get started and connected
+                  vertx.setTimer(TimeUnit.SECONDS.toMillis(1), id1 -> context.completeNow());
               })
               .onFailure(context::failNow);
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
+
+    /**
+     * Some tests may want to "manage" fewer instances than the complete cluster.
+     * Therefore, override this if your test wants to manage fewer than the complete cluster size.
+     * The Sidecar will be configured to manage the first N instances in the cluster by instance number.
+     * Defaults to the entire cluster.
+     *
+     * @param clusterSize the size of the cluster as defined by the integration test
+     * @return the number of instances to manage
+     */
+    protected int getNumInstancesToManage(int clusterSize)
+    {
+        return clusterSize;
+    }
+
 
     @AfterEach
     void tearDown() throws InterruptedException
@@ -133,11 +152,20 @@ public abstract class IntegrationTestBase
 
     protected void testWithClient(VertxTestContext context, Consumer<WebClient> tester) throws Exception
     {
+        testWithClient(context, true, tester);
+    }
+
+    protected void testWithClient(VertxTestContext context,
+                                  boolean waitForCluster,
+                                  Consumer<WebClient> tester)
+    throws Exception
+    {
+        WebClient client = WebClient.create(vertx);
         CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
                                                               .instanceFromId(1)
                                                               .delegate();
 
-        if (delegate.isUp())
+        if (delegate.isUp() || !waitForCluster)
         {
             tester.accept(client);
         }
@@ -162,9 +190,30 @@ public abstract class IntegrationTestBase
 
     protected void createTestKeyspace(Map<String, Integer> rf)
     {
-        Session session = maybeGetSession();
-        session.execute("CREATE KEYSPACE " + TEST_KEYSPACE +
-                        " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " + generateRfString(rf) + " };");
+        int attempts = 1;
+        ArrayList<Throwable> thrown = new ArrayList<>(5);
+        while (attempts <= 5)
+        {
+            try
+            {
+                Session session = maybeGetSession();
+
+                session.execute("CREATE KEYSPACE IF NOT EXISTS " + TEST_KEYSPACE +
+                                " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " +
+                                generateRfString(rf) + " };");
+                return;
+            }
+            catch (Throwable t)
+            {
+                thrown.add(t);
+                logger.debug("Failed to create keyspace {} on attempt {}", TEST_KEYSPACE, attempts);
+                attempts++;
+                Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+            }
+        }
+        RuntimeException rte = new RuntimeException("Could not create test keyspace after 5 attempts.");
+        thrown.forEach(rte::addSuppressed);
+        throw rte;
     }
 
     private String generateRfString(Map<String, Integer> dcToRf)
