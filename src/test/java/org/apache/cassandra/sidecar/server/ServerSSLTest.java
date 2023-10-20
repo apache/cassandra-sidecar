@@ -373,12 +373,25 @@ class ServerSSLTest
                   List<Future<Void>> futureList = new ArrayList<>();
                   for (int i = 0; i < serverVerticleInstances; i++)
                   {
-                      futureList.add(validateHealthEndpoint(client)
-                                     .onComplete(context.failing(throwable -> {
-                                         assertThat(throwable).isNotNull()
-                                                              .isInstanceOf(SSLHandshakeException.class)
-                                                              .hasMessageContaining("Failed to create SSL connection");
-                                     })));
+                      int finalI = i;
+                      futureList.add(validateHealthEndpoint(client).onComplete(ar -> {
+                          if (ar.succeeded())
+                          {
+                              context.failNow("The health endpoint request number " + finalI + "was expected " +
+                                              "to fail with the expired cert");
+                              return;
+                          }
+                          try
+                          {
+                              assertThat(ar.cause()).isNotNull()
+                                                    .isInstanceOf(SSLHandshakeException.class)
+                                                    .hasMessageContaining("Failed to create SSL connection");
+                          }
+                          catch (Throwable e)
+                          {
+                              context.failNow(e);
+                          }
+                      }));
                   }
                   return Future.all(futureList)
                                .onSuccess(v -> context.failNow("Success is not expected when the keystore is expired"))

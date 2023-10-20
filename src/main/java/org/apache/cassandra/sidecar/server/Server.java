@@ -60,9 +60,9 @@ public class Server
     protected final SidecarConfiguration sidecarConfiguration;
     protected final InstancesConfig instancesConfig;
     protected final Router router;
-    private final PeriodicTaskExecutor periodicTaskExecutor;
-    private final HttpServerOptionsProvider optionsProvider;
-    private final SidecarServerEvents serverEvents;
+    protected final PeriodicTaskExecutor periodicTaskExecutor;
+    protected final HttpServerOptionsProvider optionsProvider;
+    protected final SidecarServerEvents serverEvents;
     protected final List<ServerVerticle> deployedServerVerticles = new CopyOnWriteArrayList<>();
 
     @Inject
