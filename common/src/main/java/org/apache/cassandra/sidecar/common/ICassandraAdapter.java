@@ -18,7 +18,12 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.net.InetSocketAddress;
+
 import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.Statement;
 
 /**
  * Core Cassandra Adapter interface
@@ -33,7 +38,34 @@ public interface ICassandraAdapter
      */
     Metadata metadata();
 
+    /**
+     * The {@link NodeSettings} for this instance.
+     * @return the {@link NodeSettings} instance for this instance.
+     */
     NodeSettings nodeSettings();
+
+    /**
+     * Execute the provided query on the locally-managed Cassandra instance
+     * @param query the query to execute
+     * @return the {@link ResultSet}
+     */
+    default ResultSet executeLocal(String query)
+    {
+        return executeLocal(new SimpleStatement(query));
+    }
+
+    /**
+     * Execute the provided statement on the locally-managed Cassandra instance
+     * @param statement the statement to execute
+     * @return the {@link ResultSet}
+     */
+    ResultSet executeLocal(Statement statement);
+
+    /**
+     * The address on which the local instance is listening for CQL connections
+     * @return the {@link InetSocketAddress} representing the local address and port.
+     */
+    InetSocketAddress localNativeTransportPort();
 
     /**
      * @return the {@link StorageOperations} implementation for the Cassandra cluster

@@ -59,7 +59,7 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 @ExtendWith(VertxExtension.class)
 class ReplacementTest extends ReplacementBaseTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 5, newNodesPerDc = 1, network = true, gossip = true, buildCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 5, newNodesPerDc = 1, network = true, buildCluster = false)
     void retrieveMappingWithNodeReplacement(VertxTestContext context,
                                             ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {

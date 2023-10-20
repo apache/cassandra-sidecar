@@ -55,4 +55,9 @@ public interface SidecarConfiguration
      * @return the configuration for Cassandra input validation
      */
     CassandraInputValidationConfiguration cassandraInputValidationConfiguration();
+
+    /**
+     * @return the Cassandra Driver parameters to use when connecting to the cluster
+     */
+    DriverConfiguration driverConfiguration();
 }

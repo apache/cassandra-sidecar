@@ -57,7 +57,7 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
 @ExtendWith(VertxExtension.class)
 class LeavingTestMultiDCHalveCluster extends LeavingBaseTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 6, numDcs = 2, network = true, gossip = true, buildCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 6, numDcs = 2, network = true, buildCluster = false)
     void retrieveMappingMultiDCHalveClusterSize(VertxTestContext context,
                                                 ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {

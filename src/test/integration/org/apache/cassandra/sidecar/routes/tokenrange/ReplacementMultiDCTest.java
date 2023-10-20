@@ -58,7 +58,7 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 class ReplacementMultiDCTest extends ReplacementBaseTest
 {
     @CassandraIntegrationTest(
-    nodesPerDc = 5, newNodesPerDc = 1, numDcs = 2, network = true, gossip = true, buildCluster = false)
+    nodesPerDc = 5, newNodesPerDc = 1, numDcs = 2, network = true, buildCluster = false)
     void retrieveMappingWithNodeReplacementMultiDC(VertxTestContext context,
                                                    ConfigurableCassandraTestContext cassandraTestContext)
     throws Exception

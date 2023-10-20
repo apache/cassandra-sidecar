@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Sidecar should be able to load metadata even if the local instance is unavailable (CASSANDRASC-79)
  * Expose additional SSL configuration options for the Sidecar Service (CASSANDRASC-82)
  * Expose additional node settings (CASSANDRASC-84)
  * Sidecar does not handle keyspaces and table names with mixed case (CASSANDRASC-76)

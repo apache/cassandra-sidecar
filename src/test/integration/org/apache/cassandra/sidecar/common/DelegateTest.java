@@ -32,8 +32,8 @@ import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.api.NodeToolResult;
-import org.apache.cassandra.sidecar.IntegrationTestBase;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
@@ -73,13 +73,8 @@ class DelegateTest extends IntegrationTestBase
                                                                      .delegate();
         assertThat(adapterDelegate.isUp()).as("health check succeeds").isTrue();
 
-        // Disable binary
-        NodeToolResult nodetoolResult = sidecarTestContext.cluster().get(1).nodetoolResult("disablebinary");
-        assertThat(nodetoolResult.getRc())
-        .withFailMessage("Failed to disable binary:\nstdout:" + nodetoolResult.getStdout()
-                         + "\nstderr: " + nodetoolResult.getStderr())
-        .isEqualTo(0);
-
+        // Set up test listeners before disabling/enabling binary to avoid race conditions
+        // where the event happens before the consumer is registered.
         eventBus.localConsumer(ON_CASSANDRA_CQL_DISCONNECTED.address(), (Message<JsonObject> message) -> {
             int instanceId = message.body().getInteger("cassandraInstanceId");
             CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
@@ -100,6 +95,15 @@ class DelegateTest extends IntegrationTestBase
                                        .isTrue();
             cqlReady.flag();
         });
+
+        // Disable binary
+        NodeToolResult nodetoolResult = sidecarTestContext.cluster().get(1).nodetoolResult("disablebinary");
+        assertThat(nodetoolResult.getRc())
+        .withFailMessage("Failed to disable binary:\nstdout:" + nodetoolResult.getStdout()
+                         + "\nstderr: " + nodetoolResult.getStderr())
+        .isEqualTo(0);
+        // NOTE: enable binary happens inside the disable binary handler above, which then will trigger the
+        // cqlReady flag.
     }
 
     @CassandraIntegrationTest(jmx = false, nodesPerDc = 3)

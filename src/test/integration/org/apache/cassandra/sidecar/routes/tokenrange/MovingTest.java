@@ -56,7 +56,7 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
 class MovingTest extends MovingBaseTest
 {
 
-    @CassandraIntegrationTest(nodesPerDc = 5, network = true, gossip = true, buildCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 5, network = true, buildCluster = false)
     void retrieveMappingWithKeyspaceMovingNode(VertxTestContext context,
                                                ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {

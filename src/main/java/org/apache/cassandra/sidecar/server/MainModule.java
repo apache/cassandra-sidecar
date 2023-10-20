@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 
+import com.datastax.driver.core.NettyOptions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -42,6 +43,7 @@ import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
+import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
@@ -78,6 +80,8 @@ import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.MD5ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
+
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
  * Provides main binding for more complex Guice dependencies
@@ -257,14 +261,23 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
+    public CQLSessionProvider cqlSessionProvider(Vertx vertx, SidecarConfiguration sidecarConfiguration)
+    {
+        CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(sidecarConfiguration,
+                                                                               new NettyOptions());
+        vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
+        return cqlSessionProvider;
+    }
+
+    @Provides
+    @Singleton
     public InstancesConfig instancesConfig(Vertx vertx,
                                            SidecarConfiguration configuration,
                                            CassandraVersionProvider cassandraVersionProvider,
                                            SidecarVersionProvider sidecarVersionProvider,
-                                           DnsResolver dnsResolver)
+                                           DnsResolver dnsResolver,
+                                           CQLSessionProvider cqlSessionProvider)
     {
-        int healthCheckFrequencyMillis = configuration.healthCheckConfiguration().checkIntervalMillis();
-
         List<InstanceMetadata> instanceMetadataList =
         configuration.cassandraInstances()
                      .stream()
@@ -273,9 +286,9 @@ public class MainModule extends AbstractModule
                          return buildInstanceMetadata(vertx,
                                                       cassandraInstance,
                                                       cassandraVersionProvider,
-                                                      healthCheckFrequencyMillis,
                                                       sidecarVersionProvider.sidecarVersion(),
-                                                      jmxConfiguration);
+                                                      jmxConfiguration,
+                                                      cqlSessionProvider);
                      })
                      .collect(Collectors.toList());
 
@@ -362,25 +375,24 @@ public class MainModule extends AbstractModule
      * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
      * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
      *
-     * @param vertx                      the vertx instance
-     * @param cassandraInstance          the cassandra instance configuration
-     * @param versionProvider            a Cassandra version provider
-     * @param healthCheckFrequencyMillis the health check frequency configuration in milliseconds
-     * @param sidecarVersion             the version of the Sidecar from the current binary
-     * @param jmxConfiguration           the configuration for the JMX Client
+     * @param vertx             the vertx instance
+     * @param cassandraInstance the cassandra instance configuration
+     * @param versionProvider   a Cassandra version provider
+     * @param sidecarVersion    the version of the Sidecar from the current binary
+     * @param jmxConfiguration  the configuration for the JMX Client
+     * @param session           the CQL Session provider
      * @return the build instance metadata object
      */
     private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
                                                           InstanceConfiguration cassandraInstance,
                                                           CassandraVersionProvider versionProvider,
-                                                          int healthCheckFrequencyMillis,
                                                           String sidecarVersion,
-                                                          JmxConfiguration jmxConfiguration)
+                                                          JmxConfiguration jmxConfiguration,
+                                                          CQLSessionProvider session)
     {
         String host = cassandraInstance.host();
         int port = cassandraInstance.port();
 
-        CQLSessionProvider session = new CQLSessionProvider(host, port, healthCheckFrequencyMillis);
         JmxClient jmxClient = JmxClient.builder()
                                        .host(cassandraInstance.jmxHost())
                                        .port(cassandraInstance.jmxPort())
@@ -395,7 +407,9 @@ public class MainModule extends AbstractModule
                                                                          versionProvider,
                                                                          session,
                                                                          jmxClient,
-                                                                         sidecarVersion);
+                                                                         sidecarVersion,
+                                                                         host,
+                                                                         port);
         return InstanceMetadataImpl.builder()
                                    .id(cassandraInstance.id())
                                    .host(host)

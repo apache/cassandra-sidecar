@@ -193,13 +193,7 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
         for (IUpgradeableInstance nodeToRemove : removedNodes)
         {
             ClusterUtils.stopUnchecked(nodeToRemove);
-            String remAddress = nodeToRemove.config().broadcastAddress().getAddress().getHostAddress();
-
-            List<ClusterUtils.RingInstanceDetails> ring = ClusterUtils.ring(seed);
-            List<ClusterUtils.RingInstanceDetails> match = ring.stream()
-                                                               .filter((d) -> d.getAddress().equals(remAddress))
-                                                               .collect(Collectors.toList());
-            assertThat(match.stream().anyMatch(r -> r.getStatus().equals("Down"))).isTrue();
+            ClusterUtils.awaitRingStatus(seed, nodeToRemove, "Down");
         }
     }
 

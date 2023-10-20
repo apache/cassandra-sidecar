@@ -58,7 +58,7 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 @ExtendWith(VertxExtension.class)
 public class JoiningTestDoubleCluster extends JoiningBaseTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 5, newNodesPerDc = 5, network = true, gossip = true, buildCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 5, newNodesPerDc = 5, network = true, buildCluster = false)
     void retrieveMappingWithDoubleClusterSize(VertxTestContext context,
                                               ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {

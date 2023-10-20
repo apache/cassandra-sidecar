@@ -164,9 +164,6 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
     @Override
     public String toString()
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append(major).append('.').append(minor).append('.').append(patch);
-
-        return sb.toString();
+        return major + "." + minor + "." + patch;
     }
 }

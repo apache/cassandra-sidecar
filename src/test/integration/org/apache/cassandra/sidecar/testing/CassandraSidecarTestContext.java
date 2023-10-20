@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.test;
+package org.apache.cassandra.sidecar.testing;
 
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
@@ -24,8 +24,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import com.datastax.driver.core.NettyOptions;
 import com.datastax.driver.core.Session;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.distributed.UpgradeableCluster;
@@ -33,6 +33,7 @@ import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.shared.JMXUtil;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
+import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
@@ -53,24 +54,27 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class CassandraSidecarTestContext implements AutoCloseable
 {
+    private static final SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
     public final SimpleCassandraVersion version;
     private final CassandraVersionProvider versionProvider;
     private final DnsResolver dnsResolver;
     private final AbstractCassandraTestContext abstractCassandraTestContext;
     private final Vertx vertx;
-    public InstancesConfig instancesConfig;
-    private List<CQLSessionProvider> sessionProviders;
-    private List<JmxClient> jmxClients;
-    private static final SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
+    private final int numInstancesToManage;
     private final List<InstanceConfigListener> instanceConfigListeners;
+    public InstancesConfig instancesConfig;
+    private List<JmxClient> jmxClients;
+    private CQLSessionProvider sessionProvider;
 
     private CassandraSidecarTestContext(Vertx vertx,
                                         AbstractCassandraTestContext abstractCassandraTestContext,
                                         SimpleCassandraVersion version,
                                         CassandraVersionProvider versionProvider,
-                                        DnsResolver dnsResolver)
+                                        DnsResolver dnsResolver,
+                                        int numInstancesToManage)
     {
         this.vertx = vertx;
+        this.numInstancesToManage = numInstancesToManage;
         this.instanceConfigListeners = new ArrayList<>();
         this.abstractCassandraTestContext = abstractCassandraTestContext;
         this.version = version;
@@ -80,7 +84,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
 
     public static CassandraSidecarTestContext from(Vertx vertx,
                                                    AbstractCassandraTestContext cassandraTestContext,
-                                                   DnsResolver dnsResolver)
+                                                   DnsResolver dnsResolver,
+                                                   int numInstancesToManage)
     {
         org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
         SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major,
@@ -91,13 +96,26 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                                cassandraTestContext,
                                                versionParsed,
                                                versionProvider,
-                                               dnsResolver);
+                                               dnsResolver,
+                                               numInstancesToManage);
     }
 
     public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
     {
         return new CassandraVersionProvider.Builder()
                .add(new CassandraFactory(dnsResolver, svp.sidecarVersion())).build();
+    }
+
+    private static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
+    {
+        try
+        {
+            return config.getInt(configName);
+        }
+        catch (NullPointerException npe)
+        {
+            return defaultValue;
+        }
     }
 
     public void registerInstanceConfigListener(InstanceConfigListener listener)
@@ -127,8 +145,9 @@ public class CassandraSidecarTestContext implements AutoCloseable
 
     public InstancesConfig instancesConfig()
     {
+        // rebuild instances config if cluster changed
         if (instancesConfig == null
-            || instancesConfig.instances().size() != cluster().size()) // rebuild instances config if cluster changed
+            || instancesConfig.instances().size() != numInstancesToManage)
         {
             // clean-up any open sessions or client resources
             close();
@@ -139,18 +158,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
 
     public Session session()
     {
-        return session(0);
-    }
-
-    public Session session(int instance)
-    {
-        if (sessionProviders == null)
-        {
-            setInstancesConfig();
-        }
-        CQLSessionProvider cqlSessionProvider = sessionProviders.get(instance);
-        assertThat(cqlSessionProvider).as("cqlSessionProvider for instance=" + instance).isNotNull();
-        return cqlSessionProvider.localCql();
+        return sessionProvider.get();
     }
 
     @Override
@@ -165,10 +173,6 @@ public class CassandraSidecarTestContext implements AutoCloseable
     @Override
     public void close()
     {
-        if (sessionProviders != null)
-        {
-            sessionProviders.forEach(CQLSessionProvider::close);
-        }
         if (instancesConfig != null)
         {
             instancesConfig.instances().forEach(instance -> instance.delegate().close());
@@ -189,14 +193,6 @@ public class CassandraSidecarTestContext implements AutoCloseable
         return jmxClients.get(instance);
     }
 
-    /**
-     * A listener for {@link InstancesConfig} state changes
-     */
-    public interface InstanceConfigListener
-    {
-        void onInstancesConfigChange(InstancesConfig instancesConfig);
-    }
-
     private void setInstancesConfig()
     {
         this.instancesConfig = buildInstancesConfig(versionProvider, dnsResolver);
@@ -211,18 +207,16 @@ public class CassandraSidecarTestContext implements AutoCloseable
     {
         UpgradeableCluster cluster = cluster();
         List<InstanceMetadata> metadata = new ArrayList<>();
-        sessionProviders = new ArrayList<>();
         jmxClients = new ArrayList<>();
-        for (int i = 0; i < cluster.size(); i++)
+        List<InetSocketAddress> addresses = buildContactList(cluster);
+        sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
+                                                     0, SharedExecutorNettyOptions.INSTANCE);
+        for (int i = 0; i < numInstancesToManage; i++)
         {
             IUpgradeableInstance instance = cluster.get(i + 1); // 1-based indexing to match node names;
             IInstanceConfig config = instance.config();
             String hostName = JMXUtil.getJmxHost(config);
             int nativeTransportPort = tryGetIntConfig(config, "native_transport_port", 9042);
-            InetSocketAddress address = InetSocketAddress.createUnresolved(hostName,
-                                                                           nativeTransportPort);
-            CQLSessionProvider sessionProvider = new CQLSessionProvider(address, new NettyOptions());
-            this.sessionProviders.add(sessionProvider);
             // The in-jvm dtest framework sometimes returns a cluster before all the jmx infrastructure is initialized.
             // In these cases, we want to wait longer than the default retry/delay settings to connect.
             JmxClient jmxClient = JmxClient.builder()
@@ -240,12 +234,15 @@ public class CassandraSidecarTestContext implements AutoCloseable
             assertThat(dataDirParentPath).isNotNull();
             Path stagingPath = dataDirParentPath.resolve("staging");
             String stagingDir = stagingPath.toFile().getAbsolutePath();
+
             CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
                                                                              i + 1,
                                                                              versionProvider,
                                                                              sessionProvider,
                                                                              jmxClient,
-                                                                             "1.0-TEST");
+                                                                             "1.0-TEST",
+                                                                             hostName,
+                                                                             nativeTransportPort);
             metadata.add(InstanceMetadataImpl.builder()
                                              .id(i + 1)
                                              .host(config.broadcastAddress().getAddress().getHostAddress())
@@ -258,15 +255,20 @@ public class CassandraSidecarTestContext implements AutoCloseable
         return new InstancesConfigImpl(metadata, dnsResolver);
     }
 
-    private static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
+    private List<InetSocketAddress> buildContactList(UpgradeableCluster cluster)
     {
-        try
-        {
-            return config.getInt(configName);
-        }
-        catch (NullPointerException npe)
-        {
-            return defaultValue;
-        }
+        return cluster.stream()
+                      .map(i -> new InetSocketAddress(i.config().broadcastAddress().getAddress(),
+                                                      tryGetIntConfig(i.config(), "native_transport_port", 9042)))
+                      .limit(numInstancesToManage)
+                      .collect(Collectors.toList());
+    }
+
+    /**
+     * A listener for {@link InstancesConfig} state changes
+     */
+    public interface InstanceConfigListener
+    {
+        void onInstancesConfigChange(InstancesConfig instancesConfig);
     }
 }

@@ -60,7 +60,7 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
 {
     @CassandraIntegrationTest(
-    nodesPerDc = 5, newNodesPerDc = 1, numDcs = 2, network = true, gossip = true, buildCluster = false)
+    nodesPerDc = 5, newNodesPerDc = 1, numDcs = 2, network = true, buildCluster = false)
     void retrieveMappingsSingleDCReplicatedKeyspace(VertxTestContext context,
                                                     ConfigurableCassandraTestContext cassandraTestContext)
     throws Exception

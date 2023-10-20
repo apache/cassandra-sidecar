@@ -18,12 +18,19 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
+import java.net.InetSocketAddress;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.DriverUtils;
+import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.ClusterMembershipOperations;
 import org.apache.cassandra.sidecar.common.ICassandraAdapter;
@@ -49,16 +56,19 @@ public class CassandraAdapter implements ICassandraAdapter
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraAdapter.class);
     protected final DnsResolver dnsResolver;
     protected final JmxClient jmxClient;
-    private final CQLSessionProvider session;
+    private final CQLSessionProvider cqlSessionProvider;
     private final String sidecarVersion;
+    private final InetSocketAddress localNativeTransportAddress;
+    private volatile Host host;
 
-    public CassandraAdapter(DnsResolver dnsResolver, JmxClient jmxClient, CQLSessionProvider session,
-                            String sidecarVersion)
+    public CassandraAdapter(DnsResolver dnsResolver, JmxClient jmxClient, CQLSessionProvider cqlSessionProvider,
+                            String sidecarVersion, InetSocketAddress localNativeTransportAddress)
     {
         this.dnsResolver = dnsResolver;
         this.jmxClient = jmxClient;
-        this.session = session;
+        this.cqlSessionProvider = cqlSessionProvider;
         this.sidecarVersion = sidecarVersion;
+        this.localNativeTransportAddress = localNativeTransportAddress;
     }
 
     /**
@@ -68,7 +78,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @Nullable
     public Metadata metadata()
     {
-        Session activeSession = session.localCql();
+        Session activeSession = cqlSessionProvider.get();
         if (activeSession == null)
         {
             LOGGER.warn("There is no active session to Cassandra");
@@ -97,21 +107,20 @@ public class CassandraAdapter implements ICassandraAdapter
     @Nullable
     public NodeSettings nodeSettings()
     {
-        Session activeSession = session.localCql();
-        if (activeSession == null)
-        {
-            return null;
-        }
-
-        Row oneResult = activeSession.execute("SELECT "
+        ResultSet rs = executeLocal("SELECT "
                                               + RELEASE_VERSION_COLUMN_NAME + ", "
                                               + PARTITIONER_COLUMN_NAME + ", "
                                               + DATA_CENTER_COLUMN_NAME + ", "
                                               + RPC_ADDRESS_COLUMN_NAME + ", "
                                               + RPC_PORT_COLUMN_NAME + ", "
                                               + TOKENS_COLUMN_NAME
-                                              + " FROM system.local")
-                                     .one();
+                                              + " FROM system.local");
+        if (rs == null)
+        {
+            return null;
+        }
+
+        Row oneResult = rs.one();
 
         return NodeSettings.builder()
                            .releaseVersion(oneResult.getString(RELEASE_VERSION_COLUMN_NAME))
@@ -122,6 +131,49 @@ public class CassandraAdapter implements ICassandraAdapter
                            .rpcAddress(oneResult.getInet(RPC_ADDRESS_COLUMN_NAME))
                            .rpcPort(oneResult.getInt(RPC_PORT_COLUMN_NAME))
                            .build();
+    }
+
+    @Override
+    public ResultSet executeLocal(Statement statement)
+    {
+        Session activeSession = cqlSessionProvider.get();
+        Metadata metadata = metadata();
+        // Both of the above log about lack of session/metadata, so no need to log again
+        if (activeSession == null || metadata == null)
+        {
+            return null;
+        }
+
+        Host host = getHost(metadata);
+        if (host == null)
+        {
+            LOGGER.debug("Could not find host in metadata for address {}", localNativeTransportAddress);
+            return null;
+        }
+        statement.setConsistencyLevel(ConsistencyLevel.ONE);
+        statement.setHost(host);
+        return activeSession.execute(statement);
+    }
+
+    private Host getHost(Metadata metadata)
+    {
+        if (host == null)
+        {
+            synchronized (this)
+            {
+                if (host == null)
+                {
+                    host = DriverUtils.getHost(metadata, localNativeTransportAddress);
+                }
+            }
+        }
+        return host;
+    }
+
+    @Override
+    public InetSocketAddress localNativeTransportPort()
+    {
+        return localNativeTransportAddress;
     }
 
     /**

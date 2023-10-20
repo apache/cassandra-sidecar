@@ -42,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 public class JoiningTest extends JoiningBaseTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 3, newNodesPerDc = 1, gossip = true, network = true)
+    @CassandraIntegrationTest(nodesPerDc = 3, newNodesPerDc = 1, network = true)
     void retrieveMappingWithKeyspaceWithAddNode(VertxTestContext context) throws Exception
     {
         createTestKeyspace(ImmutableMap.of("replication_factor", DEFAULT_RF));

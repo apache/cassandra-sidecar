@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar;
+package org.apache.cassandra.sidecar.testing;
 
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +33,6 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -55,11 +54,27 @@ public class IntegrationTestModule extends AbstractModule
         return new WrapperInstancesConfig();
     }
 
+    @Provides
+    @Singleton
+    public SidecarConfiguration configuration()
+    {
+        ServiceConfiguration conf = ServiceConfigurationImpl.builder()
+                                                            .host("127.0.0.1")
+                                                            .port(0) // let the test find an available port
+                                                            .build();
+        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(50, 500);
+        return SidecarConfigurationImpl.builder()
+                                       .serviceConfiguration(conf)
+                                       .healthCheckConfiguration(healthCheckConfiguration)
+                                       .build();
+    }
+
     class WrapperInstancesConfig implements InstancesConfig
     {
         /**
          * @return metadata of instances owned by the sidecar
          */
+        @Override
         @NotNull
         public List<InstanceMetadata> instances()
         {
@@ -91,20 +106,5 @@ public class IntegrationTestModule extends AbstractModule
         {
             return cassandraTestContext.instancesConfig().instanceFromHost(host);
         }
-    }
-
-    @Provides
-    @Singleton
-    public SidecarConfiguration configuration()
-    {
-        ServiceConfiguration conf = ServiceConfigurationImpl.builder()
-                                                            .host("127.0.0.1")
-                                                            .port(0) // let the test find an available port
-                                                            .build();
-        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(50, 500);
-        return SidecarConfigurationImpl.builder()
-                                       .serviceConfiguration(conf)
-                                       .healthCheckConfiguration(healthCheckConfiguration)
-                                       .build();
     }
 }
