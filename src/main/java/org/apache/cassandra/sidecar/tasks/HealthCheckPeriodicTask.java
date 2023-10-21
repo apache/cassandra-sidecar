@@ -103,7 +103,7 @@ public class HealthCheckPeriodicTask implements PeriodicTask
                     promise.tryComplete();
                 }
             }
-        }, true));
+        }, false));
     }
 
     @Override

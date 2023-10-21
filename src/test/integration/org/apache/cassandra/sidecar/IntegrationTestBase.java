@@ -90,10 +90,20 @@ public abstract class IntegrationTestBase
         server = injector.getInstance(Server.class);
 
         VertxTestContext context = new VertxTestContext();
+
+        if (sidecarTestContext.isClusterBuilt())
+        {
+            vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address(),
+                                           message -> context.completeNow());
+        }
+
         server.start()
               .onSuccess(s -> {
                   sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
-                  context.completeNow();
+                  if (!sidecarTestContext.isClusterBuilt())
+                  {
+                      context.completeNow();
+                  }
               })
               .onFailure(context::failNow);
 

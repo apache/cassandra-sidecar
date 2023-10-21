@@ -40,10 +40,10 @@ public interface ServiceConfiguration
     String host();
 
     /**
-     * Returns a list of interfaces where the Sidecar process will bind and listen for connections. Defaults to
+     * Returns a list of socket addresses where the Sidecar process will bind and listen for connections. Defaults to
      * the configured {@link #host()} and {@link #port()}.
      *
-     * @return a list of interfaces where Sidecar will listen
+     * @return a list of socket addresses where Sidecar will listen
      */
     default List<SocketAddress> listenSocketAddresses()
     {

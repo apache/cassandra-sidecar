@@ -156,8 +156,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         Session activeSession = cqlSessionProvider.localCql();
         if (activeSession == null)
         {
-            LOGGER.info("No local CQL session is available for cassandraInstanceId={}. Cassandra is down presumably.",
-                        cassandraInstanceId);
+            LOGGER.info("No local CQL session is available for cassandraInstanceId={}. " +
+                        "Cassandra instance is down presumably.", cassandraInstanceId);
             markAsDownAndMaybeNotify();
             return;
         }
