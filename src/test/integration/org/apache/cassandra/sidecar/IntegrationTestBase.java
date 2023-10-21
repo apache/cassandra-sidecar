@@ -88,10 +88,17 @@ public abstract class IntegrationTestBase
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);
+        InstancesConfig instancesConfig = injector.getInstance(InstancesConfig.class);
 
         VertxTestContext context = new VertxTestContext();
         server.start()
               .onSuccess(s -> {
+                  if (sidecarTestContext.isClusterBuilt())
+                  {
+                      // Perform a health check to make sure adapters are available when the test
+                      // starts
+                      healthCheck(instancesConfig);
+                  }
                   sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
                   context.completeNow();
               })
