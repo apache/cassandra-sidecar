@@ -145,7 +145,7 @@ public class Server
      *
      * @return a future completed with the result
      */
-    public Future<CompositeFuture> close()
+    public Future<Void> close()
     {
         LOGGER.info("Stopping Cassandra Sidecar");
         deployedServerVerticles.clear();
@@ -163,9 +163,8 @@ public class Server
                                                                     instance.delegate().close();
                                                                     promise.complete(null);
                                                                 })));
-        closingFutures.add(executorPools.close());
-
         return Future.all(closingFutures)
+                     .compose(v1 -> executorPools.close())
                      .onComplete(v -> vertx.close())
                      .onSuccess(f -> LOGGER.info("Successfully stopped Cassandra Sidecar"));
     }

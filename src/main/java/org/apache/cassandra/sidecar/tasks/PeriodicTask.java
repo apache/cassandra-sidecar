@@ -59,6 +59,8 @@ public interface PeriodicTask
     /**
      * Defines the task body.
      * The method can be considered as executing in a single thread.
+     *
+     * @param promise a promise when the execution completes
      */
     void execute(Promise<Void> promise);
 

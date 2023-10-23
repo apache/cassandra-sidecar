@@ -44,6 +44,7 @@ import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
@@ -88,19 +89,25 @@ public abstract class IntegrationTestBase
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);
-        InstancesConfig instancesConfig = injector.getInstance(InstancesConfig.class);
 
         VertxTestContext context = new VertxTestContext();
+
+        if (sidecarTestContext.isClusterBuilt())
+        {
+            MessageConsumer<Object> cqlReadyConsumer = vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address());
+            cqlReadyConsumer.handler(message -> {
+                cqlReadyConsumer.unregister();
+                context.completeNow();
+            });
+        }
+
         server.start()
               .onSuccess(s -> {
-                  if (sidecarTestContext.isClusterBuilt())
-                  {
-                      // Perform a health check to make sure adapters are available when the test
-                      // starts
-                      healthCheck(instancesConfig);
-                  }
                   sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
-                  context.completeNow();
+                  if (!sidecarTestContext.isClusterBuilt())
+                  {
+                      context.completeNow();
+                  }
               })
               .onFailure(context::failNow);
 
