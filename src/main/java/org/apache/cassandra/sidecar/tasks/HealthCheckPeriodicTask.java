@@ -83,6 +83,11 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     public void execute(Promise<Void> promise)
     {
         List<InstanceMetadata> instances = instancesConfig.instances();
+        if (instances == null || instances.isEmpty())
+        {
+            promise.complete();
+            return;
+        }
         AtomicInteger counter = new AtomicInteger(instances.size());
         instances.forEach(instanceMetadata -> internalPool.executeBlocking(p -> {
             try

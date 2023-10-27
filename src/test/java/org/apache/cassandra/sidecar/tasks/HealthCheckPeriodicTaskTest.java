@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -79,6 +80,25 @@ class HealthCheckPeriodicTaskTest
         assertThat(healthCheck.initialDelay()).isEqualTo(10);
         assertThat(healthCheck.delay()).isEqualTo(1000);
         assertThat(healthCheck.name()).isEqualTo("Health Check");
+    }
+
+    @Test
+    void testHealthCheckPromiseCompletesWhenInstancesAreNull(VertxTestContext context)
+    {
+        when(mockInstancesConfig.instances()).thenReturn(null);
+        Promise<Void> promise = Promise.promise();
+        healthCheck.execute(promise);
+        promise.future().onComplete(context.succeedingThenComplete());
+    }
+
+    @Test
+    void testHealthCheckPromiseCompletesWhenNoInstancesAreConfigured(VertxTestContext context)
+    {
+        List<InstanceMetadata> mockInstanceMetadata = Collections.emptyList();
+        when(mockInstancesConfig.instances()).thenReturn(mockInstanceMetadata);
+        Promise<Void> promise = Promise.promise();
+        healthCheck.execute(promise);
+        promise.future().onComplete(context.succeedingThenComplete());
     }
 
     @Test
