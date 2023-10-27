@@ -18,17 +18,19 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 
@@ -82,33 +84,27 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     @Override
     public void execute(Promise<Void> promise)
     {
-        List<InstanceMetadata> instances = instancesConfig.instances();
-        if (instances == null || instances.isEmpty())
-        {
-            promise.complete();
-            return;
-        }
-        AtomicInteger counter = new AtomicInteger(instances.size());
-        instances.forEach(instanceMetadata -> internalPool.executeBlocking(p -> {
-            try
-            {
-                instanceMetadata.delegate().healthCheck();
-                p.complete();
-            }
-            catch (Throwable cause)
-            {
-                p.fail(cause);
-                LOGGER.error("Unable to complete health check on instance={}",
-                             instanceMetadata.id(), cause);
-            }
-            finally
-            {
-                if (counter.decrementAndGet() == 0)
-                {
-                    promise.tryComplete();
-                }
-            }
-        }, false));
+        List<Future<?>> futures = Optional.ofNullable(instancesConfig.instances()).orElse(Collections.emptyList())
+                                          .stream()
+                                          .map(instanceMetadata -> internalPool.executeBlocking(p -> {
+                                              try
+                                              {
+                                                  instanceMetadata.delegate().healthCheck();
+                                                  p.complete();
+                                              }
+                                              catch (Throwable cause)
+                                              {
+                                                  p.fail(cause);
+                                                  LOGGER.error("Unable to complete health check on instance={}",
+                                                               instanceMetadata.id(), cause);
+                                              }
+                                          }, false))
+                                          .collect(Collectors.toList());
+
+        // join always wait until all its futures are completed and will not fail as soon as one of the future fails
+        Future.join(futures)
+              .onSuccess(v -> promise.complete())
+              .onFailure(promise::fail);
     }
 
     @Override

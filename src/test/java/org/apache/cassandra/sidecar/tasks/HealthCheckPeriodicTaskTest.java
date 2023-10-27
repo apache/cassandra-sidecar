@@ -127,7 +127,7 @@ class HealthCheckPeriodicTaskTest
         when(mockInstancesConfig.instances()).thenReturn(mockInstanceMetadata);
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
-        promise.future().onComplete(context.succeedingThenComplete());
+        promise.future().onComplete(context.failingThenComplete());
     }
 
     @Test
