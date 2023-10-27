@@ -101,7 +101,7 @@ public class HealthCheckPeriodicTask implements PeriodicTask
                                           }, false))
                                           .collect(Collectors.toList());
 
-        // join always wait until all its futures are completed and will not fail as soon as one of the future fails
+        // join always waits until all its futures are completed and will not fail as soon as one of the future fails
         Future.join(futures)
               .onSuccess(v -> promise.complete())
               .onFailure(promise::fail);
