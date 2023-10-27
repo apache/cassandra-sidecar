@@ -115,9 +115,9 @@ abstract class SidecarClientTest
     void testSidecarHealthOk() throws Exception
     {
         MockResponse response = new MockResponse()
-                .setResponseCode(200)
-                .setHeader("content-type", "application/json")
-                .setBody("{\"status\":\"OK\"}");
+                                .setResponseCode(200)
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"status\":\"OK\"}");
         enqueue(response);
 
         HealthResponse result = client.sidecarHealth().get(30, TimeUnit.SECONDS);
@@ -132,14 +132,14 @@ abstract class SidecarClientTest
     void testSidecarHealthNotOk() throws Exception
     {
         MockResponse response = new MockResponse()
-                .setResponseCode(503)
-                .setHeader("content-type", "application/json")
-                .setBody("{\"status\":\"NOT_OK\"}");
+                                .setResponseCode(503)
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"status\":\"NOT_OK\"}");
         enqueue(response);
 
         assertThatThrownBy(() -> client.sidecarHealth().get(30, TimeUnit.SECONDS))
-                .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RetriesExhaustedException.class);
+        .isInstanceOf(ExecutionException.class)
+        .hasCauseInstanceOf(RetriesExhaustedException.class);
 
         validateResponseServed(ApiEndpointsV1.HEALTH_ROUTE);
     }
@@ -148,9 +148,9 @@ abstract class SidecarClientTest
     void testCassandraHealthOk() throws Exception
     {
         MockResponse response = new MockResponse()
-                .setResponseCode(200)
-                .setHeader("content-type", "application/json")
-                .setBody("{\"status\":\"OK\"}");
+                                .setResponseCode(200)
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"status\":\"OK\"}");
         enqueue(response);
 
         HealthResponse result = client.cassandraHealth().get(30, TimeUnit.SECONDS);
@@ -165,14 +165,14 @@ abstract class SidecarClientTest
     void testCassandraHealthNotOk() throws Exception
     {
         MockResponse response = new MockResponse()
-                .setResponseCode(503)
-                .setHeader("content-type", "application/json")
-                .setBody("{\"status\":\"NOT_OK\"}");
+                                .setResponseCode(503)
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"status\":\"NOT_OK\"}");
         enqueue(response);
 
         assertThatThrownBy(() -> client.cassandraHealth().get(30, TimeUnit.SECONDS))
-                .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RetriesExhaustedException.class);
+        .isInstanceOf(ExecutionException.class)
+        .hasCauseInstanceOf(RetriesExhaustedException.class);
 
         validateResponseServed(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE);
     }
@@ -364,15 +364,9 @@ abstract class SidecarClientTest
         assertThat(readReplica.replicasByDatacenter()).containsKey("datacenter1");
         assertThat(readReplica.replicasByDatacenter().get("datacenter1")).containsExactly(nodeWithPort);
         assertThat(result.replicaMetadata()).hasSize(1);
-        TokenRangeReplicasResponse.ReplicaMetadata instanceMetadata =
-        result.replicaMetadata().stream()
-              .filter(r -> r.address().equals(nodeAddress) && r.port() == port)
-              .findFirst()
-              .get();
+        TokenRangeReplicasResponse.ReplicaMetadata instanceMetadata = result.replicaMetadata().get(nodeWithPort);
         assertThat(instanceMetadata.state()).isEqualTo("Normal");
         assertThat(instanceMetadata.status()).isEqualTo("Up");
-        assertThat(instanceMetadata.address()).isEqualTo("127.0.0.1");
-        assertThat(instanceMetadata.port()).isEqualTo(7000);
         assertThat(instanceMetadata.fqdn()).isEqualTo("localhost");
         assertThat(instanceMetadata.datacenter()).isEqualTo("datacenter1");
 
@@ -1002,36 +996,37 @@ abstract class SidecarClientTest
         MockResponse response = new MockResponse().setResponseCode(ACCEPTED.code()).setBody(nodeSettingsAsString);
         enqueue(response);
 
-        RequestContext requestContext = client.requestBuilder()
-                                     .request(new NodeSettingsRequest())
-                                     .retryPolicy(new RetryPolicy()
-                                     {
-                                         @Override
-                                         public void onResponse(CompletableFuture<HttpResponse> responseFuture,
-                                                                Request request,
-                                                                HttpResponse response,
-                                                                Throwable throwable,
-                                                                int attempts,
-                                                                boolean canRetryOnADifferentHost,
-                                                                RetryAction retryAction)
-                                         {
-                                             if (response != null && response.statusCode() == ACCEPTED.code())
-                                             {
-                                                 responseFuture.complete(response);
-                                             }
-                                             else
-                                             {
-                                                 client.defaultRetryPolicy().onResponse(responseFuture,
-                                                                                        request,
-                                                                                        response,
-                                                                                        throwable,
-                                                                                        attempts,
-                                                                                        canRetryOnADifferentHost,
-                                                                                        retryAction);
-                                             }
-                                         }
-                                     })
-                                     .build();
+        RequestContext requestContext =
+        client.requestBuilder()
+              .request(new NodeSettingsRequest())
+              .retryPolicy(new RetryPolicy()
+              {
+                  @Override
+                  public void onResponse(CompletableFuture<HttpResponse> responseFuture,
+                                         Request request,
+                                         HttpResponse response,
+                                         Throwable throwable,
+                                         int attempts,
+                                         boolean canRetryOnADifferentHost,
+                                         RetryAction retryAction)
+                  {
+                      if (response != null && response.statusCode() == ACCEPTED.code())
+                      {
+                          responseFuture.complete(response);
+                      }
+                      else
+                      {
+                          client.defaultRetryPolicy().onResponse(responseFuture,
+                                                                 request,
+                                                                 response,
+                                                                 throwable,
+                                                                 attempts,
+                                                                 canRetryOnADifferentHost,
+                                                                 retryAction);
+                      }
+                  }
+              })
+              .build();
         NodeSettings result = client.<NodeSettings>executeRequestAsync(requestContext).get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.partitioner()).isEqualTo("test-partitioner");

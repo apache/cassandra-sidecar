@@ -34,8 +34,11 @@ import org.junit.jupiter.api.Test;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.assertj.core.api.InstanceOfAssertFactories;
 
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.from;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.startsWith;
@@ -111,23 +114,12 @@ public class TokenRangeReplicaProviderTest
         assertThat(result.readReplicas().get(0).replicasByDatacenter().size()).isEqualTo(1);
         assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
         assertThat(result.replicaMetadata().size()).isEqualTo(3);
-        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadata = filterReplicaMetadata(result.replicaMetadata(),
-                                                                                        "127.0.0.1", 7000);
+        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadata = result.replicaMetadata().get("127.0.0.1:7000");
         assertThat(nodeMetadata.state()).isEqualTo("Normal");
         assertThat(nodeMetadata.status()).isEqualTo("Up");
         assertThat(nodeMetadata.datacenter()).isEqualTo(TEST_DC1);
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
-                   .state()).isEqualTo("Normal");
-    }
-
-    private TokenRangeReplicasResponse.ReplicaMetadata filterReplicaMetadata(
-    List<TokenRangeReplicasResponse.ReplicaMetadata> replicaMetadata, String address, int port)
-    {
-        return replicaMetadata.stream()
-                              .filter(r -> (r.address().equals(address) && r.port() == port))
-                              .findFirst().get();
+        assertState(result.replicaMetadata(), "127.0.0.2:7000", "Normal");
+        assertState(result.replicaMetadata(), "127.0.0.3:7000", "Normal");
     }
 
     @Test
@@ -168,24 +160,19 @@ public class TokenRangeReplicaProviderTest
         assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
         assertThat(result.readReplicas().get(1).replicasByDatacenter().get(TEST_DC2)).containsAll(TEST_ENDPOINTS2);
         assertThat(result.replicaMetadata().size()).isEqualTo(5);
-        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadataDc1 = filterReplicaMetadata(result.replicaMetadata(),
-                                                                                        "127.0.0.1", 7000);
+        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadataDc1 = result.replicaMetadata().get("127.0.0.1:7000");
         assertThat(nodeMetadataDc1.state()).isEqualTo("Normal");
         assertThat(nodeMetadataDc1.status()).isEqualTo("Up");
         assertThat(nodeMetadataDc1.datacenter()).isEqualTo(TEST_DC1);
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
-                   .state()).isEqualTo("Leaving");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
-                   .state()).isEqualTo("Normal");
+        assertState(result.replicaMetadata(), "127.0.0.2:7000", "Leaving");
+        assertState(result.replicaMetadata(), "127.0.0.3:7000", "Normal");
 
-        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadatDc2 = filterReplicaMetadata(result.replicaMetadata(),
-                                                                                        "128.0.0.1", 7000);
+        TokenRangeReplicasResponse.ReplicaMetadata nodeMetadatDc2 = result.replicaMetadata().get("128.0.0.1:7000");
         assertThat(nodeMetadatDc2.state()).isEqualTo("Leaving");
         assertThat(nodeMetadatDc2.status()).isEqualTo("Up");
         assertThat(nodeMetadatDc2.datacenter()).isEqualTo(TEST_DC2);
 
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.2", 7000)
-                   .state()).isEqualTo("Normal");
+        assertState(result.replicaMetadata(), "128.0.0.2:7000", "Normal");
     }
 
     @Test
@@ -228,19 +215,12 @@ public class TokenRangeReplicaProviderTest
         assertThat(replicaInfoWithMultipleDCs.replicasByDatacenter().size()).isEqualTo(2);
         assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
         assertThat(result.readReplicas().get(1).replicasByDatacenter().get(TEST_DC2)).containsAll(TEST_ENDPOINTS2);
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
-                   .state()).isEqualTo("Leaving");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
-                   .state()).isEqualTo("Leaving");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.4", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.1", 7000)
-                   .state()).isEqualTo("Leaving");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.2", 7000)
-                   .state()).isEqualTo("Normal");
-
+        assertState(result.replicaMetadata(), "127.0.0.1:7000", "Leaving");
+        assertState(result.replicaMetadata(), "127.0.0.2:7000", "Leaving");
+        assertState(result.replicaMetadata(), "127.0.0.3:7000", "Normal");
+        assertState(result.replicaMetadata(), "127.0.0.4:7000", "Normal");
+        assertState(result.replicaMetadata(), "128.0.0.1:7000", "Leaving");
+        assertState(result.replicaMetadata(), "128.0.0.2:7000", "Normal");
     }
 
     @Test
@@ -276,17 +256,11 @@ public class TokenRangeReplicaProviderTest
         assertThat(result.readReplicas().size()).isEqualTo(1);
         assertThat(result.readReplicas().get(0).replicasByDatacenter().size()).isEqualTo(1);
         assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
-                   .state()).isEqualTo("Leaving");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.1", 7000)
-                   .state()).isEqualTo("Leaving");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "128.0.0.2", 7000)
-                   .state()).isEqualTo("Normal");
-
+        assertState(result.replicaMetadata(), "127.0.0.1:7000", "Normal");
+        assertState(result.replicaMetadata(), "127.0.0.2:7000", "Normal");
+        assertState(result.replicaMetadata(), "127.0.0.3:7000", "Leaving");
+        assertState(result.replicaMetadata(), "128.0.0.1:7000", "Leaving");
+        assertState(result.replicaMetadata(), "128.0.0.2:7000", "Normal");
     }
 
     @Test
@@ -324,12 +298,9 @@ public class TokenRangeReplicaProviderTest
                                        Long.toString(Long.MAX_VALUE))).isTrue();
         assertThat(validateRangeExists(result.writeReplicas(), "3074457345618258602",
                                        Long.toString(Long.MAX_VALUE))).isTrue();
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
-                   .state()).isEqualTo("Normal");
+        assertState(result.replicaMetadata(), "127.0.0.1:7000", "Normal");
+        assertState(result.replicaMetadata(), "127.0.0.2:7000", "Normal");
+        assertState(result.replicaMetadata(), "127.0.0.3:7000", "Normal");
     }
 
     @Test
@@ -380,14 +351,10 @@ public class TokenRangeReplicaProviderTest
         // Existing read replicas wrap-around range ends at "maxToken"
         assertThat(validateRangeExists(result.readReplicas(), "3074457345618258602",
                                        Long.toString(Long.MAX_VALUE))).isTrue();
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
-                   .state()).isEqualTo("Leaving");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.4", 7000)
-                   .state()).isEqualTo("Leaving");
+        assertState(result.replicaMetadata(), "127.0.0.1:7000", "Normal");
+        assertState(result.replicaMetadata(), "127.0.0.2:7000", "Leaving");
+        assertState(result.replicaMetadata(), "127.0.0.3:7000", "Normal");
+        assertState(result.replicaMetadata(), "127.0.0.4:7000", "Leaving");
     }
 
     @Test
@@ -431,15 +398,10 @@ public class TokenRangeReplicaProviderTest
         assertThat(validateRangeExists(result.writeReplicas(), "6148914691236517204",
                                        Long.toString(Long.MAX_VALUE))).isTrue();
 
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
-                   .state()).isEqualTo("Leaving");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.4", 7000)
-                   .state()).isEqualTo("Replacing");
-
+        assertState(result.replicaMetadata(), "127.0.0.1:7000", "Leaving");
+        assertState(result.replicaMetadata(), "127.0.0.2:7000", "Normal");
+        assertState(result.replicaMetadata(), "127.0.0.3:7000", "Normal");
+        assertState(result.replicaMetadata(), "127.0.0.4:7000", "Replacing");
     }
 
     @Test
@@ -484,15 +446,11 @@ public class TokenRangeReplicaProviderTest
         assertThat(validateRangeExists(result.writeReplicas(), "6148914691236517204",
                                        Long.toString(Long.MAX_VALUE))).isTrue();
 
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.1", 7000)
-                   .state()).isEqualTo("Leaving");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.2", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.3", 7000)
-                   .state()).isEqualTo("Normal");
-        assertThat(filterReplicaMetadata(result.replicaMetadata(), "127.0.0.4", 7000)
-                   .state()).isEqualTo("Replacing");
-
+        Map<String, TokenRangeReplicasResponse.ReplicaMetadata> map = result.replicaMetadata();
+        assertState(map, "127.0.0.1:7000", "Leaving");
+        assertState(map, "127.0.0.2:7000", "Normal");
+        assertState(map, "127.0.0.3:7000", "Normal");
+        assertState(map, "127.0.0.4:7000", "Replacing");
     }
 
     private boolean validateRangeExists(List<TokenRangeReplicasResponse.ReplicaInfo> ranges, String start, String end)
@@ -556,5 +514,15 @@ public class TokenRangeReplicaProviderTest
     private String getStatus(boolean exclude, String status, String value)
     {
         return exclude ? "" : String.format(status, value);
+    }
+
+    private static void assertState(Map<String, TokenRangeReplicasResponse.ReplicaMetadata> map,
+                                    String ipAndPort,
+                                    String expectedState)
+    {
+        assertThat(map.get(ipAndPort)).isNotNull()
+                                      .extracting(from(TokenRangeReplicasResponse.ReplicaMetadata::state),
+                                                  as(InstanceOfAssertFactories.STRING))
+                                      .isEqualTo(expectedState);
     }
 }

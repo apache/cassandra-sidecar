@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.adapters.base;
 
 import java.math.BigInteger;
 import java.net.UnknownHostException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -79,10 +80,10 @@ public class TokenRangeReplicaProvider
         StorageJmxOperations storage = initializeStorageOps();
 
         List<TokenRangeReplicas> naturalTokenRangeReplicas =
-            getTokenRangeReplicas("Natural", keyspace, partitioner, storage::getRangeToEndpointWithPortMap);
+        getTokenRangeReplicas("Natural", keyspace, partitioner, storage::getRangeToEndpointWithPortMap);
         // Pending ranges include bootstrap tokens and leaving endpoints as represented in the Cassandra TokenMetadata
         List<TokenRangeReplicas> pendingTokenRangeReplicas =
-            getTokenRangeReplicas("Pending", keyspace, partitioner, storage::getPendingRangeToEndpointWithPortMap);
+        getTokenRangeReplicas("Pending", keyspace, partitioner, storage::getPendingRangeToEndpointWithPortMap);
 
         // Merge natural and pending range replicas to generate candidates for write-replicas
         List<TokenRangeReplicas> allTokenRangeReplicas = new ArrayList<>(naturalTokenRangeReplicas);
@@ -94,7 +95,9 @@ public class TokenRangeReplicaProvider
         List<ReplicaInfo> writeReplicas = writeReplicasFromPendingRanges(allTokenRangeReplicas, hostToDatacenter);
 
         List<ReplicaInfo> readReplicas = readReplicasFromReplicaMapping(naturalTokenRangeReplicas, hostToDatacenter);
-        List<ReplicaMetadata> replicaMetadata = getReplicaMetadata(allTokenRangeReplicas, storage, hostToDatacenter);
+        Map<String, ReplicaMetadata> replicaMetadata = replicaMetadata(allTokenRangeReplicas,
+                                                                       storage,
+                                                                       hostToDatacenter);
 
         return new TokenRangeReplicasResponse(writeReplicas,
                                               readReplicas,
@@ -122,9 +125,9 @@ public class TokenRangeReplicaProvider
                               .collect(toList());
     }
 
-    private List<ReplicaMetadata> getReplicaMetadata(List<TokenRangeReplicas> replicaSet,
-                                                     StorageJmxOperations storage,
-                                                     Map<String, String> hostToDatacenter)
+    private Map<String, ReplicaMetadata> replicaMetadata(List<TokenRangeReplicas> replicaSet,
+                                                         StorageJmxOperations storage,
+                                                         Map<String, String> hostToDatacenter)
     {
         List<String> joiningNodes = storage.getJoiningNodesWithPort();
         List<String> leavingNodes = storage.getLeavingNodesWithPort();
@@ -148,12 +151,15 @@ public class TokenRangeReplicaProvider
                              try
                              {
                                  HostAndPort hap = HostAndPort.fromString(replica);
-                                 return new ReplicaMetadata(state.of(replica),
-                                                            status.of(replica),
-                                                            dnsResolver.reverseResolve(hap.getHost()),
-                                                            hap.getHost(),
-                                                            hap.getPort(),
-                                                            hostToDatacenter.get(replica));
+                                 String fqdn = dnsResolver.reverseResolve(hap.getHost());
+                                 String datacenter = hostToDatacenter.get(replica);
+                                 return new AbstractMap.SimpleEntry<>(replica,
+                                                                      new ReplicaMetadata(state.of(replica),
+                                                                                          status.of(replica),
+                                                                                          fqdn,
+                                                                                          hap.getHost(),
+                                                                                          hap.getPort(),
+                                                                                          datacenter));
                              }
                              catch (UnknownHostException e)
                              {
@@ -161,7 +167,7 @@ public class TokenRangeReplicaProvider
                                  String.format("Failed to resolve fqdn for replica %s ", replica), e);
                              }
                          })
-                         .collect(Collectors.toList());
+                         .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
     }
 
     protected EndpointSnitchJmxOperations initializeEndpointProxy()

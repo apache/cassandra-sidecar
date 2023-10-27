@@ -32,18 +32,18 @@ public class TokenRangeReplicasResponse
     private final List<ReplicaInfo> writeReplicas;
     private final List<ReplicaInfo> readReplicas;
 
-    private final List<ReplicaMetadata> replicaMetadata;
+    private final Map<String, ReplicaMetadata> replicaMetadata;
 
     /**
      * Constructs token range replicas response object with given params.
      *
-     * @param writeReplicas list of write replicas {@link ReplicaInfo} instances breakdown by token range
-     * @param readReplicas  list of read replica {@link ReplicaInfo} instances breakdown by token range
-     * @param replicaMetadata  mapping replica to it's state and status information
+     * @param writeReplicas   list of write replicas {@link ReplicaInfo} instances breakdown by token range
+     * @param readReplicas    list of read replica {@link ReplicaInfo} instances breakdown by token range
+     * @param replicaMetadata mapping replica to it's state and status information
      */
     public TokenRangeReplicasResponse(@JsonProperty("writeReplicas") List<ReplicaInfo> writeReplicas,
                                       @JsonProperty("readReplicas") List<ReplicaInfo> readReplicas,
-                                      @JsonProperty("replicaMetadata") List<ReplicaMetadata> replicaMetadata)
+                                      @JsonProperty("replicaMetadata") Map<String, ReplicaMetadata> replicaMetadata)
     {
         this.writeReplicas = writeReplicas;
         this.readReplicas = readReplicas;
@@ -54,7 +54,7 @@ public class TokenRangeReplicasResponse
      * @return metadata associated with each replica
      */
     @JsonProperty("replicaMetadata")
-    public List<ReplicaMetadata> replicaMetadata()
+    public Map<String, ReplicaMetadata> replicaMetadata()
     {
         return replicaMetadata;
     }
@@ -88,11 +88,11 @@ public class TokenRangeReplicasResponse
 
         public ReplicaInfo(@JsonProperty("start") String start,
                            @JsonProperty("end") String end,
-                           @JsonProperty("replicas") Map<String, List<String>> replicasByDc)
+                           @JsonProperty("replicas") Map<String, List<String>> replicasByDatacenter)
         {
             this.start = start;
             this.end = end;
-            this.replicasByDatacenter = replicasByDc;
+            this.replicasByDatacenter = replicasByDatacenter;
         }
 
         /**
@@ -125,6 +125,7 @@ public class TokenRangeReplicasResponse
         /**
          * {@inheritDoc}
          */
+        @Override
         public boolean equals(Object o)
         {
             if (this == o) return true;
@@ -138,6 +139,7 @@ public class TokenRangeReplicasResponse
         /**
          * {@inheritDoc}
          */
+        @Override
         public int hashCode()
         {
             return Objects.hash(start, end, replicasByDatacenter);
@@ -146,6 +148,7 @@ public class TokenRangeReplicasResponse
         /**
          * {@inheritDoc}
          */
+        @Override
         public String toString()
         {
             return "ReplicaInfo{" +
@@ -236,7 +239,6 @@ public class TokenRangeReplicasResponse
         {
             return datacenter;
         }
-
 
         /**
          * {@inheritDoc}
