@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Maintains metadata of instances maintained by Sidecar.
@@ -29,8 +30,12 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 public interface InstancesConfig
 {
     /**
+     * Returns metadata associated with the Cassandra instances managed by this Sidecar. The implementer
+     * must return a non-null value. When no Cassandra instances are configured, an empty list can be returned.
+     *
      * @return metadata of instances owned by the sidecar
      */
+    @NotNull
     List<InstanceMetadata> instances();
 
     /**
