@@ -177,14 +177,13 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
         Set<String> writeReplicaInstances = instancesFromReplicaSet(mappingResponse.writeReplicas());
         Set<String> readReplicaInstances = instancesFromReplicaSet(mappingResponse.readReplicas());
 
-        Set<String> splitRangeReplicas
-        = mappingResponse.writeReplicas().stream()
-                         .filter(w -> matchSplitRanges(w, splitRanges))
-                         .map(r ->
-                              r.replicasByDatacenter().values())
-                         .flatMap(Collection::stream)
-                         .flatMap(list -> list.stream())
-                         .collect(Collectors.toSet());
+        Set<String> splitRangeReplicas = mappingResponse.writeReplicas().stream()
+                                                        .filter(w -> matchSplitRanges(w, splitRanges))
+                                                        .map(r ->
+                                                             r.replicasByDatacenter().values())
+                                                        .flatMap(Collection::stream)
+                                                        .flatMap(Collection::stream)
+                                                        .collect(Collectors.toSet());
 
         assertThat(readReplicaInstances).doesNotContainAnyElementsOf(transientNodeAddresses);
         // Validate that the new nodes are mapped to the split ranges

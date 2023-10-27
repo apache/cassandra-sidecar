@@ -30,6 +30,7 @@ DTEST_JAR_DIR="$(dirname "${SCRIPT_DIR}/")/dtest-jars"
 echo "${CASSANDRA_VERSION}"
 echo "${GIT_HASH}"
 echo "${DTEST_ARTIFACT_ID}"
+echo "${JAVA_HOME}"
 
 ant realclean
 ant dtest-jar -Dno-checkstyle=true

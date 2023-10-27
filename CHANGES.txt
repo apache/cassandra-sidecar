@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Improve TokenRangeReplicasResponse payload (CASSANDRASC-81)
  * HealthCheckPeriodicTask execute never completes the promise when instances are empty (CASSANDRASC-80)
  * Fix token-ranges endpoint to handle gossip-info responses without 'status' (CASSANDRASC-78)
  * Upgrade vertx to version 4.4.6 to bring hot reloading and traffic shaping options (CASSANDRASC-77)

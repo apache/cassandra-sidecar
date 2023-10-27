@@ -68,6 +68,7 @@ import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurati
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -95,6 +96,7 @@ class BaseUploadsHandlerTest
     {
         canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
         mockDelegate = mock(CassandraAdapterDelegate.class);
+        doNothing().when(mockDelegate).healthCheck();
         TestModule testModule = new TestModule();
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);

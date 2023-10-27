@@ -135,7 +135,7 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
                          .stream()
                          .filter(r -> r.end().equals(String.valueOf(moveTo)))
                          .findAny();
-        assertThat(moveResultRange.isPresent());
+        assertThat(moveResultRange).isPresent();
         List<String> replicasInRange = moveResultRange.get().replicasByDatacenter().values()
                                                       .stream()
                                                       .flatMap(Collection::stream)

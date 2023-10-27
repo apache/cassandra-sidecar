@@ -46,10 +46,13 @@ import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.assertj.core.api.InstanceOfAssertFactories;
 
 import static org.apache.cassandra.distributed.shared.NetworkTopology.dcAndRack;
 import static org.apache.cassandra.distributed.shared.NetworkTopology.networkTopology;
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.from;
 
 /**
  * Test the token range replica mapping endpoint with the in-jvm dtest framework.
@@ -106,9 +109,10 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
                                    + config.broadcastAddress().getPort();
 
                 String expectedStatus = stateFunction.apply(i);
-                assertThat(filterReplicaMetadata(mappingResponse.replicaMetadata(),
-                                                 config.broadcastAddress().getAddress().getHostAddress(),
-                                                 config.broadcastAddress().getPort()).state())
+                assertThat(mappingResponse.replicaMetadata().get(ipAndPort))
+                .isNotNull()
+                .extracting(from(TokenRangeReplicasResponse.ReplicaMetadata::state),
+                            as(InstanceOfAssertFactories.STRING))
                 .isEqualTo(expectedStatus);
             }
         }
@@ -204,7 +208,8 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         return expectedRanges;
     }
 
-    protected Set<String> instancesFromReplicaSet(List<TokenRangeReplicasResponse.ReplicaInfo> replicas)
+    protected Set<String>
+    instancesFromReplicaSet(List<TokenRangeReplicasResponse.ReplicaInfo> replicas)
     {
         return replicas.stream()
                        .flatMap(r -> r.replicasByDatacenter().values().stream())
@@ -254,21 +259,13 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         }
     }
 
-    private TokenRangeReplicasResponse.ReplicaMetadata filterReplicaMetadata(
-    List<TokenRangeReplicasResponse.ReplicaMetadata> replicaMetadata, String address, int port)
-    {
-        return replicaMetadata.stream()
-                              .filter(r -> (r.address().equals(address) && r.port() == port))
-                              .findFirst().get();
-    }
-
 
     void retrieveMappingWithKeyspace(VertxTestContext context, String keyspace,
                                      Handler<HttpResponse<Buffer>> verifier) throws Exception
     {
         String testRoute = "/api/v1/keyspaces/" + keyspace + "/token-range-replicas";
         testWithClient(context, client -> client.get(server.actualPort(), "127.0.0.1", testRoute)
-                                            .send(context.succeeding(verifier)));
+                                                .send(context.succeeding(verifier)));
     }
 
     void assertMappingResponseOK(TokenRangeReplicasResponse mappingResponse,
