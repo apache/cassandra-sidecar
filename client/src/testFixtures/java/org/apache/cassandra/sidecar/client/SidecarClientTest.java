@@ -333,13 +333,13 @@ abstract class SidecarClientTest
         String nodeWithPort = nodeAddress + ":" + port;
         String expectedRangeStart = "-9223372036854775808";
         String expectedRangeEnd = "9223372036854775807";
-        String tokenRangeReplicasAsString = "{\"replicaMetadata\":[{" +
+        String tokenRangeReplicasAsString = "{\"replicaMetadata\":{\"127.0.0.1:7000\":{" +
                                             "\"state\":\"Normal\"," +
                                             "\"status\":\"Up\"," +
                                             "\"fqdn\":\"localhost\"," +
                                             "\"address\":\"127.0.0.1\"," +
                                             "\"port\":7000," +
-                                            "\"datacenter\":\"datacenter1\"}]," +
+                                            "\"datacenter\":\"datacenter1\"}}," +
                                             "\"writeReplicas\":[{\"start\":\"-9223372036854775808\"," +
                                             "\"end\":\"9223372036854775807\",\"replicasByDatacenter\":" +
                                             "{\"datacenter1\":[\"127.0.0.1:7000\"]}}],\"readReplicas\":" +
