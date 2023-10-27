@@ -34,6 +34,7 @@ import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Provides the basic dependencies for integration tests
@@ -59,6 +60,7 @@ public class IntegrationTestModule extends AbstractModule
         /**
          * @return metadata of instances owned by the sidecar
          */
+        @NotNull
         public List<InstanceMetadata> instances()
         {
             if (cassandraTestContext != null && cassandraTestContext.isClusterBuilt())

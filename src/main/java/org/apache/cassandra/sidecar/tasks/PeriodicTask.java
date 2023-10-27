@@ -60,6 +60,10 @@ public interface PeriodicTask
      * Defines the task body.
      * The method can be considered as executing in a single thread.
      *
+     * <br><b>NOTE:</b> the {@code promise} must be completed (as either succeeded or failed) at the end of the run.
+     * Failing to do so, the {@link PeriodicTaskExecutor} will not be able to schedule a new run.
+     * See {@link PeriodicTaskExecutor#executeInternal} for details.
+     *
      * @param promise a promise when the execution completes
      */
     void execute(Promise<Void> promise);

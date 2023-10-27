@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Local implementation of InstancesConfig.
@@ -57,7 +58,7 @@ public class InstancesConfigImpl implements InstancesConfig
     }
 
     @Override
-    public List<InstanceMetadata> instances()
+    public @NotNull List<InstanceMetadata> instances()
     {
         return instanceMetadataList;
     }

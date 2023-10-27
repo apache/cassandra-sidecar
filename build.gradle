@@ -169,6 +169,8 @@ configurations {
 
 dependencies {
     compileOnly('org.jetbrains:annotations:23.0.0')
+    testCompileOnly('org.jetbrains:annotations:23.0.0')
+    integrationTestCompileOnly('org.jetbrains:annotations:23.0.0')
 
     implementation("io.vertx:vertx-web:${project.vertxVersion}") {
         exclude group: 'junit', module: 'junit'
