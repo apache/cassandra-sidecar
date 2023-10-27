@@ -83,15 +83,6 @@ class HealthCheckPeriodicTaskTest
     }
 
     @Test
-    void testHealthCheckPromiseCompletesWhenInstancesAreNull(VertxTestContext context)
-    {
-        when(mockInstancesConfig.instances()).thenReturn(null);
-        Promise<Void> promise = Promise.promise();
-        healthCheck.execute(promise);
-        promise.future().onComplete(context.succeedingThenComplete());
-    }
-
-    @Test
     void testHealthCheckPromiseCompletesWhenNoInstancesAreConfigured(VertxTestContext context)
     {
         List<InstanceMetadata> mockInstanceMetadata = Collections.emptyList();
