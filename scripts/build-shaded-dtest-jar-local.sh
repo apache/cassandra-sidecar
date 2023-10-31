@@ -30,6 +30,11 @@ DTEST_JAR_DIR="$(dirname "${SCRIPT_DIR}/")/dtest-jars"
 echo "${CASSANDRA_VERSION}"
 echo "${GIT_HASH}"
 echo "${DTEST_ARTIFACT_ID}"
+echo "${JAVA_HOME}"
+
+echo "Print java dir contents for debugging purposes"
+ls -l /home/jenkins/tools/java/
+echo "done printing"
 
 ant realclean
 ant dtest-jar -Dno-checkstyle=true
