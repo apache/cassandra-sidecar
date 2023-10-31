@@ -19,6 +19,7 @@
 
 # A utility script to re-generate the server keystores used for testing
 
+SCRIPT_DIR=$( dirname -- "$( readlink -f -- "$0"; )"; )
 CERT_VALIDITY_DAYS=${CERT_VALIDITY_DAYS:-1825}
 FILE_NAME=${FILE_NAME:-server_keystore}
 
