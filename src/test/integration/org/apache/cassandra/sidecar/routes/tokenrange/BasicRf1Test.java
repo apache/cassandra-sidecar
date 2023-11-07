@@ -20,13 +20,15 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 
 import java.util.Collections;
 
-import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the token range replica mapping endpoint with the in-jvm dtest framework.
@@ -35,17 +37,16 @@ import org.apache.cassandra.testing.CassandraIntegrationTest;
  * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
  */
 @ExtendWith(VertxExtension.class)
-class BasicTestMultiDCSingleReplicated extends BaseTokenRangeIntegrationTest
+class BasicRf1Test extends BaseTokenRangeIntegrationTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 5, numDcs = 2)
-    void retrieveMappingSingleDCReplicatedRf3(VertxTestContext context)
-    throws Exception
+    @CassandraIntegrationTest(nodesPerDc = 3, gossip = true)
+    void retrieveMappingRf1(VertxTestContext context) throws Exception
     {
-        int replicationFactor = 3;
-        createTestKeyspace(ImmutableMap.of("datacenter1", replicationFactor));
+        createTestKeyspace();
         retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
+            assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
             TokenRangeReplicasResponse mappingResponse = response.bodyAsJson(TokenRangeReplicasResponse.class);
-            assertMappingResponseOK(mappingResponse, replicationFactor, Collections.singleton("datacenter1"));
+            assertMappingResponseOK(mappingResponse, 1, Collections.singleton("datacenter1"));
             context.completeNow();
         });
     }

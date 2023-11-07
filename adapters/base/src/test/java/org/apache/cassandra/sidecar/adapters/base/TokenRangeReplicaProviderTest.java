@@ -82,6 +82,7 @@ public class TokenRangeReplicaProviderTest
         dnsResolver = mock(DnsResolver.class);
         instance = new TokenRangeReplicaProvider(jmxClient, dnsResolver);
 
+        when(storageOperations.isGossipRunning()).thenReturn(true);
         when(jmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService"))
         .thenReturn(storageOperations);
         when(jmxClient.proxy(EndpointSnitchJmxOperations.class, "org.apache.cassandra.db:type=EndpointSnitchInfo"))

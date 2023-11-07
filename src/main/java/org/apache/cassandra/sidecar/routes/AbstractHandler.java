@@ -30,6 +30,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
+import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
@@ -192,6 +193,11 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
         if (cause instanceof JmxAuthenticationException)
         {
             return wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE, cause);
+        }
+
+        if (cause instanceof OperationUnavailableException)
+        {
+            return wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE, cause.getMessage(), cause);
         }
 
         return wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, cause);

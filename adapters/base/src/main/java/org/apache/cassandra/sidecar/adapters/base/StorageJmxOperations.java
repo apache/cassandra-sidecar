@@ -134,4 +134,9 @@ public interface StorageJmxOperations
      * a list of endpoints
      */
     Map<List<String>, List<String>> getPendingRangeToEndpointWithPortMap(String keyspace);
+
+    /**
+     * @return {@code true} if gossip is running, {@code false} otherwise
+     */
+    boolean isGossipRunning();
 }

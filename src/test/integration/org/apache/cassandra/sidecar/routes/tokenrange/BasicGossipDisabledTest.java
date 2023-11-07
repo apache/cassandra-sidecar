@@ -18,36 +18,37 @@
 
 package org.apache.cassandra.sidecar.routes.tokenrange;
 
-import java.util.Collections;
-
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Test the token range replica mapping endpoint with the in-jvm dtest framework.
- *
- * Note: Some related test classes are broken down to have a single test case to parallelize test execution and
- * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
+ * Tests that the token range mapping endpoint fails with service unavailable when gossip is disabled
  */
 @ExtendWith(VertxExtension.class)
-class BasicTestRf1 extends BaseTokenRangeIntegrationTest
+public class BasicGossipDisabledTest extends BaseTokenRangeIntegrationTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 3)
-    void retrieveMappingRf1(VertxTestContext context) throws Exception
+    @CassandraIntegrationTest
+    void tokenRangeEndpointFailsWhenGossipIsDisabled(CassandraTestContext context, VertxTestContext testContext)
+    throws Exception
     {
-        createTestKeyspace();
-        retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
-            assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-            TokenRangeReplicasResponse mappingResponse = response.bodyAsJson(TokenRangeReplicasResponse.class);
-            assertMappingResponseOK(mappingResponse, 1, Collections.singleton("datacenter1"));
-            context.completeNow();
+        int disableGossip = context.getCluster().getFirstRunningInstance().nodetool("disablegossip");
+        assertThat(disableGossip).isEqualTo(0);
+        retrieveMappingWithKeyspace(testContext, TEST_KEYSPACE, response -> {
+            assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
+            JsonObject payload = response.bodyAsJsonObject();
+            assertThat(payload.getString("status")).isEqualTo("Service Unavailable");
+            assertThat(payload.getInteger("code")).isEqualTo(503);
+            assertThat(payload.getString("message"))
+            .isEqualTo("Gossip is required for the operation but it is disabled");
+            testContext.completeNow();
         });
     }
 }
