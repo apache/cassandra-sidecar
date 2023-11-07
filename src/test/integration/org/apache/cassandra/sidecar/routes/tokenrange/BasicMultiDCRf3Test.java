@@ -39,9 +39,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
  */
 @ExtendWith(VertxExtension.class)
-class BasicTestMultiDCRf3 extends BaseTokenRangeIntegrationTest
+class BasicMultiDCRf3Test extends BaseTokenRangeIntegrationTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 5, numDcs = 2)
+    @CassandraIntegrationTest(nodesPerDc = 5, numDcs = 2, gossip = true)
     void retrieveMappingMultiDcRf3(VertxTestContext context) throws Exception
     {
         int replicationFactor = 3;

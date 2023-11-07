@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,8 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 class RingHandlerIntegrationTest extends IntegrationTestBase
 {
-
-    @CassandraIntegrationTest
+    @CassandraIntegrationTest(gossip = true)
     void retrieveRingWithoutKeyspace(VertxTestContext context)
     throws Exception
     {
@@ -61,7 +61,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
         });
     }
 
-    @CassandraIntegrationTest
+    @CassandraIntegrationTest(gossip = true)
     void retrieveRingWithUnknownKeyspace(VertxTestContext context) throws Exception
     {
         retrieveRingWithKeyspace(context, "unknown_ks", response -> {
@@ -75,7 +75,27 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
         });
     }
 
-    @CassandraIntegrationTest
+    @CassandraIntegrationTest(gossip = true)
+    void ringFailsWhenGossipIsDisabled(CassandraTestContext context, VertxTestContext testContext) throws Exception
+    {
+        int disableGossip = context.getCluster().getFirstRunningInstance().nodetool("disablegossip");
+        assertThat(disableGossip).isEqualTo(0);
+        String testRoute = "/api/v1/cassandra/ring";
+        testWithClient(testContext, client -> {
+            client.get(server.actualPort(), "127.0.0.1", testRoute)
+                  .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
+                  .send(testContext.succeeding(response -> {
+                      JsonObject payload = response.bodyAsJsonObject();
+                      assertThat(payload.getString("status")).isEqualTo("Service Unavailable");
+                      assertThat(payload.getInteger("code")).isEqualTo(503);
+                      assertThat(payload.getString("message"))
+                      .isEqualTo("Gossip is required for the operation but it is disabled");
+                      testContext.completeNow();
+                  }));
+        });
+    }
+
+    @CassandraIntegrationTest(gossip = true)
     void retrieveRingWithExistingKeyspace(VertxTestContext context) throws Exception
     {
         createTestKeyspace();

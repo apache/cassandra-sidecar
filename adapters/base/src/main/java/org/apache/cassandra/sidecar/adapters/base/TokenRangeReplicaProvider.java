@@ -177,9 +177,9 @@ public class TokenRangeReplicaProvider
 
     protected StorageJmxOperations initializeStorageOps()
     {
-        return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);
+        return new GossipDependentStorageJmxOperations(jmxClient.proxy(StorageJmxOperations.class,
+                                                                       STORAGE_SERVICE_OBJ_NAME));
     }
-
 
     protected String getRawGossipInfo()
     {
