@@ -39,5 +39,15 @@ public interface CQLSessionProvider
      */
     @Nullable Session get();
 
-    Session close();
+    /**
+     * Closes the CQLSessionProvider
+     */
+    void close();
+
+    /**
+     * Gets the current Session object if it already exists.
+     * Otherwise, returns null.
+     * @return the connected {@link Session} object if available. Null otherwise.
+     */
+    Session getIfConnected();
 }

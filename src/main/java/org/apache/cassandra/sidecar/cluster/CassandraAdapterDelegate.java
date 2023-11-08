@@ -351,7 +351,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     public void close()
     {
         markAsDownAndMaybeNotify();
-        Session activeSession = cqlSessionProvider.close();
+        Session activeSession = cqlSessionProvider.getIfConnected();
         if (activeSession != null)
         {
             maybeUnregisterHostListener(activeSession);

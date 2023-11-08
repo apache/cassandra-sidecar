@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,10 @@ import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.ReconnectionPolicy;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
+import org.apache.cassandra.sidecar.config.DriverConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Provides connections to the local Cassandra cluster as defined in the Configuration. Currently, it only supports
@@ -49,13 +53,13 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     private final List<InetSocketAddress> contactPoints;
     private final int numConnections;
     private final String localDc;
-
-    @Nullable
-    private Session session;
     private final NettyOptions nettyOptions;
     private final ReconnectionPolicy reconnectionPolicy;
     private final List<InetSocketAddress> localInstances;
+    @Nullable
+    private Session session;
 
+    @VisibleForTesting
     public CQLSessionProviderImpl(List<InetSocketAddress> contactPoints,
                                   List<InetSocketAddress> localInstances,
                                   int healthCheckFrequencyMillis,
@@ -69,6 +73,39 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         this.numConnections = numConnections;
         this.nettyOptions = options;
         this.reconnectionPolicy = new ExponentialReconnectionPolicy(500, healthCheckFrequencyMillis);
+    }
+
+    public CQLSessionProviderImpl(SidecarConfiguration configuration,
+                                  NettyOptions options)
+    {
+        DriverConfiguration driverConfiguration = configuration.driverConfiguration();
+        this.contactPoints = driverConfiguration.contactPoints();
+        this.localInstances = configuration.cassandraInstances()
+                                           .stream()
+                                           .map(i -> new InetSocketAddress(i.host(), i.port()))
+                                           .collect(Collectors.toList());
+        ;
+        this.localDc = driverConfiguration.localDc();
+        this.numConnections = driverConfiguration.numConnections();
+        this.nettyOptions = options;
+        int maxDelayMs = configuration.healthCheckConfiguration().checkIntervalMillis();
+        this.reconnectionPolicy = new ExponentialReconnectionPolicy(500, maxDelayMs);
+    }
+
+    static RuntimeException propagateCause(ExecutionException e)
+    {
+        Throwable cause = e.getCause();
+
+        if (cause instanceof Error) throw ((Error) cause);
+
+        // We could just rethrow e.getCause(). However, the cause of the ExecutionException has likely
+        // been
+        // created on the I/O thread receiving the response. Which means that the stacktrace associated
+        // with said cause will make no mention of the current thread. This is painful for say, finding
+        // out which execute() statement actually raised the exception. So instead, we re-create the
+        // exception.
+        if (cause instanceof DriverException) throw ((DriverException) cause).copy();
+        else throw new DriverInternalError("Unexpected exception thrown", cause);
     }
 
     /**
@@ -123,14 +160,18 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         return session;
     }
 
-    public Session close()
+    @Override
+    public Session getIfConnected()
     {
-        Session localSession;
-        synchronized (this)
-        {
-            localSession = this.session;
-            this.session = null;
-        }
+        return session;
+    }
+
+    @Override
+    public void close()
+    {
+
+        Session localSession = this.session;
+        this.session = null;
 
         if (localSession != null)
         {
@@ -152,22 +193,5 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
                 throw propagateCause(e);
             }
         }
-        return localSession;
-    }
-
-    static RuntimeException propagateCause(ExecutionException e)
-    {
-        Throwable cause = e.getCause();
-
-        if (cause instanceof Error) throw ((Error) cause);
-
-        // We could just rethrow e.getCause(). However, the cause of the ExecutionException has likely
-        // been
-        // created on the I/O thread receiving the response. Which means that the stacktrace associated
-        // with said cause will make no mention of the current thread. This is painful for say, finding
-        // out which execute() statement actually raised the exception. So instead, we re-create the
-        // exception.
-        if (cause instanceof DriverException) throw ((DriverException) cause).copy();
-        else throw new DriverInternalError("Unexpected exception thrown", cause);
     }
 }

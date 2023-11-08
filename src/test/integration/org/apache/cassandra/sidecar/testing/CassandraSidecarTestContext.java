@@ -173,13 +173,13 @@ public class CassandraSidecarTestContext implements AutoCloseable
     @Override
     public void close()
     {
-        if (sessionProvider != null)
-        {
-            sessionProvider.close();
-        }
         if (instancesConfig != null)
         {
             instancesConfig.instances().forEach(instance -> instance.delegate().close());
+        }
+        if (sessionProvider != null)
+        {
+            sessionProvider.close();
         }
     }
 

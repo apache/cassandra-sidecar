@@ -83,6 +83,8 @@ import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.MD5ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
+
 /**
  * Provides main binding for more complex Guice dependencies
  */
@@ -308,44 +310,14 @@ public class MainModule extends AbstractModule
         return configuration.cassandraInputValidationConfiguration();
     }
 
+
     @Provides
     @Singleton
-    public InstancesConfig instancesConfig(Vertx vertx,
-                                           SidecarConfiguration configuration,
-                                           CassandraVersionProvider cassandraVersionProvider,
-                                           SidecarVersionProvider sidecarVersionProvider,
-                                           DnsResolver dnsResolver)
+    public CQLSessionProvider cqlSessionProvider(Vertx vertx, SidecarConfiguration sidecarConfiguration)
     {
-        int healthCheckFrequencyMillis = configuration.healthCheckConfiguration().checkIntervalMillis();
-
-        List<InetSocketAddress> localInstances =
-        configuration.cassandraInstances()
-                     .stream()
-                     .map(i -> new InetSocketAddress(i.host(), i.port()))
-                     .collect(Collectors.toList());
-        DriverConfiguration driverConfiguration = configuration.driverConfiguration();
-        CQLSessionProvider cqlSessionProvider =
-        new CQLSessionProviderImpl(driverConfiguration.contactPoints(),
-                                   localInstances,
-                                   healthCheckFrequencyMillis,
-                                   driverConfiguration.localDc(),
-                                   driverConfiguration.numConnections(),
-                                   new NettyOptions());
-        List<InstanceMetadata> instanceMetadataList =
-        configuration.cassandraInstances()
-                     .stream()
-                     .map(cassandraInstance -> {
-                         JmxConfiguration jmxConfiguration = configuration.serviceConfiguration().jmxConfiguration();
-                         return buildInstanceMetadata(vertx,
-                                                      cassandraInstance,
-                                                      cassandraVersionProvider,
-                                                      sidecarVersionProvider.sidecarVersion(),
-                                                      jmxConfiguration,
-                                                      cqlSessionProvider);
-                     })
-                     .collect(Collectors.toList());
-
-        return new InstancesConfigImpl(instanceMetadataList, dnsResolver);
+        CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(sidecarConfiguration, new NettyOptions());
+        vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
+        return cqlSessionProvider;
     }
 
     @Provides
