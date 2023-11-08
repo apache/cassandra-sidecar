@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common;
+package org.apache.cassandra.sidecar.cluster;
 
 
 import java.net.InetSocketAddress;

@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
@@ -93,7 +94,7 @@ public class SnapshotUtils
 
     public static InstancesConfig mockInstancesConfig(Vertx vertx, String rootPath)
     {
-        CQLSessionProvider mockSession1 = mock(CQLSessionProvider.class);
+        CQLSessionProvider mockSession1 = mock(CQLSessionProviderImpl.class);
         return mockInstancesConfig(vertx, rootPath, null, mockSession1);
     }
 
@@ -110,7 +111,7 @@ public class SnapshotUtils
         if (delegate == null)
         {
             delegate = new CassandraAdapterDelegate(vertx, 1, versionProvider, cqlSessionProvider1, null, null,
-                                                     "localhost1", 9042);
+                                                    "localhost1", 9042);
         }
 
         InstanceMetadataImpl localhost = InstanceMetadataImpl.builder()

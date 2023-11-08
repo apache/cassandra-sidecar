@@ -38,6 +38,10 @@ public interface ICassandraAdapter
      */
     Metadata metadata();
 
+    /**
+     * The {@link NodeSettings} instance for this instance.
+     * @return the {@link NodeSettings} instance for this instance.
+     */
     NodeSettings nodeSettings();
 
     /**
@@ -57,6 +61,10 @@ public interface ICassandraAdapter
      */
     ResultSet executeLocal(Statement statement);
 
+    /**
+     * The address on which the local instance is listening for CQL connections
+     * @return the {@link InetSocketAddress} representing the local address and port.
+     */
     InetSocketAddress localNativeTransportPort();
 
     /**

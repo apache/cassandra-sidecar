@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.common;
 import java.net.InetSocketAddress;
 
 /**
- * A factory is used here to create instances of an Adapter.  We
+ * A factory that will create an appropriate CassandraAdapter.
  */
 public interface ICassandraFactory
 {
@@ -35,6 +35,5 @@ public interface ICassandraFactory
      */
     ICassandraAdapter create(CQLSessionProvider session,
                              JmxClient client,
-                             InetSocketAddress
-                             localNativeTransportAddress);
+                             InetSocketAddress localNativeTransportAddress);
 }

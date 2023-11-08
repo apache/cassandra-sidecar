@@ -44,6 +44,7 @@ import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
+import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
@@ -108,6 +109,55 @@ public class MainModule extends AbstractModule
     public MainModule(Path confPath)
     {
         this.confPath = confPath;
+    }
+
+    /**
+     * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
+     * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
+     *
+     * @param vertx             the vertx instance
+     * @param cassandraInstance the cassandra instance configuration
+     * @param versionProvider   a Cassandra version provider
+     * @param sidecarVersion    the version of the Sidecar from the current binary
+     * @param jmxConfiguration  the configuration for the JMX Client
+     * @param session           the CQL Session provider
+     * @return the build instance metadata object
+     */
+    private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
+                                                          InstanceConfiguration cassandraInstance,
+                                                          CassandraVersionProvider versionProvider,
+                                                          String sidecarVersion,
+                                                          JmxConfiguration jmxConfiguration,
+                                                          CQLSessionProvider session)
+    {
+        String host = cassandraInstance.host();
+        int port = cassandraInstance.port();
+
+        JmxClient jmxClient = JmxClient.builder()
+                                       .host(cassandraInstance.jmxHost())
+                                       .port(cassandraInstance.jmxPort())
+                                       .role(cassandraInstance.jmxRole())
+                                       .password(cassandraInstance.jmxRolePassword())
+                                       .enableSsl(cassandraInstance.jmxSslEnabled())
+                                       .connectionMaxRetries(jmxConfiguration.maxRetries())
+                                       .connectionRetryDelayMillis(jmxConfiguration.retryDelayMillis())
+                                       .build();
+        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
+                                                                         cassandraInstance.id(),
+                                                                         versionProvider,
+                                                                         session,
+                                                                         jmxClient,
+                                                                         sidecarVersion,
+                                                                         host,
+                                                                         port);
+        return InstanceMetadataImpl.builder()
+                                   .id(cassandraInstance.id())
+                                   .host(host)
+                                   .port(port)
+                                   .dataDirs(cassandraInstance.dataDirs())
+                                   .stagingDir(cassandraInstance.stagingDir())
+                                   .delegate(delegate)
+                                   .build();
     }
 
     @Provides
@@ -275,12 +325,12 @@ public class MainModule extends AbstractModule
                      .collect(Collectors.toList());
         DriverConfiguration driverConfiguration = configuration.driverConfiguration();
         CQLSessionProvider cqlSessionProvider =
-        new CQLSessionProvider(driverConfiguration.contactPoints(),
-                               localInstances,
-                               healthCheckFrequencyMillis,
-                               driverConfiguration.localDc(),
-                               driverConfiguration.numConnections(),
-                               new NettyOptions());
+        new CQLSessionProviderImpl(driverConfiguration.contactPoints(),
+                                   localInstances,
+                                   healthCheckFrequencyMillis,
+                                   driverConfiguration.localDc(),
+                                   driverConfiguration.numConnections(),
+                                   new NettyOptions());
         List<InstanceMetadata> instanceMetadataList =
         configuration.cassandraInstances()
                      .stream()
@@ -372,54 +422,5 @@ public class MainModule extends AbstractModule
     public SidecarStats sidecarStats()
     {
         return SidecarStats.INSTANCE;
-    }
-
-    /**
-     * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
-     * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
-     *
-     * @param vertx                      the vertx instance
-     * @param cassandraInstance          the cassandra instance configuration
-     * @param versionProvider            a Cassandra version provider
-     * @param sidecarVersion             the version of the Sidecar from the current binary
-     * @param jmxConfiguration           the configuration for the JMX Client
-     * @param session                    the CQL Session provider
-     * @return the build instance metadata object
-     */
-    private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
-                                                          InstanceConfiguration cassandraInstance,
-                                                          CassandraVersionProvider versionProvider,
-                                                          String sidecarVersion,
-                                                          JmxConfiguration jmxConfiguration,
-                                                          CQLSessionProvider session)
-    {
-        String host = cassandraInstance.host();
-        int port = cassandraInstance.port();
-
-        JmxClient jmxClient = JmxClient.builder()
-                                       .host(cassandraInstance.jmxHost())
-                                       .port(cassandraInstance.jmxPort())
-                                       .role(cassandraInstance.jmxRole())
-                                       .password(cassandraInstance.jmxRolePassword())
-                                       .enableSsl(cassandraInstance.jmxSslEnabled())
-                                       .connectionMaxRetries(jmxConfiguration.maxRetries())
-                                       .connectionRetryDelayMillis(jmxConfiguration.retryDelayMillis())
-                                       .build();
-        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
-                                                                         cassandraInstance.id(),
-                                                                         versionProvider,
-                                                                         session,
-                                                                         jmxClient,
-                                                                         sidecarVersion,
-                                                                         host,
-                                                                         port);
-        return InstanceMetadataImpl.builder()
-                                   .id(cassandraInstance.id())
-                                   .host(host)
-                                   .port(port)
-                                   .dataDirs(cassandraInstance.dataDirs())
-                                   .stagingDir(cassandraInstance.stagingDir())
-                                   .delegate(delegate)
-                                   .build();
     }
 }

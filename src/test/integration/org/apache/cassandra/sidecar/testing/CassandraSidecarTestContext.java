@@ -33,6 +33,7 @@ import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.shared.JMXUtil;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
+import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
@@ -212,8 +213,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
         List<InstanceMetadata> metadata = new ArrayList<>();
         jmxClients = new ArrayList<>();
         List<InetSocketAddress> addresses = buildContactList(cluster);
-        sessionProvider = new CQLSessionProvider(addresses, addresses, 500, null,
-                                                 0, SharedExecutorNettyOptions.INSTANCE);
+        sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
+                                                     0, SharedExecutorNettyOptions.INSTANCE);
         for (int i = 0; i < numInstancesToManage; i++)
         {
             IUpgradeableInstance instance = cluster.get(i + 1); // 1-based indexing to match node names;
