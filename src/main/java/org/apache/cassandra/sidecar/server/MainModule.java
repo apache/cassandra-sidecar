@@ -21,7 +21,9 @@ package org.apache.cassandra.sidecar.server;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 
@@ -43,6 +45,8 @@ import io.vertx.ext.web.handler.TimeoutHandler;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
@@ -304,7 +308,6 @@ public class MainModule extends AbstractModule
         return configuration.cassandraInputValidationConfiguration();
     }
 
-
     @Provides
     @Singleton
     public CQLSessionProvider cqlSessionProvider(Vertx vertx, SidecarConfiguration sidecarConfiguration)
@@ -313,6 +316,32 @@ public class MainModule extends AbstractModule
                                                                                new NettyOptions());
         vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
         return cqlSessionProvider;
+    }
+
+    @Provides
+    @Singleton
+    public InstancesConfig instancesConfig(Vertx vertx,
+                                           SidecarConfiguration configuration,
+                                           CassandraVersionProvider cassandraVersionProvider,
+                                           SidecarVersionProvider sidecarVersionProvider,
+                                           DnsResolver dnsResolver,
+                                           CQLSessionProvider cqlSessionProvider)
+    {
+        List<InstanceMetadata> instanceMetadataList =
+        configuration.cassandraInstances()
+                     .stream()
+                     .map(cassandraInstance -> {
+                         JmxConfiguration jmxConfiguration = configuration.serviceConfiguration().jmxConfiguration();
+                         return buildInstanceMetadata(vertx,
+                                                      cassandraInstance,
+                                                      cassandraVersionProvider,
+                                                      sidecarVersionProvider.sidecarVersion(),
+                                                      jmxConfiguration,
+                                                      cqlSessionProvider);
+                     })
+                     .collect(Collectors.toList());
+
+        return new InstancesConfigImpl(instanceMetadataList, dnsResolver);
     }
 
     @Provides
