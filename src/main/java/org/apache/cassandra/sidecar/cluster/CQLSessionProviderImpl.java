@@ -57,7 +57,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     private final ReconnectionPolicy reconnectionPolicy;
     private final List<InetSocketAddress> localInstances;
     @Nullable
-    private Session session;
+    private volatile Session session;
 
     @VisibleForTesting
     public CQLSessionProviderImpl(List<InetSocketAddress> contactPoints,
@@ -169,16 +169,17 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     @Override
     public void close()
     {
-
-        Session localSession = this.session;
-        this.session = null;
-
+        Session localSession;
+        synchronized (this)
+        {
+            localSession = this.session;
+            this.session = null;
+        }
         if (localSession != null)
         {
             try
             {
                 localSession.getCluster().closeAsync().get(1, TimeUnit.MINUTES);
-                localSession.closeAsync().get(1, TimeUnit.MINUTES);
             }
             catch (InterruptedException e)
             {

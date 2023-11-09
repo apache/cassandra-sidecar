@@ -177,10 +177,6 @@ public class CassandraSidecarTestContext implements AutoCloseable
         {
             instancesConfig.instances().forEach(instance -> instance.delegate().close());
         }
-        if (sessionProvider != null)
-        {
-            sessionProvider.close();
-        }
     }
 
     public JmxClient jmxClient()
