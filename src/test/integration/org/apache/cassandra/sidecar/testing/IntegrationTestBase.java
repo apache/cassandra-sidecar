@@ -114,8 +114,11 @@ public abstract class IntegrationTestBase
         server.start()
               .onSuccess(s -> {
                   sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
-                  // Give everything a moment to get started and connected
-                  vertx.setTimer(TimeUnit.SECONDS.toMillis(1), id1 -> context.completeNow());
+                  if (!sidecarTestContext.isClusterBuilt())
+                  {
+                      // Give everything a moment to get started and connected
+                      vertx.setTimer(TimeUnit.SECONDS.toMillis(1), id1 -> context.completeNow());
+                  }
               })
               .onFailure(context::failNow);
 
@@ -135,7 +138,6 @@ public abstract class IntegrationTestBase
     {
         return clusterSize;
     }
-
 
     @AfterEach
     void tearDown() throws InterruptedException
@@ -160,7 +162,6 @@ public abstract class IntegrationTestBase
                                   Consumer<WebClient> tester)
     throws Exception
     {
-        WebClient client = WebClient.create(vertx);
         CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
                                                               .instanceFromId(1)
                                                               .delegate();
