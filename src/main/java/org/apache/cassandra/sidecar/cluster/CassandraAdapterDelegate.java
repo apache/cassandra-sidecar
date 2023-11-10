@@ -295,42 +295,25 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     @Override
     public void onAdd(Host host)
     {
-        if (isThisHost(host))
-        {
-            healthCheck();
-        }
+        runIfThisHost(host, this::healthCheck);
     }
 
     @Override
     public void onUp(Host host)
     {
-        if (isThisHost(host))
-        {
-            healthCheck();
-        }
+        runIfThisHost(host, this::healthCheck);
     }
 
     @Override
     public void onDown(Host host)
     {
-        if (isThisHost(host))
-        {
-            markAsDownAndMaybeNotify();
-        }
-    }
-
-    private boolean isThisHost(Host host)
-    {
-        return this.localNativeTransportAddress.equals(host.getEndPoint().resolve());
+        runIfThisHost(host, this::markAsDownAndMaybeNotify);
     }
 
     @Override
     public void onRemove(Host host)
     {
-        if (isThisHost(host))
-        {
-            healthCheck();
-        }
+        runIfThisHost(host, this::healthCheck);
     }
 
     @Override
@@ -401,5 +384,13 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     {
         ICassandraAdapter localAdapter = this.adapter;
         return localAdapter == null ? null : getter.apply(localAdapter);
+    }
+
+    private void runIfThisHost(Host host, Runnable runnable)
+    {
+        if (this.localNativeTransportAddress.equals(host.getEndPoint().resolve()))
+        {
+            runnable.run();
+        }
     }
 }

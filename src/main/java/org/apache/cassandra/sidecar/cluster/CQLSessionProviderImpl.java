@@ -84,7 +84,6 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
                                            .stream()
                                            .map(i -> new InetSocketAddress(i.host(), i.port()))
                                            .collect(Collectors.toList());
-        ;
         this.localDc = driverConfiguration.localDc();
         this.numConnections = driverConfiguration.numConnections();
         this.nettyOptions = options;

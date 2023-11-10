@@ -111,55 +111,6 @@ public class MainModule extends AbstractModule
         this.confPath = confPath;
     }
 
-    /**
-     * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
-     * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
-     *
-     * @param vertx             the vertx instance
-     * @param cassandraInstance the cassandra instance configuration
-     * @param versionProvider   a Cassandra version provider
-     * @param sidecarVersion    the version of the Sidecar from the current binary
-     * @param jmxConfiguration  the configuration for the JMX Client
-     * @param session           the CQL Session provider
-     * @return the build instance metadata object
-     */
-    private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
-                                                          InstanceConfiguration cassandraInstance,
-                                                          CassandraVersionProvider versionProvider,
-                                                          String sidecarVersion,
-                                                          JmxConfiguration jmxConfiguration,
-                                                          CQLSessionProvider session)
-    {
-        String host = cassandraInstance.host();
-        int port = cassandraInstance.port();
-
-        JmxClient jmxClient = JmxClient.builder()
-                                       .host(cassandraInstance.jmxHost())
-                                       .port(cassandraInstance.jmxPort())
-                                       .role(cassandraInstance.jmxRole())
-                                       .password(cassandraInstance.jmxRolePassword())
-                                       .enableSsl(cassandraInstance.jmxSslEnabled())
-                                       .connectionMaxRetries(jmxConfiguration.maxRetries())
-                                       .connectionRetryDelayMillis(jmxConfiguration.retryDelayMillis())
-                                       .build();
-        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
-                                                                         cassandraInstance.id(),
-                                                                         versionProvider,
-                                                                         session,
-                                                                         jmxClient,
-                                                                         sidecarVersion,
-                                                                         host,
-                                                                         port);
-        return InstanceMetadataImpl.builder()
-                                   .id(cassandraInstance.id())
-                                   .host(host)
-                                   .port(port)
-                                   .dataDirs(cassandraInstance.dataDirs())
-                                   .stagingDir(cassandraInstance.stagingDir())
-                                   .delegate(delegate)
-                                   .build();
-    }
-
     @Provides
     @Singleton
     public Vertx vertx()
@@ -418,5 +369,54 @@ public class MainModule extends AbstractModule
     public SidecarStats sidecarStats()
     {
         return SidecarStats.INSTANCE;
+    }
+
+    /**
+     * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
+     * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
+     *
+     * @param vertx             the vertx instance
+     * @param cassandraInstance the cassandra instance configuration
+     * @param versionProvider   a Cassandra version provider
+     * @param sidecarVersion    the version of the Sidecar from the current binary
+     * @param jmxConfiguration  the configuration for the JMX Client
+     * @param session           the CQL Session provider
+     * @return the build instance metadata object
+     */
+    private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
+                                                          InstanceConfiguration cassandraInstance,
+                                                          CassandraVersionProvider versionProvider,
+                                                          String sidecarVersion,
+                                                          JmxConfiguration jmxConfiguration,
+                                                          CQLSessionProvider session)
+    {
+        String host = cassandraInstance.host();
+        int port = cassandraInstance.port();
+
+        JmxClient jmxClient = JmxClient.builder()
+                                       .host(cassandraInstance.jmxHost())
+                                       .port(cassandraInstance.jmxPort())
+                                       .role(cassandraInstance.jmxRole())
+                                       .password(cassandraInstance.jmxRolePassword())
+                                       .enableSsl(cassandraInstance.jmxSslEnabled())
+                                       .connectionMaxRetries(jmxConfiguration.maxRetries())
+                                       .connectionRetryDelayMillis(jmxConfiguration.retryDelayMillis())
+                                       .build();
+        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
+                                                                         cassandraInstance.id(),
+                                                                         versionProvider,
+                                                                         session,
+                                                                         jmxClient,
+                                                                         sidecarVersion,
+                                                                         host,
+                                                                         port);
+        return InstanceMetadataImpl.builder()
+                                   .id(cassandraInstance.id())
+                                   .host(host)
+                                   .port(port)
+                                   .dataDirs(cassandraInstance.dataDirs())
+                                   .stagingDir(cassandraInstance.stagingDir())
+                                   .delegate(delegate)
+                                   .build();
     }
 }

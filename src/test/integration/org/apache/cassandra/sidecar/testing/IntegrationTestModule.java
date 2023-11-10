@@ -27,7 +27,6 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -53,6 +52,21 @@ public class IntegrationTestModule extends AbstractModule
     public InstancesConfig instancesConfig()
     {
         return new WrapperInstancesConfig();
+    }
+
+    @Provides
+    @Singleton
+    public SidecarConfiguration configuration()
+    {
+        ServiceConfiguration conf = ServiceConfigurationImpl.builder()
+                                                            .host("127.0.0.1")
+                                                            .port(0) // let the test find an available port
+                                                            .build();
+        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(50, 500);
+        return SidecarConfigurationImpl.builder()
+                                       .serviceConfiguration(conf)
+                                       .healthCheckConfiguration(healthCheckConfiguration)
+                                       .build();
     }
 
     class WrapperInstancesConfig implements InstancesConfig
@@ -92,28 +106,5 @@ public class IntegrationTestModule extends AbstractModule
         {
             return cassandraTestContext.instancesConfig().instanceFromHost(host);
         }
-    }
-
-    @Provides
-    @Singleton
-    public SidecarConfiguration configuration()
-    {
-        ServiceConfiguration conf = ServiceConfigurationImpl.builder()
-                                                            .host("127.0.0.1")
-                                                            .port(0) // let the test find an available port
-                                                            .build();
-        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(50, 500);
-        return SidecarConfigurationImpl.builder()
-                                       .serviceConfiguration(conf)
-                                       .healthCheckConfiguration(healthCheckConfiguration)
-                                       .build();
-    }
-
-    @Provides
-    @Singleton
-    // TODO: Will this do anything use
-    public CQLSessionProvider cqlSessionProvider()
-    {
-        return null;
     }
 }
