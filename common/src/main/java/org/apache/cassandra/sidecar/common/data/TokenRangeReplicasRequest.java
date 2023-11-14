@@ -25,14 +25,14 @@ import java.util.Objects;
  */
 public class TokenRangeReplicasRequest
 {
-    private final String keyspace;
+    private final Name keyspace;
 
     /**
      * Constructs a ring request with {@code keyspace} parameter.
      *
      * @param keyspace  the keyspace in Cassandra
      */
-    public TokenRangeReplicasRequest(String keyspace)
+    public TokenRangeReplicasRequest(Name keyspace)
     {
         this.keyspace = keyspace;
     }
@@ -40,7 +40,7 @@ public class TokenRangeReplicasRequest
     /**
      * @return the keyspace for the request
      */
-    public String keyspace()
+    public Name keyspace()
     {
         return keyspace;
     }

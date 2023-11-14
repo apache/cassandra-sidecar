@@ -43,6 +43,7 @@ import org.apache.cassandra.sidecar.stats.SSTableStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.apache.cassandra.sidecar.utils.SSTableUploader;
 import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
 
@@ -187,7 +188,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                        }
                    })
                    .compose(metadata -> {
-                       KeyspaceMetadata keyspaceMetadata = metadata.getKeyspace(request.keyspace());
+                       KeyspaceMetadata keyspaceMetadata = MetadataUtils.keyspace(metadata, request.keyspace());
                        if (keyspaceMetadata == null)
                        {
                            String message = String.format("Invalid keyspace '%s' supplied", request.keyspace());
@@ -195,10 +196,10 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                            return Future.failedFuture(wrapHttpException(HttpResponseStatus.BAD_REQUEST, message));
                        }
 
-                       if (keyspaceMetadata.getTable(request.tableName()) == null)
+                       if (MetadataUtils.table(keyspaceMetadata, request.table()) == null)
                        {
                            String message = String.format("Invalid table name '%s' supplied for keyspace '%s'",
-                                                          request.tableName(), request.keyspace());
+                                                          request.table(), request.keyspace());
                            logger.error(message);
                            return Future.failedFuture(wrapHttpException(HttpResponseStatus.BAD_REQUEST, message));
                        }

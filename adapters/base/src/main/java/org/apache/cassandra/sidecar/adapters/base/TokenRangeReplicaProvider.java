@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeState;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
+import org.apache.cassandra.sidecar.common.data.Name;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse.ReplicaInfo;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse.ReplicaMetadata;
@@ -73,17 +74,17 @@ public class TokenRangeReplicaProvider
         this.dnsResolver = dnsResolver;
     }
 
-    public TokenRangeReplicasResponse tokenRangeReplicas(String keyspace, Partitioner partitioner)
+    public TokenRangeReplicasResponse tokenRangeReplicas(Name keyspace, Partitioner partitioner)
     {
         Objects.requireNonNull(keyspace, "keyspace must be non-null");
 
         StorageJmxOperations storage = initializeStorageOps();
 
         List<TokenRangeReplicas> naturalTokenRangeReplicas =
-        getTokenRangeReplicas("Natural", keyspace, partitioner, storage::getRangeToEndpointWithPortMap);
+        getTokenRangeReplicas("Natural", keyspace.name(), partitioner, storage::getRangeToEndpointWithPortMap);
         // Pending ranges include bootstrap tokens and leaving endpoints as represented in the Cassandra TokenMetadata
         List<TokenRangeReplicas> pendingTokenRangeReplicas =
-        getTokenRangeReplicas("Pending", keyspace, partitioner, storage::getPendingRangeToEndpointWithPortMap);
+        getTokenRangeReplicas("Pending", keyspace.name(), partitioner, storage::getPendingRangeToEndpointWithPortMap);
 
         // Merge natural and pending range replicas to generate candidates for write-replicas
         List<TokenRangeReplicas> allTokenRangeReplicas = new ArrayList<>(naturalTokenRangeReplicas);

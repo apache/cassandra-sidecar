@@ -20,13 +20,15 @@ package org.apache.cassandra.sidecar.data;
 
 import java.util.Objects;
 
+import org.apache.cassandra.sidecar.common.data.Name;
+
 /**
  * Holder class for the {@link org.apache.cassandra.sidecar.routes.RingHandler}
  * request parameters
  */
 public class RingRequest
 {
-    private final String keyspace;
+    private final Name keyspace;
 
     /**
      * Constructs a ring request
@@ -39,9 +41,9 @@ public class RingRequest
     /**
      * Constructs a ring request with an optional {@code keyspace} and a {@code resolveIp} parameter.
      *
-     * @param keyspace  the keyspace in Cassandra
+     * @param keyspace the keyspace in Cassandra
      */
-    public RingRequest(String keyspace)
+    public RingRequest(Name keyspace)
     {
         this.keyspace = keyspace;
     }
@@ -49,7 +51,7 @@ public class RingRequest
     /**
      * @return the keyspace for the request
      */
-    public String keyspace()
+    public Name keyspace()
     {
         return keyspace;
     }
@@ -82,7 +84,7 @@ public class RingRequest
     public String toString()
     {
         return "RingRequest{" +
-               "keyspace='" + keyspace +
+               "keyspace='" + (keyspace != null ? keyspace.name() : null) +
                "'}";
     }
 }

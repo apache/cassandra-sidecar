@@ -73,7 +73,7 @@ public class SSTableUploadRequest extends SSTableUploads
         return "SSTableUploadRequest{" +
                "uploadId='" + uploadId() + '\'' +
                ", keyspace='" + keyspace() + '\'' +
-               ", tableName='" + tableName() + '\'' +
+               ", tableName='" + table() + '\'' +
                ", component='" + component + '\'' +
                ", expectedChecksum='" + expectedChecksum + '\'' +
                '}';

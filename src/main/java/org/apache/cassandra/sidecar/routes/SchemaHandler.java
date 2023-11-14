@@ -32,6 +32,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.data.SchemaRequest;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.MetadataUtils;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -96,7 +97,8 @@ public class SchemaHandler extends AbstractHandler<SchemaRequest>
         }
 
         // retrieve keyspace metadata
-        KeyspaceMetadata ksMetadata = metadata.getKeyspace(requestParams.keyspace());
+        KeyspaceMetadata ksMetadata = MetadataUtils.keyspace(metadata, requestParams.keyspace());
+
         if (ksMetadata == null)
         {
             // set request as failed and return
@@ -107,7 +109,8 @@ public class SchemaHandler extends AbstractHandler<SchemaRequest>
             return;
         }
 
-        SchemaResponse schemaResponse = new SchemaResponse(requestParams.keyspace(), ksMetadata.exportAsString());
+        SchemaResponse schemaResponse = new SchemaResponse(requestParams.keyspace().name(),
+                                                           ksMetadata.exportAsString());
         context.json(schemaResponse);
     }
 

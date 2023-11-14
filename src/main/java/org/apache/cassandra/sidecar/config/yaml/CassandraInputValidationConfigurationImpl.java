@@ -40,8 +40,10 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
                                                             "system_auth",
                                                             "system_views",
                                                             "system_virtual_schema")));
-    public static final String ALLOWED_CHARS_FOR_DIRECTORY_PROPERTY = "allowed_chars_for_directory";
-    public static final String DEFAULT_ALLOWED_CHARS_FOR_DIRECTORY = "[a-zA-Z0-9_-]+";
+    public static final String ALLOWED_CHARS_FOR_NAME_PROPERTY = "allowed_chars_for_directory";
+    public static final String DEFAULT_ALLOWED_CHARS_FOR_NAME = "[a-zA-Z][a-zA-Z0-9_]{0,47}";
+    public static final String ALLOWED_CHARS_FOR_QUOTED_NAME_PROPERTY = "allowed_chars_for_quoted_name";
+    public static final String DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME = "[a-zA-Z_0-9]{1,48}";
     public static final String ALLOWED_CHARS_FOR_COMPONENT_NAME_PROPERTY = "allowed_chars_for_component_name";
     public static final String DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME =
     "[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)";
@@ -52,8 +54,11 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     @JsonProperty(FORBIDDEN_KEYSPACES_PROPERTY)
     protected final Set<String> forbiddenKeyspaces;
 
-    @JsonProperty(value = ALLOWED_CHARS_FOR_DIRECTORY_PROPERTY, defaultValue = DEFAULT_ALLOWED_CHARS_FOR_DIRECTORY)
-    protected final String allowedPatternForDirectory;
+    @JsonProperty(value = ALLOWED_CHARS_FOR_NAME_PROPERTY, defaultValue = DEFAULT_ALLOWED_CHARS_FOR_NAME)
+    protected final String allowedPatternForName;
+
+    @JsonProperty(value = ALLOWED_CHARS_FOR_QUOTED_NAME_PROPERTY, defaultValue = DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME)
+    protected final String allowedPatternForQuotedName;
 
     @JsonProperty(value = ALLOWED_CHARS_FOR_COMPONENT_NAME_PROPERTY,
     defaultValue = DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME)
@@ -66,24 +71,27 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     public CassandraInputValidationConfigurationImpl()
     {
         this(DEFAULT_FORBIDDEN_KEYSPACES,
-             DEFAULT_ALLOWED_CHARS_FOR_DIRECTORY,
+             DEFAULT_ALLOWED_CHARS_FOR_NAME,
+             DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME,
              DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME,
              DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME);
     }
 
     public CassandraInputValidationConfigurationImpl(Set<String> forbiddenKeyspaces,
-                                                     String allowedPatternForDirectory,
+                                                     String allowedPatternForName,
+                                                     String allowedPatternForQuotedName,
                                                      String allowedPatternForComponentName,
                                                      String allowedPatternForRestrictedComponentName)
     {
         this.forbiddenKeyspaces = forbiddenKeyspaces;
-        this.allowedPatternForDirectory = allowedPatternForDirectory;
+        this.allowedPatternForName = allowedPatternForName;
+        this.allowedPatternForQuotedName = allowedPatternForQuotedName;
         this.allowedPatternForComponentName = allowedPatternForComponentName;
         this.allowedPatternForRestrictedComponentName = allowedPatternForRestrictedComponentName;
     }
 
     /**
-     * @return a set of forbidden keyspaces
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(FORBIDDEN_KEYSPACES_PROPERTY)
@@ -93,18 +101,27 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     }
 
     /**
-     * @return a regular expression for an allowed pattern for directory names
-     * (i.e. keyspace directory name or table directory name)
+     * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = ALLOWED_CHARS_FOR_DIRECTORY_PROPERTY, defaultValue = DEFAULT_ALLOWED_CHARS_FOR_DIRECTORY)
-    public String allowedPatternForDirectory()
+    @JsonProperty(value = ALLOWED_CHARS_FOR_NAME_PROPERTY, defaultValue = DEFAULT_ALLOWED_CHARS_FOR_NAME)
+    public String allowedPatternForName()
     {
-        return allowedPatternForDirectory;
+        return allowedPatternForName;
     }
 
     /**
-     * @return a regular expression for an allowed pattern for component names
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = ALLOWED_CHARS_FOR_QUOTED_NAME_PROPERTY, defaultValue = DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME)
+    public String allowedPatternForQuotedName()
+    {
+        return allowedPatternForQuotedName;
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = ALLOWED_CHARS_FOR_COMPONENT_NAME_PROPERTY,
@@ -115,7 +132,7 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     }
 
     /**
-     * @return a regular expression to an allowed pattern for a subset of component names
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty(value = ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME_PROPERTY,

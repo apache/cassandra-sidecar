@@ -57,12 +57,12 @@ public class NodeSettings
      * @param sidecar        the settings of the Sidecar on the Cassandra node, including its version
      */
     public NodeSettings(@JsonProperty("releaseVersion") String releaseVersion,
-                        @JsonProperty("partitioner")    String partitioner,
-                        @JsonProperty("sidecar")        Map<String, String> sidecar)
+                        @JsonProperty("partitioner") String partitioner,
+                        @JsonProperty("sidecar") Map<String, String> sidecar)
     {
         this.releaseVersion = releaseVersion;
-        this.partitioner    = partitioner;
-        this.sidecar        = sidecar;
+        this.partitioner = partitioner;
+        this.sidecar = sidecar;
     }
 
     @JsonProperty("releaseVersion")
@@ -91,6 +91,7 @@ public class NodeSettings
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean equals(Object other)
     {
         if (this == other)
@@ -103,13 +104,14 @@ public class NodeSettings
         }
         NodeSettings that = (NodeSettings) other;
         return Objects.equals(this.releaseVersion, that.releaseVersion)
-            && Objects.equals(this.partitioner,    that.partitioner)
-            && Objects.equals(this.sidecar,        that.sidecar);
+               && Objects.equals(this.partitioner, that.partitioner)
+               && Objects.equals(this.sidecar, that.sidecar);
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public int hashCode()
     {
         return Objects.hash(releaseVersion, partitioner, sidecar);

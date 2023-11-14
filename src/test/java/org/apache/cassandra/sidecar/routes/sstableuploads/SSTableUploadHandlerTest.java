@@ -69,7 +69,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
 {
     private static final String FILE_TO_BE_UPLOADED =
     "./src/test/resources/instance1/data/TestKeyspace/TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b/snapshots"
-    + "/TestSnapshot/TestKeyspace-TestTable-54ea95ce-bba2-4e0a-a9be-e428e5d7160b-Data.db";
+    + "/TestSnapshot/nb-1-big-Data.db";
 
     @Test
     void testUploadWithoutMd5_expectSuccessfulUpload(VertxTestContext context) throws IOException

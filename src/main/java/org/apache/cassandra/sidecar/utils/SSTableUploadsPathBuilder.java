@@ -75,7 +75,9 @@ public class SSTableUploadsPathBuilder extends BaseFileSystem
         return validate(request)
                .compose(validRequest -> resolveUploadIdDirectory(host, request.uploadId()))
                .compose(stagingDirectory ->
-                        resolveUploadDirectory(stagingDirectory, request.keyspace(), request.tableName()));
+                        resolveUploadDirectory(stagingDirectory,
+                                               request.keyspace().name(),
+                                               request.table().name()));
     }
 
     /**
@@ -152,8 +154,8 @@ public class SSTableUploadsPathBuilder extends BaseFileSystem
                .compose(validUploadId -> {
                    try
                    {
-                       validator.validateKeyspaceName(request.keyspace());
-                       validator.validateTableName(request.tableName());
+                       validator.validateKeyspaceName(request.keyspace().name());
+                       validator.validateTableName(request.table().name());
 
                        if (request instanceof SSTableUploadRequest)
                        {
