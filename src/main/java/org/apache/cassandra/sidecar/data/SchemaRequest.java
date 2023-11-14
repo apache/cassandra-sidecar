@@ -17,6 +17,7 @@
  */
 package org.apache.cassandra.sidecar.data;
 
+import org.apache.cassandra.sidecar.common.data.Keyspace;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -25,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class SchemaRequest
 {
-    private final String keyspace;
+    private final Keyspace keyspace;
 
     /**
      * Constructs a {@link SchemaRequest} with the {@link org.jetbrains.annotations.Nullable} {@code keyspace}.
@@ -34,13 +35,23 @@ public class SchemaRequest
      */
     public SchemaRequest(@Nullable String keyspace)
     {
+        this(keyspace == null ? null : new Keyspace(keyspace));
+    }
+
+    /**
+     * Constructs a {@link SchemaRequest} with the {@link org.jetbrains.annotations.Nullable} {@code keyspace}.
+     *
+     * @param keyspace the keyspace in Cassandra
+     */
+    public SchemaRequest(@Nullable Keyspace keyspace)
+    {
         this.keyspace = keyspace;
     }
 
     /**
      * @return the keyspace in Cassandra
      */
-    public String keyspace()
+    public Keyspace keyspace()
     {
         return keyspace;
     }
@@ -51,7 +62,7 @@ public class SchemaRequest
     public String toString()
     {
         return "SchemaRequest{" +
-               "keyspace='" + keyspace() + '\'' +
+               "keyspace='" + keyspace + '\'' +
                '}';
     }
 }

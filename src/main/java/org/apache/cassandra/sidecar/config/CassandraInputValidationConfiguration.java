@@ -31,10 +31,18 @@ public interface CassandraInputValidationConfiguration
     Set<String> forbiddenKeyspaces();
 
     /**
-     * @return a regular expression for an allowed pattern for directory names
-     * (i.e. keyspace directory name or table directory name)
+     * @return a regular expression for an allowed pattern for name of keyspaces and tables defined by the grammar in
+     * <a href="https://cassandra.apache.org/doc/4.1/cassandra/cql/ddl.html#common-definitions">Cassandra CQL common
+     * definitions</a>
      */
-    String allowedPatternForDirectory();
+    String allowedPatternForName();
+
+    /**
+     * @return a regular expression for an allowed pattern for <i>quoted</i> names of keyspace and tables defined by
+     * the grammar in <a href="https://cassandra.apache.org/doc/4.1/cassandra/cql/ddl.html#common-definitions">
+     * Cassandra CQL common definitions</a>
+     */
+    String allowedPatternForQuotedName();
 
     /**
      * @return a regular expression for an allowed pattern for component names

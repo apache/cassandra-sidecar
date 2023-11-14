@@ -43,17 +43,17 @@ public class SSTableUploads
     /**
      * @return the keyspace in Cassandra
      */
-    public String keyspace()
+    public Keyspace keyspace()
     {
-        return qualifiedTableName.keyspace();
+        return qualifiedTableName.getKeyspace();
     }
 
     /**
      * @return the table name in Cassandra
      */
-    public String tableName()
+    public Table table()
     {
-        return qualifiedTableName.tableName();
+        return qualifiedTableName.table();
     }
 
     /**

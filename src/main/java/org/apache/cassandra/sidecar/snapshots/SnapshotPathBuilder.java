@@ -289,7 +289,8 @@ public class SnapshotPathBuilder extends BaseFileSystem
         {
             Preconditions.checkArgument(!secondaryIndexName.isEmpty(), "secondaryIndexName cannot be empty");
             Preconditions.checkArgument(secondaryIndexName.charAt(0) == '.', "Invalid secondary index name");
-            validator.validatePattern(secondaryIndexName.substring(1), "secondary index");
+            String indexName = secondaryIndexName.substring(1);
+            validator.validatePattern(indexName, indexName, "secondary index", false);
         }
         validator.validateRestrictedComponentName(request.componentName());
     }

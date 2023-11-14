@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Sidecar does not handle keyspaces and table names with mixed case (CASSANDRASC-76)
  * Require gossip to be enabled for ring and token ranges mapping endpoints (CASSANDRASC-83)
  * Improve TokenRangeReplicasResponse payload (CASSANDRASC-81)
  * HealthCheckPeriodicTask execute never completes the promise when instances are empty (CASSANDRASC-80)

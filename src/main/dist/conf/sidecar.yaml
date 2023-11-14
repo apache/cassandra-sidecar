@@ -135,6 +135,7 @@ cassandra_input_validation:
     - system_auth
     - system_views
     - system_virtual_schema
-  allowed_chars_for_directory: "[a-zA-Z0-9_-]+"
+  allowed_chars_for_directory: "[a-zA-Z][a-zA-Z0-9_]{0,47}"
+  allowed_chars_for_quoted_name: "[a-zA-Z_0-9]{1,48}"
   allowed_chars_for_component_name: "[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)"
   allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(.db|TOC.txt)"

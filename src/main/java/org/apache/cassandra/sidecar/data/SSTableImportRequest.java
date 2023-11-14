@@ -143,7 +143,7 @@ public class SSTableImportRequest extends SSTableUploads
                && copyData == that.copyData
                && uploadId().equals(that.uploadId())
                && keyspace().equals(that.keyspace())
-               && tableName().equals(that.tableName());
+               && table().equals(that.table());
     }
 
     /**
@@ -151,7 +151,7 @@ public class SSTableImportRequest extends SSTableUploads
      */
     public int hashCode()
     {
-        return Objects.hash(uploadId(), keyspace(), tableName(), resetLevel, clearRepaired, verifySSTables,
+        return Objects.hash(uploadId(), keyspace(), table(), resetLevel, clearRepaired, verifySSTables,
                             verifyTokens, invalidateCaches, extendedVerify, copyData);
     }
 
@@ -163,7 +163,7 @@ public class SSTableImportRequest extends SSTableUploads
         return "SSTableUploadRequest{" +
                "uploadId='" + uploadId() + '\'' +
                ", keyspace='" + keyspace() + '\'' +
-               ", tableName='" + tableName() + '\'' +
+               ", tableName='" + table() + '\'' +
                ", resetLevel=" + resetLevel +
                ", clearRepaired=" + clearRepaired +
                ", verifySSTables=" + verifySSTables +

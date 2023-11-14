@@ -106,7 +106,7 @@ public class SnapshotsHandlerTest
     public void testRouteSucceedsWithKeyspaceAndTableName(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1-1234/snapshots/snapshot1";
+        String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1/snapshots/snapshot1";
         ListSnapshotFilesResponse.FileInfo fileInfoExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
                                                "localhost",
@@ -114,7 +114,7 @@ public class SnapshotsHandlerTest
                                                0,
                                                "snapshot1",
                                                "keyspace1",
-                                               "table1-1234",
+                                               "table1",
                                                "1.db");
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
@@ -123,7 +123,7 @@ public class SnapshotsHandlerTest
                                                0,
                                                "snapshot1",
                                                "keyspace1",
-                                               "table1-1234",
+                                               "table1",
                                                "2.db");
 
         client.get(server.actualPort(), "localhost", testRoute)
@@ -141,7 +141,7 @@ public class SnapshotsHandlerTest
     public void testRouteSucceedsIncludeSecondaryIndexes(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1-1234" +
+        String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1" +
                            "/snapshots/snapshot1?includeSecondaryIndexFiles=true";
         List<ListSnapshotFilesResponse.FileInfo> fileInfoExpected = Arrays.asList(
         new ListSnapshotFilesResponse.FileInfo(11,
@@ -150,7 +150,7 @@ public class SnapshotsHandlerTest
                                                0,
                                                "snapshot1",
                                                "keyspace1",
-                                               "table1-1234",
+                                               "table1",
                                                "1.db"),
         new ListSnapshotFilesResponse.FileInfo(0,
                                                "localhost",
@@ -158,7 +158,7 @@ public class SnapshotsHandlerTest
                                                0,
                                                "snapshot1",
                                                "keyspace1",
-                                               "table1-1234",
+                                               "table1",
                                                ".index/secondary.db")
         );
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
@@ -168,7 +168,7 @@ public class SnapshotsHandlerTest
                                                0,
                                                "snapshot1",
                                                "keyspace1",
-                                               "table1-1234",
+                                               "table1",
                                                "2.db");
 
         client.get(server.actualPort(), "localhost", testRoute)
@@ -185,7 +185,7 @@ public class SnapshotsHandlerTest
     public void testRouteInvalidSnapshot(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1-1234/snapshots/snapshotInvalid";
+        String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1/snapshots/snapshotInvalid";
         client.get(server.actualPort(), "localhost", testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());

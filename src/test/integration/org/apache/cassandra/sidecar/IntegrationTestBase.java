@@ -51,7 +51,9 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.data.Keyspace;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.common.data.Table;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
@@ -71,6 +73,7 @@ public abstract class IntegrationTestBase
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     protected Vertx vertx;
     protected Server server;
+    protected WebClient client;
 
     protected static final String TEST_KEYSPACE = "testkeyspace";
     private static final String TEST_TABLE_PREFIX = "testtable";
@@ -101,6 +104,7 @@ public abstract class IntegrationTestBase
             });
         }
 
+        client = WebClient.create(vertx);
         server.start()
               .onSuccess(s -> {
                   sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
@@ -118,6 +122,7 @@ public abstract class IntegrationTestBase
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
+        client.close();
         server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
@@ -128,7 +133,6 @@ public abstract class IntegrationTestBase
 
     protected void testWithClient(VertxTestContext context, Consumer<WebClient> tester) throws Exception
     {
-        WebClient client = WebClient.create(vertx);
         CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
                                                               .instanceFromId(1)
                                                               .delegate();
@@ -171,8 +175,13 @@ public abstract class IntegrationTestBase
 
     protected QualifiedTableName createTestTable(String createTableStatement)
     {
+        return createTestTable(TEST_TABLE_PREFIX, createTableStatement);
+    }
+
+    protected QualifiedTableName createTestTable(String tablePrefix, String createTableStatement)
+    {
         Session session = maybeGetSession();
-        QualifiedTableName tableName = uniqueTestTableFullName();
+        QualifiedTableName tableName = uniqueTestTableFullName(tablePrefix);
         session.execute(String.format(createTableStatement, tableName));
         return tableName;
     }
@@ -184,9 +193,10 @@ public abstract class IntegrationTestBase
         return session;
     }
 
-    private static QualifiedTableName uniqueTestTableFullName()
+    private static QualifiedTableName uniqueTestTableFullName(String tablePrefix)
     {
-        return new QualifiedTableName(TEST_KEYSPACE, TEST_TABLE_PREFIX + TEST_TABLE_ID.getAndIncrement());
+        return new QualifiedTableName(new Keyspace(TEST_KEYSPACE, true),
+                                      new Table(tablePrefix + TEST_TABLE_ID.getAndIncrement(), true));
     }
 
     public List<Path> findChildFile(CassandraSidecarTestContext context, String hostname, String target)

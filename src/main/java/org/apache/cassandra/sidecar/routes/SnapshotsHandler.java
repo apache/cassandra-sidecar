@@ -214,7 +214,7 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
                                                    dataDirectoryIndex,
                                                    directory.snapshotName,
                                                    directory.keyspace,
-                                                   directory.tableName,
+                                                   maybeRemoveTableId(directory.tableName),
                                                    snapshotFile.path.substring(fileNameIndex)));
         }
         return response;
@@ -353,5 +353,21 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
     private void validate(SnapshotRequest request)
     {
         validator.validateSnapshotName(request.snapshotName());
+    }
+
+    /**
+     * Removes the table UUID portion from the table name if present.
+     *
+     * @param tableName the table name with or without the UUID
+     * @return the table name without the UUID
+     */
+    private String maybeRemoveTableId(String tableName)
+    {
+        int dashIndex = tableName.lastIndexOf("-");
+        if (dashIndex > 0)
+        {
+            return tableName.substring(0, dashIndex);
+        }
+        return tableName;
     }
 }

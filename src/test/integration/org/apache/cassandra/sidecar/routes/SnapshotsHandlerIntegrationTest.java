@@ -32,7 +32,6 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.IntegrationTestBase;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.test.CassandraSidecarTestContext;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -45,7 +44,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     void createSnapshotEndpointFailsWhenKeyspaceDoesNotExist(VertxTestContext context) throws InterruptedException
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspaces/non-existent/tables/testtable/snapshots/my-snapshot";
+        String testRoute = "/api/v1/keyspaces/non_existent/tables/testtable/snapshots/my-snapshot";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeedingThenComplete());
@@ -60,7 +59,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         createTestKeyspace();
 
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non-existent/snapshots/my-snapshot";
+        String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non_existent/snapshots/my-snapshot";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeedingThenComplete());
@@ -73,11 +72,11 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     throws InterruptedException
     {
         createTestKeyspace();
-        String table = createTestTableAndPopulate(sidecarTestContext);
+        QualifiedTableName tableName = createTestTableAndPopulate();
 
         WebClient client = WebClient.create(vertx);
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                         TEST_KEYSPACE, table);
+                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response ->
@@ -99,11 +98,40 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     throws InterruptedException
     {
         createTestKeyspace();
-        String table = createTestTableAndPopulate(sidecarTestContext);
+        QualifiedTableName tableName = createTestTableAndPopulate();
 
         WebClient client = WebClient.create(vertx);
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                         TEST_KEYSPACE, table);
+                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
+        client.put(server.actualPort(), "127.0.0.1", testRoute)
+              .expect(ResponsePredicate.SC_OK)
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+
+                  // validate that the snapshot is created
+                  List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1",
+                                                   "my-snapshot");
+                  assertThat(found).isNotEmpty()
+                                   .anyMatch(p -> p.toString().endsWith("manifest.json"))
+                                   .anyMatch(p -> p.toString().endsWith("schema.cql"))
+                                   .anyMatch(p -> p.toString().endsWith("-big-Data.db"));
+
+                  context.completeNow();
+              })));
+        // wait until test completes
+        assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @CassandraIntegrationTest
+    void testCreateSnapshotEndpointWithMixedCaseTableName(VertxTestContext context)
+    throws InterruptedException
+    {
+        createTestKeyspace();
+        QualifiedTableName tableName = createTestTableAndPopulate("QuOtEdTaBlENaMe");
+
+        WebClient client = WebClient.create(vertx);
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
+                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> context.verify(() -> {
@@ -126,7 +154,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void deleteSnapshotFailsWhenKeyspaceDoesNotExist(VertxTestContext context) throws InterruptedException
     {
-        String testRoute = "/api/v1/keyspaces/non-existent/tables/testtable/snapshots/my-snapshot";
+        String testRoute = "/api/v1/keyspaces/non_existent/tables/testtable/snapshots/my-snapshot";
         assertNotFoundOnDeleteSnapshot(context, testRoute);
     }
 
@@ -135,9 +163,9 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     throws InterruptedException
     {
         createTestKeyspace();
-        createTestTableAndPopulate(sidecarTestContext);
+        createTestTableAndPopulate();
 
-        String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non-existent/snapshots/my-snapshot";
+        String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non_existent/snapshots/my-snapshot";
         assertNotFoundOnDeleteSnapshot(context, testRoute);
     }
 
@@ -146,10 +174,10 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     throws InterruptedException
     {
         createTestKeyspace();
-        String table = createTestTableAndPopulate(sidecarTestContext);
+        QualifiedTableName tableName = createTestTableAndPopulate();
 
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/non-existent",
-                                         TEST_KEYSPACE, table);
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/non_existent",
+                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
         assertNotFoundOnDeleteSnapshot(context, testRoute);
     }
 
@@ -159,12 +187,13 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     throws InterruptedException
     {
         createTestKeyspace();
-        String table = createTestTableAndPopulate(sidecarTestContext);
+        QualifiedTableName tableName = createTestTableAndPopulate();
 
         WebClient client = WebClient.create(vertx);
         String snapshotName = "my-snapshot" + UUID.randomUUID();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s",
-                                         TEST_KEYSPACE, table, snapshotName);
+                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName(),
+                                         snapshotName);
 
         // first create the snapshot
         client.put(server.actualPort(), "127.0.0.1", testRoute)
@@ -199,7 +228,19 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    private String createTestTableAndPopulate(CassandraSidecarTestContext cassandraTestContext)
+    private QualifiedTableName createTestTableAndPopulate(String tableNamePrefix)
+    {
+        QualifiedTableName tableName = createTestTable(tableNamePrefix,
+        "CREATE TABLE %s (id text PRIMARY KEY, name text);");
+        Session session = maybeGetSession();
+
+        session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('1', 'Francisco');");
+        session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('2', 'Saranya');");
+        session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('3', 'Yifan');");
+        return tableName;
+    }
+
+    private QualifiedTableName createTestTableAndPopulate()
     {
         QualifiedTableName tableName = createTestTable(
         "CREATE TABLE %s (id text PRIMARY KEY, name text);");
@@ -208,7 +249,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('1', 'Francisco');");
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('2', 'Saranya');");
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('3', 'Yifan');");
-        return tableName.tableName();
+        return tableName;
     }
 
     private void assertNotFoundOnDeleteSnapshot(VertxTestContext context, String testRoute) throws InterruptedException

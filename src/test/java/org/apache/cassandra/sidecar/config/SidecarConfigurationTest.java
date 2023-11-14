@@ -86,7 +86,8 @@ class SidecarConfigurationTest
         configuration.cassandraInputValidationConfiguration();
 
         assertThat(validationConfiguration.forbiddenKeyspaces()).contains("a", "b", "c");
-        assertThat(validationConfiguration.allowedPatternForDirectory()).isEqualTo("[a-z]+");
+        assertThat(validationConfiguration.allowedPatternForName()).isEqualTo("[a-z]+");
+        assertThat(validationConfiguration.allowedPatternForQuotedName()).isEqualTo("[A-Z]+");
         assertThat(validationConfiguration.allowedPatternForComponentName())
         .isEqualTo("(.db|.cql|.json|.crc32|TOC.txt)");
         assertThat(validationConfiguration.allowedPatternForRestrictedComponentName())
@@ -315,7 +316,8 @@ class SidecarConfigurationTest
                                                                           "system_auth",
                                                                           "system_views",
                                                                           "system_virtual_schema");
-        assertThat(config.allowedPatternForDirectory()).isEqualTo("[a-zA-Z0-9_-]+");
+        assertThat(config.allowedPatternForName()).isEqualTo("[a-zA-Z][a-zA-Z0-9_]{0,47}");
+        assertThat(config.allowedPatternForQuotedName()).isEqualTo("[a-zA-Z_0-9]{1,48}");
         assertThat(config.allowedPatternForComponentName())
         .isEqualTo("[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)");
         assertThat(config.allowedPatternForRestrictedComponentName()).isEqualTo("[a-zA-Z0-9_-]+(.db|TOC.txt)");

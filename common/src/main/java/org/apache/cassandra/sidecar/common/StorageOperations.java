@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.common;
 import java.net.UnknownHostException;
 import java.util.Map;
 
+import org.apache.cassandra.sidecar.common.data.Keyspace;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.jetbrains.annotations.NotNull;
@@ -58,14 +59,15 @@ public interface StorageOperations
      * @return ring view
      * @throws UnknownHostException when hostname of peer Cassandra nodes cannot be resolved
      */
-    RingResponse ring(@Nullable String keyspace) throws UnknownHostException;
+    RingResponse ring(@Nullable Keyspace keyspace) throws UnknownHostException;
 
     /**
      * Get the token ranges and the corresponding read and write replicas by datacenter
-     * @param keyspace the keyspace in the Cassandra database
+     *
+     * @param keyspace    the keyspace in the Cassandra database
      * @param partitioner token partitioner used for token assignment
      * @return token range to read and write replica mappings
      */
-    TokenRangeReplicasResponse tokenRangeReplicas(@NotNull String keyspace,
+    TokenRangeReplicasResponse tokenRangeReplicas(@NotNull Keyspace keyspace,
                                                   @NotNull String partitioner);
 }

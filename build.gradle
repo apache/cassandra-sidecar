@@ -323,6 +323,8 @@ tasks.register("integrationTest", Test) {
         jvmArgs(JDK11_OPTIONS)
         println("JVM arguments for $project.name are $allJvmArgs")
     }
+    // Disable direct memory allocator as it doesn't release properly
+    systemProperty "cassandra.netty_use_heap_allocator", "true"
     systemProperty "vertxweb.environment", "dev"
     // Because tests are forked, we need to explicitly pass the system property from the
     // Gradle JVM down to the children

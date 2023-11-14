@@ -25,6 +25,8 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.handler.HttpException;
+import org.apache.cassandra.sidecar.common.data.Keyspace;
+import org.apache.cassandra.sidecar.common.data.Table;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl;
 import org.jetbrains.annotations.NotNull;
@@ -65,13 +67,16 @@ public class CassandraInputValidator
      * @throws HttpException        when the {@code keyspace} contains invalid characters in the name or when the
      *                              keyspace is forbidden
      */
-    public String validateKeyspaceName(@NotNull String keyspace)
+    public Keyspace validateKeyspaceName(@NotNull String keyspace)
     {
         Objects.requireNonNull(keyspace, "keyspace must not be null");
-        validatePattern(keyspace, "keyspace");
-        if (validationConfiguration.forbiddenKeyspaces().contains(keyspace))
+        String unquoted = removeQuotesIfNecessary(keyspace);
+        // whether the input is quoted from the source
+        boolean isQuoted = !unquoted.equals(keyspace);
+        validatePattern(unquoted, keyspace, "keyspace", isQuoted);
+        if (validationConfiguration.forbiddenKeyspaces().contains(unquoted))
             throw new HttpException(HttpResponseStatus.FORBIDDEN.code(), "Forbidden keyspace: " + keyspace);
-        return keyspace;
+        return new Keyspace(unquoted, isQuoted);
     }
 
     /**
@@ -83,11 +88,13 @@ public class CassandraInputValidator
      * @throws NullPointerException when the {@code tableName} is {@code null}
      * @throws HttpException        when the {@code tableName} contains invalid characters in the name
      */
-    public String validateTableName(@NotNull String tableName)
+    public Table validateTableName(@NotNull String tableName)
     {
         Objects.requireNonNull(tableName, "tableName must not be null");
-        validatePattern(tableName, "table name");
-        return tableName;
+        String unquoted = removeQuotesIfNecessary(tableName);
+        boolean isQuoted = !unquoted.equals(tableName);
+        validatePattern(unquoted, tableName, "table name", isQuoted);
+        return new Table(unquoted, isQuoted);
     }
 
     /**
@@ -97,7 +104,7 @@ public class CassandraInputValidator
      * @param snapshotName the name of the Cassandra snapshot to validate
      * @return the validated {@code snapshotName}
      * @throws NullPointerException when the {@code snapshotName} is {@code null}
-     * @throws HttpException        when the {@code snapshotName} contains inalid characters in the name
+     * @throws HttpException        when the {@code snapshotName} contains invalid characters in the name
      */
     public String validateSnapshotName(@NotNull String snapshotName)
     {
@@ -160,16 +167,39 @@ public class CassandraInputValidator
     }
 
     /**
-     * Validates that the {@code input} matches the {@code patternWordChars}
+     * Validates that the {@code unquotedInput} matches the {@code patternWordChars}
      *
-     * @param input the input
-     * @param name  a name for the exception
-     * @throws HttpException when the {@code input} does not match the pattern
+     * @param unquotedInput      the unquoted input
+     * @param quotedInput        the original input used for the exception message
+     * @param name               a name for the exception message
+     * @param isQuotedFromSource whether the name was quoted from source
+     * @throws HttpException when the {@code unquotedInput} does not match the pattern
      */
-    public void validatePattern(String input, String name)
+    public void validatePattern(String unquotedInput, String quotedInput, String name, boolean isQuotedFromSource)
     {
-        if (!input.matches(validationConfiguration.allowedPatternForDirectory()))
+        String pattern = isQuotedFromSource
+                         ? validationConfiguration.allowedPatternForQuotedName()
+                         : validationConfiguration.allowedPatternForName();
+
+        if (!unquotedInput.matches(pattern))
             throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
-                                    "Invalid characters in " + name + ": " + input);
+                                    "Invalid characters in " + name + ": " + quotedInput);
+    }
+
+    /**
+     * Removes the surrounding quotes for the name, if the quotes are present. Otherwise, returns the original
+     * input.
+     *
+     * @param name the name
+     * @return the {@code name} without surrounding quotes
+     */
+    static String removeQuotesIfNecessary(String name)
+    {
+        if (name == null || name.length() <= 1
+            || name.charAt(0) != '"' || name.charAt(name.length() - 1) != '"')
+        {
+            return name;
+        }
+        return name.substring(1, name.length() - 1);
     }
 }

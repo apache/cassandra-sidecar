@@ -115,8 +115,8 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
                              {
                                  context.json(new SSTableImportResponse(true,
                                                                         request.uploadId(),
-                                                                        request.keyspace(),
-                                                                        request.tableName()));
+                                                                        request.keyspace().name(),
+                                                                        request.table().name()));
                                  logger.debug("ImportHandler completed request={}, remoteAddress={}, instance={}",
                                               request, remoteAddress, host);
                              }
@@ -183,8 +183,8 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
     {
         return new SSTableImporter.ImportOptions.Builder()
                .host(host)
-               .keyspace(request.keyspace())
-               .tableName(request.tableName())
+               .keyspace(request.keyspace().name())
+               .tableName(request.table().name())
                .directory(uploadDirectory)
                .uploadId(request.uploadId())
                .resetLevel(request.resetLevel())

@@ -32,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.common.JmxClient;
+import org.apache.cassandra.sidecar.common.data.Keyspace;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.assertj.core.api.InstanceOfAssertFactories;
@@ -61,7 +62,7 @@ public class TokenRangeReplicaProviderTest
     private static final List<String> TEST_MULTI_DC_ENDPOINTS = Arrays.asList("128.0.0.1:7000",
                                                                               "128.0.0.2:7000",
                                                                               "127.0.0.4:7000");
-    public static final String TEST_KEYSPACE = "test_keyspace";
+    public static final Keyspace TEST_KEYSPACE = new Keyspace("test_keyspace");
 
     private static final String TEST_HOSTNAME = "Hostname";
 
@@ -98,9 +99,10 @@ public class TokenRangeReplicaProviderTest
         Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
         readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE.name())).thenReturn(readReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
+        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(writeReplicaMappings);
         when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
         when(storageOperations.getLiveNodesWithPort()).thenReturn(TEST_ENDPOINTS1);
         when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
@@ -134,9 +136,10 @@ public class TokenRangeReplicaProviderTest
         when(storageOperations.getLiveNodesWithPort()).thenReturn(allLiveNodes);
         when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE.name())).thenReturn(readReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
+        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(writeReplicaMappings);
         when(storageOperations.getLeavingNodesWithPort()).thenReturn(Arrays.asList("128.0.0.1:7000", "127.0.0.2:7000"));
         when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
         when(clusterMembershipOperations.getAllEndpointStatesWithPort()).thenReturn(generateSampleGossip("NORMAL",
@@ -150,7 +153,7 @@ public class TokenRangeReplicaProviderTest
         when(endpointOperations.getDatacenter(startsWith("127"))).thenReturn(TEST_DC1);
         when(endpointOperations.getDatacenter(startsWith("128"))).thenReturn(TEST_DC2);
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas("test_keyspace", Partitioner.Random);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Random);
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(2);
         // Single token range
@@ -187,9 +190,10 @@ public class TokenRangeReplicaProviderTest
         when(storageOperations.getLiveNodesWithPort()).thenReturn(allLiveNodes);
         when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE.name())).thenReturn(readReplicaMappings);
         Map<List<String>, List<String>> writeReplicaMappings = new HashMap<>();
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
+        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(writeReplicaMappings);
         when(storageOperations.getLeavingNodesWithPort()).thenReturn(Arrays.asList("127.0.0.1:7000",
                                                                                    "127.0.0.2:7000",
                                                                                    "128.0.0.1:7000"));
@@ -204,7 +208,7 @@ public class TokenRangeReplicaProviderTest
         when(endpointOperations.getDatacenter(startsWith("127"))).thenReturn(TEST_DC1);
         when(endpointOperations.getDatacenter(startsWith("128"))).thenReturn(TEST_DC2);
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas("test_keyspace", Partitioner.Random);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Random);
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(2);
         // 2 token ranges
@@ -237,8 +241,10 @@ public class TokenRangeReplicaProviderTest
         when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
 
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(readReplicaMappings);
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(writeReplicaMappings);
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(readReplicaMappings);
+        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(writeReplicaMappings);
         when(storageOperations.getLeavingNodesWithPort()).thenReturn(Arrays.asList("127.0.0.3:7000", "128.0.0.1:7000"));
         when(clusterMembershipOperations.getAllEndpointStatesWithPort())
         .thenReturn(generateSampleGossip("NORMAL",
@@ -251,7 +257,7 @@ public class TokenRangeReplicaProviderTest
         when(endpointOperations.getDatacenter(startsWith("127"))).thenReturn(TEST_DC1);
         when(endpointOperations.getDatacenter(startsWith("128"))).thenReturn(TEST_DC2);
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas("test_keyspace", Partitioner.Random);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Random);
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(2);
         assertThat(result.readReplicas().size()).isEqualTo(1);
@@ -279,8 +285,9 @@ public class TokenRangeReplicaProviderTest
 
         when(storageOperations.getLiveNodesWithPort()).thenReturn(TEST_ENDPOINTS1);
         when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(rangeToEndpointWithPortMap);
+        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
         .thenReturn(pendingRangeToEndpointWithPortMap);
         when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
         when(storageOperations.getLeavingNodesWithPort()).thenReturn(Arrays.asList("127.0.0.4:7000", "128.0.0.2:7000"));
@@ -327,8 +334,9 @@ public class TokenRangeReplicaProviderTest
         when(storageOperations.getLiveNodesWithPort()).thenReturn(TEST_ENDPOINTS1);
         when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(rangeToEndpointWithPortMap);
+        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
         .thenReturn(pendingRangeToEndpointWithPortMap);
         when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
         when(storageOperations.getLeavingNodesWithPort()).thenReturn(Arrays.asList("127.0.0.2:7000", "127.0.0.4:7000"));
@@ -377,8 +385,9 @@ public class TokenRangeReplicaProviderTest
         .thenReturn(Arrays.asList("127.0.0.1:7000", "127.0.0.2:7000", "127.0.0.3:7000", "127.0.0.4:7000"));
         when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(rangeToEndpointWithPortMap);
+        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
         .thenReturn(pendingRangeToEndpointWithPortMap);
         when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
         when(storageOperations.getLeavingNodesWithPort()).thenReturn(Arrays.asList("127.0.0.1:7000", "128.0.0.1:7000"));
@@ -424,8 +433,9 @@ public class TokenRangeReplicaProviderTest
         .thenReturn(Arrays.asList("127.0.0.1:7000", "127.0.0.2:7000", "127.0.0.3:7000", "127.0.0.4:7000"));
         when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
 
-        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE)).thenReturn(rangeToEndpointWithPortMap);
-        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE))
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(rangeToEndpointWithPortMap);
+        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE.name()))
         .thenReturn(pendingRangeToEndpointWithPortMap);
         when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
         when(storageOperations.getLeavingNodesWithPort()).thenReturn(Arrays.asList("127.0.0.1:7000", "128.0.0.1:7000"));

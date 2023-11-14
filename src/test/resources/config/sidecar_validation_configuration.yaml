@@ -30,5 +30,6 @@ cassandra_input_validation:
     - b
     - c
   allowed_chars_for_directory: "[a-z]+"
+  allowed_chars_for_quoted_name: "[A-Z]+"
   allowed_chars_for_component_name: "(.db|.cql|.json|.crc32|TOC.txt)"
   allowed_chars_for_restricted_component_name: "(.db|TOC.txt)"
