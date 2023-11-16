@@ -71,6 +71,7 @@ public abstract class IntegrationTestBase
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     protected Vertx vertx;
     protected Server server;
+    protected WebClient client;
 
     protected static final String TEST_KEYSPACE = "testkeyspace";
     private static final String TEST_TABLE_PREFIX = "testtable";
@@ -89,7 +90,7 @@ public abstract class IntegrationTestBase
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);
-
+        client = WebClient.create(vertx);
         VertxTestContext context = new VertxTestContext();
 
         if (sidecarTestContext.isClusterBuilt())
@@ -118,6 +119,7 @@ public abstract class IntegrationTestBase
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
+        client.close();
         server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
@@ -128,7 +130,6 @@ public abstract class IntegrationTestBase
 
     protected void testWithClient(VertxTestContext context, Consumer<WebClient> tester) throws Exception
     {
-        WebClient client = WebClient.create(vertx);
         CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
                                                               .instanceFromId(1)
                                                               .delegate();

@@ -329,6 +329,7 @@ class SidecarConfigurationTest
         assertThat(config.handshakeTimeoutInSeconds()).isEqualTo(25L);
         assertThat(config.clientAuth()).isEqualTo("REQUEST");
         assertThat(config.keystore()).isNotNull();
+        assertThat(config.keystore().type()).isEqualTo("PKCS12");
         assertThat(config.keystore().path()).isEqualTo("path/to/keystore.p12");
         assertThat(config.keystore().password()).isEqualTo("password");
         assertThat(config.keystore().reloadStore()).isTrue();
@@ -338,6 +339,15 @@ class SidecarConfigurationTest
         assertThat(config.truststore().password()).isEqualTo("password");
         assertThat(config.truststore().reloadStore()).isFalse();
         assertThat(config.truststore().checkIntervalInSeconds()).isEqualTo(-1);
+        assertThat(config.secureTransportProtocols()).contains("TLSv1.3");
+        assertThat(config.cipherSuites()).contains("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                                                   "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                                                   "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                                                   "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+                                                   "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+                                                   "TLS_RSA_WITH_AES_128_GCM_SHA256",
+                                                   "TLS_RSA_WITH_AES_128_CBC_SHA",
+                                                   "TLS_RSA_WITH_AES_256_CBC_SHA");
     }
 
     private Path yaml(String resourceName)
