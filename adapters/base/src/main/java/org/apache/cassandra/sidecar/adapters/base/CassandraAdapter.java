@@ -34,6 +34,13 @@ import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.cassandra.sidecar.common.NodeSettings.DATA_CENTER_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.common.NodeSettings.PARTITIONER_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.common.NodeSettings.RELEASE_VERSION_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.common.NodeSettings.RPC_ADDRESS_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.common.NodeSettings.RPC_PORT_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.common.NodeSettings.TOKENS_COLUMN_NAME;
+
 /**
  * A {@link ICassandraAdapter} implementation for Cassandra 4.0 and later
  */
@@ -96,12 +103,25 @@ public class CassandraAdapter implements ICassandraAdapter
             return null;
         }
 
-        Row oneResult = activeSession.execute("select release_version, partitioner from system.local")
+        Row oneResult = activeSession.execute("SELECT "
+                                              + RELEASE_VERSION_COLUMN_NAME + ", "
+                                              + PARTITIONER_COLUMN_NAME + ", "
+                                              + DATA_CENTER_COLUMN_NAME + ", "
+                                              + RPC_ADDRESS_COLUMN_NAME + ", "
+                                              + RPC_PORT_COLUMN_NAME + ", "
+                                              + TOKENS_COLUMN_NAME
+                                              + " FROM system.local")
                                      .one();
 
-        return new NodeSettings(oneResult.getString("release_version"),
-                                oneResult.getString("partitioner"),
-                                sidecarVersion);
+        return NodeSettings.builder()
+                           .releaseVersion(oneResult.getString(RELEASE_VERSION_COLUMN_NAME))
+                           .partitioner(oneResult.getString(PARTITIONER_COLUMN_NAME))
+                           .sidecarVersion(sidecarVersion)
+                           .datacenter(oneResult.getString(DATA_CENTER_COLUMN_NAME))
+                           .tokens(oneResult.getSet(TOKENS_COLUMN_NAME, String.class))
+                           .rpcAddress(oneResult.getInet(RPC_ADDRESS_COLUMN_NAME))
+                           .rpcPort(oneResult.getInt(RPC_PORT_COLUMN_NAME))
+                           .build();
     }
 
     /**

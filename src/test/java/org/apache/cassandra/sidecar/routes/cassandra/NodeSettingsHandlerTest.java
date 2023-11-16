@@ -17,6 +17,7 @@
  */
 package org.apache.cassandra.sidecar.routes.cassandra;
 
+import java.net.InetAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -31,8 +32,11 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
@@ -81,39 +85,33 @@ class NodeSettingsHandlerTest
     }
 
     @Test
-    public void validRequestWithoutInstanceId(VertxTestContext context)
+    void validRequestWithoutInstanceId(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
         client.get(server.actualPort(), "localhost", NODE_SETTINGS_ROUTE)
               .as(BodyCodec.buffer())
               .send(resp -> {
                   assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                  NodeSettings status = resp.result().bodyAsJson(NodeSettings.class);
-                  assertThat(status.partitioner()).isEqualTo("testPartitioner");
-                  assertThat(status.releaseVersion()).isEqualTo("testVersion");
-                  assertThat(status.sidecarVersion()).isEqualTo("testSidecar");
+                  validateNodeSettings(resp);
                   context.completeNow();
               });
     }
 
     @Test
-    public void validRequestWithInstanceId(VertxTestContext context)
+    void validRequestWithInstanceId(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
         client.get(server.actualPort(), "localhost", String.format(URI_WITH_INSTANCE_ID, "1"))
               .as(BodyCodec.buffer())
               .send(resp -> {
                   assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                  NodeSettings status = resp.result().bodyAsJson(NodeSettings.class);
-                  assertThat(status.partitioner()).isEqualTo("testPartitioner");
-                  assertThat(status.releaseVersion()).isEqualTo("testVersion");
-                  assertThat(status.sidecarVersion()).isEqualTo("testSidecar");
+                  validateNodeSettings(resp);
                   context.completeNow();
               });
     }
 
     @Test
-    public void validRequestWithInvalidInstanceId(VertxTestContext context)
+    void validRequestWithInvalidInstanceId(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
         client.get(server.actualPort(), "localhost", String.format(URI_WITH_INSTANCE_ID, "10"))
@@ -125,5 +123,19 @@ class NodeSettingsHandlerTest
                   assertThat(error.getString("message")).isEqualTo("Instance id 10 not found");
                   context.completeNow();
               });
+    }
+
+    static void validateNodeSettings(AsyncResult<HttpResponse<Buffer>> resp)
+    {
+        NodeSettings status = resp.result().bodyAsJson(NodeSettings.class);
+        assertThat(status.partitioner()).isEqualTo("testPartitioner");
+        assertThat(status.releaseVersion()).isEqualTo("testVersion");
+        assertThat(status.sidecarVersion()).isEqualTo("testSidecar");
+        assertThat(status.datacenter()).isEqualTo("testDC");
+        assertThat(status.rpcAddress()).isEqualTo(InetAddress.getLoopbackAddress());
+        assertThat(status.rpcPort()).isEqualTo(6475);
+        assertThat(status.tokens()).isNotNull()
+                                   .isNotEmpty()
+                                   .containsExactly("testToken");
     }
 }

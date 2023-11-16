@@ -46,6 +46,12 @@ import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.cassandra.sidecar.common.NodeSettings.DATA_CENTER_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.common.NodeSettings.PARTITIONER_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.common.NodeSettings.RELEASE_VERSION_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.common.NodeSettings.RPC_ADDRESS_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.common.NodeSettings.RPC_PORT_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.common.NodeSettings.TOKENS_COLUMN_NAME;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 
@@ -166,14 +172,28 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
         try
         {
-            Row oneResult = activeSession.execute("select release_version, partitioner from system.local")
+            Row oneResult = activeSession.execute("SELECT "
+                                                  + RELEASE_VERSION_COLUMN_NAME + ", "
+                                                  + PARTITIONER_COLUMN_NAME + ", "
+                                                  + DATA_CENTER_COLUMN_NAME + ", "
+                                                  + RPC_ADDRESS_COLUMN_NAME + ", "
+                                                  + RPC_PORT_COLUMN_NAME + ", "
+                                                  + TOKENS_COLUMN_NAME
+                                                  + " FROM system.local")
                                          .one();
 
             // Note that within the scope of this method, we should keep on using the local releaseVersion
-            String releaseVersion = oneResult.getString("release_version");
-            NodeSettings newNodeSettings = new NodeSettings(releaseVersion,
-                                                            oneResult.getString("partitioner"),
-                                                            sidecarVersion);
+            String releaseVersion = oneResult.getString(RELEASE_VERSION_COLUMN_NAME);
+            NodeSettings newNodeSettings = NodeSettings.builder()
+                                                       .releaseVersion(releaseVersion)
+                                                       .partitioner(oneResult.getString(PARTITIONER_COLUMN_NAME))
+                                                       .sidecarVersion(sidecarVersion)
+                                                       .datacenter(oneResult.getString(DATA_CENTER_COLUMN_NAME))
+                                                       .tokens(oneResult.getSet(TOKENS_COLUMN_NAME, String.class))
+                                                       .rpcAddress(oneResult.getInet(RPC_ADDRESS_COLUMN_NAME))
+                                                       .rpcPort(oneResult.getInt(RPC_PORT_COLUMN_NAME))
+                                                       .build();
+
             if (!newNodeSettings.equals(nodeSettings))
             {
                 // Update the nodeSettings cache
