@@ -192,16 +192,16 @@ class SidecarConfigurationTest
         assertThat(i1.jmxRolePassword()).isEqualTo("controlPassword");
 
         // service configuration
-        validateDefaultServiceConfiguration(config.serviceConfiguration());
+        validateServiceConfigurationFromYaml(config.serviceConfiguration());
 
         // ssl configuration
         assertThat(config.sslConfiguration()).isNull();
 
         // health check configuration
-        validateHealthCheckConfiguration(config.healthCheckConfiguration());
+        validateHealthCheckConfigurationFromYaml(config.healthCheckConfiguration());
 
         // cassandra input validation configuration
-        validateDefaultCassandraInputValidationConfiguration(config.cassandraInputValidationConfiguration());
+        validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
     }
 
     void validateMultipleInstancesSidecarConfiguration(SidecarConfiguration config, boolean withSslConfiguration)
@@ -250,12 +250,12 @@ class SidecarConfigurationTest
         assertThat(i3.jmxSslEnabled()).isFalse();
 
         // service configuration
-        validateDefaultServiceConfiguration(config.serviceConfiguration());
+        validateServiceConfigurationFromYaml(config.serviceConfiguration());
 
         // ssl configuration
         if (withSslConfiguration)
         {
-            validateDefaultSslConfiguration(config.sslConfiguration());
+            validateSslConfigurationFromYaml(config.sslConfiguration());
         }
         else
         {
@@ -263,13 +263,13 @@ class SidecarConfigurationTest
         }
 
         // health check configuration
-        validateHealthCheckConfiguration(config.healthCheckConfiguration());
+        validateHealthCheckConfigurationFromYaml(config.healthCheckConfiguration());
 
         // cassandra input validation configuration
-        validateDefaultCassandraInputValidationConfiguration(config.cassandraInputValidationConfiguration());
+        validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
     }
 
-    void validateDefaultServiceConfiguration(ServiceConfiguration serviceConfiguration)
+    void validateServiceConfigurationFromYaml(ServiceConfiguration serviceConfiguration)
     {
         assertThat(serviceConfiguration).isNotNull();
         assertThat(serviceConfiguration.host()).isEqualTo("0.0.0.0");
@@ -298,14 +298,14 @@ class SidecarConfigurationTest
         assertThat(trafficShaping.checkIntervalForStatsMillis()).isEqualTo(3000L);
     }
 
-    private void validateHealthCheckConfiguration(HealthCheckConfiguration config)
+    private void validateHealthCheckConfigurationFromYaml(HealthCheckConfiguration config)
     {
         assertThat(config).isNotNull();
         assertThat(config.initialDelayMillis()).isEqualTo(100);
         assertThat(config.checkIntervalMillis()).isEqualTo(30_000);
     }
 
-    void validateDefaultCassandraInputValidationConfiguration(CassandraInputValidationConfiguration config)
+    void validateCassandraInputValidationConfigurationFromYaml(CassandraInputValidationConfiguration config)
     {
         assertThat(config).isNotNull();
         assertThat(config.forbiddenKeyspaces()).containsExactlyInAnyOrder("system_schema",
@@ -321,7 +321,7 @@ class SidecarConfigurationTest
         assertThat(config.allowedPatternForRestrictedComponentName()).isEqualTo("[a-zA-Z0-9_-]+(.db|TOC.txt)");
     }
 
-    void validateDefaultSslConfiguration(SslConfiguration config)
+    void validateSslConfigurationFromYaml(SslConfiguration config)
     {
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isTrue();
@@ -339,7 +339,7 @@ class SidecarConfigurationTest
         assertThat(config.truststore().password()).isEqualTo("password");
         assertThat(config.truststore().reloadStore()).isFalse();
         assertThat(config.truststore().checkIntervalInSeconds()).isEqualTo(-1);
-        assertThat(config.secureTransportProtocols()).contains("TLSv1.3");
+        assertThat(config.secureTransportProtocols()).containsExactly("TLSv1.3");
         assertThat(config.cipherSuites()).contains("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
                                                    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                                                    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
