@@ -96,12 +96,23 @@ public class CassandraAdapter implements ICassandraAdapter
             return null;
         }
 
-        Row oneResult = activeSession.execute("select release_version, partitioner from system.local")
+        Row oneResult = activeSession.execute("select release_version, "
+                                              + "partitioner, "
+                                              + "data_center, "
+                                              + "rpc_address, "
+                                              + "rpc_port, "
+                                              + "tokens from system.local")
                                      .one();
 
-        return new NodeSettings(oneResult.getString("release_version"),
-                                oneResult.getString("partitioner"),
-                                sidecarVersion);
+        return NodeSettings.builder()
+                           .releaseVersion(oneResult.getString("release_version"))
+                           .partitioner(oneResult.getString("partitioner"))
+                           .sidecarVersion(sidecarVersion)
+                           .datacenter(oneResult.getString("data_center"))
+                           .tokens(oneResult.getSet("tokens", String.class))
+                           .rpcAddress(oneResult.getInet("rpc_address"))
+                           .rpcPort(oneResult.getInt("rpc_port"))
+                           .build();
     }
 
     /**

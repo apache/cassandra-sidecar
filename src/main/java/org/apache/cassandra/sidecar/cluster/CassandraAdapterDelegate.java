@@ -166,14 +166,26 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
         try
         {
-            Row oneResult = activeSession.execute("select release_version, partitioner from system.local")
+            Row oneResult = activeSession.execute("select release_version, "
+                                                  + "partitioner, "
+                                                  + "data_center, "
+                                                  + "rpc_address, "
+                                                  + "rpc_port, "
+                                                  + "tokens from system.local")
                                          .one();
 
             // Note that within the scope of this method, we should keep on using the local releaseVersion
             String releaseVersion = oneResult.getString("release_version");
-            NodeSettings newNodeSettings = new NodeSettings(releaseVersion,
-                                                            oneResult.getString("partitioner"),
-                                                            sidecarVersion);
+            NodeSettings newNodeSettings = NodeSettings.builder()
+                                                       .releaseVersion(releaseVersion)
+                                                       .partitioner(oneResult.getString("partitioner"))
+                                                       .sidecarVersion(sidecarVersion)
+                                                       .datacenter(oneResult.getString("data_center"))
+                                                       .tokens(oneResult.getSet("tokens", String.class))
+                                                       .rpcAddress(oneResult.getInet("rpc_address"))
+                                                       .rpcPort(oneResult.getInt("rpc_port"))
+                                                       .build();
+
             if (!newNodeSettings.equals(nodeSettings))
             {
                 // Update the nodeSettings cache

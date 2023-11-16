@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -121,8 +122,15 @@ public class TestModule extends AbstractModule
         CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
         if (isUp)
         {
-            when(delegate.nodeSettings()).thenReturn(new NodeSettings(
-            "testVersion", "testPartitioner", Collections.singletonMap("version", "testSidecar")));
+            when(delegate.nodeSettings()).thenReturn(NodeSettings.builder()
+                                                                 .releaseVersion("testVersion")
+                                                                 .partitioner("testPartitioner")
+                                                                 .sidecarVersion("testSidecar")
+                                                                 .datacenter("testDC")
+                                                                 .rpcAddress(InetAddress.getLoopbackAddress())
+                                                                 .rpcPort(6475)
+                                                                 .tokens(Collections.singleton("testToken"))
+                                                                 .build());
         }
         when(delegate.isUp()).thenReturn(isUp);
         when(instanceMeta.delegate()).thenReturn(delegate);
