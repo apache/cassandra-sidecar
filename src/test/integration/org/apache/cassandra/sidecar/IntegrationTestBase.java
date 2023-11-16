@@ -92,7 +92,7 @@ public abstract class IntegrationTestBase
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);
-
+        client = WebClient.create(vertx);
         VertxTestContext context = new VertxTestContext();
 
         if (sidecarTestContext.isClusterBuilt())

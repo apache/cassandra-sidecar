@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.server;
 
+import java.util.LinkedHashSet;
 import java.util.function.Function;
 
 import org.apache.commons.lang3.SystemUtils;
@@ -71,7 +72,14 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
         if (ssl != null && ssl.enabled())
         {
             options.setClientAuth(ClientAuth.valueOf(ssl.clientAuth()))
-                   .setSsl(true);
+                   .setSsl(true)
+                   // Use LinkedHashSet to preserve input order
+                   .setEnabledSecureTransportProtocols(new LinkedHashSet<>(ssl.secureTransportProtocols()));
+
+            for (String cipherSuite : ssl.cipherSuites())
+            {
+                options.addEnabledCipherSuite(cipherSuite);
+            }
 
             if (ssl.preferOpenSSL() && OpenSSLEngineOptions.isAvailable())
             {

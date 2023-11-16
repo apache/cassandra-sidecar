@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import java.util.List;
+
 /**
  * Encapsulates SSL Configuration
  */
@@ -52,6 +54,22 @@ public interface SslConfiguration
      * @return the client authentication mode
      */
     String clientAuth();
+
+    /**
+     * Return a list of the enabled cipher suites. The list of cipher suites must be provided in the
+     * desired order for its intended use.
+     *
+     * @return the enabled cipher suites
+     */
+    List<String> cipherSuites();
+
+    /**
+     * Returns a list of enabled SSL/TLS protocols. The list of accepted protocols must be provided in the
+     * desired order of use.
+     *
+     * @return the enabled SSL/TLS protocols
+     */
+    List<String> secureTransportProtocols();
 
     /**
      * @return {@code true} if the keystore is configured, and the {@link KeyStoreConfiguration#path()} and

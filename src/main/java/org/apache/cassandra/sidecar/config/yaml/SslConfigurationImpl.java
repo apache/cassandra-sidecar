@@ -18,7 +18,10 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -36,6 +39,8 @@ public class SslConfigurationImpl implements SslConfiguration
     public static final boolean DEFAULT_USE_OPEN_SSL = true;
     public static final long DEFAULT_HANDSHAKE_TIMEOUT_SECONDS = 10L;
     public static final String DEFAULT_CLIENT_AUTH = "NONE";
+    public static final List<String> DEFAULT_SECURE_TRANSPORT_PROTOCOLS
+    = Collections.unmodifiableList(Arrays.asList("TLSv1.2", "TLSv1.3"));
 
 
     @JsonProperty("enabled")
@@ -48,6 +53,12 @@ public class SslConfigurationImpl implements SslConfiguration
     protected final long handshakeTimeoutInSeconds;
 
     protected String clientAuth;
+
+    @JsonProperty(value = "cipher_suites")
+    protected final List<String> cipherSuites;
+
+    @JsonProperty(value = "accepted_protocols")
+    protected final List<String> secureTransportProtocols;
 
     @JsonProperty("keystore")
     protected final KeyStoreConfiguration keystore;
@@ -68,6 +79,8 @@ public class SslConfigurationImpl implements SslConfiguration
         setClientAuth(builder.clientAuth);
         keystore = builder.keystore;
         truststore = builder.truststore;
+        cipherSuites = builder.cipherSuites;
+        secureTransportProtocols = builder.secureTransportProtocols;
     }
 
     /**
@@ -100,6 +113,9 @@ public class SslConfigurationImpl implements SslConfiguration
         return handshakeTimeoutInSeconds;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @JsonProperty(value = "client_auth", defaultValue = "NONE")
     public String clientAuth()
@@ -125,6 +141,26 @@ public class SslConfigurationImpl implements SslConfiguration
                                                       .collect(Collectors.joining(",")));
             throw new IllegalArgumentException(errorMessage);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = "cipher_suites")
+    public List<String> cipherSuites()
+    {
+        return cipherSuites;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = "accepted_protocols")
+    public List<String> secureTransportProtocols()
+    {
+        return secureTransportProtocols;
     }
 
     /**
@@ -166,12 +202,14 @@ public class SslConfigurationImpl implements SslConfiguration
      */
     public static class Builder implements DataObjectBuilder<Builder, SslConfigurationImpl>
     {
-        private boolean enabled = DEFAULT_SSL_ENABLED;
-        private boolean useOpenSsl = DEFAULT_USE_OPEN_SSL;
-        private long handshakeTimeoutInSeconds = DEFAULT_HANDSHAKE_TIMEOUT_SECONDS;
-        private String clientAuth = DEFAULT_CLIENT_AUTH;
-        private KeyStoreConfiguration keystore = null;
-        private KeyStoreConfiguration truststore = null;
+        protected boolean enabled = DEFAULT_SSL_ENABLED;
+        protected boolean useOpenSsl = DEFAULT_USE_OPEN_SSL;
+        protected long handshakeTimeoutInSeconds = DEFAULT_HANDSHAKE_TIMEOUT_SECONDS;
+        protected String clientAuth = DEFAULT_CLIENT_AUTH;
+        protected List<String> cipherSuites = Collections.emptyList();
+        protected List<String> secureTransportProtocols = DEFAULT_SECURE_TRANSPORT_PROTOCOLS;
+        protected KeyStoreConfiguration keystore = null;
+        protected KeyStoreConfiguration truststore = null;
 
         protected Builder()
         {
@@ -191,8 +229,7 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public Builder enabled(boolean enabled)
         {
-            this.enabled = enabled;
-            return this;
+            return update(b -> b.enabled = enabled);
         }
 
         /**
@@ -203,8 +240,7 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public Builder useOpenSsl(boolean useOpenSsl)
         {
-            this.useOpenSsl = useOpenSsl;
-            return this;
+            return update(b -> b.useOpenSsl = useOpenSsl);
         }
 
         /**
@@ -215,8 +251,7 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public Builder handshakeTimeoutInSeconds(long handshakeTimeoutInSeconds)
         {
-            this.handshakeTimeoutInSeconds = handshakeTimeoutInSeconds;
-            return this;
+            return update(b -> b.handshakeTimeoutInSeconds = handshakeTimeoutInSeconds);
         }
 
         /**
@@ -227,8 +262,29 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public Builder clientAuth(String clientAuth)
         {
-            this.clientAuth = clientAuth;
-            return this;
+            return update(b -> b.clientAuth = clientAuth);
+        }
+
+        /**
+         * Sets the {@code cipherSuites} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param cipherSuites the {@code cipherSuites} to set
+         * @return a reference to this Builder
+         */
+        public Builder cipherSuites(List<String> cipherSuites)
+        {
+            return update(b -> b.cipherSuites = new ArrayList<>(cipherSuites));
+        }
+
+        /**
+         * Sets the {@code secureTransportProtocols} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param secureTransportProtocols the {@code secureTransportProtocols} to set
+         * @return a reference to this Builder
+         */
+        public Builder secureTransportProtocols(List<String> secureTransportProtocols)
+        {
+            return update(b -> b.secureTransportProtocols = new ArrayList<>(secureTransportProtocols));
         }
 
         /**
@@ -239,8 +295,7 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public Builder keystore(KeyStoreConfiguration keystore)
         {
-            this.keystore = keystore;
-            return this;
+            return update(b -> b.keystore = keystore);
         }
 
         /**
@@ -251,8 +306,7 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public Builder truststore(KeyStoreConfiguration truststore)
         {
-            this.truststore = truststore;
-            return this;
+            return update(b -> b.truststore = truststore);
         }
 
         /**

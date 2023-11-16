@@ -112,7 +112,19 @@ ssl:
   use_openssl: false
   handshake_timeout_sec: 25
   client_auth: REQUEST # valid options are NONE, REQUEST, REQUIRED
+  accepted_protocols:
+   - TLSv1.3
+  cipher_suites:
+   - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+   - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+   - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+   - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+   - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+   - TLS_RSA_WITH_AES_128_GCM_SHA256
+   - TLS_RSA_WITH_AES_128_CBC_SHA
+   - TLS_RSA_WITH_AES_256_CBC_SHA
   keystore:
+    type: PKCS12
     path: "path/to/keystore.p12"
     password: password
     check_interval_sec: 300

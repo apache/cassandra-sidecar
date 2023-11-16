@@ -113,7 +113,12 @@ sidecar:
 #    use_openssl: true
 #    handshake_timeout_sec: 10
 #    client_auth: NONE # valid options are NONE, REQUEST, REQUIRED
+#    accepted_protocols:
+#     - TLSv1.2
+#     - TLSv1.3
+#    cipher_suites: []
 #    keystore:
+#      type: PKCS12
 #      path: "path/to/keystore.p12"
 #      password: password
 #      check_interval_sec: 300

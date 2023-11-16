@@ -342,6 +342,43 @@ class ServerSSLTest
     }
 
     @Test
+    void failsOnClientUsingUnacceptableProtocol(VertxTestContext context)
+    {
+        SslConfigurationImpl ssl =
+        SslConfigurationImpl.builder()
+                            .enabled(true)
+                            .useOpenSsl(true)
+                            .keystore(p12KeyStore)
+                            .truststore(p12TrustStore)
+                            .build();
+
+        builder.sslConfiguration(ssl)
+               .serviceConfiguration(ServiceConfigurationImpl.builder()
+                                                             .host("127.0.0.1")
+                                                             .port(9043)
+                                                             .build());
+
+        server = server();
+
+        // Remove default protocols enabled for the server and only add an unsupported protocol to the client
+        WebClientOptions options = new WebClientOptions().setSsl(true)
+                                                         .addEnabledSecureTransportProtocol("TLSv1.1")
+                                                         .removeEnabledSecureTransportProtocol("TLSv1.2")
+                                                         .removeEnabledSecureTransportProtocol("TLSv1.3");
+        server.start()
+              .compose(s -> validateHealthEndpoint(clientWithP12Keystore(options, true, false)))
+              .onComplete(context.failing(throwable -> {
+                  assertThat(throwable).isNotNull()
+                                       .isInstanceOf(SSLHandshakeException.class)
+                                       .hasMessageContaining("Failed to create SSL connection")
+                                       .hasCauseInstanceOf(SSLHandshakeException.class)
+                                       .hasRootCauseMessage("No appropriate protocol (protocol is disabled " +
+                                                            "or cipher suites are inappropriate)");
+                  context.completeNow();
+              }));
+    }
+
+    @Test
     void testHotReloadOfServerCertificates(VertxTestContext context)
     {
         KeyStoreConfigurationImpl expiredP12KeyStore =
@@ -437,6 +474,11 @@ class ServerSSLTest
     WebClient clientWithP12Keystore(boolean includeTrustStore, boolean includeClientKeyStore)
     {
         WebClientOptions options = new WebClientOptions().setSsl(true);
+        return clientWithP12Keystore(options, includeTrustStore, includeClientKeyStore);
+    }
+
+    WebClient clientWithP12Keystore(WebClientOptions options, boolean includeTrustStore, boolean includeClientKeyStore)
+    {
         if (includeTrustStore)
         {
             options.setTrustOptions(new PfxOptions().setPath(trustStoreP12Path.toString())

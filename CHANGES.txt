@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Expose additional SSL configuration options for the Sidecar Service (CASSANDRASC-82)
  * Expose additional node settings (CASSANDRASC-84)
  * Sidecar does not handle keyspaces and table names with mixed case (CASSANDRASC-76)
  * Require gossip to be enabled for ring and token ranges mapping endpoints (CASSANDRASC-83)
