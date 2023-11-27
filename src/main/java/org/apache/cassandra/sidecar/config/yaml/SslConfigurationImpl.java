@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -272,7 +273,7 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public Builder cipherSuites(List<String> cipherSuites)
         {
-            return update(b -> b.cipherSuites = cipherSuites);
+            return update(b -> b.cipherSuites = new ArrayList<>(cipherSuites));
         }
 
         /**
@@ -283,7 +284,7 @@ public class SslConfigurationImpl implements SslConfiguration
          */
         public Builder secureTransportProtocols(List<String> secureTransportProtocols)
         {
-            return update(b -> b.secureTransportProtocols = secureTransportProtocols);
+            return update(b -> b.secureTransportProtocols = new ArrayList<>(secureTransportProtocols));
         }
 
         /**
