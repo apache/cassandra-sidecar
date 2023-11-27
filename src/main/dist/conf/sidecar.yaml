@@ -104,6 +104,11 @@ sidecar:
   jmx:
     max_retries: 3
     retry_delay_millis: 200
+  schema:
+    is_enabled: false
+    keyspace: sidecar_internal
+    replication_strategy: SimpleStrategy
+    replication_factor: 1
 
 #
 # Enable SSL configuration (Disabled by default)
@@ -150,3 +155,19 @@ cassandra_input_validation:
   allowed_chars_for_quoted_name: "[a-zA-Z_0-9]{1,48}"
   allowed_chars_for_component_name: "[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)"
   allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(.db|TOC.txt)"
+
+blob_restore:
+  job_discovery_active_loop_delay_millis: 5
+  job_discovery_idle_loop_delay_millis: 10
+  job_discovery_recency_days: 5
+  slice_process_max_concurrency: 20
+  restore_job_tables_ttl_seconds: 7776000
+
+s3_client:
+  concurrency: 4
+  thread_name_prefix: s3-client
+  thread_keep_alive_seconds: 60
+#  proxy_config:
+#    uri:
+#    username:
+#    password:

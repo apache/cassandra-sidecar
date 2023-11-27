@@ -39,6 +39,8 @@ import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
+import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
+import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -74,6 +76,12 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @JsonProperty("cassandra_input_validation")
     protected final CassandraInputValidationConfiguration cassandraInputValidationConfiguration;
 
+    @JsonProperty("blob_restore")
+    protected final RestoreJobConfiguration restoreJobConfiguration;
+
+    @JsonProperty("s3_client")
+    protected final S3ClientConfiguration s3ClientConfiguration;
+
     public SidecarConfigurationImpl()
     {
         this(builder());
@@ -88,6 +96,8 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         healthCheckConfiguration = builder.healthCheckConfiguration;
         cassandraInputValidationConfiguration = builder.cassandraInputValidationConfiguration;
         driverConfiguration = builder.driverConfiguration;
+        restoreJobConfiguration = builder.restoreJobConfiguration;
+        s3ClientConfiguration = builder.s3ClientConfiguration;
     }
 
     /**
@@ -167,6 +177,26 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return cassandraInputValidationConfiguration;
     }
 
+    /**
+     * @return the configuration for restore jobs
+     */
+    @Override
+    @JsonProperty("blob_restore")
+    public RestoreJobConfiguration restoreJobConfiguration()
+    {
+        return restoreJobConfiguration;
+    }
+
+    /**
+     * @return the configuration for Amazon S3 client
+     */
+    @Override
+    @JsonProperty("s3_client")
+    public S3ClientConfiguration s3ClientConfiguration()
+    {
+        return s3ClientConfiguration;
+    }
+
     public static SidecarConfigurationImpl readYamlConfiguration(String yamlConfigurationPath) throws IOException
     {
         try
@@ -211,7 +241,11 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
                                     .addAbstractTypeMapping(TrafficShapingConfiguration.class,
                                                             TrafficShapingConfigurationImpl.class)
                                     .addAbstractTypeMapping(DriverConfiguration.class,
-                                                            DriverConfigurationImpl.class);
+                                                            DriverConfigurationImpl.class)
+                                    .addAbstractTypeMapping(RestoreJobConfiguration.class,
+                                                            RestoreJobConfigurationImpl.class)
+                                    .addAbstractTypeMapping(S3ClientConfiguration.class,
+                                                            S3ClientConfigurationImpl.class);
 
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
                               .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
@@ -240,6 +274,8 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         private CassandraInputValidationConfiguration cassandraInputValidationConfiguration
         = new CassandraInputValidationConfigurationImpl();
         private DriverConfiguration driverConfiguration = new DriverConfigurationImpl();
+        private RestoreJobConfiguration restoreJobConfiguration = new RestoreJobConfigurationImpl();
+        private S3ClientConfiguration s3ClientConfiguration = new S3ClientConfigurationImpl();
 
         protected Builder()
         {
@@ -328,6 +364,30 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder cassandraInputValidationConfiguration(CassandraInputValidationConfiguration configuration)
         {
             return update(b -> b.cassandraInputValidationConfiguration = configuration);
+        }
+
+        /**
+         * Sets the {@code restoreJobConfiguration} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param configuration the {@code restoreJobConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder restoreJobConfiguration(RestoreJobConfiguration configuration)
+        {
+            return update(b -> b.restoreJobConfiguration = configuration);
+        }
+
+        /**
+         * Sets the {@code s3ClientConfiguration} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param configuration the {@code s3ClientConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder s3ClientConfiguration(S3ClientConfiguration configuration)
+        {
+            return update(b -> b.s3ClientConfiguration = configuration);
         }
 
         /**

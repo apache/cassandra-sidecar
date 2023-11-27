@@ -81,6 +81,12 @@ public enum SidecarServerEvents
      * a given instance has been disconnected. The instance identifier will be passed as part of the message.
      */
     ON_CASSANDRA_JMX_DISCONNECTED,
+
+    /**
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when sidecar schema has been
+     * initialized.
+     */
+    ON_SIDECAR_SCHEMA_INITIALIZED,
     ;
 
     public String address()

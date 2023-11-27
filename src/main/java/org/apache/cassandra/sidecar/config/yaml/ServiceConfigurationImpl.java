@@ -28,6 +28,7 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
+import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
@@ -60,6 +61,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final String WORKER_POOLS_PROPERTY = "worker_pools";
     private static final String JMX_PROPERTY = "jmx";
     private static final String TRAFFIC_SHAPING_PROPERTY = "traffic_shaping";
+    private static final String SCHEMA = "schema";
     protected static final Map<String, WorkerPoolConfiguration> DEFAULT_WORKER_POOLS_CONFIGURATION
     = Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
     {{
@@ -113,6 +115,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = TRAFFIC_SHAPING_PROPERTY)
     protected final TrafficShapingConfiguration trafficShapingConfiguration;
 
+    @JsonProperty(value = SCHEMA)
+    protected final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
+
     /**
      * Constructs a new {@link ServiceConfigurationImpl} with the default values
      */
@@ -142,6 +147,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         workerPoolsConfiguration = builder.workerPoolsConfiguration;
         jmxConfiguration = builder.jmxConfiguration;
         trafficShapingConfiguration = builder.trafficShapingConfiguration;
+        schemaKeyspaceConfiguration = builder.schemaKeyspaceConfiguration;
     }
 
     /**
@@ -284,6 +290,16 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         return trafficShapingConfiguration;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = SCHEMA)
+    public SchemaKeyspaceConfiguration schemaKeyspaceConfiguration()
+    {
+        return schemaKeyspaceConfiguration;
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -309,6 +325,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         DEFAULT_WORKER_POOLS_CONFIGURATION;
         protected JmxConfiguration jmxConfiguration = new JmxConfigurationImpl();
         protected TrafficShapingConfiguration trafficShapingConfiguration = new TrafficShapingConfigurationImpl();
+        protected SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = new SchemaKeyspaceConfigurationImpl();
 
         private Builder()
         {
@@ -473,6 +490,18 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         public Builder trafficShapingConfiguration(TrafficShapingConfiguration trafficShapingConfiguration)
         {
             return update(b -> b.trafficShapingConfiguration = trafficShapingConfiguration);
+        }
+
+        /**
+         * Sets the {@code schemaKeyspaceConfiguration} and returns a reference to this Builder enabling method
+         * chaining.
+         *
+         * @param schemaKeyspaceConfiguration the {@code schemaKeyspaceConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder schemaKeyspaceConfiguration(SchemaKeyspaceConfiguration schemaKeyspaceConfiguration)
+        {
+            return update(b -> b.schemaKeyspaceConfiguration = schemaKeyspaceConfiguration);
         }
 
         /**

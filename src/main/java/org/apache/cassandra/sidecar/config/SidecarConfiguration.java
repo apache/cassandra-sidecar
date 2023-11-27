@@ -60,4 +60,14 @@ public interface SidecarConfiguration
      * @return the Cassandra Driver parameters to use when connecting to the cluster
      */
     DriverConfiguration driverConfiguration();
+
+    /**
+     * @return the configuration for restore jobs done by sidecar
+     */
+    RestoreJobConfiguration restoreJobConfiguration();
+
+    /**
+     * @return the configuration for Amazon S3 client
+     */
+    S3ClientConfiguration s3ClientConfiguration();
 }

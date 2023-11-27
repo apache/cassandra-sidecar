@@ -39,7 +39,8 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
                                                             "system",
                                                             "system_auth",
                                                             "system_views",
-                                                            "system_virtual_schema")));
+                                                            "system_virtual_schema",
+                                                            "sidecar_internal")));
     public static final String ALLOWED_CHARS_FOR_NAME_PROPERTY = "allowed_chars_for_directory";
     public static final String DEFAULT_ALLOWED_CHARS_FOR_NAME = "[a-zA-Z][a-zA-Z0-9_]{0,47}";
     public static final String ALLOWED_CHARS_FOR_QUOTED_NAME_PROPERTY = "allowed_chars_for_quoted_name";

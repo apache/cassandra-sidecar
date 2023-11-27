@@ -193,6 +193,13 @@ dependencies {
     implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
     implementation(group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: "${project.jacksonVersion}")
 
+    // aws sdk BOM + s3
+    implementation platform(group: 'software.amazon.awssdk', name:'bom', version:"${project.aswSdkVersion}")
+    implementation('software.amazon.awssdk:s3')
+    implementation('software.amazon.awssdk:netty-nio-client')
+
+    implementation(group: 'org.lz4', name: 'lz4-java', version: "${project.xxHashVersion}")
+
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
