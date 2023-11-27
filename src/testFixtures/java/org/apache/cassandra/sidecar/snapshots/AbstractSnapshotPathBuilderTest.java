@@ -227,7 +227,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                       new SnapshotRequest("ks",
                                                                           "table",
                                                                           "snapshot",
-                                                                          false)),
+                                                                          false,
+                                                                          null)),
                                        "No data directories are available for host 'emptyDataDirInstance'");
     }
 
@@ -244,7 +245,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                       new SnapshotRequest("ks",
                                                                           "table",
                                                                           "snapshot",
-                                                                          false)),
+                                                                          false,
+                                                                          null)),
                                        "Keyspace 'ks' does not exist");
     }
 
@@ -261,7 +263,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                       new SnapshotRequest("non_existent",
                                                                           "table",
                                                                           "snapshot",
-                                                                          false)),
+                                                                          false,
+                                                                          null)),
                                        "Keyspace 'non_existent' does not exist");
     }
 
@@ -278,7 +281,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                       new SnapshotRequest("not_a_keyspace_dir",
                                                                           "table",
                                                                           "snapshot",
-                                                                          false)),
+                                                                          false,
+                                                                          null)),
                                        "Keyspace 'not_a_keyspace_dir' does not exist");
     }
 
@@ -295,7 +299,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                       new SnapshotRequest("ks1",
                                                                           "non_existent",
                                                                           "snapshot",
-                                                                          false)),
+                                                                          false,
+                                                                          null)),
                                        "Table 'non_existent' does not exist");
     }
 
@@ -313,7 +318,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                       new SnapshotRequest("ks1",
                                                                           "table",
                                                                           "snapshot",
-                                                                          false)),
+                                                                          false,
+                                                                          null)),
                                        "Table 'table' does not exist");
     }
 
@@ -330,7 +336,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                       new SnapshotRequest("ks1",
                                                                           "not_a_table_dir",
                                                                           "snapshot",
-                                                                          false)),
+                                                                          false,
+                                                                          null)),
                                        "Table 'not_a_table_dir' does not exist");
     }
 
@@ -347,7 +354,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                       new SnapshotRequest("ks1",
                                                                           "table1",
                                                                           "non_existent",
-                                                                          false)),
+                                                                          false,
+                                                                          null)),
                                        "Snapshot directory 'non_existent' does not exist");
     }
 
@@ -364,7 +372,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                       new SnapshotRequest("ks1",
                                                                           "table1",
                                                                           "not_a_snapshot_dir",
-                                                                          false)),
+                                                                          false,
+                                                                          null)),
                                        "Snapshot directory 'not_a_snapshot_dir' does not exist");
     }
 
@@ -508,7 +517,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                               new SnapshotRequest("ks1",
                                                                   "table1",
                                                                   "backup.2022-03-17-04-PDT",
-                                                                  false)),
+                                                                  false,
+                                                                  null)),
                                expectedPath);
 
         expectedPath = dataDir0.getAbsolutePath() + "/data/ks2/table2/snapshots/ea823202-a62c-4603-bb6a-4e15d79091cd";
@@ -516,7 +526,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                               new SnapshotRequest("ks2",
                                                                   "table2",
                                                                   "ea823202-a62c-4603-bb6a-4e15d79091cd",
-                                                                  false)),
+                                                                  false,
+                                                                  null)),
                                expectedPath);
 
         expectedPath = dataDir1.getAbsolutePath() + "/ks3/table3/snapshots/snapshot1";
@@ -524,7 +535,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                               new SnapshotRequest("ks3",
                                                                   "table3",
                                                                   "snapshot1",
-                                                                  false)),
+                                                                  false,
+                                                                  null)),
                                expectedPath);
 
         // table table4 shares the prefix with table table4abc
@@ -535,7 +547,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                               new SnapshotRequest("ks4",
                                                                   "table4abc",
                                                                   "this_is_a_valid_snapshot_name_i_❤_u",
-                                                                  false)),
+                                                                  false,
+                                                                  null)),
                                expectedPath);
     }
 
@@ -588,7 +601,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                       new SnapshotRequest("ks1",
                                                           "a_table",
                                                           "a_snapshot",
-                                                          false)),
+                                                          false,
+                                                          null)),
                                expectedPath);
 
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot/index.db";
@@ -606,7 +620,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                       new SnapshotRequest("ks1",
                                                           "a_table",
                                                           "a_snapshot",
-                                                          false)),
+                                                          false,
+                                                          null)),
                                expectedPath);
 
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot/nb-203-big-TOC.txt";
@@ -624,7 +639,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                       new SnapshotRequest("ks1",
                                                           "a_table",
                                                           "a_snapshot",
-                                                          false)),
+                                                          false,
+                                                          null)),
                                expectedPath);
     }
 
@@ -683,7 +699,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                       new SnapshotRequest("ks4",
                                                           "table4",
                                                           "this_is_a_valid_snapshot_name_i_❤_u",
-                                                          false)),
+                                                          false,
+                                                          null)),
                                expectedPath);
 
         expectedPath = table4New.getAbsolutePath()
@@ -703,7 +720,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                       new SnapshotRequest("ks4",
                                                           "table4",
                                                           "this_is_a_valid_snapshot_name_i_❤_u",
-                                                          false)),
+                                                          false,
+                                                          null)),
                                expectedPath);
 
         expectedPath = table4New.getAbsolutePath()
@@ -723,7 +741,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                       new SnapshotRequest("ks4",
                                                           "table4",
                                                           "this_is_a_valid_snapshot_name_i_❤_u",
-                                                          false)),
+                                                          false,
+                                                          null)),
                                expectedPath);
     }
 

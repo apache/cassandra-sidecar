@@ -43,6 +43,7 @@ import org.apache.cassandra.sidecar.common.data.SchemaResponse;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The SidecarClient class to perform requests
@@ -313,9 +314,32 @@ public class SidecarClient implements AutoCloseable
                                                   String table,
                                                   String snapshotName)
     {
+        return createSnapshot(instance, keyspace, table, snapshotName, null);
+    }
+
+    /**
+     * Executes the create snapshot request using the default retry policy and provided {@code instance}
+     *
+     * @param instance     the instance where the request will be executed
+     * @param keyspace     the keyspace in Cassandra
+     * @param table        the table name in Cassandra
+     * @param snapshotName the name of the snapshot
+     * @param snapshotTTL  an optional time to live option for the snapshot (available since Cassandra 4.1+).
+     *                     The TTL option must specify the units, for example 2d represents a TTL for 2 days;
+     *                     1h represents a TTL of 1 hour, etc. Valid units are {@code d}, {@code h}, {@code s},
+     *                     {@code ms}, {@code us}, {@code µs}, {@code ns}, and {@code m}.
+     * @return a completable future for the request
+     */
+    public CompletableFuture<Void> createSnapshot(SidecarInstance instance,
+                                                  String keyspace,
+                                                  String table,
+                                                  String snapshotName,
+                                                  @Nullable String snapshotTTL)
+    {
         return executor.executeRequestAsync(requestBuilder().retryPolicy(ignoreConflictRetryPolicy)
                                                             .singleInstanceSelectionPolicy(instance)
-                                                            .createSnapshotRequest(keyspace, table, snapshotName)
+                                                            .createSnapshotRequest(keyspace, table,
+                                                                                   snapshotName, snapshotTTL)
                                                             .build());
     }
 

@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.routes;
 import java.io.FileNotFoundException;
 import java.nio.file.NoSuchFileException;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -82,7 +83,8 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
 {
-    private static final String INCLUDE_SECONDARY_INDEX_FILES = "includeSecondaryIndexFiles";
+    private static final String INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM = "includeSecondaryIndexFiles";
+    private static final String TTL_QUERY_PARAM = "ttl";
     private final SnapshotPathBuilder builder;
     private final ServiceConfiguration configuration;
 
@@ -235,14 +237,20 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
     {
         ExecutorPools.TaskExecutorPool pool = executorPools.service();
         pool.executeBlocking(promise -> {
-                CassandraAdapterDelegate delegate = metadataFetcher.delegate(host(context));
+                CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+                if (delegate == null)
+                    throw cassandraServiceUnavailable();
                 StorageOperations storageOperations = delegate.storageOperations();
                 if (storageOperations == null)
                     throw cassandraServiceUnavailable();
                 logger.debug("Creating snapshot request={}, remoteAddress={}, instance={}",
                              requestParams, remoteAddress, host);
+                Map<String, String> options = requestParams.ttl() != null
+                                              ? ImmutableMap.of("ttl", requestParams.ttl())
+                                              : ImmutableMap.of();
+
                 storageOperations.takeSnapshot(requestParams.snapshotName(), requestParams.keyspace(),
-                                               requestParams.tableName(), ImmutableMap.of());
+                                               requestParams.tableName(), options);
                 JsonObject jsonObject = new JsonObject()
                                         .put("result", "Success");
                 context.json(jsonObject);
@@ -338,13 +346,14 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
     @Override
     protected SnapshotRequest extractParamsOrThrow(final RoutingContext context)
     {
-        boolean includeSecondaryIndexFiles = RequestUtils.parseBooleanHeader(context.request(),
-                                                                             INCLUDE_SECONDARY_INDEX_FILES,
-                                                                             false);
+        boolean includeSecondaryIndexFiles =
+        RequestUtils.parseBooleanQueryParam(context.request(), INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM, false);
+        String ttl = context.request().getParam(TTL_QUERY_PARAM);
 
         SnapshotRequest snapshotRequest = new SnapshotRequest(qualifiedTableName(context),
                                                               context.pathParam("snapshot"),
-                                                              includeSecondaryIndexFiles
+                                                              includeSecondaryIndexFiles,
+                                                              ttl
         );
         validate(snapshotRequest);
         return snapshotRequest;

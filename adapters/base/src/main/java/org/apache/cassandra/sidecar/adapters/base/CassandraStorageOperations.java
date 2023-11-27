@@ -80,11 +80,39 @@ public class CassandraStorageOperations implements StorageOperations
     }
 
     /**
-     * {@inheritDoc}
+     * Takes the snapshot of a multiple column family from different keyspaces. A snapshot name must be specified.
+     * It logs a warning when the {@code ttl} option is provided as the option is unsupported.
+     *
+     * @param tag      the tag given to the snapshot; may not be null or empty
+     * @param keyspace the keyspace in the Cassandra database to use for the snapshot
+     * @param table    the table in the Cassandra database to use for the snapshot
+     * @param options  map of options, for example ttl, skipFlush
      */
     @Override
     public void takeSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table,
                              @Nullable Map<String, String> options)
+    {
+        if (options != null && options.containsKey("ttl"))
+        {
+            LOGGER.warn("The ttl option is not supported in Cassandra 4.0");
+        }
+
+        takeSnapshotInternal(tag, keyspace, table, options);
+    }
+
+    /**
+     * Actually performs the take snapshot operation of a multiple column family from different keyspaces.
+     * A snapshot name must be specified.
+     *
+     * @param tag      the tag given to the snapshot; may not be null or empty
+     * @param keyspace the keyspace in the Cassandra database to use for the snapshot
+     * @param table    the table in the Cassandra database to use for the snapshot
+     * @param options  map of options, for example ttl, skipFlush
+     */
+    protected void takeSnapshotInternal(@NotNull String tag,
+                                        @NotNull String keyspace,
+                                        @NotNull String table,
+                                        @Nullable Map<String, String> options)
     {
         requireNonNull(tag, "snapshot tag must be non-null");
         requireNonNull(keyspace, "keyspace for the  must be non-null");

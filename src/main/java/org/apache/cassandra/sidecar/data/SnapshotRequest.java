@@ -30,6 +30,7 @@ public class SnapshotRequest
     private final String snapshotName;
     private final boolean includeSecondaryIndexFiles;
     private final QualifiedTableName qualifiedTableName;
+    private final String ttl;
 
     /**
      * Constructor for the holder class
@@ -38,22 +39,26 @@ public class SnapshotRequest
      * @param tableName                  the table name in Cassandra
      * @param snapshotName               the name of the snapshot
      * @param includeSecondaryIndexFiles true if secondary index files are allowed, false otherwise
+     * @param ttl                        an optional TTL for snapshot creation
      */
     public SnapshotRequest(String keyspace,
                            String tableName,
                            String snapshotName,
-                           boolean includeSecondaryIndexFiles)
+                           boolean includeSecondaryIndexFiles,
+                           String ttl)
     {
-        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, includeSecondaryIndexFiles);
+        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, includeSecondaryIndexFiles, ttl);
     }
 
     public SnapshotRequest(QualifiedTableName qualifiedTableName,
                            String snapshotName,
-                           boolean includeSecondaryIndexFiles)
+                           boolean includeSecondaryIndexFiles,
+                           String ttl)
     {
         this.qualifiedTableName = qualifiedTableName;
         this.snapshotName = Objects.requireNonNull(snapshotName, "snapshotName must not be null");
         this.includeSecondaryIndexFiles = includeSecondaryIndexFiles;
+        this.ttl = ttl;
     }
 
     /**
@@ -97,6 +102,14 @@ public class SnapshotRequest
     }
 
     /**
+     * @return the TTL for snapshot creation if provided
+     */
+    public String ttl()
+    {
+        return ttl;
+    }
+
+    /**
      * {@inheritDoc}
      */
     public String toString()
@@ -106,6 +119,7 @@ public class SnapshotRequest
                ", tableName='" + tableName() + '\'' +
                ", snapshotName='" + snapshotName + '\'' +
                ", includeSecondaryIndexFiles=" + includeSecondaryIndexFiles +
+               ", ttl=" + ttl +
                '}';
     }
 }

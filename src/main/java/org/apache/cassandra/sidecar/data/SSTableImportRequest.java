@@ -25,7 +25,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.SSTableUploads;
 
-import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanHeader;
+import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
 /**
  * Holder class for the {@code org.apache.cassandra.sidecar.routes.SSTableUploadsResource}
@@ -186,12 +186,12 @@ public class SSTableImportRequest extends SSTableUploads
         HttpServerRequest request = context.request();
         return new SSTableImportRequest(qualifiedTableName,
                                         context.pathParam("uploadId"),
-                                        parseBooleanHeader(request, "resetLevel", true),
-                                        parseBooleanHeader(request, "clearRepaired", true),
-                                        parseBooleanHeader(request, "verifySSTables", true),
-                                        parseBooleanHeader(request, "verifyTokens", true),
-                                        parseBooleanHeader(request, "invalidateCaches", true),
-                                        parseBooleanHeader(request, "extendedVerify", true),
-                                        parseBooleanHeader(request, "copyData", false));
+                                        parseBooleanQueryParam(request, "resetLevel", true),
+                                        parseBooleanQueryParam(request, "clearRepaired", true),
+                                        parseBooleanQueryParam(request, "verifySSTables", true),
+                                        parseBooleanQueryParam(request, "verifyTokens", true),
+                                        parseBooleanQueryParam(request, "invalidateCaches", true),
+                                        parseBooleanQueryParam(request, "extendedVerify", true),
+                                        parseBooleanQueryParam(request, "copyData", false));
     }
 }

@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.client.selection.InstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.SingleInstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The context for a given request that include the {@link InstanceSelectionPolicy}, the {@link RetryPolicy}, and
@@ -368,11 +369,16 @@ public class RequestContext
          * @param keyspace     the keyspace in Cassandra
          * @param tableName    the table name in Cassandra
          * @param snapshotName the name of the snapshot
+         * @param snapshotTTL  an optional time to live option for the snapshot (available since Cassandra 4.1+)
+         *                     The TTL option must specify the units, for example 2d represents a TTL for 2 days;
+         *                     1h represents a TTL of 1 hour, etc. Valid units are {@code d}, {@code h}, {@code s},
+         *                     {@code ms}, {@code us}, {@code µs}, {@code ns}, and {@code m}.
          * @return a reference to this Builder
          */
-        public Builder createSnapshotRequest(String keyspace, String tableName, String snapshotName)
+        public Builder createSnapshotRequest(String keyspace, String tableName, String snapshotName,
+                                             @Nullable String snapshotTTL)
         {
-            return request(new CreateSnapshotRequest(keyspace, tableName, snapshotName));
+            return request(new CreateSnapshotRequest(keyspace, tableName, snapshotName, snapshotTTL));
         }
 
         /**

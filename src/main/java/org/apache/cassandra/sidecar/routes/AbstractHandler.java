@@ -83,9 +83,17 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
         HttpServerRequest request = context.request();
         String host = host(context);
         SocketAddress remoteAddress = request.remoteAddress();
-        T requestParams = extractParamsOrThrow(context);
-        logger.debug("{} received request={}, remoteAddress={}, instance={}",
-                     this.getClass().getSimpleName(), requestParams, remoteAddress, host);
+        T requestParams = null;
+        try
+        {
+            requestParams = extractParamsOrThrow(context);
+            logger.debug("{} received request={}, remoteAddress={}, instance={}",
+                         this.getClass().getSimpleName(), requestParams, remoteAddress, host);
+        }
+        catch (Exception exception)
+        {
+            processFailure(exception, context, host, remoteAddress, null);
+        }
 
         handleInternal(context, request, host, remoteAddress, requestParams);
     }

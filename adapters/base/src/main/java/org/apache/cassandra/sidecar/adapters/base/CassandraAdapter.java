@@ -48,9 +48,9 @@ public class CassandraAdapter implements ICassandraAdapter
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraAdapter.class);
     protected final DnsResolver dnsResolver;
     protected final JmxClient jmxClient;
-    private final CQLSessionProvider cqlSessionProvider;
-    private final InetSocketAddress localNativeTransportAddress;
-    private final DriverUtils driverUtils;
+    protected final CQLSessionProvider cqlSessionProvider;
+    protected final InetSocketAddress localNativeTransportAddress;
+    protected final DriverUtils driverUtils;
     private volatile Host host;
 
     public CassandraAdapter(DnsResolver dnsResolver,
@@ -127,7 +127,7 @@ public class CassandraAdapter implements ICassandraAdapter
         return activeSession.execute(statement);
     }
 
-    private Host getHost(Metadata metadata)
+    protected Host getHost(Metadata metadata)
     {
         if (host == null)
         {

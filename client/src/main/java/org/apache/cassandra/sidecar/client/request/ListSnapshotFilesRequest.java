@@ -40,7 +40,7 @@ public class ListSnapshotFilesRequest extends SnapshotRequest<ListSnapshotFilesR
                                     String snapshotName,
                                     boolean includeSecondaryIndexFiles)
     {
-        super(keyspace, table, snapshotName, includeSecondaryIndexFiles);
+        super(keyspace, table, snapshotName, includeSecondaryIndexFiles, null);
     }
 
     /**

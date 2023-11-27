@@ -26,17 +26,17 @@ import io.vertx.core.http.HttpServerRequest;
 public class RequestUtils
 {
     /**
-     * Parses a boolean parameter from the {@code request}, for the given {@code headerName}. If the request param
+     * Parses a boolean parameter from the {@code request}, for the given {@code paramName}. If the request param
      * is not {@code true} or {@code false}, it returns the {@code defaultValue}.
      *
      * @param request      the request
-     * @param headerName   the name of the header
+     * @param paramName    the name of the query parameter
      * @param defaultValue the default value when the request parameter does not match {@code true} or {@code false}
-     * @return the parsed value for the {@code headerName} from the {@code request}
+     * @return the parsed value for the {@code paramName} from the {@code request}
      */
-    public static boolean parseBooleanHeader(HttpServerRequest request, String headerName, boolean defaultValue)
+    public static boolean parseBooleanQueryParam(HttpServerRequest request, String paramName, boolean defaultValue)
     {
-        String value = request.getParam(headerName);
+        String value = request.getParam(paramName);
         if ("true".equalsIgnoreCase(value))
             return true;
         if ("false".equalsIgnoreCase(value))
