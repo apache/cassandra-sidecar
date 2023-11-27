@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.adapters.base;
+package org.apache.cassandra.sidecar.adapters.cassandra40;
 
 import java.net.InetSocketAddress;
 
@@ -29,33 +29,32 @@ import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 
 /**
- * Factory to produce the 4.1 adapter
+ * Factory to produce the 4.0 adapter
  */
-@MinimumVersion("4.1.0")
-public class CassandraFactory implements ICassandraFactory
+@MinimumVersion("4.0.0")
+public class Cassandra40Factory implements ICassandraFactory
 {
     protected final DnsResolver dnsResolver;
-    protected final DriverUtils driverUtils;
+    private final DriverUtils driverUtils;
 
-    public CassandraFactory(DnsResolver dnsResolver, DriverUtils driverUtils)
+    public Cassandra40Factory(DnsResolver dnsResolver, DriverUtils driverUtils)
     {
         this.dnsResolver = dnsResolver;
         this.driverUtils = driverUtils;
     }
 
     /**
-     * Returns a new adapter for Cassandra 4.1 clusters.
+     * Returns a new adapter for Cassandra 4.0 clusters.
      *
      * @param session                     the session to the Cassandra database
      * @param jmxClient                   the JMX client to connect to the Cassandra database
-     * @param localNativeTransportAddress the address and port on which this instance is configured to listen
+     * @param localNativeTransportAddress the native transport address and port of the instance
      * @return a new adapter for the 4.0 clusters
      */
     @Override
-    public ICassandraAdapter create(CQLSessionProvider session,
-                                    JmxClient jmxClient,
+    public ICassandraAdapter create(CQLSessionProvider session, JmxClient jmxClient,
                                     InetSocketAddress localNativeTransportAddress)
     {
-        return new CassandraAdapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils);
+        return new Cassandra40Adapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils);
     }
 }

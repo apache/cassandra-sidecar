@@ -40,7 +40,7 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.cassandra.sidecar.adapters.base.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
 
 /**
- * An implementation of the {@link StorageOperations} that interfaces with Cassandra 4.0 and later
+ * An implementation of the {@link StorageOperations} that interfaces with Cassandra 4.1 and later
  */
 public class CassandraStorageOperations implements StorageOperations
 {

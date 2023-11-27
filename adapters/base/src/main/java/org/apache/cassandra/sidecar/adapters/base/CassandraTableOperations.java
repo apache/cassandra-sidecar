@@ -26,7 +26,7 @@ import org.apache.cassandra.sidecar.common.TableOperations;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * An implementation of the {@link TableOperations} that interfaces with Cassandra 4.0 and later
+ * An implementation of the {@link TableOperations} that interfaces with Cassandra 4.1 and later
  */
 public class CassandraTableOperations implements TableOperations
 {

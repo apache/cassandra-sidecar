@@ -558,6 +558,27 @@ abstract class SidecarClientTest
     }
 
     @Test
+    void testCreateSnapshotWithTTL() throws Exception
+    {
+        MockResponse response = new MockResponse().setResponseCode(OK.code());
+        SidecarInstanceImpl sidecarInstance = instances.get(3);
+        MockWebServer mockWebServer = servers.get(3);
+        mockWebServer.enqueue(response);
+
+        client.createSnapshot(sidecarInstance, "cycling", "cyclist_name", "2023.04.11", "2d")
+              .get(30, TimeUnit.SECONDS);
+
+        assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
+        RecordedRequest request = mockWebServer.takeRequest();
+        String expected = ApiEndpointsV1.SNAPSHOTS_ROUTE
+                          .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                          .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                          .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11") + "?ttl=2d";
+        assertThat(request.getPath()).isEqualTo(expected);
+        assertThat(request.getMethod()).isEqualTo("PUT");
+    }
+
+    @Test
     void testCleanUploadSession() throws Exception
     {
         MockResponse response = new MockResponse().setResponseCode(OK.code());

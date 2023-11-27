@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.client.request;
 
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * An abstract class that access the {@link ApiEndpointsV1#SNAPSHOTS_ROUTE}
@@ -29,26 +30,38 @@ abstract class SnapshotRequest<T> extends DecodableRequest<T>
 {
     SnapshotRequest(String keyspace, String table, String snapshotName)
     {
-        super(requestURI(keyspace, table, snapshotName, false));
+        super(requestURI(keyspace, table, snapshotName, false, null));
     }
 
-    SnapshotRequest(String keyspace, String table, String snapshotName, boolean includeSecondaryIndexFiles)
+    SnapshotRequest(String keyspace, String table, String snapshotName, boolean includeSecondaryIndexFiles,
+                    @Nullable String snapshotTTL)
     {
-        super(requestURI(keyspace, table, snapshotName, includeSecondaryIndexFiles));
+        super(requestURI(keyspace, table, snapshotName, includeSecondaryIndexFiles, snapshotTTL));
     }
 
-    static String requestURI(String keyspace, String tableName, String snapshotName, boolean includeSecondaryIndexFiles)
+    static String requestURI(String keyspace, String tableName, String snapshotName,
+                             boolean includeSecondaryIndexFiles, @Nullable String snapshotTTL)
     {
         String requestUri = ApiEndpointsV1.SNAPSHOTS_ROUTE
                             .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
                             .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)
                             .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshotName);
 
-        if (!includeSecondaryIndexFiles)
+        if (!includeSecondaryIndexFiles && snapshotTTL == null)
         {
             return requestUri;
         }
 
-        return requestUri + "?includeSecondaryIndexFiles=true";
+        if (!includeSecondaryIndexFiles)
+        {
+            return requestUri + "?ttl=" + snapshotTTL;
+        }
+
+        if (snapshotTTL == null)
+        {
+            return requestUri + "?includeSecondaryIndexFiles=true";
+        }
+
+        return requestUri + "?includeSecondaryIndexFiles=true&ttl=" + snapshotTTL;
     }
 }

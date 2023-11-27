@@ -41,17 +41,17 @@ import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A {@link ICassandraAdapter} implementation for Cassandra 4.0 and later
+ * A {@link ICassandraAdapter} implementation for Cassandra 4.1 and later
  */
 public class CassandraAdapter implements ICassandraAdapter
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraAdapter.class);
     protected final DnsResolver dnsResolver;
     protected final JmxClient jmxClient;
-    private final CQLSessionProvider cqlSessionProvider;
-    private final InetSocketAddress localNativeTransportAddress;
-    private final DriverUtils driverUtils;
-    private volatile Host host;
+    protected final CQLSessionProvider cqlSessionProvider;
+    protected final InetSocketAddress localNativeTransportAddress;
+    protected final DriverUtils driverUtils;
+    protected volatile Host host;
 
     public CassandraAdapter(DnsResolver dnsResolver,
                             JmxClient jmxClient,

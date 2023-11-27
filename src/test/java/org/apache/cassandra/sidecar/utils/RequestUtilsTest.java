@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.http.HttpServerRequest;
@@ -32,35 +33,42 @@ import static org.mockito.Mockito.when;
  */
 class RequestUtilsTest
 {
-    @Test
-    void testParseBooleanHeader()
+    HttpServerRequest mockRequest;
+
+    @BeforeEach
+    void setup()
     {
-        HttpServerRequest mockRequest = mock(Http1xServerRequest.class);
-        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "non-existent", true)).isTrue();
-        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "non-existent-false", false)).isFalse();
+        mockRequest = mock(Http1xServerRequest.class);
+    }
+
+    @Test
+    void testParseBooleanQueryParam()
+    {
+        assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "non-existent", true)).isTrue();
+        assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "non-existent-false", false)).isFalse();
 
         when(mockRequest.getParam("false-param")).thenReturn("false");
-        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "false-param", true)).isFalse();
+        assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "false-param", true)).isFalse();
 
         when(mockRequest.getParam("fAlSe-mixed-case-param")).thenReturn("fAlSe");
-        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "fAlSe-mixed-case-param", true)).isFalse();
+        assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "fAlSe-mixed-case-param", true)).isFalse();
 
         when(mockRequest.getParam("FALSE-uppercase-param")).thenReturn("FALSE");
-        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "FALSE-uppercase-param", true)).isFalse();
+        assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "FALSE-uppercase-param", true)).isFalse();
 
         when(mockRequest.getParam("true-param")).thenReturn("true");
-        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "true-param", false)).isTrue();
+        assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "true-param", false)).isTrue();
 
         when(mockRequest.getParam("TrUe-mixed-case-param")).thenReturn("TrUe");
-        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "TrUe-mixed-case-param", false)).isTrue();
+        assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "TrUe-mixed-case-param", false)).isTrue();
 
         when(mockRequest.getParam("TRUE-uppercase-param")).thenReturn("TRUE");
-        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "TRUE-uppercase-param", false)).isTrue();
+        assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "TRUE-uppercase-param", false)).isTrue();
 
         when(mockRequest.getParam("default-value-true")).thenReturn("not-a-valid-true");
-        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "default-value-true", false)).isFalse();
+        assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "default-value-true", false)).isFalse();
 
         when(mockRequest.getParam("default-value-false")).thenReturn("not-a-valid-false");
-        assertThat(RequestUtils.parseBooleanHeader(mockRequest, "default-value-false", true)).isTrue();
+        assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "default-value-false", true)).isTrue();
     }
 }

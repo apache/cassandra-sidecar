@@ -35,6 +35,7 @@ import org.apache.cassandra.distributed.impl.AbstractClusterUtils;
 import org.apache.cassandra.distributed.impl.InstanceConfig;
 import org.apache.cassandra.distributed.shared.JMXUtil;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
+import org.apache.cassandra.sidecar.adapters.cassandra40.Cassandra40Factory;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
@@ -104,8 +105,11 @@ public class CassandraSidecarTestContext implements AutoCloseable
 
     public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
     {
+        DriverUtils driverUtils = new DriverUtils();
         return new CassandraVersionProvider.Builder()
-               .add(new CassandraFactory(dnsResolver, new DriverUtils())).build();
+               .add(new Cassandra40Factory(dnsResolver, driverUtils))
+               .add(new CassandraFactory(dnsResolver, driverUtils))
+               .build();
     }
 
     private static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)

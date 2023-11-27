@@ -56,17 +56,17 @@ public class CassandraVersionProvider
     {
         ICassandraFactory result = versions.get(0);
 
-        for (ICassandraFactory f : versions)
+        for (ICassandraFactory factory : versions)
         {
             SimpleCassandraVersion currentMinVersion = SimpleCassandraVersion.create(result);
-            SimpleCassandraVersion nextVersion = SimpleCassandraVersion.create(f);
+            SimpleCassandraVersion nextVersion = SimpleCassandraVersion.create(factory);
 
             // skip if we can rule this out early
             if (nextVersion.isGreaterThan(requestedVersion)) continue;
 
             if (requestedVersion.isGreaterThan(currentMinVersion))
             {
-                result = f;
+                result = factory;
             }
         }
         return result;
