@@ -213,6 +213,7 @@ class RingHandlerTest
             when(instanceMetadata.host()).thenReturn(host);
             when(instanceMetadata.port()).thenReturn(9042);
             when(instanceMetadata.id()).thenReturn(instanceId);
+            when(instanceMetadata.stagingDir()).thenReturn("");
             CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
             StorageOperations ops = mock(StorageOperations.class);
             when(ops.ring(any())).thenAnswer((Answer<RingResponse>) invocation -> ringSupplier.get());

@@ -130,6 +130,7 @@ public class GossipInfoHandlerTest
             when(instanceMetadata.host()).thenReturn(host);
             when(instanceMetadata.port()).thenReturn(9042);
             when(instanceMetadata.id()).thenReturn(instanceId);
+            when(instanceMetadata.stagingDir()).thenReturn("");
             CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
             ClusterMembershipOperations ops = mock(ClusterMembershipOperations.class);
             when(ops.gossipInfo()).thenReturn(SAMPLE_GOSSIP_INFO);

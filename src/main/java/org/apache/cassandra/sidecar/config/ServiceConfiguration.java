@@ -134,4 +134,9 @@ public interface ServiceConfiguration
      * @return the configuration for the global inbound and outbound traffic shaping options
      */
     TrafficShapingConfiguration trafficShapingConfiguration();
+
+    /**
+     * @return the configuration for sidecar schema
+     */
+    SchemaKeyspaceConfiguration schemaKeyspaceConfiguration();
 }

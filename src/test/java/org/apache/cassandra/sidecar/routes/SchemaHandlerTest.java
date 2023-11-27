@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -70,7 +72,7 @@ class SchemaHandlerTest
     Vertx vertx;
     Server server;
     @TempDir
-    File dataDir0;
+    File instanceDir;
     String testKeyspaceSchema;
 
     @BeforeEach
@@ -159,9 +161,13 @@ class SchemaHandlerTest
             final int instanceId = 100;
             final String host = "127.0.0.1";
             final InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
+            Files.createDirectory(Paths.get(instanceDir.getCanonicalPath(), "data"));
+            Files.createDirectory(Paths.get(instanceDir.getCanonicalPath(), "sstable-staging"));
             when(instanceMetadata.host()).thenReturn(host);
             when(instanceMetadata.port()).thenReturn(9042);
-            when(instanceMetadata.dataDirs()).thenReturn(Collections.singletonList(dataDir0.getCanonicalPath()));
+            when(instanceMetadata.dataDirs())
+            .thenReturn(Collections.singletonList(instanceDir.getCanonicalPath() + "/data"));
+            when(instanceMetadata.stagingDir()).thenReturn(instanceDir.getCanonicalPath() + "/sstable-staging");
             when(instanceMetadata.id()).thenReturn(instanceId);
             CassandraAdapterDelegate mockCassandraAdapterDelegate = mock(CassandraAdapterDelegate.class);
             when(instanceMetadata.delegate()).thenReturn(mockCassandraAdapterDelegate);

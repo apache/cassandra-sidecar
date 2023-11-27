@@ -94,6 +94,17 @@ public final class ApiEndpointsV1
 
     public static final String KEYSPACE_TOKEN_MAPPING_ROUTE = API_V1 + PER_KEYSPACE + "/token-range-replicas";
 
+    // Blob Transport Extension
+    public static final String JOB_ID_PATH_PARAM = ":jobId";
+    public static final String RESTORE_JOBS = "/restore-jobs";
+    public static final String SLICES = "/slices";
+    public static final String ABORT = "/abort";
+    public static final String PER_RESTORE_JOB = RESTORE_JOBS + "/" + JOB_ID_PATH_PARAM;
+    public static final String CREATE_RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + RESTORE_JOBS;
+    public static final String RESTORE_JOB_SLICES_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB + SLICES;
+    public static final String RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB;
+    public static final String ABORT_RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB + ABORT;
+
     private ApiEndpointsV1()
     {
         throw new IllegalStateException(getClass() + " is a constants container and shall not be instantiated");

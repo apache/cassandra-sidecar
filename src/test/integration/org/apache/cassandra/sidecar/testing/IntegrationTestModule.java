@@ -18,22 +18,30 @@
 
 package org.apache.cassandra.sidecar.testing;
 
+import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.jetbrains.annotations.NotNull;
+
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
  * Provides the basic dependencies for integration tests
@@ -58,15 +66,35 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public SidecarConfiguration configuration()
     {
-        ServiceConfiguration conf = ServiceConfigurationImpl.builder()
-                                                            .host("127.0.0.1")
-                                                            .port(0) // let the test find an available port
-                                                            .build();
-        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(50, 500);
+        ServiceConfiguration conf
+        = ServiceConfigurationImpl.builder()
+                                  .host("127.0.0.1")
+                                  .port(0) // let the test find an available port
+                                  .schemaKeyspaceConfiguration(SchemaKeyspaceConfigurationImpl.builder()
+                                                                                              .isEnabled(true)
+                                                                                              .build())
+                                  .build();
+        HealthCheckConfiguration healthCheckConfiguration
+        = new HealthCheckConfigurationImpl(50, 500);
         return SidecarConfigurationImpl.builder()
                                        .serviceConfiguration(conf)
                                        .healthCheckConfiguration(healthCheckConfiguration)
                                        .build();
+    }
+
+    @Provides
+    @Singleton
+    public CQLSessionProvider cqlSessionProvider(Vertx vertx, InstancesConfig instancesConfig)
+    {
+        // cql session provider uses local instances as contacts
+        List<InetSocketAddress> addresses = instancesConfig.instances()
+                                                           .stream()
+                                                           .map(i -> new InetSocketAddress(i.host(), i.port()))
+                                                           .collect(Collectors.toList());
+        CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
+                                                                               0, SharedExecutorNettyOptions.INSTANCE);
+        vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
+        return cqlSessionProvider;
     }
 
     class WrapperInstancesConfig implements InstancesConfig

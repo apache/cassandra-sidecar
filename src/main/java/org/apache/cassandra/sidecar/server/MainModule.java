@@ -38,6 +38,7 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
@@ -56,14 +57,20 @@ import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
+import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
+import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.GossipInfoHandler;
 import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
@@ -75,9 +82,18 @@ import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.TimeSkewHandler;
 import org.apache.cassandra.sidecar.routes.TokenRangeReplicaMapHandler;
 import org.apache.cassandra.sidecar.routes.cassandra.NodeSettingsHandler;
+import org.apache.cassandra.sidecar.routes.restore.AbortRestoreJobHandler;
+import org.apache.cassandra.sidecar.routes.restore.CreateRestoreJobHandler;
+import org.apache.cassandra.sidecar.routes.restore.CreateRestoreSliceHandler;
+import org.apache.cassandra.sidecar.routes.restore.RestoreJobSummaryHandler;
+import org.apache.cassandra.sidecar.routes.restore.RestoreRequestValidationHandler;
+import org.apache.cassandra.sidecar.routes.restore.UpdateRestoreJobHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableCleanupHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
+import org.apache.cassandra.sidecar.routes.validations.ValidateTableExistenceHandler;
+import org.apache.cassandra.sidecar.stats.RestoreJobStats;
+import org.apache.cassandra.sidecar.stats.SidecarSchemaStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
@@ -142,6 +158,14 @@ public class MainModule extends AbstractModule
                               SSTableUploadHandler ssTableUploadHandler,
                               SSTableImportHandler ssTableImportHandler,
                               SSTableCleanupHandler ssTableCleanupHandler,
+                              RestoreRequestValidationHandler validateRestoreJobRequest,
+                              DiskSpaceProtectionHandler diskSpaceProtection,
+                              ValidateTableExistenceHandler validateTableExistence,
+                              CreateRestoreJobHandler createRestoreJobHandler,
+                              RestoreJobSummaryHandler restoreJobSummaryHandler,
+                              UpdateRestoreJobHandler updateRestoreJobHandler,
+                              AbortRestoreJobHandler abortRestoreJobHandler,
+                              CreateRestoreSliceHandler createRestoreSliceHandler,
                               ErrorHandler errorHandler)
     {
         Router router = Router.router(vertx);
@@ -244,6 +268,36 @@ public class MainModule extends AbstractModule
         router.get(ApiEndpointsV1.NODE_SETTINGS_ROUTE)
               .handler(nodeSettingsHandler);
 
+        router.post(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE)
+              .handler(BodyHandler.create())
+              .handler(validateTableExistence)
+              .handler(validateRestoreJobRequest)
+              .handler(createRestoreJobHandler);
+
+        router.post(ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE)
+              .handler(BodyHandler.create())
+              .handler(diskSpaceProtection) // reject creating slice if short of disk space
+              .handler(validateTableExistence)
+              .handler(validateRestoreJobRequest)
+              .handler(createRestoreSliceHandler);
+
+        router.get(ApiEndpointsV1.RESTORE_JOB_ROUTE)
+              .handler(validateTableExistence)
+              .handler(validateRestoreJobRequest)
+              .handler(restoreJobSummaryHandler);
+
+        router.patch(ApiEndpointsV1.RESTORE_JOB_ROUTE)
+              .handler(BodyHandler.create())
+              .handler(validateTableExistence)
+              .handler(validateRestoreJobRequest)
+              .handler(updateRestoreJobHandler);
+
+        // we don't expect users to send body for abort requests, hence we don't use BodyHandler
+        router.post(ApiEndpointsV1.ABORT_RESTORE_JOB_ROUTE)
+              .handler(validateTableExistence)
+              .handler(validateRestoreJobRequest)
+              .handler(abortRestoreJobHandler);
+
         return router;
     }
 
@@ -340,10 +394,10 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     @Named("IngressFileRateLimiter")
-    public SidecarRateLimiter ingressFileRateLimiter(ServiceConfiguration serviceConfiguration)
+    public SidecarRateLimiter ingressFileRateLimiter(ServiceConfiguration config)
     {
-        return SidecarRateLimiter.create(serviceConfiguration.trafficShapingConfiguration()
-                                                             .inboundGlobalFileBandwidthBytesPerSecond());
+        return SidecarRateLimiter.create(config.trafficShapingConfiguration()
+                                               .inboundGlobalFileBandwidthBytesPerSecond());
     }
 
     @Provides
@@ -393,6 +447,62 @@ public class MainModule extends AbstractModule
     public SidecarStats sidecarStats()
     {
         return SidecarStats.INSTANCE;
+    }
+
+    @Provides
+    @Singleton
+    public RestoreJobStats restoreJobStats()
+    {
+        return new RestoreJobStats()
+        {
+        };
+    }
+
+    @Provides
+    @Singleton
+    public SidecarSchemaStats sidecarSchemaStats()
+    {
+        return new SidecarSchemaStats()
+        {
+        };
+    }
+
+    @Provides
+    @Singleton
+    public RestoreJobsSchema restoreJobsSchema(SidecarConfiguration configuration)
+    {
+        return new RestoreJobsSchema(configuration.serviceConfiguration()
+                                                  .schemaKeyspaceConfiguration(),
+                                     configuration.restoreJobConfiguration()
+                                                  .restoreJobTablesTtlSeconds());
+    }
+
+    @Provides
+    @Singleton
+    public RestoreSlicesSchema restoreSlicesSchema(SidecarConfiguration configuration)
+    {
+        return new RestoreSlicesSchema(configuration.serviceConfiguration()
+                                                    .schemaKeyspaceConfiguration(),
+                                       configuration.restoreJobConfiguration()
+                                                    .restoreJobTablesTtlSeconds());
+    }
+
+    @Provides
+    @Singleton
+    public SidecarSchema sidecarSchema(Vertx vertx,
+                                       ExecutorPools executorPools,
+                                       SidecarConfiguration configuration,
+                                       SidecarSchemaStats stats,
+                                       CQLSessionProvider cqlSessionProvider,
+                                       RestoreJobsSchema restoreJobsSchema,
+                                       RestoreSlicesSchema restoreSlicesSchema)
+    {
+        SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
+        // register table schema when enabled
+        sidecarInternalKeyspace.registerTableSchema(restoreJobsSchema);
+        sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
+        return new SidecarSchema(vertx, executorPools, configuration,
+                                 stats, sidecarInternalKeyspace, cqlSessionProvider);
     }
 
     /**
