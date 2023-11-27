@@ -33,6 +33,13 @@ public class NodeSettings
 {
     private static final String VERSION = "version";
 
+    public static final String RELEASE_VERSION_COLUMN_NAME = "release_version";
+    public static final String PARTITIONER_COLUMN_NAME = "partitioner";
+    public static final String DATA_CENTER_COLUMN_NAME = "data_center";
+    public static final String RPC_ADDRESS_COLUMN_NAME = "rpc_address";
+    public static final String RPC_PORT_COLUMN_NAME = "rpc_port";
+    public static final String TOKENS_COLUMN_NAME = "tokens";
+
     @JsonProperty("releaseVersion")
     private final String releaseVersion;
     @JsonProperty("partitioner")
