@@ -23,35 +23,11 @@ package org.apache.cassandra.sidecar.adapters.base.exception;
  */
 public class OperationUnavailableException extends RuntimeException
 {
-    private final OperationType operationType;
+    public static final OperationUnavailableException GOSSIP_DISABLED
+    = new OperationUnavailableException("Gossip is required for the operation but it is disabled");
 
-    public OperationUnavailableException(OperationType operationType)
+    public OperationUnavailableException(String errorMessage)
     {
-        super(operationType.message);
-        this.operationType = operationType;
-    }
-
-    public OperationType operationType()
-    {
-        return operationType;
-    }
-
-    /**
-     * The requirement for the operation
-     */
-    public enum OperationType
-    {
-        /**
-         * Gossip is required for the operation, but gossip has been disabled
-         */
-        GOSSIP_DISABLED("Gossip is required for the operation but it is disabled"),
-        ;
-
-        private final String message;
-
-        OperationType(String message)
-        {
-            this.message = message;
-        }
+        super(errorMessage);
     }
 }
