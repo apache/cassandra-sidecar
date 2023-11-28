@@ -21,8 +21,7 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.TableMetadata;
-import org.apache.cassandra.sidecar.common.data.Keyspace;
-import org.apache.cassandra.sidecar.common.data.Table;
+import org.apache.cassandra.sidecar.common.data.Name;
 
 /**
  * Utilities for {@link Metadata} operations
@@ -38,7 +37,7 @@ public class MetadataUtils
      * known keyspace. Note that the result might be stale or null if metadata was explicitly
      * disabled with {@link QueryOptions#setMetadataEnabled(boolean)}.
      */
-    public static KeyspaceMetadata keyspace(Metadata metadata, Keyspace keyspace)
+    public static KeyspaceMetadata keyspace(Metadata metadata, Name keyspace)
     {
         return metadata.getKeyspace(keyspace.maybeQuotedName());
     }
@@ -46,12 +45,12 @@ public class MetadataUtils
     /**
      * Returns the metadata for a table contained in this keyspace.
      *
-     * @param metadata  the metadata object.
-     * @param table the name of table to retrieve
+     * @param metadata the metadata object.
+     * @param table    the name of table to retrieve
      * @return the metadata for table {@code name} if it exists in this keyspace, {@code null}
      * otherwise.
      */
-    public static TableMetadata table(KeyspaceMetadata metadata, Table table)
+    public static TableMetadata table(KeyspaceMetadata metadata, Name table)
     {
         return metadata.getTable(table.maybeQuotedName());
     }

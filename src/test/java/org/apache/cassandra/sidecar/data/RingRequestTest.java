@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.data;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.common.data.Keyspace;
+import org.apache.cassandra.sidecar.common.data.Name;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,7 +40,7 @@ class RingRequestTest
     @Test
     void testConstructorWithParams()
     {
-        RingRequest request = new RingRequest(new Keyspace("valid_keyspace"));
+        RingRequest request = new RingRequest(new Name("valid_keyspace"));
         assertThat(request).isNotNull();
         assertThat(request.keyspace()).isNotNull();
         assertThat(request.keyspace().name()).isEqualTo("valid_keyspace");
@@ -49,8 +49,8 @@ class RingRequestTest
     @Test
     void testToString()
     {
-        RingRequest request1 = new RingRequest(new Keyspace("valid_keyspace"));
-        RingRequest request2 = new RingRequest(new Keyspace("ks2"));
+        RingRequest request1 = new RingRequest(new Name("valid_keyspace"));
+        RingRequest request2 = new RingRequest(new Name("ks2"));
         assertThat(request1).hasToString("RingRequest{keyspace='valid_keyspace'}");
         assertThat(request2).hasToString("RingRequest{keyspace='ks2'}");
     }
@@ -58,9 +58,9 @@ class RingRequestTest
     @Test
     void testEquals()
     {
-        RingRequest request1 = new RingRequest(new Keyspace("ks"));
-        RingRequest request2 = new RingRequest(new Keyspace("ks"));
-        RingRequest request3 = new RingRequest(new Keyspace("ks5"));
+        RingRequest request1 = new RingRequest(new Name("ks"));
+        RingRequest request2 = new RingRequest(new Name("ks"));
+        RingRequest request3 = new RingRequest(new Name("ks5"));
         assertThat(request1).isEqualTo(request2);
         assertThat(request1).isNotSameAs(request2);
         assertThat(request1).isNotEqualTo(request3);
@@ -69,9 +69,9 @@ class RingRequestTest
     @Test
     void testHashCode()
     {
-        RingRequest request1 = new RingRequest(new Keyspace("ks"));
-        RingRequest request2 = new RingRequest(new Keyspace("ks"));
-        RingRequest request3 = new RingRequest(new Keyspace("ks5"));
+        RingRequest request1 = new RingRequest(new Name("ks"));
+        RingRequest request2 = new RingRequest(new Name("ks"));
+        RingRequest request3 = new RingRequest(new Name("ks5"));
         assertThat(request1).hasSameHashCodeAs(request2);
         assertThat(request1).doesNotHaveSameHashCodeAs(request3);
     }

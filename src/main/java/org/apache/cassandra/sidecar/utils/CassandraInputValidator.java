@@ -25,8 +25,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.common.data.Keyspace;
-import org.apache.cassandra.sidecar.common.data.Table;
+import org.apache.cassandra.sidecar.common.data.Name;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl;
 import org.jetbrains.annotations.NotNull;
@@ -67,7 +66,7 @@ public class CassandraInputValidator
      * @throws HttpException        when the {@code keyspace} contains invalid characters in the name or when the
      *                              keyspace is forbidden
      */
-    public Keyspace validateKeyspaceName(@NotNull String keyspace)
+    public Name validateKeyspaceName(@NotNull String keyspace)
     {
         Objects.requireNonNull(keyspace, "keyspace must not be null");
         String unquoted = removeQuotesIfNecessary(keyspace);
@@ -76,7 +75,7 @@ public class CassandraInputValidator
         validatePattern(unquoted, keyspace, "keyspace", isQuoted);
         if (validationConfiguration.forbiddenKeyspaces().contains(unquoted))
             throw new HttpException(HttpResponseStatus.FORBIDDEN.code(), "Forbidden keyspace: " + keyspace);
-        return new Keyspace(unquoted, isQuoted);
+        return new Name(unquoted, keyspace);
     }
 
     /**
@@ -88,13 +87,13 @@ public class CassandraInputValidator
      * @throws NullPointerException when the {@code tableName} is {@code null}
      * @throws HttpException        when the {@code tableName} contains invalid characters in the name
      */
-    public Table validateTableName(@NotNull String tableName)
+    public Name validateTableName(@NotNull String tableName)
     {
         Objects.requireNonNull(tableName, "tableName must not be null");
         String unquoted = removeQuotesIfNecessary(tableName);
         boolean isQuoted = !unquoted.equals(tableName);
         validatePattern(unquoted, tableName, "table name", isQuoted);
-        return new Table(unquoted, isQuoted);
+        return new Name(unquoted, tableName);
     }
 
     /**

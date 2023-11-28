@@ -38,6 +38,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -51,9 +52,8 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.data.Keyspace;
+import org.apache.cassandra.sidecar.common.data.Name;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.data.Table;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
@@ -195,8 +195,9 @@ public abstract class IntegrationTestBase
 
     private static QualifiedTableName uniqueTestTableFullName(String tablePrefix)
     {
-        return new QualifiedTableName(new Keyspace(TEST_KEYSPACE, true),
-                                      new Table(tablePrefix + TEST_TABLE_ID.getAndIncrement(), true));
+        String unquotedTableName = tablePrefix + TEST_TABLE_ID.getAndIncrement();
+        return new QualifiedTableName(new Name(TEST_KEYSPACE, Metadata.quoteIfNecessary(TEST_KEYSPACE)),
+                                      new Name(unquotedTableName, Metadata.quoteIfNecessary(unquotedTableName)));
     }
 
     public List<Path> findChildFile(CassandraSidecarTestContext context, String hostname, String target)

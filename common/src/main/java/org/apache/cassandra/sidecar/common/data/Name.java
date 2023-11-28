@@ -20,8 +20,6 @@ package org.apache.cassandra.sidecar.common.data;
 
 import java.util.Objects;
 
-import com.datastax.driver.core.Metadata;
-
 /**
  * Represents the name of keyspaces and tables defined by the grammar in
  * <a href="https://cassandra.apache.org/doc/4.1/cassandra/cql/ddl.html#common-definitions">Cassandra CQL common
@@ -37,24 +35,22 @@ public class Name
      *
      * @param name the name
      */
-    Name(String name)
+    public Name(String name)
     {
-        this(name, false);
+        this(name, name);
     }
 
     /**
-     * Constructs a {@link Name} object with the provided {@code unquotedName}, and
-     * {@code isQuotedFromSource} parameters. For example, if the user-provided input was
-     * {@code "\"QuotedName\""}, then the parameters for this constructor should be initialized with
-     * {@code new Name("QuotedTableName", true)}.
+     * Constructs a {@link Name} object with the provided {@code unquotedName} and {@code maybeQuotedName}
+     * parameters.
      *
-     * @param unquotedName       the unquoted name for the table
-     * @param isQuotedFromSource whether the name was quoted from source
+     * @param unquotedName    the unquoted name
+     * @param maybeQuotedName the maybe quoted name
      */
-    Name(String unquotedName, boolean isQuotedFromSource)
+    public Name(String unquotedName, String maybeQuotedName)
     {
         this.unquotedName = Objects.requireNonNull(unquotedName, "the unquoted name is required");
-        this.maybeQuotedName = isQuotedFromSource ? Metadata.quoteIfNecessary(unquotedName) : unquotedName;
+        this.maybeQuotedName = Objects.requireNonNull(maybeQuotedName, "the _maybe_ quoted name is required");
     }
 
     /**

@@ -27,9 +27,9 @@ import org.jetbrains.annotations.Nullable;
 public class QualifiedTableName
 {
     @Nullable
-    private final Keyspace keyspace;
+    private final Name keyspace;
     @Nullable
-    private final Table table;
+    private final Name table;
 
     /**
      * Constructs a qualified name with the given {@code keyspace} and {@code tableName}
@@ -57,11 +57,11 @@ public class QualifiedTableName
             Objects.requireNonNull(keyspace, "keyspace must not be null");
             Objects.requireNonNull(tableName, "tableName must not be null");
         }
-        this.keyspace = !required && keyspace == null ? null : new Keyspace(keyspace);
-        this.table = !required && tableName == null ? null : new Table(tableName);
+        this.keyspace = !required && keyspace == null ? null : new Name(keyspace);
+        this.table = !required && tableName == null ? null : new Name(tableName);
     }
 
-    public QualifiedTableName(@Nullable Keyspace keyspace, @Nullable Table table)
+    public QualifiedTableName(@Nullable Name keyspace, @Nullable Name table)
     {
         this.keyspace = keyspace;
         this.table = table;
@@ -87,7 +87,7 @@ public class QualifiedTableName
     /**
      * @return the keyspace in Cassandra
      */
-    public @Nullable Keyspace getKeyspace()
+    public @Nullable Name getKeyspace()
     {
         return keyspace;
     }
@@ -112,7 +112,7 @@ public class QualifiedTableName
     /**
      * @return the table name in Cassandra
      */
-    public @Nullable Table table()
+    public @Nullable Name table()
     {
         return table;
     }

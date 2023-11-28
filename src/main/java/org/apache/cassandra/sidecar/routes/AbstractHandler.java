@@ -32,9 +32,8 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.data.Keyspace;
+import org.apache.cassandra.sidecar.common.data.Name;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.data.Table;
 import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -237,7 +236,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
      * @param required whether the keyspace is required
      * @return the validated keyspace name from the context
      */
-    protected Keyspace keyspace(RoutingContext context, boolean required)
+    protected Name keyspace(RoutingContext context, boolean required)
     {
         String keyspace = context.pathParam(KEYSPACE_PATH_PARAM);
         if (required || keyspace != null)
@@ -254,7 +253,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
      * @param required whether the table name is required
      * @return the validated table name from the context
      */
-    private Table tableName(RoutingContext context, boolean required)
+    private Name tableName(RoutingContext context, boolean required)
     {
         String tableName = context.pathParam(TABLE_PATH_PARAM);
         if (required || tableName != null)

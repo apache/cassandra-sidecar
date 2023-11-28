@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeState;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
-import org.apache.cassandra.sidecar.common.data.Keyspace;
+import org.apache.cassandra.sidecar.common.data.Name;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse.ReplicaInfo;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse.ReplicaMetadata;
@@ -74,7 +74,7 @@ public class TokenRangeReplicaProvider
         this.dnsResolver = dnsResolver;
     }
 
-    public TokenRangeReplicasResponse tokenRangeReplicas(Keyspace keyspace, Partitioner partitioner)
+    public TokenRangeReplicasResponse tokenRangeReplicas(Name keyspace, Partitioner partitioner)
     {
         Objects.requireNonNull(keyspace, "keyspace must be non-null");
 

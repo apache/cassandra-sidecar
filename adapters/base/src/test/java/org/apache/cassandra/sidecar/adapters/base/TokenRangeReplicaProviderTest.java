@@ -32,7 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.data.Keyspace;
+import org.apache.cassandra.sidecar.common.data.Name;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.assertj.core.api.InstanceOfAssertFactories;
@@ -62,7 +62,7 @@ public class TokenRangeReplicaProviderTest
     private static final List<String> TEST_MULTI_DC_ENDPOINTS = Arrays.asList("128.0.0.1:7000",
                                                                               "128.0.0.2:7000",
                                                                               "127.0.0.4:7000");
-    public static final Keyspace TEST_KEYSPACE = new Keyspace("test_keyspace");
+    public static final Name TEST_KEYSPACE = new Name("test_keyspace");
 
     private static final String TEST_HOSTNAME = "Hostname";
 

@@ -43,7 +43,7 @@ public class SSTableUploads
     /**
      * @return the keyspace in Cassandra
      */
-    public Keyspace keyspace()
+    public Name keyspace()
     {
         return qualifiedTableName.getKeyspace();
     }
@@ -51,7 +51,7 @@ public class SSTableUploads
     /**
      * @return the table name in Cassandra
      */
-    public Table table()
+    public Name table()
     {
         return qualifiedTableName.table();
     }

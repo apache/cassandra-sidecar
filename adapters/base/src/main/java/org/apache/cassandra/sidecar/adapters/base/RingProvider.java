@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeState;
 import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeStatus;
 import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.data.Keyspace;
+import org.apache.cassandra.sidecar.common.data.Name;
 import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
@@ -61,7 +61,7 @@ public class RingProvider
     }
 
     @SuppressWarnings("UnstableApiUsage")
-    public RingResponse ring(@Nullable Keyspace keyspace) throws UnknownHostException
+    public RingResponse ring(@Nullable Name keyspace) throws UnknownHostException
     {
         StorageJmxOperations storageOps = initializeStorageOps();
         EndpointSnitchJmxOperations epSnitchInfo = initializeEndpointProxy();

@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.StorageOperations;
-import org.apache.cassandra.sidecar.common.data.Keyspace;
+import org.apache.cassandra.sidecar.common.data.Name;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
@@ -136,7 +136,7 @@ public class CassandraStorageOperations implements StorageOperations
      * {@inheritDoc}
      */
     @Override
-    public RingResponse ring(@Nullable Keyspace keyspace) throws UnknownHostException
+    public RingResponse ring(@Nullable Name keyspace) throws UnknownHostException
     {
         return ringProvider.ring(keyspace);
     }
@@ -145,7 +145,7 @@ public class CassandraStorageOperations implements StorageOperations
      * {@inheritDoc}
      */
     @Override
-    public TokenRangeReplicasResponse tokenRangeReplicas(@NotNull Keyspace keyspace, @NotNull String partitioner)
+    public TokenRangeReplicasResponse tokenRangeReplicas(@NotNull Name keyspace, @NotNull String partitioner)
     {
         return tokenRangeReplicaProvider.tokenRangeReplicas(keyspace, Partitioner.fromClassName(partitioner));
     }
