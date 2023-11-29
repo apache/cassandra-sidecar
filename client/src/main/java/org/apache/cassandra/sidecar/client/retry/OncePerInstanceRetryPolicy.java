@@ -18,19 +18,50 @@
 
 package org.apache.cassandra.sidecar.client.retry;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
 import org.apache.cassandra.sidecar.client.request.Request;
+import org.apache.cassandra.sidecar.common.utils.TimeUtils;
 
 /**
  * A retry policy that attempts to execute the request once on each instance
- * until the first successful response is received, or fails if none were successful
+ * until the first successful response is received, or fails if none were successful.
+ *
+ * Accepts optional minimum and maximum durations used to calculate random delay
+ * before each retry attempt in order to avoid the thundering herd problem.
+ *
+ * Retries immediately without delay if minimum and maximum durations are not specified.
  */
 public class OncePerInstanceRetryPolicy extends RetryPolicy
 {
+    private final Duration minimumDelay;
+    private final Duration maximumDelay;
+
+    /**
+     * Instantiates {@link OncePerInstanceRetryPolicy} with no delay between retry attempts
+     */
+    public OncePerInstanceRetryPolicy()
+    {
+        this(Duration.ZERO, Duration.ZERO);
+    }
+
+    /**
+     * Instantiates {@link OncePerInstanceRetryPolicy} with random delays between retry attempts
+     *
+     * @param minimumDelay duration of minimum possible retry delay, inclusive
+     * @param maximumDelay duration of maximum possible retry delay, inclusive
+     */
+    public OncePerInstanceRetryPolicy(Duration minimumDelay, Duration maximumDelay)
+    {
+        super();
+        this.minimumDelay = minimumDelay;
+        this.maximumDelay = maximumDelay;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -49,7 +80,7 @@ public class OncePerInstanceRetryPolicy extends RetryPolicy
         }
         else if (canRetryOnADifferentHost)
         {
-            retryAction.retry(attempts + 1, 0L);
+            retryAction.retry(attempts + 1, TimeUtils.randomDuration(minimumDelay, maximumDelay).toMillis());
         }
         else
         {

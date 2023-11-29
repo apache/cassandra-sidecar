@@ -69,6 +69,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     protected RequestExecutor executor;
     protected final RetryPolicy defaultRetryPolicy;
     protected final RetryPolicy ignoreConflictRetryPolicy;
+    protected final RetryPolicy oncePerInstanceRetryPolicy;
     protected RequestContext.Builder baseBuilder;
 
     public SidecarClient(SidecarInstancesProvider instancesProvider,
@@ -80,6 +81,8 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
         ignoreConflictRetryPolicy = new IgnoreConflictRetryPolicy(sidecarClientConfig.maxRetries(),
                                                                   sidecarClientConfig.retryDelayMillis(),
                                                                   sidecarClientConfig.maxRetryDelayMillis());
+        oncePerInstanceRetryPolicy = new OncePerInstanceRetryPolicy(sidecarClientConfig.minimumHealthRetryDelay(),
+                                                                    sidecarClientConfig.maximumHealthRetryDelay());
         baseBuilder = new RequestContext.Builder()
                       .instanceSelectionPolicy(new RandomInstanceSelectionPolicy(instancesProvider))
                       .retryPolicy(defaultRetryPolicy);
@@ -95,7 +98,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     {
         return executor.executeRequestAsync(requestBuilder()
                                             .sidecarHealthRequest()
-                                            .retryPolicy(new OncePerInstanceRetryPolicy())
+                                            .retryPolicy(oncePerInstanceRetryPolicy)
                                             .build());
     }
 
@@ -110,7 +113,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     {
         return executor.executeRequestAsync(requestBuilder()
                                             .cassandraHealthRequest()
-                                            .retryPolicy(new OncePerInstanceRetryPolicy())
+                                            .retryPolicy(oncePerInstanceRetryPolicy)
                                             .build());
     }
 

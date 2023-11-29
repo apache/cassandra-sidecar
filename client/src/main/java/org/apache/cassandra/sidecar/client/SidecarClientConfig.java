@@ -19,6 +19,8 @@
 
 package org.apache.cassandra.sidecar.client;
 
+import java.time.Duration;
+
 /**
  * Encapsulates configurations for the {@link SidecarClient}
  */
@@ -38,4 +40,14 @@ public interface SidecarClientConfig
      * @return the maximum amount of time to wait before retrying a failed request
      */
      long maxRetryDelayMillis();
+
+    /**
+     * @return the minimum amount of time to wait before retrying a failed health check
+     */
+     Duration minimumHealthRetryDelay();
+
+    /**
+     * @return the maximum amount of time to wait before retrying a failed health check
+     */
+     Duration maximumHealthRetryDelay();
 }
