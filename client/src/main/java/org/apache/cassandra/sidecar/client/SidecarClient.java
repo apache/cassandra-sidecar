@@ -19,6 +19,7 @@
 
 package org.apache.cassandra.sidecar.client;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -64,6 +65,9 @@ import org.jetbrains.annotations.Nullable;
 public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExtension
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarClient.class);
+    private static final Duration MINIMUM_RETRY_DELAY = Duration.ofSeconds(1L);
+    private static final Duration MAXIMUM_RETRY_DELAY = Duration.ofSeconds(5L);
+    private static final RetryPolicy ONCE_PER_INSTANCE_RETRY_POLICY = new OncePerInstanceRetryPolicy(MINIMUM_RETRY_DELAY, MAXIMUM_RETRY_DELAY);
 
     protected RequestExecutor executor;
     protected final RetryPolicy defaultRetryPolicy;
@@ -93,9 +97,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     public CompletableFuture<HealthResponse> sidecarHealth()
     {
         return executor.executeRequestAsync(requestBuilder()
-                                            .sidecarHealthRequest()
-                                            .retryPolicy(new OncePerInstanceRetryPolicy())
-                                            .build());
+                .sidecarHealthRequest()
+                .retryPolicy(ONCE_PER_INSTANCE_RETRY_POLICY)
+                .build());
     }
 
     /**
@@ -108,9 +112,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     public CompletableFuture<HealthResponse> cassandraHealth()
     {
         return executor.executeRequestAsync(requestBuilder()
-                                            .cassandraHealthRequest()
-                                            .retryPolicy(new OncePerInstanceRetryPolicy())
-                                            .build());
+                .cassandraHealthRequest()
+                .retryPolicy(ONCE_PER_INSTANCE_RETRY_POLICY)
+                .build());
     }
 
     /**
