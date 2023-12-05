@@ -39,7 +39,7 @@ public interface ICassandraAdapter
     Metadata metadata();
 
     /**
-     * The {@link NodeSettings} instance for this instance.
+     * The {@link NodeSettings} for this instance.
      * @return the {@link NodeSettings} instance for this instance.
      */
     NodeSettings nodeSettings();

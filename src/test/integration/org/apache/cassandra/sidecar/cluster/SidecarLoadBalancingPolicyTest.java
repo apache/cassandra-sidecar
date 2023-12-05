@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Assertions;
 
-import com.datastax.driver.core.DriverExtensions;
+import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
@@ -51,7 +51,7 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
     private static List<Host> getConnectedHosts(Set<Host> hosts)
     {
         return hosts.stream()
-                    .filter(DriverExtensions::hasActiveConnections)
+                    .filter(DriverUtils::hasActiveConnections)
                     .collect(Collectors.toList());
     }
 
@@ -65,15 +65,13 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
     {
         Set<Host> hosts = sidecarTestContext.session().getCluster().getMetadata().getAllHosts();
         List<Host> connectedHosts = getConnectedHosts(hosts);
-        // We manage 2 hosts, and ask for an additional 4 (the default) for connections.
+        // We manage 2 hosts, and ask for an additional 2 (the default) for connections.
         // Therefore, we expect 4 hosts to have connections at startup.
-        int expectedConnections = SIDECAR_MANAGED_INSTANCES + SidecarLoadBalancingPolicy.MIN_ADDITIONAL_CONNECTIONS;
+        int expectedConnections = SIDECAR_MANAGED_INSTANCES + SidecarLoadBalancingPolicy.MIN_NON_LOCAL_CONNECTIONS;
         assertThat(connectedHosts.size()).isEqualTo(expectedConnections);
         // Now, shut down one of the hosts and make sure that we connect to a different node
         UpgradeableCluster cluster = sidecarTestContext.cluster();
-        IUpgradeableInstance inst = shutDownNonLocalInstance(
-        cluster,
-        sidecarTestContext.instancesConfig().instances());
+        IUpgradeableInstance inst = shutDownNonLocalInstance(cluster, sidecarTestContext.instancesConfig().instances());
         assertThat(inst.isShutdown()).isTrue();
         InetSocketAddress downInstanceAddress = inst.broadcastAddress();
         assertConnectionsWithRetry(downInstanceAddress, expectedConnections);

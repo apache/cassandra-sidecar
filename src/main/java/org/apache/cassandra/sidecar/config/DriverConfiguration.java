@@ -35,7 +35,7 @@ public interface DriverConfiguration
 
     /**
      * The number of connections other than locally-managed nodes to use.
-     * The minimum is 2 - if your value is &lt; 2, the Sidecar will use 2.
+     * The minimum is 2 - if your value is less than 2, the Sidecar will use 2.
      * @return the number of connections to make to the cluster.
      */
     int numConnections();

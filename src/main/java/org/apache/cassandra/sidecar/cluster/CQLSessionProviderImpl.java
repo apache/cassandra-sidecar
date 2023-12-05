@@ -117,29 +117,30 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     @Nullable
     public synchronized Session get()
     {
+        if (session != null)
+        {
+            return session;
+        }
         Cluster cluster = null;
         try
         {
-            if (session == null)
-            {
-                logger.info("Connecting to cluster using contact points {}", contactPoints);
+            logger.info("Connecting to cluster using contact points {}", contactPoints);
 
-                LoadBalancingPolicy lbp = new SidecarLoadBalancingPolicy(localInstances, localDc, numConnections);
-                // Prevent spurious reconnects of ignored down nodes on `onUp` events
-                QueryOptions queryOptions = new QueryOptions().setReprepareOnUp(false);
-                cluster = Cluster.builder()
-                                 .addContactPointsWithPorts(contactPoints)
-                                 .withReconnectionPolicy(reconnectionPolicy)
-                                 .withoutMetrics()
-                                 .withLoadBalancingPolicy(lbp)
-                                 .withQueryOptions(queryOptions)
-                                 // tests can create a lot of these Cluster objects, to avoid creating HWTs and
-                                 // event thread pools for each we have the override
-                                 .withNettyOptions(nettyOptions)
-                                 .build();
-                session = cluster.connect();
-                logger.info("Successfully connected to Cassandra!");
-            }
+            LoadBalancingPolicy lbp = new SidecarLoadBalancingPolicy(localInstances, localDc, numConnections);
+            // Prevent spurious reconnects of ignored down nodes on `onUp` events
+            QueryOptions queryOptions = new QueryOptions().setReprepareOnUp(false);
+            cluster = Cluster.builder()
+                             .addContactPointsWithPorts(contactPoints)
+                             .withReconnectionPolicy(reconnectionPolicy)
+                             .withoutMetrics()
+                             .withLoadBalancingPolicy(lbp)
+                             .withQueryOptions(queryOptions)
+                             // tests can create a lot of these Cluster objects, to avoid creating HWTs and
+                             // event thread pools for each we have the override
+                             .withNettyOptions(nettyOptions)
+                             .build();
+            session = cluster.connect();
+            logger.info("Successfully connected to Cassandra!");
         }
         catch (Exception e)
         {

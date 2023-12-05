@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.DriverExtensions;
+import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ResultSet;
@@ -59,6 +59,7 @@ public class CassandraAdapter implements ICassandraAdapter
     private final CQLSessionProvider cqlSessionProvider;
     private final String sidecarVersion;
     private final InetSocketAddress localNativeTransportAddress;
+    private volatile Host host;
 
     public CassandraAdapter(DnsResolver dnsResolver, JmxClient jmxClient, CQLSessionProvider cqlSessionProvider,
                             String sidecarVersion, InetSocketAddress localNativeTransportAddress)
@@ -120,7 +121,7 @@ public class CassandraAdapter implements ICassandraAdapter
         }
 
         Row oneResult = rs.one();
-        
+
         return NodeSettings.builder()
                            .releaseVersion(oneResult.getString(RELEASE_VERSION_COLUMN_NAME))
                            .partitioner(oneResult.getString(PARTITIONER_COLUMN_NAME))
@@ -143,7 +144,7 @@ public class CassandraAdapter implements ICassandraAdapter
             return null;
         }
 
-        Host host = DriverExtensions.getHost(metadata, localNativeTransportAddress);
+        Host host = getHost(metadata);
         if (host == null)
         {
             LOGGER.debug("Could not find host in metadata for address {}", localNativeTransportAddress);
@@ -154,6 +155,22 @@ public class CassandraAdapter implements ICassandraAdapter
         return activeSession.execute(statement);
     }
 
+    private Host getHost(Metadata metadata)
+    {
+        if (host == null)
+        {
+            synchronized (this)
+            {
+                if (host == null)
+                {
+                    host = DriverUtils.getHost(metadata, localNativeTransportAddress);
+                }
+            }
+        }
+        return host;
+    }
+
+    @Override
     public InetSocketAddress localNativeTransportPort()
     {
         return localNativeTransportAddress;

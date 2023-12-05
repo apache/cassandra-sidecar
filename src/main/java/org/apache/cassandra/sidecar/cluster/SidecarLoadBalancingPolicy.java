@@ -19,22 +19,22 @@
 package org.apache.cassandra.sidecar.cluster;
 
 import java.net.InetSocketAddress;
-import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.Iterators;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.DriverExtensions;
+import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.HostDistance;
 import com.datastax.driver.core.Statement;
@@ -50,13 +50,13 @@ import com.datastax.driver.core.policies.RoundRobinPolicy;
  */
 class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
 {
-    public static final int MIN_ADDITIONAL_CONNECTIONS = 2;
+    public static final int MIN_NON_LOCAL_CONNECTIONS = 2;
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarLoadBalancingPolicy.class);
     private final Set<Host> selectedHosts = new HashSet<>();
     private final Set<InetSocketAddress> localHostAddresses;
     private final LoadBalancingPolicy childPolicy;
     private final int totalRequestedConnections;
-    private final Random secureRandom = new SecureRandom();
+    private final Random random = new Random();
     private final HashSet<Host> allHosts = new HashSet<>();
     private Cluster cluster;
 
@@ -66,11 +66,11 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
     {
         this.childPolicy = createChildPolicy(localDc);
         this.localHostAddresses = new HashSet<>(localHostAddresses);
-        if (numAdditionalConnections < MIN_ADDITIONAL_CONNECTIONS)
+        if (numAdditionalConnections < MIN_NON_LOCAL_CONNECTIONS)
         {
             LOGGER.warn("Additional instances requested was {}, which is less than the minimum of {}. Using {}.",
-                        numAdditionalConnections, MIN_ADDITIONAL_CONNECTIONS, MIN_ADDITIONAL_CONNECTIONS);
-            numAdditionalConnections = MIN_ADDITIONAL_CONNECTIONS;
+                        numAdditionalConnections, MIN_NON_LOCAL_CONNECTIONS, MIN_NON_LOCAL_CONNECTIONS);
+            numAdditionalConnections = MIN_NON_LOCAL_CONNECTIONS;
         }
         this.totalRequestedConnections = this.localHostAddresses.size() + numAdditionalConnections;
     }
@@ -126,6 +126,7 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
         // Don't remove local addresses from the selected host list
         if (localHostAddresses.contains(host.getBroadcastRpcAddress()))
         {
+            LOGGER.debug("Local Node {} has been marked down.", host);
             return;
         }
 
@@ -137,7 +138,7 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
             // of preventing the driver from trying to reconnect to them
             // if we miss the `onUp` event, so we need to schedule reconnects
             // for these hosts explicitly unless we have active connections.
-            DriverExtensions.startPeriodicReconnectionAttempt(cluster, host);
+            DriverUtils.startPeriodicReconnectionAttempt(cluster, host);
         }
         recalculateSelectedHosts();
         childPolicy.onDown(host);
@@ -193,25 +194,33 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
 
     private synchronized void recalculateSelectedHosts()
     {
-        // Copy the list to allow us to remove hosts as we build the list
-        List<Host> sourceHosts = new ArrayList<>(this.allHosts);
-        addLocalHostsToSelected(sourceHosts);
-        Collections.shuffle(sourceHosts, this.secureRandom);
-        Iterator<Host> hostIterator = sourceHosts.iterator();
-        while (selectedHosts.size() < totalRequestedConnections && hostIterator.hasNext())
+        Map<Boolean, List<Host>> partitionedHosts = allHosts.stream()
+                                                            .collect(Collectors.partitioningBy(
+                                                            host -> localHostAddresses.contains(
+                                                            host.getEndPoint().resolve())));
+        List<Host> localHosts = partitionedHosts.get(true);
+        if (localHosts == null)
         {
-            Host host = hostIterator.next();
-            if (!selectedHosts.contains(host) && host.isUp())
-            {
-                selectedHosts.add(host);
-                hostIterator.remove();
-            }
+            LOGGER.warn("Did not find any local hosts in the complete host list!");
         }
-        if (selectedHosts.size() < totalRequestedConnections)
+        else
         {
-            LOGGER.warn("Requested number of instances (local + additional) ({}) is greater " +
-                        "than the number of UP hosts in the cluster ({})",
-                        totalRequestedConnections, selectedHosts.size());
+            selectedHosts.addAll(localHosts);
+        }
+        int requiredNewHosts = this.totalRequestedConnections - selectedHosts.size();
+        if (requiredNewHosts > 0)
+        {
+            List<Host> nonLocalHosts = partitionedHosts.get(false);
+            if (nonLocalHosts == null)
+            {
+                LOGGER.warn("Did not find any local hosts in the complete host list!");
+                return;
+            }
+
+            Collections.shuffle(nonLocalHosts, this.random);
+            List<Host> nonLocalToAdd = nonLocalHosts.stream().limit(requiredNewHosts)
+                                                    .collect(Collectors.toList());
+            selectedHosts.addAll(nonLocalToAdd);
         }
     }
 }

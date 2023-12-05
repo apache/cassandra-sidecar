@@ -28,7 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.DriverExtensions;
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ResultSet;
@@ -87,6 +88,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private final AtomicBoolean registered = new AtomicBoolean(false);
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
     private final InetSocketAddress localNativeTransportAddress;
+    private volatile Host host;
 
     /**
      * Constructs a new {@link CassandraAdapterDelegate} for the given {@code cassandraInstance}
@@ -192,8 +194,9 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                                 + RPC_ADDRESS_COLUMN_NAME + ", "
                                 + RPC_PORT_COLUMN_NAME + ", "
                                 + TOKENS_COLUMN_NAME
-            + " FROM system.local");
-            Host host = DriverExtensions.getHost(activeSession.getCluster().getMetadata(), localNativeTransportAddress);
+                                + " FROM system.local");
+            Metadata metadata = activeSession.getCluster().getMetadata();
+            host = getHost(metadata);
             if (host == null)
             {
                 LOGGER.warn("Could not find host in cluster metadata by address and port {}",
@@ -201,6 +204,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 return;
             }
             healthCheckStatement.setHost(host);
+            healthCheckStatement.setConsistencyLevel(ConsistencyLevel.ONE);
             Row oneResult = activeSession.execute(healthCheckStatement).one();
 
             // Note that within the scope of this method, we should keep on using the local releaseVersion
@@ -234,10 +238,25 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         {
             LOGGER.error("Unexpected error connecting to Cassandra instance {}", cassandraInstanceId, e);
             // The cassandra node is down.
-            // Unregister the host listener and nullify the session in order to get a new object.
+            // Unregister the host listener.
             markAsDownAndMaybeNotify();
             maybeUnregisterHostListener(activeSession);
         }
+    }
+
+    private Host getHost(Metadata metadata)
+    {
+        if (host == null)
+        {
+            synchronized (this)
+            {
+                if (host == null)
+                {
+                    host = DriverUtils.getHost(metadata, localNativeTransportAddress);
+                }
+            }
+        }
+        return host;
     }
 
     /**

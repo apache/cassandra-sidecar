@@ -49,5 +49,5 @@ public interface CQLSessionProvider
      * Otherwise, returns null.
      * @return the connected {@link Session} object if available. Null otherwise.
      */
-    Session getIfConnected();
+    @Nullable Session getIfConnected();
 }

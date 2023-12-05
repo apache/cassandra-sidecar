@@ -20,10 +20,12 @@ package com.datastax.driver.core;
 
 import java.net.InetSocketAddress;
 
+import org.jetbrains.annotations.VisibleForTesting;
+
 /**
  * A collection of methods that require access to package-private members in the datastax driver.
  */
-public class DriverExtensions
+public class DriverUtils
 {
     /**
      * Check if a host has active connections
@@ -31,6 +33,7 @@ public class DriverExtensions
      * @param host the host to check
      * @return true if the host has active connections, false otherwise
      */
+    @VisibleForTesting
     public static boolean hasActiveConnections(Host host)
     {
         return host.convictionPolicy.hasActiveConnections();

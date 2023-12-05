@@ -56,7 +56,6 @@ public class CQLSessionProviderTest extends IntegrationTestBase
     {
         UpgradeableCluster cluster = cassandraTestContext.getCluster();
         testWithClient(context, false, webClient -> {
-
                            // To start, both instances are stopped, so we should get 503s for both
                            buildInstanceHealthRequest(webClient, "1")
                            .send()
@@ -124,7 +123,6 @@ public class CQLSessionProviderTest extends IntegrationTestBase
                        }
         );
     }
-
 
     private HttpRequest<String> buildInstanceHealthRequest(WebClient webClient, String instanceId)
     {
