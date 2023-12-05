@@ -73,7 +73,8 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
         UpgradeableCluster cluster = sidecarTestContext.cluster();
         IUpgradeableInstance inst = shutDownNonLocalInstance(cluster, sidecarTestContext.instancesConfig().instances());
         assertThat(inst.isShutdown()).isTrue();
-        InetSocketAddress downInstanceAddress = inst.broadcastAddress();
+        InetSocketAddress downInstanceAddress = new InetSocketAddress(inst.broadcastAddress().getAddress(),
+                                                                      inst.config().getInt("native_transport_port"));
         assertConnectionsWithRetry(downInstanceAddress, expectedConnections);
     }
 
@@ -87,14 +88,18 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
             Set<Host> hosts = sidecarTestContext.session().getCluster().getMetadata().getAllHosts();
             connectedHosts = getConnectedHosts(hosts);
             List<InetSocketAddress> connectedAddresses = getAddresses(connectedHosts);
-            assertThat(connectedAddresses).doesNotContain(downInstanceAddress);
-            int connectedInstances = connectedHosts.size();
-            if (connectedInstances == expectedConnections)
+            if (connectedHosts.size() == expectedConnections && !connectedAddresses.contains(downInstanceAddress))
             {
                 return;
             }
             attempts++;
             Uninterruptibles.sleepUninterruptibly(5, TimeUnit.SECONDS);
+        }
+        List<InetSocketAddress> connectedAddresses = getAddresses(connectedHosts);
+        assertThat(connectedAddresses).doesNotContain(downInstanceAddress);
+        if (connectedHosts.size() == expectedConnections)
+        {
+            return;
         }
         String message =
         String.format("Waited 2 minutes for connected hosts (%d) to be the expected number (%d) but failed",

@@ -158,9 +158,9 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
         childPolicy.close();
     }
 
-
     /**
      * Creates the child policy based on the presence of a local datacenter
+     *
      * @param localDc the local datacenter to use, or null
      * @return a {@link LoadBalancingPolicy}
      */
@@ -173,54 +173,63 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
         return new RoundRobinPolicy();
     }
 
-    /**
-     * Adds any local hosts to the selected host list
-     *
-     * @param sourceHosts the list of hosts provided by the control connection
-     */
-    private void addLocalHostsToSelected(List<Host> sourceHosts)
+    private synchronized void recalculateSelectedHosts()
     {
-        Iterator<Host> hostIterator = sourceHosts.iterator();
-        while (hostIterator.hasNext())
+        Map<Boolean, List<Host>> partitionedHosts = allHosts.stream()
+                                                            .collect(Collectors.partitioningBy(this::isLocalHost));
+        List<Host> localHosts = partitionedHosts.get(true);
+        int numLocalHostsConfigured = localHostAddresses.size();
+        if (localHosts == null || localHosts.isEmpty())
         {
-            Host host = hostIterator.next();
-            if (localHostAddresses.contains(host.getEndPoint().resolve()))
+            LOGGER.warn("Did not find any local hosts in allHosts.");
+        }
+        else
+        {
+            if (localHosts.size() < numLocalHostsConfigured)
             {
-                selectedHosts.add(host);
-                hostIterator.remove();
+                LOGGER.warn("Could not find all configured local hosts in host list.");
+            }
+            selectedHosts.addAll(localHosts);
+        }
+        int requiredNonLocalHosts = this.totalRequestedConnections - selectedHosts.size();
+        if (requiredNonLocalHosts > 0)
+        {
+            List<Host> nonLocalHosts = partitionedHosts.get(false);
+            if (nonLocalHosts == null || nonLocalHosts.isEmpty())
+            {
+                LOGGER.warn("Did not find any non-local hosts in allHosts");
+                return;
+            }
+
+            // Remove down and already selected hosts from consideration
+            nonLocalHosts = nonLocalHosts.stream()
+                                         .filter(h -> !selectedHosts.contains(h) && h.isUp())
+                                         .collect(Collectors.toList());
+
+            if (nonLocalHosts.size() < requiredNonLocalHosts)
+            {
+                LOGGER.warn("Could not find enough new, up non-local hosts to meet requested number {}",
+                            requiredNonLocalHosts);
+            }
+            else
+            {
+                LOGGER.debug("Found enough new, up, non-local hosts to meet requested number {}",
+                             requiredNonLocalHosts);
+            }
+            if (nonLocalHosts.size() > requiredNonLocalHosts)
+            {
+                Collections.shuffle(nonLocalHosts, this.random);
+            }
+            int hostsToAdd = Math.min(requiredNonLocalHosts, nonLocalHosts.size());
+            for (int i = 0; i < hostsToAdd; i++)
+            {
+                selectedHosts.add(nonLocalHosts.get(i));
             }
         }
     }
 
-    private synchronized void recalculateSelectedHosts()
+    private boolean isLocalHost(Host host)
     {
-        Map<Boolean, List<Host>> partitionedHosts = allHosts.stream()
-                                                            .collect(Collectors.partitioningBy(
-                                                            host -> localHostAddresses.contains(
-                                                            host.getEndPoint().resolve())));
-        List<Host> localHosts = partitionedHosts.get(true);
-        if (localHosts == null)
-        {
-            LOGGER.warn("Did not find any local hosts in the complete host list!");
-        }
-        else
-        {
-            selectedHosts.addAll(localHosts);
-        }
-        int requiredNewHosts = this.totalRequestedConnections - selectedHosts.size();
-        if (requiredNewHosts > 0)
-        {
-            List<Host> nonLocalHosts = partitionedHosts.get(false);
-            if (nonLocalHosts == null)
-            {
-                LOGGER.warn("Did not find any local hosts in the complete host list!");
-                return;
-            }
-
-            Collections.shuffle(nonLocalHosts, this.random);
-            List<Host> nonLocalToAdd = nonLocalHosts.stream().limit(requiredNewHosts)
-                                                    .collect(Collectors.toList());
-            selectedHosts.addAll(nonLocalToAdd);
-        }
+        return localHostAddresses.contains(host.getEndPoint().resolve());
     }
 }

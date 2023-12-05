@@ -18,12 +18,11 @@
 
 package org.apache.cassandra.sidecar.common;
 
-import java.util.concurrent.TimeUnit;
-
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.vertx.core.Promise;
+import io.vertx.core.Future;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -31,13 +30,13 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -71,15 +70,17 @@ public class CQLSessionProviderTest extends IntegrationTestBase
                                     .onSuccess(response -> assertKeyspaceFailed(response, context)))
                            .compose(_ignored -> {
                                // Start instance 1 and check both again
-                               Promise<Void> promise = Promise.promise();
-                               new Thread(() -> {
+                               return Future.future(promise -> {
+                                   vertx.eventBus()
+                                        .localConsumer(ON_CASSANDRA_CQL_READY.address(),
+                                                       (Message<JsonObject> message) -> {
+                                                           if (message.body().getInteger("cassandraInstanceId") == 1)
+                                                           {
+                                                               promise.complete();
+                                                           }
+                                                       });
                                    cluster.get(1).startup();
-                                   // Instance 1 should now be up - wait for reconnect before testing
-                                   Uninterruptibles.sleepUninterruptibly(5000, TimeUnit.MILLISECONDS);
-                                   promise.complete();
-                               }
-                               ).start();
-                               return promise.future();
+                               });
                            })
                            .compose(_ignored ->
                                     buildInstanceHealthRequest(webClient, "1")
@@ -97,17 +98,17 @@ public class CQLSessionProviderTest extends IntegrationTestBase
                                     .onSuccess(response -> assertKeyspaceOk(response, context)))
                            .compose(_ignored -> {
                                // Start instance 2 and check both again
-                               Promise<Void> promise = Promise.promise();
-                               new Thread(() -> {
+                               return Future.future(promise -> {
+                                   vertx.eventBus()
+                                        .localConsumer(ON_CASSANDRA_CQL_READY.address(),
+                                                       (Message<JsonObject> message) -> {
+                                                           if (message.body().getInteger("cassandraInstanceId") == 2)
+                                                           {
+                                                               promise.complete();
+                                                           }
+                                                       });
                                    cluster.get(2).startup();
-                                   ClusterUtils.assertInRing(cluster.get(1), cluster.get(2));
-                                   // Instance 2 should now be up - wait for gossip
-                                   // and reconnect before testing
-                                   Uninterruptibles.sleepUninterruptibly(5000, TimeUnit.MILLISECONDS);
-                                   promise.complete();
-                               }
-                               ).start();
-                               return promise.future();
+                               });
                            })
                            .compose(_ignored ->
                                     buildInstanceHealthRequest(webClient, "1")
