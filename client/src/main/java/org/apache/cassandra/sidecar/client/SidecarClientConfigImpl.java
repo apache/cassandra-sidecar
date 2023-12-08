@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.client;
 
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 
+import java.time.Duration;
+
 /**
  * Encapsulates configurations for the {@link SidecarClient}
  */
@@ -29,16 +31,22 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
     public static final int DEFAULT_MAX_RETRIES = 3;
     public static final long DEFAULT_RETRY_DELAY_MILLIS = 500L;
     public static final long DEFAULT_MAX_RETRY_DELAY_MILLIS = 60_000L;
+    public static final Duration DEFAULT_MINIMUM_HEALTH_RETRY_DELAY = Duration.ofSeconds(1L);
+    public static final Duration DEFAULT_MAXIMUM_HEALTH_RETRY_DELAY = Duration.ofSeconds(5L);
 
     protected final int maxRetries;
     protected final long retryDelayMillis;
     protected final long maxRetryDelayMillis;
+    protected final Duration minimumHealthRetryDelay;
+    protected final Duration maximumHealthRetryDelay;
 
     private SidecarClientConfigImpl(Builder builder)
     {
         maxRetries = builder.maxRetries;
         retryDelayMillis = builder.retryDelayMillis;
         maxRetryDelayMillis = builder.maxRetryDelayMillis;
+        minimumHealthRetryDelay = builder.minimumHealthRetryDelay;
+        maximumHealthRetryDelay = builder.maximumHealthRetryDelay;
     }
 
     /**
@@ -68,19 +76,39 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
         return maxRetryDelayMillis;
     }
 
+    /**
+     * @return the minimum amount of time to wait before retrying a failed health check
+     */
+     @Override
+     public Duration minimumHealthRetryDelay()
+     {
+        return minimumHealthRetryDelay;
+     }
+
+    /**
+     * @return the maximum amount of time to wait before retrying a failed health check
+     */
+     @Override
+     public Duration maximumHealthRetryDelay()
+     {
+        return maximumHealthRetryDelay;
+     }
+
     public static Builder builder()
     {
         return new Builder();
     }
 
     /**
-     * {@code SidecarConfig} builder static inner class.
+     * {@code SidecarConfig} builder static inner class
      */
     public static class Builder implements DataObjectBuilder<Builder, SidecarClientConfig>
     {
         protected int maxRetries = DEFAULT_MAX_RETRIES;
         protected long retryDelayMillis = DEFAULT_RETRY_DELAY_MILLIS;
         protected long maxRetryDelayMillis = DEFAULT_MAX_RETRY_DELAY_MILLIS;
+        protected Duration minimumHealthRetryDelay = DEFAULT_MINIMUM_HEALTH_RETRY_DELAY;
+        protected Duration maximumHealthRetryDelay = DEFAULT_MAXIMUM_HEALTH_RETRY_DELAY;
 
         protected Builder()
         {
@@ -93,40 +121,62 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
         }
 
         /**
-         * Sets the {@code maxRetries} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code maxRetries} and returns a reference to this Builder enabling method chaining
          *
          * @param maxRetries the {@code maxRetries} to set
          * @return a reference to this Builder
          */
         public Builder maxRetries(int maxRetries)
         {
-            return update(b -> b.maxRetries = maxRetries);
+            return update(builder -> builder.maxRetries = maxRetries);
         }
 
         /**
-         * Sets the {@code retryDelayMillis} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code retryDelayMillis} and returns a reference to this Builder enabling method chaining
          *
          * @param retryDelayMillis the {@code retryDelayMillis} to set
          * @return a reference to this Builder
          */
         public Builder retryDelayMillis(long retryDelayMillis)
         {
-            return update(b -> b.retryDelayMillis = retryDelayMillis);
+            return update(builder -> builder.retryDelayMillis = retryDelayMillis);
         }
 
         /**
-         * Sets the {@code maxRetryDelayMillis} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code maxRetryDelayMillis} and returns a reference to this Builder enabling method chaining
          *
          * @param maxRetryDelayMillis the {@code maxRetryDelayMillis} to set
          * @return a reference to this Builder
          */
         public Builder maxRetryDelayMillis(long maxRetryDelayMillis)
         {
-            return update(b -> b.maxRetryDelayMillis = maxRetryDelayMillis);
+            return update(builder -> builder.maxRetryDelayMillis = maxRetryDelayMillis);
         }
 
         /**
-         * Returns a {@code SidecarConfig} built from the parameters previously set.
+         * Sets the {@code minimumHealthRetryDelay} and returns a reference to this Builder enabling method chaining
+         *
+         * @param minimumHealthRetryDelay the {@code minimumHealthRetryDelay} to set
+         * @return a reference to this Builder
+         */
+        public Builder minimumHealthRetryDelay(Duration minimumHealthRetryDelay)
+        {
+            return update(builder -> builder.minimumHealthRetryDelay = minimumHealthRetryDelay);
+        }
+
+        /**
+         * Sets the {@code maximumHealthRetryDelay} and returns a reference to this Builder enabling method chaining
+         *
+         * @param maximumHealthRetryDelay the {@code maximumHealthRetryDelay} to set
+         * @return a reference to this Builder
+         */
+        public Builder maximumHealthRetryDelay(Duration maximumHealthRetryDelay)
+        {
+            return update(builder -> builder.maximumHealthRetryDelay = maximumHealthRetryDelay);
+        }
+
+        /**
+         * Returns a {@code SidecarConfig} built from the parameters previously set
          *
          * @return a {@code SidecarConfig} built with parameters of this {@code SidecarConfig.Builder}
          */

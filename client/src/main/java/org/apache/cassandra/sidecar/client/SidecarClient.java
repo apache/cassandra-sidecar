@@ -19,7 +19,6 @@
 
 package org.apache.cassandra.sidecar.client;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -65,13 +64,11 @@ import org.jetbrains.annotations.Nullable;
 public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExtension
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarClient.class);
-    private static final Duration MINIMUM_RETRY_DELAY = Duration.ofSeconds(1L);
-    private static final Duration MAXIMUM_RETRY_DELAY = Duration.ofSeconds(5L);
-    private static final RetryPolicy ONCE_PER_INSTANCE_RETRY_POLICY = new OncePerInstanceRetryPolicy(MINIMUM_RETRY_DELAY, MAXIMUM_RETRY_DELAY);
 
     protected RequestExecutor executor;
     protected final RetryPolicy defaultRetryPolicy;
     protected final RetryPolicy ignoreConflictRetryPolicy;
+    protected final RetryPolicy oncePerInstanceRetryPolicy;
     protected RequestContext.Builder baseBuilder;
 
     public SidecarClient(SidecarInstancesProvider instancesProvider,
@@ -80,13 +77,15 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                          RetryPolicy defaultRetryPolicy)
     {
         this.defaultRetryPolicy = defaultRetryPolicy;
-        ignoreConflictRetryPolicy = new IgnoreConflictRetryPolicy(sidecarClientConfig.maxRetries(),
-                                                                  sidecarClientConfig.retryDelayMillis(),
-                                                                  sidecarClientConfig.maxRetryDelayMillis());
-        baseBuilder = new RequestContext.Builder()
-                      .instanceSelectionPolicy(new RandomInstanceSelectionPolicy(instancesProvider))
-                      .retryPolicy(defaultRetryPolicy);
-        executor = requestExecutor;
+        this.ignoreConflictRetryPolicy = new IgnoreConflictRetryPolicy(sidecarClientConfig.maxRetries(),
+                                                                       sidecarClientConfig.retryDelayMillis(),
+                                                                       sidecarClientConfig.maxRetryDelayMillis());
+        this.oncePerInstanceRetryPolicy = new OncePerInstanceRetryPolicy(sidecarClientConfig.minimumHealthRetryDelay(),
+                                                                         sidecarClientConfig.maximumHealthRetryDelay());
+        this.baseBuilder = new RequestContext.Builder()
+                .instanceSelectionPolicy(new RandomInstanceSelectionPolicy(instancesProvider))
+                .retryPolicy(defaultRetryPolicy);
+        this.executor = requestExecutor;
     }
 
     /**
@@ -98,7 +97,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     {
         return executor.executeRequestAsync(requestBuilder()
                 .sidecarHealthRequest()
-                .retryPolicy(ONCE_PER_INSTANCE_RETRY_POLICY)
+                .retryPolicy(oncePerInstanceRetryPolicy)
                 .build());
     }
 
@@ -113,7 +112,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     {
         return executor.executeRequestAsync(requestBuilder()
                 .cassandraHealthRequest()
-                .retryPolicy(ONCE_PER_INSTANCE_RETRY_POLICY)
+                .retryPolicy(oncePerInstanceRetryPolicy)
                 .build());
     }
 
