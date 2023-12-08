@@ -87,11 +87,11 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
     @Override
     public HostDistance distance(Host host)
     {
-        if (!selectedHosts.contains(host))
+        if (selectedHosts.contains(host) || isLocalHost(host))
         {
-            return HostDistance.IGNORED;
+            return childPolicy.distance(host);
         }
-        return childPolicy.distance(host);
+        return HostDistance.IGNORED;
     }
 
     @Override
@@ -230,6 +230,7 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
 
     private boolean isLocalHost(Host host)
     {
+        LOGGER.debug("Looking up {} in Local hosts: {}", host, localHostAddresses);
         return localHostAddresses.contains(host.getEndPoint().resolve());
     }
 }

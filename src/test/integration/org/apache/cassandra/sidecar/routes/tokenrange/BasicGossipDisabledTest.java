@@ -39,7 +39,7 @@ public class BasicGossipDisabledTest extends BaseTokenRangeIntegrationTest
     void tokenRangeEndpointFailsWhenGossipIsDisabled(CassandraTestContext context, VertxTestContext testContext)
     throws Exception
     {
-        int disableGossip = context.getCluster().getFirstRunningInstance().nodetool("disablegossip");
+        int disableGossip = context.cluster().getFirstRunningInstance().nodetool("disablegossip");
         assertThat(disableGossip).isEqualTo(0);
         retrieveMappingWithKeyspace(testContext, TEST_KEYSPACE, response -> {
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.SERVICE_UNAVAILABLE.code());

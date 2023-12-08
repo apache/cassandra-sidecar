@@ -92,6 +92,7 @@ public class JmxClient implements NotificationListener, Closeable
                                     "connectionMaxRetries must be a positive integer");
         connectionMaxRetries = builder.connectionMaxRetries;
         connectionRetryDelayMillis = builder.connectionRetryDelayMillis;
+        this.checkConnection();
     }
 
     /**
@@ -126,7 +127,7 @@ public class JmxClient implements NotificationListener, Closeable
                : RMISocketFactory.getDefaultSocketFactory();
     }
 
-    private synchronized void checkConnection()
+    public synchronized void checkConnection()
     {
         if (!this.connected)
         {

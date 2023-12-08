@@ -87,6 +87,5 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
 
     public int clusterSize()
     {
-        return annotation.numDcs() * annotation.nodesPerDc();
-    }
-}
+        return annotation.numDcs() * (annotation.nodesPerDc() + annotation.newNodesPerDc());
+    }}

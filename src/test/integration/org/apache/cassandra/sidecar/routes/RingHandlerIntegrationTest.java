@@ -78,7 +78,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(gossip = true)
     void ringFailsWhenGossipIsDisabled(CassandraTestContext context, VertxTestContext testContext) throws Exception
     {
-        int disableGossip = context.getCluster().getFirstRunningInstance().nodetool("disablegossip");
+        int disableGossip = context.cluster().getFirstRunningInstance().nodetool("disablegossip");
         assertThat(disableGossip).isEqualTo(0);
         String testRoute = "/api/v1/cassandra/ring";
         testWithClient(testContext, client -> {

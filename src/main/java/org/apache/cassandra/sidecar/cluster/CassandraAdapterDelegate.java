@@ -20,6 +20,10 @@ package org.apache.cassandra.sidecar.cluster;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -28,14 +32,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import io.vertx.core.Vertx;
@@ -52,12 +53,6 @@ import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.cassandra.sidecar.common.NodeSettings.DATA_CENTER_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.PARTITIONER_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.RELEASE_VERSION_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.RPC_ADDRESS_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.RPC_PORT_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.TOKENS_COLUMN_NAME;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 
@@ -82,12 +77,12 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private final CassandraVersionProvider versionProvider;
     private final CQLSessionProvider cqlSessionProvider;
     private final JmxClient jmxClient;
-    private SimpleCassandraVersion currentVersion;
-    private ICassandraAdapter adapter;
-    private volatile NodeSettings nodeSettings = null;
     private final AtomicBoolean registered = new AtomicBoolean(false);
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
     private final InetSocketAddress localNativeTransportAddress;
+    private SimpleCassandraVersion currentVersion;
+    private ICassandraAdapter adapter;
+    private volatile NodeSettings nodeSettings = null;
     private volatile Host host;
 
     /**
@@ -172,51 +167,33 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     private void healthCheckInternal()
     {
-        Session activeSession = cqlSessionProvider.get();
-        if (activeSession == null)
-        {
-            LOGGER.info("No local CQL session is available for cassandraInstanceId={}. " +
-                        "Cassandra instance is down presumably.", cassandraInstanceId);
-            markAsDownAndMaybeNotify();
-            return;
-        }
-
-        maybeRegisterHostListener(activeSession);
-
         try
         {
-            // NOTE: We cannot use `executeLocal` here as there may be no adapter yet.
-            SimpleStatement healthCheckStatement =
-            new SimpleStatement("SELECT "
-                                + RELEASE_VERSION_COLUMN_NAME + ", "
-                                + PARTITIONER_COLUMN_NAME + ", "
-                                + DATA_CENTER_COLUMN_NAME + ", "
-                                + RPC_ADDRESS_COLUMN_NAME + ", "
-                                + RPC_PORT_COLUMN_NAME + ", "
-                                + TOKENS_COLUMN_NAME
-                                + " FROM system.local");
-            Metadata metadata = activeSession.getCluster().getMetadata();
-            host = getHost(metadata);
-            if (host == null)
+            if (!jmxClient.isConnected())
             {
-                LOGGER.warn("Could not find host in cluster metadata by address and port {}",
-                            localNativeTransportAddress);
+                markAsDownAndMaybeNotify();
                 return;
             }
-            healthCheckStatement.setHost(host);
-            healthCheckStatement.setConsistencyLevel(ConsistencyLevel.ONE);
-            Row oneResult = activeSession.execute(healthCheckStatement).one();
 
-            // Note that within the scope of this method, we should keep on using the local releaseVersion
-            String releaseVersion = oneResult.getString(RELEASE_VERSION_COLUMN_NAME);
+            LimitedStorageOperations storageOperations =
+            jmxClient.proxy(LimitedStorageOperations.class,
+                            "org.apache.cassandra.db:type=StorageService");
+            LimitedEndpointSnitchOperations endpointSnitchOperations =
+            jmxClient.proxy(LimitedEndpointSnitchOperations.class,
+                            "org.apache.cassandra.db:type=EndpointSnitchInfo");
+            String releaseVersion = storageOperations.getReleaseVersion();
+            String partitionerName = storageOperations.getPartitionerName();
+            List<String> tokens = maybeGetTokens(storageOperations);
+            String dataCenter = endpointSnitchOperations.getDatacenter();
+
             NodeSettings newNodeSettings = NodeSettings.builder()
                                                        .releaseVersion(releaseVersion)
-                                                       .partitioner(oneResult.getString(PARTITIONER_COLUMN_NAME))
+                                                       .partitioner(partitionerName)
                                                        .sidecarVersion(sidecarVersion)
-                                                       .datacenter(oneResult.getString(DATA_CENTER_COLUMN_NAME))
-                                                       .tokens(oneResult.getSet(TOKENS_COLUMN_NAME, String.class))
-                                                       .rpcAddress(oneResult.getInet(RPC_ADDRESS_COLUMN_NAME))
-                                                       .rpcPort(oneResult.getInt(RPC_PORT_COLUMN_NAME))
+                                                       .datacenter(dataCenter)
+                                                       .tokens(new HashSet<>(tokens))
+                                                       .rpcAddress(localNativeTransportAddress.getAddress())
+                                                       .rpcPort(localNativeTransportAddress.getPort())
                                                        .build();
 
             if (!newNodeSettings.equals(nodeSettings))
@@ -233,15 +210,41 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 notifyCqlConnection();
             }
             LOGGER.debug("Cassandra version {}", releaseVersion);
+            Session activeSession = cqlSessionProvider.get();
+            if (activeSession == null)
+            {
+                LOGGER.info("No local CQL session is available for cassandraInstanceId={}. " +
+                            "Cassandra instance is down presumably.", cassandraInstanceId);
+                markAsDownAndMaybeNotify();
+                return;
+            }
+
+            maybeRegisterHostListener(activeSession);
         }
         catch (IllegalArgumentException | NoHostAvailableException e)
         {
-            LOGGER.error("Unexpected error connecting to Cassandra instance {}", cassandraInstanceId, e);
-            // The cassandra node is down.
-            // Unregister the host listener.
-            markAsDownAndMaybeNotify();
-            maybeUnregisterHostListener(activeSession);
+            markNodeDown(e);
         }
+    }
+
+    private static List<String> maybeGetTokens(LimitedStorageOperations storageOperations)
+    {
+        try
+        {
+            return storageOperations.getTokens();
+        }
+        catch (AssertionError aex)
+        {
+            return Collections.emptyList();
+        }
+    }
+
+    private void markNodeDown(RuntimeException e)
+    {
+        LOGGER.error("Unexpected error connecting to Cassandra instance {}", cassandraInstanceId, e);
+        // The cassandra node is down.
+        // Unregister the host listener.
+        markAsDownAndMaybeNotify();
     }
 
     private Host getHost(Metadata metadata)
@@ -253,6 +256,13 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 if (host == null)
                 {
                     host = DriverUtils.getHost(metadata, localNativeTransportAddress);
+                    if (host == null)
+                    {
+                        // Create a one-off Host instance but don't keep it around as the driver will
+                        // eventually be able to connect. This is mostly for `joining` nodes where the driver
+                        // hasn't yet seen it as up and added it to metadata
+                        return DriverUtils.createHost(metadata, localNativeTransportAddress);
+                    }
                 }
             }
         }
@@ -411,5 +421,19 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         {
             runnable.run();
         }
+    }
+
+    public interface LimitedStorageOperations
+    {
+        String getReleaseVersion();
+
+        String getPartitionerName();
+
+        List<String> getTokens();
+    }
+
+    public interface LimitedEndpointSnitchOperations
+    {
+        String getDatacenter();
     }
 }

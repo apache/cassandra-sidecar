@@ -25,12 +25,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.datastax.driver.core.Session;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.impl.AbstractClusterUtils;
+import org.apache.cassandra.distributed.impl.InstanceConfig;
 import org.apache.cassandra.distributed.shared.JMXUtil;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
@@ -46,6 +48,7 @@ import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
+import org.jetbrains.annotations.NotNull;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -208,13 +211,13 @@ public class CassandraSidecarTestContext implements AutoCloseable
         UpgradeableCluster cluster = cluster();
         List<InstanceMetadata> metadata = new ArrayList<>();
         jmxClients = new ArrayList<>();
-        List<InetSocketAddress> addresses = buildContactList(cluster);
+        List<InstanceConfig> configs = buildInstanceConfigs(cluster);
+        List<InetSocketAddress> addresses = buildContactList(configs);
         sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
                                                      0, SharedExecutorNettyOptions.INSTANCE);
-        for (int i = 0; i < numInstancesToManage; i++)
+        for (int i = 0; i < configs.size(); i++)
         {
-            IUpgradeableInstance instance = cluster.get(i + 1); // 1-based indexing to match node names;
-            IInstanceConfig config = instance.config();
+            IInstanceConfig config = configs.get(i);
             String hostName = JMXUtil.getJmxHost(config);
             int nativeTransportPort = tryGetIntConfig(config, "native_transport_port", 9042);
             // The in-jvm dtest framework sometimes returns a cluster before all the jmx infrastructure is initialized.
@@ -255,13 +258,23 @@ public class CassandraSidecarTestContext implements AutoCloseable
         return new InstancesConfigImpl(metadata, dnsResolver);
     }
 
-    private List<InetSocketAddress> buildContactList(UpgradeableCluster cluster)
+    private List<InetSocketAddress> buildContactList(List<InstanceConfig> configs)
     {
-        return cluster.stream()
-                      .map(i -> new InetSocketAddress(i.config().broadcastAddress().getAddress(),
-                                                      tryGetIntConfig(i.config(), "native_transport_port", 9042)))
-                      .limit(numInstancesToManage)
-                      .collect(Collectors.toList());
+        // Always return the complete list of addresses even if the cluster isn't yet that large
+        // this way, we populate the entire local instance list
+        return configs.stream()
+               .map(config ->  new InetSocketAddress(config.broadcastAddress().getAddress(),
+                                                           tryGetIntConfig(config, "native_transport_port", 9042)))
+               .collect(Collectors.toList());
+    }
+
+    @NotNull
+    private List<InstanceConfig> buildInstanceConfigs(UpgradeableCluster cluster)
+    {
+        return IntStream.range(1, numInstancesToManage + 1)
+                        .mapToObj(nodeNum ->
+                                  AbstractClusterUtils.createInstanceConfig(cluster, nodeNum))
+               .collect(Collectors.toList());
     }
 
     /**

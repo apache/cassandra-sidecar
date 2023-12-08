@@ -20,6 +20,7 @@ package com.datastax.driver.core;
 
 import java.net.InetSocketAddress;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -64,7 +65,20 @@ public class DriverUtils
         // which is what it actually uses to connect to the cluster. Therefore, create a TranslatedAddressEndpoint
         // to use for searching. It has to be one of these because that's what the driver is using internally,
         // and the `.equals` method used when searching checks the type explicitly.
-        TranslatedAddressEndPoint endPoint = new TranslatedAddressEndPoint(localNativeTransportAddress);
+        TranslatedAddressEndPoint endPoint = getTranslatedAddressEndPoint(localNativeTransportAddress);
         return metadata.getHost(endPoint);
+    }
+
+    public static Host createHost(Metadata metadata, InetSocketAddress localNativeTransportAddress)
+    {
+        TranslatedAddressEndPoint endPoint = getTranslatedAddressEndPoint(localNativeTransportAddress);
+        return metadata.newHost(endPoint);
+    }
+
+    @NotNull
+    private static TranslatedAddressEndPoint getTranslatedAddressEndPoint(InetSocketAddress localNativeTransportAddress)
+    {
+        TranslatedAddressEndPoint endPoint = new TranslatedAddressEndPoint(localNativeTransportAddress);
+        return endPoint;
     }
 }

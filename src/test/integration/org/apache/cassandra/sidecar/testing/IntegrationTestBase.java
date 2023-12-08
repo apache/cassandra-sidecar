@@ -181,7 +181,7 @@ public abstract class IntegrationTestBase
         }
 
         // wait until the test completes
-        assertThat(context.awaitCompletion(2, TimeUnit.MINUTES)).isTrue();
+        assertThat(context.awaitCompletion(4, TimeUnit.MINUTES)).isTrue();
     }
 
     protected void createTestKeyspace()
