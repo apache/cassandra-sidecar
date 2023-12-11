@@ -28,7 +28,6 @@ import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
@@ -40,13 +39,6 @@ import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.jetbrains.annotations.Nullable;
-
-import static org.apache.cassandra.sidecar.common.NodeSettings.DATA_CENTER_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.PARTITIONER_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.RELEASE_VERSION_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.RPC_ADDRESS_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.RPC_PORT_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.TOKENS_COLUMN_NAME;
 
 /**
  * A {@link ICassandraAdapter} implementation for Cassandra 4.0 and later
@@ -107,30 +99,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @Nullable
     public NodeSettings nodeSettings()
     {
-        ResultSet rs = executeLocal("SELECT "
-                                              + RELEASE_VERSION_COLUMN_NAME + ", "
-                                              + PARTITIONER_COLUMN_NAME + ", "
-                                              + DATA_CENTER_COLUMN_NAME + ", "
-                                              + RPC_ADDRESS_COLUMN_NAME + ", "
-                                              + RPC_PORT_COLUMN_NAME + ", "
-                                              + TOKENS_COLUMN_NAME
-                                              + " FROM system.local");
-        if (rs == null)
-        {
-            return null;
-        }
-
-        Row oneResult = rs.one();
-
-        return NodeSettings.builder()
-                           .releaseVersion(oneResult.getString(RELEASE_VERSION_COLUMN_NAME))
-                           .partitioner(oneResult.getString(PARTITIONER_COLUMN_NAME))
-                           .sidecarVersion(sidecarVersion)
-                           .datacenter(oneResult.getString(DATA_CENTER_COLUMN_NAME))
-                           .tokens(oneResult.getSet(TOKENS_COLUMN_NAME, String.class))
-                           .rpcAddress(oneResult.getInet(RPC_ADDRESS_COLUMN_NAME))
-                           .rpcPort(oneResult.getInt(RPC_PORT_COLUMN_NAME))
-                           .build();
+        throw new UnsupportedOperationException("Node settings are not provided by this adapter");
     }
 
     @Override

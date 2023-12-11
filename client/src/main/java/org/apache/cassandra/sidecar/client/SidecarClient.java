@@ -79,9 +79,24 @@ public class SidecarClient implements AutoCloseable
     public CompletableFuture<HealthResponse> sidecarHealth()
     {
         return executor.executeRequestAsync(requestBuilder()
-                .sidecarHealthRequest()
-                .retryPolicy(new OncePerInstanceRetryPolicy())
-                .build());
+                                            .sidecarHealthRequest()
+                                            .retryPolicy(new OncePerInstanceRetryPolicy())
+                                            .build());
+    }
+
+    /**
+     * Executes the Cassandra health request using the configured selection policy and with no retries
+     *
+     * @return a completable future of the Cassandra health response
+     * @deprecated use {@link #cassandraNativeHealth()} instead
+     */
+    @Deprecated
+    public CompletableFuture<HealthResponse> cassandraHealth()
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .cassandraHealthRequest()
+                                            .retryPolicy(new OncePerInstanceRetryPolicy())
+                                            .build());
     }
 
     /**
@@ -89,12 +104,25 @@ public class SidecarClient implements AutoCloseable
      *
      * @return a completable future of the Cassandra health response
      */
-    public CompletableFuture<HealthResponse> cassandraHealth()
+    public CompletableFuture<HealthResponse> cassandraNativeHealth()
     {
         return executor.executeRequestAsync(requestBuilder()
-                .cassandraHealthRequest()
-                .retryPolicy(new OncePerInstanceRetryPolicy())
-                .build());
+                                            .cassandraNativeHealthRequest()
+                                            .retryPolicy(new OncePerInstanceRetryPolicy())
+                                            .build());
+    }
+
+    /**
+     * Executes the Cassandra health request using the configured selection policy and with no retries
+     *
+     * @return a completable future of the Cassandra health response
+     */
+    public CompletableFuture<HealthResponse> cassandraJmxHealth()
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .cassandraJmxHealthRequest()
+                                            .retryPolicy(new OncePerInstanceRetryPolicy())
+                                            .build());
     }
 
     /**

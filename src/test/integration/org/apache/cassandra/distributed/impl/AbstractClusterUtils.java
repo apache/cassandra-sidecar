@@ -16,31 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.testing;
-
-import org.apache.cassandra.distributed.UpgradeableCluster;
+package org.apache.cassandra.distributed.impl;
 
 /**
- * Passed to integration tests.
- * See {@link CassandraIntegrationTest} for the required annotation
- * See {@link CassandraTestTemplate} for the Test Template
+ * Utility class to interact with protected methods in AbstractCluster
  */
-public class CassandraTestContext extends AbstractCassandraTestContext
+public class AbstractClusterUtils
 {
-
-    public CassandraTestContext(SimpleCassandraVersion version,
-                                UpgradeableCluster cluster,
-                                CassandraIntegrationTest annotation)
+    public static InstanceConfig createInstanceConfig(AbstractCluster cluster, int nodeNumber)
     {
-        super(version, cluster, annotation);
-    }
-
-    @Override
-    public String toString()
-    {
-        return "CassandraTestContext{"
-               + "version=" + version
-               + ", cluster=" + cluster
-               + '}';
+        return cluster.createInstanceConfig(nodeNumber);
     }
 }

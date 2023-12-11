@@ -20,9 +20,15 @@ package org.apache.cassandra.sidecar.cluster;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import javax.management.Notification;
+import javax.management.NotificationListener;
+import javax.management.remote.JMXConnectionNotification;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,14 +58,12 @@ import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.cassandra.sidecar.common.NodeSettings.DATA_CENTER_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.PARTITIONER_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.RELEASE_VERSION_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.RPC_ADDRESS_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.RPC_PORT_COLUMN_NAME;
-import static org.apache.cassandra.sidecar.common.NodeSettings.TOKENS_COLUMN_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_JMX_DISCONNECTED;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_JMX_READY;
 
 
 /**
@@ -82,13 +86,16 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private final CassandraVersionProvider versionProvider;
     private final CQLSessionProvider cqlSessionProvider;
     private final JmxClient jmxClient;
+    private final JmxNotificationListener notificationListener;
     private SimpleCassandraVersion currentVersion;
     private ICassandraAdapter adapter;
-    private volatile NodeSettings nodeSettings = null;
+    private volatile boolean isNativeUp = false;
+    private volatile NodeSettings nodeSettingsFromJmx = null;
     private final AtomicBoolean registered = new AtomicBoolean(false);
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
     private final InetSocketAddress localNativeTransportAddress;
     private volatile Host host;
+    private volatile boolean closed = false;
 
     /**
      * Constructs a new {@link CassandraAdapterDelegate} for the given {@code cassandraInstance}
@@ -118,6 +125,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         this.versionProvider = versionProvider;
         this.cqlSessionProvider = session;
         this.jmxClient = jmxClient;
+        notificationListener = new JmxNotificationListener();
+        this.jmxClient.registerListener(notificationListener);
     }
 
     private void maybeRegisterHostListener(@NotNull Session session)
@@ -146,17 +155,24 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     /**
      * Should be called on initial connect as well as when a server comes back since it might be from an upgrade
-     * synchronized so we don't flood the DB with version requests
+     * synchronized, so we don't flood the DB with version requests
      *
      * <p>If the healthcheck determines we've changed versions, it should load the proper adapter</p>
      */
     public void healthCheck()
     {
+        if (closed)
+        {
+            LOGGER.debug("Skipping health check for cassandraInstanceId={}. Delegate is closed", cassandraInstanceId);
+            return;
+        }
+
         if (isHealthCheckActive.compareAndSet(false, true))
         {
             try
             {
-                healthCheckInternal();
+                jmxHealthCheck();
+                nativeProtocolHealthCheck();
             }
             finally
             {
@@ -170,14 +186,49 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
     }
 
-    private void healthCheckInternal()
+    /**
+     * Performs health checks by utilizing the JMX protocol. It uses a small subset of the exposed mBeans to
+     * collect information needed to populate the {@link NodeSettings} object.
+     */
+    protected void jmxHealthCheck()
+    {
+        try
+        {
+            NodeSettings newNodeSettings = newNodeSettingsFromJmx();
+            if (!newNodeSettings.equals(nodeSettingsFromJmx))
+            {
+                // Update the nodeSettings cache
+                SimpleCassandraVersion previousVersion = currentVersion;
+                currentVersion = SimpleCassandraVersion.create(newNodeSettings.releaseVersion());
+                adapter = versionProvider.cassandra(newNodeSettings.releaseVersion())
+                                         .create(cqlSessionProvider, jmxClient, localNativeTransportAddress);
+                nodeSettingsFromJmx = newNodeSettings;
+                LOGGER.info("Cassandra version change detected (from={} to={}) for cassandraInstanceId={}. " +
+                            "New adapter loaded={}", previousVersion, currentVersion, cassandraInstanceId, adapter);
+
+                notifyJmxConnection();
+            }
+            LOGGER.debug("Cassandra version {}", newNodeSettings.releaseVersion());
+        }
+        catch (RuntimeException e)
+        {
+            LOGGER.error("Unable to connect JMX to Cassandra instance {}", cassandraInstanceId, e);
+            // The cassandra node JMX connectivity is unavailable.
+            markJmxDownAndMaybeNotifyDisconnection();
+        }
+    }
+
+    /**
+     * Performs health checks by utilizing the native protocol
+     */
+    protected void nativeProtocolHealthCheck()
     {
         Session activeSession = cqlSessionProvider.get();
         if (activeSession == null)
         {
             LOGGER.info("No local CQL session is available for cassandraInstanceId={}. " +
                         "Cassandra instance is down presumably.", cassandraInstanceId);
-            markAsDownAndMaybeNotify();
+            markNativeDownAndMaybeNotifyDisconnection();
             return;
         }
 
@@ -186,15 +237,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         try
         {
             // NOTE: We cannot use `executeLocal` here as there may be no adapter yet.
-            SimpleStatement healthCheckStatement =
-            new SimpleStatement("SELECT "
-                                + RELEASE_VERSION_COLUMN_NAME + ", "
-                                + PARTITIONER_COLUMN_NAME + ", "
-                                + DATA_CENTER_COLUMN_NAME + ", "
-                                + RPC_ADDRESS_COLUMN_NAME + ", "
-                                + RPC_PORT_COLUMN_NAME + ", "
-                                + TOKENS_COLUMN_NAME
-                                + " FROM system.local");
+            SimpleStatement healthCheckStatement = new SimpleStatement("SELECT release_version FROM system.local");
             Metadata metadata = activeSession.getCluster().getMetadata();
             host = getHost(metadata);
             if (host == null)
@@ -205,46 +248,82 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             }
             healthCheckStatement.setHost(host);
             healthCheckStatement.setConsistencyLevel(ConsistencyLevel.ONE);
-            Row oneResult = activeSession.execute(healthCheckStatement).one();
+            Row row = activeSession.execute(healthCheckStatement).one();
 
-            // Note that within the scope of this method, we should keep on using the local releaseVersion
-            String releaseVersion = oneResult.getString(RELEASE_VERSION_COLUMN_NAME);
-            NodeSettings newNodeSettings = NodeSettings.builder()
-                                                       .releaseVersion(releaseVersion)
-                                                       .partitioner(oneResult.getString(PARTITIONER_COLUMN_NAME))
-                                                       .sidecarVersion(sidecarVersion)
-                                                       .datacenter(oneResult.getString(DATA_CENTER_COLUMN_NAME))
-                                                       .tokens(oneResult.getSet(TOKENS_COLUMN_NAME, String.class))
-                                                       .rpcAddress(oneResult.getInet(RPC_ADDRESS_COLUMN_NAME))
-                                                       .rpcPort(oneResult.getInt(RPC_PORT_COLUMN_NAME))
-                                                       .build();
-
-            if (!newNodeSettings.equals(nodeSettings))
+            if (row != null)
             {
-                // Update the nodeSettings cache
-                SimpleCassandraVersion previousVersion = currentVersion;
-                currentVersion = SimpleCassandraVersion.create(releaseVersion);
-                adapter = versionProvider.cassandra(releaseVersion)
-                                         .create(cqlSessionProvider, jmxClient, localNativeTransportAddress);
-                nodeSettings = newNodeSettings;
-                LOGGER.info("Cassandra version change detected (from={} to={}) for cassandraInstanceId={}. " +
-                            "New adapter loaded={}", previousVersion, currentVersion, cassandraInstanceId, adapter);
-
-                notifyCqlConnection();
+                if (!isNativeUp)
+                {
+                    isNativeUp = true;
+                    notifyNativeConnection();
+                }
             }
-            LOGGER.debug("Cassandra version {}", releaseVersion);
+            else
+            {
+                // This should never happen but added for completeness
+                LOGGER.error("Expected to query the release_version from system.local but encountered null {}",
+                             cassandraInstanceId);
+                // The cassandra native protocol connection to the node is down.
+                markNativeDownAndMaybeNotifyDisconnection();
+                // Unregister the host listener.
+                maybeUnregisterHostListener(activeSession);
+            }
         }
         catch (IllegalArgumentException | NoHostAvailableException e)
         {
-            LOGGER.error("Unexpected error connecting to Cassandra instance {}", cassandraInstanceId, e);
-            // The cassandra node is down.
+            LOGGER.error("Unexpected error querying Cassandra instance {}", cassandraInstanceId, e);
+            // The cassandra native protocol connection to the node is down.
+            markNativeDownAndMaybeNotifyDisconnection();
             // Unregister the host listener.
-            markAsDownAndMaybeNotify();
             maybeUnregisterHostListener(activeSession);
         }
     }
 
-    private Host getHost(Metadata metadata)
+    protected NodeSettings newNodeSettingsFromJmx()
+    {
+        LimitedStorageOperations storageOperations =
+        jmxClient.proxy(LimitedStorageOperations.class, STORAGE_SERVICE_OBJ_NAME);
+        LimitedEndpointSnitchOperations endpointSnitchOperations =
+        jmxClient.proxy(LimitedEndpointSnitchOperations.class, ENDPOINT_SNITCH_INFO_OBJ_NAME);
+
+        String releaseVersion = storageOperations.getReleaseVersion();
+        String partitionerName = storageOperations.getPartitionerName();
+        List<String> tokens = maybeGetTokens(storageOperations);
+        String dataCenter = endpointSnitchOperations.getDatacenter();
+
+        return NodeSettings.builder()
+                           .releaseVersion(releaseVersion)
+                           .partitioner(partitionerName)
+                           .sidecarVersion(sidecarVersion)
+                           .datacenter(dataCenter)
+                           .tokens(new LinkedHashSet<>(tokens))
+                           .rpcAddress(localNativeTransportAddress.getAddress())
+                           .rpcPort(localNativeTransportAddress.getPort())
+                           .build();
+    }
+
+    /**
+     * Attempts to return the tokens assigned to the Cassandra instance.
+     *
+     * @param storageOperations the interface to perform the operations
+     * @return the list of tokens assigned to the Cassandra instance
+     */
+    protected List<String> maybeGetTokens(LimitedStorageOperations storageOperations)
+    {
+        try
+        {
+            return storageOperations.getTokens();
+        }
+        catch (AssertionError aex)
+        {
+            // On a joining node, the JMX call will fail with an AssertionError; we catch this scenario to prevent
+            // failure and just return an empty list of tokens. This is technically correct, because the node, while
+            // joining, doesn't actually own any tokens until it has successfully completed joining.
+            return Collections.emptyList();
+        }
+    }
+
+    protected Host getHost(Metadata metadata)
     {
         if (host == null)
         {
@@ -271,13 +350,17 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     /**
-     * @return a cached {@link NodeSettings}. The returned value could be null when no CQL connection is established
+     * Returns the cached node settings value obtained during scheduled health checks. This method does not delegate
+     * to the internal adapter, as the information is retrieved on the configured health check interval.
+     *
+     * @return a cached {@link NodeSettings}. The returned value will be {@code null} when no JMX connection is
+     * established
      */
     @Nullable
     @Override
     public NodeSettings nodeSettings()
     {
-        return nodeSettings;
+        return nodeSettingsFromJmx;
     }
 
     public ResultSet executeLocal(Statement statement)
@@ -326,7 +409,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     @Override
     public void onDown(Host host)
     {
-        runIfThisHost(host, this::markAsDownAndMaybeNotify);
+        runIfThisHost(host, this::markNativeDownAndMaybeNotifyDisconnection);
     }
 
     @Override
@@ -345,14 +428,27 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     {
     }
 
-    public boolean isUp()
+    /**
+     * @return {@code true} if the native protocol is enabled on the Cassandra instance, {@code false} otherwise
+     */
+    public boolean isNativeUp()
     {
-        return nodeSettings != null;
+        return isNativeUp;
+    }
+
+    /**
+     * @return {@code true} if JMX connectivity has been established to the Cassandra instance, {@code false} otherwise
+     */
+    public boolean isJmxUp()
+    {
+        return nodeSettingsFromJmx != null;
     }
 
     public void close()
     {
-        markAsDownAndMaybeNotify();
+        closed = true;
+        markNativeDownAndMaybeNotifyDisconnection();
+        markJmxDownAndMaybeNotifyDisconnection();
         Session activeSession = cqlSessionProvider.getIfConnected();
         if (activeSession != null)
         {
@@ -360,6 +456,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
         if (jmxClient != null)
         {
+            jmxClient.unregisterListener(notificationListener);
             try
             {
                 jmxClient.close();
@@ -377,7 +474,15 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         return currentVersion;
     }
 
-    protected void notifyCqlConnection()
+    protected void notifyJmxConnection()
+    {
+        JsonObject connectMessage = new JsonObject()
+                                    .put("cassandraInstanceId", cassandraInstanceId);
+        vertx.eventBus().publish(ON_CASSANDRA_JMX_READY.address(), connectMessage);
+        LOGGER.info("JMX connected to cassandraInstanceId={}", cassandraInstanceId);
+    }
+
+    protected void notifyNativeConnection()
     {
         JsonObject connectMessage = new JsonObject()
                                     .put("cassandraInstanceId", cassandraInstanceId);
@@ -385,16 +490,31 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         LOGGER.info("CQL connected to cassandraInstanceId={}", cassandraInstanceId);
     }
 
-    protected void markAsDownAndMaybeNotify()
+    protected void markNativeDownAndMaybeNotifyDisconnection()
     {
-        NodeSettings currentNodeSettings = nodeSettings;
-        nodeSettings = null;
-        if (currentNodeSettings != null)
+        boolean wasCqlConnected = isNativeUp;
+        isNativeUp = false;
+        if (wasCqlConnected)
         {
             JsonObject disconnectMessage = new JsonObject()
                                            .put("cassandraInstanceId", cassandraInstanceId);
             vertx.eventBus().publish(ON_CASSANDRA_CQL_DISCONNECTED.address(), disconnectMessage);
             LOGGER.info("CQL disconnection from cassandraInstanceId={}", cassandraInstanceId);
+        }
+    }
+
+    protected void markJmxDownAndMaybeNotifyDisconnection()
+    {
+        NodeSettings currentNodeSettings = nodeSettingsFromJmx;
+        nodeSettingsFromJmx = null;
+        currentVersion = null;
+        adapter = null;
+        if (currentNodeSettings != null)
+        {
+            JsonObject disconnectMessage = new JsonObject()
+                                           .put("cassandraInstanceId", cassandraInstanceId);
+            vertx.eventBus().publish(ON_CASSANDRA_JMX_DISCONNECTED.address(), disconnectMessage);
+            LOGGER.info("JMX disconnection from cassandraInstanceId={}", cassandraInstanceId);
         }
     }
 
@@ -411,5 +531,79 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         {
             runnable.run();
         }
+    }
+
+    /**
+     * A {@link NotificationListener} implementation that reacts to {@link JMXConnectionNotification} notifications
+     * and updates the state of the JMX connection internally.
+     */
+    protected class JmxNotificationListener implements NotificationListener
+    {
+        @Override
+        public void handleNotification(Notification notification, Object handback)
+        {
+            if (notification instanceof JMXConnectionNotification)
+            {
+                JMXConnectionNotification connectNotice = (JMXConnectionNotification) notification;
+                String type = connectNotice.getType();
+                switch (type)
+                {
+                    case JMXConnectionNotification.OPENED:
+                        // Do not notify here as we may not have set up our own delegate yet
+                        // Instead, run the JMX Health Check, which will notify once we have
+                        // created or updated the adapter.
+                        jmxHealthCheck();
+                        break;
+
+                    case JMXConnectionNotification.CLOSED:
+                    case JMXConnectionNotification.FAILED:
+                    case JMXConnectionNotification.NOTIFS_LOST:
+                        markJmxDownAndMaybeNotifyDisconnection();
+                        break;
+
+                    default:
+                        LOGGER.warn("Encountered unexpected JMX notification type={}", type);
+                        break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Limited StorageOperations to obtain information required for node settings. Interface visibility is public
+     * because JMX proxy works on public interfaces only.
+     */
+    public interface LimitedStorageOperations
+    {
+        /**
+         * Fetch a string representation of the Cassandra version.
+         *
+         * @return A string representation of the Cassandra version.
+         */
+        String getReleaseVersion();
+
+        /**
+         * @return the cluster partitioner
+         */
+        String getPartitionerName();
+
+        /**
+         * Fetch string representations of the tokens for this node.
+         *
+         * @return a collection of tokens formatted as strings
+         */
+        List<String> getTokens();
+    }
+
+    /**
+     * Limited standard Snitch info to obtain information required for node settings. Interface visibility is public
+     * because JMX proxy works on public interfaces only.
+     */
+    public interface LimitedEndpointSnitchOperations
+    {
+        /**
+         * @return the Datacenter name depending on the respective snitch used for this node
+         */
+        String getDatacenter();
     }
 }

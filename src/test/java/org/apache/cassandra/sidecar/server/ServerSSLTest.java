@@ -371,9 +371,10 @@ class ServerSSLTest
                   assertThat(throwable).isNotNull()
                                        .isInstanceOf(SSLHandshakeException.class)
                                        .hasMessageContaining("Failed to create SSL connection")
-                                       .hasCauseInstanceOf(SSLHandshakeException.class)
-                                       .hasRootCauseMessage("No appropriate protocol (protocol is disabled " +
-                                                            "or cipher suites are inappropriate)");
+                                       .hasCauseInstanceOf(SSLHandshakeException.class);
+                  assertThat(throwable.getCause().getMessage())
+                  .containsAnyOf("No appropriate protocol (protocol is disabled or cipher suites are inappropriate)",
+                                 "Received fatal alert: protocol_version");
                   context.completeNow();
               }));
     }

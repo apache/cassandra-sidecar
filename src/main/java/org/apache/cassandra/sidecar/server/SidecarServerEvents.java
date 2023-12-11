@@ -69,6 +69,18 @@ public enum SidecarServerEvents
      * for the Sidecar-managed Cassandra instances are available.
      */
     ON_ALL_CASSANDRA_CQL_READY,
+
+    /**
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a JMX connection for
+     * a given instance has been established. The instance identifier will be passed as part of the message.
+     */
+    ON_CASSANDRA_JMX_READY,
+
+    /**
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a JMX connection for
+     * a given instance has been disconnected. The instance identifier will be passed as part of the message.
+     */
+    ON_CASSANDRA_JMX_DISCONNECTED,
     ;
 
     public String address()

@@ -87,11 +87,11 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
     @Override
     public HostDistance distance(Host host)
     {
-        if (!selectedHosts.contains(host))
+        if (selectedHosts.contains(host) || isLocalHost(host))
         {
-            return HostDistance.IGNORED;
+            return childPolicy.distance(host);
         }
-        return childPolicy.distance(host);
+        return HostDistance.IGNORED;
     }
 
     @Override
@@ -197,7 +197,7 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
             List<Host> nonLocalHosts = partitionedHosts.get(false);
             if (nonLocalHosts == null || nonLocalHosts.isEmpty())
             {
-                LOGGER.warn("Did not find any non-local hosts in allHosts");
+                LOGGER.debug("Did not find any non-local hosts in allHosts");
                 return;
             }
 

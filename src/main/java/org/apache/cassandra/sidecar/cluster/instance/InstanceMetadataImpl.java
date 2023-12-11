@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Local implementation of InstanceMetadata.
@@ -35,6 +36,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
     private final int port;
     private final List<String> dataDirs;
     private final String stagingDir;
+    @Nullable
     private final CassandraAdapterDelegate delegate;
 
     protected InstanceMetadataImpl(Builder builder)
@@ -78,7 +80,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
     }
 
     @Override
-    public CassandraAdapterDelegate delegate()
+    public @Nullable CassandraAdapterDelegate delegate()
     {
         return delegate;
     }

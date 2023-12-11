@@ -23,16 +23,16 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.HealthResponse;
 
 /**
- * Represents a request to retrieve the Cassandra health
+ * Represents a request to retrieve the connectivity health checks performed against the Cassandra JMX protocol
  */
-public class CassandraHealthRequest extends DecodableRequest<HealthResponse>
+public class CassandraJmxHealthRequest extends DecodableRequest<HealthResponse>
 {
     /**
-     * Constructs a request to retrieve the Cassandra health
+     * Constructs a request to retrieve the Cassandra JMX health
      */
-    public CassandraHealthRequest()
+    public CassandraJmxHealthRequest()
     {
-        super(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE);
+        super(ApiEndpointsV1.CASSANDRA_JMX_HEALTH_ROUTE);
     }
 
     /**

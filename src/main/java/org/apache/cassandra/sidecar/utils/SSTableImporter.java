@@ -207,6 +207,12 @@ public class SSTableImporter
             ImportOptions options = pair.getValue();
 
             CassandraAdapterDelegate cassandra = metadataFetcher.delegate(options.host);
+            if (cassandra == null)
+            {
+                promise.fail(HttpExceptions.cassandraServiceUnavailable());
+                continue;
+            }
+
             TableOperations tableOperations = cassandra.tableOperations();
 
             if (tableOperations == null)

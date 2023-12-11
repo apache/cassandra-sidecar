@@ -23,9 +23,12 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.rmi.server.RMIClientSocketFactory;
 import java.rmi.server.RMISocketFactory;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -66,7 +69,8 @@ public class JmxClient implements NotificationListener, Closeable
     private final BooleanSupplier enableSslSupplier;
     private final int connectionMaxRetries;
     private final long connectionRetryDelayMillis;
-
+    private final Set<NotificationListener> registeredNotificationListeners =
+    Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /**
      * Creates a new JMX client with {@link Builder} options.
@@ -117,6 +121,27 @@ public class JmxClient implements NotificationListener, Closeable
         {
             throw new RuntimeException(String.format("Invalid remote object name '%s'", remoteName), e);
         }
+    }
+
+    /**
+     * Registers a {@link NotificationListener} to be notified whenever we encounter a JMX event. This method
+     * guarantees that a listener will be registered at most once.
+     *
+     * @param notificationListener the listener to be notified
+     */
+    public void registerListener(NotificationListener notificationListener)
+    {
+        registeredNotificationListeners.add(notificationListener);
+    }
+
+    /**
+     * Removes an already registered {@link NotificationListener} from the recipient list for JMX events.
+     *
+     * @param notificationListener the listener to be removed
+     */
+    public void unregisterListener(NotificationListener notificationListener)
+    {
+        registeredNotificationListeners.remove(notificationListener);
     }
 
     private RMIClientSocketFactory rmiClientSocketFactory(boolean enableSsl)
@@ -206,8 +231,14 @@ public class JmxClient implements NotificationListener, Closeable
                 {
                     this.connected = justConnected;
                 }
+                forwardNotification(notification, handback);
             }
         }
+    }
+
+    private void forwardNotification(Notification notification, Object handback)
+    {
+        registeredNotificationListeners.forEach(listener -> listener.handleNotification(notification, handback));
     }
 
     /**

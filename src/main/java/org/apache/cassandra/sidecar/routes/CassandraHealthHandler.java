@@ -31,6 +31,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.JMX;
 import static org.apache.cassandra.sidecar.server.MainModule.NOT_OK_STATUS;
 import static org.apache.cassandra.sidecar.server.MainModule.OK_STATUS;
 
@@ -72,7 +73,11 @@ public class CassandraHealthHandler extends AbstractHandler<Void>
                                   Void request)
     {
         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-        if (delegate != null && delegate.isUp())
+
+        boolean isServiceUp = context.request().path().contains(JMX)
+                              ? delegate != null && delegate.isJmxUp()
+                              : delegate != null && delegate.isNativeUp();
+        if (isServiceUp)
         {
             context.json(OK_STATUS);
         }

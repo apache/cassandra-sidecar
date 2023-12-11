@@ -28,6 +28,8 @@ public final class ApiEndpointsV1
 
     public static final String HEALTH = "/__health";
     public static final String CASSANDRA = "/cassandra";
+    public static final String NATIVE = "/native";
+    public static final String JMX = "/jmx";
     public static final String KEYSPACE_PATH_PARAM = ":keyspace";
     public static final String TABLE_PATH_PARAM = ":table";
     public static final String SNAPSHOT_PATH_PARAM = ":snapshot";
@@ -44,7 +46,14 @@ public final class ApiEndpointsV1
     public static final String PER_UPLOAD = "/uploads/" + UPLOAD_ID_PATH_PARAM;
 
     public static final String HEALTH_ROUTE = API_V1 + HEALTH;
+
+    /**
+     * @deprecated in favor of {@link #CASSANDRA_NATIVE_HEALTH_ROUTE}
+     */
+    @Deprecated
     public static final String CASSANDRA_HEALTH_ROUTE = API_V1 + CASSANDRA + HEALTH;
+    public static final String CASSANDRA_NATIVE_HEALTH_ROUTE = API_V1 + CASSANDRA + NATIVE + HEALTH;
+    public static final String CASSANDRA_JMX_HEALTH_ROUTE = API_V1 + CASSANDRA + JMX + HEALTH;
 
     @Deprecated  // NOTE: Uses singular forms of "keyspace" and "table"
     public static final String DEPRECATED_SNAPSHOTS_ROUTE = API_V1 + "/keyspace/" + KEYSPACE_PATH_PARAM +

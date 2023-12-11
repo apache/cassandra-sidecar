@@ -53,7 +53,7 @@ public class CQLSessionProviderTest extends IntegrationTestBase
     void testCqlSessionProviderWorksAsExpected(VertxTestContext context, CassandraTestContext cassandraTestContext)
     throws Exception
     {
-        UpgradeableCluster cluster = cassandraTestContext.getCluster();
+        UpgradeableCluster cluster = cassandraTestContext.cluster();
         testWithClient(context, false, webClient -> {
                            // To start, both instances are stopped, so we should get 503s for both
                            buildInstanceHealthRequest(webClient, "1")
@@ -129,7 +129,7 @@ public class CQLSessionProviderTest extends IntegrationTestBase
     {
         return webClient.get(server.actualPort(),
                              "localhost",
-                             "/api/v1/cassandra/__health?instanceId=" + instanceId)
+                             "/api/v1/cassandra/native/__health?instanceId=" + instanceId)
                         .as(BodyCodec.string());
     }
 

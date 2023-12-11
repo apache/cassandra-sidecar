@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.cluster.instance;
 import java.util.List;
 
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.jetbrains.annotations.Nullable;
 
 
 /**
@@ -56,5 +57,5 @@ public interface InstanceMetadata
     /**
      * @return a {@link CassandraAdapterDelegate} specific for the instance
      */
-    CassandraAdapterDelegate delegate();
+    @Nullable CassandraAdapterDelegate delegate();
 }

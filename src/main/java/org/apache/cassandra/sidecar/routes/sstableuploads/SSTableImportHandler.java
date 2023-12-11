@@ -165,6 +165,11 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
     private Future<Void> importSSTablesAsync(SSTableImporter.ImportOptions importOptions)
     {
         CassandraAdapterDelegate cassandra = metadataFetcher.delegate(importOptions.host());
+        if (cassandra == null)
+        {
+            return Future.failedFuture(cassandraServiceUnavailable());
+        }
+
         TableOperations tableOperations = cassandra.tableOperations();
 
         if (tableOperations == null)

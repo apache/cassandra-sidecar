@@ -103,7 +103,8 @@ public abstract class IntegrationTestBase
 
         if (sidecarTestContext.isClusterBuilt())
         {
-            MessageConsumer<Object> cqlReadyConsumer = vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address());
+            MessageConsumer<JsonObject> cqlReadyConsumer = vertx.eventBus()
+                                                                .localConsumer(ON_CASSANDRA_CQL_READY.address());
             cqlReadyConsumer.handler(message -> {
                 cqlReadyConsumer.unregister();
                 context.completeNow();
@@ -166,7 +167,8 @@ public abstract class IntegrationTestBase
                                                               .instanceFromId(1)
                                                               .delegate();
 
-        if (delegate.isUp() || !waitForCluster)
+        assertThat(delegate).isNotNull();
+        if (delegate.isNativeUp() || !waitForCluster)
         {
             tester.accept(client);
         }

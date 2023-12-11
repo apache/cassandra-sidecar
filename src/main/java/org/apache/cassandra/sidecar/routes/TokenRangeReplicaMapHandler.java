@@ -69,6 +69,11 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<TokenRangeRepli
                                TokenRangeReplicasRequest request)
     {
         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+        if (delegate == null)
+        {
+            context.fail(cassandraServiceUnavailable());
+            return;
+        }
 
         StorageOperations operations = delegate.storageOperations();
         Metadata metadata = delegate.metadata();

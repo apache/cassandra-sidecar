@@ -22,7 +22,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.cassandra.sidecar.client.request.CassandraHealthRequest;
+import org.apache.cassandra.sidecar.client.request.CassandraJmxHealthRequest;
+import org.apache.cassandra.sidecar.client.request.CassandraNativeHealthRequest;
 import org.apache.cassandra.sidecar.client.request.CleanSSTableUploadSessionRequest;
 import org.apache.cassandra.sidecar.client.request.ClearSnapshotRequest;
 import org.apache.cassandra.sidecar.client.request.CreateSnapshotRequest;
@@ -52,7 +53,16 @@ import org.apache.cassandra.sidecar.common.utils.HttpRange;
 public class RequestContext
 {
     protected static final SidecarHealthRequest SIDECAR_HEALTH_REQUEST = new SidecarHealthRequest();
-    protected static final CassandraHealthRequest CASSANDRA_HEALTH_REQUEST = new CassandraHealthRequest();
+
+    /**
+     * @deprecated in favor of {@link #CASSANDRA_NATIVE_HEALTH_REQUEST}
+     */
+    @Deprecated
+    protected static final CassandraNativeHealthRequest CASSANDRA_HEALTH_REQUEST =
+    new CassandraNativeHealthRequest(true /* useDeprecatedHealthEndpoint */);
+    protected static final CassandraNativeHealthRequest CASSANDRA_NATIVE_HEALTH_REQUEST =
+    new CassandraNativeHealthRequest();
+    protected static final CassandraJmxHealthRequest CASSANDRA_JMX_HEALTH_REQUEST = new CassandraJmxHealthRequest();
     protected static final SchemaRequest FULL_SCHEMA_REQUEST = new SchemaRequest();
     protected static final TimeSkewRequest TIME_SKEW_REQUEST = new TimeSkewRequest();
     protected static final NodeSettingsRequest NODE_SETTINGS_REQUEST = new NodeSettingsRequest();
@@ -190,14 +200,39 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link CassandraHealthRequest}
+         * Sets the {@code request} to be a {@link CassandraNativeHealthRequest}
+         * with the {@code useDeprecatedHealthEndpoint} parameter set to {@code true}
+         * and returns a reference to this Builder enabling method chaining.
+         *
+         * @return a reference to this Builder
+         * @deprecated in favor of {@link #cassandraNativeHealthRequest()}
+         */
+        @Deprecated
+        public Builder cassandraHealthRequest()
+        {
+            return request(CASSANDRA_HEALTH_REQUEST);
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link CassandraNativeHealthRequest}
          * and returns a reference to this Builder enabling method chaining
          *
          * @return a reference to this Builder
          */
-        public Builder cassandraHealthRequest()
+        public Builder cassandraNativeHealthRequest()
         {
-            return request(CASSANDRA_HEALTH_REQUEST);
+            return request(CASSANDRA_NATIVE_HEALTH_REQUEST);
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link CassandraJmxHealthRequest}
+         * and returns a reference to this Builder enabling method chaining
+         *
+         * @return a reference to this Builder
+         */
+        public Builder cassandraJmxHealthRequest()
+        {
+            return request(CASSANDRA_JMX_HEALTH_REQUEST);
         }
 
         /**
