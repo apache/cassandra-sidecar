@@ -37,7 +37,11 @@ public class CassandraNativeHealthRequest extends DecodableRequest<HealthRespons
 
     /**
      * Constructs a request to retrieve the Cassandra native health
+     *
+     * @param useDeprecatedHealthEndpoint {@code true} if using the deprecated endpoint, {@code false} to use
+     *                                    the new endpoint
      */
+    @SuppressWarnings("deprecation")
     public CassandraNativeHealthRequest(boolean useDeprecatedHealthEndpoint)
     {
         super(useDeprecatedHealthEndpoint
