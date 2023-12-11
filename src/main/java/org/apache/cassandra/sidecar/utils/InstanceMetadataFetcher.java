@@ -75,6 +75,7 @@ public class InstanceMetadataFetcher
      * @return the {@link CassandraAdapterDelegate} for the given {@code host}, or the first instance when {@code host}
      * is {@code null}
      */
+    @Nullable
     public CassandraAdapterDelegate delegate(String host)
     {
         return instance(host).delegate();

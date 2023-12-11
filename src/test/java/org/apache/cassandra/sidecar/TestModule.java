@@ -132,7 +132,7 @@ public class TestModule extends AbstractModule
                                                                  .tokens(Collections.singleton("testToken"))
                                                                  .build());
         }
-        when(delegate.isUp()).thenReturn(isUp);
+        when(delegate.isNativeUp()).thenReturn(isUp);
         when(instanceMeta.delegate()).thenReturn(delegate);
         return instanceMeta;
     }

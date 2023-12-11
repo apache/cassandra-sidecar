@@ -153,12 +153,12 @@ abstract class SidecarClientTest
                                 .setBody("{\"status\":\"OK\"}");
         enqueue(response);
 
-        HealthResponse result = client.cassandraHealth().get(30, TimeUnit.SECONDS);
+        HealthResponse result = client.cassandraNativeHealth().get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualToIgnoringCase("OK");
         assertThat(result.isOk()).isTrue();
 
-        validateResponseServed(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE);
+        validateResponseServed(ApiEndpointsV1.CASSANDRA_NATIVE_HEALTH_ROUTE);
     }
 
     @Test
@@ -170,11 +170,11 @@ abstract class SidecarClientTest
                                 .setBody("{\"status\":\"NOT_OK\"}");
         enqueue(response);
 
-        assertThatThrownBy(() -> client.cassandraHealth().get(30, TimeUnit.SECONDS))
+        assertThatThrownBy(() -> client.cassandraNativeHealth().get(30, TimeUnit.SECONDS))
         .isInstanceOf(ExecutionException.class)
         .hasCauseInstanceOf(RetriesExhaustedException.class);
 
-        validateResponseServed(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE);
+        validateResponseServed(ApiEndpointsV1.CASSANDRA_NATIVE_HEALTH_ROUTE);
     }
 
     @Test

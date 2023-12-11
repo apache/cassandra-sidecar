@@ -48,7 +48,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 class DelegateTest extends IntegrationTestBase
 {
-    @CassandraIntegrationTest(jmx = false)
+    @CassandraIntegrationTest()
     void testCorrectVersionIsEnabled()
     {
         CassandraAdapterDelegate delegate = sidecarTestContext.instancesConfig()
@@ -61,7 +61,7 @@ class DelegateTest extends IntegrationTestBase
         assertThat(version).isGreaterThanOrEqualTo(sidecarTestContext.version);
     }
 
-    @CassandraIntegrationTest(jmx = false)
+    @CassandraIntegrationTest()
     void testHealthCheck(VertxTestContext context)
     {
         EventBus eventBus = vertx.eventBus();
@@ -106,7 +106,7 @@ class DelegateTest extends IntegrationTestBase
         // cqlReady flag.
     }
 
-    @CassandraIntegrationTest(jmx = false, nodesPerDc = 3)
+    @CassandraIntegrationTest(nodesPerDc = 3)
     void testAllInstancesHealthCheck(VertxTestContext context)
     {
         EventBus eventBus = vertx.eventBus();

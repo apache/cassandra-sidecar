@@ -162,7 +162,15 @@ public class MainModule extends AbstractModule
         router.get(ApiEndpointsV1.HEALTH_ROUTE)
               .handler(context -> context.json(OK_STATUS));
 
+        // Backwards compatibility for the Cassandra health endpoint
+        //noinspection deprecation
         router.get(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE)
+              .handler(cassandraHealthHandler);
+
+        router.get(ApiEndpointsV1.CASSANDRA_NATIVE_HEALTH_ROUTE)
+              .handler(cassandraHealthHandler);
+
+        router.get(ApiEndpointsV1.CASSANDRA_JMX_HEALTH_ROUTE)
               .handler(cassandraHealthHandler);
 
         //noinspection deprecation

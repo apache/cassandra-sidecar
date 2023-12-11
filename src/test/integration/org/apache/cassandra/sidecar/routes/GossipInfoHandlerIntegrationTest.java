@@ -52,7 +52,7 @@ class GossipInfoHandlerIntegrationTest extends IntegrationTestBase
                       assertThat(gossipInfo.generation()).isNotNull();
                       assertThat(gossipInfo.heartbeat()).isNotNull();
                       assertThat(gossipInfo.hostId()).isNotNull();
-                      String releaseVersion = cassandraTestContext.getCluster().getFirstRunningInstance()
+                      String releaseVersion = cassandraTestContext.cluster().getFirstRunningInstance()
                                                                   .getReleaseVersionString();
                       assertThat(gossipInfo.releaseVersion()).startsWith(releaseVersion);
                       context.completeNow();

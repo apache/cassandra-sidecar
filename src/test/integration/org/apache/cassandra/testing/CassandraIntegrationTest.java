@@ -112,7 +112,7 @@ public @interface CassandraIntegrationTest
      *     or {@link ConfigurableCassandraTestContext#configureAndStartCluster(Consumer)} to get the cluster.
      *     NOTE: This cluster object must be closed by the test as the framework doesn't have access to it.
      * If true (the default), the test should take an instance of {@link CassandraTestContext}
-     *          {@link CassandraTestContext#getCluster()} will contain the built cluster.
+     *          {@link CassandraTestContext#cluster()} will contain the built cluster.
      * @return true if the cluster should be built by the test framework, false otherwise
      */
     boolean buildCluster() default true;

@@ -87,11 +87,11 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
     @Override
     public HostDistance distance(Host host)
     {
-        if (!selectedHosts.contains(host))
+        if (selectedHosts.contains(host) || isLocalHost(host))
         {
-            return HostDistance.IGNORED;
+            return childPolicy.distance(host);
         }
-        return childPolicy.distance(host);
+        return HostDistance.IGNORED;
     }
 
     @Override

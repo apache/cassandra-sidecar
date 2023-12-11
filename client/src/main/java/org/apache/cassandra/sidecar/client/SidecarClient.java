@@ -89,10 +89,37 @@ public class SidecarClient implements AutoCloseable
      *
      * @return a completable future of the Cassandra health response
      */
+    @Deprecated
     public CompletableFuture<HealthResponse> cassandraHealth()
     {
         return executor.executeRequestAsync(requestBuilder()
                 .cassandraHealthRequest()
+                .retryPolicy(new OncePerInstanceRetryPolicy())
+                .build());
+    }
+
+    /**
+     * Executes the Cassandra health request using the configured selection policy and with no retries
+     *
+     * @return a completable future of the Cassandra health response
+     */
+    public CompletableFuture<HealthResponse> cassandraNativeHealth()
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                .cassandraNativeHealthRequest()
+                .retryPolicy(new OncePerInstanceRetryPolicy())
+                .build());
+    }
+
+    /**
+     * Executes the Cassandra health request using the configured selection policy and with no retries
+     *
+     * @return a completable future of the Cassandra health response
+     */
+    public CompletableFuture<HealthResponse> cassandraJmxHealth()
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                .cassandraJmxHealthRequest()
                 .retryPolicy(new OncePerInstanceRetryPolicy())
                 .build());
     }
