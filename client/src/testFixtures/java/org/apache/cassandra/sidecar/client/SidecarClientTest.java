@@ -144,8 +144,43 @@ abstract class SidecarClientTest
         validateResponseServed(ApiEndpointsV1.HEALTH_ROUTE);
     }
 
+    @SuppressWarnings("deprecation")
     @Test
-    void testCassandraHealthOk() throws Exception
+    void testCassandraDeprecatedHealthOk() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                                .setResponseCode(200)
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"status\":\"OK\"}");
+        enqueue(response);
+
+        HealthResponse result = client.cassandraHealth().get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualToIgnoringCase("OK");
+        assertThat(result.isOk()).isTrue();
+
+        validateResponseServed(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE);
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    void testCassandraDeprecatedHealthNotOk() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                                .setResponseCode(503)
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"status\":\"NOT_OK\"}");
+        enqueue(response);
+
+        assertThatThrownBy(() -> client.cassandraHealth().get(30, TimeUnit.SECONDS))
+        .isInstanceOf(ExecutionException.class)
+        .hasCauseInstanceOf(RetriesExhaustedException.class);
+
+        validateResponseServed(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE);
+    }
+
+    @Test
+    void testCassandraNativeHealthOk() throws Exception
     {
         MockResponse response = new MockResponse()
                                 .setResponseCode(200)
@@ -162,7 +197,7 @@ abstract class SidecarClientTest
     }
 
     @Test
-    void testCassandraHealthNotOk() throws Exception
+    void testCassandraNativeHealthNotOk() throws Exception
     {
         MockResponse response = new MockResponse()
                                 .setResponseCode(503)
@@ -175,6 +210,39 @@ abstract class SidecarClientTest
         .hasCauseInstanceOf(RetriesExhaustedException.class);
 
         validateResponseServed(ApiEndpointsV1.CASSANDRA_NATIVE_HEALTH_ROUTE);
+    }
+
+    @Test
+    void testCassandraJmxHealthOk() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                                .setResponseCode(200)
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"status\":\"OK\"}");
+        enqueue(response);
+
+        HealthResponse result = client.cassandraJmxHealth().get(1, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualTo("OK");
+        assertThat(result.isOk()).isTrue();
+
+        validateResponseServed(ApiEndpointsV1.CASSANDRA_JMX_HEALTH_ROUTE);
+    }
+
+    @Test
+    void testCassandraJmxHealthNotOk() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                                .setResponseCode(503)
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"status\":\"NOT_OK\"}");
+        enqueue(response);
+
+        assertThatThrownBy(() -> client.cassandraJmxHealth().get(1, TimeUnit.SECONDS))
+        .isInstanceOf(ExecutionException.class)
+        .hasCauseInstanceOf(RetriesExhaustedException.class);
+
+        validateResponseServed(ApiEndpointsV1.CASSANDRA_JMX_HEALTH_ROUTE);
     }
 
     @Test

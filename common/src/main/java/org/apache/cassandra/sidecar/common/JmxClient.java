@@ -125,7 +125,7 @@ public class JmxClient implements NotificationListener, Closeable
 
     /**
      * Registers a {@link NotificationListener} to be notified whenever we encounter a JMX event. This method
-     * guarantees that a listener will only be registered once.
+     * guarantees that a listener will be registered at most once.
      *
      * @param notificationListener the listener to be notified
      */

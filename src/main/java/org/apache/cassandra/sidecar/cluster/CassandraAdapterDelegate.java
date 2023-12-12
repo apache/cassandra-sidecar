@@ -180,7 +180,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     /**
-     * Performs health checks by utilizing the JMX protocol. It utilizes a small subset of the exposed mBeans to
+     * Performs health checks by utilizing the JMX protocol. It uses a small subset of the exposed mBeans to
      * collect information needed to populate the {@link NodeSettings} object.
      */
     protected void jmxHealthCheck()
@@ -211,6 +211,9 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
     }
 
+    /**
+     * Performs health checks by utilizing the native protocol
+     */
     protected void nativeProtocolHealthCheck()
     {
         Session activeSession = cqlSessionProvider.get();
@@ -218,6 +221,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         {
             LOGGER.info("No local CQL session is available for cassandraInstanceId={}. " +
                         "Cassandra instance is down presumably.", cassandraInstanceId);
+            markNativeDownAndMaybeNotifyDisconnection();
             return;
         }
 
@@ -438,6 +442,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     public void close()
     {
         markNativeDownAndMaybeNotifyDisconnection();
+        markJmxDownAndMaybeNotifyDisconnection();
         Session activeSession = cqlSessionProvider.getIfConnected();
         if (activeSession != null)
         {
@@ -520,9 +525,12 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
     }
 
+    /**
+     * A {@link NotificationListener} implementation that reacts to {@link JMXConnectionNotification} notifications
+     * and updates the state of the JMX connection internally.
+     */
     protected class JmxNotificationListener implements NotificationListener
     {
-
         @Override
         public void handleNotification(Notification notification, Object handback)
         {
