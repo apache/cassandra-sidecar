@@ -44,6 +44,8 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
+
 /**
  * This class is in charge of performing SSTable imports into the desired Cassandra instance.
  * Since imports are synchronized in the Cassandra side on a per table-basis, we only perform one import per
@@ -207,6 +209,12 @@ public class SSTableImporter
             ImportOptions options = pair.getValue();
 
             CassandraAdapterDelegate cassandra = metadataFetcher.delegate(options.host);
+            if (cassandra == null)
+            {
+                promise.fail(HttpExceptions.cassandraServiceUnavailable());
+                continue;
+            }
+
             TableOperations tableOperations = cassandra.tableOperations();
 
             if (tableOperations == null)

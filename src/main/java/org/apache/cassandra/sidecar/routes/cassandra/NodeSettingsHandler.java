@@ -60,6 +60,11 @@ public class NodeSettingsHandler extends AbstractHandler<Void>
                                Void request)
     {
         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+        if (delegate == null)
+        {
+            context.fail(cassandraServiceUnavailable());
+            return;
+        }
         NodeSettings nodeSettings = delegate.nodeSettings();
         if (nodeSettings == null)
         {

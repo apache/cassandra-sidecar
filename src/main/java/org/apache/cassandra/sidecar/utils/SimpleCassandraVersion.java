@@ -62,7 +62,7 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
      * @throws IllegalArgumentException if the provided string does not
      *                                  represent a version
      */
-    public static SimpleCassandraVersion create(String version)
+    public static SimpleCassandraVersion create(String version) throws IllegalArgumentException
     {
         String stripped = version.toUpperCase().replace(SNAPSHOT, "");
         Matcher matcher = PATTERN.matcher(stripped);

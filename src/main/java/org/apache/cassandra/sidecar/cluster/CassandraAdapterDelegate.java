@@ -549,6 +549,10 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                     case JMXConnectionNotification.NOTIFS_LOST:
                         markJmxDownAndMaybeNotifyDisconnection();
                         break;
+
+                    default:
+                        LOGGER.warn("Encountered unexpected JMX notification type={}", type);
+                        break;
                 }
             }
         }

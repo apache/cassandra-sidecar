@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -172,6 +171,7 @@ public abstract class IntegrationTestBase
                                                               .instanceFromId(1)
                                                               .delegate();
 
+        assertThat(delegate).isNotNull();
         if (delegate.isNativeUp() || !waitForCluster)
         {
             tester.accept(client);

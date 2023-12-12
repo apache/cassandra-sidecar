@@ -160,7 +160,7 @@ public class CQLSessionProviderTest extends IntegrationTestBase
 //                                                       });
 //                                   IUpgradeableInstance newInstance = ClusterUtils
 //                                                                      .addInstance(cluster,
-//                                                                                   cluster.get(1).config(), config -> {
+//  cluster.get(1).config(), config -> {
 //                                                                          config.set("auto_bootstrap", true);
 //                                                                          config.with(Feature.GOSSIP,
 //                                                                                      Feature.JMX,

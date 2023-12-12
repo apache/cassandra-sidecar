@@ -63,6 +63,12 @@ public class RingHandler extends AbstractHandler<RingRequest>
                                RingRequest request)
     {
         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+        if (delegate == null)
+        {
+            context.fail(cassandraServiceUnavailable());
+            return;
+        }
+
         StorageOperations storageOperations = delegate.storageOperations();
 
         if (storageOperations == null)
