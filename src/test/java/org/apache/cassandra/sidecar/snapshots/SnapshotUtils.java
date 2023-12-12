@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
@@ -110,8 +111,9 @@ public class SnapshotUtils
 
         if (delegate == null)
         {
-            delegate = new CassandraAdapterDelegate(vertx, 1, versionProvider, cqlSessionProvider1, null, null,
-                                                    "localhost1", 9042);
+            JmxClient mockJmxClient = mock(JmxClient.class);
+            delegate = new CassandraAdapterDelegate(vertx, 1, versionProvider, cqlSessionProvider1, mockJmxClient,
+                                                    null, "localhost1", 9042);
         }
 
         InstanceMetadataImpl localhost = InstanceMetadataImpl.builder()

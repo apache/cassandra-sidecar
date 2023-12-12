@@ -197,7 +197,7 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
             List<Host> nonLocalHosts = partitionedHosts.get(false);
             if (nonLocalHosts == null || nonLocalHosts.isEmpty())
             {
-                LOGGER.warn("Did not find any non-local hosts in allHosts");
+                LOGGER.debug("Did not find any non-local hosts in allHosts");
                 return;
             }
 
