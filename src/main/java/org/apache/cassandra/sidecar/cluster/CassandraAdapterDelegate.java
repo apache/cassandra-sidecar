@@ -205,7 +205,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
         catch (RuntimeException e)
         {
-            LOGGER.error("Unexpected error connecting to Cassandra instance {}", cassandraInstanceId, e);
+            LOGGER.error("Unable to connect JMX to Cassandra instance {}", cassandraInstanceId, e);
             // The cassandra node JMX connectivity is unavailable.
             markJmxDownAndMaybeNotifyDisconnection();
         }
@@ -248,8 +248,6 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 if (!isNativeUp)
                 {
                     isNativeUp = true;
-                    LOGGER.info("Cassandra native connectivity established for cassandraInstanceId={}",
-                                cassandraInstanceId);
                     notifyNativeConnection();
                 }
             }
@@ -501,6 +499,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     {
         NodeSettings currentNodeSettings = nodeSettingsFromJmx;
         nodeSettingsFromJmx = null;
+        currentVersion = null;
+        adapter = null;
         if (currentNodeSettings != null)
         {
             JsonObject disconnectMessage = new JsonObject()
