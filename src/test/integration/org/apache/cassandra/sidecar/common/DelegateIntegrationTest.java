@@ -193,10 +193,10 @@ class DelegateIntegrationTest extends IntegrationTestBase
         Checkpoint jmxNotConnected = context.checkpoint();
         Checkpoint nativeNotConnected = context.checkpoint();
 
-        final CountDownLatch firstTwoConnected = new CountDownLatch(2);
+        CountDownLatch firstTwoConnected = new CountDownLatch(2);
 
-        final Set<Integer> nativeConnectedInstances = new ConcurrentHashSet<>();
-        final Set<Integer> jmxConnectedInstances = new ConcurrentHashSet<>();
+        Set<Integer> nativeConnectedInstances = new ConcurrentHashSet<>();
+        Set<Integer> jmxConnectedInstances = new ConcurrentHashSet<>();
 
         eventBus.localConsumer(ON_CASSANDRA_JMX_READY.address(), (Message<JsonObject> message) -> {
             Integer instanceId = message.body().getInteger("cassandraInstanceId");
