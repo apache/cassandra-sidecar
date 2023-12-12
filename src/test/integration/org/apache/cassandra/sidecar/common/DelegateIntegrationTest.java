@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.common;
 
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -182,8 +183,8 @@ class DelegateIntegrationTest extends IntegrationTestBase
     }
 
     @Timeout(value = 2, timeUnit = TimeUnit.MINUTES)
-    @CassandraIntegrationTest(nodesPerDc = 2, newNodesPerDc = 1)
-    public void testChangingClusterSize(VertxTestContext context)
+    @CassandraIntegrationTest(nodesPerDc = 2, newNodesPerDc = 1, startCluster = false)
+    public void testChangingClusterSize(VertxTestContext context) throws InterruptedException
     {
         EventBus eventBus = vertx.eventBus();
 
@@ -192,41 +193,53 @@ class DelegateIntegrationTest extends IntegrationTestBase
         Checkpoint jmxNotConnected = context.checkpoint();
         Checkpoint nativeNotConnected = context.checkpoint();
 
-        Set<Integer> jmxConnectedInstances = new ConcurrentHashSet<>();
-        jmxConnectedInstances.addAll(nativeConnectedInstances);
+        final CountDownLatch firstTwoConnected = new CountDownLatch(2);
+
+        final Set<Integer> nativeConnectedInstances = new ConcurrentHashSet<>();
+        final Set<Integer> jmxConnectedInstances = new ConcurrentHashSet<>();
 
         eventBus.localConsumer(ON_CASSANDRA_JMX_READY.address(), (Message<JsonObject> message) -> {
             Integer instanceId = message.body().getInteger("cassandraInstanceId");
-            buildJmxHealthRequest(client, instanceId).send(assertHealthCheckOk(context, jmxConnected));
-            jmxConnectedInstances.add(instanceId);
-            validateJmxConnections(context, jmxConnectedInstances, jmxNotConnected);
+            logger.info("DBG: Received JMX connection notification for {}", instanceId);
+            // make sure the instance wasn't already in the set before validating
+            if (jmxConnectedInstances.add(instanceId))
+            {
+                jmxConnected.flag();
+                validateJmxConnections(context, jmxConnectedInstances, jmxNotConnected, firstTwoConnected);
+            }
         });
 
         eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
             Integer instanceId = message.body().getInteger("cassandraInstanceId");
+            logger.info("DBG: Received native connection notification for {}", instanceId);
             buildNativeHealthRequest(client, instanceId).send(assertHealthCheckOk(context, nativeConnected));
-            nativeConnectedInstances.add(instanceId);
-            validateNativeConnections(context, nativeNotConnected);
+            // make sure the instance wasn't already in the set before validating/flagging
+            if (nativeConnectedInstances.add(instanceId))
+            {
+                nativeConnected.flag();
+                validateNativeConnections(context, nativeNotConnected, firstTwoConnected, nativeConnectedInstances);
+            }
         });
 
-        for (Integer instanceId : nativeConnectedInstances)
-        {
-            buildJmxHealthRequest(client, instanceId).send().onComplete(assertHealthCheckOk(context, jmxConnected));
-            buildNativeHealthRequest(client, instanceId).send()
-                                                        .onComplete(assertHealthCheckOk(context, nativeConnected));
-        }
+        // Now that the event listeners are set up, start the cluster
+        sidecarTestContext.cluster().startup();
 
-        validateJmxConnections(context, jmxConnectedInstances, jmxNotConnected);
-        validateNativeConnections(context, nativeNotConnected);
+        // Wait for the first two instances to get connected
+        assertThat(firstTwoConnected.await(2, TimeUnit.MINUTES)).isTrue();
+
+        // now start the 3rd instance - the test will complete when it's connected
+        addNewInstance();
     }
 
     private void validateJmxConnections(VertxTestContext context, Set<Integer> jmxConnectedInstances,
-                                        Checkpoint notOkCheckpoint)
+                                        Checkpoint notOkCheckpoint, CountDownLatch firstTwoConnected)
     {
         int upInstanceCount = jmxConnectedInstances.size();
         if (upInstanceCount == 2)
         {
             buildJmxHealthRequest(client, 3).send(assertHealthCheckNotOk(context, notOkCheckpoint));
+            logger.info("DBG: First two instances connected via JMX, third is down");
+            firstTwoConnected.countDown();
         }
         else if (upInstanceCount == 3)
         {
@@ -234,14 +247,18 @@ class DelegateIntegrationTest extends IntegrationTestBase
         }
     }
 
-    private void validateNativeConnections(VertxTestContext context, Checkpoint notOkCheckpoint)
+    private void validateNativeConnections(VertxTestContext context,
+                                           Checkpoint notOkCheckpoint,
+                                           CountDownLatch firstTwoConnected,
+                                           Set<Integer> nativeConnectedInstances)
     {
         int upInstanceCount = nativeConnectedInstances.size();
         if (upInstanceCount == 2)
         {
             assertThat(nativeConnectedInstances).containsExactly(1, 2);
             buildNativeHealthRequest(client, 3).send(assertHealthCheckNotOk(context, notOkCheckpoint));
-            addNewInstance();
+            logger.info("DBG: First two instances connected via native, third is down");
+            firstTwoConnected.countDown();
         }
         else if (upInstanceCount == 3)
         {
@@ -255,7 +272,6 @@ class DelegateIntegrationTest extends IntegrationTestBase
         return context.succeeding(response -> context.verify(() -> {
             assertThat(response.statusCode()).isEqualTo(OK.code());
             assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
-            checkpoint.flag();
         }));
     }
 

@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,7 +49,6 @@ import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
-import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
@@ -84,7 +82,6 @@ public abstract class IntegrationTestBase
     protected WebClient client;
     protected CassandraSidecarTestContext sidecarTestContext;
     protected Injector injector;
-    protected Set<Integer> nativeConnectedInstances = new ConcurrentHashSet<>();
 
     @BeforeEach
     void setup(AbstractCassandraTestContext cassandraTestContext, TestInfo testInfo) throws InterruptedException
@@ -110,7 +107,6 @@ public abstract class IntegrationTestBase
                                                                 .localConsumer(ON_CASSANDRA_CQL_READY.address());
             cqlReadyConsumer.handler(message -> {
                 cqlReadyConsumer.unregister();
-                nativeConnectedInstances.add(message.body().getInteger("cassandraInstanceId"));
                 context.completeNow();
             });
         }
