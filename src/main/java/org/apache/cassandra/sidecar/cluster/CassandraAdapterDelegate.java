@@ -316,9 +316,9 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
         catch (AssertionError aex)
         {
-            // On a joining node, the JMX call will with an AssertionError; we catch this scenario to prevent failure
-            // and just return an empty list of tokens. This is technically correct, because the node, while joining,
-            // doesn't actually own any tokens until it has successfully completed joining.
+            // On a joining node, the JMX call will fail with an AssertionError; we catch this scenario to prevent
+            // failure and just return an empty list of tokens. This is technically correct, because the node, while
+            // joining, doesn't actually own any tokens until it has successfully completed joining.
             return Collections.emptyList();
         }
     }
