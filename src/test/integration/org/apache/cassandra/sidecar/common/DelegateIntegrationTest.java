@@ -55,6 +55,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_JMX_DISCONNECTED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_JMX_READY;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -144,6 +145,42 @@ class DelegateIntegrationTest extends IntegrationTestBase
         });
     }
 
+    @CassandraIntegrationTest(nodesPerDc = 3)
+    void testStoppingAnInstance(VertxTestContext context)
+    {
+        EventBus eventBus = vertx.eventBus();
+        Checkpoint allCqlReady = context.checkpoint();
+        Checkpoint cqlDisconnected = context.checkpoint();
+        Checkpoint jmxDisconnected = context.checkpoint();
+
+        Set<Integer> expectedCassandraInstanceIds = ImmutableSet.of(1, 2, 3);
+        eventBus.localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
+            JsonArray cassandraInstanceIds = message.body().getJsonArray("cassandraInstanceIds");
+            assertThat(cassandraInstanceIds).hasSize(3);
+            assertThat(IntStream.rangeClosed(1, cassandraInstanceIds.size()))
+            .allMatch(expectedCassandraInstanceIds::contains);
+
+            allCqlReady.flag();
+
+            // Stop instance 2
+            ClusterUtils.stopUnchecked(sidecarTestContext.cluster().get(2));
+        });
+
+        eventBus.localConsumer(ON_CASSANDRA_CQL_DISCONNECTED.address(), (Message<JsonObject> message) -> {
+            Integer instanceId = message.body().getInteger("cassandraInstanceId");
+            assertThat(instanceId).isEqualTo(2);
+
+            buildNativeHealthRequest(client, instanceId).send(assertHealthCheckNotOk(context, cqlDisconnected));
+        });
+
+        eventBus.localConsumer(ON_CASSANDRA_JMX_DISCONNECTED.address(), (Message<JsonObject> message) -> {
+            Integer instanceId = message.body().getInteger("cassandraInstanceId");
+            assertThat(instanceId).isEqualTo(2);
+
+            buildJmxHealthRequest(client, instanceId).send(assertHealthCheckNotOk(context, jmxDisconnected));
+        });
+    }
+
     @Timeout(value = 2, timeUnit = TimeUnit.MINUTES)
     @CassandraIntegrationTest(nodesPerDc = 2, newNodesPerDc = 1)
     public void testChangingClusterSize(VertxTestContext context)
@@ -167,7 +204,7 @@ class DelegateIntegrationTest extends IntegrationTestBase
 
         eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
             Integer instanceId = message.body().getInteger("cassandraInstanceId");
-            buildInstanceHealthRequest(client, instanceId).send(assertHealthCheckOk(context, nativeConnected));
+            buildNativeHealthRequest(client, instanceId).send(assertHealthCheckOk(context, nativeConnected));
             nativeConnectedInstances.add(instanceId);
             validateNativeConnections(context, nativeNotConnected);
         });
@@ -175,8 +212,8 @@ class DelegateIntegrationTest extends IntegrationTestBase
         for (Integer instanceId : nativeConnectedInstances)
         {
             buildJmxHealthRequest(client, instanceId).send().onComplete(assertHealthCheckOk(context, jmxConnected));
-            buildInstanceHealthRequest(client, instanceId).send()
-                                                          .onComplete(assertHealthCheckOk(context, nativeConnected));
+            buildNativeHealthRequest(client, instanceId).send()
+                                                        .onComplete(assertHealthCheckOk(context, nativeConnected));
         }
 
         validateJmxConnections(context, jmxConnectedInstances, jmxNotConnected);
@@ -203,7 +240,7 @@ class DelegateIntegrationTest extends IntegrationTestBase
         if (upInstanceCount == 2)
         {
             assertThat(nativeConnectedInstances).containsExactly(1, 2);
-            buildInstanceHealthRequest(client, 3).send(assertHealthCheckNotOk(context, notOkCheckpoint));
+            buildNativeHealthRequest(client, 3).send(assertHealthCheckNotOk(context, notOkCheckpoint));
             addNewInstance();
         }
         else if (upInstanceCount == 3)
@@ -232,7 +269,7 @@ class DelegateIntegrationTest extends IntegrationTestBase
         }));
     }
 
-    private HttpRequest<Buffer> buildInstanceHealthRequest(WebClient webClient, int instanceId)
+    private HttpRequest<Buffer> buildNativeHealthRequest(WebClient webClient, int instanceId)
     {
         return webClient.get(server.actualPort(),
                              "localhost",

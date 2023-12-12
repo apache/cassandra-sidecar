@@ -95,6 +95,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
     private final InetSocketAddress localNativeTransportAddress;
     private volatile Host host;
+    private volatile boolean closed = false;
 
     /**
      * Constructs a new {@link CassandraAdapterDelegate} for the given {@code cassandraInstance}
@@ -160,6 +161,12 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      */
     public void healthCheck()
     {
+        if (closed)
+        {
+            LOGGER.debug("Skipping health check for cassandraInstanceId={}. Delegate is closed", cassandraInstanceId);
+            return;
+        }
+
         if (isHealthCheckActive.compareAndSet(false, true))
         {
             try
@@ -439,6 +446,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     public void close()
     {
+        closed = true;
         markNativeDownAndMaybeNotifyDisconnection();
         markJmxDownAndMaybeNotifyDisconnection();
         Session activeSession = cqlSessionProvider.getIfConnected();
