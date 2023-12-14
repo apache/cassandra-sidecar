@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ResultSet;
@@ -38,6 +37,7 @@ import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -49,18 +49,21 @@ public class CassandraAdapter implements ICassandraAdapter
     protected final DnsResolver dnsResolver;
     protected final JmxClient jmxClient;
     private final CQLSessionProvider cqlSessionProvider;
-    private final String sidecarVersion;
     private final InetSocketAddress localNativeTransportAddress;
+    private final DriverUtils driverUtils;
     private volatile Host host;
 
-    public CassandraAdapter(DnsResolver dnsResolver, JmxClient jmxClient, CQLSessionProvider cqlSessionProvider,
-                            String sidecarVersion, InetSocketAddress localNativeTransportAddress)
+    public CassandraAdapter(DnsResolver dnsResolver,
+                            JmxClient jmxClient,
+                            CQLSessionProvider cqlSessionProvider,
+                            InetSocketAddress localNativeTransportAddress,
+                            DriverUtils driverUtils)
     {
         this.dnsResolver = dnsResolver;
         this.jmxClient = jmxClient;
         this.cqlSessionProvider = cqlSessionProvider;
-        this.sidecarVersion = sidecarVersion;
         this.localNativeTransportAddress = localNativeTransportAddress;
+        this.driverUtils = driverUtils;
     }
 
     /**
@@ -132,7 +135,7 @@ public class CassandraAdapter implements ICassandraAdapter
             {
                 if (host == null)
                 {
-                    host = DriverUtils.getHost(metadata, localNativeTransportAddress);
+                    host = driverUtils.getHost(metadata, localNativeTransportAddress);
                 }
             }
         }

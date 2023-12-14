@@ -38,6 +38,7 @@ import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.ReconnectionPolicy;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.Nullable;
@@ -56,6 +57,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     private final NettyOptions nettyOptions;
     private final ReconnectionPolicy reconnectionPolicy;
     private final List<InetSocketAddress> localInstances;
+    private final DriverUtils driverUtils;
     @Nullable
     private volatile Session session;
 
@@ -73,11 +75,14 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         this.numConnections = numConnections;
         this.nettyOptions = options;
         this.reconnectionPolicy = new ExponentialReconnectionPolicy(500, healthCheckFrequencyMillis);
+        this.driverUtils = new DriverUtils();
     }
 
     public CQLSessionProviderImpl(SidecarConfiguration configuration,
-                                  NettyOptions options)
+                                  NettyOptions options,
+                                  DriverUtils driverUtils)
     {
+        this.driverUtils = driverUtils;
         DriverConfiguration driverConfiguration = configuration.driverConfiguration();
         this.contactPoints = driverConfiguration.contactPoints();
         this.localInstances = configuration.cassandraInstances()
@@ -126,7 +131,8 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         {
             logger.info("Connecting to cluster using contact points {}", contactPoints);
 
-            LoadBalancingPolicy lbp = new SidecarLoadBalancingPolicy(localInstances, localDc, numConnections);
+            LoadBalancingPolicy lbp = new SidecarLoadBalancingPolicy(localInstances, localDc, numConnections,
+                                                                     driverUtils);
             // Prevent spurious reconnects of ignored down nodes on `onUp` events
             QueryOptions queryOptions = new QueryOptions().setReprepareOnUp(false);
             cluster = Cluster.builder()

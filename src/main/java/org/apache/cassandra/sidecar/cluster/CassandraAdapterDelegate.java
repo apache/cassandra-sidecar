@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ResultSet;
@@ -53,6 +52,7 @@ import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.TableOperations;
+import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.jetbrains.annotations.NotNull;
@@ -82,6 +82,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     private final Vertx vertx;
     private final int cassandraInstanceId;
+    private final DriverUtils driverUtils;
     private final String sidecarVersion;
     private final CassandraVersionProvider versionProvider;
     private final CQLSessionProvider cqlSessionProvider;
@@ -105,6 +106,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      * @param versionProvider     a Cassandra version provider
      * @param session             the session to the Cassandra database
      * @param jmxClient           the JMX client used to communicate with the Cassandra instance
+     * @param driverUtils         a wrapper that exposes Cassandra driver utilities
      * @param sidecarVersion      the version of the Sidecar from the current binary
      * @param host                the Cassandra instance's hostname or ip address as a string
      * @param port                the Cassandra instance's port number
@@ -114,12 +116,14 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                                     CassandraVersionProvider versionProvider,
                                     CQLSessionProvider session,
                                     JmxClient jmxClient,
+                                    DriverUtils driverUtils,
                                     String sidecarVersion,
                                     String host,
                                     int port)
     {
         this.vertx = Objects.requireNonNull(vertx);
         this.cassandraInstanceId = cassandraInstanceId;
+        this.driverUtils = driverUtils;
         this.localNativeTransportAddress = new InetSocketAddress(host, port);
         this.sidecarVersion = sidecarVersion;
         this.versionProvider = versionProvider;
@@ -331,7 +335,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             {
                 if (host == null)
                 {
-                    host = DriverUtils.getHost(metadata, localNativeTransportAddress);
+                    host = driverUtils.getHost(metadata, localNativeTransportAddress);
                 }
             }
         }
