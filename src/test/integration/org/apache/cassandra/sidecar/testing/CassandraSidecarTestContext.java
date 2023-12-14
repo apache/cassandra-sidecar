@@ -44,7 +44,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
@@ -57,7 +57,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class CassandraSidecarTestContext implements AutoCloseable
 {
-    private static final SidecarVersionProvider svp = new SidecarVersionProvider("/sidecar.version");
     public final SimpleCassandraVersion version;
     private final CassandraVersionProvider versionProvider;
     private final DnsResolver dnsResolver;
@@ -106,7 +105,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
     public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
     {
         return new CassandraVersionProvider.Builder()
-               .add(new CassandraFactory(dnsResolver, svp.sidecarVersion())).build();
+               .add(new CassandraFactory(dnsResolver, new DriverUtils())).build();
     }
 
     private static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
@@ -243,6 +242,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                                                              versionProvider,
                                                                              sessionProvider,
                                                                              jmxClient,
+                                                                             new DriverUtils(),
                                                                              "1.0-TEST",
                                                                              hostName,
                                                                              nativeTransportPort);

@@ -53,6 +53,7 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
@@ -269,12 +270,21 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public CQLSessionProvider cqlSessionProvider(Vertx vertx, SidecarConfiguration sidecarConfiguration)
+    public CQLSessionProvider cqlSessionProvider(Vertx vertx, SidecarConfiguration sidecarConfiguration,
+                                                 DriverUtils driverUtils)
     {
         CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(sidecarConfiguration,
-                                                                               new NettyOptions());
+                                                                               new NettyOptions(),
+                                                                               driverUtils);
         vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
         return cqlSessionProvider;
+    }
+
+    @Provides
+    @Singleton
+    public DriverUtils driverUtils()
+    {
+        return new DriverUtils();
     }
 
     @Provides
@@ -284,7 +294,8 @@ public class MainModule extends AbstractModule
                                            CassandraVersionProvider cassandraVersionProvider,
                                            SidecarVersionProvider sidecarVersionProvider,
                                            DnsResolver dnsResolver,
-                                           CQLSessionProvider cqlSessionProvider)
+                                           CQLSessionProvider cqlSessionProvider,
+                                           DriverUtils driverUtils)
     {
         List<InstanceMetadata> instanceMetadataList =
         configuration.cassandraInstances()
@@ -296,7 +307,8 @@ public class MainModule extends AbstractModule
                                                       cassandraVersionProvider,
                                                       sidecarVersionProvider.sidecarVersion(),
                                                       jmxConfiguration,
-                                                      cqlSessionProvider);
+                                                      cqlSessionProvider,
+                                                      driverUtils);
                      })
                      .collect(Collectors.toList());
 
@@ -305,11 +317,10 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver,
-                                                             SidecarVersionProvider sidecarVersionProvider)
+    public CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver, DriverUtils driverUtils)
     {
         CassandraVersionProvider.Builder builder = new CassandraVersionProvider.Builder();
-        builder.add(new CassandraFactory(dnsResolver, sidecarVersionProvider.sidecarVersion()));
+        builder.add(new CassandraFactory(dnsResolver, driverUtils));
         return builder.build();
     }
 
@@ -396,7 +407,8 @@ public class MainModule extends AbstractModule
                                                           CassandraVersionProvider versionProvider,
                                                           String sidecarVersion,
                                                           JmxConfiguration jmxConfiguration,
-                                                          CQLSessionProvider session)
+                                                          CQLSessionProvider session,
+                                                          DriverUtils driverUtils)
     {
         String host = cassandraInstance.host();
         int port = cassandraInstance.port();
@@ -415,6 +427,7 @@ public class MainModule extends AbstractModule
                                                                          versionProvider,
                                                                          session,
                                                                          jmxClient,
+                                                                         driverUtils,
                                                                          sidecarVersion,
                                                                          host,
                                                                          port);

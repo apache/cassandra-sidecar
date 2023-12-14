@@ -34,13 +34,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.HostDistance;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.RoundRobinPolicy;
+import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 
 /**
  * The SidecarLoadBalancingPolicy is designed to ensure that the Cassandra Metadata objects associated with the
@@ -54,6 +54,7 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarLoadBalancingPolicy.class);
     private final Set<Host> selectedHosts = new HashSet<>();
     private final Set<InetSocketAddress> localHostAddresses;
+    private final DriverUtils driverUtils;
     private final LoadBalancingPolicy childPolicy;
     private final int totalRequestedConnections;
     private final Random random = new Random();
@@ -62,10 +63,12 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
 
     public SidecarLoadBalancingPolicy(List<InetSocketAddress> localHostAddresses,
                                       String localDc,
-                                      int numAdditionalConnections)
+                                      int numAdditionalConnections,
+                                      DriverUtils driverUtils)
     {
         this.childPolicy = createChildPolicy(localDc);
         this.localHostAddresses = new HashSet<>(localHostAddresses);
+        this.driverUtils = driverUtils;
         if (numAdditionalConnections < MIN_NON_LOCAL_CONNECTIONS)
         {
             LOGGER.warn("Additional instances requested was {}, which is less than the minimum of {}. Using {}.",
@@ -138,7 +141,7 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
             // of preventing the driver from trying to reconnect to them
             // if we miss the `onUp` event, so we need to schedule reconnects
             // for these hosts explicitly unless we have active connections.
-            DriverUtils.startPeriodicReconnectionAttempt(cluster, host);
+            driverUtils.startPeriodicReconnectionAttempt(cluster, host);
         }
         recalculateSelectedHosts();
         childPolicy.onDown(host);
