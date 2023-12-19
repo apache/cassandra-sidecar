@@ -61,7 +61,7 @@ abstract class SnapshotRequest<T> extends DecodableRequest<T>
 
         if (snapshotTTL != null)
         {
-            requestUri = requestUri + "?ttl=" + snapshotTTL;
+            requestUri = requestUri + "ttl=" + snapshotTTL;
         }
 
         return requestUri;
