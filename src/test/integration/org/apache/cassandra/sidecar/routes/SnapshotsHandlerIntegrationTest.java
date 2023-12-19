@@ -34,6 +34,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import com.datastax.driver.core.Session;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -243,6 +244,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         ObjectMapper jsonMapper = new ObjectMapper(new JsonFactory());
         jsonMapper.registerModule(new JavaTimeModule());
         jsonMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        jsonMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         try (InputStream in = Files.newInputStream(manifestPath))
         {
