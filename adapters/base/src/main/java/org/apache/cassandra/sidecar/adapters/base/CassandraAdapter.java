@@ -51,7 +51,7 @@ public class CassandraAdapter implements ICassandraAdapter
     protected final CQLSessionProvider cqlSessionProvider;
     protected final InetSocketAddress localNativeTransportAddress;
     protected final DriverUtils driverUtils;
-    protected volatile Host host;
+    private volatile Host host;
 
     public CassandraAdapter(DnsResolver dnsResolver,
                             JmxClient jmxClient,
@@ -127,7 +127,7 @@ public class CassandraAdapter implements ICassandraAdapter
         return activeSession.execute(statement);
     }
 
-    private Host getHost(Metadata metadata)
+    protected Host getHost(Metadata metadata)
     {
         if (host == null)
         {

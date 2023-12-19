@@ -52,16 +52,18 @@ abstract class SnapshotRequest<T> extends DecodableRequest<T>
             return requestUri;
         }
 
-        if (!includeSecondaryIndexFiles)
+        requestUri = requestUri + '?';
+
+        if (includeSecondaryIndexFiles)
         {
-            return requestUri + "?ttl=" + snapshotTTL;
+            requestUri = requestUri + "includeSecondaryIndexFiles=true";
         }
 
-        if (snapshotTTL == null)
+        if (snapshotTTL != null)
         {
-            return requestUri + "?includeSecondaryIndexFiles=true";
+            requestUri = requestUri + "?ttl=" + snapshotTTL;
         }
 
-        return requestUri + "?includeSecondaryIndexFiles=true&ttl=" + snapshotTTL;
+        return requestUri;
     }
 }
