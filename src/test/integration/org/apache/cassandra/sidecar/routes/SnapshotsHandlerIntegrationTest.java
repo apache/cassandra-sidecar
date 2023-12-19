@@ -201,8 +201,13 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest
-    void testCreateSnapshotEndpointWithTtl(VertxTestContext context) throws InterruptedException
+    void testCreateSnapshotEndpointWithTtl(VertxTestContext context,
+                                           CassandraTestContext cassandraTestContext) throws InterruptedException
     {
+        // TTL is only supported in Cassandra 4.1
+        boolean validateExpectedTtl = cassandraTestContext.version
+                                      .compareTo(SimpleCassandraVersion.create("4.1.0")) >= 0;
+
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
@@ -231,7 +236,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
 
                   assertThat(manifest).isPresent();
                   assertThat(manifest.get()).exists();
-                  validateManifestExpirationDate(manifest.get(), expectedTtlInSeconds);
+                  validateManifestExpirationDate(manifest.get(), expectedTtlInSeconds, validateExpectedTtl);
 
                   context.completeNow();
               })));
@@ -239,7 +244,7 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    private void validateManifestExpirationDate(Path manifestPath, long expectedTtl)
+    private void validateManifestExpirationDate(Path manifestPath, long expectedTtl, boolean validateExpectedTtl)
     {
         ObjectMapper jsonMapper = new ObjectMapper(new JsonFactory());
         jsonMapper.registerModule(new JavaTimeModule());
@@ -250,8 +255,16 @@ class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
         {
             SnapshotManifest manifest = jsonMapper.readValue(in, SnapshotManifest.class);
 
-            long actualTtl = ChronoUnit.SECONDS.between(manifest.createdAt, manifest.expiresAt);
-            assertThat(actualTtl).isEqualTo(expectedTtl);
+            if (validateExpectedTtl)
+            {
+                long actualTtl = ChronoUnit.SECONDS.between(manifest.createdAt, manifest.expiresAt);
+                assertThat(actualTtl).isEqualTo(expectedTtl);
+            }
+            else
+            {
+                assertThat(manifest.createdAt).isNull();
+                assertThat(manifest.expiresAt).isNull();
+            }
         }
         catch (IOException e)
         {
