@@ -24,7 +24,7 @@ import org.apache.cassandra.sidecar.common.JmxClient;
 import static org.apache.cassandra.sidecar.adapters.base.ClusterMembershipJmxOperations.FAILURE_DETECTOR_OBJ_NAME;
 
 /**
- * An implementation of the {@link ClusterMembershipOperations} that interfaces with Cassandra 4.1 and later
+ * An implementation of the {@link ClusterMembershipOperations} that interfaces with Cassandra 4.0 and later
  */
 public class CassandraClusterMembershipOperations implements ClusterMembershipOperations
 {

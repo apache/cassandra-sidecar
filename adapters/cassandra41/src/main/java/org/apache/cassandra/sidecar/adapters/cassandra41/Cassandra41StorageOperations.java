@@ -16,12 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.adapters.cassandra40;
+package org.apache.cassandra.sidecar.adapters.cassandra41;
 
 import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.adapters.base.CassandraStorageOperations;
 import org.apache.cassandra.sidecar.adapters.base.RingProvider;
@@ -33,19 +30,17 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * An implementation of the {@link StorageOperations} that interfaces with Cassandra 4.0 and later
+ * An implementation of the {@link StorageOperations} that interfaces with Cassandra 4.1 and later
  */
-public class Cassandra40StorageOperations extends CassandraStorageOperations
+public class Cassandra41StorageOperations extends CassandraStorageOperations
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra40StorageOperations.class);
-
     /**
      * Creates a new instance with the provided {@link JmxClient} and {@link DnsResolver}
      *
      * @param jmxClient   the JMX client used to communicate with the Cassandra instance
      * @param dnsResolver the DNS resolver used to lookup replicas
      */
-    public Cassandra40StorageOperations(JmxClient jmxClient, DnsResolver dnsResolver)
+    public Cassandra41StorageOperations(JmxClient jmxClient, DnsResolver dnsResolver)
     {
         super(jmxClient, dnsResolver);
     }
@@ -58,7 +53,7 @@ public class Cassandra40StorageOperations extends CassandraStorageOperations
      * @param ringProvider              the ring provider instance
      * @param tokenRangeReplicaProvider the token range replica provider
      */
-    public Cassandra40StorageOperations(JmxClient jmxClient,
+    public Cassandra41StorageOperations(JmxClient jmxClient,
                                         RingProvider ringProvider,
                                         TokenRangeReplicaProvider tokenRangeReplicaProvider)
     {
@@ -71,10 +66,6 @@ public class Cassandra40StorageOperations extends CassandraStorageOperations
                              @NotNull String table,
                              @Nullable Map<String, String> options)
     {
-        if (options != null && options.containsKey("ttl"))
-        {
-            LOGGER.warn("The ttl option is not supported in Cassandra 4.0");
-        }
-        super.takeSnapshot(tag, keyspace, table, options);
+        super.takeSnapshotInternal(tag, keyspace, table, options);
     }
 }

@@ -29,9 +29,9 @@ import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 
 /**
- * Factory to produce the 4.1 adapter
+ * Factory to produce the 4.0 adapter
  */
-@MinimumVersion("4.1.0")
+@MinimumVersion("4.0.0")
 public class CassandraFactory implements ICassandraFactory
 {
     protected final DnsResolver dnsResolver;
@@ -44,7 +44,7 @@ public class CassandraFactory implements ICassandraFactory
     }
 
     /**
-     * Returns a new adapter for Cassandra 4.1 clusters.
+     * Returns a new adapter for Cassandra 4.0 clusters.
      *
      * @param session                     the session to the Cassandra database
      * @param jmxClient                   the JMX client to connect to the Cassandra database

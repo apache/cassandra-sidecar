@@ -41,7 +41,7 @@ import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A {@link ICassandraAdapter} implementation for Cassandra 4.1 and later
+ * A {@link ICassandraAdapter} implementation for Cassandra 4.0 and later
  */
 public class CassandraAdapter implements ICassandraAdapter
 {

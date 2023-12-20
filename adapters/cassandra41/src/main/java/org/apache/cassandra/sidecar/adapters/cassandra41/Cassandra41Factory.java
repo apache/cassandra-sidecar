@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.adapters.cassandra40;
+package org.apache.cassandra.sidecar.adapters.cassandra41;
 
 import java.net.InetSocketAddress;
 
@@ -29,15 +29,15 @@ import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 
 /**
- * Factory to produce the 4.0 adapter
+ * Factory to produce the 4.1 adapter
  */
-@MinimumVersion("4.0.0")
-public class Cassandra40Factory implements ICassandraFactory
+@MinimumVersion("4.1.0")
+public class Cassandra41Factory implements ICassandraFactory
 {
     protected final DnsResolver dnsResolver;
     private final DriverUtils driverUtils;
 
-    public Cassandra40Factory(DnsResolver dnsResolver, DriverUtils driverUtils)
+    public Cassandra41Factory(DnsResolver dnsResolver, DriverUtils driverUtils)
     {
         this.dnsResolver = dnsResolver;
         this.driverUtils = driverUtils;
@@ -55,6 +55,6 @@ public class Cassandra40Factory implements ICassandraFactory
     public ICassandraAdapter create(CQLSessionProvider session, JmxClient jmxClient,
                                     InetSocketAddress localNativeTransportAddress)
     {
-        return new Cassandra40Adapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils);
+        return new Cassandra41Adapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils);
     }
 }
