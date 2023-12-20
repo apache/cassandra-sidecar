@@ -133,7 +133,7 @@ dependencies {
     testImplementation "org.quicktheories:quicktheories:0.26"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
 
-    testImplementation('com.google.guava:guava-testlib:31.1-jre') {
+    testImplementation('com.google.guava:guava-testlib:32.0.0-jre') {
         exclude group: 'junit', module: 'junit'
     }
 
