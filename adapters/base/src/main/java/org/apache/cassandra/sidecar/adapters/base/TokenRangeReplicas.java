@@ -69,7 +69,7 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
                                                                       Partitioner partitioner,
                                                                       Set<String> replicaSet)
     {
-        if (start.compareTo(end) > 0)
+        if (start.compareTo(end) >= 0)
         {
             return unwrapRange(start, end, partitioner, replicaSet);
         }
@@ -216,10 +216,11 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
      */
     public static List<TokenRangeReplicas> normalize(List<TokenRangeReplicas> ranges)
     {
-
         if (ranges.stream().noneMatch(r -> r.partitioner.minToken.compareTo(r.start()) == 0))
         {
-            LOGGER.warn("{} based minToken does not exist in the token ranges", Partitioner.class.getName());
+            LOGGER.warn("{} based minToken does not exist in the token ranges", ranges.stream()
+                                                                                      .findFirst()
+                                                                                      .get().partitioner.name());
         }
 
         return deoverlap(ranges);

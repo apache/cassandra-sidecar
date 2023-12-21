@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Fix Sidecar TokenRangeReplicas endpoint to unwrap the token-range by partitioner's range for a single node clusters (CASSANDRASC-90)
  * Expose TTL option for the create snapshot endpoint (CASSANDRASC-85)
  * Allow DriverUtils to be pluggable (CASSANDRASC-88)
  * Add JMX health checks during the periodic health checks (CASSANDRASC-87)
