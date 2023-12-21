@@ -50,4 +50,17 @@ class BasicRf1Test extends BaseTokenRangeIntegrationTest
             context.completeNow();
         });
     }
+
+    @CassandraIntegrationTest()
+    void retrieveMappingSingleNodeRf1(VertxTestContext context) throws Exception
+    {
+        createTestKeyspace();
+        retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
+            assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+            TokenRangeReplicasResponse mappingResponse = response.bodyAsJson(TokenRangeReplicasResponse.class);
+            assertMappingResponseOK(mappingResponse, 1, Collections.singleton("datacenter1"));
+            context.completeNow();
+        });
+    }
+
 }

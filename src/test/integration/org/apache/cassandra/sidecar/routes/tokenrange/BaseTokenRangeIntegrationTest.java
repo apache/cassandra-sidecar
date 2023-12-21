@@ -37,6 +37,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.dht.Murmur3Partitioner;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.TokenSupplier;
@@ -275,6 +276,8 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         assertThat(mappingResponse).isNotNull();
         assertThat(mappingResponse.readReplicas()).isNotNull();
         assertThat(mappingResponse.writeReplicas()).isNotNull();
+        validateRanges(mappingResponse.writeReplicas());
+        validateRanges(mappingResponse.readReplicas());
         TokenRangeReplicasResponse.ReplicaInfo readReplica = mappingResponse.readReplicas().get(0);
         assertThat(readReplica.replicasByDatacenter()).isNotNull().hasSize(dcReplication.size());
         TokenRangeReplicasResponse.ReplicaInfo writeReplica = mappingResponse.writeReplicas().get(0);
@@ -290,5 +293,18 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
             assertThat(writeReplica.replicasByDatacenter().get(dcName).size())
             .isGreaterThanOrEqualTo(replicationFactor);
         }
+    }
+
+    private void validateRanges(List<TokenRangeReplicasResponse.ReplicaInfo> replicaRanges)
+    {
+        // Ranges should not be empty
+        replicaRanges.stream().forEach(r -> assertThat(r.start()).isNotEqualTo(r.end()));
+        // Ranges should include partitioner start and end
+        replicaRanges.stream()
+                     .map(TokenRangeReplicasResponse.ReplicaInfo::start)
+                     .anyMatch(s -> s.equals(Murmur3Partitioner.MINIMUM.toString()));
+        replicaRanges.stream()
+                     .map(TokenRangeReplicasResponse.ReplicaInfo::end)
+                     .anyMatch(s -> s.equals(Long.toString(Murmur3Partitioner.MAXIMUM)));
     }
 }
