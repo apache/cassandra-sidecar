@@ -93,6 +93,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
         catch (Exception exception)
         {
             processFailure(exception, context, host, remoteAddress, null);
+            return;
         }
 
         handleInternal(context, request, host, remoteAddress, requestParams);
