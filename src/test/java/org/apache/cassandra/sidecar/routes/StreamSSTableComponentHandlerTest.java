@@ -221,7 +221,8 @@ public class StreamSSTableComponentHandlerTest
     void failsWhenTableNameContainsInvalidCharacters(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/i_❤_u/snapshots/snap/components/component-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE +
+                           "/tables/i_❤_u/snapshots/snap/components/component-Data.db";
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
