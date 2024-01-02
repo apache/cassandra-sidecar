@@ -216,10 +216,11 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
      */
     public static List<TokenRangeReplicas> normalize(List<TokenRangeReplicas> ranges)
     {
-
         if (ranges.stream().noneMatch(r -> r.partitioner.minToken.compareTo(r.start()) == 0))
         {
-            LOGGER.warn("Partitioner based minToken does not exist in the token ranges");
+            LOGGER.warn("{} based minToken does not exist in the token ranges", ranges.stream()
+                                                                                      .findFirst()
+                                                                                      .get().partitioner.name());
         }
 
         return deoverlap(ranges);
