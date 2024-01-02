@@ -298,13 +298,13 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
     private void validateRanges(List<TokenRangeReplicasResponse.ReplicaInfo> replicaRanges)
     {
         // Ranges should not be empty
-        replicaRanges.stream().forEach(r -> assertThat(r.start()).isNotEqualTo(r.end()));
+        replicaRanges.forEach(r -> assertThat(r.start()).isNotEqualTo(r.end()));
         // Ranges should include partitioner start and end
-        replicaRanges.stream()
-                     .map(TokenRangeReplicasResponse.ReplicaInfo::start)
-                     .anyMatch(s -> s.equals(Murmur3Partitioner.MINIMUM.toString()));
-        replicaRanges.stream()
-                     .map(TokenRangeReplicasResponse.ReplicaInfo::end)
-                     .anyMatch(s -> s.equals(Long.toString(Murmur3Partitioner.MAXIMUM)));
+        assertThat(replicaRanges.stream()
+                                .map(TokenRangeReplicasResponse.ReplicaInfo::start)
+                                .anyMatch(s -> s.equals(Murmur3Partitioner.MINIMUM.toString()))).isTrue();
+        assertThat(replicaRanges.stream()
+                                .map(TokenRangeReplicasResponse.ReplicaInfo::end)
+                                .anyMatch(s -> s.equals(Long.toString(Murmur3Partitioner.MAXIMUM)))).isTrue();
     }
 }
