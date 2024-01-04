@@ -89,14 +89,12 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
             requestParams = extractParamsOrThrow(context);
             logger.debug("{} received request={}, remoteAddress={}, instance={}",
                          this.getClass().getSimpleName(), requestParams, remoteAddress, host);
+            handleInternal(context, request, host, remoteAddress, requestParams);
         }
         catch (Exception exception)
         {
-            processFailure(exception, context, host, remoteAddress, null);
-            return;
+            processFailure(exception, context, host, remoteAddress, requestParams);
         }
-
-        handleInternal(context, request, host, remoteAddress, requestParams);
     }
 
     /**
@@ -166,7 +164,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
     }
 
     /**
-     * Processes the failure with the given parameters
+     * Processes the failure while handling the request.
      *
      * @param cause         the cause
      * @param context       the routing context
