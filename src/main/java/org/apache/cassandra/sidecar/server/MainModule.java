@@ -68,6 +68,7 @@ import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.GossipInfoHandler;
 import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
+import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
 import org.apache.cassandra.sidecar.routes.SnapshotsHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
@@ -145,12 +146,14 @@ public class MainModule extends AbstractModule
     {
         Router router = Router.router(vertx);
         router.route()
+              .order(RoutingOrder.HIGHEST.order)
               .handler(loggerHandler)
               .handler(TimeoutHandler.create(conf.requestTimeoutMillis(),
                                              HttpResponseStatus.REQUEST_TIMEOUT.code()));
 
         router.route()
               .path(ApiEndpointsV1.API + "/*")
+              .order(RoutingOrder.HIGHEST.order)
               .failureHandler(errorHandler);
 
         // Docs index.html page

@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Define routing order for http routes (CASSANDRASC-93)
  * AbstractHandler is handling the request even when it fails to extract params (CASSANDRASC-91)
  * Fix Sidecar TokenRangeReplicas endpoint to unwrap the token-range by partitioner's range for a single node clusters (CASSANDRASC-90)
  * Expose TTL option for the create snapshot endpoint (CASSANDRASC-85)
