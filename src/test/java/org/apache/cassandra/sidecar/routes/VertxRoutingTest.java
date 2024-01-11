@@ -137,7 +137,8 @@ class VertxRoutingTest
     void testLeveledRoutesWithSameOrder(VertxTestContext context) throws Exception
     {
         /*
-         * For the leveled routes that is declared with the same order, the effective evaluation order is the adding order
+         * For the leveled routes that is declared with the same order,
+         * the effective evaluation order is the adding order
          */
         CountDownLatch serverReady = new CountDownLatch(1);
         Router router = Router.router(vertx);
@@ -168,7 +169,8 @@ class VertxRoutingTest
     {
         /*
          * Similar to testLeveledRoutesWithSameOrder, but the root route is declared after `/endpoint`.
-         * Since `/endpoint` ends the response and does not forward the evaluation, the root route handler is not called.
+         * Since `/endpoint` ends the response and does not forward the evaluation,
+         * the root route handler is not called.
          */
         AtomicBoolean rootEvaluated = new AtomicBoolean(false);
         CountDownLatch serverReady = new CountDownLatch(1);
