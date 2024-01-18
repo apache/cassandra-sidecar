@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -47,7 +48,9 @@ import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
 import org.apache.cassandra.sidecar.utils.BaseFileSystem;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * This class builds the snapshot path on a given host validating that it exists
@@ -422,7 +425,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
         }
 
         List<Future<FileProps>> futures = fileList.stream()
-                                                  .map(fs::props)
+                                                  .map(filePropsProvider())
                                                   .collect(Collectors.toList());
 
         Promise<String> promise = Promise.promise();
@@ -448,6 +451,12 @@ public class SnapshotPathBuilder extends BaseFileSystem
                   }
               });
         return promise.future();
+    }
+
+    @VisibleForTesting
+    protected @NotNull Function<String, Future<FileProps>> filePropsProvider()
+    {
+        return fs::props;
     }
 
     /**

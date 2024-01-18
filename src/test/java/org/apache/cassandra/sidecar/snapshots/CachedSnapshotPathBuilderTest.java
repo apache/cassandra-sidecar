@@ -21,7 +21,9 @@ package org.apache.cassandra.sidecar.snapshots;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -29,6 +31,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.file.FileProps;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
@@ -45,8 +49,11 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
+import org.jetbrains.annotations.NotNull;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link CachedSnapshotPathBuilder}
@@ -64,6 +71,18 @@ class CachedSnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
                                                       validator, executorPools);
         instance2.tableDirCache.invalidateAll(); // make sure we start with an empty cache
         instance2.snapshotListCache.invalidateAll(); // make sure we start with an empty cache
+
+        // To ensure that lastModified timestamp is guaranteed to be smaller for the new data dir
+        // we provide it explicitly
+        try
+        {
+            customizeLastModifiedTimestamp();
+        }
+        catch (IOException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+
         return new CachedSnapshotPathBuilder(vertx, serviceConfiguration, instancesConfig, validator, executorPools);
     }
 
@@ -450,12 +469,29 @@ class CachedSnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
         assertThat(actual).isEqualTo(expected);
     }
 
+    private void customizeLastModifiedTimestamp() throws IOException
+    {
+        // Guarantees that the timestamp returned for the new directory is always greater than the old directory
+        FileProps oldKs4FileProps = mock(FileProps.class);
+        FileProps newKs4FileProps = mock(FileProps.class);
+        when(oldKs4FileProps.isDirectory()).thenReturn(true);
+        when(oldKs4FileProps.lastModifiedTime()).thenReturn(2L);
+        when(newKs4FileProps.isDirectory()).thenReturn(true);
+        when(newKs4FileProps.lastModifiedTime()).thenReturn(4L);
+
+        instance2.customFileToFilePropsMap.put(dataDir1.getCanonicalPath()
+                                               + "/data/ks4/table4-a6442310a57611ec8b980b0b2009844e" , oldKs4FileProps);
+        instance2.customFileToFilePropsMap.put(dataDir1.getCanonicalPath()
+                                               + "/data/ks4/table4-a72c8740a57611ec935db766a70c44a1", newKs4FileProps);
+    }
+
     /**
      * Keep track of how many futures are resolved to ensure that future results are cached
      */
     static class TestCachedSnapshotPathBuilder extends CachedSnapshotPathBuilder
     {
         final AtomicInteger futureResolutionCount = new AtomicInteger();
+        final Map<String, FileProps> customFileToFilePropsMap = new HashMap<>();
 
         public TestCachedSnapshotPathBuilder(Vertx vertx,
                                              ServiceConfiguration serviceConfiguration,
@@ -483,6 +519,19 @@ class CachedSnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
             // is only processed once when it is in the cache
             futureResolutionCount.incrementAndGet();
             return super.listSnapshotDirectory(snapshotDirectory, includeSecondaryIndexFiles);
+        }
+
+        @Override
+        protected @NotNull Function<String, Future<FileProps>> filePropsProvider()
+        {
+            return path -> {
+                FileProps fileProps = customFileToFilePropsMap.get(path);
+                if (fileProps != null)
+                {
+                    return Future.succeededFuture(fileProps);
+                }
+                return fs.props(path);
+            };
         }
     }
 }

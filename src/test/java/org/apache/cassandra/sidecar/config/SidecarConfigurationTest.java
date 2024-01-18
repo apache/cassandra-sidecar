@@ -185,7 +185,7 @@ class SidecarConfigurationTest
         assertThat(driverConfiguration).isNotNull();
         assertThat(driverConfiguration.localDc()).isEqualTo("dc1");
         List<InetSocketAddress> endpoints = Arrays.asList(new InetSocketAddress("127.0.0.1", 9042),
-                                                                  new InetSocketAddress("127.0.0.2", 9042));
+                                                          new InetSocketAddress("127.0.0.2", 9042));
         assertThat(driverConfiguration.contactPoints()).isEqualTo(endpoints);
         assertThat(driverConfiguration.numConnections()).isEqualTo(6);
     }
@@ -204,6 +204,16 @@ class SidecarConfigurationTest
         assertThat(configuration.replicationFactor()).isEqualTo(3);
         assertThat(configuration.createReplicationStrategyString())
         .isEqualTo("{'class':'SimpleStrategy', 'replication_factor':'3'}");
+    }
+
+    @Test
+    void testMissingSSTableSnapshotSection() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_missing_sstable_snapshot.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+
+        assertThat(config.serviceConfiguration()).isNotNull();
+        assertThat(config.serviceConfiguration().sstableSnapshotConfiguration()).isNull();
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
@@ -323,6 +333,14 @@ class SidecarConfigurationTest
         assertThat(throttle.delayInSeconds()).isEqualTo(5);
         assertThat(throttle.timeoutInSeconds()).isEqualTo(10);
 
+        // file stream cache for fileProps
+        CacheConfiguration filePropsCache = serviceConfiguration.fileStreamPropsCache();
+
+        assertThat(filePropsCache).isNotNull();
+        assertThat(filePropsCache.enabled()).isTrue();
+        assertThat(filePropsCache.maximumSize()).isEqualTo(200);
+        assertThat(filePropsCache.expireAfterAccessMillis()).isEqualTo(100);
+
         // validate traffic shaping options
         TrafficShapingConfiguration trafficShaping = serviceConfiguration.trafficShapingConfiguration();
         assertThat(trafficShaping).isNotNull();
@@ -331,6 +349,24 @@ class SidecarConfigurationTest
         assertThat(trafficShaping.peakOutboundGlobalBandwidthBytesPerSecond()).isEqualTo(2000L);
         assertThat(trafficShaping.maxDelayToWaitMillis()).isEqualTo(2500L);
         assertThat(trafficShaping.checkIntervalForStatsMillis()).isEqualTo(3000L);
+
+        // SSTable snapshot configuration section
+        SSTableSnapshotConfiguration snapshotConfig = serviceConfiguration.sstableSnapshotConfiguration();
+
+        assertThat(snapshotConfig).isNotNull();
+        assertThat(snapshotConfig.isCacheConfigurationAvailable()).isTrue();
+
+        assertThat(snapshotConfig.snapshotListCacheConfiguration().enabled()).isTrue();
+        assertThat(snapshotConfig.snapshotListCacheConfiguration().maximumSize()).isEqualTo(450);
+        assertThat(snapshotConfig.snapshotListCacheConfiguration().expireAfterAccessMillis()).isEqualTo(350);
+
+        assertThat(snapshotConfig.tableDirCacheConfiguration().enabled()).isTrue();
+        assertThat(snapshotConfig.tableDirCacheConfiguration().maximumSize()).isEqualTo(250);
+        assertThat(snapshotConfig.tableDirCacheConfiguration().expireAfterAccessMillis()).isEqualTo(150);
+
+        assertThat(snapshotConfig.snapshotPathCacheConfiguration().enabled()).isTrue();
+        assertThat(snapshotConfig.snapshotPathCacheConfiguration().maximumSize()).isEqualTo(550);
+        assertThat(snapshotConfig.snapshotPathCacheConfiguration().expireAfterAccessMillis()).isEqualTo(450);
     }
 
     private void validateHealthCheckConfigurationFromYaml(HealthCheckConfiguration config)
