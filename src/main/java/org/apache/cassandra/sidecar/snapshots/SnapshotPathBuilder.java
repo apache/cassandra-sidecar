@@ -36,8 +36,6 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -54,7 +52,6 @@ import org.jetbrains.annotations.Nullable;
 /**
  * This class builds the snapshot path on a given host validating that it exists
  */
-@Singleton
 public class SnapshotPathBuilder extends BaseFileSystem
 {
     private static final String DATA_SUB_DIR = "/data";
@@ -70,7 +67,6 @@ public class SnapshotPathBuilder extends BaseFileSystem
      * @param validator       a validator instance to validate Cassandra-specific input
      * @param executorPools   executor pools for blocking executions
      */
-    @Inject
     public SnapshotPathBuilder(Vertx vertx,
                                InstancesConfig instancesConfig,
                                CassandraInputValidator validator,

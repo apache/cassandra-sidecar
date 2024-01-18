@@ -35,7 +35,7 @@ public interface CacheConfiguration
     long maximumSize();
 
     /**
-     * @return {@code true} if the cache is enabled, false otherwise
+     * @return {@code true} if the cache is enabled, {@code false} otherwise
      */
     default boolean enabled()
     {

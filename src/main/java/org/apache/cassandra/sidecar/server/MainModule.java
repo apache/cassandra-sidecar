@@ -462,7 +462,16 @@ public class MainModule extends AbstractModule
                                                    CassandraInputValidator validator,
                                                    ExecutorPools executorPools)
     {
-        return new CachedSnapshotPathBuilder(vertx, serviceConfiguration, instancesConfig, validator, executorPools);
+        if (serviceConfiguration.sstableSnapshotConfiguration() != null
+            && serviceConfiguration.sstableSnapshotConfiguration().isCacheConfigurationAvailable())
+        {
+            return new CachedSnapshotPathBuilder(vertx, serviceConfiguration, instancesConfig, validator,
+                                                 executorPools);
+        }
+        else
+        {
+            return new SnapshotPathBuilder(vertx, instancesConfig, validator, executorPools);
+        }
     }
 
     @Provides
