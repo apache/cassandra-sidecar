@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 class RestoreJobsDatabaseAccessorIntTest extends IntegrationTestBase
 {
-    @CassandraIntegrationTest(jmx = false)
+    @CassandraIntegrationTest
     void testCrudOperations()
     {
         CountDownLatch latch = new CountDownLatch(1);
