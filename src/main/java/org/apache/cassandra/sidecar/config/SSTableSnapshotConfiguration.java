@@ -46,7 +46,7 @@ public interface SSTableSnapshotConfiguration
     default boolean isCacheConfigurationAvailable()
     {
         return tableDirCacheConfiguration() != null
-               && snapshotPathCacheConfiguration() != null
+               && snapshotListCacheConfiguration() != null
                && snapshotPathCacheConfiguration() != null;
     }
 }
