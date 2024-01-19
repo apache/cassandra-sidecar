@@ -24,6 +24,7 @@ import java.util.function.Function;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.vertx.core.Future;
 import io.vertx.core.file.FileProps;
@@ -48,6 +49,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Handler for sending out files.
  */
+@Singleton
 public class FileStreamHandler extends AbstractHandler<String>
 {
     public static final String FILE_PATH_CONTEXT_KEY = "fileToTransfer";
@@ -86,7 +88,7 @@ public class FileStreamHandler extends AbstractHandler<String>
         .compose(fileProps -> fileStreamer.stream(new HttpResponse(httpRequest, context.response()), localFile,
                                                   fileProps.size(), httpRequest.getHeader(HttpHeaderNames.RANGE)))
         .onSuccess(v -> logger.debug("Completed streaming file '{}'", localFile))
-        .onFailure(context::fail);
+        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, localFile));
     }
 
     @Override
@@ -104,7 +106,7 @@ public class FileStreamHandler extends AbstractHandler<String>
      * @return a succeeded future with the {@link FileProps}, or a failed future if the file does not exist;
      * is not a regular file; or if the file is empty
      */
-    private Future<FileProps> ensureValidFile(FileSystem fs, String localFile)
+    protected Future<FileProps> ensureValidFile(FileSystem fs, String localFile)
     {
         return filePropsCache != null
                ? filePropsCache.get(localFile, ensureValidFileNonCached(fs))
@@ -119,7 +121,7 @@ public class FileStreamHandler extends AbstractHandler<String>
      * is not a regular file; or if the file is empty
      */
     @NotNull
-    private Function<String, Future<FileProps>> ensureValidFileNonCached(FileSystem fs)
+    protected Function<String, Future<FileProps>> ensureValidFileNonCached(FileSystem fs)
     {
         return path -> fs.props(path)
                          .compose(fileProps -> {
