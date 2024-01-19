@@ -24,6 +24,9 @@ import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.UpdateRestoreJobRequestPayload;
 
+/**
+ * Represents a request to update a restore job
+ */
 public class UpdateRestoreJobRequest extends Request implements JsonPayloadRequest
 {
     private final UpdateRestoreJobRequestPayload requestPayload;
@@ -36,7 +39,8 @@ public class UpdateRestoreJobRequest extends Request implements JsonPayloadReque
      * @param jobId    a unique identifier for the job
      * @param requestPayload  request payload
      */
-    public UpdateRestoreJobRequest(String keyspace, String table, UUID jobId, UpdateRestoreJobRequestPayload requestPayload)
+    public UpdateRestoreJobRequest(String keyspace, String table, UUID jobId,
+                                   UpdateRestoreJobRequestPayload requestPayload)
     {
         super(requestURI(keyspace, table, jobId));
         this.requestPayload = requestPayload;

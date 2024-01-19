@@ -24,6 +24,9 @@ import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSummaryResponsePayload;
 
+/**
+ * Represents a request to retrieve the summary of a restore job
+ */
 public class RestoreJobSummaryRequest extends DecodableRequest<RestoreJobSummaryResponsePayload>
 {
     /**

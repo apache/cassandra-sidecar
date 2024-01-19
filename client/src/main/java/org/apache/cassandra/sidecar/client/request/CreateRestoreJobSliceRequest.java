@@ -24,6 +24,9 @@ import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.CreateSliceRequestPayload;
 
+/**
+ * Represents a request to create a restore job slice
+ */
 public class CreateRestoreJobSliceRequest extends Request implements JsonPayloadRequest
 {
     private final CreateSliceRequestPayload payload;
@@ -42,7 +45,8 @@ public class CreateRestoreJobSliceRequest extends Request implements JsonPayload
     }
 
     // todo: drop me once the dev endpoint is promoted
-    public CreateRestoreJobSliceRequest(String keyspace, String table, UUID jobId, CreateSliceRequestPayload payload, boolean useDevApi)
+    public CreateRestoreJobSliceRequest(String keyspace, String table, UUID jobId, CreateSliceRequestPayload payload,
+                                        boolean useDevApi)
     {
         super(requestURI(keyspace, table, jobId, useDevApi));
         this.payload = payload;

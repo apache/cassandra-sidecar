@@ -23,6 +23,9 @@ import java.util.UUID;
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 
+/**
+ * Represents a request to abort a restore job
+ */
 public class AbortRestoreJobRequest extends Request
 {
     /**

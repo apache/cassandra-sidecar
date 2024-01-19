@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
+/**
+ * A request that contains json payload
+ */
 public interface JsonPayloadRequest
 {
     /**

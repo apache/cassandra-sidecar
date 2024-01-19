@@ -23,7 +23,11 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.data.CreateRestoreJobResponsePayload;
 
-public class CreateRestoreJobRequest extends DecodableRequest<CreateRestoreJobResponsePayload> implements JsonPayloadRequest
+/**
+ * Represents a request to create a restore job
+ */
+public class CreateRestoreJobRequest extends DecodableRequest<CreateRestoreJobResponsePayload>
+implements JsonPayloadRequest
 {
     private final CreateRestoreJobRequestPayload requestPayload;
 
