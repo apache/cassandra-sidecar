@@ -20,13 +20,21 @@
 package org.apache.cassandra.sidecar.client;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.cassandra.sidecar.client.request.AbortRestoreJobRequest;
+import org.apache.cassandra.sidecar.client.request.CreateRestoreJobRequest;
+import org.apache.cassandra.sidecar.client.request.CreateRestoreJobSliceRequest;
 import org.apache.cassandra.sidecar.client.request.ImportSSTableRequest;
+import org.apache.cassandra.sidecar.client.request.RestoreJobSummaryRequest;
+import org.apache.cassandra.sidecar.client.request.UpdateRestoreJobRequest;
+import org.apache.cassandra.sidecar.client.retry.CreateRestoreJobRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.IgnoreConflictRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.OncePerInstanceRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
@@ -34,21 +42,26 @@ import org.apache.cassandra.sidecar.client.retry.RunnableOnStatusCodeRetryPolicy
 import org.apache.cassandra.sidecar.client.selection.InstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.RandomInstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.common.NodeSettings;
+import org.apache.cassandra.sidecar.common.data.CreateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.data.CreateRestoreJobResponsePayload;
+import org.apache.cassandra.sidecar.common.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.data.HealthResponse;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.common.data.RestoreJobSummaryResponsePayload;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.data.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.data.SchemaResponse;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * The SidecarClient class to perform requests
  */
-public class SidecarClient implements AutoCloseable
+public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExtension
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarClient.class);
 
@@ -441,6 +454,75 @@ public class SidecarClient implements AutoCloseable
         return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
                                                             .cleanSSTableUploadSessionRequest(uploadId)
                                                             .build());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CompletableFuture<CreateRestoreJobResponsePayload> createRestoreJob(String keyspace,
+                                                                               String table,
+                                                                               CreateRestoreJobRequestPayload payload)
+    {
+        Objects.requireNonNull(payload, "payload cannot be null");
+        return executor.executeRequestAsync(requestBuilder()
+                                            .retryPolicy(new CreateRestoreJobRetryPolicy(defaultRetryPolicy))
+                                            .request(new CreateRestoreJobRequest(keyspace, table, payload))
+                                            .build());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CompletableFuture<Void> updateRestoreJob(String keyspace,
+                                                    String table,
+                                                    UUID jobId,
+                                                    UpdateRestoreJobRequestPayload payload)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .request(new UpdateRestoreJobRequest(keyspace, table, jobId, payload))
+                                            .build());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CompletableFuture<Void> abortRestoreJob(String keyspace, String table, UUID jobId)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .request(new AbortRestoreJobRequest(keyspace, table, jobId))
+                                            .build());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CompletableFuture<RestoreJobSummaryResponsePayload> restoreJobSummary(String keyspace,
+                                                                                 String table,
+                                                                                 UUID jobId)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .request(new RestoreJobSummaryRequest(keyspace, table, jobId))
+                                            .build());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CompletableFuture<Void> createRestoreJobSlice(SidecarInstance instance,
+                                                         String keyspace,
+                                                         String table,
+                                                         UUID jobId,
+                                                         CreateSliceRequestPayload payload)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .request(new CreateRestoreJobSliceRequest(keyspace, table, jobId, payload))
+                                            .build());
     }
 
     /**

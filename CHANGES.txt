@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add sidecar client changes for restore from S3 (CASSANDRASC-95)
  * Add restore SSTables from S3 into Cassandra feature to Cassandra Sidecar (CASSANDRASC-92)
  * Define routing order for http routes (CASSANDRASC-93)
  * AbstractHandler is handling the request even when it fails to extract params (CASSANDRASC-91)
