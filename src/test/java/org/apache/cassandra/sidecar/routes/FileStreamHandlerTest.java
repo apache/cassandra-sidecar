@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -42,6 +45,8 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link FileStreamHandler}
@@ -76,31 +81,58 @@ class FileStreamHandlerTest
     @Test
     void failsWhenFileDoesNotExist(VertxTestContext context)
     {
-        server(tempDir.resolve("non-existent-file").toString())
+        serverFuture(tempDir.resolve("non-existent-file").toString())
         .onSuccess(server -> {
-            this.server = server;
             client.get(server.actualPort(), "127.0.0.1", "/stream")
                   .expect(ResponsePredicate.SC_NOT_FOUND)
-                  .send(context.succeedingThenComplete());
+                  .send(context.succeeding(response -> context.verify(() -> {
+                      JsonObject responseJson = response.bodyAsJsonObject();
+                      assertThat(responseJson.getString("message")).isEqualTo("The requested file does not exist");
+                      assertThat(responseJson.getInteger("code")).isEqualTo(404);
+                      assertThat(responseJson.getString("status")).isEqualTo("Not Found");
+                      context.completeNow();
+                  })));
         })
         .onFailure(context::failNow);
     }
 
-    Future<HttpServer> server(String path)
+    @Test
+    void failsWhenFileIsNotARegularFile(VertxTestContext context) throws IOException
+    {
+        Path directory = tempDir.resolve("directory");
+        assertThat(Files.createDirectory(directory)).exists();
+        serverFuture(directory.toString())
+        .onSuccess(server -> {
+            client.get(server.actualPort(), "127.0.0.1", "/stream")
+                  .expect(ResponsePredicate.SC_NOT_FOUND)
+                  .send(context.succeeding(response -> context.verify(() -> {
+                      JsonObject responseJson = response.bodyAsJsonObject();
+                      assertThat(responseJson.getString("message")).isEqualTo("The requested file does not exist");
+                      assertThat(responseJson.getInteger("code")).isEqualTo(404);
+                      assertThat(responseJson.getString("status")).isEqualTo("Not Found");
+                      context.completeNow();
+                  })));
+        })
+        .onFailure(context::failNow);
+    }
+
+    Future<HttpServer> serverFuture(String path)
     {
         Router router = Router.router(vertx);
+        // to capture the expected payloads from the clients
+        router.route().failureHandler(new JsonErrorHandler());
 
         router.get("/stream")
               .handler(context -> context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
                                          .next())
               .handler(fileStreamHandler());
 
-        return vertx.createHttpServer()
-                    .requestHandler(router)
-                    .listen(0, "localhost");
-//                                 .result();
-//        assertThat(server).isNotNull();
-//        return server;
+        Future<HttpServer> future = vertx.createHttpServer()
+                                         .requestHandler(router)
+                                         .listen(0, "localhost");
+        // keep track of the server, so we can close it on tearDown
+        future.onSuccess(server -> this.server = server);
+        return future;
     }
 
     private FileStreamHandler fileStreamHandler()

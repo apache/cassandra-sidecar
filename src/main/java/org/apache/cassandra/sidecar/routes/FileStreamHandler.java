@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.nio.file.NoSuchFileException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -36,6 +37,7 @@ import org.apache.cassandra.sidecar.cache.ToggleableCache;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
 import org.apache.cassandra.sidecar.models.HttpResponse;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -95,6 +97,25 @@ public class FileStreamHandler extends AbstractHandler<String>
     protected String extractParamsOrThrow(RoutingContext context)
     {
         return context.get(FILE_PATH_CONTEXT_KEY);
+    }
+
+    @Override
+    protected void processFailure(Throwable cause,
+                                  RoutingContext context,
+                                  String host,
+                                  SocketAddress remoteAddress,
+                                  String localFile)
+    {
+        NoSuchFileException noSuchFileException = ThrowableUtils.getCause(cause, NoSuchFileException.class);
+
+        if (noSuchFileException != null)
+        {
+            logger.error("The requested file '{}' does not exist", localFile);
+            context.fail(wrapHttpException(NOT_FOUND, "The requested file does not exist"));
+            return;
+        }
+
+        super.processFailure(cause, context, host, remoteAddress, localFile);
     }
 
     /**
