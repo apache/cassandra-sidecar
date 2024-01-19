@@ -28,6 +28,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -57,9 +58,12 @@ import org.apache.cassandra.sidecar.client.retry.RetryAction;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.NodeSettings;
+import org.apache.cassandra.sidecar.common.data.CreateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.data.HealthResponse;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
 import org.apache.cassandra.sidecar.common.data.SSTableImportResponse;
@@ -67,12 +71,15 @@ import org.apache.cassandra.sidecar.common.data.SchemaResponse;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
+import org.apache.cassandra.sidecar.foundataion.RestoreJobSecretsGen;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -1122,6 +1129,52 @@ abstract class SidecarClientTest
         assertThat(result.releaseVersion()).isEqualTo("4.0.0");
 
         validateResponseServed(ApiEndpointsV1.NODE_SETTINGS_ROUTE);
+    }
+
+    @Test
+    void testAcceptCreateRestoreJobRequest()
+    {
+        enqueue(new MockResponse()
+                .setResponseCode(OK.code())
+                .setBody("{\"jobId\":\"8e5799a4-d277-11ed-8d85-6916bb9b8056\",\"status\":\"CREATED\"}"));
+
+        UUID jobId = UUID.fromString("8e5799a4-d277-11ed-8d85-6916bb9b8056");
+        long expireAt = System.currentTimeMillis() + 10000;
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        CreateRestoreJobRequestPayload requestPayload = CreateRestoreJobRequestPayload.builder(secrets, expireAt)
+                                                                                      .jobId(jobId)
+                                                                                      .build();
+        CreateRestoreJobResponsePayload responsePayload = client.createRestoreJob("cycling",
+                                                                                  "rank_by_year_and_name",
+                                                                                  requestPayload)
+                                                                .join();
+
+        assertThat(responsePayload).isNotNull();
+        assertThat(responsePayload.jobId()).isEqualTo(jobId);
+        assertThat(responsePayload.status()).isEqualTo("CREATED");
+    }
+
+    @Test
+    void testCreateRestoreJobShouldNotRetryOnDifferentHostWithBadRequest()
+    {
+        enqueue(new MockResponse()
+                .setResponseCode(BAD_REQUEST.code())
+                .setBody("{\"status\":\"Fail\"," +
+                         "\"message\":\"Error while decoding values, check your request body\"}"));
+
+        UUID jobId = UUID.fromString("8e5799a4-d277-11ed-8d85-6916bb9b8056");
+        long expireAt = System.currentTimeMillis() + 10000;
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        CreateRestoreJobRequestPayload requestPayload = CreateRestoreJobRequestPayload.builder(secrets, expireAt)
+                                                                                      .jobId(jobId)
+                                                                                      .build();
+        assertThatException().isThrownBy(() -> client.createRestoreJob("badkeyspace",
+                                                                       "bad_table",
+                                                                       requestPayload)
+                                                     .join())
+                             .withCauseInstanceOf(RetriesExhaustedException.class)
+                             .withMessageContaining("Unable to complete request '/api/v1/keyspaces/" +
+                                                    "badkeyspace/tables/bad_table/restore-jobs' after 1 attempt");
     }
 
     private void enqueue(MockResponse response)
