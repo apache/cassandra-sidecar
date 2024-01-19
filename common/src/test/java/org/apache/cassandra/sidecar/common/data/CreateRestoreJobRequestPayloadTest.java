@@ -65,7 +65,7 @@ class CreateRestoreJobRequestPayloadTest
         String json = "{\"jobId\":\"" + uuid + "\"," +
                       "\"jobAgent\":\"Spark Bulk Analytics\"," +
                       "\"status\":\"Completed\"," +
-                      "\"expireAt\":"+ System.currentTimeMillis() + 1000 +
+                      "\"expireAt\":" + System.currentTimeMillis() + 1000 +
                       ",\"secrets\":" + MAPPER.writeValueAsString(RestoreJobSecretsGen.genRestoreJobSecrets()) + "}";
         assertThatThrownBy(() -> MAPPER.readValue(json, CreateRestoreJobRequestPayload.class))
         .isInstanceOf(UnrecognizedPropertyException.class)
@@ -88,7 +88,7 @@ class CreateRestoreJobRequestPayloadTest
     {
         RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
         String json = "{\"secrets\":" + MAPPER.writeValueAsString(secrets) +
-                      ", \"expireAt\":"+ System.currentTimeMillis() + 1000 +"}";
+                      ", \"expireAt\":" + System.currentTimeMillis() + 1000 + "}";
         CreateRestoreJobRequestPayload req = MAPPER.readValue(json, CreateRestoreJobRequestPayload.class);
         assertThat(req).isNotNull();
         assertThat(req.jobId()).isNull();
@@ -100,7 +100,7 @@ class CreateRestoreJobRequestPayloadTest
     @Test
     void testReadFromJsonFailsWithoutSecrets()
     {
-        String json = "{\"expireAt\":"+ System.currentTimeMillis() + 1000 + "}";
+        String json = "{\"expireAt\":" + System.currentTimeMillis() + 1000 + "}";
         assertThatThrownBy(() -> MAPPER.readValue(json, CreateRestoreJobRequestPayload.class))
         .isInstanceOf(ValueInstantiationException.class)
         .hasCauseInstanceOf(NullPointerException.class)
@@ -134,7 +134,7 @@ class CreateRestoreJobRequestPayloadTest
     void testReadFromJsonFailsWithInvalidJobId() throws JsonProcessingException
     {
         String json = "{\"jobId\":\"12951f25-d393-4158-9e90-ec0cbe05af21\"," +
-                      "\"expireAt\":\""+ System.currentTimeMillis() + 1000 +"\"," +
+                      "\"expireAt\":\"" + System.currentTimeMillis() + 1000 + "\"," +
                       "\"secrets\":" + MAPPER.writeValueAsString(RestoreJobSecretsGen.genRestoreJobSecrets()) + "}";
         assertThatThrownBy(() -> MAPPER.readValue(json, CreateRestoreJobRequestPayload.class))
         .isInstanceOf(ValueInstantiationException.class);
@@ -148,7 +148,7 @@ class CreateRestoreJobRequestPayloadTest
         Date date = Date.from(Instant.ofEpochMilli(time));
         String json = "{\"jobId\":\"e870e5dc-d25e-11ed-afa1-0242ac120002\"," +
                       "\"jobAgent\":\"agent\"," +
-                      "\"expireAt\":\""+ time +"\"," +
+                      "\"expireAt\":\"" + time + "\"," +
                       "\"secrets\":" + MAPPER.writeValueAsString(secrets) + "}";
         CreateRestoreJobRequestPayload test = MAPPER.readValue(json, CreateRestoreJobRequestPayload.class);
         assertThat(test.jobId()).hasToString("e870e5dc-d25e-11ed-afa1-0242ac120002");
@@ -164,14 +164,15 @@ class CreateRestoreJobRequestPayloadTest
     void testBuilder()
     {
         RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
-        CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload.builder(secrets, System.currentTimeMillis() + 10000)
-                                                                           .jobAgent("agent")
-                                                                           .updateImportOptions(options -> {
-                                                                               options
-                                                                               .resetLevel(false)
-                                                                               .clearRepaired(false);
-                                                                           })
-                                                                           .build();
+        CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload
+                                             .builder(secrets, System.currentTimeMillis() + 10000)
+                                             .jobAgent("agent")
+                                             .updateImportOptions(options -> {
+                                                 options
+                                                 .resetLevel(false)
+                                                 .clearRepaired(false);
+                                             })
+                                             .build();
         assertThat(req.secrets()).isEqualTo(secrets);
         assertThat(req.jobAgent()).isEqualTo("agent");
         assertThat(req.importOptions()).isEqualTo(SSTableImportOptions.defaults()

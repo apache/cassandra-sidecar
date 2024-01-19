@@ -53,7 +53,7 @@ class UpdateRestoreJobRequestPayloadTest
     {
         long time = System.currentTimeMillis() + 1000;
         Date date = Date.from(Instant.ofEpochMilli(time));
-        String json = "{\"expireAt\":"+ time + "}";
+        String json = "{\"expireAt\":" + time + "}";
         UpdateRestoreJobRequestPayload req = mapper.readValue(json, UpdateRestoreJobRequestPayload.class);
 
         assertThat(req.expireAtAsDate()).isEqualTo(date);
@@ -63,10 +63,14 @@ class UpdateRestoreJobRequestPayloadTest
     @Test
     void testJsonSerializationShouldIgnoreUnwantedFields() throws JsonProcessingException
     {
-        UpdateRestoreJobRequestPayload payload = new UpdateRestoreJobRequestPayload(null, RestoreJobSecretsGen.genRestoreJobSecrets(), null, null);
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        UpdateRestoreJobRequestPayload payload = new UpdateRestoreJobRequestPayload(null, secrets
+                                                                                    , null, null);
         String json = mapper.writeValueAsString(payload);
         assertThat(json).contains(RestoreJobConstants.JOB_SECRETS)
-                        .doesNotContain(RestoreJobConstants.JOB_AGENT, RestoreJobConstants.JOB_EXPIRE_AT, RestoreJobConstants.JOB_STATUS)
+                        .doesNotContain(RestoreJobConstants.JOB_AGENT,
+                                        RestoreJobConstants.JOB_EXPIRE_AT,
+                                        RestoreJobConstants.JOB_STATUS)
                         .doesNotContain("empty"); // ignored by @JsonIgnore
     }
 }
