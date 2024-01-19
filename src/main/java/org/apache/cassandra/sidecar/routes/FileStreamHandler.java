@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -43,6 +45,7 @@ import org.apache.cassandra.sidecar.utils.FileStreamer;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
@@ -64,8 +67,9 @@ public class FileStreamHandler extends AbstractHandler<String>
      * properties can occur multiple times during bulk reads for the same file. This cache aims
      * to reduce filesystem access to resolve the file props used for file streaming.
      */
+    @VisibleForTesting
     @Nullable
-    private final Cache<String, Future<FileProps>> filePropsCache;
+    final Cache<String, FileProps> filePropsCache;
 
     @Inject
     public FileStreamHandler(InstanceMetadataFetcher metadataFetcher,
@@ -106,9 +110,15 @@ public class FileStreamHandler extends AbstractHandler<String>
                                   SocketAddress remoteAddress,
                                   String localFile)
     {
-        NoSuchFileException noSuchFileException = ThrowableUtils.getCause(cause, NoSuchFileException.class);
+        IOException fileNotFoundException = ThrowableUtils.getCause(cause, NoSuchFileException.class);
 
-        if (noSuchFileException != null)
+        if (fileNotFoundException == null)
+        {
+            // FileNotFoundException comes from the stream method
+            fileNotFoundException = ThrowableUtils.getCause(cause, FileNotFoundException.class);
+        }
+
+        if (fileNotFoundException != null)
         {
             logger.error("The requested file '{}' does not exist", localFile);
             context.fail(wrapHttpException(NOT_FOUND, "The requested file does not exist"));
@@ -129,9 +139,21 @@ public class FileStreamHandler extends AbstractHandler<String>
      */
     protected Future<FileProps> ensureValidFile(FileSystem fs, String localFile)
     {
-        return filePropsCache != null
-               ? filePropsCache.get(localFile, ensureValidFileNonCached(fs))
-               : ensureValidFileNonCached(fs).apply(localFile);
+        if (filePropsCache != null)
+        {
+            FileProps fileProps = filePropsCache.getIfPresent(localFile);
+
+            if (fileProps != null)
+            {
+                return Future.succeededFuture(fileProps);
+            }
+
+            return ensureValidFileNonCached(fs).apply(localFile)
+                                               // Only persist to cache succeeded future results
+                                               .onSuccess(props -> filePropsCache.put(localFile, props));
+        }
+
+        return ensureValidFileNonCached(fs).apply(localFile);
     }
 
     /**
@@ -173,14 +195,14 @@ public class FileStreamHandler extends AbstractHandler<String>
      * @return the new cache object
      */
     @Nullable
-    protected Cache<String, Future<FileProps>> initializeCache(@Nullable CacheConfiguration config)
+    protected Cache<String, FileProps> initializeCache(@Nullable CacheConfiguration config)
     {
         if (config == null)
         {
             logger.info("No configuration provided for filePropsCache. Skipping initialization.");
             return null;
         }
-        Cache<String, Future<FileProps>> delegate =
+        Cache<String, FileProps> delegate =
         Caffeine.newBuilder()
                 .maximumSize(config.maximumSize())
                 .expireAfterAccess(config.expireAfterAccessMillis(), TimeUnit.MILLISECONDS)

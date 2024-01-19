@@ -97,17 +97,23 @@ public class HttpResponse
      */
     public Future<Void> sendFile(String fileName, long fileLength, HttpRange range)
     {
-        // notify client we support range requests
-        response.putHeader(HttpHeaderNames.ACCEPT_RANGES, "bytes");
+        // Defer setting headers in case of an error before sending the file
+        response.headersEndHandler(v -> {
+            // notify client we support range requests
+            response.putHeader(HttpHeaderNames.ACCEPT_RANGES, "bytes");
 
-        if (range.length() != fileLength)
-        {
-            setPartialContentStatus(range);
-        }
+            if (range.length() != fileLength)
+            {
+                setPartialContentStatus(range);
+            }
+            response.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+                    .putHeader(HttpHeaderNames.CONTENT_LENGTH, Long.toString(range.length()));
+        });
 
-        return response.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-                       .putHeader(HttpHeaderNames.CONTENT_LENGTH, Long.toString(range.length()))
-                       .sendFile(fileName, range.start(), range.length());
+        return response.sendFile(fileName, range.start(), range.length())
+                       // reset the headersEndHandler on failure so we don't end up writing headers
+                       // when sendFile fails
+                       .onFailure(ignored -> response.headersEndHandler(null));
     }
 
     /**
