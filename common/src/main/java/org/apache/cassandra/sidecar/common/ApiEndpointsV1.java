@@ -102,7 +102,8 @@ public final class ApiEndpointsV1
     public static final String PER_RESTORE_JOB = RESTORE_JOBS + "/" + JOB_ID_PATH_PARAM;
     public static final String CREATE_RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + RESTORE_JOBS;
     public static final String RESTORE_JOB_SLICES_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB + SLICES;
-    public static final String DEV_RESTORE_JOB_SLICES_ROUTE = API + "/dev" + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB + SLICES;
+    public static final String DEV_RESTORE_JOB_SLICES_ROUTE = API + "/dev" + PER_KEYSPACE +
+                                                              PER_TABLE + PER_RESTORE_JOB + SLICES;
     public static final String RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB;
     public static final String ABORT_RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB + ABORT;
 
