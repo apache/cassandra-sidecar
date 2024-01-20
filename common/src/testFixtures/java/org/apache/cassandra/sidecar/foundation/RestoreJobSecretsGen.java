@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.foundataion;
+package org.apache.cassandra.sidecar.foundation;
 
 import java.util.concurrent.ThreadLocalRandom;
 
