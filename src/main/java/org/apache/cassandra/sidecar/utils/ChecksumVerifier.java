@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.utils;
 
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 
 /**
  * Interface to verify integrity of SSTables uploaded.
@@ -30,9 +31,19 @@ import io.vertx.core.Future;
 public interface ChecksumVerifier
 {
     /**
-     * @param checksum  expected checksum value
-     * @param filePath  path to SSTable component
-     * @return String   component path, if verification is a success, else a failed future is returned
+     * @param options  a map with options required for validation
+     * @param filePath path to SSTable component
+     * @return a future String with the component path if verification is a success, otherwise a failed future
      */
-    Future<String> verify(String checksum, String filePath);
+    Future<String> verify(MultiMap options, String filePath);
+
+    /**
+     * @param options a map with options required to determine if the validation can be performed or not
+     * @return {@code true} if this {@link ChecksumVerifier} can perform the verification, {@code false}
+     * otherwise
+     */
+    default boolean canVerify(MultiMap options)
+    {
+        return false;
+    }
 }

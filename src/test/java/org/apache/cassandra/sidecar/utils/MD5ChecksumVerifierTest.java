@@ -19,13 +19,12 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -33,9 +32,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
+import io.vertx.core.http.impl.headers.HeadersMultiMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -62,8 +63,8 @@ class MD5ChecksumVerifierTest
     void testFileDescriptorsClosedWithValidChecksum() throws IOException, NoSuchAlgorithmException,
                                                              InterruptedException
     {
-        byte[] randomBytes = generateRandomBytes();
-        Path randomFilePath = writeBytesToRandomFile(randomBytes);
+        Path randomFilePath = TestFileUtils.prepareTestFile(tempDir, "random-file.txt", 1024);
+        byte[] randomBytes = Files.readAllBytes(randomFilePath);
         String expectedChecksum = Base64.getEncoder()
                                         .encodeToString(MessageDigest.getInstance("MD5")
                                                                      .digest(randomBytes));
@@ -74,14 +75,15 @@ class MD5ChecksumVerifierTest
     @Test
     void testFileDescriptorsClosedWithInvalidChecksum() throws IOException, InterruptedException
     {
-        Path randomFilePath = writeBytesToRandomFile(generateRandomBytes());
+        Path randomFilePath = TestFileUtils.prepareTestFile(tempDir, "random-file.txt", 1024);
         runTestScenario(randomFilePath, "invalid");
     }
 
     private void runTestScenario(Path filePath, String checksum) throws InterruptedException
     {
         CountDownLatch latch = new CountDownLatch(1);
-        verifier.verify(checksum, filePath.toAbsolutePath().toString())
+        verifier.verify(new HeadersMultiMap().set("content-md5", checksum),
+                        filePath.toAbsolutePath().toString())
                 .onComplete(complete -> latch.countDown());
 
         assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
@@ -91,23 +93,6 @@ class MD5ChecksumVerifierTest
         assertThatThrownBy(() -> verifier.file.end())
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("File handle is closed");
-    }
-
-    private byte[] generateRandomBytes()
-    {
-        byte[] bytes = new byte[1024];
-        ThreadLocalRandom.current().nextBytes(bytes);
-        return bytes;
-    }
-
-    private Path writeBytesToRandomFile(byte[] bytes) throws IOException
-    {
-        Path tempPath = tempDir.resolve("random-file.txt");
-        try (RandomAccessFile writer = new RandomAccessFile(tempPath.toFile(), "rw"))
-        {
-            writer.write(bytes);
-        }
-        return tempPath;
     }
 
     /**
@@ -124,10 +109,10 @@ class MD5ChecksumVerifierTest
         }
 
         @Override
-        Future<String> calculateMD5(AsyncFile file)
+        protected Future<String> calculateHash(AsyncFile file, MultiMap options)
         {
             this.file = file;
-            return super.calculateMD5(file);
+            return super.calculateHash(file, options);
         }
     }
 }

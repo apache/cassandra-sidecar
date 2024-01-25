@@ -63,6 +63,7 @@ import org.apache.cassandra.sidecar.common.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.data.HealthResponse;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.common.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RingEntry;
 import org.apache.cassandra.sidecar.common.data.RingResponse;
@@ -70,6 +71,7 @@ import org.apache.cassandra.sidecar.common.data.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.data.SchemaResponse;
 import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
@@ -722,7 +724,7 @@ abstract class SidecarClientTest
     }
 
     @Test
-    void testUploadSSTableWithChecksum(@TempDir Path tempDirectory) throws Exception
+    void testUploadSSTableWithMD5Checksum(@TempDir Path tempDirectory) throws Exception
     {
         Path fileToUpload = prepareFile(tempDirectory);
         try (MockWebServer server = new MockWebServer())
@@ -735,7 +737,7 @@ abstract class SidecarClientTest
                                         "cyclist_name",
                                         "0000-0000",
                                         "nb-1-big-TOC.txt",
-                                        "15a69dc6501aa5ae17af037fe053f610",
+                                        new MD5Digest("15a69dc6501aa5ae17af037fe053f610"),
                                         fileToUpload.toString())
                   .get(30, TimeUnit.SECONDS);
 
@@ -750,6 +752,76 @@ abstract class SidecarClientTest
             assertThat(request.getMethod()).isEqualTo("PUT");
             assertThat(request.getHeader(HttpHeaderNames.CONTENT_MD5.toString()))
             .isEqualTo("15a69dc6501aa5ae17af037fe053f610");
+            assertThat(request.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())).isEqualTo("80");
+            assertThat(request.getBodySize()).isEqualTo(80);
+        }
+    }
+
+    @Test
+    void testUploadSSTableWithXXHashChecksum(@TempDir Path tempDirectory) throws Exception
+    {
+        Path fileToUpload = prepareFile(tempDirectory);
+        try (MockWebServer server = new MockWebServer())
+        {
+            server.enqueue(new MockResponse().setResponseCode(OK.code()));
+
+            SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
+            client.uploadSSTableRequest(sidecarInstance,
+                                        "cycling",
+                                        "cyclist_name",
+                                        "0000-0000",
+                                        "nb-1-big-TOC.txt",
+                                        new XXHash32Digest("15a69dc6501aa5ae17af037fe053f610"),
+                                        fileToUpload.toString())
+                  .get(30, TimeUnit.SECONDS);
+
+            assertThat(server.getRequestCount()).isEqualTo(1);
+            RecordedRequest request = server.takeRequest();
+            assertThat(request.getPath())
+            .isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
+                       .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
+                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
+            assertThat(request.getMethod()).isEqualTo("PUT");
+            assertThat(request.getHeader("content-xxhash32"))
+            .isEqualTo("15a69dc6501aa5ae17af037fe053f610");
+            assertThat(request.getHeader("content-xxhash32-seed")).isNull();
+            assertThat(request.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())).isEqualTo("80");
+            assertThat(request.getBodySize()).isEqualTo(80);
+        }
+    }
+
+    @Test
+    void testUploadSSTableWithXXHashChecksumAndSeed(@TempDir Path tempDirectory) throws Exception
+    {
+        Path fileToUpload = prepareFile(tempDirectory);
+        try (MockWebServer server = new MockWebServer())
+        {
+            server.enqueue(new MockResponse().setResponseCode(OK.code()));
+
+            SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
+            client.uploadSSTableRequest(sidecarInstance,
+                                        "cycling",
+                                        "cyclist_name",
+                                        "0000-0000",
+                                        "nb-1-big-TOC.txt",
+                                        new XXHash32Digest("15a69dc6501aa5ae17af037fe053f610", "123456"),
+                                        fileToUpload.toString())
+                  .get(30, TimeUnit.SECONDS);
+
+            assertThat(server.getRequestCount()).isEqualTo(1);
+            RecordedRequest request = server.takeRequest();
+            assertThat(request.getPath())
+            .isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
+                       .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
+                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
+            assertThat(request.getMethod()).isEqualTo("PUT");
+            assertThat(request.getHeader("content-xxhash32"))
+            .isEqualTo("15a69dc6501aa5ae17af037fe053f610");
+            assertThat(request.getHeader("content-xxhash32-seed")).isEqualTo("123456");
             assertThat(request.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())).isEqualTo("80");
             assertThat(request.getBodySize()).isEqualTo(80);
         }

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.server;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ import com.google.inject.name.Named;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.web.Router;
@@ -97,8 +99,10 @@ import org.apache.cassandra.sidecar.stats.SidecarSchemaStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
+import org.apache.cassandra.sidecar.utils.ChecksumVerifierFactory;
 import org.apache.cassandra.sidecar.utils.MD5ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
+import org.apache.cassandra.sidecar.utils.XXHash32ChecksumVerifier;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
@@ -430,9 +434,14 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public ChecksumVerifier checksumVerifier(Vertx vertx)
+    public ChecksumVerifierFactory checksumVerifierFactory(Vertx vertx)
     {
-        return new MD5ChecksumVerifier(vertx.fileSystem());
+        FileSystem fs = vertx.fileSystem();
+        List<ChecksumVerifier> verifierList = new ArrayList<>();
+        verifierList.add(new XXHash32ChecksumVerifier(fs));
+        verifierList.add(new MD5ChecksumVerifier(fs));
+
+        return new ChecksumVerifierFactory(verifierList);
     }
 
     @Provides

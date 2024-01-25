@@ -115,11 +115,21 @@ public class RestoreJobUtil
      */
     public static String checksum(File file) throws IOException
     {
+        int seed = 0x9747b28c; // random seed for initializing
+        return checksum(file, seed);
+    }
+
+    /**
+     * @param file the file to use to perform the checksum
+     * @param seed the seed to use for the hasher
+     * @return the checksum hex string of the file's content. XXHash32 is employed as the hash algorithm.
+     */
+    public static String checksum(File file, int seed) throws IOException
+    {
         try (FileInputStream fis = new FileInputStream(file))
         {
             // might have shared hashers with ThreadLocal
             XXHashFactory factory = XXHashFactory.safeInstance();
-            int seed = 0x9747b28c; // random seed for initializing
             try (StreamingXXHash32 hasher = factory.newStreamingHash32(seed))
             {
                 byte[] buffer = new byte[KB_512];
@@ -128,7 +138,7 @@ public class RestoreJobUtil
                 {
                     hasher.update(buffer, 0, len);
                 }
-                return Long.toHexString(hasher.getValue()); 
+                return Long.toHexString(hasher.getValue());
             }
         }
     }

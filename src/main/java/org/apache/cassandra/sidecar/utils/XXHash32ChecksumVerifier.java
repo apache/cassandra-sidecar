@@ -18,26 +18,26 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
+import net.jpountz.xxhash.StreamingXXHash32;
+import net.jpountz.xxhash.XXHashFactory;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
- * Implementation of {@link ChecksumVerifier}. Here we use MD5 implementation of {@link java.security.MessageDigest}
- * for calculating checksum. And match the calculated checksum with expected checksum obtained from request.
+ * Implementation of {@link ChecksumVerifier} to calculate the checksum and match the calculated checksum
+ * with the expected checksum.
  */
-public class MD5ChecksumVerifier extends AsyncFileChecksumVerifier
+public class XXHash32ChecksumVerifier extends AsyncFileChecksumVerifier
 {
-    public MD5ChecksumVerifier(FileSystem fs)
+    public static final String CONTENT_XXHASH = "content-xxhash32";
+    public static final String CONTENT_XXHASH_SEED = "content-xxhash32-seed";
+
+    public XXHash32ChecksumVerifier(FileSystem fs)
     {
         super(fs);
     }
@@ -45,34 +45,46 @@ public class MD5ChecksumVerifier extends AsyncFileChecksumVerifier
     @Override
     protected @Nullable String expectedChecksum(MultiMap options)
     {
-        return options.get(HttpHeaderNames.CONTENT_MD5.toString());
+        return options.get(CONTENT_XXHASH);
     }
 
     @Override
     @VisibleForTesting
     protected Future<String> calculateHash(AsyncFile file, MultiMap options)
     {
-        MessageDigest digest;
-        try
-        {
-            digest = MessageDigest.getInstance("MD5");
-        }
-        catch (NoSuchAlgorithmException e)
-        {
-            return Future.failedFuture(e);
-        }
-
         Promise<String> result = Promise.promise();
+        Future<String> future = result.future();
 
-        readFile(file, result, buf -> digest.update(buf.getBytes()),
-                 _v -> result.complete(Base64.getEncoder().encodeToString(digest.digest())));
+        // might have shared hashers with ThreadLocal
+        XXHashFactory factory = XXHashFactory.safeInstance();
 
-        return result.future();
+        int seed = maybeGetSeedOrDefault(options);
+        StreamingXXHash32 hasher = factory.newStreamingHash32(seed);
+
+        future.onComplete(ignored -> hasher.close());
+
+        readFile(file, result, buf -> {
+                     byte[] bytes = buf.getBytes();
+                     hasher.update(bytes, 0, bytes.length);
+                 },
+                 _v -> result.complete(Long.toHexString(hasher.getValue())));
+
+        return future;
     }
 
     @Override
     protected String algorithm()
     {
-        return "MD5";
+        return "XXHash32";
+    }
+
+    protected int maybeGetSeedOrDefault(MultiMap options)
+    {
+        String seedHex = options.get(CONTENT_XXHASH_SEED);
+        if (seedHex != null)
+        {
+            return (int) Long.parseLong(seedHex, 16);
+        }
+        return 0x9747b28c; // random seed for initializing
     }
 }

@@ -44,6 +44,7 @@ import org.apache.cassandra.sidecar.client.retry.NoRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.client.selection.InstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.SingleInstanceSelectionPolicy;
+import org.apache.cassandra.sidecar.common.data.Digest;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.jetbrains.annotations.Nullable;
 
@@ -449,14 +450,14 @@ public class RequestContext
          * @param tableName the table name in Cassandra
          * @param uploadId  an identifier for the upload
          * @param component SSTable component being uploaded
-         * @param checksum  hash value to check integrity of SSTable component uploaded
+         * @param digest    digest value to check integrity of SSTable component uploaded
          * @param filename  the path to the file to be uploaded
          * @return a reference to this Builder
          */
         public Builder uploadSSTableRequest(String keyspace, String tableName, String uploadId, String component,
-                                            String checksum, String filename)
+                                            Digest digest, String filename)
         {
-            return request(new UploadSSTableRequest(keyspace, tableName, uploadId, component, checksum, filename));
+            return request(new UploadSSTableRequest(keyspace, tableName, uploadId, component, digest, filename));
         }
 
         /**

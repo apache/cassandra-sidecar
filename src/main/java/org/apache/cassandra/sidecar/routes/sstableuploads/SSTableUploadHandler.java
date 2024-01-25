@@ -127,7 +127,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         .compose(uploadDirectory -> uploader.uploadComponent(httpRequest,
                                                              uploadDirectory,
                                                              request.component(),
-                                                             request.expectedChecksum(),
+                                                             httpRequest.headers(),
                                                              configuration.filePermissions()))
         .compose(fs::props)
         .onSuccess(fileProps -> {

@@ -19,15 +19,15 @@
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -45,6 +45,9 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.common.data.Digest;
+import org.apache.cassandra.sidecar.common.data.MD5Digest;
+import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 import org.assertj.core.data.Percentage;
@@ -58,6 +61,7 @@ import static java.nio.file.attribute.PosixFilePermission.OTHERS_WRITE;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
+import static org.apache.cassandra.sidecar.utils.TestFileUtils.prepareTestFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -75,7 +79,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testUploadWithoutMd5_expectSuccessfulUpload(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", "",
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", null,
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.OK.code(), false);
     }
 
@@ -83,15 +87,63 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testUploadWithCorrectMd5_expectSuccessfulUpload(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-correct-md5.db", "jXd/OF09/siBXSD3SWAm3A==",
-                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.OK.code(), false);
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-correct-md5.db",
+                                   new MD5Digest("jXd/OF09/siBXSD3SWAm3A=="),
+                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
+                                   HttpResponseStatus.OK.code(),
+                                   false);
+    }
+
+    @Test
+    void testUploadWithCorrectXXHash_expectSuccessfulUpload(VertxTestContext context) throws IOException
+    {
+        UUID uploadId = UUID.randomUUID();
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-correct-xxhash.db",
+                                   new XXHash32Digest("7a28edc0"),
+                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
+                                   HttpResponseStatus.OK.code(),
+                                   false);
+    }
+
+    @Test
+    void testUploadWithCorrectXXHashAndCustomSeed_expectSuccessfulUpload(VertxTestContext context) throws IOException
+    {
+        UUID uploadId = UUID.randomUUID();
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-correct-xxhash.db",
+                                   new XXHash32Digest("ffffffffb9510d6b", "55555555"),
+                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
+                                   HttpResponseStatus.OK.code(),
+                                   false);
     }
 
     @Test
     void testUploadWithIncorrectMd5_expectErrorCode(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-incorrect-md5.db", "incorrectMd5",
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-incorrect-md5.db",
+                                   new MD5Digest("incorrectMd5"),
+                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
+                                   SidecarHttpResponseStatus.CHECKSUM_MISMATCH.code(),
+                                   false);
+    }
+
+    @Test
+    void testUploadWithIncorrectXXHash_expectErrorCode(VertxTestContext context) throws IOException
+    {
+        UUID uploadId = UUID.randomUUID();
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-incorrect-xxhash.db",
+                                   new XXHash32Digest("incorrectXXHash"),
+                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
+                                   SidecarHttpResponseStatus.CHECKSUM_MISMATCH.code(),
+                                   false);
+    }
+
+    @Test
+    void testUploadWithIncorrectXXHashAndCustomSeed_expectErrorCode(VertxTestContext context) throws IOException
+    {
+        UUID uploadId = UUID.randomUUID();
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-incorrect-xxhash.db",
+                                   new XXHash32Digest("7a28edc0", "bad"),
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
                                    SidecarHttpResponseStatus.CHECKSUM_MISMATCH.code(),
                                    false);
@@ -101,26 +153,27 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testInvalidFileName_expectErrorCode(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "ks$tbl-me-4-big-Data.db", "",
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "ks$tbl-me-4-big-Data.db", null,
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
                                    false);
     }
 
     @Test
-    void testUploadWithoutContentLength_expectSuccessfulUpload(VertxTestContext context) throws IOException
+    void testUploadWithoutContentLength_expectSuccessfulUpload(VertxTestContext context)
     {
         UUID uploadId = UUID.randomUUID();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-content-length.db",
-                                   "jXd/OF09/siBXSD3SWAm3A==", 0, HttpResponseStatus.OK.code(), false);
+                                   new MD5Digest("jXd/OF09/siBXSD3SWAm3A=="), 0, HttpResponseStatus.OK.code(), false);
     }
 
     @Test
-    void testUploadTimeout_expectTimeoutError(VertxTestContext context) throws IOException
+    void testUploadTimeout_expectTimeoutError(VertxTestContext context)
     {
         // if we send more than actual length, vertx goes hung, probably looking for more data than exists in the file,
         // we should see timeout error in this case
         UUID uploadId = UUID.randomUUID();
-        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-higher-content-length.db", "", 1000, -1, true);
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-higher-content-length.db", null, 1000, -1,
+                                   true);
     }
 
     @Test
@@ -128,14 +181,14 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-lesser-content-length.db",
-                                   "", Files.size(Paths.get(FILE_TO_BE_UPLOADED)) - 2, HttpResponseStatus.OK.code(),
+                                   null, Files.size(Paths.get(FILE_TO_BE_UPLOADED)) - 2, HttpResponseStatus.OK.code(),
                                    false);
     }
 
     @Test
     void testInvalidUploadId(VertxTestContext context) throws IOException
     {
-        sendUploadRequestAndVerify(null, context, "foo", "ks", "tbl", "with-lesser-content-length.db", "",
+        sendUploadRequestAndVerify(null, context, "foo", "ks", "tbl", "with-lesser-content-length.db", null,
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
                                    false, response -> {
             JsonObject error = response.bodyAsJsonObject();
@@ -149,7 +202,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testInvalidKeyspace(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        sendUploadRequestAndVerify(context, uploadId, "invalidKeyspace", "tbl", "with-lesser-content-length.db", "",
+        sendUploadRequestAndVerify(context, uploadId, "invalidKeyspace", "tbl", "with-lesser-content-length.db", null,
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
                                    false);
     }
@@ -158,7 +211,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     void testInvalidTable(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
-        sendUploadRequestAndVerify(context, uploadId, "ks", "invalidTableName", "with-lesser-content-length.db", "",
+        sendUploadRequestAndVerify(context, uploadId, "ks", "invalidTableName", "with-lesser-content-length.db", null,
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.BAD_REQUEST.code(),
                                    false);
     }
@@ -169,7 +222,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(100F);
 
         UUID uploadId = UUID.randomUUID();
-        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", "",
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", null,
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
                                    HttpResponseStatus.INSUFFICIENT_STORAGE.code(), false);
     }
@@ -180,7 +233,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(0);
 
         UUID uploadId = UUID.randomUUID();
-        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", "",
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", null,
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
                                    HttpResponseStatus.TOO_MANY_REQUESTS.code(), false);
     }
@@ -193,13 +246,13 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         UUID uploadId = UUID.randomUUID();
         CountDownLatch latch = new CountDownLatch(1);
         sendUploadRequestAndVerify(latch, context, uploadId.toString(), "invalidKeyspace", "tbl",
-                                   "without-md5.db", "", Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
+                                   "without-md5.db", null, Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
                                    HttpResponseStatus.BAD_REQUEST.code(), false);
 
         assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
         // checking if permits were released after bad requests
-        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", "",
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "without-md5.db", null,
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.OK.code(), false);
     }
 
@@ -209,7 +262,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         String uploadId = UUID.randomUUID().toString();
         when(mockSSTableUploadConfiguration.filePermissions()).thenReturn("rwxr-xr-x");
 
-        sendUploadRequestAndVerify(null, context, uploadId, "ks", "tbl", "without-md5.db", "",
+        sendUploadRequestAndVerify(null, context, uploadId, "ks", "tbl", "without-md5.db", null,
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)), HttpResponseStatus.OK.code(),
                                    false, response -> {
 
@@ -247,7 +300,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
 
         long startTime = System.nanoTime();
         String uploadId = UUID.randomUUID().toString();
-        sendUploadRequestAndVerify(null, context, uploadId, "ks", "tbl", "1MB-File-Data.db", "",
+        sendUploadRequestAndVerify(null, context, uploadId, "ks", "tbl", "1MB-File-Data.db", null,
                                    Files.size(largeFilePath), HttpResponseStatus.OK.code(),
                                    false, response -> {
 
@@ -269,7 +322,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
 
         long startTime = System.nanoTime();
         String uploadId = UUID.randomUUID().toString();
-        sendUploadRequestAndVerify(null, context, uploadId, "ks", "tbl", "1MB-File-Data.db", "",
+        sendUploadRequestAndVerify(null, context, uploadId, "ks", "tbl", "1MB-File-Data.db", null,
                                    Files.size(largeFilePath), HttpResponseStatus.OK.code(),
                                    false, response -> {
 
@@ -286,13 +339,13 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                             String keyspace,
                                             String tableName,
                                             String targetFileName,
-                                            String expectedMd5,
+                                            Digest expectedDigest,
                                             long fileLength,
                                             int expectedRetCode,
                                             boolean expectTimeout)
     {
         sendUploadRequestAndVerify(null, context, uploadId.toString(), keyspace, tableName, targetFileName,
-                                   expectedMd5, fileLength, expectedRetCode, expectTimeout);
+                                   expectedDigest, fileLength, expectedRetCode, expectTimeout);
     }
 
     private void sendUploadRequestAndVerify(CountDownLatch latch,
@@ -301,7 +354,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                             String keyspace,
                                             String tableName,
                                             String targetFileName,
-                                            String expectedMd5,
+                                            Digest expectedDigest,
                                             long fileLength,
                                             int expectedRetCode,
                                             boolean expectTimeout)
@@ -312,7 +365,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                    keyspace,
                                    tableName,
                                    targetFileName,
-                                   expectedMd5,
+                                   expectedDigest,
                                    fileLength,
                                    expectedRetCode,
                                    expectTimeout,
@@ -326,7 +379,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                             String keyspace,
                                             String tableName,
                                             String targetFileName,
-                                            String expectedMd5,
+                                            Digest expectedDigest,
                                             long fileLength,
                                             int expectedRetCode,
                                             boolean expectTimeout,
@@ -337,9 +390,11 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + keyspace
                            + "/tables/" + tableName + "/components/" + targetFileName;
         HttpRequest<Buffer> req = client.put(server.actualPort(), "localhost", testRoute);
-        if (!expectedMd5.isEmpty())
+        if (expectedDigest != null)
         {
-            req.putHeader(HttpHeaderNames.CONTENT_MD5.toString(), expectedMd5);
+            Map<String, String> headers = new HashMap<>();
+            expectedDigest.accept(headers);
+            req.headers().setAll(headers);
         }
         if (fileLength != 0)
         {
@@ -382,25 +437,5 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             }
             client.close();
         });
-    }
-
-    static Path prepareTestFile(Path directory, String fileName, long sizeInBytes) throws IOException
-    {
-        Path filePath = directory.resolve(fileName);
-        Files.deleteIfExists(filePath);
-
-        byte[] buffer = new byte[1024];
-        try (OutputStream outputStream = Files.newOutputStream(filePath))
-        {
-            int written = 0;
-            while (written < sizeInBytes)
-            {
-                ThreadLocalRandom.current().nextBytes(buffer);
-                int toWrite = (int) Math.min(buffer.length, sizeInBytes - written);
-                outputStream.write(buffer, 0, toWrite);
-                written += toWrite;
-            }
-        }
-        return filePath;
     }
 }
