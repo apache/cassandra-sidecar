@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.data;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.SSTableUploads;
@@ -29,7 +28,6 @@ import org.apache.cassandra.sidecar.common.data.SSTableUploads;
 public class SSTableUploadRequest extends SSTableUploads
 {
     private final String component;
-    private final String expectedChecksum;
 
     /**
      * Constructs an SSTableUploadRequest
@@ -37,16 +35,13 @@ public class SSTableUploadRequest extends SSTableUploads
      * @param qualifiedTableName the qualified table name in Cassandra
      * @param uploadId           an identifier for the upload
      * @param component          SSTable component being uploaded
-     * @param expectedChecksum   expected hash value to check integrity of SSTable component uploaded
      */
     public SSTableUploadRequest(QualifiedTableName qualifiedTableName,
                                 String uploadId,
-                                String component,
-                                String expectedChecksum)
+                                String component)
     {
         super(qualifiedTableName, uploadId);
         this.component = component;
-        this.expectedChecksum = expectedChecksum;
     }
 
     /**
@@ -55,14 +50,6 @@ public class SSTableUploadRequest extends SSTableUploads
     public String component()
     {
         return this.component;
-    }
-
-    /**
-     * @return expected checksum value of SSTable component
-     */
-    public String expectedChecksum()
-    {
-        return this.expectedChecksum;
     }
 
     /**
@@ -75,7 +62,6 @@ public class SSTableUploadRequest extends SSTableUploads
                ", keyspace='" + keyspace() + '\'' +
                ", tableName='" + table() + '\'' +
                ", component='" + component + '\'' +
-               ", expectedChecksum='" + expectedChecksum + '\'' +
                '}';
     }
 
@@ -90,7 +76,6 @@ public class SSTableUploadRequest extends SSTableUploads
     {
         return new SSTableUploadRequest(qualifiedTableName,
                                         context.pathParam("uploadId"),
-                                        context.pathParam("component"),
-                                        context.request().getHeader(HttpHeaderNames.CONTENT_MD5.toString()));
+                                        context.pathParam("component"));
     }
 }

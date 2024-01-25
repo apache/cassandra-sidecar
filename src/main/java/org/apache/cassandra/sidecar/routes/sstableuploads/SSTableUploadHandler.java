@@ -42,6 +42,8 @@ import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.stats.SSTableStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.utils.DigestVerifier;
+import org.apache.cassandra.sidecar.utils.DigestVerifierFactory;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.apache.cassandra.sidecar.utils.SSTableUploader;
@@ -62,6 +64,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
     private final SSTableUploadsPathBuilder uploadPathBuilder;
     private final ConcurrencyLimiter limiter;
     private final SSTableStats stats;
+    private final DigestVerifierFactory digestVerifierFactory;
 
     /**
      * Constructs a handler with the provided params.
@@ -74,6 +77,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
      * @param executorPools        executor pools for blocking executions
      * @param validator            a validator instance to validate Cassandra-specific input
      * @param sidecarStats         an interface holding all stats related to main sidecar process
+     * @param digestVerifierFactory a factory of checksum verifiers
      */
     @Inject
     protected SSTableUploadHandler(Vertx vertx,
@@ -83,7 +87,8 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                                    SSTableUploadsPathBuilder uploadPathBuilder,
                                    ExecutorPools executorPools,
                                    CassandraInputValidator validator,
-                                   SidecarStats sidecarStats)
+                                   SidecarStats sidecarStats,
+                                   DigestVerifierFactory digestVerifierFactory)
     {
         super(metadataFetcher, executorPools, validator);
         this.fs = vertx.fileSystem();
@@ -92,6 +97,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         this.uploadPathBuilder = uploadPathBuilder;
         this.limiter = new ConcurrencyLimiter(configuration::concurrentUploadsLimit);
         this.stats = sidecarStats.ssTableStats();
+        this.digestVerifierFactory = digestVerifierFactory;
     }
 
     /**
@@ -124,11 +130,14 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         .compose(validRequest -> uploadPathBuilder.resolveStagingDirectory(host))
         .compose(this::ensureSufficientSpaceAvailable)
         .compose(v -> uploadPathBuilder.build(host, request))
-        .compose(uploadDirectory -> uploader.uploadComponent(httpRequest,
-                                                             uploadDirectory,
-                                                             request.component(),
-                                                             request.expectedChecksum(),
-                                                             configuration.filePermissions()))
+        .compose(uploadDirectory -> {
+            DigestVerifier digestVerifier = digestVerifierFactory.verifier(httpRequest.headers());
+            return uploader.uploadComponent(httpRequest,
+                                            uploadDirectory,
+                                            request.component(),
+                                            digestVerifier,
+                                            configuration.filePermissions());
+        })
         .compose(fs::props)
         .onSuccess(fileProps -> {
             long serviceTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeInNanos);

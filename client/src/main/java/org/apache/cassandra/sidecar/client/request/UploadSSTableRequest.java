@@ -25,16 +25,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.data.Digest;
 
 /**
  * Represents a request to upload an SSTable component
  */
 public class UploadSSTableRequest extends Request implements UploadableRequest
 {
-    private final String expectedChecksum;
+    private final Digest digest;
     private final String filename;
 
     /**
@@ -44,14 +44,14 @@ public class UploadSSTableRequest extends Request implements UploadableRequest
      * @param table     the table name in Cassandra
      * @param uploadId  an identifier for the upload
      * @param component SSTable component being uploaded
-     * @param checksum  hash value to check integrity of SSTable component uploaded
+     * @param digest    digest value to check integrity of SSTable component uploaded
      * @param filename  the path to the file to be uploaded
      */
     public UploadSSTableRequest(String keyspace, String table, String uploadId, String component,
-                                String checksum, String filename)
+                                Digest digest, String filename)
     {
         super(requestURI(keyspace, table, uploadId, component));
-        this.expectedChecksum = checksum;
+        this.digest = digest;
         this.filename = Objects.requireNonNull(filename, "the filename is must be non-null");
 
         if (!Files.exists(Paths.get(filename)))
@@ -72,12 +72,12 @@ public class UploadSSTableRequest extends Request implements UploadableRequest
     @Override
     public Map<String, String> headers()
     {
-        if (expectedChecksum == null)
+        if (digest == null)
         {
             return super.headers();
         }
         Map<String, String> headers = new HashMap<>(super.headers());
-        headers.put(HttpHeaderNames.CONTENT_MD5.toString(), expectedChecksum);
+        headers.putAll(digest.headers());
         return Collections.unmodifiableMap(headers);
     }
 

@@ -39,6 +39,7 @@ import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.core.streams.WriteStream;
+import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
 
 /**
  * A class that handles SSTable Uploads
@@ -50,23 +51,19 @@ public class SSTableUploader
     private static final String DEFAULT_TEMP_SUFFIX = ".tmp";
 
     private final FileSystem fs;
-    private final ChecksumVerifier checksumVerifier;
     private final SidecarRateLimiter rateLimiter;
 
     /**
      * Constructs an instance of {@link SSTableUploader} with provided params for uploading an SSTable component.
      *
-     * @param vertx            Vertx reference
-     * @param checksumVerifier verifier for checking integrity of upload
-     * @param rateLimiter      rate limiter for uploading SSTable components
+     * @param vertx       Vertx reference
+     * @param rateLimiter rate limiter for uploading SSTable components
      */
     @Inject
     public SSTableUploader(Vertx vertx,
-                           ChecksumVerifier checksumVerifier,
                            @Named("IngressFileRateLimiter") SidecarRateLimiter rateLimiter)
     {
         this.fs = vertx.fileSystem();
-        this.checksumVerifier = checksumVerifier;
         this.rateLimiter = rateLimiter;
     }
 
@@ -76,14 +73,14 @@ public class SSTableUploader
      * @param readStream        server request from which file upload is acquired
      * @param uploadDirectory   the absolute path to the upload directory in the target {@code fs}
      * @param componentFileName the file name of the component
-     * @param expectedChecksum  for verifying upload integrity, passed in through request
+     * @param digestVerifier    the digest verifier instance
      * @param filePermissions   specifies the posix file permissions used to create the SSTable file
      * @return path of SSTable component to which data was uploaded
      */
     public Future<String> uploadComponent(ReadStream<Buffer> readStream,
                                           String uploadDirectory,
                                           String componentFileName,
-                                          String expectedChecksum,
+                                          DigestVerifier digestVerifier,
                                           String filePermissions)
     {
 
@@ -92,15 +89,16 @@ public class SSTableUploader
 
         return fs.mkdirs(uploadDirectory) // ensure the parent directory is created
                  .compose(v -> createTempFile(uploadDirectory, componentFileName, filePermissions))
-                 .compose(tempFilePath -> streamAndVerify(readStream, tempFilePath, expectedChecksum))
+                 .compose(tempFilePath -> streamAndVerify(readStream, tempFilePath, digestVerifier))
                  .compose(verifiedTempFilePath -> moveAtomicallyWithFallBack(verifiedTempFilePath, targetPath));
     }
 
-    private Future<String> streamAndVerify(ReadStream<Buffer> readStream, String tempFilePath, String expectedChecksum)
+    private Future<String> streamAndVerify(ReadStream<Buffer> readStream, String tempFilePath,
+                                           DigestVerifier digestVerifier)
     {
         // pipe read stream to temp file
         return streamToFile(readStream, tempFilePath)
-               .compose(v -> checksumVerifier.verify(expectedChecksum, tempFilePath))
+               .compose(v -> digestVerifier.verify(tempFilePath))
                .onFailure(throwable -> fs.delete(tempFilePath));
     }
 
@@ -128,7 +126,9 @@ public class SSTableUploader
         LOGGER.debug("Moving from={} to={}", source, target);
         return fs.move(source, target, new CopyOptions().setAtomicMove(true))
                  .recover(cause -> {
-                     if (hasCause(cause, AtomicMoveNotSupportedException.class, 10))
+                     Exception atomicMoveNotSupportedException =
+                     ThrowableUtils.getCause(cause, AtomicMoveNotSupportedException.class);
+                     if (atomicMoveNotSupportedException != null)
                      {
                          LOGGER.warn("Failed to perform atomic move from={} to={}", source, target, cause);
                          return fs.move(source, target, new CopyOptions().setAtomicMove(false));
@@ -137,33 +137,6 @@ public class SSTableUploader
                  })
                  .compose(v -> Future.succeededFuture(target));
     }
-
-    /**
-     * Returns true if a cause of type {@code type} is found in the stack trace before exceeding the {@code depth}
-     *
-     * @param cause the original cause
-     * @param type  the exception type to test
-     * @param depth the maximum depth to check in the stack trace
-     * @return true if the exception of type {@code type} exists in the stacktrace, false otherwise
-     */
-    private static boolean hasCause(Throwable cause, Class<? extends Throwable> type, int depth)
-    {
-        int i = 0;
-        while (i < depth)
-        {
-            if (cause == null)
-                return false;
-
-            if (type.isInstance(cause))
-                return true;
-
-            cause = cause.getCause();
-
-            i++;
-        }
-        return false;
-    }
-
 
     /**
      * A {@link WriteStream} implementation that supports rate limiting.

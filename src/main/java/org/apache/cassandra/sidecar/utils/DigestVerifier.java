@@ -23,16 +23,15 @@ import io.vertx.core.Future;
 /**
  * Interface to verify integrity of SSTables uploaded.
  * <p>
- * Note: If checksum calculations of multiple files are happening at the same time, we would want to limit concurrent
- * checksum calculations. Since {@link ChecksumVerifier} is currently used only by upload handler, we are not
- * introducing another limit here. Concurrent uploads limit should limit concurrent checksum calculations as well.
+ * Note: If digest calculations of multiple files are happening at the same time, we would want to limit concurrent
+ * digest calculations. Since {@link DigestVerifier} is currently used only by upload handler, we are not
+ * introducing another limit here. Concurrent uploads limit should limit concurrent digest calculations as well.
  */
-public interface ChecksumVerifier
+public interface DigestVerifier
 {
     /**
-     * @param checksum  expected checksum value
-     * @param filePath  path to SSTable component
-     * @return String   component path, if verification is a success, else a failed future is returned
+     * @param filePath path to SSTable component
+     * @return a future String with the component path if verification is a success, otherwise a failed future
      */
-    Future<String> verify(String checksum, String filePath);
+    Future<String> verify(String filePath);
 }

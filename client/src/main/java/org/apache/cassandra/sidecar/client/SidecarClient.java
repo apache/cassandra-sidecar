@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.data.CreateSliceRequestPayload;
+import org.apache.cassandra.sidecar.common.data.Digest;
 import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.data.HealthResponse;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
@@ -391,7 +392,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      * @param table         the table name in Cassandra
      * @param uploadId      the unique identifier for the upload
      * @param componentName the name of the SSTable component
-     * @param checksum      hash value to check integrity of SSTable component uploaded
+     * @param digest        digest value to check integrity of SSTable component uploaded
      * @param filename      the path to the file to be uploaded
      * @return a completable future for the request
      */
@@ -400,7 +401,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                         String table,
                                                         String uploadId,
                                                         String componentName,
-                                                        String checksum,
+                                                        Digest digest,
                                                         String filename)
     {
         return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
@@ -408,7 +409,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                                                   table,
                                                                                   uploadId,
                                                                                   componentName,
-                                                                                  checksum,
+                                                                                  digest,
                                                                                   filename)
                                                             .build());
     }

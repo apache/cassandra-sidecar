@@ -96,8 +96,6 @@ import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.stats.SidecarSchemaStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
-import org.apache.cassandra.sidecar.utils.ChecksumVerifier;
-import org.apache.cassandra.sidecar.utils.MD5ChecksumVerifier;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -426,13 +424,6 @@ public class MainModule extends AbstractModule
     public DnsResolver dnsResolver()
     {
         return DnsResolver.DEFAULT;
-    }
-
-    @Provides
-    @Singleton
-    public ChecksumVerifier checksumVerifier(Vertx vertx)
-    {
-        return new MD5ChecksumVerifier(vertx.fileSystem());
     }
 
     @Provides
