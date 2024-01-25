@@ -51,7 +51,6 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -84,7 +83,6 @@ class BaseUploadsHandlerTest
     protected Server server;
     protected WebClient client;
     protected CassandraAdapterDelegate mockDelegate;
-    protected TableOperations mockCFOperations;
     protected SidecarConfiguration sidecarConfiguration;
     @TempDir
     protected Path temporaryPath;
@@ -98,8 +96,6 @@ class BaseUploadsHandlerTest
     {
         canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
         mockDelegate = mock(CassandraAdapterDelegate.class);
-        mockCFOperations = mock(TableOperations.class);
-        when(mockDelegate.tableOperations()).thenReturn(mockCFOperations);
         doNothing().when(mockDelegate).healthCheck();
         TestModule testModule = new TestModule();
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
