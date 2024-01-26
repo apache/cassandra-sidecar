@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
-import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,7 +34,6 @@ class DigestVerifierFactoryTest
 {
     MultiMap options;
     Vertx vertx = Vertx.vertx();
-    FileSystem fs = vertx.fileSystem();
 
     @BeforeEach
     void setup()
@@ -66,7 +64,7 @@ class DigestVerifierFactoryTest
     }
 
     @Test
-    void testFirstVerifierInListTakesPrecedence()
+    void testFirstVerifierTakesPrecedence()
     {
         options.set("content-md5", "md5-header")
                .set("content-xxhash32", "xxhash-header");

@@ -25,14 +25,14 @@ import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32_SEED;
+
 /**
  * Implements the XXHash32 Digest
  */
 public class XXHash32Digest implements Digest
 {
-    public static final String CONTENT_XXHASH32 = "content-xxhash32";
-    public static final String CONTENT_XXHASH32_SEED = "content-xxhash32-seed";
-
     private final @NotNull String value;
     private final @Nullable String seedHex;
 

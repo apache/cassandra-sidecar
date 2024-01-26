@@ -28,8 +28,8 @@ import net.jpountz.xxhash.XXHashFactory;
 import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
 import org.jetbrains.annotations.VisibleForTesting;
 
-import static org.apache.cassandra.sidecar.common.data.XXHash32Digest.CONTENT_XXHASH32;
-import static org.apache.cassandra.sidecar.common.data.XXHash32Digest.CONTENT_XXHASH32_SEED;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32_SEED;
 
 /**
  * Implementation of {@link DigestVerifier} to calculate the checksum and match the calculated checksum

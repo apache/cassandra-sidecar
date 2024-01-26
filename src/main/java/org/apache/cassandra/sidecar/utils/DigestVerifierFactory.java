@@ -27,7 +27,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.file.FileSystem;
 import org.jetbrains.annotations.VisibleForTesting;
 
-import static org.apache.cassandra.sidecar.common.data.XXHash32Digest.CONTENT_XXHASH32;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
 
 /**
  * A factory class that returns the {@link DigestVerifier} instance.
