@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.Objects;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +50,7 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
     protected AsyncFileDigestVerifier(FileSystem fs, D digest)
     {
         this.fs = fs;
-        this.digest = digest;
+        this.digest = Objects.requireNonNull(digest, "digest is required");
     }
 
     /**

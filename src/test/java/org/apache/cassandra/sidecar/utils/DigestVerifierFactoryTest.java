@@ -25,6 +25,8 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
 
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
+import static org.apache.cassandra.sidecar.utils.DigestVerifierFactory.FALLBACK_VERIFIER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -41,6 +43,16 @@ class DigestVerifierFactoryTest
         options = new HeadersMultiMap();
     }
 
+
+    @Test
+    void testEmptyFactoryReturnsFallbackVerifier()
+    {
+        DigestVerifier verifier = new DigestVerifierFactory(vertx).verifier(options);
+        assertThat(verifier).as("should fallback to the fallback verifier when no verifiers are configured")
+                            .isNotNull()
+                            .isSameAs(FALLBACK_VERIFIER);
+    }
+
     @Test
     void testMd5Verifier()
     {
@@ -55,7 +67,7 @@ class DigestVerifierFactoryTest
     @Test
     void testXXHashVerifier()
     {
-        options.set("content-xxhash32", "xxhash-header");
+        options.set(CONTENT_XXHASH32, "xxhash-header");
         DigestVerifier verifier = new DigestVerifierFactory(vertx).verifier(options);
 
         assertThat(verifier).as("XXHashChecksumVerifier can verify XXHash content headers")
@@ -67,7 +79,7 @@ class DigestVerifierFactoryTest
     void testFirstVerifierTakesPrecedence()
     {
         options.set("content-md5", "md5-header")
-               .set("content-xxhash32", "xxhash-header");
+               .set(CONTENT_XXHASH32, "xxhash-header");
         DigestVerifier verifier = new DigestVerifierFactory(vertx).verifier(options);
 
         assertThat(verifier).as("XXHashChecksumVerifier is selected when both headers are present")

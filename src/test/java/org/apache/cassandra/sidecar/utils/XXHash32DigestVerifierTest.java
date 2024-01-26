@@ -38,6 +38,7 @@ import org.assertj.core.api.InstanceOfAssertFactories;
 import static org.apache.cassandra.sidecar.restore.RestoreJobUtil.checksum;
 import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.from;
 
@@ -61,13 +62,13 @@ class XXHash32DigestVerifierTest
     }
 
     @Test
-    void testValidationSucceedsWhenChecksumIsNotNull() throws InterruptedException, IOException
+    void failsWhenDigestIsNull()
     {
-        runTestScenario(randomFilePath, null, false);
+        assertThatNullPointerException().isThrownBy(() -> newVerifier(null)).withMessage("digest is required");
     }
 
     @Test
-    void testFileDescriptorsClosedWithValidChecksum() throws IOException, InterruptedException
+    void testFileDescriptorsClosedWithValidDigest() throws IOException, InterruptedException
     {
         XXHash32Digest digest = new XXHash32Digest(checksum(randomFilePath.toFile()));
         runTestScenario(randomFilePath, digest, false);
@@ -89,7 +90,7 @@ class XXHash32DigestVerifierTest
     }
 
     @Test
-    void testFileDescriptorsClosedWithInvalidChecksum() throws InterruptedException
+    void testFileDescriptorsClosedWithInvalidDigest() throws InterruptedException
     {
         runTestScenario(randomFilePath, new XXHash32Digest("invalid"), true);
     }
