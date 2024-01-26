@@ -59,7 +59,7 @@ class DigestVerifierFactoryTest
         options.set("content-md5", "md5-header");
         DigestVerifier verifier = new DigestVerifierFactory(vertx).verifier(options);
 
-        assertThat(verifier).as("MD5ChecksumVerifier can verify MD5 content headers")
+        assertThat(verifier).as("MD5DigestVerifier can verify MD5 content headers")
                             .isNotNull()
                             .isInstanceOf(MD5DigestVerifier.class);
     }
@@ -70,7 +70,7 @@ class DigestVerifierFactoryTest
         options.set(CONTENT_XXHASH32, "xxhash-header");
         DigestVerifier verifier = new DigestVerifierFactory(vertx).verifier(options);
 
-        assertThat(verifier).as("XXHashChecksumVerifier can verify XXHash content headers")
+        assertThat(verifier).as("XXHashDigestVerifier can verify XXHash content headers")
                             .isNotNull()
                             .isInstanceOf(XXHash32DigestVerifier.class);
     }
@@ -82,7 +82,7 @@ class DigestVerifierFactoryTest
                .set(CONTENT_XXHASH32, "xxhash-header");
         DigestVerifier verifier = new DigestVerifierFactory(vertx).verifier(options);
 
-        assertThat(verifier).as("XXHashChecksumVerifier is selected when both headers are present")
+        assertThat(verifier).as("XXHashDigestVerifier is selected when both headers are present")
                             .isNotNull()
                             .isInstanceOf(XXHash32DigestVerifier.class);
     }
