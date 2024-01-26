@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.common.data;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -29,6 +30,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public class XXHash32Digest implements Digest
 {
+    public static final String CONTENT_XXHASH32 = "content-xxhash32";
+    public static final String CONTENT_XXHASH32_SEED = "content-xxhash32-seed";
+
     private final @NotNull String value;
     private final @Nullable String seedHex;
 
@@ -40,6 +44,17 @@ public class XXHash32Digest implements Digest
     public XXHash32Digest(String value)
     {
         this(value, null);
+    }
+
+    /**
+     * Constructs a new instance with the provided XXHash {@code value} and the {@code seed} value.
+     *
+     * @param value the xxhash value
+     * @param seed  the seed
+     */
+    public XXHash32Digest(String value, int seed)
+    {
+        this(value, Integer.toHexString(seed));
     }
 
     /**
@@ -56,17 +71,40 @@ public class XXHash32Digest implements Digest
     }
 
     /**
-     * Adds XXHash headers to the existing {@code headers}
-     *
-     * @param headers the input argument
+     * {@inheritDoc}
      */
     @Override
-    public void accept(Map<String, String> headers)
+    public String value()
     {
-        headers.put("content-xxhash32", value);
+        return value;
+    }
+
+    /**
+     * @return the optional seed in hexadecimal format
+     */
+    public @Nullable String seedHex()
+    {
+        return seedHex;
+    }
+
+    @Override
+    public String algorithm()
+    {
+        return "XXHash32";
+    }
+
+    /**
+     * @return XXHash headers for the digest
+     */
+    @Override
+    public Map<String, String> headers()
+    {
+        Map<String, String> headers = new HashMap<>();
+        headers.put(CONTENT_XXHASH32, value);
         if (seedHex != null)
         {
-            headers.put("content-xxhash32-seed", seedHex);
+            headers.put(CONTENT_XXHASH32_SEED, seedHex);
         }
+        return headers;
     }
 }

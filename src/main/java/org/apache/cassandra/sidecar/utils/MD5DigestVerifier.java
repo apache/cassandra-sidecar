@@ -28,29 +28,29 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
-import org.jetbrains.annotations.Nullable;
+import org.apache.cassandra.sidecar.common.data.MD5Digest;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
- * Implementation of {@link ChecksumVerifier}. Here we use MD5 implementation of {@link java.security.MessageDigest}
+ * Implementation of {@link DigestVerifier}. Here we use MD5 implementation of {@link java.security.MessageDigest}
  * for calculating checksum. And match the calculated checksum with expected checksum obtained from request.
  */
-public class MD5ChecksumVerifier extends AsyncFileChecksumVerifier
+public class MD5DigestVerifier extends AsyncFileDigestVerifier<MD5Digest>
 {
-    public MD5ChecksumVerifier(FileSystem fs)
+    protected MD5DigestVerifier(FileSystem fs, MD5Digest digest)
     {
-        super(fs);
+        super(fs, digest);
     }
 
-    @Override
-    protected @Nullable String expectedChecksum(MultiMap options)
+    public static DigestVerifier create(FileSystem fs, MultiMap headers)
     {
-        return options.get(HttpHeaderNames.CONTENT_MD5.toString());
+        MD5Digest md5Digest = new MD5Digest(headers.get(HttpHeaderNames.CONTENT_MD5.toString()));
+        return new MD5DigestVerifier(fs, md5Digest);
     }
 
     @Override
     @VisibleForTesting
-    protected Future<String> calculateHash(AsyncFile file, MultiMap options)
+    protected Future<String> calculateHash(AsyncFile file)
     {
         MessageDigest digest;
         try
@@ -68,11 +68,5 @@ public class MD5ChecksumVerifier extends AsyncFileChecksumVerifier
                  _v -> result.complete(Base64.getEncoder().encodeToString(digest.digest())));
 
         return result.future();
-    }
-
-    @Override
-    protected String algorithm()
-    {
-        return "MD5";
     }
 }

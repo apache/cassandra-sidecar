@@ -32,7 +32,6 @@ import com.google.inject.name.Named;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.CopyOptions;
@@ -52,23 +51,19 @@ public class SSTableUploader
     private static final String DEFAULT_TEMP_SUFFIX = ".tmp";
 
     private final FileSystem fs;
-    private final ChecksumVerifierFactory checksumVerifierFactory;
     private final SidecarRateLimiter rateLimiter;
 
     /**
      * Constructs an instance of {@link SSTableUploader} with provided params for uploading an SSTable component.
      *
-     * @param vertx                   Vertx reference
-     * @param checksumVerifierFactory a factory of checksum verifiers
-     * @param rateLimiter             rate limiter for uploading SSTable components
+     * @param vertx       Vertx reference
+     * @param rateLimiter rate limiter for uploading SSTable components
      */
     @Inject
     public SSTableUploader(Vertx vertx,
-                           ChecksumVerifierFactory checksumVerifierFactory,
                            @Named("IngressFileRateLimiter") SidecarRateLimiter rateLimiter)
     {
         this.fs = vertx.fileSystem();
-        this.checksumVerifierFactory = checksumVerifierFactory;
         this.rateLimiter = rateLimiter;
     }
 
@@ -78,14 +73,14 @@ public class SSTableUploader
      * @param readStream        server request from which file upload is acquired
      * @param uploadDirectory   the absolute path to the upload directory in the target {@code fs}
      * @param componentFileName the file name of the component
-     * @param headers           request headers
+     * @param digestVerifier    the digest verifier instance
      * @param filePermissions   specifies the posix file permissions used to create the SSTable file
      * @return path of SSTable component to which data was uploaded
      */
     public Future<String> uploadComponent(ReadStream<Buffer> readStream,
                                           String uploadDirectory,
                                           String componentFileName,
-                                          MultiMap headers,
+                                          DigestVerifier digestVerifier,
                                           String filePermissions)
     {
 
@@ -94,17 +89,16 @@ public class SSTableUploader
 
         return fs.mkdirs(uploadDirectory) // ensure the parent directory is created
                  .compose(v -> createTempFile(uploadDirectory, componentFileName, filePermissions))
-                 .compose(tempFilePath -> streamAndVerify(readStream, tempFilePath, headers))
+                 .compose(tempFilePath -> streamAndVerify(readStream, tempFilePath, digestVerifier))
                  .compose(verifiedTempFilePath -> moveAtomicallyWithFallBack(verifiedTempFilePath, targetPath));
     }
 
     private Future<String> streamAndVerify(ReadStream<Buffer> readStream, String tempFilePath,
-                                           MultiMap headers)
+                                           DigestVerifier digestVerifier)
     {
-        ChecksumVerifier checksumVerifier = checksumVerifierFactory.verifier(headers);
         // pipe read stream to temp file
         return streamToFile(readStream, tempFilePath)
-               .compose(v -> checksumVerifier.verify(headers, tempFilePath))
+               .compose(v -> digestVerifier.verify(tempFilePath))
                .onFailure(throwable -> fs.delete(tempFilePath));
     }
 

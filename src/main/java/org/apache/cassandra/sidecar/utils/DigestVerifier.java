@@ -19,31 +19,19 @@
 package org.apache.cassandra.sidecar.utils;
 
 import io.vertx.core.Future;
-import io.vertx.core.MultiMap;
 
 /**
  * Interface to verify integrity of SSTables uploaded.
  * <p>
- * Note: If checksum calculations of multiple files are happening at the same time, we would want to limit concurrent
- * checksum calculations. Since {@link ChecksumVerifier} is currently used only by upload handler, we are not
- * introducing another limit here. Concurrent uploads limit should limit concurrent checksum calculations as well.
+ * Note: If digest calculations of multiple files are happening at the same time, we would want to limit concurrent
+ * digest calculations. Since {@link DigestVerifier} is currently used only by upload handler, we are not
+ * introducing another limit here. Concurrent uploads limit should limit concurrent digest calculations as well.
  */
-public interface ChecksumVerifier
+public interface DigestVerifier
 {
     /**
-     * @param options  a map with options required for validation
      * @param filePath path to SSTable component
      * @return a future String with the component path if verification is a success, otherwise a failed future
      */
-    Future<String> verify(MultiMap options, String filePath);
-
-    /**
-     * @param options a map with options required to determine if the validation can be performed or not
-     * @return {@code true} if this {@link ChecksumVerifier} can perform the verification, {@code false}
-     * otherwise
-     */
-    default boolean canVerify(MultiMap options)
-    {
-        return false;
-    }
+    Future<String> verify(String filePath);
 }

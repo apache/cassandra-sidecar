@@ -23,95 +23,68 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.ext.web.handler.HttpException;
-import org.jetbrains.annotations.Nullable;
+import org.apache.cassandra.sidecar.common.data.Digest;
 
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus.CHECKSUM_MISMATCH;
 
 /**
- * Provides basic functionality to perform checksum validations using {@link AsyncFile}
+ * Provides basic functionality to perform digest validations using {@link AsyncFile}
+ *
+ * @param <D> the Digest type
  */
-public abstract class AsyncFileChecksumVerifier implements ChecksumVerifier
+public abstract class AsyncFileDigestVerifier<D extends Digest> implements DigestVerifier
 {
     public static final int DEFAULT_READ_BUFFER_SIZE = 512 * 1024; // 512KiB
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
     protected final FileSystem fs;
+    protected final D digest;
 
-    protected AsyncFileChecksumVerifier(FileSystem fs)
+    protected AsyncFileDigestVerifier(FileSystem fs, D digest)
     {
         this.fs = fs;
+        this.digest = digest;
     }
 
     /**
-     * @param options  a map with options required for validation
      * @param filePath path to SSTable component
      * @return a future String with the component path if verification is a success, otherwise a failed future
      */
     @Override
-    public Future<String> verify(MultiMap options, String filePath)
+    public Future<String> verify(String filePath)
     {
-        String expectedChecksum = expectedChecksum(options);
-        if (expectedChecksum == null)
-        {
-            return Future.succeededFuture(filePath);
-        }
-
-        logger.debug("Validating {}. expected_checksum={}", algorithm(), expectedChecksum);
+        logger.debug("Validating {}. expected_checksum={}", digest.algorithm(), digest.value());
 
         return fs.open(filePath, new OpenOptions())
-                 .compose((AsyncFile asyncFile) -> calculateHash(asyncFile, options))
+                 .compose(this::calculateHash)
                  .compose(computedChecksum -> {
-                     if (!expectedChecksum.equals(computedChecksum))
+                     if (!computedChecksum.equals(digest.value()))
                      {
                          logger.error("Checksum mismatch. computed_checksum={}, expected_checksum={}, algorithm=MD5",
-                                      computedChecksum, expectedChecksum);
+                                      computedChecksum, digest.value());
                          return Future.failedFuture(new HttpException(CHECKSUM_MISMATCH.code(),
                                                                       String.format("Checksum mismatch. "
                                                                                     + "expected_checksum=%s, "
                                                                                     + "algorithm=%s",
-                                                                                    expectedChecksum,
-                                                                                    algorithm())));
+                                                                                    digest.value(),
+                                                                                    digest.algorithm())));
                      }
                      return Future.succeededFuture(filePath);
                  });
     }
 
     /**
-     * @param options a map with options required to determine if the validation can be performed or not
-     * @return {@code true} if the expected checksum is contained in the options, {@code false} otherwise
-     */
-    @Override
-    public boolean canVerify(MultiMap options)
-    {
-        return expectedChecksum(options) != null;
-    }
-
-    /**
-     * @param options key / value options used for verification
-     * @return the expected checksum from the options
-     */
-    @Nullable
-    protected abstract String expectedChecksum(MultiMap options);
-
-    /**
-     * @return the name of the checksum algorithm
-     */
-    protected abstract String algorithm();
-
-    /**
      * Returns a future with the calculated checksum for the provided {@link AsyncFile file}.
      *
      * @param asyncFile the async file to use for hash calculation
-     * @param options   a map with options required for validation
      * @return a future with the computed checksum for the provided {@link AsyncFile file}
      */
-    protected abstract Future<String> calculateHash(AsyncFile asyncFile, MultiMap options);
+    protected abstract Future<String> calculateHash(AsyncFile asyncFile);
 
     protected void readFile(AsyncFile file, Promise<String> result, Handler<Buffer> onBufferAvailable,
                             Handler<Void> onReadComplete)
@@ -123,7 +96,7 @@ public abstract class AsyncFileChecksumVerifier implements ChecksumVerifier
             .handler(onBufferAvailable)
             .endHandler(onReadComplete)
             .exceptionHandler(cause -> {
-                logger.error("Error while calculating the {} checksum", algorithm(), cause);
+                logger.error("Error while calculating the {} checksum", digest.algorithm(), cause);
                 result.fail(cause);
             })
             .resume();

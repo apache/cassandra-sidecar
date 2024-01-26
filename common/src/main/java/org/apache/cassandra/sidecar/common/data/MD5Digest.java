@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.common.data;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
@@ -42,13 +43,26 @@ public class MD5Digest implements Digest
     }
 
     /**
-     * Adds MD5 headers to the existing {@code headers}
-     *
-     * @param headers the input argument
+     * {@inheritDoc}
      */
     @Override
-    public void accept(Map<String, String> headers)
+    public String value()
     {
-        headers.put(HttpHeaderNames.CONTENT_MD5.toString(), value);
+        return value;
+    }
+
+    @Override
+    public String algorithm()
+    {
+        return "MD5";
+    }
+
+    /**
+     * @return MD5 headers for the Digest
+     */
+    @Override
+    public Map<String, String> headers()
+    {
+        return Collections.singletonMap(HttpHeaderNames.CONTENT_MD5.toString(), value);
     }
 }

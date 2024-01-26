@@ -77,7 +77,7 @@ public class UploadSSTableRequest extends Request implements UploadableRequest
             return super.headers();
         }
         Map<String, String> headers = new HashMap<>(super.headers());
-        digest.accept(headers);
+        headers.putAll(digest.headers());
         return Collections.unmodifiableMap(headers);
     }
 

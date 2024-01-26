@@ -25,32 +25,32 @@ import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
 import net.jpountz.xxhash.StreamingXXHash32;
 import net.jpountz.xxhash.XXHashFactory;
-import org.jetbrains.annotations.Nullable;
+import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
 import org.jetbrains.annotations.VisibleForTesting;
 
+import static org.apache.cassandra.sidecar.common.data.XXHash32Digest.CONTENT_XXHASH32;
+import static org.apache.cassandra.sidecar.common.data.XXHash32Digest.CONTENT_XXHASH32_SEED;
+
 /**
- * Implementation of {@link ChecksumVerifier} to calculate the checksum and match the calculated checksum
+ * Implementation of {@link DigestVerifier} to calculate the checksum and match the calculated checksum
  * with the expected checksum.
  */
-public class XXHash32ChecksumVerifier extends AsyncFileChecksumVerifier
+public class XXHash32DigestVerifier extends AsyncFileDigestVerifier<XXHash32Digest>
 {
-    public static final String CONTENT_XXHASH = "content-xxhash32";
-    public static final String CONTENT_XXHASH_SEED = "content-xxhash32-seed";
-
-    public XXHash32ChecksumVerifier(FileSystem fs)
+    protected XXHash32DigestVerifier(FileSystem fs, XXHash32Digest digest)
     {
-        super(fs);
+        super(fs, digest);
     }
 
-    @Override
-    protected @Nullable String expectedChecksum(MultiMap options)
+    public static XXHash32DigestVerifier create(FileSystem fs, MultiMap headers)
     {
-        return options.get(CONTENT_XXHASH);
+        XXHash32Digest digest = new XXHash32Digest(headers.get(CONTENT_XXHASH32), headers.get(CONTENT_XXHASH32_SEED));
+        return new XXHash32DigestVerifier(fs, digest);
     }
 
     @Override
     @VisibleForTesting
-    protected Future<String> calculateHash(AsyncFile file, MultiMap options)
+    protected Future<String> calculateHash(AsyncFile file)
     {
         Promise<String> result = Promise.promise();
         Future<String> future = result.future();
@@ -58,7 +58,7 @@ public class XXHash32ChecksumVerifier extends AsyncFileChecksumVerifier
         // might have shared hashers with ThreadLocal
         XXHashFactory factory = XXHashFactory.safeInstance();
 
-        int seed = maybeGetSeedOrDefault(options);
+        int seed = maybeGetSeedOrDefault();
         StreamingXXHash32 hasher = factory.newStreamingHash32(seed);
 
         future.onComplete(ignored -> hasher.close());
@@ -72,15 +72,9 @@ public class XXHash32ChecksumVerifier extends AsyncFileChecksumVerifier
         return future;
     }
 
-    @Override
-    protected String algorithm()
+    protected int maybeGetSeedOrDefault()
     {
-        return "XXHash32";
-    }
-
-    protected int maybeGetSeedOrDefault(MultiMap options)
-    {
-        String seedHex = options.get(CONTENT_XXHASH_SEED);
+        String seedHex = digest.seedHex();
         if (seedHex != null)
         {
             return (int) Long.parseLong(seedHex, 16);

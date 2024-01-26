@@ -19,11 +19,24 @@
 package org.apache.cassandra.sidecar.common.data;
 
 import java.util.Map;
-import java.util.function.Consumer;
 
 /**
  * Interface that represents a checksum digest
  */
-public interface Digest extends Consumer<Map<String, String>>
+public interface Digest
 {
+    /**
+     * @return headers to be used in the HTTP request
+     */
+    Map<String, String> headers();
+
+    /**
+     * @return the string representation of the digest
+     */
+    String value();
+
+    /**
+     * @return the name of the digest's algorithm
+     */
+    String algorithm();
 }

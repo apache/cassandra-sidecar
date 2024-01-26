@@ -32,22 +32,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.vertx.core.Future;
-import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
-import io.vertx.core.http.impl.headers.HeadersMultiMap;
+import org.apache.cassandra.sidecar.common.data.MD5Digest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Unit tests for {@link MD5ChecksumVerifier}
+ * Unit tests for {@link MD5DigestVerifier}
  */
-class MD5ChecksumVerifierTest
+class MD5DigestVerifierTest
 {
     static Vertx vertx;
-    static ExposeAsyncFileMD5ChecksumVerifier verifier;
 
     @TempDir
     Path tempDir;
@@ -56,7 +54,6 @@ class MD5ChecksumVerifierTest
     static void setup()
     {
         vertx = Vertx.vertx();
-        verifier = new ExposeAsyncFileMD5ChecksumVerifier(vertx.fileSystem());
     }
 
     @Test
@@ -82,8 +79,8 @@ class MD5ChecksumVerifierTest
     private void runTestScenario(Path filePath, String checksum) throws InterruptedException
     {
         CountDownLatch latch = new CountDownLatch(1);
-        verifier.verify(new HeadersMultiMap().set("content-md5", checksum),
-                        filePath.toAbsolutePath().toString())
+        ExposeAsyncFileMD5DigestVerifier verifier = newVerifier(new MD5Digest(checksum));
+        verifier.verify(filePath.toAbsolutePath().toString())
                 .onComplete(complete -> latch.countDown());
 
         assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
@@ -95,24 +92,29 @@ class MD5ChecksumVerifierTest
         .hasMessageContaining("File handle is closed");
     }
 
+    static ExposeAsyncFileMD5DigestVerifier newVerifier(MD5Digest digest)
+    {
+        return new ExposeAsyncFileMD5DigestVerifier(vertx.fileSystem(), digest);
+    }
+
     /**
-     * Class that extends from {@link MD5ChecksumVerifier} for testing purposes and holds a reference to the
+     * Class that extends from {@link MD5DigestVerifier} for testing purposes and holds a reference to the
      * {@link AsyncFile} to ensure that the file has been closed.
      */
-    static class ExposeAsyncFileMD5ChecksumVerifier extends MD5ChecksumVerifier
+    static class ExposeAsyncFileMD5DigestVerifier extends MD5DigestVerifier
     {
         AsyncFile file;
 
-        public ExposeAsyncFileMD5ChecksumVerifier(FileSystem fs)
+        public ExposeAsyncFileMD5DigestVerifier(FileSystem fs, MD5Digest md5Digest)
         {
-            super(fs);
+            super(fs, md5Digest);
         }
 
         @Override
-        protected Future<String> calculateHash(AsyncFile file, MultiMap options)
+        protected Future<String> calculateHash(AsyncFile file)
         {
             this.file = file;
-            return super.calculateHash(file, options);
+            return super.calculateHash(file);
         }
     }
 }

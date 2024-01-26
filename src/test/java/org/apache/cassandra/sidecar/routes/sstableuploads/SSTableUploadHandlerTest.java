@@ -23,8 +23,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -392,9 +390,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         HttpRequest<Buffer> req = client.put(server.actualPort(), "localhost", testRoute);
         if (expectedDigest != null)
         {
-            Map<String, String> headers = new HashMap<>();
-            expectedDigest.accept(headers);
-            req.headers().setAll(headers);
+            req.headers().addAll(expectedDigest.headers());
         }
         if (fileLength != 0)
         {
