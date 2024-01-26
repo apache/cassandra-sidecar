@@ -77,15 +77,15 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                          RetryPolicy defaultRetryPolicy)
     {
         this.defaultRetryPolicy = defaultRetryPolicy;
-        this.ignoreConflictRetryPolicy = new IgnoreConflictRetryPolicy(sidecarClientConfig.maxRetries(),
-                                                                       sidecarClientConfig.retryDelayMillis(),
-                                                                       sidecarClientConfig.maxRetryDelayMillis());
-        this.oncePerInstanceRetryPolicy = new OncePerInstanceRetryPolicy(sidecarClientConfig.minimumHealthRetryDelay(),
-                                                                         sidecarClientConfig.maximumHealthRetryDelay());
-        this.baseBuilder = new RequestContext.Builder()
-                .instanceSelectionPolicy(new RandomInstanceSelectionPolicy(instancesProvider))
-                .retryPolicy(defaultRetryPolicy);
-        this.executor = requestExecutor;
+        ignoreConflictRetryPolicy = new IgnoreConflictRetryPolicy(sidecarClientConfig.maxRetries(),
+                                                                  sidecarClientConfig.retryDelayMillis(),
+                                                                  sidecarClientConfig.maxRetryDelayMillis());
+        oncePerInstanceRetryPolicy = new OncePerInstanceRetryPolicy(sidecarClientConfig.minimumHealthRetryDelay(),
+                                                                    sidecarClientConfig.maximumHealthRetryDelay());
+        baseBuilder = new RequestContext.Builder()
+                      .instanceSelectionPolicy(new RandomInstanceSelectionPolicy(instancesProvider))
+                      .retryPolicy(defaultRetryPolicy);
+        executor = requestExecutor;
     }
 
     /**
@@ -96,9 +96,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     public CompletableFuture<HealthResponse> sidecarHealth()
     {
         return executor.executeRequestAsync(requestBuilder()
-                .sidecarHealthRequest()
-                .retryPolicy(oncePerInstanceRetryPolicy)
-                .build());
+                                            .sidecarHealthRequest()
+                                            .retryPolicy(oncePerInstanceRetryPolicy)
+                                            .build());
     }
 
     /**
@@ -111,9 +111,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     public CompletableFuture<HealthResponse> cassandraHealth()
     {
         return executor.executeRequestAsync(requestBuilder()
-                .cassandraHealthRequest()
-                .retryPolicy(oncePerInstanceRetryPolicy)
-                .build());
+                                            .cassandraHealthRequest()
+                                            .retryPolicy(oncePerInstanceRetryPolicy)
+                                            .build());
     }
 
     /**

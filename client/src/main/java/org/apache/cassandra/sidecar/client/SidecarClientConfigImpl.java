@@ -19,9 +19,9 @@
 
 package org.apache.cassandra.sidecar.client;
 
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
-
 import java.time.Duration;
+
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 
 /**
  * Encapsulates configurations for the {@link SidecarClient}
@@ -100,7 +100,7 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
     }
 
     /**
-     * {@code SidecarConfig} builder static inner class
+     * {@code SidecarConfig} builder static inner class.
      */
     public static class Builder implements DataObjectBuilder<Builder, SidecarClientConfig>
     {
@@ -121,36 +121,36 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
         }
 
         /**
-         * Sets the {@code maxRetries} and returns a reference to this Builder enabling method chaining
+         * Sets the {@code maxRetries} and returns a reference to this Builder enabling method chaining.
          *
          * @param maxRetries the {@code maxRetries} to set
          * @return a reference to this Builder
          */
         public Builder maxRetries(int maxRetries)
         {
-            return update(builder -> builder.maxRetries = maxRetries);
+            return update(b -> b.maxRetries = maxRetries);
         }
 
         /**
-         * Sets the {@code retryDelayMillis} and returns a reference to this Builder enabling method chaining
+         * Sets the {@code retryDelayMillis} and returns a reference to this Builder enabling method chaining.
          *
          * @param retryDelayMillis the {@code retryDelayMillis} to set
          * @return a reference to this Builder
          */
         public Builder retryDelayMillis(long retryDelayMillis)
         {
-            return update(builder -> builder.retryDelayMillis = retryDelayMillis);
+            return update(b -> b.retryDelayMillis = retryDelayMillis);
         }
 
         /**
-         * Sets the {@code maxRetryDelayMillis} and returns a reference to this Builder enabling method chaining
+         * Sets the {@code maxRetryDelayMillis} and returns a reference to this Builder enabling method chaining.
          *
          * @param maxRetryDelayMillis the {@code maxRetryDelayMillis} to set
          * @return a reference to this Builder
          */
         public Builder maxRetryDelayMillis(long maxRetryDelayMillis)
         {
-            return update(builder -> builder.maxRetryDelayMillis = maxRetryDelayMillis);
+            return update(b -> b.maxRetryDelayMillis = maxRetryDelayMillis);
         }
 
         /**
@@ -176,7 +176,7 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
         }
 
         /**
-         * Returns a {@code SidecarConfig} built from the parameters previously set
+         * Returns a {@code SidecarConfig} built from the parameters previously set.
          *
          * @return a {@code SidecarConfig} built with parameters of this {@code SidecarConfig.Builder}
          */
