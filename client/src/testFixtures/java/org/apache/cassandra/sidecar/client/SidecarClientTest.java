@@ -80,6 +80,8 @@ import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32_SEED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -784,9 +786,9 @@ abstract class SidecarClientTest
                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                        .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
             assertThat(request.getMethod()).isEqualTo("PUT");
-            assertThat(request.getHeader("content-xxhash32"))
+            assertThat(request.getHeader(CONTENT_XXHASH32))
             .isEqualTo("15a69dc6501aa5ae17af037fe053f610");
-            assertThat(request.getHeader("content-xxhash32-seed")).isNull();
+            assertThat(request.getHeader(CONTENT_XXHASH32_SEED)).isNull();
             assertThat(request.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())).isEqualTo("80");
             assertThat(request.getBodySize()).isEqualTo(80);
         }
@@ -819,9 +821,9 @@ abstract class SidecarClientTest
                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                        .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
             assertThat(request.getMethod()).isEqualTo("PUT");
-            assertThat(request.getHeader("content-xxhash32"))
+            assertThat(request.getHeader(CONTENT_XXHASH32))
             .isEqualTo("15a69dc6501aa5ae17af037fe053f610");
-            assertThat(request.getHeader("content-xxhash32-seed")).isEqualTo("123456");
+            assertThat(request.getHeader(CONTENT_XXHASH32_SEED)).isEqualTo("123456");
             assertThat(request.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())).isEqualTo("80");
             assertThat(request.getBodySize()).isEqualTo(80);
         }
