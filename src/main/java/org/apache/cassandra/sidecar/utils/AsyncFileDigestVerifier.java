@@ -60,18 +60,18 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
     @Override
     public Future<String> verify(String filePath)
     {
-        logger.debug("Validating {}. expected_checksum={}", digest.algorithm(), digest.value());
+        logger.debug("Validating {}. expected_digest={}", digest.algorithm(), digest.value());
 
         return fs.open(filePath, new OpenOptions())
-                 .compose(this::calculateHash)
-                 .compose(computedChecksum -> {
-                     if (!computedChecksum.equals(digest.value()))
+                 .compose(this::calculateDigest)
+                 .compose(computedDigest -> {
+                     if (!computedDigest.equals(digest.value()))
                      {
-                         logger.error("Checksum mismatch. computed_checksum={}, expected_checksum={}, algorithm=MD5",
-                                      computedChecksum, digest.value());
+                         logger.error("Digest mismatch. computed_digest={}, expected_digest={}, algorithm=MD5",
+                                      computedDigest, digest.value());
                          return Future.failedFuture(new HttpException(CHECKSUM_MISMATCH.code(),
-                                                                      String.format("Checksum mismatch. "
-                                                                                    + "expected_checksum=%s, "
+                                                                      String.format("Digest mismatch. "
+                                                                                    + "expected_digest=%s, "
                                                                                     + "algorithm=%s",
                                                                                     digest.value(),
                                                                                     digest.algorithm())));
@@ -81,12 +81,12 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
     }
 
     /**
-     * Returns a future with the calculated checksum for the provided {@link AsyncFile file}.
+     * Returns a future with the calculated digest for the provided {@link AsyncFile file}.
      *
-     * @param asyncFile the async file to use for hash calculation
-     * @return a future with the computed checksum for the provided {@link AsyncFile file}
+     * @param asyncFile the async file to use for digest calculation
+     * @return a future with the computed digest for the provided {@link AsyncFile file}
      */
-    protected abstract Future<String> calculateHash(AsyncFile asyncFile);
+    protected abstract Future<String> calculateDigest(AsyncFile asyncFile);
 
     protected void readFile(AsyncFile file, Promise<String> result, Handler<Buffer> onBufferAvailable,
                             Handler<Void> onReadComplete)
@@ -98,7 +98,7 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
             .handler(onBufferAvailable)
             .endHandler(onReadComplete)
             .exceptionHandler(cause -> {
-                logger.error("Error while calculating the {} checksum", digest.algorithm(), cause);
+                logger.error("Error while calculating the {} digest", digest.algorithm(), cause);
                 result.fail(cause);
             })
             .resume();

@@ -32,8 +32,8 @@ import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CO
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32_SEED;
 
 /**
- * Implementation of {@link DigestVerifier} to calculate the checksum and match the calculated checksum
- * with the expected checksum.
+ * Implementation of {@link DigestVerifier} to calculate the digest and match the calculated digest
+ * with the expected digest.
  */
 public class XXHash32DigestVerifier extends AsyncFileDigestVerifier<XXHash32Digest>
 {
@@ -50,7 +50,7 @@ public class XXHash32DigestVerifier extends AsyncFileDigestVerifier<XXHash32Dige
 
     @Override
     @VisibleForTesting
-    protected Future<String> calculateHash(AsyncFile file)
+    protected Future<String> calculateDigest(AsyncFile file)
     {
         Promise<String> result = Promise.promise();
         Future<String> future = result.future();

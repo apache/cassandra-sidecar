@@ -33,7 +33,7 @@ import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Implementation of {@link DigestVerifier}. Here we use MD5 implementation of {@link java.security.MessageDigest}
- * for calculating checksum. And match the calculated checksum with expected checksum obtained from request.
+ * for calculating digest and match the calculated digest with expected digest obtained from request.
  */
 public class MD5DigestVerifier extends AsyncFileDigestVerifier<MD5Digest>
 {
@@ -50,7 +50,7 @@ public class MD5DigestVerifier extends AsyncFileDigestVerifier<MD5Digest>
 
     @Override
     @VisibleForTesting
-    protected Future<String> calculateHash(AsyncFile file)
+    protected Future<String> calculateDigest(AsyncFile file)
     {
         MessageDigest digest;
         try

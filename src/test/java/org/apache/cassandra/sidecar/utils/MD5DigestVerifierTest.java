@@ -57,29 +57,29 @@ class MD5DigestVerifierTest
     }
 
     @Test
-    void testFileDescriptorsClosedWithValidChecksum() throws IOException, NoSuchAlgorithmException,
-                                                             InterruptedException
+    void testFileDescriptorsClosedWithValidDigest() throws IOException, NoSuchAlgorithmException,
+                                                           InterruptedException
     {
         Path randomFilePath = TestFileUtils.prepareTestFile(tempDir, "random-file.txt", 1024);
         byte[] randomBytes = Files.readAllBytes(randomFilePath);
-        String expectedChecksum = Base64.getEncoder()
-                                        .encodeToString(MessageDigest.getInstance("MD5")
-                                                                     .digest(randomBytes));
+        String expectedDigest = Base64.getEncoder()
+                                      .encodeToString(MessageDigest.getInstance("MD5")
+                                                                   .digest(randomBytes));
 
-        runTestScenario(randomFilePath, expectedChecksum);
+        runTestScenario(randomFilePath, expectedDigest);
     }
 
     @Test
-    void testFileDescriptorsClosedWithInvalidChecksum() throws IOException, InterruptedException
+    void testFileDescriptorsClosedWithInvalidDigest() throws IOException, InterruptedException
     {
         Path randomFilePath = TestFileUtils.prepareTestFile(tempDir, "random-file.txt", 1024);
         runTestScenario(randomFilePath, "invalid");
     }
 
-    private void runTestScenario(Path filePath, String checksum) throws InterruptedException
+    private void runTestScenario(Path filePath, String digest) throws InterruptedException
     {
         CountDownLatch latch = new CountDownLatch(1);
-        ExposeAsyncFileMD5DigestVerifier verifier = newVerifier(new MD5Digest(checksum));
+        ExposeAsyncFileMD5DigestVerifier verifier = newVerifier(new MD5Digest(digest));
         verifier.verify(filePath.toAbsolutePath().toString())
                 .onComplete(complete -> latch.countDown());
 
@@ -111,10 +111,10 @@ class MD5DigestVerifierTest
         }
 
         @Override
-        protected Future<String> calculateHash(AsyncFile file)
+        protected Future<String> calculateDigest(AsyncFile file)
         {
             this.file = file;
-            return super.calculateHash(file);
+            return super.calculateDigest(file);
         }
     }
 }

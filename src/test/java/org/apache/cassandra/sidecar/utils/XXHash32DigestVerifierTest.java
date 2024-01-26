@@ -108,7 +108,7 @@ class XXHash32DigestVerifierTest
                         assertThat(complete.cause())
                         .isInstanceOf(HttpException.class)
                         .extracting(from(t -> ((HttpException) t).getPayload()), as(InstanceOfAssertFactories.STRING))
-                        .contains("Checksum mismatch. expected_checksum=" + digest.value());
+                        .contains("Digest mismatch. expected_digest=" + digest.value());
                     }
                     else
                     {
@@ -146,10 +146,10 @@ class XXHash32DigestVerifierTest
         }
 
         @Override
-        protected Future<String> calculateHash(AsyncFile file)
+        protected Future<String> calculateDigest(AsyncFile file)
         {
             this.file = file;
-            return super.calculateHash(file);
+            return super.calculateDigest(file);
         }
     }
 }

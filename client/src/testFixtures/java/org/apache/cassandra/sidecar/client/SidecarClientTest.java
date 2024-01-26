@@ -691,7 +691,7 @@ abstract class SidecarClientTest
     }
 
     @Test
-    void testUploadSSTableWithoutChecksum(@TempDir Path tempDirectory) throws Exception
+    void testUploadSSTableWithoutDigest(@TempDir Path tempDirectory) throws Exception
     {
         Path fileToUpload = prepareFile(tempDirectory);
         try (MockWebServer server = new MockWebServer())
@@ -724,7 +724,7 @@ abstract class SidecarClientTest
     }
 
     @Test
-    void testUploadSSTableWithMD5Checksum(@TempDir Path tempDirectory) throws Exception
+    void testUploadSSTableWithMD5Digest(@TempDir Path tempDirectory) throws Exception
     {
         Path fileToUpload = prepareFile(tempDirectory);
         try (MockWebServer server = new MockWebServer())
@@ -758,7 +758,7 @@ abstract class SidecarClientTest
     }
 
     @Test
-    void testUploadSSTableWithXXHashChecksum(@TempDir Path tempDirectory) throws Exception
+    void testUploadSSTableWithXXHashDigest(@TempDir Path tempDirectory) throws Exception
     {
         Path fileToUpload = prepareFile(tempDirectory);
         try (MockWebServer server = new MockWebServer())
@@ -793,7 +793,7 @@ abstract class SidecarClientTest
     }
 
     @Test
-    void testUploadSSTableWithXXHashChecksumAndSeed(@TempDir Path tempDirectory) throws Exception
+    void testUploadSSTableWithXXHashDigestAndSeed(@TempDir Path tempDirectory) throws Exception
     {
         Path fileToUpload = prepareFile(tempDirectory);
         try (MockWebServer server = new MockWebServer())
