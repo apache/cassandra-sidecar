@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.NettyOptions;
 import com.google.inject.AbstractModule;
@@ -98,6 +100,7 @@ import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 
+import static org.apache.cassandra.sidecar.common.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
@@ -105,6 +108,7 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_
  */
 public class MainModule extends AbstractModule
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MainModule.class);
     public static final Map<String, String> OK_STATUS = Collections.singletonMap("status", "OK");
     public static final Map<String, String> NOT_OK_STATUS = Collections.singletonMap("status", "NOT_OK");
 
@@ -383,10 +387,13 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
+    @Named("StreamRequestRateLimiter")
     public SidecarRateLimiter streamRequestRateLimiter(ServiceConfiguration config)
     {
-        return SidecarRateLimiter.create(config.throttleConfiguration()
-                                               .rateLimitStreamRequestsPerSecond());
+        long permitsPerSecond = config.throttleConfiguration().rateLimitStreamRequestsPerSecond();
+        LOGGER.info("Configuring streamRequestRateLimiter. rateLimitStreamRequestsPerSecond={}",
+                    permitsPerSecond);
+        return SidecarRateLimiter.create(permitsPerSecond);
     }
 
     @Provides
@@ -394,8 +401,12 @@ public class MainModule extends AbstractModule
     @Named("IngressFileRateLimiter")
     public SidecarRateLimiter ingressFileRateLimiter(ServiceConfiguration config)
     {
-        return SidecarRateLimiter.create(config.trafficShapingConfiguration()
-                                               .inboundGlobalFileBandwidthBytesPerSecond());
+        long bytesPerSecond = config.trafficShapingConfiguration()
+                                    .inboundGlobalFileBandwidthBytesPerSecond();
+        LOGGER.info("Configuring ingressFileRateLimiter. inboundGlobalFileBandwidth={}/s " +
+                    "rawInboundGlobalFileBandwidth={} B/s", bytesToHumanReadableBinaryPrefix(bytesPerSecond),
+                    bytesPerSecond);
+        return SidecarRateLimiter.create(bytesPerSecond);
     }
 
     @Provides

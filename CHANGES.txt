@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Improve logging for traffic shaping / rate limiting configuration (CASSANDRASC-98)
  * Startup Validation Failures when Checking Sidecar Connectivity (CASSANDRASC-86)
  * Add support for additional digest validation during SSTable upload (CASSANDRASC-97)
  * Add sidecar client changes for restore from S3 (CASSANDRASC-95)
