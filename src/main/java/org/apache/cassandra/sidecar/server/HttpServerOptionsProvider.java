@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.utils.SslUtils;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.cassandra.sidecar.common.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
 
 /**
  * A provider that takes the {@link SidecarConfiguration} and builds {@link HttpServerOptions} from the configured
@@ -148,6 +149,14 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
      */
     protected TrafficShapingOptions buildTrafficShapingOptions(TrafficShapingConfiguration trafficShapingConfig)
     {
+        LOGGER.info("Configured traffic shaping options. InboundGlobalBandwidth={}/s OutboundGlobalBandwidth={}/s " +
+                    "PeakOutboundGlobalBandwidth={}/s IntervalForStats={}ms MaxDelayToWait={}ms",
+                    bytesToHumanReadableBinaryPrefix(trafficShapingConfig.inboundGlobalBandwidthBytesPerSecond()),
+                    bytesToHumanReadableBinaryPrefix(trafficShapingConfig.outboundGlobalBandwidthBytesPerSecond()),
+                    bytesToHumanReadableBinaryPrefix(trafficShapingConfig.peakOutboundGlobalBandwidthBytesPerSecond()),
+                    trafficShapingConfig.checkIntervalForStatsMillis(),
+                    trafficShapingConfig.maxDelayToWaitMillis()
+        );
         return new TrafficShapingOptions()
                .setInboundGlobalBandwidth(trafficShapingConfig.inboundGlobalBandwidthBytesPerSecond())
                .setOutboundGlobalBandwidth(trafficShapingConfig.outboundGlobalBandwidthBytesPerSecond())

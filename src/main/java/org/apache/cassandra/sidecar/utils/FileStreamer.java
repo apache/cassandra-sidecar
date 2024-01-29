@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.ext.web.handler.HttpException;
@@ -40,9 +41,9 @@ import org.apache.cassandra.sidecar.models.HttpResponse;
 import org.apache.cassandra.sidecar.stats.SSTableStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
 import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 /**
  * General handler for serving files
@@ -60,7 +61,7 @@ public class FileStreamer
     @Inject
     public FileStreamer(ExecutorPools executorPools,
                         ServiceConfiguration config,
-                        SidecarRateLimiter rateLimiter,
+                        @Named("StreamRequestRateLimiter") SidecarRateLimiter rateLimiter,
                         SidecarStats stats)
     {
         this.executorPools = executorPools;
