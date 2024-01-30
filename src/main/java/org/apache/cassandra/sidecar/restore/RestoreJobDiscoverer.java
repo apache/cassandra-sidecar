@@ -261,7 +261,8 @@ public class RestoreJobDiscoverer implements PeriodicTask
             slice = slice.unbuild().ownerInstance(instance).build();
             try
             {
-                // todo: do not re-submit for download if the slice is staged (when job status is before staged) or imported (when job status is staged) on the instance already
+                // todo: do not re-submit for download if the slice is staged (when job status is before staged)
+                //       or imported (when job status is staged) on the instance already
                 restoreJobManagerGroupSingleton.get().trySubmit(instance, slice, restoreJob);
             }
             catch (RestoreJobFatalException e)

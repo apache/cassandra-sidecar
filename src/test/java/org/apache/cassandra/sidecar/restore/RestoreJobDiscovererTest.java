@@ -19,11 +19,9 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -40,7 +38,6 @@ import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.RestoreJobTest;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
@@ -128,10 +125,10 @@ class RestoreJobDiscovererTest
         UUID failedJobId = UUIDs.timeBased();
         UUID succeededJobId = UUIDs.timeBased();
         mockResult.add(createNewTestingJob(newJobId));
-        mockResult.add(createUpdatedJob(failedJobId, "agent",
-                                        RestoreJobStatus.ABORTED, null, new Date(System.currentTimeMillis() + 10000L)));
-        mockResult.add(createUpdatedJob(succeededJobId, "agent",
-                                        RestoreJobStatus.SUCCEEDED, null, new Date(System.currentTimeMillis() + 10000L)));
+        mockResult.add(createUpdatedJob(failedJobId, "agent", RestoreJobStatus.ABORTED, null,
+                                        new Date(System.currentTimeMillis() + 10000L)));
+        mockResult.add(createUpdatedJob(succeededJobId, "agent", RestoreJobStatus.SUCCEEDED, null,
+                                        new Date(System.currentTimeMillis() + 10000L)));
         ArgumentCaptor<UUID> jobIdCapture = ArgumentCaptor.forClass(UUID.class);
         doNothing().when(mockManagers).removeJobInternal(jobIdCapture.capture());
         when(mockJobAccessor.findAllRecent(anyInt())).thenReturn(mockResult);

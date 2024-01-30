@@ -149,7 +149,8 @@ public class RestoreProcessor implements PeriodicTask
                 }
                 else // log a warning and retry. It should not reach here.
                 {
-                    LOGGER.warn("Unexpected state of slice. It is neither staged nor imported. sliceKey={}", slice.key());
+                    LOGGER.warn("Unexpected state of slice. It is neither staged nor imported. sliceKey={}",
+                                slice.key());
                     sliceQueue.offer(slice);
                 }
             })

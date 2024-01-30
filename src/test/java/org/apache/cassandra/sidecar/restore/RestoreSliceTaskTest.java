@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +53,6 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import static org.apache.cassandra.sidecar.AssertionUtils.getBlocking;
-import static org.apache.cassandra.sidecar.db.RestoreJob.toLocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doReturn;
@@ -170,7 +168,8 @@ class RestoreSliceTaskTest
         when(restoreSlice.job()).thenReturn(job);
         when(restoreSlice.stagedObjectPath()).thenReturn(Paths.get("nonexist"));
         when(storageClient.objectExists(restoreSlice)).thenReturn(CompletableFuture.completedFuture(null));
-        when(storageClient.downloadObjectIfAbsent(restoreSlice)).thenReturn(CompletableFuture.completedFuture(new File(".")));
+        when(storageClient.downloadObjectIfAbsent(restoreSlice))
+        .thenReturn(CompletableFuture.completedFuture(new File(".")));
 
         Promise<RestoreSlice> promise = Promise.promise();
         task.handle(promise);
@@ -245,13 +244,16 @@ class RestoreSliceTaskTest
             stats.captureSliceImportTime(1, 123L);
             slice.completeImportPhase();
             event.tryComplete(slice);
-            onSuccessCommit.run();
+            if (onSuccessCommit != null)
+            {
+                onSuccessCommit.run();
+            }
         }
 
         @Override
         void unzipAndImport(Promise<RestoreSlice> event, File file)
         {
-            unzipAndImport(event, file, () -> {});
+            unzipAndImport(event, file, null);
         }
     }
 }

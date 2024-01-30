@@ -67,7 +67,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
     @GuardedBy("this")
     private Set<Host> localInstancesCache;
     @GuardedBy("this")
-    private ImmutableMap<String, ImmutableMap<Integer, Set<TokenRange>>> localTokenRangesCache;
+    private ImmutableMap<String, Map<Integer, Set<TokenRange>>> localTokenRangesCache;
 
     @Inject
     public CachedLocalTokenRanges(InstancesConfig instancesConfig, DnsResolver dnsResolver)
@@ -142,7 +142,8 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             host = allHosts.get(ip);
             if (host == null)
             {
-                LOGGER.warn("Could not map InstanceMetadata to Host host={} port={} ip={}", instance.host(), instance.port(), ip.ipAddress);
+                LOGGER.warn("Could not map InstanceMetadata to Host host={} port={} ip={}",
+                            instance.host(), instance.port(), ip.ipAddress);
                 return null;
             }
         }
@@ -202,7 +203,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             putNullSafe.accept(host.getBroadcastSocketAddress(), host);
         }
 
-        ImmutableMap.Builder<String, ImmutableMap<Integer, Set<TokenRange>>> perKeyspaceBuilder = ImmutableMap.builder();
+        ImmutableMap.Builder<String, Map<Integer, Set<TokenRange>>> perKeyspaceBuilder = ImmutableMap.builder();
         ImmutableSet.Builder<Host> hostBuilder = ImmutableSet.builder();
         if (isClusterTheSame && localInstancesCache != null)
         {

@@ -105,7 +105,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
     /**
      * Update fields in the restore job and persist
      *
-     * @param updateRestoreJobRequestPayload fields to be updated
+     * @param payload fields to be updated
      * @param jobId job ID
      * @return the restore job object with only the updated fields
      * @throws DataObjectMappingException when secrets json cannot be serialized

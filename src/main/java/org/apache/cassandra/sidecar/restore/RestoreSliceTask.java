@@ -139,8 +139,11 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                 }
                 else
                 {
-                    IllegalStateException unexpectedState = new IllegalStateException("Unexpected restore job status. Expected only CREATED or STAGED when processing active slices. Found status: " + job.status);
-                    event.tryFail(RestoreJobExceptions.ofFatalSlice("Unexpected restore job status", slice, unexpectedState));
+                    String msg = "Unexpected restore job status. Expected only CREATED or STAGED when " +
+                                 "processing active slices. Found status: " + job.status;
+                    Exception unexpectedState = new IllegalStateException(msg);
+                    event.tryFail(RestoreJobExceptions.ofFatalSlice("Unexpected restore job status",
+                                                                    slice, unexpectedState));
                 }
             }
             else

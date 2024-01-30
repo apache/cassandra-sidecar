@@ -23,8 +23,6 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.utils.Bytes;

@@ -102,7 +102,8 @@ class AsyncFileSystemUtilsTest
     void testEnsureSufficientStorageWithNonexistingFilePath()
     {
         // The input path `./non-existing + uuid` does not exist.
-        // `ensureSufficientStorage` should navigate to parent paths until finding an existing path to be used for checking
+        // `ensureSufficientStorage` should navigate to parent paths until finding an existing path
+        // to be used for checking
         // The test expects no exception is thrown
         AssertionUtils.getBlocking(ensureSufficientStorage("./non-existing" + UUID.randomUUID(), 0L,
                                                            0.0001, executorPools.internal()));
