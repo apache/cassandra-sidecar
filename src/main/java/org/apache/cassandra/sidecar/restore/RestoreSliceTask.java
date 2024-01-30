@@ -329,7 +329,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                                   .resolve(slice.table())
                                   .toFile();
 
-            boolean targetDirExist = targetDir.isDirectory() && targetDir.exists();
+            boolean targetDirExist = targetDir.isDirectory();
 
             if (!zipFile.exists())
             {
@@ -346,10 +346,9 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                 return;
             }
 
-            targetDir.mkdirs();
-
             try
             {
+                Files.createDirectories(targetDir.toPath());
                 // Remove all existing files under the target directory
                 // The validation step later expects only the files registered in the manifest.
                 RestoreJobUtil.cleanDirectory(targetDir.toPath());

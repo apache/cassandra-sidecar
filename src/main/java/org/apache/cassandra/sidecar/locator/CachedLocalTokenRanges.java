@@ -44,6 +44,7 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
@@ -80,20 +81,6 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
         this.localInstancesCache = null;
     }
 
-    @Nullable
-    public Set<Host> localInstances()
-    {
-        return localInstancesCache;
-    }
-
-    public void warmCache(String keyspace)
-    {
-        if (localInstancesCache == null)
-        {
-            localTokenRanges(keyspace);
-        }
-    }
-
     @Override
     @Nullable
     public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace)
@@ -106,7 +93,8 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             return Collections.emptyMap();
         }
 
-        Metadata metadata = localInstances.get(0).delegate().metadata();
+        CassandraAdapterDelegate delegate = localInstances.get(0).delegate();
+        Metadata metadata = delegate == null ? null : delegate.metadata();
         if (metadata == null)
         {
             LOGGER.debug("Not yet connect to Cassandra cluster");
