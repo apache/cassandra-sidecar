@@ -175,10 +175,11 @@ class RestoreProcessorTest
         RestoreSlice slice = mock(RestoreSlice.class, Mockito.RETURNS_DEEP_STUBS);
         when(slice.jobId()).thenReturn(UUIDs.timeBased());
         when(slice.owner().id()).thenReturn(1);
-        when(slice.toAsyncTask(any(), any(), any(), anyDouble(), any())).thenReturn(promise -> {
+        when(slice.toAsyncTask(any(), any(), any(), anyDouble(), any(), any())).thenReturn(promise -> {
             Uninterruptibles.awaitUninterruptibly(latch);
             promise.complete(slice);
         });
+        when(slice.hasImported()).thenReturn(true);
         return slice;
     }
 }

@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -30,10 +31,13 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.ext.web.handler.HttpException;
+import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
+import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
@@ -59,27 +63,30 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreSliceTask.class);
 
-    private final RestoreJob job;
     private final RestoreSlice slice;
     private final StorageClient s3Client;
     private final ExecutorPools.TaskExecutorPool executorPool;
     private final SSTableImporter importer;
     private final double requiredUsableSpacePercentage;
+    private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobStats stats;
 
-    public RestoreSliceTask(RestoreJob job, RestoreSlice slice,
+    public RestoreSliceTask(RestoreSlice slice,
                             StorageClient s3Client,
                             ExecutorPools.TaskExecutorPool executorPool,
                             SSTableImporter importer,
                             double requiredUsableSpacePercentage,
+                            RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
                             RestoreJobStats stats)
     {
-        this.job = job;
+        Preconditions.checkArgument(!slice.job().isRangeManagedByServer() || sliceDatabaseAccessor != null,
+                                    "sliceDatabaseAccessor cannot be null");
         this.slice = slice;
         this.s3Client = s3Client;
         this.executorPool = executorPool;
         this.importer = importer;
         this.requiredUsableSpacePercentage = requiredUsableSpacePercentage;
+        this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.stats = stats;
     }
 
@@ -92,11 +99,55 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
         // The slice, when being process, requires a total of slice size (download) + uncompressed (unzip) to use.
         // The protection below guards the slice being process, if the usable disk space falls below the threshold
         // after considering the slice
-        ensureSufficientStorage(slice.targetPathInStaging().toString(),
+        ensureSufficientStorage(slice.stageDirectory().toString(),
                                 slice.compressedSize() + slice.uncompressedSize(),
                                 requiredUsableSpacePercentage,
                                 executorPool)
-        .onSuccess(ignored -> downloadSliceAndImport(event))
+        .onSuccess(ignored -> {
+            RestoreJob job = slice.job();
+            if (job.isRangeManagedByServer())
+            {
+                if (job.status == RestoreJobStatus.CREATED)
+                {
+                    if (Files.exists(slice.stagedObjectPath()))
+                    {
+                        LOGGER.debug("The slice has been staged already. sliceKey={} stagedFilePath={}",
+                                     slice.key(), slice.stagedObjectPath());
+                        slice.completeStagePhase(); // update the flag if missed
+                        sliceDatabaseAccessor.updateStatus(slice);
+                        event.tryComplete(slice);
+                        return;
+                    }
+
+                    // 1. check object existence and validate eTag / checksum
+                    checkObjectExistence(event)
+                    // 2. download slice/object when the remote object exists
+                    .thenCompose(headObject -> downloadSlice(event))
+                    // 3. persist status
+                    .thenAccept(x -> {
+                        slice.completeStagePhase();
+                        sliceDatabaseAccessor.updateStatus(slice);
+                        // completed staging. A new task is produced when it comes to import
+                        event.tryComplete(slice);
+                    });
+                }
+                else if (job.status == RestoreJobStatus.STAGED)
+                {
+                    unzipAndImport(event, slice.stagedObjectPath().toFile(),
+                                   // persist status
+                                   () -> sliceDatabaseAccessor.updateStatus(slice));
+                }
+                else
+                {
+                    IllegalStateException unexpectedState = new IllegalStateException("Unexpected restore job status. Expected only CREATED or STAGED when processing active slices. Found status: " + job.status);
+                    event.tryFail(RestoreJobExceptions.ofFatalSlice("Unexpected restore job status", slice, unexpectedState));
+                }
+            }
+            else
+            {
+                downloadSliceAndImport(event);
+            }
+        })
         .onFailure(cause -> {
             String msg = "Unable to ensure enough space for the slice. Retry later";
             event.tryFail(RestoreJobExceptions.ofSlice(msg, slice, cause));
@@ -184,6 +235,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
         {
             RestoreJobFatalException ex = RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
                                                                             slice, null);
+            event.tryFail(ex);
             CompletableFuture<File> failedFuture = new CompletableFuture<>();
             failedFuture.completeExceptionally(ex);
             return failedFuture;
@@ -224,6 +276,11 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
     @VisibleForTesting
     void unzipAndImport(Promise<RestoreSlice> event, File file)
     {
+        unzipAndImport(event, file, null);
+    }
+
+    void unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
+    {
         if (file == null) // the condition should never happen. Having it here for logic completeness
         {
             event.tryFail(RestoreJobExceptions.ofFatalSlice("Object not found from disk", slice, null));
@@ -234,7 +291,21 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
         unzip(file)
         .compose(this::validateFiles)
         .compose(this::commit)
-        .onSuccess(x -> event.tryComplete(slice))
+        .compose(x -> {
+            if (onSuccessCommit == null)
+            {
+                return Future.succeededFuture();
+            }
+
+            return executorPool.executeBlocking(promise -> {
+                onSuccessCommit.run();
+                promise.tryComplete();
+            });
+        })
+        .onSuccess(x -> {
+            slice.completeImportPhase();
+            event.tryComplete(slice);
+        })
         .onFailure(failure -> {
             logWarnIfHasHttpExceptionCauseOnCommit(failure, slice);
             event.tryFail(RestoreJobExceptions.propagate("Fail to commit slice. "
@@ -248,22 +319,32 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
             if (failOnCancelled(promise))
                 return;
 
-            if (!zipFile.exists())
-            {
-                promise.tryFail(new RestoreJobException("Object not found from disk. File: " + zipFile));
-                return;
-            }
-
             // targetPathInStaging points to the directory named after uploadId
             // SSTableImporter expects the file system structure to be uploadId/keyspace/table/sstables
-            File targetDir = slice.targetPathInStaging()
+            File targetDir = slice.stageDirectory()
                                   .resolve(slice.keyspace())
                                   .resolve(slice.table())
                                   .toFile();
-            if (!targetDir.mkdirs())
+
+            boolean targetDirExist = targetDir.isDirectory() && targetDir.exists();
+
+            if (!zipFile.exists())
             {
-                LOGGER.warn("Error occurred while creating directory for holding SSTables for SSTableImporter");
+                if (targetDirExist)
+                {
+                    LOGGER.debug("The files in slice are already extracted. Maybe it is a retried task?");
+                    promise.complete(targetDir);
+                }
+                else
+                {
+                    promise.tryFail(new RestoreJobException("Object not found from disk. File: " + zipFile));
+                }
+                // return early
+                return;
             }
+
+            targetDir.mkdirs();
+
             try
             {
                 // Remove all existing files under the target directory
@@ -275,7 +356,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                 // Then, delete the downloaded zip file
                 if (!zipFile.delete())
                 {
-                    LOGGER.warn("Error while deleting file {}, please note for space wastage",
+                    LOGGER.warn("File deletion attempt failed. file={}",
                                 zipFile.getAbsolutePath());
                 }
             }
@@ -383,7 +464,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
 
         LOGGER.info("Begin committing SSTables. sliceKey={}", slice.key());
 
-        SSTableImportOptions options = job.importOptions;
+        SSTableImportOptions options = slice.job().importOptions;
         SSTableImporter.ImportOptions importOptions = new SSTableImporter.ImportOptions.Builder()
                                                       .host(slice.owner().host())
                                                       .keyspace(slice.keyspace())

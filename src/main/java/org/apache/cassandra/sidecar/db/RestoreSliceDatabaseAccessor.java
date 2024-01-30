@@ -51,18 +51,19 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor
 
     public RestoreSlice create(RestoreSlice slice)
     {
-        BoundStatement statement = restoreSlicesSchema.insertSlice().bind(slice.jobId(),
-                                                                          slice.bucketId(),
-                                                                          slice.sliceId(),
-                                                                          slice.bucket(),
-                                                                          slice.key(),
-                                                                          slice.checksum(),
-                                                                          slice.startToken(),
-                                                                          slice.endToken(),
-                                                                          slice.compressedSize(),
-                                                                          slice.uncompressedSize(),
-                                                                          slice.statusByReplica(),
-                                                                          slice.replicas());
+        BoundStatement statement = restoreSlicesSchema.insertSlice()
+                                                      .bind(slice.jobId(),
+                                                            slice.bucketId(),
+                                                            slice.sliceId(),
+                                                            slice.bucket(),
+                                                            slice.key(),
+                                                            slice.checksum(),
+                                                            slice.startToken(),
+                                                            slice.endToken(),
+                                                            slice.compressedSize(),
+                                                            slice.uncompressedSize(),
+                                                            slice.statusByReplica(),
+                                                            slice.replicas());
         execute(statement);
         return slice;
     }
@@ -71,12 +72,13 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = restoreSlicesSchema.updateStatus().bind(slice.statusByReplica(),
-                                                                           slice.replicas(),
-                                                                           slice.jobId(),
-                                                                           slice.bucketId(),
-                                                                           slice.startToken(),
-                                                                           slice.sliceId());
+        BoundStatement statement = restoreSlicesSchema.updateStatus()
+                                                      .bind(slice.statusByReplica(),
+                                                            slice.replicas(),
+                                                            slice.jobId(),
+                                                            slice.bucketId(),
+                                                            slice.startToken(),
+                                                            slice.sliceId());
         Row row = execute(statement).one();
         if (row == null)
         {
@@ -91,10 +93,11 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = restoreSlicesSchema.findAllByTokenRange().bind(jobId,
-                                                                                                         bucketId,
-                                                                                                         startToken,
-                                                                                                         endToken);
+        BoundStatement statement = restoreSlicesSchema.findAllByTokenRange()
+                                                      .bind(jobId,
+                                                            bucketId,
+                                                            startToken,
+                                                            endToken);
         ResultSet result = execute(statement);
         List<RestoreSlice> slices = new ArrayList<>();
         for (Row row : result)

@@ -24,6 +24,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
+import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 
@@ -48,6 +49,21 @@ public class RestoreJobTest
                .jobId(jobId)
                .jobStatus(status)
                .expireAt(new Date(System.currentTimeMillis() + 10000L));
+        return builder.build();
+    }
+
+    public static RestoreJob createUpdatedJob(UUID jobId, String jobAgent,
+                                              RestoreJobStatus status,
+                                              RestoreJobSecrets secrets,
+                                              Date expireAt)
+    throws DataObjectMappingException
+    {
+        RestoreJob.Builder builder = RestoreJob.builder();
+        builder.createdAt(RestoreJob.toLocalDate(jobId))
+               .jobId(jobId).jobAgent(jobAgent)
+               .jobStatus(status)
+               .jobSecrets(secrets)
+               .expireAt(expireAt);
         return builder.build();
     }
 

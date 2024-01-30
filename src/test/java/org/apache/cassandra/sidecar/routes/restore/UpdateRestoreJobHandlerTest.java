@@ -143,8 +143,14 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
 
     private RestoreJob createTestNewJob(String jobId)
     {
-        return RestoreJob.create(null, UUID.fromString(jobId), "ks", "table",
-                                 "agent", RestoreJobStatus.SUCCEEDED, SECRETS, SSTableImportOptions.defaults());
+        return RestoreJob.builder()
+                         .jobId(UUID.fromString(jobId))
+                         .keyspace("ks").table("table")
+                         .jobAgent("agent")
+                         .jobStatus(RestoreJobStatus.SUCCEEDED)
+                         .jobSecrets(SECRETS)
+                         .sstableImportOptions(SSTableImportOptions.defaults())
+                         .build();
     }
 
     private JsonObject getRequestPayload()

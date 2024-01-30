@@ -48,4 +48,11 @@ public interface RestoreJobConfiguration
      * @return time to live for restore job tables: restore_job and restore_slice
      */
     long restoreJobTablesTtlSeconds();
+
+    /**
+     * Controls whether the feature to allow server-side the slice assignment and verification based on the token range
+     * is enabled or not.
+     * @return true if enabled; false otherwise
+     */
+    boolean isServerManagedRangeEnabled();
 }

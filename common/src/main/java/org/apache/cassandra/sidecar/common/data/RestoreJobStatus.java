@@ -24,6 +24,7 @@ package org.apache.cassandra.sidecar.common.data;
 public enum RestoreJobStatus
 {
     CREATED,
+    STAGED,
     @Deprecated // replaced by ABORTED
     FAILED,
     ABORTED,

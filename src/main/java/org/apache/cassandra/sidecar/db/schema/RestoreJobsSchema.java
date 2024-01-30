@@ -141,8 +141,9 @@ public class RestoreJobsSchema extends AbstractSchema.TableSchema
                              "  status," +
                              "  blob_secrets," +
                              "  import_options," +
+                             "  consistency_level," +
                              "  expire_at" +
-                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
+                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
         }
 
         static String updateBlobSecrets(SchemaKeyspaceConfiguration config)
@@ -192,6 +193,7 @@ public class RestoreJobsSchema extends AbstractSchema.TableSchema
                              "status, " +
                              "blob_secrets, " +
                              "import_options, " +
+                             "consistency_level, " +
                              "expire_at " +
                              "FROM %s.%s " +
                              "WHERE created_at = ? AND job_id = ?", config);
@@ -207,6 +209,7 @@ public class RestoreJobsSchema extends AbstractSchema.TableSchema
                              "status, " +
                              "blob_secrets, " +
                              "import_options, " +
+                             "consistency_level, " +
                              "expire_at " +
                              "FROM %s.%s " +
                              "WHERE created_at = ?", config);

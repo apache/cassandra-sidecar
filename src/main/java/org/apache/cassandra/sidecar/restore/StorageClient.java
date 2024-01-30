@@ -152,7 +152,7 @@ public class StorageClient
                         .bucket(slice.bucket())
                         .key(slice.key())
                         .build();
-        Path objectPath = slice.targetPathInStaging().resolve(slice.key());
+        Path objectPath = slice.stagedObjectPath();
         File object = objectPath.toFile();
         if (object.exists())
         {

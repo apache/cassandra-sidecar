@@ -61,7 +61,7 @@ public class RestoreJobUtil
      */
     public static void unzip(File zipFile, File targetDir) throws IOException, RestoreJobException
     {
-        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile)))
+        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile.toPath())))
         {
             ZipEntry zipEntry = zis.getNextEntry();
 

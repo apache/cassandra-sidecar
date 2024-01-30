@@ -81,9 +81,11 @@ public class AbortRestoreJobHandler extends AbstractHandler<String>
 
             restoreJobDatabaseAccessor.abort(job.jobId);
             restoreJobManagerGroup.signalRefreshRestoreJob();
-            return Future.succeededFuture();
+            return Future.succeededFuture(job);
         })
-        .onSuccess(ignored -> {
+        .onSuccess(job -> {
+            logger.info("Successfully aborted restore job. job={}, remoteAddress={}, instance={}",
+                        job, remoteAddress, host);
             stats.captureFailedJob();
             context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
         })

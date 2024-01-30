@@ -30,12 +30,17 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import io.vertx.core.Promise;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
+import org.apache.cassandra.sidecar.locator.CachedLocalTokenRanges;
+import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
+import org.apache.cassandra.sidecar.locator.TokenRange;
 import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
@@ -54,6 +59,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
     private final RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor;
     private final Provider<RestoreJobManagerGroup> restoreJobManagerGroupSingleton;
+    private final LocalTokenRangesProvider localTokenRangesProvider;
     private final InstanceMetadataFetcher instanceMetadataFetcher;
     private final RestoreJobStats stats;
     private volatile boolean refreshSignaled = true;
@@ -67,6 +73,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                                 RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
                                 RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor,
                                 Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
+                                CachedLocalTokenRanges cachedLocalTokenRanges,
                                 InstanceMetadataFetcher instanceMetadataFetcher,
                                 RestoreJobStats stats)
     {
@@ -75,6 +82,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
              restoreJobDatabaseAccessor,
              restoreSliceDatabaseAccessor,
              restoreJobManagerGroupProvider,
+             cachedLocalTokenRanges,
              instanceMetadataFetcher,
              stats);
     }
@@ -85,6 +93,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                          RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
                          RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor,
                          Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
+                         LocalTokenRangesProvider cachedLocalTokenRanges,
                          InstanceMetadataFetcher instanceMetadataFetcher,
                          RestoreJobStats stats)
     {
@@ -94,6 +103,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
         this.restoreSliceDatabaseAccessor = restoreSliceDatabaseAccessor;
         this.jobDiscoveryRecencyDays = restoreJobConfig.jobDiscoveryRecencyDays();
         this.restoreJobManagerGroupSingleton = restoreJobManagerGroupProvider;
+        this.localTokenRangesProvider = cachedLocalTokenRanges;
         this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.stats = stats;
     }
@@ -153,6 +163,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                 switch (job.status)
                 {
                     case CREATED:
+                    case STAGED:
                         if (job.expireAt == null // abort all old jobs that has no expireAt value
                             || job.expireAt.getTime() < nowMillis)
                         {
@@ -164,6 +175,11 @@ public class RestoreJobDiscoverer implements PeriodicTask
                         // find the oldest non-completed job
                         days = Math.max(days, delta(today, job.createdAt));
                         restoreJobManagers.updateRestoreJob(job);
+                        if (job.isRangeManagedByServer())
+                        {
+                            // todo: potential exceedingly number of queries
+                            findSlicesAndSubmit(job);
+                        }
                         inflightJobsCount += 1;
                         break;
                     case FAILED:
@@ -208,12 +224,53 @@ public class RestoreJobDiscoverer implements PeriodicTask
     }
 
     /**
-     * TODO: remove the method on phase 2 completion
      * Signal the job discovery loop to refresh in the next execution
      */
     public void signalRefresh()
     {
         refreshSignaled = true;
+    }
+
+    // find all slices of the job that should be downloaded to the local instances,
+    // according to the cluster token ownership
+    private void findSlicesAndSubmit(RestoreJob restoreJob)
+    {
+        if (!restoreJobConfig.isServerManagedRangeEnabled())
+        {
+            return;
+        }
+
+        localTokenRangesProvider.localTokenRanges(restoreJob.keyspaceName)
+                                .forEach((key, ranges) -> {
+                                    int instanceId = key;
+                                    InstanceMetadata instance = instanceMetadataFetcher.instance(instanceId);
+                                    ranges.forEach(range -> findSlicesOfRangeAndSubmit(instance, restoreJob, range));
+                                });
+    }
+
+    // try to submit the slice.
+    // If it is already exist, it is a no-op.
+    // If the submission fails, the slice status of the instance is updated.
+    private void findSlicesOfRangeAndSubmit(InstanceMetadata instance, RestoreJob restoreJob, TokenRange range)
+    {
+        short bucketId = 0; // TODO: update the implementation to pick proper bucketId
+        restoreSliceDatabaseAccessor
+        .selectByJobByBucketByTokenRange(restoreJob.jobId, bucketId, range.start, range.end)
+        .forEach(slice -> {
+            // set the owner instance, which is not read from database
+            slice = slice.unbuild().ownerInstance(instance).build();
+            try
+            {
+                // todo: do not re-submit for download if the slice is staged (when job status is before staged) or imported (when job status is staged) on the instance already
+                restoreJobManagerGroupSingleton.get().trySubmit(instance, slice, restoreJob);
+            }
+            catch (RestoreJobFatalException e)
+            {
+                slice.fail(e); // TODO: is it still needed? no, remove it later.
+                slice.failAtInstance(instance.id());
+                restoreSliceDatabaseAccessor.updateStatus(slice);
+            }
+        });
     }
 
     private boolean abortJob(RestoreJob job)

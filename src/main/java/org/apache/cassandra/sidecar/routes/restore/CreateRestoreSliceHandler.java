@@ -98,7 +98,7 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
                                  .qualifiedTableName(tableName)
                                  .createSliceRequestPayload(request)
                                  .ownerInstance(instance)
-                                 .targetPathInStaging(Paths.get(instance.stagingDir()), uploadId)
+                                 .stageDirectory(Paths.get(instance.stagingDir()), uploadId)
                                  .replicaStatus(Collections.singletonMap(String.valueOf(instance.id()),
                                                                          RestoreSliceStatus.COMMITTING))
                                  .replicas(Collections.singleton(String.valueOf(instance.id())))

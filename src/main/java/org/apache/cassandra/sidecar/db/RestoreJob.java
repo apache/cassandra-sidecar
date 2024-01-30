@@ -55,6 +55,8 @@ public class RestoreJob
     public final short bucketCount;
     public final String consistencyLevel;
 
+    private final boolean isMaterialized; // When true, the job object is materialized from database
+
     public static Builder builder()
     {
         return new Builder();
@@ -80,41 +82,6 @@ public class RestoreJob
         //  Add new fields to CreateRestoreJobRequestPayload too
 //               .bucketCount(row.getShort("bucket_count"))
 //               .consistencyLevel(row.getString("consistency_level"));
-        return builder.build();
-    }
-
-    // todo: candidate to be removed
-    public static RestoreJob forUpdates(UUID jobId, String jobAgent,
-                                        RestoreJobStatus status,
-                                        RestoreJobSecrets secrets,
-                                        Date expireAt)
-    throws DataObjectMappingException
-    {
-        Builder builder = new Builder();
-        builder.createdAt(toLocalDate(jobId))
-               .jobId(jobId).jobAgent(jobAgent)
-               .jobStatus(status)
-               .jobSecrets(secrets)
-               .expireAt(expireAt);
-        return builder.build();
-    }
-
-    // todo: candidate to be removed
-    @VisibleForTesting
-    public static RestoreJob create(LocalDate createdAt,
-                                    UUID jobId,
-                                    String keyspaceName,
-                                    String tableName,
-                                    String jobAgent,
-                                    RestoreJobStatus status,
-                                    RestoreJobSecrets secrets,
-                                    SSTableImportOptions importOptions)
-    {
-        Builder builder = new Builder();
-        builder.createdAt(createdAt)
-               .jobId(jobId).jobAgent(jobAgent)
-               .keyspace(keyspaceName).table(tableName)
-               .jobStatus(status).jobSecrets(secrets).sstableImportOptions(importOptions);
         return builder.build();
     }
 
@@ -156,11 +123,26 @@ public class RestoreJob
         this.expireAt = builder.expireAt;
         this.bucketCount = builder.bucketCount;
         this.consistencyLevel = builder.consistencyLevel;
+        this.isMaterialized = builder.isMaterialized;
     }
 
     public Builder unbuild()
     {
         return new Builder(this);
+    }
+
+    /**
+     * When a job object is materialized from database, and it has non-null consistencyLevel, the range of the slices
+     * of the restore is managed by Sidecar server, meaning that server should assign slices to sidecar instances and
+     * check whether the job has met the consistency level to complete the job; otherwise, sidecar instances are just
+     * simple workers and rely on client for decision-making.
+     * Depending on the return value, call-sites select the correct handling for the restore jobs and slices
+     * @return true when sidecar server manages the slices based on the token range; otherwise, return false.
+     */
+    public boolean isRangeManagedByServer()
+    {
+        // a full job that has consistency level specified
+        return isMaterialized && consistencyLevel != null;
     }
 
     /**
@@ -211,6 +193,7 @@ public class RestoreJob
         private Date expireAt;
         private short bucketCount;
         private String consistencyLevel;
+        private boolean isMaterialized;
 
         private Builder()
         {
@@ -230,6 +213,7 @@ public class RestoreJob
             this.expireAt = restoreJob.expireAt;
             this.bucketCount = restoreJob.bucketCount;
             this.consistencyLevel = restoreJob.consistencyLevel;
+            this.isMaterialized = restoreJob.isMaterialized;
         }
 
         public Builder createdAt(LocalDate createdAt)
@@ -285,6 +269,11 @@ public class RestoreJob
         public Builder consistencyLevel(String consistencyLevel)
         {
             return update(b -> b.consistencyLevel = consistencyLevel);
+        }
+
+        public Builder isMaterialized(boolean isMaterialized)
+        {
+            return update(b -> b.isMaterialized = isMaterialized);
         }
 
         @Override

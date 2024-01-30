@@ -36,6 +36,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     public static final int DEFAULT_JOB_DISCOVERY_RECENCY_DAYS = 5;
     public static final int DEFAULT_PROCESS_MAX_CONCURRENCY = 20; // process at most 20 slices concurrently
     public static final long DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(90);
+    public static final boolean DEFAULT_IS_SERVER_MANAGED_RANGE_ENABLED = false;
 
     @JsonProperty(value = "job_discovery_active_loop_delay_millis", defaultValue = "5")
     protected final long jobDiscoveryActiveLoopDelayMillis;
@@ -52,6 +53,9 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     @JsonProperty(value = "restore_job_tables_ttl_seconds", defaultValue = "90")
     protected final long restoreJobTablesTtlSeconds;
 
+    @JsonProperty(value = "is_server_managed_range_enabled", defaultValue = "false")
+    protected final boolean isServerManagedRangeEnabled;
+
     protected RestoreJobConfigurationImpl()
     {
         this(builder());
@@ -64,6 +68,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.jobDiscoveryRecencyDays = builder.jobDiscoveryRecencyDays;
         this.processMaxConcurrency = builder.processMaxConcurrency;
         this.restoreJobTablesTtlSeconds = builder.restoreJobTablesTtlSeconds;
+        this.isServerManagedRangeEnabled = builder.isServerManagedRangeEnabled;
         validate();
     }
 
@@ -132,6 +137,14 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         return restoreJobTablesTtlSeconds;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public boolean isServerManagedRangeEnabled()
+    {
+        return false;
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -147,6 +160,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         private int jobDiscoveryRecencyDays = DEFAULT_JOB_DISCOVERY_RECENCY_DAYS;
         private int processMaxConcurrency = DEFAULT_PROCESS_MAX_CONCURRENCY;
         private long restoreJobTablesTtlSeconds = DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS;
+        private boolean isServerManagedRangeEnabled = DEFAULT_IS_SERVER_MANAGED_RANGE_ENABLED;
 
         protected Builder()
         {
@@ -167,8 +181,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
          */
         public Builder jobDiscoveryActiveLoopDelayMillis(long jobDiscoveryActiveLoopDelayMillis)
         {
-            this.jobDiscoveryActiveLoopDelayMillis = jobDiscoveryActiveLoopDelayMillis;
-            return this;
+            return update(b -> b.jobDiscoveryActiveLoopDelayMillis = jobDiscoveryActiveLoopDelayMillis);
         }
 
         /**
@@ -180,8 +193,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
          */
         public Builder jobDiscoveryIdleLoopDelayMillis(long jobDiscoveryIdleLoopDelayMillis)
         {
-            this.jobDiscoveryIdleLoopDelayMillis = jobDiscoveryIdleLoopDelayMillis;
-            return this;
+            return update(b -> b.jobDiscoveryIdleLoopDelayMillis = jobDiscoveryIdleLoopDelayMillis);
         }
 
         /**
@@ -193,8 +205,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
          */
         public Builder jobDiscoveryRecencyDays(int jobDiscoveryRecencyDays)
         {
-            this.jobDiscoveryRecencyDays = jobDiscoveryRecencyDays;
-            return this;
+            return update(b -> b.jobDiscoveryRecencyDays = jobDiscoveryRecencyDays);
         }
 
         /**
@@ -206,8 +217,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
          */
         public Builder processMaxConcurrency(int processMaxConcurrency)
         {
-            this.processMaxConcurrency = processMaxConcurrency;
-            return this;
+            return update(b -> b.processMaxConcurrency = processMaxConcurrency);
         }
 
         /**
@@ -219,10 +229,20 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
          */
         public Builder restoreJobTablesTtlSeconds(long restoreJobTablesTtlSeconds)
         {
-            this.restoreJobTablesTtlSeconds = restoreJobTablesTtlSeconds;
-            return this;
+            return update(b -> b.restoreJobTablesTtlSeconds = restoreJobTablesTtlSeconds);
         }
 
+        /**
+         * Sets the {@code isServerManagedRangeEnabled} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param isServerManagedRangeEnabled the {@code isServerManagedRangeEnabled} to set
+         * @return a reference to this Builder
+         */
+        public Builder isServerManagedRangeEnabled(boolean isServerManagedRangeEnabled)
+        {
+            return update(b -> b.isServerManagedRangeEnabled = isServerManagedRangeEnabled);
+        }
 
         @Override
         public RestoreJobConfigurationImpl build()

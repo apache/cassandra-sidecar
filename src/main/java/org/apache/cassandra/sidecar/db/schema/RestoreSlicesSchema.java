@@ -78,7 +78,7 @@ public class RestoreSlicesSchema extends AbstractSchema.TableSchema
                              "  end_token varint," +
                              "  compressed_size bigint," +
                              "  uncompressed_size bigint," +
-                             "  status_by_replica map<text, text>," +
+                             "  status_by_replica map<text, text>," + // key is instance ID; value is RestoreSliceStatus
                              "  all_replicas set<text>," +
                              "  PRIMARY KEY ((job_id, bucket_id), start_token, slice_id)" +
                              ") WITH default_time_to_live = %s",
