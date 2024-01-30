@@ -184,7 +184,6 @@ public abstract class BaseRestoreJobTests
 
             @Override
             public RestoreJob update(UpdateRestoreJobRequestPayload payload,
-                                     QualifiedTableName qualifiedTableName,
                                      UUID jobId)
             {
                 return updateFunc.apply(payload);

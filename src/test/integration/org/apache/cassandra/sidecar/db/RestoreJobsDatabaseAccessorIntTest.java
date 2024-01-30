@@ -58,11 +58,11 @@ class RestoreJobsDatabaseAccessorIntTest extends IntegrationTestBase
         RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
         long expiresAtMillis = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1);
         UUID jobId = UUIDs.timeBased();
-        accessor.create(CreateRestoreJobRequestPayload.builder(secrets, expiresAtMillis)
-                                                      .jobId(jobId)
-                                                      .jobAgent("agent")
-                                                      .build(),
-                        qualifiedTableName);
+        CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload.builder(secrets, expiresAtMillis)
+                                                                               .jobId(jobId)
+                                                                               .jobAgent("agent")
+                                                                               .build();
+        accessor.create(payload, qualifiedTableName);
 
         List<RestoreJob> foundJobs = accessor.findAllRecent(3);
         assertThat(foundJobs).hasSize(1);
@@ -70,7 +70,7 @@ class RestoreJobsDatabaseAccessorIntTest extends IntegrationTestBase
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.CREATED, expiresAtMillis, secrets);
         UpdateRestoreJobRequestPayload markSucceeded
         = new UpdateRestoreJobRequestPayload(null, null, RestoreJobStatus.SUCCEEDED, null);
-        accessor.update(markSucceeded, qualifiedTableName, jobId);
+        accessor.update(markSucceeded, jobId);
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.SUCCEEDED, expiresAtMillis, secrets);
     }
 

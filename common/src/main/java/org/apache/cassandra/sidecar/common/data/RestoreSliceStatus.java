@@ -18,15 +18,44 @@
 
 package org.apache.cassandra.sidecar.common.data;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
+
 /**
  * Holds all possible restore slice statues
  */
 public enum RestoreSliceStatus
 {
-    EMPTY,
-    PROCESSING,
-    COMMITTING,
     SUCCEEDED,
     FAILED,
-    ABORTED
+    ABORTED,
+    COMMITTING(SUCCEEDED, FAILED, ABORTED),
+    STAGED(COMMITTING, FAILED, ABORTED),
+    PROCESSING(STAGED, FAILED, ABORTED),
+    EMPTY(PROCESSING, FAILED, ABORTED);
+
+    // Do not use EnumSet, since validTargetStatuses is assigned on constructing and enums are not available yet.
+    private final Set<RestoreSliceStatus> validTargetStatusSet;
+
+    RestoreSliceStatus(RestoreSliceStatus... targetStatuses)
+    {
+        this.validTargetStatusSet = new HashSet<>();
+        Collections.addAll(validTargetStatusSet, targetStatuses);
+    }
+
+    /**
+     * Advance the status with validation
+     * @param targetStatus target status to advance to
+     * @return new status
+     */
+    public RestoreSliceStatus advanceTo(RestoreSliceStatus targetStatus)
+    {
+        Preconditions.checkArgument(validTargetStatusSet.contains(targetStatus),
+                                    name() + " status can only advance to one of the follow statuses: " +
+                                    validTargetStatusSet);
+        return targetStatus;
+    }
 }

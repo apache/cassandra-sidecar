@@ -45,7 +45,7 @@ class RestoreSliceTest
                       .startToken(BigInteger.ONE).endToken(BigInteger.valueOf(2))
                       .replicaStatus(Collections.singletonMap("replica1", RestoreSliceStatus.COMMITTING))
                       .replicas(Collections.singleton("replica1"))
-                      .targetPathInStaging(path, "uploadId")
+                      .stageDirectory(path, "uploadId")
                       .build();
         RestoreSlice slice2 = slice1.unbuild().build();
         assertThat(slice1).isEqualTo(slice2);

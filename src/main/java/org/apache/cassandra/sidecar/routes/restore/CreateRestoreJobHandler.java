@@ -86,7 +86,7 @@ public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobReq
     @Override
     protected CreateRestoreJobRequestPayload extractParamsOrThrow(RoutingContext context)
     {
-        String bodyString = context.getBodyAsString();
+        String bodyString = context.body().asString();
         if (bodyString == null || bodyString.equalsIgnoreCase("null")) // json encoder writes null as "null"
         {
             logger.warn("Bad request to create restore job. Received null payload.");

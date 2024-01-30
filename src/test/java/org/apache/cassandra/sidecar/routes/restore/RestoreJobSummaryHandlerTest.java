@@ -52,10 +52,14 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
         mockLookupRestoreJob(x -> {
             UUID id = UUID.fromString(jobId);
             // keyspace name is different
-
-            return RestoreJob.create(LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(id)), id,
-                                     "ks", "table", "job agent",
-                                     RestoreJobStatus.CREATED, SECRETS, SSTableImportOptions.defaults());
+            return RestoreJob.builder()
+                             .createdAt(LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(id)))
+                             .jobId(id).jobAgent("job agent")
+                             .keyspace("ks").table("table")
+                             .jobStatus(RestoreJobStatus.CREATED)
+                             .jobSecrets(SECRETS)
+                             .sstableImportOptions(SSTableImportOptions.defaults())
+                             .build();
         });
         sendGetRestoreJobSummaryRequestAndVerify("ks", "table", jobId, context, HttpResponseStatus.OK.code());
     }
@@ -80,8 +84,12 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
         String jobId = "7cd82ff9-d276-11ed-93e5-7fce0df1306f";
         mockLookupRestoreJob(x -> {
             // keyspace name is different
-            return RestoreJob.create(null, UUID.fromString(jobId), "ks",
-                                     "table", null, RestoreJobStatus.CREATED, null, null);
+            return RestoreJob.builder()
+                             .createdAt(null)
+                             .jobId(UUID.fromString(jobId))
+                             .keyspace("ks").table("table")
+                             .jobStatus(RestoreJobStatus.CREATED)
+                             .build();
         });
         sendGetRestoreJobSummaryRequestAndVerify("ks1", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f",
                                                  context,  HttpResponseStatus.NOT_FOUND.code());
@@ -111,9 +119,12 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(x -> {
             UUID jobId = UUID.fromString("7cd82ff9-d276-11ed-93e5-7fce0df1306f");
-            return RestoreJob.create(LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(jobId)), jobId,
-                                     "ks", "table", "job agent",
-                                     RestoreJobStatus.CREATED, null, null);
+            return RestoreJob.builder()
+                             .createdAt(LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(jobId)))
+                             .jobId(jobId).jobAgent("job agent")
+                             .keyspace("ks").table("table")
+                             .jobStatus(RestoreJobStatus.CREATED)
+                             .build();
         });
         sendGetRestoreJobSummaryRequestAndVerify("ks", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f",
                                                  context, HttpResponseStatus.INTERNAL_SERVER_ERROR.code());

@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.db;
 import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -46,7 +48,14 @@ import org.apache.cassandra.sidecar.utils.SSTableImporter;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Data object that contains all values that matter to the restore job slice
+ * <p>Data object that contains all values that matter to the restore job slice.</p>
+ *
+ * <p>How the staged files are organized on disk? For each slice,</p>
+ * <ol>
+ * <li>the S3 object is downloaded to the path at "stageDirectory/key". It is a zip file.</li>
+ * <li>the zip is then extracted to the directory at "stageDirectory/keyspace/table/".
+ *    The extracted sstables are imported into Cassandra.</li>
+ * </ol>
  */
 public class RestoreSlice
 {
@@ -58,7 +67,12 @@ public class RestoreSlice
     private final String bucket;
     private final String key;
     private final String checksum; // etag
-    private final Path targetPathInStaging; // the path to store the s3 object of the slice
+    // The path to the directory that stores the s3 object of the slice and the sstables after unzipping.
+    // Its value is "baseStageDirectory/uploadId"
+    private final Path stageDirectory;
+    // The path to the staged s3 object (file). The path is inside stageDirectory.
+    // Its value is "stageDirectory/key"
+    private final Path stagedObjectPath;
     private final String uploadId;
     private final InstanceMetadata owner;
     private final BigInteger startToken;
@@ -69,7 +83,11 @@ public class RestoreSlice
     private final long compressedSize;
     private final long uncompressedSize;
     private RestoreSliceTracker tracker;
+
+    // mutable states
     private boolean existsOnS3 = false;
+    private boolean hasStaged = false;
+    private boolean hasImported = false;
     private int downloadAttempt = 0;
     private volatile boolean isCancelled = false;
 
@@ -88,7 +106,8 @@ public class RestoreSlice
         this.bucket = builder.bucket;
         this.key = builder.key;
         this.checksum = builder.checksum;
-        this.targetPathInStaging = builder.targetPathInStaging;
+        this.stageDirectory = builder.stageDirectory;
+        this.stagedObjectPath = builder.stagedObjectPath;
         this.uploadId = builder.uploadId;
         this.owner = builder.owner;
         this.startToken = builder.startToken;
@@ -151,11 +170,27 @@ public class RestoreSlice
     }
 
     /**
-     * Make the slice as completed
+     * Mark the slice as completed
      */
     public void complete()
     {
         tracker.completeSlice(this);
+    }
+
+    /**
+     * Mark the slice has completed the stage phase
+     */
+    public void completeStagePhase()
+    {
+        this.hasStaged = true;
+    }
+
+    /**
+     * Mark the slice has completed the import phase
+     */
+    public void completeImportPhase()
+    {
+        this.hasImported = true;
     }
 
     public void failAtInstance(int instanceId)
@@ -169,6 +204,7 @@ public class RestoreSlice
     public void fail(RestoreJobFatalException exception)
     {
         tracker.fail(exception);
+        failAtInstance(owner().id());
     }
 
     public void setExistsOnS3()
@@ -196,6 +232,7 @@ public class RestoreSlice
                                                       ExecutorPools.TaskExecutorPool executorPool,
                                                       SSTableImporter importer,
                                                       double requiredUsableSpacePercentage,
+                                                      RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
                                                       RestoreJobStats stats)
     {
         if (isCancelled)
@@ -204,10 +241,12 @@ public class RestoreSlice
 
         try
         {
-            RestoreJob restoreJob = job();
-            StorageClient s3Client = s3ClientPool.storageClient(restoreJob);
-            return new RestoreSliceTask(restoreJob, this, s3Client,
-                                        executorPool, importer, requiredUsableSpacePercentage, stats);
+            StorageClient s3Client = s3ClientPool.storageClient(job());
+            return new RestoreSliceTask(this, s3Client,
+                                        executorPool, importer,
+                                        requiredUsableSpacePercentage,
+                                        sliceDatabaseAccessor,
+                                        stats);
         }
         catch (IllegalStateException illegalState)
         {
@@ -300,9 +339,21 @@ public class RestoreSlice
         return this.replicas;
     }
 
-    public Path targetPathInStaging()
+    /**
+     * @return the path to the directory that stores the s3 object of the slice
+     *         and the sstables after unzipping
+     */
+    public Path stageDirectory()
     {
-        return targetPathInStaging;
+        return stageDirectory;
+    }
+
+    /**
+     * @return the path to the staged s3 object
+     */
+    public Path stagedObjectPath()
+    {
+        return stagedObjectPath;
     }
 
     public long compressedSize()
@@ -330,6 +381,16 @@ public class RestoreSlice
         return existsOnS3;
     }
 
+    public boolean hasStaged()
+    {
+        return hasStaged;
+    }
+
+    public boolean hasImported()
+    {
+        return hasImported;
+    }
+
     public int downloadAttempt()
     {
         return downloadAttempt;
@@ -350,6 +411,7 @@ public class RestoreSlice
     public static RestoreSlice from(Row row)
     {
         Builder builder = new Builder();
+        builder.jobId(row.getUUID("job_id"));
         builder.sliceId(row.getString("slice_id"));
         builder.bucketId(row.getShort("bucket_id"));
         builder.storageBucket(row.getString("bucket"));
@@ -377,7 +439,8 @@ public class RestoreSlice
         private String bucket;
         private String key;
         private String checksum; // etag
-        private Path targetPathInStaging; // the path to store the s3 object of the slice
+        private Path stageDirectory;
+        private Path stagedObjectPath;
         private String uploadId;
         private InstanceMetadata owner;
         private BigInteger startToken;
@@ -401,7 +464,7 @@ public class RestoreSlice
             this.bucket = slice.bucket;
             this.key = slice.key;
             this.checksum = slice.checksum;
-            this.targetPathInStaging = slice.targetPathInStaging;
+            this.stageDirectory = slice.stageDirectory;
             this.uploadId = slice.uploadId;
             this.owner = slice.owner;
             this.startToken = slice.startToken;
@@ -450,10 +513,10 @@ public class RestoreSlice
             return update(b -> b.checksum = checksum);
         }
 
-        public Builder targetPathInStaging(Path basePath, String uploadId)
+        public Builder stageDirectory(Path basePath, String uploadId)
         {
             return update(b -> {
-                b.targetPathInStaging = basePath.resolve(uploadId);
+                b.stageDirectory = basePath.resolve(uploadId);
                 b.uploadId = uploadId;
             });
         }
@@ -485,12 +548,12 @@ public class RestoreSlice
 
         public Builder replicaStatus(Map<String, RestoreSliceStatus> statusByReplica)
         {
-            return update(b -> b.statusByReplica = Collections.unmodifiableMap(statusByReplica));
+            return update(b -> b.statusByReplica = new HashMap<>(statusByReplica));
         }
 
         public Builder replicas(Set<String> replicas)
         {
-            return update(b -> b.replicas = Collections.unmodifiableSet(replicas));
+            return update(b -> b.replicas = new HashSet<>(replicas));
         }
 
         /**
@@ -525,6 +588,8 @@ public class RestoreSlice
         @Override
         public RestoreSlice build()
         {
+            // precompute the path to the to-be-staged object on disk
+            stagedObjectPath = stageDirectory.resolve(key);
             return new RestoreSlice(this);
         }
 

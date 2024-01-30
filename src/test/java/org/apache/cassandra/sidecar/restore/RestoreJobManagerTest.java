@@ -245,11 +245,16 @@ class RestoreJobManagerTest
 
     private RestoreSlice getTestSlice(RestoreJob job)
     {
+        InstanceMetadata owner = mock(InstanceMetadata.class);
+        when(owner.id()).thenReturn(1);
         RestoreSlice slice = RestoreSlice
                              .builder()
                              .jobId(job.jobId)
                              .bucketId((short) 0)
-                             .targetPathInStaging(testDir, "uploadId")
+                             .stageDirectory(testDir, "uploadId")
+                             .storageKey("storageKey")
+                             .storageBucket("storageBucket")
+                             .ownerInstance(owner)
                              .replicaStatus(Collections.emptyMap())
                              .replicas(Collections.emptySet())
                              .build();

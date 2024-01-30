@@ -167,8 +167,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
          */
         public Builder jobDiscoveryActiveLoopDelayMillis(long jobDiscoveryActiveLoopDelayMillis)
         {
-            this.jobDiscoveryActiveLoopDelayMillis = jobDiscoveryActiveLoopDelayMillis;
-            return this;
+            return update(b -> b.jobDiscoveryActiveLoopDelayMillis = jobDiscoveryActiveLoopDelayMillis);
         }
 
         /**
@@ -180,8 +179,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
          */
         public Builder jobDiscoveryIdleLoopDelayMillis(long jobDiscoveryIdleLoopDelayMillis)
         {
-            this.jobDiscoveryIdleLoopDelayMillis = jobDiscoveryIdleLoopDelayMillis;
-            return this;
+            return update(b -> b.jobDiscoveryIdleLoopDelayMillis = jobDiscoveryIdleLoopDelayMillis);
         }
 
         /**
@@ -193,8 +191,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
          */
         public Builder jobDiscoveryRecencyDays(int jobDiscoveryRecencyDays)
         {
-            this.jobDiscoveryRecencyDays = jobDiscoveryRecencyDays;
-            return this;
+            return update(b -> b.jobDiscoveryRecencyDays = jobDiscoveryRecencyDays);
         }
 
         /**
@@ -206,8 +203,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
          */
         public Builder processMaxConcurrency(int processMaxConcurrency)
         {
-            this.processMaxConcurrency = processMaxConcurrency;
-            return this;
+            return update(b -> b.processMaxConcurrency = processMaxConcurrency);
         }
 
         /**
@@ -219,10 +215,8 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
          */
         public Builder restoreJobTablesTtlSeconds(long restoreJobTablesTtlSeconds)
         {
-            this.restoreJobTablesTtlSeconds = restoreJobTablesTtlSeconds;
-            return this;
+            return update(b -> b.restoreJobTablesTtlSeconds = restoreJobTablesTtlSeconds);
         }
-
 
         @Override
         public RestoreJobConfigurationImpl build()

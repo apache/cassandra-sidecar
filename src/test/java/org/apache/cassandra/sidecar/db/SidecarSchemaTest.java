@@ -19,11 +19,15 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -116,7 +120,9 @@ public class SidecarSchemaTest
         sidecarSchema.startSidecarSchemaInitializer();
         context.verify(() -> {
             int maxWaitTime = 20; // about 10 seconds
-            while (interceptedExecStmts.size() < 1 || !sidecarSchema.isInitialized())
+            while (interceptedPrepStmts.size() < 10
+                   || interceptedExecStmts.size() < 3
+                   || !sidecarSchema.isInitialized())
             {
                 if (maxWaitTime-- <= 0)
                 {
@@ -129,6 +135,51 @@ public class SidecarSchemaTest
             assertEquals(3, interceptedExecStmts.size());
             assertTrue(interceptedExecStmts.get(0).contains("CREATE KEYSPACE IF NOT EXISTS sidecar_internal"),
                        "Create keyspace should be executed the first");
+            assertTrue(hasElementContains(interceptedExecStmts,
+                                          "CREATE TABLE IF NOT EXISTS sidecar_internal.restore_job_v2"),
+                       "Create table should be executed the next for job table");
+            assertTrue(hasElementContains(interceptedExecStmts,
+                                          "CREATE TABLE IF NOT EXISTS sidecar_internal.restore_slice_v2"),
+                       "Create table should be executed the next for slice table");
+
+            List<String> expectedPrepStatements = Arrays.asList(
+            "INSERT INTO sidecar_internal.restore_job_v2 (  created_at,  job_id,  keyspace_name,  table_name,  " +
+            "job_agent,  status,  blob_secrets,  import_options,  consistency_level,  expire_at) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+
+            "INSERT INTO sidecar_internal.restore_job_v2 (  created_at,  job_id,  blob_secrets) VALUES (?, ? ,?)",
+
+            "INSERT INTO sidecar_internal.restore_job_v2 (  created_at,  job_id,  status) VALUES (?, ?, ?)",
+
+            "INSERT INTO sidecar_internal.restore_job_v2 (  created_at,  job_id,  job_agent) VALUES (?, ?, ?)",
+
+            "INSERT INTO sidecar_internal.restore_job_v2 (  created_at,  job_id,  expire_at) VALUES (?, ?, ?)",
+
+            "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, " +
+            "consistency_level, expire_at FROM sidecar_internal.restore_job_v2 WHERE created_at = ? AND job_id = ?",
+
+            "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, " +
+            "consistency_level, expire_at FROM sidecar_internal.restore_job_v2 WHERE created_at = ?",
+
+            "INSERT INTO sidecar_internal.restore_slice_v2 (  job_id,  bucket_id,  slice_id,  bucket,  key,  " +
+            "checksum,  start_token,  end_token,  compressed_size,  uncompressed_size,  status_by_replica,  " +
+            "all_replicas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+
+            "SELECT job_id, bucket_id, slice_id, bucket, key, checksum, start_token, end_token, compressed_size, " +
+            "uncompressed_size, status_by_replica, all_replicas FROM sidecar_internal.restore_slice_v2 " +
+            "WHERE job_id = ? AND bucket_id = ? AND end_token >= ? AND start_token < ? ALLOW FILTERING",
+
+            "UPDATE sidecar_internal.restore_slice_v2 SET status_by_replica = status_by_replica + ?, " +
+            "all_replicas = all_replicas + ? WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND slice_id = ?"
+            );
+
+            Set<String> expected = new HashSet<>(expectedPrepStatements);
+            Set<String> actual = new HashSet<>(interceptedPrepStmts);
+            Set<String> notInExpected = Sets.difference(actual, expected);
+            assertEquals(expected.size(), actual.size(), "Number of prepared statements should match");
+            assertTrue(notInExpected.isEmpty(),
+                       "Found the following statements that not in expected: " + notInExpected);
+
             assertTrue(sidecarSchema.isInitialized());
             context.completeNow();
         });

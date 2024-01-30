@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
+import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
@@ -58,6 +59,7 @@ public class RestoreProcessor implements PeriodicTask
     private final ConcurrencyLimiter processMaxConcurrency;
     private final SliceQueue sliceQueue = new SliceQueue();
     private final double requiredUsableSpacePercentage; // value range: [0.0, 1.0)
+    private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobStats stats;
     private volatile boolean isClosed = false; // OK to run close twice, so relax the control to volatile
 
@@ -67,6 +69,7 @@ public class RestoreProcessor implements PeriodicTask
                             SidecarSchema sidecarSchema,
                             StorageClientPool s3ClientPool,
                             SSTableImporter importer,
+                            RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
                             RestoreJobStats stats)
     {
         this.pool = executorPools.internal();
@@ -77,6 +80,7 @@ public class RestoreProcessor implements PeriodicTask
         this.requiredUsableSpacePercentage
         = config.serviceConfiguration().ssTableUploadConfiguration().minimumSpacePercentageRequired() / 100.0;
         this.importer = importer;
+        this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.stats = stats;
     }
 
@@ -126,12 +130,29 @@ public class RestoreProcessor implements PeriodicTask
             // capture the new queue length after polling
             sliceQueue.captureImportQueueLength();
             pool.executeBlocking(slice.toAsyncTask(s3ClientPool, pool, importer,
-                                                   requiredUsableSpacePercentage, stats),
+                                                   requiredUsableSpacePercentage,
+                                                   sliceDatabaseAccessor, stats),
                                  false) // unordered
             .onSuccess(restoreSlice -> {
-                stats.captureSliceCompletionTime(slice.owner().id(), System.nanoTime() - slice.creationTimeNanos());
-                LOGGER.info("Slice completes successfully. sliceKey={}", restoreSlice.key());
-                restoreSlice.complete();
+                if (slice.hasImported())
+                {
+                    stats.captureSliceCompletionTime(slice.owner().id(), System.nanoTime() - slice.creationTimeNanos());
+                    LOGGER.info("Slice completes successfully. sliceKey={}", slice.key());
+                    slice.complete();
+                }
+                else if (slice.hasStaged())
+                {
+                    // todo: report stat of time taken to stage
+                    LOGGER.info("Slice has been staged successfully. sliceKey={}", slice.key());
+                    // the slice is not fully complete yet. Re-enqueue the slice.
+                    sliceQueue.offer(slice);
+                }
+                else // log a warning and retry. It should not reach here.
+                {
+                    LOGGER.warn("Unexpected state of slice. It is neither staged nor imported. sliceKey={}",
+                                slice.key());
+                    sliceQueue.offer(slice);
+                }
             })
             .onFailure(cause -> {
                 if (cause instanceof RestoreJobException && ((RestoreJobException) cause).retryable())
@@ -143,8 +164,13 @@ public class RestoreProcessor implements PeriodicTask
                 else
                 {
                     LOGGER.error("Slice failed with unrecoverable failure. sliceKey={}", slice.key(), cause);
-                    // fail the slice. In the current implementation, all slices of the job get aborted
+                    // fail the slice and mark the slice has failed on its owning instance.
+                    // In the phase 1 implementation, all slices of the job get aborted
                     slice.fail(RestoreJobExceptions.toFatal(cause));
+                    if (slice.job().isManagedBySidecar())
+                    {
+                        sliceDatabaseAccessor.updateStatus(slice);
+                    }
                     // revoke the s3 credentials of the job too
                     s3ClientPool.revokeCredentials(slice.jobId());
                 }

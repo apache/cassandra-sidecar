@@ -38,13 +38,15 @@ import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.RestoreJobTest;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.stats.TestRestoreJobStats;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.mockito.ArgumentCaptor;
 
+import static org.apache.cassandra.sidecar.db.RestoreJobTest.createNewTestingJob;
+import static org.apache.cassandra.sidecar.db.RestoreJobTest.createUpdatedJob;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doNothing;
@@ -57,18 +59,20 @@ class RestoreJobDiscovererTest
     private static final long idleLoopDelay = 2000;
     private static final int recencyDays = 10;
     private final TestRestoreJobStats stats = new TestRestoreJobStats();
-    private RestoreJobDatabaseAccessor mockJobAccessor = mock(RestoreJobDatabaseAccessor.class);
-    private RestoreSliceDatabaseAccessor mockSliceAccessor = mock(RestoreSliceDatabaseAccessor.class);
-    private RestoreJobManagerGroup mockManagers = mock(RestoreJobManagerGroup.class);
-    private PeriodicTaskExecutor executor = mock(PeriodicTaskExecutor.class);
-    private SidecarSchema sidecarSchema = mock(SidecarSchema.class);
-    private RestoreJobDiscoverer loop = new RestoreJobDiscoverer(testConfig(),
-                                                                 sidecarSchema,
-                                                                 mockJobAccessor,
-                                                                 mockSliceAccessor,
-                                                                 () -> mockManagers,
-                                                                 null,
-                                                                 stats);
+    private final RestoreJobDatabaseAccessor mockJobAccessor = mock(RestoreJobDatabaseAccessor.class);
+    private final RestoreSliceDatabaseAccessor mockSliceAccessor = mock(RestoreSliceDatabaseAccessor.class);
+    private final RestoreJobManagerGroup mockManagers = mock(RestoreJobManagerGroup.class);
+    private final LocalTokenRangesProvider rangesProvider = mock(LocalTokenRangesProvider.class);
+    private final PeriodicTaskExecutor executor = mock(PeriodicTaskExecutor.class);
+    private final SidecarSchema sidecarSchema = mock(SidecarSchema.class);
+    private final RestoreJobDiscoverer loop = new RestoreJobDiscoverer(testConfig(),
+                                                                       sidecarSchema,
+                                                                       mockJobAccessor,
+                                                                       mockSliceAccessor,
+                                                                       () -> mockManagers,
+                                                                       rangesProvider,
+                                                                       null,
+                                                                       stats);
 
     @Test
     void testGetDelay()
@@ -78,9 +82,13 @@ class RestoreJobDiscovererTest
         // when there is active restore job (status: CREATED)
         UUID jobId = UUIDs.timeBased();
         when(mockJobAccessor.findAllRecent(anyInt()))
-        .thenReturn(Collections.singletonList(RestoreJob.forUpdates(jobId, "agent",
-                                                                    RestoreJobStatus.CREATED, null,
-                                                                    new Date(System.currentTimeMillis() + 10000L))));
+        .thenReturn(Collections.singletonList(RestoreJob.builder()
+                                                        .createdAt(RestoreJob.toLocalDate(jobId))
+                                                        .jobId(jobId)
+                                                        .jobAgent("agent")
+                                                        .jobStatus(RestoreJobStatus.CREATED)
+                                                        .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                                        .build()));
         loop.registerPeriodicTaskExecutor(executor);
         executeBlocking();
         assertThat(stats.activeJobCount).describedAs("active jobs count is updated")
@@ -88,9 +96,13 @@ class RestoreJobDiscovererTest
         assertThat(loop.delay()).isEqualTo(activeLoopDelay);
         // when no more jobs are active, the delay is reset back to idle loop delay accordingly.
         when(mockJobAccessor.findAllRecent(anyInt()))
-        .thenReturn(Collections.singletonList(RestoreJob.forUpdates(jobId, "agent",
-                                                                    RestoreJobStatus.SUCCEEDED, null,
-                                                                    new Date(System.currentTimeMillis() + 10000L))));
+        .thenReturn(Collections.singletonList(RestoreJob.builder()
+                                                        .createdAt(RestoreJob.toLocalDate(jobId))
+                                                        .jobId(jobId)
+                                                        .jobAgent("agent")
+                                                        .jobStatus(RestoreJobStatus.SUCCEEDED)
+                                                        .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                                        .build()));
         executeBlocking();
         assertThat(stats.activeJobCount).describedAs("active jobs count is updated")
                                         .isZero();
@@ -112,11 +124,11 @@ class RestoreJobDiscovererTest
         UUID newJobId = UUIDs.timeBased();
         UUID failedJobId = UUIDs.timeBased();
         UUID succeededJobId = UUIDs.timeBased();
-        mockResult.add(RestoreJobTest.createNewTestingJob(newJobId));
-        mockResult.add(RestoreJob.forUpdates(failedJobId, "agent", RestoreJobStatus.ABORTED, null,
-                                             new Date(System.currentTimeMillis() + 10000L)));
-        mockResult.add(RestoreJob.forUpdates(succeededJobId, "agent", RestoreJobStatus.SUCCEEDED, null,
-                                             new Date(System.currentTimeMillis() + 10000L)));
+        mockResult.add(createNewTestingJob(newJobId));
+        mockResult.add(createUpdatedJob(failedJobId, "agent", RestoreJobStatus.ABORTED, null,
+                                        new Date(System.currentTimeMillis() + 10000L)));
+        mockResult.add(createUpdatedJob(succeededJobId, "agent", RestoreJobStatus.SUCCEEDED, null,
+                                        new Date(System.currentTimeMillis() + 10000L)));
         ArgumentCaptor<UUID> jobIdCapture = ArgumentCaptor.forClass(UUID.class);
         doNothing().when(mockManagers).removeJobInternal(jobIdCapture.capture());
         when(mockJobAccessor.findAllRecent(anyInt())).thenReturn(mockResult);
@@ -144,8 +156,8 @@ class RestoreJobDiscovererTest
 
         // Execution 2
         when(mockJobAccessor.findAllRecent(anyInt()))
-        .thenReturn(Collections.singletonList(RestoreJob.forUpdates(newJobId, "agent",
-                                                  RestoreJobStatus.SUCCEEDED, null, new Date())));
+        .thenReturn(Collections.singletonList(createUpdatedJob(newJobId, "agent",
+                                                               RestoreJobStatus.SUCCEEDED, null, new Date())));
         executeBlocking();
 
         assertThat(stats.activeJobCount).isZero();
@@ -164,7 +176,7 @@ class RestoreJobDiscovererTest
         loop.signalRefresh();
         UUID newJobId2 = UUIDs.timeBased();
         when(mockJobAccessor.findAllRecent(anyInt()))
-        .thenReturn(Collections.singletonList(RestoreJobTest.createNewTestingJob(newJobId2)));
+        .thenReturn(Collections.singletonList(createNewTestingJob(newJobId2)));
         assertThat(loop.isRefreshSignaled()).isTrue();
 
         executeBlocking();
@@ -179,8 +191,8 @@ class RestoreJobDiscovererTest
 
         // Execution 5
         when(mockJobAccessor.findAllRecent(anyInt()))
-        .thenReturn(Collections.singletonList(RestoreJob.forUpdates(newJobId2, "agent",
-                                                                    RestoreJobStatus.ABORTED, null, new Date())));
+        .thenReturn(Collections.singletonList(createUpdatedJob(newJobId2, "agent",
+                                                               RestoreJobStatus.ABORTED, null, new Date())));
         executeBlocking();
 
         assertThat(stats.activeJobCount).isZero();
@@ -200,16 +212,16 @@ class RestoreJobDiscovererTest
     }
 
     @Test
-    void testExecuteWithExpiredJobs() throws Exception
+    void testExecuteWithExpiredJobs()
     {
         // setup: all 3 jobs are expired. All of them should be aborted via mockJobAccessor
         when(sidecarSchema.isInitialized()).thenReturn(true);
-        List<RestoreJob> mockResult
-        = IntStream.range(0, 3)
-                   .boxed()
-                   .map(x -> RestoreJob.forUpdates(UUIDs.timeBased(), "agent", RestoreJobStatus.CREATED, null,
-                                                   new Date(System.currentTimeMillis() - 1000L)))
-                   .collect(Collectors.toList());
+        List<RestoreJob> mockResult = IntStream.range(0, 3)
+                                               .boxed()
+                                               .map(x -> createUpdatedJob(UUIDs.timeBased(), "agent",
+                                                                          RestoreJobStatus.CREATED, null,
+                                                                          new Date(System.currentTimeMillis() - 1000L)))
+                                               .collect(Collectors.toList());
         ArgumentCaptor<UUID> abortedJobs = ArgumentCaptor.forClass(UUID.class);
         doNothing().when(mockJobAccessor).abort(abortedJobs.capture());
         when(mockJobAccessor.findAllRecent(anyInt())).thenReturn(mockResult);

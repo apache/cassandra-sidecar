@@ -19,12 +19,15 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Guice;
@@ -36,7 +39,9 @@ import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools.TaskExecutorPool;
 import org.apache.cassandra.sidecar.db.RestoreJob;
+import org.apache.cassandra.sidecar.db.RestoreJobTest;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
+import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.server.MainModule;
@@ -48,33 +53,30 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import static org.apache.cassandra.sidecar.AssertionUtils.getBlocking;
-import static org.apache.cassandra.sidecar.db.RestoreJob.toLocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RestoreSliceTaskTest
 {
-    private RestoreJob restoreJob;
     private RestoreSlice restoreSlice;
     private StorageClient storageClient;
     private TaskExecutorPool executorPool;
     private SSTableImporter importer;
     private TestRestoreJobStats stats;
     private RestoreSliceTask task;
+    private RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
 
     @BeforeEach
     void setup()
     {
-        UUID jobId = UUIDs.timeBased();
-        restoreJob = RestoreJob.builder()
-                               .jobId(jobId)
-                               .createdAt(toLocalDate(jobId))
-                               .jobStatus(RestoreJobStatus.CREATED)
-                               .build();
         restoreSlice = mock(RestoreSlice.class, Mockito.RETURNS_DEEP_STUBS);
-        when(restoreSlice.targetPathInStaging()).thenReturn(Paths.get("."));
+        when(restoreSlice.stageDirectory()).thenReturn(Paths.get("."));
         when(restoreSlice.sliceId()).thenReturn("testing-slice");
         when(restoreSlice.key()).thenReturn("storage-key");
         when(restoreSlice.owner().id()).thenReturn(1);
@@ -83,8 +85,10 @@ class RestoreSliceTaskTest
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
         executorPool = injector.getInstance(ExecutorPools.class).internal();
         stats = new TestRestoreJobStats();
-        task = new TestRestoreSliceTask(restoreJob, restoreSlice, storageClient,
-                                        executorPool, importer, 0, stats);
+        sliceDatabaseAccessor = mock(RestoreSliceDatabaseAccessor.class);
+        task = new TestRestoreSliceTask(restoreSlice, storageClient,
+                                        executorPool, importer, 0,
+                                        sliceDatabaseAccessor, stats);
     }
 
     @Test
@@ -155,26 +159,101 @@ class RestoreSliceTaskTest
         .hasMessageContaining("Object not found");
     }
 
+    @Test
+    void testSliceStaging()
+    {
+        // test specific setup
+        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED));
+        doReturn(true).when(job).isManagedBySidecar();
+        when(restoreSlice.job()).thenReturn(job);
+        when(restoreSlice.stagedObjectPath()).thenReturn(Paths.get("nonexist"));
+        when(storageClient.objectExists(restoreSlice)).thenReturn(CompletableFuture.completedFuture(null));
+        when(storageClient.downloadObjectIfAbsent(restoreSlice))
+        .thenReturn(CompletableFuture.completedFuture(new File(".")));
+
+        Promise<RestoreSlice> promise = Promise.promise();
+        task.handle(promise);
+        getBlocking(promise.future()); // no error is thrown
+
+        verify(restoreSlice, times(1)).completeStagePhase();
+        verify(restoreSlice, times(0)).completeImportPhase(); // should not be called in this phase
+        verify(sliceDatabaseAccessor, times(1)).updateStatus(restoreSlice);
+    }
+
+    @Test
+    void testSliceStagingWithExistingObject(@TempDir Path testFolder) throws IOException
+    {
+        // test specific setup
+        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED));
+        doReturn(true).when(job).isManagedBySidecar();
+        when(restoreSlice.job()).thenReturn(job);
+        Path stagedPath = testFolder.resolve("slice.zip");
+        Files.createFile(stagedPath);
+        when(restoreSlice.stagedObjectPath()).thenReturn(stagedPath);
+        when(storageClient.objectExists(restoreSlice))
+        .thenThrow(new RuntimeException("Should not call this method"));
+        when(storageClient.downloadObjectIfAbsent(restoreSlice))
+        .thenThrow(new RuntimeException("Should not call this method"));
+
+        Promise<RestoreSlice> promise = Promise.promise();
+        task.handle(promise);
+        getBlocking(promise.future()); // no error is thrown
+
+        verify(restoreSlice, times(1)).completeStagePhase();
+        verify(restoreSlice, times(0)).completeImportPhase(); // should not be called in this phase
+        verify(sliceDatabaseAccessor, times(1)).updateStatus(restoreSlice);
+    }
+
+    @Test
+    void testSliceImport()
+    {
+        // test specific setup
+        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED));
+        doReturn(true).when(job).isManagedBySidecar();
+        when(restoreSlice.job()).thenReturn(job);
+
+        Promise<RestoreSlice> promise = Promise.promise();
+        task.handle(promise);
+        getBlocking(promise.future()); // no error is thrown
+
+        verify(restoreSlice, times(0)).completeStagePhase(); // should not be called in the phase
+        verify(restoreSlice, times(1)).completeImportPhase();
+        verify(sliceDatabaseAccessor, times(1)).updateStatus(restoreSlice);
+    }
+
+
     static class TestRestoreSliceTask extends RestoreSliceTask
     {
         private final RestoreSlice slice;
         private final RestoreJobStats stats;
 
-        public TestRestoreSliceTask(RestoreJob job, RestoreSlice slice, StorageClient s3Client,
-                                    TaskExecutorPool executorPool, SSTableImporter importer,
-                                    double requiredUsableSpacePercentage, RestoreJobStats stats)
+        public TestRestoreSliceTask(RestoreSlice slice, StorageClient s3Client, TaskExecutorPool executorPool,
+                                    SSTableImporter importer, double requiredUsableSpacePercentage,
+                                    RestoreSliceDatabaseAccessor sliceDatabaseAccessor, RestoreJobStats stats)
         {
-            super(job, slice, s3Client, executorPool, importer, requiredUsableSpacePercentage, stats);
+            super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage, sliceDatabaseAccessor, stats);
             this.slice = slice;
             this.stats = stats;
         }
 
-        void unzipAndImport(Promise<RestoreSlice> event, File file)
+        @Override
+        void unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
         {
             stats.captureSliceUnzipTime(1, 123L);
             stats.captureSliceValidationTime(1, 123L);
             stats.captureSliceImportTime(1, 123L);
+            slice.completeImportPhase();
             event.tryComplete(slice);
+            if (onSuccessCommit != null)
+            {
+                onSuccessCommit.run();
+            }
+        }
+
+        @Override
+        void unzipAndImport(Promise<RestoreSlice> event, File file)
+        {
+            unzipAndImport(event, file, null);
         }
     }
 }

@@ -44,6 +44,7 @@
             <Class name="org.apache.cassandra.sidecar.CassandraSidecarDaemon" />
             <Class name="org.apache.cassandra.sidecar.utils.SSTableImporter" />
             <Class name="org.apache.cassandra.sidecar.tasks.HealthCheckPeriodicTask" />
+            <Class name="org.apache.cassandra.sidecar.restore.RestoreSliceTaskTest" />
         </Or>
     </Match>
 

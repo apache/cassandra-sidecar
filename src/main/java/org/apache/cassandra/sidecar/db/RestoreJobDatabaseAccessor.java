@@ -82,6 +82,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
                                    .jobSecrets(payload.secrets())
                                    .sstableImportOptions(payload.importOptions())
                                    .expireAt(payload.expireAtAsDate())
+                                   .consistencyLevel(payload.consistencyLevel())
                                    .build();
         ByteBuffer secrets = serializeValue(job.secrets, "secrets");
         ByteBuffer importOptions = serializeValue(job.importOptions, "sstable import options");
@@ -94,17 +95,29 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
                                                           job.status.toString(),
                                                           secrets,
                                                           importOptions,
+                                                          job.consistencyLevel,
                                                           job.expireAt);
 
         execute(statement);
         return job;
     }
 
-    public RestoreJob update(UpdateRestoreJobRequestPayload payload, QualifiedTableName qualifiedTableName, UUID jobId)
+    /**
+     * Update fields in the restore job and persist
+     *
+     * @param payload fields to be updated
+     * @param jobId job ID
+     * @return the restore job object with only the updated fields
+     * @throws DataObjectMappingException when secrets json cannot be serialized
+     */
+    public RestoreJob update(UpdateRestoreJobRequestPayload payload, UUID jobId)
     throws DataObjectMappingException
     {
         sidecarSchema.ensureInitialized();
+        RestoreJob.Builder updateBuilder = RestoreJob.builder();
         LocalDate createdAt = RestoreJob.toLocalDate(jobId);
+        updateBuilder.createdAt(createdAt)
+                     .jobId(jobId);
 
         RestoreJobSecrets secrets = payload.secrets();
         RestoreJobStatus status = payload.status();
@@ -127,22 +140,26 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
             {
                 throw new DataObjectMappingException("Failed to serialize secrets", e);
             }
+            updateBuilder.jobSecrets(secrets);
         }
         if (status != null)
         {
             batchStatement.add(restoreJobsSchema.updateStatus().bind(createdAt, jobId, status.name()));
+            updateBuilder.jobStatus(status);
         }
         if (jobAgent != null)
         {
             batchStatement.add(restoreJobsSchema.updateJobAgent().bind(createdAt, jobId, jobAgent));
+            updateBuilder.jobAgent(jobAgent);
         }
         if (expireAt != null)
         {
             batchStatement.add(restoreJobsSchema.updateExpireAt().bind(createdAt, jobId, expireAt));
+            updateBuilder.expireAt(expireAt);
         }
 
         execute(batchStatement);
-        return RestoreJob.forUpdates(jobId, jobAgent, status, secrets, expireAt);
+        return updateBuilder.build();
     }
 
     public void abort(UUID jobId)

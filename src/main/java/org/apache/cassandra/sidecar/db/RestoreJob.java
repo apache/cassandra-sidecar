@@ -23,8 +23,6 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.utils.Bytes;
@@ -54,6 +52,7 @@ public class RestoreJob
     public final Date expireAt;
     public final short bucketCount;
     public final String consistencyLevel;
+    public final Manager restoreJobManager;
 
     public static Builder builder()
     {
@@ -75,46 +74,12 @@ public class RestoreJob
                .jobStatus(decodeJobStatus(row.getString("status")))
                .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
                .expireAt(row.getTimestamp("expire_at"))
-               .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")));
+               .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
+               .consistencyLevel(row.getString("consistency_level"));
+
         // todo: Yifan, add them back when the cql statement is updated to reflect the new columns.
         //  Add new fields to CreateRestoreJobRequestPayload too
 //               .bucketCount(row.getShort("bucket_count"))
-//               .consistencyLevel(row.getString("consistency_level"));
-        return builder.build();
-    }
-
-    // todo: candidate to be removed
-    public static RestoreJob forUpdates(UUID jobId, String jobAgent,
-                                        RestoreJobStatus status,
-                                        RestoreJobSecrets secrets,
-                                        Date expireAt)
-    throws DataObjectMappingException
-    {
-        Builder builder = new Builder();
-        builder.createdAt(toLocalDate(jobId))
-               .jobId(jobId).jobAgent(jobAgent)
-               .jobStatus(status)
-               .jobSecrets(secrets)
-               .expireAt(expireAt);
-        return builder.build();
-    }
-
-    // todo: candidate to be removed
-    @VisibleForTesting
-    public static RestoreJob create(LocalDate createdAt,
-                                    UUID jobId,
-                                    String keyspaceName,
-                                    String tableName,
-                                    String jobAgent,
-                                    RestoreJobStatus status,
-                                    RestoreJobSecrets secrets,
-                                    SSTableImportOptions importOptions)
-    {
-        Builder builder = new Builder();
-        builder.createdAt(createdAt)
-               .jobId(jobId).jobAgent(jobAgent)
-               .keyspace(keyspaceName).table(tableName)
-               .jobStatus(status).jobSecrets(secrets).sstableImportOptions(importOptions);
         return builder.build();
     }
 
@@ -156,11 +121,17 @@ public class RestoreJob
         this.expireAt = builder.expireAt;
         this.bucketCount = builder.bucketCount;
         this.consistencyLevel = builder.consistencyLevel;
+        this.restoreJobManager = builder.manager;
     }
 
     public Builder unbuild()
     {
         return new Builder(this);
+    }
+
+    public boolean isManagedBySidecar()
+    {
+        return restoreJobManager == Manager.SIDECAR;
     }
 
     /**
@@ -211,6 +182,7 @@ public class RestoreJob
         private Date expireAt;
         private short bucketCount;
         private String consistencyLevel;
+        private Manager manager;
 
         private Builder()
         {
@@ -284,7 +256,10 @@ public class RestoreJob
 
         public Builder consistencyLevel(String consistencyLevel)
         {
-            return update(b -> b.consistencyLevel = consistencyLevel);
+            return update(b -> {
+                b.consistencyLevel = consistencyLevel;
+                b.manager = resolveManager(consistencyLevel);
+            });
         }
 
         @Override
@@ -298,5 +273,35 @@ public class RestoreJob
         {
             return new RestoreJob(this);
         }
+
+        /**
+         * Resolve the manager of the restore job based on the existence of consistencyLevel
+         * @return the resolved Manager
+         */
+        private Manager resolveManager(String consistencyLevel)
+        {
+            // If spark is the manager, the restore job is created w/o specifying consistency level
+            // If the manager of the restore job is sidecar, consistency level must present
+            return consistencyLevel == null ? Manager.SPARK : Manager.SIDECAR;
+        }
+    }
+
+    /**
+     * The manager of the restore job. The variant could change the code path a restore job runs.
+     * It is a feature switch essentially.
+     */
+    public enum Manager
+    {
+        /**
+         * The restore job is managed by Spark. Sidecar instances are just simple workers. They rely on client/Spark
+         * for decision-making.
+         */
+        SPARK,
+
+        /**
+         * The restore job is managed by Sidecar. Sidecar instances should assign slices to sidecar instances
+         * and check whether the job has met the consistency level to complete the job.
+         */
+        SIDECAR,
     }
 }

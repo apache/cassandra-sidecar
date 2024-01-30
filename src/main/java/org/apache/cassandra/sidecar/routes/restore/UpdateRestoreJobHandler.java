@@ -30,7 +30,6 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -77,10 +76,9 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                                   SocketAddress remoteAddress,
                                   UpdateRestoreJobRequestPayload requestPayload)
     {
-        QualifiedTableName qualifiedTableName = qualifiedTableName(context);
-
-        RoutingContextUtils.getAsFuture(context, SC_RESTORE_JOB)
-                           .compose(job -> {
+        RoutingContextUtils
+        .getAsFuture(context, SC_RESTORE_JOB)
+        .compose(job -> {
             if (RestoreJobStatus.isFinalState(job.status))
             {
                 // skip the update, since the job is in the final state already
@@ -91,12 +89,11 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
 
             return executorPools.service().<RestoreJob>executeBlocking(promise -> {
                 promise.complete(restoreJobDatabaseAccessor.update(requestPayload,
-                                                                   qualifiedTableName,
                                                                    job.jobId));
             });
         })
-                           .onSuccess(job -> {
-            logger.info("Successfully update restore job. job={}, request={}, remoteAddress={}, instance={}",
+        .onSuccess(job -> {
+            logger.info("Successfully updated restore job. job={}, request={}, remoteAddress={}, instance={}",
                         job, requestPayload, remoteAddress, host);
             if (job.status == RestoreJobStatus.SUCCEEDED)
             {
@@ -115,13 +112,13 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
             restoreJobManagerGroup.signalRefreshRestoreJob();
             context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
         })
-                           .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestPayload));
+        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestPayload));
     }
 
     @Override
     protected UpdateRestoreJobRequestPayload extractParamsOrThrow(RoutingContext context)
     {
-        String bodyString = context.getBodyAsString();
+        String bodyString = context.body().asString();
         if (bodyString == null || bodyString.equalsIgnoreCase("null")) // json encoder writes null as "null"
         {
             logger.warn("Bad request to update restore job. Received null payload.");

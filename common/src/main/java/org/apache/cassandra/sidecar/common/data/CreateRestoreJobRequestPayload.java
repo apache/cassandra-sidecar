@@ -26,8 +26,10 @@ import java.util.function.Consumer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_AGENT;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CONSISTENCY_LEVEL;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_EXPIRE_AT;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_ID;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_IMPORT_OPTIONS;
@@ -43,6 +45,8 @@ public class CreateRestoreJobRequestPayload
     private final RestoreJobSecrets secrets;
     private final SSTableImportOptions importOptions;
     private final long expireAtInMillis;
+    @Nullable
+    private final String consistencyLevel; // optional field
 
     /**
      * Builder to build a CreateRestoreJobRequest
@@ -65,13 +69,15 @@ public class CreateRestoreJobRequestPayload
      * @param secrets          secrets to be used by restore job to download data
      * @param importOptions    the configured options for SSTable import
      * @param expireAtInMillis a timestamp in the future when the job is considered expired
+     * @param consistencyLevel consistency level a job should satisfy
      */
     @JsonCreator
     public CreateRestoreJobRequestPayload(@JsonProperty(JOB_ID) UUID jobId,
                                           @JsonProperty(JOB_AGENT) String jobAgent,
                                           @JsonProperty(JOB_SECRETS) RestoreJobSecrets secrets,
                                           @JsonProperty(JOB_IMPORT_OPTIONS) SSTableImportOptions importOptions,
-                                          @JsonProperty(JOB_EXPIRE_AT) long expireAtInMillis)
+                                          @JsonProperty(JOB_EXPIRE_AT) long expireAtInMillis,
+                                          @JsonProperty(JOB_CONSISTENCY_LEVEL) String consistencyLevel)
     {
         Preconditions.checkArgument(jobId == null || jobId.version() == 1,
                                     "Only time based UUIDs allowed for jobId");
@@ -85,6 +91,7 @@ public class CreateRestoreJobRequestPayload
                              ? SSTableImportOptions.defaults()
                              : importOptions;
         this.expireAtInMillis = expireAtInMillis;
+        this.consistencyLevel = consistencyLevel;
     }
 
     private CreateRestoreJobRequestPayload(Builder builder)
@@ -94,6 +101,7 @@ public class CreateRestoreJobRequestPayload
         this.secrets = builder.secrets;
         this.importOptions = builder.importOptions;
         this.expireAtInMillis = builder.expireAtInMillis;
+        this.consistencyLevel = builder.consistencyLevel;
     }
 
     /**
@@ -151,6 +159,16 @@ public class CreateRestoreJobRequestPayload
         return new Date(expireAtInMillis);
     }
 
+    /**
+     * @return the consistency level a job should satisfy
+     */
+    @JsonProperty(JOB_CONSISTENCY_LEVEL)
+    @Nullable
+    public String consistencyLevel()
+    {
+        return consistencyLevel;
+    }
+
     @Override
     public String toString()
     {
@@ -159,6 +177,7 @@ public class CreateRestoreJobRequestPayload
                JOB_AGENT + "='" + jobAgent + "', " +
                JOB_SECRETS + "='" + secrets + "', " +
                JOB_EXPIRE_AT + "='" + expireAtInMillis + "', " +
+               JOB_CONSISTENCY_LEVEL + "='" + consistencyLevel + "', " +
                JOB_IMPORT_OPTIONS + "='" + importOptions + "'}";
     }
 
@@ -173,6 +192,7 @@ public class CreateRestoreJobRequestPayload
 
         private UUID jobId = null;
         private String jobAgent = null;
+        private String consistencyLevel = null;
 
         Builder(RestoreJobSecrets secrets, long expireAtInMillis)
         {
@@ -195,6 +215,12 @@ public class CreateRestoreJobRequestPayload
         public Builder updateImportOptions(Consumer<SSTableImportOptions> updater)
         {
             updater.accept(importOptions);
+            return this;
+        }
+
+        public Builder consistencyLevel(String consistencyLevel)
+        {
+            this.consistencyLevel = consistencyLevel;
             return this;
         }
 

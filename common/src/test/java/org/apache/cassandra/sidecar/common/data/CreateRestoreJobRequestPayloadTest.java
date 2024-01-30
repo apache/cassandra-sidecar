@@ -46,6 +46,7 @@ class CreateRestoreJobRequestPayloadTest
         Date date = Date.from(Instant.ofEpochMilli(time));
         CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload.builder(secrets, time)
                                                                            .jobId(UUID.fromString(id))
+                                                                           .consistencyLevel("QUORUM")
                                                                            .jobAgent("agent")
                                                                            .build();
         String json = MAPPER.writeValueAsString(req);
@@ -56,6 +57,7 @@ class CreateRestoreJobRequestPayloadTest
         assertThat(test.expireAtInMillis()).isEqualTo(time);
         assertThat(test.expireAtAsDate()).isEqualTo(date);
         assertThat(test.importOptions()).isEqualTo(SSTableImportOptions.defaults());
+        assertThat(test.consistencyLevel()).isEqualTo("QUORUM");
     }
 
     @Test
@@ -157,8 +159,8 @@ class CreateRestoreJobRequestPayloadTest
         assertThat(test.expireAtInMillis()).isEqualTo(time);
         assertThat(test.expireAtAsDate()).isEqualTo(date);
         assertThat(test.importOptions()).isEqualTo(SSTableImportOptions.defaults());
+        assertThat(test.consistencyLevel()).isNull();
     }
-
 
     @Test
     void testBuilder()
@@ -172,11 +174,13 @@ class CreateRestoreJobRequestPayloadTest
                                                  .resetLevel(false)
                                                  .clearRepaired(false);
                                              })
+                                             .consistencyLevel("QUORUM")
                                              .build();
         assertThat(req.secrets()).isEqualTo(secrets);
         assertThat(req.jobAgent()).isEqualTo("agent");
         assertThat(req.importOptions()).isEqualTo(SSTableImportOptions.defaults()
                                                                       .resetLevel(false)
                                                                       .clearRepaired(false));
+        assertThat(req.consistencyLevel()).isEqualTo("QUORUM");
     }
 }
