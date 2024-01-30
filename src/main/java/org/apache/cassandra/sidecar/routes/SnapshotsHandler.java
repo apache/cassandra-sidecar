@@ -184,13 +184,9 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
         {
             context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
         }
-        else if (cause instanceof HttpException)
-        {
-            context.fail(cause);
-        }
         else
         {
-            context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid request for " + requestParams));
+            super.processFailure(cause, context, host, remoteAddress, requestParams);
         }
     }
 

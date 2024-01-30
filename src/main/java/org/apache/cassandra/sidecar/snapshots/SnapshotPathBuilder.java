@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -129,6 +130,8 @@ public class SnapshotPathBuilder extends BaseFileSystem
                                                             boolean includeSecondaryIndexFiles)
     {
         Promise<List<SnapshotFile>> promise = Promise.promise();
+
+        Files.walkFileTree(Paths.get(""),
 
         // List the snapshot directory
         fs.readDir(snapshotDirectory)
