@@ -54,7 +54,8 @@ public enum RestoreSliceStatus
     public RestoreSliceStatus advanceTo(RestoreSliceStatus targetStatus)
     {
         Preconditions.checkArgument(validTargetStatuses.contains(targetStatus),
-                                    name() + " status can only advance to one of the follow statuses: " + validTargetStatuses);
+                                    name() + " status can only advance to one of the follow statuses: " +
+                                    validTargetStatuses);
         return targetStatus;
     }
 }
