@@ -48,6 +48,7 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.routes.snapshots.GETSnapshotsHandler;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
@@ -60,12 +61,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 
 /**
- * Tests for the {@link SnapshotsHandler}
+ * Tests for the {@link GETSnapshotsHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class SnapshotsHandlerTest
+public class GETSnapshotsHandlerTest
 {
-    private static final Logger logger = LoggerFactory.getLogger(SnapshotsHandlerTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(GETSnapshotsHandlerTest.class);
     private Vertx vertx;
     private Server server;
     @TempDir

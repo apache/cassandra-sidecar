@@ -53,7 +53,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(VertxExtension.class)
-class SnapshotsHandlerIntegrationTest extends IntegrationTestBase
+class GETSnapshotsHandlerIntegrationTest extends IntegrationTestBase
 {
     @CassandraIntegrationTest
     void createSnapshotEndpointFailsWhenKeyspaceDoesNotExist(VertxTestContext context) throws InterruptedException

@@ -79,7 +79,7 @@ import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
-import org.apache.cassandra.sidecar.routes.SnapshotsHandler;
+import org.apache.cassandra.sidecar.routes.snapshots.GETSnapshotsHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.TimeSkewHandler;
 import org.apache.cassandra.sidecar.routes.TokenRangeReplicaMapHandler;
@@ -152,7 +152,7 @@ public class MainModule extends AbstractModule
                               CassandraHealthHandler cassandraHealthHandler,
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
                               FileStreamHandler fileStreamHandler,
-                              SnapshotsHandler snapshotsHandler,
+                              GETSnapshotsHandler GETSnapshotsHandler,
                               SchemaHandler schemaHandler,
                               RingHandler ringHandler,
                               TokenRangeReplicaMapHandler tokenRangeHandler,
@@ -223,14 +223,14 @@ public class MainModule extends AbstractModule
 
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_SNAPSHOTS_ROUTE)
-              .handler(snapshotsHandler);
+              .handler(GETSnapshotsHandler);
 
         router.route()
               .method(HttpMethod.GET)
               .method(HttpMethod.PUT)
               .method(HttpMethod.DELETE)
               .path(ApiEndpointsV1.SNAPSHOTS_ROUTE)
-              .handler(snapshotsHandler);
+              .handler(GETSnapshotsHandler);
 
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_ALL_KEYSPACES_SCHEMA_ROUTE)
