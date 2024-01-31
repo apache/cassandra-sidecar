@@ -71,7 +71,7 @@ public final class ByteUtils
         if (bytes >= ONE_GIB) return formatHelper(bytes, ONE_GIB, "GiB");
         if (bytes >= ONE_MIB) return formatHelper(bytes, ONE_MIB, "MiB");
         if (bytes >= ONE_KIB) return formatHelper(bytes, ONE_KIB, "KiB");
-        return bytes + " bytes";
+        return bytes + " B";
     }
 
     static String formatHelper(double bytes, long baseUnit, String unitName)

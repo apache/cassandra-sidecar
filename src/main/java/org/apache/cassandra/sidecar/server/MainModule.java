@@ -391,7 +391,7 @@ public class MainModule extends AbstractModule
     public SidecarRateLimiter streamRequestRateLimiter(ServiceConfiguration config)
     {
         long permitsPerSecond = config.throttleConfiguration().rateLimitStreamRequestsPerSecond();
-        LOGGER.info("Configuring streamRequestRateLimiter with rateLimitStreamRequestsPerSecond={}",
+        LOGGER.info("Configuring streamRequestRateLimiter. rateLimitStreamRequestsPerSecond={}",
                     permitsPerSecond);
         return SidecarRateLimiter.create(permitsPerSecond);
     }
@@ -403,8 +403,9 @@ public class MainModule extends AbstractModule
     {
         long bytesPerSecond = config.trafficShapingConfiguration()
                                     .inboundGlobalFileBandwidthBytesPerSecond();
-        LOGGER.info("Configuring ingressFileRateLimiter with InboundGlobalFileBandwidth={}/s",
-                    bytesToHumanReadableBinaryPrefix(bytesPerSecond));
+        LOGGER.info("Configuring ingressFileRateLimiter. inboundGlobalFileBandwidth={}/s " +
+                    "rawInboundGlobalFileBandwidth={} B/s", bytesToHumanReadableBinaryPrefix(bytesPerSecond),
+                    bytesPerSecond);
         return SidecarRateLimiter.create(bytesPerSecond);
     }
 

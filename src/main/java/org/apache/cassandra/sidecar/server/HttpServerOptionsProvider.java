@@ -144,26 +144,34 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
     /**
      * Returns the built {@link TrafficShapingOptions} that are going to be applied to the server.
      *
-     * @param trafficShapingConfig the configuration for the traffic shaping options.
+     * @param config the configuration for the traffic shaping options.
      * @return the built {@link TrafficShapingOptions} from the {@link TrafficShapingConfiguration}
      */
-    protected TrafficShapingOptions buildTrafficShapingOptions(TrafficShapingConfiguration trafficShapingConfig)
+    protected TrafficShapingOptions buildTrafficShapingOptions(TrafficShapingConfiguration config)
     {
-        LOGGER.info("Configured traffic shaping options. InboundGlobalBandwidth={}/s OutboundGlobalBandwidth={}/s " +
-                    "PeakOutboundGlobalBandwidth={}/s IntervalForStats={}ms MaxDelayToWait={}ms",
-                    bytesToHumanReadableBinaryPrefix(trafficShapingConfig.inboundGlobalBandwidthBytesPerSecond()),
-                    bytesToHumanReadableBinaryPrefix(trafficShapingConfig.outboundGlobalBandwidthBytesPerSecond()),
-                    bytesToHumanReadableBinaryPrefix(trafficShapingConfig.peakOutboundGlobalBandwidthBytesPerSecond()),
-                    trafficShapingConfig.checkIntervalForStatsMillis(),
-                    trafficShapingConfig.maxDelayToWaitMillis()
+        long inboundGlobalBandwidthBytesPerSecond = config.inboundGlobalBandwidthBytesPerSecond();
+        long outboundGlobalBandwidthBytesPerSecond = config.outboundGlobalBandwidthBytesPerSecond();
+        long peakOutboundGlobalBandwidthBytesPerSecond = config.peakOutboundGlobalBandwidthBytesPerSecond();
+        LOGGER.info("Configured traffic shaping options. InboundGlobalBandwidth={}/s " +
+                    "rawInboundGlobalBandwidth={} B/s OutboundGlobalBandwidth={}/s rawOutboundGlobalBandwidth={} B/s " +
+                    "PeakOutboundGlobalBandwidth={}/s rawPeakOutboundGlobalBandwidth={} B/s IntervalForStats={}ms " +
+                    "MaxDelayToWait={}ms",
+                    bytesToHumanReadableBinaryPrefix(inboundGlobalBandwidthBytesPerSecond),
+                    inboundGlobalBandwidthBytesPerSecond,
+                    bytesToHumanReadableBinaryPrefix(outboundGlobalBandwidthBytesPerSecond),
+                    outboundGlobalBandwidthBytesPerSecond,
+                    bytesToHumanReadableBinaryPrefix(peakOutboundGlobalBandwidthBytesPerSecond),
+                    peakOutboundGlobalBandwidthBytesPerSecond,
+                    config.checkIntervalForStatsMillis(),
+                    config.maxDelayToWaitMillis()
         );
         return new TrafficShapingOptions()
-               .setInboundGlobalBandwidth(trafficShapingConfig.inboundGlobalBandwidthBytesPerSecond())
-               .setOutboundGlobalBandwidth(trafficShapingConfig.outboundGlobalBandwidthBytesPerSecond())
-               .setPeakOutboundGlobalBandwidth(trafficShapingConfig.peakOutboundGlobalBandwidthBytesPerSecond())
-               .setCheckIntervalForStats(trafficShapingConfig.checkIntervalForStatsMillis())
+               .setInboundGlobalBandwidth(inboundGlobalBandwidthBytesPerSecond)
+               .setOutboundGlobalBandwidth(outboundGlobalBandwidthBytesPerSecond)
+               .setPeakOutboundGlobalBandwidth(peakOutboundGlobalBandwidthBytesPerSecond)
+               .setCheckIntervalForStats(config.checkIntervalForStatsMillis())
                .setCheckIntervalForStatsTimeUnit(MILLISECONDS)
-               .setMaxDelayToWait(trafficShapingConfig.maxDelayToWaitMillis())
+               .setMaxDelayToWait(config.maxDelayToWaitMillis())
                .setMaxDelayToWaitUnit(MILLISECONDS);
     }
 }

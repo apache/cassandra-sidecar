@@ -41,11 +41,11 @@ class ByteUtilsTest
     @Test
     void testToHumanReadableBinaryPrefix()
     {
-        assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(0)).isEqualTo("0 bytes");
+        assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(0)).isEqualTo("0 B");
         assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(1152921504606846976L)).isEqualTo("1.00 EiB");
         assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(1152921504606846977L)).isEqualTo("1.00 EiB");
         assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(Long.MAX_VALUE)).isEqualTo("8.00 EiB");
-        assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(64)).isEqualTo("64 bytes");
+        assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(64)).isEqualTo("64 B");
         assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(3221225472L)).isEqualTo("3.00 GiB");
         assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(4L * 1024 * 1024)).isEqualTo("4.00 MiB");
         assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(4L * 1024 * 1024 * 1024)).isEqualTo("4.00 GiB");
