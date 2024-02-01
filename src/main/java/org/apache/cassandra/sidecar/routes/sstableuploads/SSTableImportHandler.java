@@ -167,6 +167,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
         CassandraAdapterDelegate cassandra = metadataFetcher.delegate(importOptions.host());
         if (cassandra == null)
         {
+            logger.info("Cassandra is null");
             return Future.failedFuture(cassandraServiceUnavailable());
         }
 
@@ -174,6 +175,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
 
         if (tableOperations == null)
         {
+            logger.info("TableOperations is null");
             return Future.failedFuture(cassandraServiceUnavailable());
         }
         else

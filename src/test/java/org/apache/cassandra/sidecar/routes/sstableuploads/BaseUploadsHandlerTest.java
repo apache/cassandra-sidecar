@@ -49,6 +49,7 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.adapters.base.CassandraTableOperations;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
@@ -90,6 +91,7 @@ class BaseUploadsHandlerTest
     protected SSTableUploadConfiguration mockSSTableUploadConfiguration;
     protected TrafficShapingConfiguration trafficShapingConfiguration;
     protected SidecarRateLimiter ingressFileRateLimiter;
+    protected CassandraTableOperations mockCFOperations;
 
     @BeforeEach
     void setup() throws InterruptedException, IOException
@@ -134,9 +136,12 @@ class BaseUploadsHandlerTest
         Metadata mockMetadata = mock(Metadata.class);
         KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
         TableMetadata mockTableMetadata = mock(TableMetadata.class);
+        when(mockKeyspaceMetadata.getTable("ks")).thenReturn(mockTableMetadata);
         when(mockMetadata.getKeyspace("ks")).thenReturn(mockKeyspaceMetadata);
-        when(mockMetadata.getKeyspace("ks").getTable("tbl")).thenReturn(mockTableMetadata);
         when(mockDelegate.metadata()).thenReturn(mockMetadata);
+
+        mockCFOperations = mock(CassandraTableOperations.class);
+        when(mockDelegate.tableOperations()).thenReturn(mockCFOperations);
 
         VertxTestContext context = new VertxTestContext();
         server.start()
