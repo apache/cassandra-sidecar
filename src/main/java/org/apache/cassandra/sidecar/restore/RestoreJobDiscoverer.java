@@ -175,7 +175,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                         // find the oldest non-completed job
                         days = Math.max(days, delta(today, job.createdAt));
                         restoreJobManagers.updateRestoreJob(job);
-                        if (job.isRangeManagedByServer())
+                        if (job.isManagedBySidecar())
                         {
                             // todo: potential exceedingly number of queries
                             findSlicesAndSubmit(job);

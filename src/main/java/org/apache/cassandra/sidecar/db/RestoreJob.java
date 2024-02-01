@@ -52,8 +52,7 @@ public class RestoreJob
     public final Date expireAt;
     public final short bucketCount;
     public final String consistencyLevel;
-
-    private final boolean isMaterialized; // When true, the job object is materialized from database
+    public final Manager restoreJobManager;
 
     public static Builder builder()
     {
@@ -76,10 +75,13 @@ public class RestoreJob
                .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
                .expireAt(row.getTimestamp("expire_at"))
                .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")));
+        String consistencyLevel = row.getString("consistency_level");
+        builder.manager(consistencyLevel == null ? Manager.SPARK : Manager.SIDECAR)
+               .consistencyLevel(consistencyLevel);
+
         // todo: Yifan, add them back when the cql statement is updated to reflect the new columns.
         //  Add new fields to CreateRestoreJobRequestPayload too
 //               .bucketCount(row.getShort("bucket_count"))
-//               .consistencyLevel(row.getString("consistency_level"));
         return builder.build();
     }
 
@@ -121,7 +123,7 @@ public class RestoreJob
         this.expireAt = builder.expireAt;
         this.bucketCount = builder.bucketCount;
         this.consistencyLevel = builder.consistencyLevel;
-        this.isMaterialized = builder.isMaterialized;
+        this.restoreJobManager = builder.manager;
     }
 
     public Builder unbuild()
@@ -129,18 +131,9 @@ public class RestoreJob
         return new Builder(this);
     }
 
-    /**
-     * When a job object is materialized from database, and it has non-null consistencyLevel, the range of the slices
-     * of the restore is managed by Sidecar server, meaning that server should assign slices to sidecar instances and
-     * check whether the job has met the consistency level to complete the job; otherwise, sidecar instances are just
-     * simple workers and rely on client for decision-making.
-     * Depending on the return value, call-sites select the correct handling for the restore jobs and slices
-     * @return true when sidecar server manages the slices based on the token range; otherwise, return false.
-     */
-    public boolean isRangeManagedByServer()
+    public boolean isManagedBySidecar()
     {
-        // a full job that has consistency level specified
-        return isMaterialized && consistencyLevel != null;
+        return restoreJobManager == Manager.SIDECAR;
     }
 
     /**
@@ -191,7 +184,7 @@ public class RestoreJob
         private Date expireAt;
         private short bucketCount;
         private String consistencyLevel;
-        private boolean isMaterialized;
+        private Manager manager;
 
         private Builder()
         {
@@ -211,7 +204,6 @@ public class RestoreJob
             this.expireAt = restoreJob.expireAt;
             this.bucketCount = restoreJob.bucketCount;
             this.consistencyLevel = restoreJob.consistencyLevel;
-            this.isMaterialized = restoreJob.isMaterialized;
         }
 
         public Builder createdAt(LocalDate createdAt)
@@ -269,9 +261,9 @@ public class RestoreJob
             return update(b -> b.consistencyLevel = consistencyLevel);
         }
 
-        public Builder isMaterialized(boolean isMaterialized)
+        public Builder manager(Manager manager)
         {
-            return update(b -> b.isMaterialized = isMaterialized);
+            return update(b -> b.manager = manager);
         }
 
         @Override
@@ -285,5 +277,24 @@ public class RestoreJob
         {
             return new RestoreJob(this);
         }
+    }
+
+    /**
+     * The manager of the restore job. The variant could change the code path a restore job runs.
+     * It is a feature switch essentially.
+     */
+    public enum Manager
+    {
+        /**
+         * The restore job is managed by Spark. Sidecar instances are just simple workers. They rely on client/Spark
+         * for decision-making.
+         */
+        SPARK,
+
+        /**
+         * The restore job is managed by Sidecar. Sidecar instances should assign slices to sidecar instances
+         * and check whether the job has met the consistency level to complete the job.
+         */
+        SIDECAR,
     }
 }

@@ -164,7 +164,7 @@ class RestoreSliceTaskTest
     {
         // test specific setup
         RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED));
-        doReturn(true).when(job).isRangeManagedByServer();
+        doReturn(true).when(job).isManagedBySidecar();
         when(restoreSlice.job()).thenReturn(job);
         when(restoreSlice.stagedObjectPath()).thenReturn(Paths.get("nonexist"));
         when(storageClient.objectExists(restoreSlice)).thenReturn(CompletableFuture.completedFuture(null));
@@ -185,7 +185,7 @@ class RestoreSliceTaskTest
     {
         // test specific setup
         RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED));
-        doReturn(true).when(job).isRangeManagedByServer();
+        doReturn(true).when(job).isManagedBySidecar();
         when(restoreSlice.job()).thenReturn(job);
         Path stagedPath = testFolder.resolve("slice.zip");
         Files.createFile(stagedPath);
@@ -209,7 +209,7 @@ class RestoreSliceTaskTest
     {
         // test specific setup
         RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED));
-        doReturn(true).when(job).isRangeManagedByServer();
+        doReturn(true).when(job).isManagedBySidecar();
         when(restoreSlice.job()).thenReturn(job);
 
         Promise<RestoreSlice> promise = Promise.promise();

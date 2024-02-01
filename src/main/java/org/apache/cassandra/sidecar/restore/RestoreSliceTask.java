@@ -79,7 +79,8 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                             RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
                             RestoreJobStats stats)
     {
-        Preconditions.checkArgument(!slice.job().isRangeManagedByServer() || sliceDatabaseAccessor != null,
+        Preconditions.checkArgument(slice.job().restoreJobManager == RestoreJob.Manager.SPARK
+                                    || sliceDatabaseAccessor != null,
                                     "sliceDatabaseAccessor cannot be null");
         this.slice = slice;
         this.s3Client = s3Client;
@@ -105,7 +106,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                                 executorPool)
         .onSuccess(ignored -> {
             RestoreJob job = slice.job();
-            if (job.isRangeManagedByServer())
+            if (job.isManagedBySidecar())
             {
                 if (job.status == RestoreJobStatus.CREATED)
                 {

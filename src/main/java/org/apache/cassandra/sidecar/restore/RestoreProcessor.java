@@ -167,7 +167,7 @@ public class RestoreProcessor implements PeriodicTask
                     // fail the slice and mark the slice has failed on its owning instance.
                     // In the phase 1 implementation, all slices of the job get aborted
                     slice.fail(RestoreJobExceptions.toFatal(cause));
-                    if (slice.job().isRangeManagedByServer())
+                    if (slice.job().isManagedBySidecar())
                     {
                         sliceDatabaseAccessor.updateStatus(slice);
                     }
