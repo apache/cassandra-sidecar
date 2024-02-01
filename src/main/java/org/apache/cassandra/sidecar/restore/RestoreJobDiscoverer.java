@@ -235,11 +235,6 @@ public class RestoreJobDiscoverer implements PeriodicTask
     // according to the cluster token ownership
     private void findSlicesAndSubmit(RestoreJob restoreJob)
     {
-        if (!restoreJobConfig.isServerManagedRangeEnabled())
-        {
-            return;
-        }
-
         localTokenRangesProvider.localTokenRanges(restoreJob.keyspaceName)
                                 .forEach((key, ranges) -> {
                                     int instanceId = key;
