@@ -129,8 +129,14 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         this.versionProvider = versionProvider;
         this.cqlSessionProvider = session;
         this.jmxClient = jmxClient;
-        notificationListener = new JmxNotificationListener();
+        notificationListener = initializeJmxListener();
+    }
+
+    protected JmxNotificationListener initializeJmxListener()
+    {
+        JmxNotificationListener notificationListener = new JmxNotificationListener();
         this.jmxClient.registerListener(notificationListener);
+        return notificationListener;
     }
 
     private void maybeRegisterHostListener(@NotNull Session session)

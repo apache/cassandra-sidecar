@@ -40,13 +40,11 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.common.TableOperations;
 
 import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_COPY_DATA;
 import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_INVALIDATE_CACHES;
 import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_VERIFY_TOKENS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -110,9 +108,6 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
 
-        TableOperations mockCFOperations = mock(TableOperations.class);
-        when(mockDelegate.tableOperations()).thenReturn(mockCFOperations);
-
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
         clientRequest(context, requestURI,
                       response -> assertThat(response.statusCode())
@@ -124,6 +119,7 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         createStagedUploadFiles(uploadId);
+        testDelegate.setTableOperations(null);
 
         client.put(server.actualPort(), "localhost", "/api/v1/uploads/"
                                                      + uploadId + "/keyspaces/ks/tables/table/import")
@@ -137,8 +133,6 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
-        TableOperations mockCFOperations = mock(TableOperations.class);
-        when(mockDelegate.tableOperations()).thenReturn(mockCFOperations);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 true, true, true,
@@ -157,8 +151,6 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
-        TableOperations mockCFOperations = mock(TableOperations.class);
-        when(mockDelegate.tableOperations()).thenReturn(mockCFOperations);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 false, true, true,
@@ -182,8 +174,6 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
-        TableOperations mockCFOperations = mock(TableOperations.class);
-        when(mockDelegate.tableOperations()).thenReturn(mockCFOperations);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 false, true, true,
@@ -217,8 +207,6 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
-        TableOperations mockCFOperations = mock(TableOperations.class);
-        when(mockDelegate.tableOperations()).thenReturn(mockCFOperations);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 true, false, true,
@@ -252,8 +240,6 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
-        TableOperations mockCFOperations = mock(TableOperations.class);
-        when(mockDelegate.tableOperations()).thenReturn(mockCFOperations);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 true, true, false,
@@ -287,8 +273,6 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
-        TableOperations mockCFOperations = mock(TableOperations.class);
-        when(mockDelegate.tableOperations()).thenReturn(mockCFOperations);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 true, true, true,
@@ -313,6 +297,7 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                                                                    DEFAULT_COPY_DATA);
                         context.completeNow();
                     })));
+
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 

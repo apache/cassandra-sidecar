@@ -49,8 +49,10 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.adapters.base.CassandraTableOperations;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -60,6 +62,7 @@ import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_CHECK_INTERVAL;
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT;
@@ -68,7 +71,6 @@ import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurati
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -82,7 +84,7 @@ class BaseUploadsHandlerTest
     protected Vertx vertx;
     protected Server server;
     protected WebClient client;
-    protected CassandraAdapterDelegate mockDelegate;
+    protected TestCassandraAdapterDelegate testDelegate;
     protected SidecarConfiguration sidecarConfiguration;
     @TempDir
     protected Path temporaryPath;
@@ -90,13 +92,15 @@ class BaseUploadsHandlerTest
     protected SSTableUploadConfiguration mockSSTableUploadConfiguration;
     protected TrafficShapingConfiguration trafficShapingConfiguration;
     protected SidecarRateLimiter ingressFileRateLimiter;
+    protected CassandraTableOperations mockCFOperations;
+
+
 
     @BeforeEach
     void setup() throws InterruptedException, IOException
     {
         canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
-        mockDelegate = mock(CassandraAdapterDelegate.class);
-        doNothing().when(mockDelegate).healthCheck();
+        testDelegate  = new TestCassandraAdapterDelegate();
         TestModule testModule = new TestModule();
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
@@ -121,7 +125,7 @@ class BaseUploadsHandlerTest
         sidecarConfiguration = SidecarConfigurationImpl.builder()
                                                        .serviceConfiguration(serviceConfiguration)
                                                        .build();
-        TestModuleOverride testModuleOverride = new TestModuleOverride(mockDelegate);
+        TestModuleOverride testModuleOverride = new TestModuleOverride(testDelegate);
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(Modules.override(testModule)
                                                                      .with(testModuleOverride)));
@@ -136,7 +140,10 @@ class BaseUploadsHandlerTest
         TableMetadata mockTableMetadata = mock(TableMetadata.class);
         when(mockMetadata.getKeyspace("ks")).thenReturn(mockKeyspaceMetadata);
         when(mockMetadata.getKeyspace("ks").getTable("tbl")).thenReturn(mockTableMetadata);
-        when(mockDelegate.metadata()).thenReturn(mockMetadata);
+        testDelegate.setMetadata(mockMetadata);
+
+        mockCFOperations = mock(CassandraTableOperations.class);
+        testDelegate.setTableOperations(mockCFOperations);
 
         VertxTestContext context = new VertxTestContext();
         server.start()
@@ -220,6 +227,55 @@ class BaseUploadsHandlerTest
         public SidecarConfiguration configuration()
         {
             return sidecarConfiguration;
+        }
+    }
+
+    static class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
+    {
+        Metadata metadata;
+        TableOperations tableOperations;
+
+        public TestCassandraAdapterDelegate()
+        {
+            super(Vertx.vertx(), 1, null, null, null, null, null, "localhost", 9043);
+        }
+
+        protected JmxNotificationListener initializeJmxListener()
+        {
+            return null;
+        }
+
+        @Override
+        public void healthCheck()
+        {
+            // do nothing
+        }
+
+        @Override
+        public @Nullable Metadata metadata()
+        {
+            return metadata;
+        }
+
+        public void setMetadata(Metadata metadata)
+        {
+            this.metadata = metadata;
+        }
+
+        @Override
+        public @Nullable TableOperations tableOperations()
+        {
+            return tableOperations;
+        }
+
+        public void setTableOperations(TableOperations tableOperations)
+        {
+            this.tableOperations = tableOperations;
+        }
+
+        @Override
+        public void close()
+        {
         }
     }
 }
