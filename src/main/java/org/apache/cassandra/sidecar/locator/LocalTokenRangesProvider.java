@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 public interface LocalTokenRangesProvider
 {
     /**
-     * Calculate the token ranges owned & replicated to the local Cassandra instance(s).
+     * Calculate the token ranges owned and replicated to the local Cassandra instance(s).
      * When Sidecar is paired with multiple Cassandra instance, the ranges of each Cassandra instance is captured
      * in the form of map, where the key is the instance id and the value is the ranges of the instance. When Sidecar
      * is paired with a single Cassandra instance, the result map has a single entry.
