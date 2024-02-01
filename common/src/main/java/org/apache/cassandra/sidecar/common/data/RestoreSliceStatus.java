@@ -38,12 +38,12 @@ public enum RestoreSliceStatus
     EMPTY(PROCESSING, FAILED, ABORTED);
 
     // Do not use EnumSet, since validTargetStatuses is assigned on constructing and enums are not available yet.
-    private final Set<RestoreSliceStatus> validTargetStatuses;
+    private final Set<RestoreSliceStatus> validTargetStatusSet;
 
     RestoreSliceStatus(RestoreSliceStatus... targetStatuses)
     {
-        this.validTargetStatuses = new HashSet<>();
-        Collections.addAll(validTargetStatuses, targetStatuses);
+        this.validTargetStatusSet = new HashSet<>();
+        Collections.addAll(validTargetStatusSet, targetStatuses);
     }
 
     /**
@@ -53,9 +53,9 @@ public enum RestoreSliceStatus
      */
     public RestoreSliceStatus advanceTo(RestoreSliceStatus targetStatus)
     {
-        Preconditions.checkArgument(validTargetStatuses.contains(targetStatus),
+        Preconditions.checkArgument(validTargetStatusSet.contains(targetStatus),
                                     name() + " status can only advance to one of the follow statuses: " +
-                                    validTargetStatuses);
+                                    validTargetStatusSet);
         return targetStatus;
     }
 }

@@ -29,6 +29,7 @@ import static org.apache.cassandra.sidecar.common.data.RestoreSliceStatus.FAILED
 import static org.apache.cassandra.sidecar.common.data.RestoreSliceStatus.PROCESSING;
 import static org.apache.cassandra.sidecar.common.data.RestoreSliceStatus.STAGED;
 import static org.apache.cassandra.sidecar.common.data.RestoreSliceStatus.SUCCEEDED;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RestoreSliceStatusTest
@@ -36,19 +37,18 @@ class RestoreSliceStatusTest
     @Test
     void testStatusAdvancing()
     {
-        EMPTY.advanceTo(PROCESSING);
-        EMPTY.advanceTo(FAILED);
-        EMPTY.advanceTo(ABORTED);
-        PROCESSING.advanceTo(STAGED);
-        PROCESSING.advanceTo(FAILED);
-        PROCESSING.advanceTo(ABORTED);
-        STAGED.advanceTo(COMMITTING);
-        STAGED.advanceTo(FAILED);
-        STAGED.advanceTo(ABORTED);
-        COMMITTING.advanceTo(SUCCEEDED);
-        COMMITTING.advanceTo(FAILED);
-        COMMITTING.advanceTo(ABORTED);
-        // all above statements should not throw
+        assertAdvanceTo(EMPTY, PROCESSING);
+        assertAdvanceTo(EMPTY, FAILED);
+        assertAdvanceTo(EMPTY, ABORTED);
+        assertAdvanceTo(PROCESSING, STAGED);
+        assertAdvanceTo(PROCESSING, FAILED);
+        assertAdvanceTo(PROCESSING, ABORTED);
+        assertAdvanceTo(STAGED, COMMITTING);
+        assertAdvanceTo(STAGED, FAILED);
+        assertAdvanceTo(STAGED, ABORTED);
+        assertAdvanceTo(COMMITTING, SUCCEEDED);
+        assertAdvanceTo(COMMITTING, FAILED);
+        assertAdvanceTo(COMMITTING, ABORTED);
     }
 
     @Test
@@ -74,5 +74,10 @@ class RestoreSliceStatusTest
             .hasNoCause()
             .hasMessageContaining(commonErrorMsg);
         });
+    }
+
+    private void assertAdvanceTo(RestoreSliceStatus from, RestoreSliceStatus to)
+    {
+        assertThat(from.advanceTo(to)).isEqualTo(to);
     }
 }

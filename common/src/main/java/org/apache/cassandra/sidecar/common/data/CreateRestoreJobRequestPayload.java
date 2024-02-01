@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_AGENT;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CONSISTENCY_LEVEL;
@@ -44,7 +45,8 @@ public class CreateRestoreJobRequestPayload
     private final RestoreJobSecrets secrets;
     private final SSTableImportOptions importOptions;
     private final long expireAtInMillis;
-    private final String consistencyLevel; // Nullable / optional field
+    @Nullable
+    private final String consistencyLevel; // optional field
 
     /**
      * Builder to build a CreateRestoreJobRequest
@@ -161,6 +163,7 @@ public class CreateRestoreJobRequestPayload
      * @return the consistency level a job should satisfy
      */
     @JsonProperty(JOB_CONSISTENCY_LEVEL)
+    @Nullable
     public String consistencyLevel()
     {
         return consistencyLevel;

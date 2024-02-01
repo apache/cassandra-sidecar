@@ -51,7 +51,7 @@ import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Get token ranges owned/replicated to the local Cassandra instance(s) by keyspace
+ * Get token ranges owned & replicated to the local Cassandra instance(s) by keyspace
  * The results are cached and gets invalidated when local instances or cluster topology changed
  */
 @Singleton
