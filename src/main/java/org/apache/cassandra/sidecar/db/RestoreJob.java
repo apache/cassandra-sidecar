@@ -74,10 +74,8 @@ public class RestoreJob
                .jobStatus(decodeJobStatus(row.getString("status")))
                .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
                .expireAt(row.getTimestamp("expire_at"))
-               .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")));
-        String consistencyLevel = row.getString("consistency_level");
-        builder.manager(consistencyLevel == null ? Manager.SPARK : Manager.SIDECAR)
-               .consistencyLevel(consistencyLevel);
+               .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
+               .consistencyLevel(row.getString("consistency_level"));
 
         // todo: Yifan, add them back when the cql statement is updated to reflect the new columns.
         //  Add new fields to CreateRestoreJobRequestPayload too
@@ -258,12 +256,10 @@ public class RestoreJob
 
         public Builder consistencyLevel(String consistencyLevel)
         {
-            return update(b -> b.consistencyLevel = consistencyLevel);
-        }
-
-        public Builder manager(Manager manager)
-        {
-            return update(b -> b.manager = manager);
+            return update(b -> {
+                b.consistencyLevel = consistencyLevel;
+                b.manager = resolveManager(consistencyLevel);
+            });
         }
 
         @Override
@@ -276,6 +272,17 @@ public class RestoreJob
         public RestoreJob build()
         {
             return new RestoreJob(this);
+        }
+
+        /**
+         * Resolve the manager of the restore job based on the existence of consistencyLevel
+         * @return the resolved Manager
+         */
+        private Manager resolveManager(String consistencyLevel)
+        {
+            // If spark is the manager, the restore job is created w/o specifying consistency level
+            // If the manager of the restore job is sidecar, consistency level must present
+            return consistencyLevel == null ? Manager.SPARK : Manager.SIDECAR;
         }
     }
 

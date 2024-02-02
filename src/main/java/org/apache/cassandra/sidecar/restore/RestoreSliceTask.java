@@ -79,7 +79,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                             RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
                             RestoreJobStats stats)
     {
-        Preconditions.checkArgument(slice.job().restoreJobManager == RestoreJob.Manager.SPARK
+        Preconditions.checkArgument(!slice.job().isManagedBySidecar()
                                     || sliceDatabaseAccessor != null,
                                     "sliceDatabaseAccessor cannot be null");
         this.slice = slice;
