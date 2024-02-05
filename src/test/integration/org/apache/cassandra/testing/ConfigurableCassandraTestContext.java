@@ -66,28 +66,31 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
     public UpgradeableCluster configureAndStartCluster(Consumer<UpgradeableCluster.Builder> configurator)
     throws IOException
     {
+        RuntimeException exception = null;
         for (int i = 0; i < 3; i++)
         {
             try
             {
                 cluster = configureCluster(configurator);
                 cluster.startup();
+                return cluster;
             }
             catch (RuntimeException ret)
             {
-                boolean addressAlreadyInUse = Throwables.anyCauseMatches(ret, this::portNotAvailableToBind);
+                exception = ret;
+                boolean addressAlreadyInUse = Throwables.anyCauseMatches(exception, this::portNotAvailableToBind);
                 if (addressAlreadyInUse)
                 {
-                    LOGGER.warn("Failed to provision cluster after {} retries", i, ret);
+                    LOGGER.warn("Failed to provision cluster after {} retries", i, exception);
                 }
                 else
                 {
-                    throw ret;
+                    throw exception;
                 }
 
             }
         }
-        return cluster;
+        throw exception;
     }
 
     @Override
