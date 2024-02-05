@@ -19,9 +19,16 @@
 package org.apache.cassandra.testing;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.util.function.Consumer;
 
+import org.apache.commons.lang3.StringUtils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.utils.Throwables;
 
 /**
  * A Cassandra Test Context implementation that allows advanced cluster configuration before cluster creation
@@ -29,6 +36,8 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
  */
 public class ConfigurableCassandraTestContext extends AbstractCassandraTestContext
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurableCassandraTestContext.class);
+
     public static final String BUILT_CLUSTER_CANNOT_BE_CONFIGURED_ERROR =
     "Cannot configure a cluster after it is built. Please set the buildCluster annotation attribute to false, "
     + "and do not call `getCluster` before calling this method.";
@@ -57,8 +66,27 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
     public UpgradeableCluster configureAndStartCluster(Consumer<UpgradeableCluster.Builder> configurator)
     throws IOException
     {
-        cluster = configureCluster(configurator);
-        cluster.startup();
+        for (int i = 0; i < 3; i++)
+        {
+            try
+            {
+                cluster = configureCluster(configurator);
+                cluster.startup();
+            }
+            catch (RuntimeException ret)
+            {
+                boolean addressAlreadyInUse = Throwables.anyCauseMatches(ret, this::portNotAvailableToBind);
+                if (addressAlreadyInUse)
+                {
+                    LOGGER.warn("Failed to provision cluster after {} retries", i, ret);
+                }
+                else
+                {
+                    throw ret;
+                }
+
+            }
+        }
         return cluster;
     }
 
@@ -69,5 +97,11 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
                + ", version=" + version
                + ", builder=" + builder
                + '}';
+    }
+
+    private boolean portNotAvailableToBind(Throwable ex)
+    {
+        return ex instanceof BindException &&
+               StringUtils.contains(ex.getMessage(), "Address already in use");
     }
 }
