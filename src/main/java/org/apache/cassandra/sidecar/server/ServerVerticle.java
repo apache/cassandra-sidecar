@@ -33,6 +33,7 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.SSLOptions;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.core.net.TrafficShapingOptions;
 import io.vertx.ext.web.Router;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -112,6 +113,21 @@ public class ServerVerticle extends AbstractVerticle
         return Future.all(deployedServers.stream()
                                          .map(server -> server.updateSSLOptions(options))
                                          .collect(Collectors.toList()));
+    }
+
+    /**
+     * Updates the {@link TrafficShapingOptions} internally for the deployed server.
+     *
+     * @param options the updated traffic shaping options
+     */
+    void updateTrafficShapingOptions(TrafficShapingOptions options)
+    {
+        List<HttpServer> deployedServers = this.deployedServers;
+        if (deployedServers == null || deployedServers.isEmpty())
+        {
+            throw new IllegalStateException("No servers are running");
+        }
+        deployedServers.forEach(server -> server.updateTrafficShapingOptions(options));
     }
 
     /**

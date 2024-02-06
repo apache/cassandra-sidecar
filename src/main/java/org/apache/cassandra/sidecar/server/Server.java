@@ -44,6 +44,7 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SSLOptions;
+import io.vertx.core.net.TrafficShapingOptions;
 import io.vertx.ext.web.Router;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -187,6 +188,17 @@ public class Server
                                .map(serverVerticle -> serverVerticle.updateSSLOptions(options))
                                .collect(Collectors.toList());
         return Future.all(updateFutures);
+    }
+
+    /**
+     * Updates the traffic shaping options for all servers in all the deployed verticle instances
+     *
+     * @param options update traffic shaping options
+     */
+    public void updateTrafficShapingOptions(TrafficShapingOptions options)
+    {
+        // Updates the traffic shaping options of all the deployed verticles
+        deployedServerVerticles.forEach(serverVerticle -> serverVerticle.updateTrafficShapingOptions(options));
     }
 
     /**
