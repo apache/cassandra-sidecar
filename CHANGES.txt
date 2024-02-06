@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Upgrade Vert.x version in Sidecar to 4.5.2 (CASSANDRASC-101)
  * Break restore job into stage and import phases and persist restore slice status on phase completion (CASSANDRASC-99)
  * Improve logging for traffic shaping / rate limiting configuration (CASSANDRASC-98)
  * Startup Validation Failures when Checking Sidecar Connectivity (CASSANDRASC-86)
