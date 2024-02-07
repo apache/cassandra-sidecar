@@ -33,7 +33,9 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.SSLOptions;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.core.net.TrafficShapingOptions;
 import io.vertx.ext.web.Router;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.VisibleForTesting;
@@ -49,6 +51,7 @@ public class ServerVerticle extends AbstractVerticle
     protected final Router router;
     private final HttpServerOptions options;
     private List<HttpServer> deployedServers;
+    private ExecutorPools executorPools;
 
     /**
      * Constructs a new instance of the {@link ServerVerticle} with the provided parameters.
@@ -56,14 +59,17 @@ public class ServerVerticle extends AbstractVerticle
      * @param sidecarConfiguration the configuration for running Sidecar
      * @param router               the configured router for this Service
      * @param options              the {@link HttpServerOptions} to create the HTTP server
+     * @param executorPools        task pools for executing blocking operations
      */
     public ServerVerticle(SidecarConfiguration sidecarConfiguration,
                           Router router,
-                          HttpServerOptions options)
+                          HttpServerOptions options,
+                          ExecutorPools executorPools)
     {
         this.sidecarConfiguration = sidecarConfiguration;
         this.router = router;
         this.options = options;
+        this.executorPools = executorPools;
     }
 
     /**
@@ -112,6 +118,24 @@ public class ServerVerticle extends AbstractVerticle
         return Future.all(deployedServers.stream()
                                          .map(server -> server.updateSSLOptions(options))
                                          .collect(Collectors.toList()));
+    }
+
+    /**
+     * Updates the {@link TrafficShapingOptions} internally for the deployed server.
+     *
+     * @param options the updated traffic shaping options
+     * @return a future signaling the update success
+     */
+    Future<Void> updateTrafficShapingOptions(TrafficShapingOptions options)
+    {
+        List<HttpServer> deployedServers = this.deployedServers;
+        if (deployedServers == null || deployedServers.isEmpty())
+        {
+            return Future.failedFuture("No servers are running");
+        }
+        return executorPools.service().executeBlocking(promise -> {
+            deployedServers.forEach(server -> server.updateTrafficShapingOptions(options));
+        });
     }
 
     /**

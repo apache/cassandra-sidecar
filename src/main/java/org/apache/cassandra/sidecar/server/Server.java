@@ -44,6 +44,7 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SSLOptions;
+import io.vertx.core.net.TrafficShapingOptions;
 import io.vertx.ext.web.Router;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -114,7 +115,8 @@ public class Server
         DeploymentOptions deploymentOptions = new DeploymentOptions().setInstances(serverVerticleCount);
         HttpServerOptions options = optionsProvider.apply(sidecarConfiguration);
         return vertx.deployVerticle(() -> {
-                        ServerVerticle serverVerticle = new ServerVerticle(sidecarConfiguration, router, options);
+                        ServerVerticle serverVerticle = new ServerVerticle(sidecarConfiguration, router,
+                                                                           options, executorPools);
                         deployedServerVerticles.add(serverVerticle);
                         return serverVerticle;
                     }, deploymentOptions)
@@ -185,6 +187,22 @@ public class Server
         List<Future<CompositeFuture>> updateFutures =
         deployedServerVerticles.stream()
                                .map(serverVerticle -> serverVerticle.updateSSLOptions(options))
+                               .collect(Collectors.toList());
+        return Future.all(updateFutures);
+    }
+
+    /**
+     * Updates the traffic shaping options for all servers in all the deployed verticle instances
+     *
+     * @param options update traffic shaping options
+     * @return a future to indicate the update was successfully completed
+     */
+    public Future<CompositeFuture> updateTrafficShapingOptions(TrafficShapingOptions options)
+    {
+        // Updates the traffic shaping options of all the deployed verticles
+        List<Future<Void>> updateFutures =
+        deployedServerVerticles.stream()
+                               .map(serverVerticle -> serverVerticle.updateTrafficShapingOptions(options))
                                .collect(Collectors.toList());
         return Future.all(updateFutures);
     }
