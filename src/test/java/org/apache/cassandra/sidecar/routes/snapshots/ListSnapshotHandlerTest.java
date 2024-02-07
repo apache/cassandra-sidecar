@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.routes;
+package org.apache.cassandra.sidecar.routes.snapshots;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -48,7 +48,6 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
-import org.apache.cassandra.sidecar.routes.snapshots.GETSnapshotsHandler;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
@@ -61,12 +60,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 
 /**
- * Tests for the {@link GETSnapshotsHandler}
+ * Tests for the {@link ListSnapshotHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class GETSnapshotsHandlerTest
+public class ListSnapshotHandlerTest
 {
-    private static final Logger logger = LoggerFactory.getLogger(GETSnapshotsHandlerTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(ListSnapshotHandlerTest.class);
     private Vertx vertx;
     private Server server;
     @TempDir

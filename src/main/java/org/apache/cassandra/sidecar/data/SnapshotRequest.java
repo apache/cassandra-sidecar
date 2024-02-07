@@ -21,10 +21,10 @@ import java.util.Objects;
 
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.routes.snapshots.GETSnapshotsHandler;
+import org.apache.cassandra.sidecar.routes.snapshots.ListSnapshotHandler;
 
 /**
- * Holder class for the {@link GETSnapshotsHandler}
+ * Holder class for the {@link ListSnapshotHandler}
  * request parameters
  */
 public class SnapshotRequest

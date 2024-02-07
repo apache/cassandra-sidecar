@@ -63,14 +63,14 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * <i>"testSnapshot"</i> snapshot for the <i>"ks"</i> keyspace and the <i>"tbl"</i> table
  */
 @Singleton
-public class GETSnapshotsHandler extends AbstractHandler<SnapshotRequest>
+public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
 {
     private static final String INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM = "includeSecondaryIndexFiles";
     private final SnapshotPathBuilder builder;
     private final ServiceConfiguration configuration;
 
     @Inject
-    public GETSnapshotsHandler(SnapshotPathBuilder builder,
+    public ListSnapshotHandler(SnapshotPathBuilder builder,
                                ServiceConfiguration configuration,
                                InstanceMetadataFetcher metadataFetcher,
                                CassandraInputValidator validator,
@@ -182,7 +182,7 @@ public class GETSnapshotsHandler extends AbstractHandler<SnapshotRequest>
     {
         ListSnapshotFilesResponse response = new ListSnapshotFilesResponse();
         int sidecarPort = configuration.port();
-        SnapshotDirectory directory = SnapshotDirectory.of(snapshotDirectory);
+//        SnapshotDirectory directory = SnapshotDirectory.of(snapshotDirectory);
         int dataDirectoryIndex = dataDirectoryIndex(host, directory.dataDirectory);
         int offset = snapshotDirectory.length() + 1;
 
@@ -202,19 +202,6 @@ public class GETSnapshotsHandler extends AbstractHandler<SnapshotRequest>
                                                    snapshotFile.path.substring(fileNameIndex)));
         }
         return response;
-    }
-
-    private int dataDirectoryIndex(String host, String dataDirectory)
-    {
-        List<String> dataDirs = metadataFetcher.instance(host).dataDirs();
-        for (int index = 0; index < dataDirs.size(); index++)
-        {
-            if (dataDirectory.startsWith(dataDirs.get(index)))
-            {
-                return index;
-            }
-        }
-        return -1;
     }
 
     /**
