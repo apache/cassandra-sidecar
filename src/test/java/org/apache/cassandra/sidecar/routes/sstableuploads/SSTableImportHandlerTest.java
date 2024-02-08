@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -115,21 +114,12 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                                   .isEqualTo(HttpResponseStatus.NOT_FOUND.code()));
     }
 
-    /**
-     * We use mockDelegate from {@link BaseUploadsHandlerTest}. Because the delegate already is mocked to return a
-     * valid {@link org.apache.cassandra.sidecar.common.TableOperations} this test can be flaky. Mocking seems to be
-     * stable if confined in scope, updates to mock objects in 2 different scopes doesn't seem to be picked up.
-     * To enable this test and have stable runs, we need to move mocking
-     * {@link org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate} into the test case along with other
-     * mocking calls of CassandraAdaptorDelegate.
-     */
-    @Disabled
     @Test
     void testFailsWhenCassandraIsUnavailable(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();
         createStagedUploadFiles(uploadId);
-        when(mockDelegate.tableOperations()).thenReturn(null);
+        testDelegate.setTableOperations(null);
 
         client.put(server.actualPort(), "localhost", "/api/v1/uploads/"
                                                      + uploadId + "/keyspaces/ks/tables/table/import")
