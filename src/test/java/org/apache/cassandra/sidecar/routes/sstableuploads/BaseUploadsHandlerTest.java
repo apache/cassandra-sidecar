@@ -136,8 +136,8 @@ class BaseUploadsHandlerTest
         Metadata mockMetadata = mock(Metadata.class);
         KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
         TableMetadata mockTableMetadata = mock(TableMetadata.class);
-        when(mockKeyspaceMetadata.getTable("ks")).thenReturn(mockTableMetadata);
         when(mockMetadata.getKeyspace("ks")).thenReturn(mockKeyspaceMetadata);
+        when(mockMetadata.getKeyspace("ks").getTable("tbl")).thenReturn(mockTableMetadata);
         when(mockDelegate.metadata()).thenReturn(mockMetadata);
 
         mockCFOperations = mock(CassandraTableOperations.class);

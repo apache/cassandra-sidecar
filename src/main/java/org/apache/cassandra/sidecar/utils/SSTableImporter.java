@@ -209,7 +209,6 @@ public class SSTableImporter
             CassandraAdapterDelegate cassandra = metadataFetcher.delegate(options.host);
             if (cassandra == null)
             {
-                LOGGER.info("CassandraAdapterDelegate are not available");
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
                 continue;
             }
@@ -218,7 +217,6 @@ public class SSTableImporter
 
             if (tableOperations == null)
             {
-                LOGGER.info("TableOperations are not available");
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
             }
             else

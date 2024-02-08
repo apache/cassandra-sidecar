@@ -285,6 +285,16 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                                 .addQueryParam("extendedVerify", "false"),
                     context.succeeding(response -> context.verify(() -> {
                         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                        verify(mockCFOperations).importNewSSTables("ks",
+                                                                   "table",
+                                                                   stageDirectoryAbsolutePath,
+                                                                   true,
+                                                                   true,
+                                                                   true,
+                                                                   DEFAULT_VERIFY_TOKENS,
+                                                                   DEFAULT_INVALIDATE_CACHES,
+                                                                   false,
+                                                                   DEFAULT_COPY_DATA);
                         context.completeNow();
                     })));
 
