@@ -115,8 +115,7 @@ public class Server
         DeploymentOptions deploymentOptions = new DeploymentOptions().setInstances(serverVerticleCount);
         HttpServerOptions options = optionsProvider.apply(sidecarConfiguration);
         return vertx.deployVerticle(() -> {
-                        ServerVerticle serverVerticle = new ServerVerticle(sidecarConfiguration, router,
-                                                                           options, executorPools);
+                        ServerVerticle serverVerticle = new ServerVerticle(sidecarConfiguration, router, options);
                         deployedServerVerticles.add(serverVerticle);
                         return serverVerticle;
                     }, deploymentOptions)
@@ -195,16 +194,11 @@ public class Server
      * Updates the traffic shaping options for all servers in all the deployed verticle instances
      *
      * @param options update traffic shaping options
-     * @return a future to indicate the update was successfully completed
      */
-    public Future<CompositeFuture> updateTrafficShapingOptions(TrafficShapingOptions options)
+    public void updateTrafficShapingOptions(TrafficShapingOptions options)
     {
         // Updates the traffic shaping options of all the deployed verticles
-        List<Future<Void>> updateFutures =
-        deployedServerVerticles.stream()
-                               .map(serverVerticle -> serverVerticle.updateTrafficShapingOptions(options))
-                               .collect(Collectors.toList());
-        return Future.all(updateFutures);
+        deployedServerVerticles.forEach(serverVerticle -> serverVerticle.updateTrafficShapingOptions(options));
     }
 
     /**
