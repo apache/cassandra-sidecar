@@ -150,6 +150,7 @@ class ServerTest
 
         server.start()
               .compose(this::validateHealthEndpoint)
+              .onFailure(context::failNow)
               .onSuccess(v -> {
                   assertThatIllegalArgumentException()
                   .isThrownBy(() -> server.updateTrafficShapingOptions(null))
