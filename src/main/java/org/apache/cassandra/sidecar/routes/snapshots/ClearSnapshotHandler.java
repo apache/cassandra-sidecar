@@ -32,7 +32,6 @@ import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
-import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -45,16 +44,12 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequest>
 {
-    private final SnapshotPathBuilder builder;
-
     @Inject
-    public ClearSnapshotHandler(SnapshotPathBuilder builder,
-                                InstanceMetadataFetcher metadataFetcher,
+    public ClearSnapshotHandler(InstanceMetadataFetcher metadataFetcher,
                                 CassandraInputValidator validator,
                                 ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, validator);
-        this.builder = builder;
     }
 
     /**
@@ -74,24 +69,27 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                SocketAddress remoteAddress,
                                SnapshotRequest requestParams)
     {
-        // Leverage the SnapshotBuilder for validation purposes. Currently, JMX does not validate for
-        // non-existent snapshot name or keyspace. Additionally, the current JMX implementation to clear snapshots
-        // does not support passing a table as a parameter.
-        builder.build(host, requestParams)
-               .compose(snapshotDirectory ->
-                        executorPools.service().executeBlocking(promise -> {
-                            CassandraAdapterDelegate delegate =
-                            metadataFetcher.delegate(host(context));
-                            StorageOperations storageOperations = delegate.storageOperations();
-                            if (storageOperations == null)
-                                throw cassandraServiceUnavailable();
-                            logger.debug("Clearing snapshot request={}, remoteAddress={}, instance={}",
-                                         requestParams, remoteAddress, host);
-                            storageOperations.clearSnapshot(requestParams.snapshotName(), requestParams.keyspace(),
-                                                            requestParams.tableName());
-                            context.response().end();
-                        }))
-               .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestParams));
+        executorPools.service().executeBlocking(promise -> {
+            CassandraAdapterDelegate delegate = metadataFetcher.delegate(host(context));
+            if (delegate == null)
+            {
+                promise.fail(cassandraServiceUnavailable());
+                return;
+            }
+
+            StorageOperations storageOperations = delegate.storageOperations();
+            if (storageOperations == null)
+            {
+                promise.fail(cassandraServiceUnavailable());
+                return;
+            }
+
+            logger.debug("Clearing snapshot request={}, remoteAddress={}, instance={}",
+                         requestParams, remoteAddress, host);
+            storageOperations.clearSnapshot(requestParams.snapshotName(), requestParams.keyspace(),
+                                            requestParams.tableName());
+            context.response().end();
+        }).onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestParams));
     }
 
     @Override
@@ -117,7 +115,7 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequest>
      * {@inheritDoc}
      */
     @Override
-    protected SnapshotRequest extractParamsOrThrow(final RoutingContext context)
+    protected SnapshotRequest extractParamsOrThrow(RoutingContext context)
     {
         SnapshotRequest snapshotRequest = SnapshotRequest.builder()
                                                          .qualifiedTableName(qualifiedTableName(context))

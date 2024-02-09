@@ -34,40 +34,16 @@ public class SnapshotRequest
     private final QualifiedTableName qualifiedTableName;
     private final String ttl;
 
-//    /**
-//     * Constructor for the holder class
-//     *
-//     * @param keyspace                   the keyspace in Cassandra
-//     * @param tableName                  the table name in Cassandra
-//     * @param snapshotName               the name of the snapshot
-//     * @param includeSecondaryIndexFiles true if secondary index files are allowed, false otherwise
-//     * @param ttl                        an optional TTL for snapshot creation
-//     */
-//    public SnapshotRequest(String keyspace,
-//                           String tableName,
-//                           String snapshotName,
-//                           boolean includeSecondaryIndexFiles,
-//                           String ttl)
-//    {
-//        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, includeSecondaryIndexFiles, ttl);
-//    }
-//
-//    public SnapshotRequest(QualifiedTableName qualifiedTableName,
-//                           String snapshotName,
-//                           boolean includeSecondaryIndexFiles,
-//                           String ttl)
-//    {
-//        this.qualifiedTableName = qualifiedTableName;
-//        this.snapshotName = Objects.requireNonNull(snapshotName, "snapshotName must not be null");
-//        this.includeSecondaryIndexFiles = includeSecondaryIndexFiles;
-//        this.ttl = ttl;
-//    }
-
+    /**
+     * Constructs a new object from the configured builder.
+     *
+     * @param builder the builder object used to construct this object
+     */
     private SnapshotRequest(Builder builder)
     {
         snapshotName = Objects.requireNonNull(builder.snapshotName, "snapshotName must not be null");
+        qualifiedTableName = Objects.requireNonNull(builder.qualifiedTableName, "qualifiedTableName must be not null");
         includeSecondaryIndexFiles = builder.includeSecondaryIndexFiles;
-        qualifiedTableName = builder.qualifiedTableName;
         ttl = builder.ttl;
     }
 
@@ -122,6 +98,7 @@ public class SnapshotRequest
     /**
      * {@inheritDoc}
      */
+    @Override
     public String toString()
     {
         return "SnapshotRequest{" +
@@ -178,6 +155,18 @@ public class SnapshotRequest
         public Builder includeSecondaryIndexFiles(boolean includeSecondaryIndexFiles)
         {
             return update(b -> b.includeSecondaryIndexFiles = includeSecondaryIndexFiles);
+        }
+
+        /**
+         * Sets the {@code qualifiedTableName} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param keyspace the Cassandra keyspace
+         * @param table    the Cassandra table
+         * @return a reference to this Builder
+         */
+        public Builder qualifiedTableName(String keyspace, String table)
+        {
+            return update(b -> b.qualifiedTableName = new QualifiedTableName(keyspace, table));
         }
 
         /**

@@ -24,7 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -42,7 +41,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.FileProps;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -111,12 +109,80 @@ public class SnapshotPathBuilder extends BaseFileSystem
      * @param request the request to list the snapshot files
      * @return the absolute path of the snapshot directory
      */
+    // TODO : remove this method
     public Future<String> build(String host, SnapshotRequest request)
     {
         return dataDirectories(host)
                .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
                .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.tableName()))
                .compose(tableDirectory -> findSnapshotDirectory(tableDirectory, request.snapshotName()));
+    }
+
+    public Future<Stream<SnapshotFile>> streamSnapshotFiles(List<String> dataDirectoryList,
+                                                            String snapshotName,
+                                                            boolean includeSecondaryIndexFiles)
+    {
+        return executorPools.internal().executeBlocking(blockingPromise -> {
+            try
+            {
+                Stream<SnapshotFile> result =
+                IntStream.range(0, dataDirectoryList.size())
+                         // Get the index and resolved snapshot directory
+                         .mapToObj(dataDirIndex -> {
+                             String dataDir = dataDirectoryList.get(dataDirIndex);
+                             Path snapshotDir = Paths.get(dataDir)
+                                                     .resolve(SNAPSHOTS_DIR_NAME)
+                                                     .resolve(snapshotName);
+                             return pair(dataDirIndex, snapshotDir);
+                         })
+                         // The snapshot directory might not exist on every data directory.
+                         // For example, if there was only one row inserted in a table,
+                         // and we have 4 data directories, only a single data directory
+                         // will have SSTables, and only that data directory will create the
+                         // snapshot directory.
+                         .filter(entry -> Files.exists(entry.getValue()) && Files.isDirectory(entry.getValue()))
+                         // List all the files in the directory
+                         .flatMap(entry -> listSnapshotDir(entry.getKey(), entry.getValue(),
+                                                           includeSecondaryIndexFiles));
+
+                blockingPromise.complete(result);
+            }
+            catch (Throwable throwable)
+            {
+                blockingPromise.tryFail(throwable);
+            }
+        });
+    }
+
+    protected Stream<SnapshotFile> listSnapshotDir(int dataDirectoryIndex,
+                                                   Path snapshotDir,
+                                                   boolean includeSecondaryIndexFiles)
+    {
+        try
+        {
+            // flatmap will close the stream opened by Files.walk. From javadocs: "Each mapped stream is
+            // closed after its contents have been placed into this stream." See:
+            // java.util.stream.ReferencePipeline#flatMap
+            return Files.walk(snapshotDir, includeSecondaryIndexFiles ? 2 : 1)
+                        .map(snapshotFile -> {
+                            try
+                            {
+                                BasicFileAttributes attrs = Files.readAttributes(snapshotFile,
+                                                                                 BasicFileAttributes.class);
+                                return pair(snapshotFile, attrs);
+                            }
+                            catch (IOException e)
+                            {
+                                throw new RuntimeException("Unable to read file attributes for " + snapshotFile, e);
+                            }
+                        })
+                        .filter(entry -> entry.getValue().isRegularFile())
+                        .map(entry -> new SnapshotFile(entry.getKey(), entry.getValue().size(), dataDirectoryIndex));
+        }
+        catch (IOException ioException)
+        {
+            throw new RuntimeException("Unable to list directory " + snapshotDir, ioException);
+        }
     }
 
     /**
@@ -131,8 +197,6 @@ public class SnapshotPathBuilder extends BaseFileSystem
                                                             boolean includeSecondaryIndexFiles)
     {
         Promise<List<SnapshotFile>> promise = Promise.promise();
-
-        Files.walkFileTree(Paths.get(""),
 
         // List the snapshot directory
         fs.readDir(snapshotDirectory)
@@ -159,8 +223,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
                                  .filter(i -> ar.<FileProps>resultAt(i).isRegularFile())
                                  .mapToObj(i -> {
                                      long size = ar.<FileProps>resultAt(i).size();
-                                     return new SnapshotFile(list.get(i),
-                                                             size);
+                                     return new SnapshotFile(Paths.get(list.get(i)), size, 0);
                                  })
                                  .collect(Collectors.toList());
 
@@ -468,13 +531,15 @@ public class SnapshotPathBuilder extends BaseFileSystem
      */
     public static class SnapshotFile
     {
-        public final String path;
+        public final Path path;
         public final long size;
+        public final int dataDirectoryIndex;
 
-        SnapshotFile(String path, long size)
+        SnapshotFile(Path path, long size, int dataDirectoryIndex)
         {
             this.path = path;
             this.size = size;
+            this.dataDirectoryIndex = dataDirectoryIndex;
         }
     }
 

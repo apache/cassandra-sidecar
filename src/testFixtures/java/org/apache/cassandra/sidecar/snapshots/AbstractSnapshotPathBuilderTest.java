@@ -396,11 +396,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                                                       "component.db")),
                                      "No data directories are available for host 'emptyDataDirInstance'");
         failsWithNoSuchFileException(instance.build("emptyDataDirInstance",
-                                                    new SnapshotRequest("ks",
-                                                                        "table",
-                                                                        "snapshot",
-                                                                        false,
-                                                                        null)),
+                                                    SnapshotRequest.builder()
+                                                                   .qualifiedTableName("ks", "table")
+                                                                   .snapshotName("snapshot")
+                                                                   .build()),
                                      "No data directories are available for host 'emptyDataDirInstance'");
     }
 
@@ -414,11 +413,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                                                       "component.db")),
                                      "Keyspace 'ks' does not exist");
         failsWithNoSuchFileException(instance.build("invalidDataDirInstance",
-                                                    new SnapshotRequest("ks",
-                                                                        "table",
-                                                                        "snapshot",
-                                                                        false,
-                                                                        null)),
+                                                    SnapshotRequest.builder()
+                                                                   .qualifiedTableName("ks", "table")
+                                                                   .snapshotName("snapshot")
+                                                                   .build()),
                                      "Keyspace 'ks' does not exist");
     }
 
@@ -432,11 +430,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                                                       "component.db")),
                                      "Keyspace 'non_existent' does not exist");
         failsWithNoSuchFileException(instance.build("localhost",
-                                                    new SnapshotRequest("non_existent",
-                                                                        "table",
-                                                                        "snapshot",
-                                                                        false,
-                                                                        null)),
+                                                    SnapshotRequest.builder()
+                                                                   .qualifiedTableName("non_existent", "table")
+                                                                   .snapshotName("snapshot")
+                                                                   .build()),
                                      "Keyspace 'non_existent' does not exist");
     }
 
@@ -450,11 +447,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                                                       "component.db")),
                                      "Keyspace 'not_a_keyspace_dir' does not exist");
         failsWithNoSuchFileException(instance.build("localhost",
-                                                    new SnapshotRequest("not_a_keyspace_dir",
-                                                                        "table",
-                                                                        "snapshot",
-                                                                        false,
-                                                                        null)),
+                                                    SnapshotRequest.builder()
+                                                                   .qualifiedTableName("not_a_keyspace_dir", "table")
+                                                                   .snapshotName("snapshot")
+                                                                   .build()),
                                      "Keyspace 'not_a_keyspace_dir' does not exist");
     }
 
@@ -468,11 +464,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                                                       "component.db")),
                                      "Table 'non_existent' does not exist");
         failsWithNoSuchFileException(instance.build("localhost",
-                                                    new SnapshotRequest("ks1",
-                                                                        "non_existent",
-                                                                        "snapshot",
-                                                                        false,
-                                                                        null)),
+                                                    SnapshotRequest.builder()
+                                                                   .qualifiedTableName("ks1", "non_existent")
+                                                                   .snapshotName("snapshot")
+                                                                   .build()),
                                      "Table 'non_existent' does not exist");
     }
 
@@ -487,11 +482,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                                                       "component.db")),
                                      "Table 'table' does not exist");
         failsWithNoSuchFileException(instance.build("localhost",
-                                                    new SnapshotRequest("ks1",
-                                                                        "table",
-                                                                        "snapshot",
-                                                                        false,
-                                                                        null)),
+                                                    SnapshotRequest.builder()
+                                                                   .qualifiedTableName("ks1", "table")
+                                                                   .snapshotName("snapshot")
+                                                                   .build()),
                                      "Table 'table' does not exist");
     }
 
@@ -505,11 +499,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                                                       "component.db")),
                                      "Table 'not_a_table_dir' does not exist");
         failsWithNoSuchFileException(instance.build("localhost",
-                                                    new SnapshotRequest("ks1",
-                                                                        "not_a_table_dir",
-                                                                        "snapshot",
-                                                                        false,
-                                                                        null)),
+                                                    SnapshotRequest.builder()
+                                                                   .qualifiedTableName("ks1", "not_a_table_dir")
+                                                                   .snapshotName("snapshot")
+                                                                   .build()),
                                      "Table 'not_a_table_dir' does not exist");
     }
 
@@ -523,11 +516,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                                                       "component.db")),
                                      "Component 'component.db' does not exist for snapshot 'non_existent'");
         failsWithNoSuchFileException(instance.build("localhost",
-                                                    new SnapshotRequest("ks1",
-                                                                        "table1",
-                                                                        "non_existent",
-                                                                        false,
-                                                                        null)),
+                                                    SnapshotRequest.builder()
+                                                                   .qualifiedTableName("ks1", "table1")
+                                                                   .snapshotName("non_existent")
+                                                                   .build()),
                                      "Snapshot directory 'non_existent' does not exist");
     }
 
@@ -541,11 +533,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                                                       "component.db")),
                                      "Component 'component.db' does not exist for snapshot 'not_a_snapshot_dir'");
         failsWithNoSuchFileException(instance.build("localhost",
-                                                    new SnapshotRequest("ks1",
-                                                                        "table1",
-                                                                        "not_a_snapshot_dir",
-                                                                        false,
-                                                                        null)),
+                                                    SnapshotRequest.builder()
+                                                                   .qualifiedTableName("ks1", "table1")
+                                                                   .snapshotName("not_a_snapshot_dir")
+                                                                   .build()),
                                      "Snapshot directory 'not_a_snapshot_dir' does not exist");
     }
 
@@ -686,29 +677,26 @@ public abstract class AbstractSnapshotPathBuilderTest
     {
         String expectedPath = dataDir0.getAbsolutePath() + "/ks1/table1/snapshots/backup.2022-03-17-04-PDT";
         succeedsWhenPathExists(instance.build("localhost",
-                                              new SnapshotRequest("ks1",
-                                                                  "table1",
-                                                                  "backup.2022-03-17-04-PDT",
-                                                                  false,
-                                                                  null)),
+                                              SnapshotRequest.builder()
+                                                             .qualifiedTableName("ks1", "table1")
+                                                             .snapshotName("backup.2022-03-17-04-PDT")
+                                                             .build()),
                                expectedPath);
 
         expectedPath = dataDir0.getAbsolutePath() + "/data/ks2/table2/snapshots/ea823202-a62c-4603-bb6a-4e15d79091cd";
         succeedsWhenPathExists(instance.build("localhost",
-                                              new SnapshotRequest("ks2",
-                                                                  "table2",
-                                                                  "ea823202-a62c-4603-bb6a-4e15d79091cd",
-                                                                  false,
-                                                                  null)),
+                                              SnapshotRequest.builder()
+                                                             .qualifiedTableName("ks2", "table2")
+                                                             .snapshotName("ea823202-a62c-4603-bb6a-4e15d79091cd")
+                                                             .build()),
                                expectedPath);
 
         expectedPath = dataDir1.getAbsolutePath() + "/ks3/table3/snapshots/snapshot1";
         succeedsWhenPathExists(instance.build("localhost",
-                                              new SnapshotRequest("ks3",
-                                                                  "table3",
-                                                                  "snapshot1",
-                                                                  false,
-                                                                  null)),
+                                              SnapshotRequest.builder()
+                                                             .qualifiedTableName("ks3", "table3")
+                                                             .snapshotName("snapshot1")
+                                                             .build()),
                                expectedPath);
 
         // table table4 shares the prefix with table table4abc
@@ -716,11 +704,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                        + "/data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1"
                        + "/snapshots/this_is_a_valid_snapshot_name_i_❤_u";
         succeedsWhenPathExists(instance.build("localhost",
-                                              new SnapshotRequest("ks4",
-                                                                  "table4abc",
-                                                                  "this_is_a_valid_snapshot_name_i_❤_u",
-                                                                  false,
-                                                                  null)),
+                                              SnapshotRequest.builder()
+                                                             .qualifiedTableName("ks4", "table4abc")
+                                                             .snapshotName("this_is_a_valid_snapshot_name_i_❤_u")
+                                                             .build()),
                                expectedPath);
     }
 
@@ -770,11 +757,10 @@ public abstract class AbstractSnapshotPathBuilderTest
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot";
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
-                                      new SnapshotRequest("ks1",
-                                                          "a_table",
-                                                          "a_snapshot",
-                                                          false,
-                                                          null)),
+                                      SnapshotRequest.builder()
+                                                     .qualifiedTableName("ks1", "a_table")
+                                                     .snapshotName("a_snapshot")
+                                                     .build()),
                                expectedPath);
 
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot/index.db";
@@ -789,11 +775,10 @@ public abstract class AbstractSnapshotPathBuilderTest
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot";
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
-                                      new SnapshotRequest("ks1",
-                                                          "a_table",
-                                                          "a_snapshot",
-                                                          false,
-                                                          null)),
+                                      SnapshotRequest.builder()
+                                                     .qualifiedTableName("ks1", "a_table")
+                                                     .snapshotName("a_snapshot")
+                                                     .build()),
                                expectedPath);
 
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot/nb-203-big-TOC.txt";
@@ -808,11 +793,10 @@ public abstract class AbstractSnapshotPathBuilderTest
         expectedPath = atableWithUUID.getAbsolutePath() + "/snapshots/a_snapshot";
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
-                                      new SnapshotRequest("ks1",
-                                                          "a_table",
-                                                          "a_snapshot",
-                                                          false,
-                                                          null)),
+                                      SnapshotRequest.builder()
+                                                     .qualifiedTableName("ks1", "a_table")
+                                                     .snapshotName("a_snapshot")
+                                                     .build()),
                                expectedPath);
     }
 
@@ -868,11 +852,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                        + "/snapshots/this_is_a_valid_snapshot_name_i_❤_u";
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
-                                      new SnapshotRequest("ks4",
-                                                          "table4",
-                                                          "this_is_a_valid_snapshot_name_i_❤_u",
-                                                          false,
-                                                          null)),
+                                      SnapshotRequest.builder()
+                                                     .qualifiedTableName("ks4", "table4")
+                                                     .snapshotName("this_is_a_valid_snapshot_name_i_❤_u")
+                                                     .build()),
                                expectedPath);
 
         expectedPath = table4New.getAbsolutePath()
@@ -889,11 +872,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                        + "/snapshots/this_is_a_valid_snapshot_name_i_❤_u";
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
-                                      new SnapshotRequest("ks4",
-                                                          "table4",
-                                                          "this_is_a_valid_snapshot_name_i_❤_u",
-                                                          false,
-                                                          null)),
+                                      SnapshotRequest.builder()
+                                                     .qualifiedTableName("ks4", "table4")
+                                                     .snapshotName("this_is_a_valid_snapshot_name_i_❤_u")
+                                                     .build()),
                                expectedPath);
 
         expectedPath = table4New.getAbsolutePath()
@@ -910,11 +892,10 @@ public abstract class AbstractSnapshotPathBuilderTest
                        + "/snapshots/this_is_a_valid_snapshot_name_i_❤_u";
         succeedsWhenPathExists(newBuilder
                                .build("localhost",
-                                      new SnapshotRequest("ks4",
-                                                          "table4",
-                                                          "this_is_a_valid_snapshot_name_i_❤_u",
-                                                          false,
-                                                          null)),
+                                      SnapshotRequest.builder()
+                                                     .qualifiedTableName("ks4", "table4")
+                                                     .snapshotName("this_is_a_valid_snapshot_name_i_❤_u")
+                                                     .build()),
                                expectedPath);
     }
 

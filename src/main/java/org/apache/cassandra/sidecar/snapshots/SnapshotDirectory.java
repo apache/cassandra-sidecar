@@ -31,6 +31,7 @@ import static org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder.SNAPSHO
  */
 public class SnapshotDirectory
 {
+    // TODO: potentially remove this class
     public final String dataDirectory;
     public final String keyspace;
     public final String tableName;

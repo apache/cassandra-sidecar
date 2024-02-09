@@ -151,11 +151,11 @@ public class CassandraStorageOperations implements StorageOperations
     public void clearSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table)
     {
         requireNonNull(tag, "snapshot tag must be non-null");
-        requireNonNull(keyspace, "keyspace for the  must be non-null");
+        requireNonNull(keyspace, "keyspace must be non-null");
         requireNonNull(table, "table must be non-null");
         LOGGER.debug("Table is not supported by Cassandra JMX endpoints. " +
                      "Clearing snapshot with tag={} and keyspace={}; table={} is ignored", tag, keyspace, table);
-        final String[] keyspaces = { keyspace };
+        String[] keyspaces = { keyspace };
         jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
                  .clearSnapshot(tag, keyspaces);
     }

@@ -141,7 +141,7 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequest>
      * {@inheritDoc}
      */
     @Override
-    protected SnapshotRequest extractParamsOrThrow(final RoutingContext context)
+    protected SnapshotRequest extractParamsOrThrow(RoutingContext context)
     {
         String ttl = context.request().getParam(TTL_QUERY_PARAM);
 

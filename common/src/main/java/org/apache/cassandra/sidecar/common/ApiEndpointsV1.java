@@ -30,6 +30,7 @@ public final class ApiEndpointsV1
     public static final String CASSANDRA = "/cassandra";
     public static final String NATIVE = "/native";
     public static final String JMX = "/jmx";
+    public static final String DATA_PATH_PARAM = ":dataDirIndex";
     public static final String KEYSPACE_PATH_PARAM = ":keyspace";
     public static final String TABLE_PATH_PARAM = ":table";
     public static final String SNAPSHOT_PATH_PARAM = ":snapshot";

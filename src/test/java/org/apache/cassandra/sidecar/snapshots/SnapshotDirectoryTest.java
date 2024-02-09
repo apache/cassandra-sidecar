@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 class SnapshotDirectoryTest
 {
+    // TODO: potentially remove this class
 
     @ParameterizedTest
     @ValueSource(strings = { "not-valid", "/two-levels/not-valid", "three/levels/not-valid", "four/levels/not/valid" })
