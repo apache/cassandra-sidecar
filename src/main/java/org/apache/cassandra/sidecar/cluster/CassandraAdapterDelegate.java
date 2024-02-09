@@ -134,8 +134,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     protected JmxNotificationListener initializeJmxListener()
     {
-        JmxNotificationListener notificationListener;
-        notificationListener = new JmxNotificationListener();
+        JmxNotificationListener notificationListener = new JmxNotificationListener();
         this.jmxClient.registerListener(notificationListener);
         return notificationListener;
     }
