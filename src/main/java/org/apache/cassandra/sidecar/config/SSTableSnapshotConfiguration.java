@@ -24,29 +24,7 @@ package org.apache.cassandra.sidecar.config;
 public interface SSTableSnapshotConfiguration
 {
     /**
-     * @return the configuration for the cache used for table directories caches used for SSTable snapshot
-     * functionality
-     */
-    CacheConfiguration tableDirCacheConfiguration();
-
-    /**
      * @return the configuration for the cache used for SSTable snapshot list of files
      */
     CacheConfiguration snapshotListCacheConfiguration();
-
-    /**
-     * @return the configuration for the cache used for the SSTable snapshot component path
-     */
-    CacheConfiguration snapshotPathCacheConfiguration();
-
-    /**
-     * @return {@code true} if the underlying cache configurations are provided (not {@code null}),
-     * {@code false} otherwise
-     */
-    default boolean isCacheConfigurationAvailable()
-    {
-        return tableDirCacheConfiguration() != null
-               && snapshotListCacheConfiguration() != null
-               && snapshotPathCacheConfiguration() != null;
-    }
 }

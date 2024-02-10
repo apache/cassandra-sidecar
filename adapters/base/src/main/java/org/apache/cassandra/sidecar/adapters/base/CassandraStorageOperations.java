@@ -20,6 +20,9 @@ package org.apache.cassandra.sidecar.adapters.base;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -48,6 +51,7 @@ public class CassandraStorageOperations implements StorageOperations
     protected final JmxClient jmxClient;
     protected final RingProvider ringProvider;
     protected final TokenRangeReplicaProvider tokenRangeReplicaProvider;
+    private volatile List<String> dataFileLocations;
 
     /**
      * Creates a new instance with the provided {@link JmxClient} and {@link DnsResolver}
@@ -176,5 +180,25 @@ public class CassandraStorageOperations implements StorageOperations
     public TokenRangeReplicasResponse tokenRangeReplicas(@NotNull Name keyspace, @NotNull String partitioner)
     {
         return tokenRangeReplicaProvider.tokenRangeReplicas(keyspace, Partitioner.fromClassName(partitioner));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<String> dataFileLocations()
+    {
+        if (dataFileLocations == null)
+        {
+            // Currently, the data file locations will not mutate while the Cassandra process is alive.
+            // We can cache the data file locations in process, when a Cassandra disconnection happens,
+            // a new CassandraAdapterDelegate will be constructed and this value will get repopulated
+            // once accessed, if there were any changes to the data file locations for the Cassandra
+            // process, Sidecar will get the correct list of data directories.
+            String[] allDataFileLocations = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                                                     .getAllDataFileLocations();
+            dataFileLocations = Collections.unmodifiableList(Arrays.asList(allDataFileLocations));
+        }
+        return dataFileLocations;
     }
 }

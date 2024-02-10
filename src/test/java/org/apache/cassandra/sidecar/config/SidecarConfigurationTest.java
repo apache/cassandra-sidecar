@@ -333,14 +333,6 @@ class SidecarConfigurationTest
         assertThat(throttle.delayInSeconds()).isEqualTo(5);
         assertThat(throttle.timeoutInSeconds()).isEqualTo(10);
 
-        // file stream cache for fileProps
-        CacheConfiguration filePropsCache = serviceConfiguration.fileStreamPropsCache();
-
-        assertThat(filePropsCache).isNotNull();
-        assertThat(filePropsCache.enabled()).isTrue();
-        assertThat(filePropsCache.maximumSize()).isEqualTo(200);
-        assertThat(filePropsCache.expireAfterAccessMillis()).isEqualTo(100);
-
         // validate traffic shaping options
         TrafficShapingConfiguration trafficShaping = serviceConfiguration.trafficShapingConfiguration();
         assertThat(trafficShaping).isNotNull();
@@ -354,19 +346,10 @@ class SidecarConfigurationTest
         SSTableSnapshotConfiguration snapshotConfig = serviceConfiguration.sstableSnapshotConfiguration();
 
         assertThat(snapshotConfig).isNotNull();
-        assertThat(snapshotConfig.isCacheConfigurationAvailable()).isTrue();
 
         assertThat(snapshotConfig.snapshotListCacheConfiguration().enabled()).isTrue();
         assertThat(snapshotConfig.snapshotListCacheConfiguration().maximumSize()).isEqualTo(450);
         assertThat(snapshotConfig.snapshotListCacheConfiguration().expireAfterAccessMillis()).isEqualTo(350);
-
-        assertThat(snapshotConfig.tableDirCacheConfiguration().enabled()).isTrue();
-        assertThat(snapshotConfig.tableDirCacheConfiguration().maximumSize()).isEqualTo(250);
-        assertThat(snapshotConfig.tableDirCacheConfiguration().expireAfterAccessMillis()).isEqualTo(150);
-
-        assertThat(snapshotConfig.snapshotPathCacheConfiguration().enabled()).isTrue();
-        assertThat(snapshotConfig.snapshotPathCacheConfiguration().maximumSize()).isEqualTo(550);
-        assertThat(snapshotConfig.snapshotPathCacheConfiguration().expireAfterAccessMillis()).isEqualTo(450);
     }
 
     private void validateHealthCheckConfigurationFromYaml(HealthCheckConfiguration config)

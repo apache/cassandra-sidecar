@@ -22,17 +22,23 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.cache.DataDirectoriesCache;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
@@ -41,6 +47,7 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.RequestUtils;
 
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -64,20 +71,21 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
     private static final String INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM = "includeSecondaryIndexFiles";
     private final SnapshotPathBuilder builder;
     private final ServiceConfiguration configuration;
-    private final DataDirectoriesCache dataDirCache;
+    private final CacheConfiguration cacheConfiguration;
+    private final Cache<String, Future<ListSnapshotFilesResponse>> cache;
 
     @Inject
     public ListSnapshotHandler(SnapshotPathBuilder builder,
                                ServiceConfiguration configuration,
                                InstanceMetadataFetcher metadataFetcher,
                                CassandraInputValidator validator,
-                               ExecutorPools executorPools,
-                               DataDirectoriesCache dataDirCache)
+                               ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, validator);
         this.builder = builder;
         this.configuration = configuration;
-        this.dataDirCache = dataDirCache;
+        this.cacheConfiguration = configuration.sstableSnapshotConfiguration().snapshotListCacheConfiguration();
+        this.cache = initializeCache(cacheConfiguration);
     }
 
     /**
@@ -107,23 +115,8 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                SocketAddress remoteAddress,
                                SnapshotRequest request)
     {
-        executorPools.service().<List<String>>executeBlocking(promise -> {
-            try
-            {
-                promise.complete(dataDirCache.dataPaths(host, request.keyspace(), request.tableName()));
-            }
-            catch (IOException e)
-            {
-                String payload = String.format("Unable to retrieve data directory list for %s.%s",
-                                               request.keyspace(), request.tableName());
-                promise.fail(wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, payload, e));
-            }
-        }).compose(dataDirectoryList ->
-                   builder.streamSnapshotFiles(dataDirectoryList,
-                                               request.snapshotName(),
-                                               request.includeSecondaryIndexFiles())
-        ).onSuccess(snapshotFileStream -> {
-            ListSnapshotFilesResponse response = buildResponse(host, request, snapshotFileStream);
+        cachedResponseOrProcess(host, request)
+        .onSuccess(response -> {
             if (response.snapshotFilesInfo().isEmpty())
             {
                 String payload = "Snapshot '" + request.snapshotName() + "' not found";
@@ -135,7 +128,8 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
                              "instance={}", request, remoteAddress, host);
                 context.json(response);
             }
-        }).onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+        })
+        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 
     @Override
@@ -166,18 +160,67 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
         boolean includeSecondaryIndexFiles =
         RequestUtils.parseBooleanQueryParam(context.request(), INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM, false);
 
-        SnapshotRequest snapshotRequest = SnapshotRequest.builder()
-                                                         .qualifiedTableName(qualifiedTableName(context))
-                                                         .snapshotName(context.pathParam("snapshot"))
-                                                         .includeSecondaryIndexFiles(includeSecondaryIndexFiles)
-                                                         .build();
-        validate(snapshotRequest);
-        return snapshotRequest;
+        return SnapshotRequest.builder()
+                              .qualifiedTableName(qualifiedTableName(context))
+                              .snapshotName(context.pathParam("snapshot"))
+                              .includeSecondaryIndexFiles(includeSecondaryIndexFiles)
+                              .build();
     }
 
-    protected ListSnapshotFilesResponse buildResponse(String host,
-                                                      SnapshotRequest request,
-                                                      Stream<SnapshotPathBuilder.SnapshotFile> snapshotFileStream)
+    protected Future<ListSnapshotFilesResponse> cachedResponseOrProcess(String host, SnapshotRequest request)
+    {
+        if (cache != null && cacheConfiguration.enabled())
+        {
+            String key = host + ":" + request;
+            return cache.get(key, k -> processResponse(host, request));
+        }
+        return processResponse(host, request);
+    }
+
+    protected Future<ListSnapshotFilesResponse> processResponse(String host, SnapshotRequest request)
+    {
+        return dataPaths(host, request.keyspace(), request.tableName())
+               .compose(dataDirectoryList ->
+                        builder.streamSnapshotFiles(dataDirectoryList,
+                                                    request.snapshotName(),
+                                                    request.includeSecondaryIndexFiles())
+               )
+               .compose(snapshotFileStream -> buildResponse(host, request, snapshotFileStream));
+    }
+
+    protected Future<List<String>> dataPaths(String host, String keyspace, String table)
+    {
+        return executorPools.service().executeBlocking(promise -> {
+
+            CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+            if (delegate == null)
+            {
+                promise.fail(cassandraServiceUnavailable());
+                return;
+            }
+
+            TableOperations tableOperations = delegate.tableOperations();
+            if (tableOperations == null)
+            {
+                promise.fail(cassandraServiceUnavailable());
+                return;
+            }
+
+            try
+            {
+                promise.complete(tableOperations.getDataPaths(keyspace, table));
+            }
+            catch (IOException e)
+            {
+                promise.fail(e);
+            }
+        });
+    }
+
+    protected Future<ListSnapshotFilesResponse>
+    buildResponse(String host,
+                  SnapshotRequest request,
+                  Stream<SnapshotPathBuilder.SnapshotFile> snapshotFileStream)
     {
         int sidecarPort = configuration.port();
         ListSnapshotFilesResponse response = new ListSnapshotFilesResponse();
@@ -188,15 +231,11 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                                                             file.dataDirectoryIndex,
                                                                             request.snapshotName(),
                                                                             request.keyspace(),
-                                                                            maybeRemoveTableId(request.tableName()),
+                                                                            request.tableName(),
+                                                                            file.tableUuid,
                                                                             file.path.getFileName().toString()));
         });
-        return response;
-    }
-
-    private void validate(SnapshotRequest request)
-    {
-        validator.validateSnapshotName(request.snapshotName());
+        return Future.succeededFuture(response);
     }
 
     /**
@@ -205,7 +244,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
      * @param tableName the table name with or without the UUID
      * @return the table name without the UUID
      */
-    private String maybeRemoveTableId(String tableName)
+    public String maybeRemoveTableId(String tableName)
     {
         int dashIndex = tableName.lastIndexOf("-");
         if (dashIndex > 0)
@@ -213,5 +252,21 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
             return tableName.substring(0, dashIndex);
         }
         return tableName;
+    }
+
+    protected Cache<String, Future<ListSnapshotFilesResponse>> initializeCache(CacheConfiguration cacheConfiguration)
+    {
+        if (cacheConfiguration == null)
+        {
+            return null;
+        }
+        return Caffeine.newBuilder()
+                       .maximumSize(cacheConfiguration.maximumSize())
+                       .expireAfterAccess(cacheConfiguration.expireAfterAccessMillis(), TimeUnit.MILLISECONDS)
+                       .recordStats()
+                       .removalListener((key, value, cause) ->
+                                        logger.debug("Removed from cache=snapshot_cache, entry={}, key={}, cause={}",
+                                                     value, key, cause))
+                       .build();
     }
 }

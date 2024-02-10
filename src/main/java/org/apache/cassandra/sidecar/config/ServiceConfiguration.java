@@ -95,12 +95,6 @@ public interface ServiceConfiguration
     ThrottleConfiguration throttleConfiguration();
 
     /**
-     * @return the cache configuration for {@link org.apache.cassandra.sidecar.routes.FileStreamHandler}'s
-     * {@link io.vertx.core.file.FileProps} cache
-     */
-    CacheConfiguration fileStreamPropsCache();
-
-    /**
      * @return the configuration for SSTable component uploads on this service
      */
     SSTableUploadConfiguration ssTableUploadConfiguration();

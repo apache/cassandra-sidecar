@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.SocketAddress;
@@ -106,8 +107,11 @@ public class HttpResponse
             {
                 setPartialContentStatus(range);
             }
-            response.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-                    .putHeader(HttpHeaderNames.CONTENT_LENGTH, Long.toString(range.length()));
+
+            if (!response.headers().contains(HttpHeaders.CONTENT_TYPE))
+            {
+                response.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
+            }
         });
 
         return response.sendFile(fileName, range.start(), range.length())

@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.common;
 
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.cassandra.sidecar.common.data.Name;
@@ -70,4 +71,9 @@ public interface StorageOperations
      */
     TokenRangeReplicasResponse tokenRangeReplicas(@NotNull Name keyspace,
                                                   @NotNull String partitioner);
+
+    /**
+     * @return the list of all data file locations for the Cassandra instance
+     */
+    List<String> dataFileLocations();
 }

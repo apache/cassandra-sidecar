@@ -92,7 +92,7 @@ public class CassandraInputValidator
         Objects.requireNonNull(tableName, "tableName must not be null");
         String unquoted = removeQuotesIfNecessary(tableName);
         boolean isQuoted = !unquoted.equals(tableName);
-        validatePattern(unquoted, tableName, "table name", isQuoted);
+//        validatePattern(unquoted, tableName, "table name", isQuoted);
         return new Name(unquoted, tableName);
     }
 

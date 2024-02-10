@@ -75,9 +75,6 @@ sidecar:
     stream_requests_per_sec: 5000
     delay_sec: 5
     timeout_sec: 10
-  file_stream_props_cache:
-    expire_after_access_millis: 300000 # 5 minutes
-    maximum_size: 10000
   traffic_shaping:
     inbound_global_bandwidth_bps: 0               # 0 implies unthrottled, the inbound bandwidth in bytes per second
     outbound_global_bandwidth_bps: 0              # 0 implies unthrottled, the outbound bandwidth in bytes per second
@@ -96,14 +93,8 @@ sidecar:
       expire_after_access_millis: 7200000 # 2 hours
       maximum_size: 10000
   sstable_snapshot:
-    table_dir_cache:
-      expire_after_access_millis: 7200000 # 2 hours
-      maximum_size: 10000
     snapshot_list_cache:
       expire_after_access_millis: 7200000 # 2 hours
-      maximum_size: 10000
-    snapshot_path_cache:
-      expire_after_access_millis: 300000 # 5 minutes
       maximum_size: 10000
   worker_pools:
     service:

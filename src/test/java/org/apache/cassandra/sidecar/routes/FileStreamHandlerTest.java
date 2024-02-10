@@ -23,8 +23,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.junit.jupiter.api.AfterEach;
@@ -38,8 +36,6 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.file.FileProps;
-import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -54,7 +50,6 @@ import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-import org.jetbrains.annotations.NotNull;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
@@ -237,52 +232,52 @@ class FileStreamHandlerTest
         .onFailure(context::failNow);
     }
 
-    @Test
-    void testCacheBeingUsed(VertxTestContext context) throws IOException
-    {
-        int sizeInBytes = 1024;
-        Path oneKbFile = prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
-        assertThat(oneKbFile).exists();
-        serverFuture(oneKbFile.toString(), true)
-        .compose(server -> {
-            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(0);
-            return client.get(server.actualPort(), "127.0.0.1", "/stream")
-                         .as(BodyCodec.buffer())
-                         .send();
-        })
-        .compose(response -> {
-            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(1);
-            assertThat(response.statusCode()).isEqualTo(OK.code());
-            assertThat(response.body().length()).isEqualTo(sizeInBytes);
-            return Future.succeededFuture();
-        })
-        .compose(v -> client.get(server.actualPort(), "127.0.0.1", "/stream")
-                            .as(BodyCodec.buffer())
-                            .send())
-        .compose(response -> {
-            // cache was used for the second request
-            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(1);
-            assertThat(response.statusCode()).isEqualTo(OK.code());
-            assertThat(response.body().length()).isEqualTo(sizeInBytes);
-            return Future.succeededFuture();
-        })
-        .compose(v -> {
-            // force a cache invalidation
-            assertThat(fileStreamHandler.filePropsCache).isNotNull();
-            fileStreamHandler.filePropsCache.invalidateAll();
-            return client.get(server.actualPort(), "127.0.0.1", "/stream")
-                         .as(BodyCodec.buffer())
-                         .send();
-        })
-        .onSuccess(response -> {
-            // cache is empty, so we should have a cache miss for the third request
-            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(2);
-            assertThat(response.statusCode()).isEqualTo(OK.code());
-            assertThat(response.body().length()).isEqualTo(sizeInBytes);
-            context.completeNow();
-        })
-        .onFailure(context::failNow);
-    }
+//    @Test
+//    void testCacheBeingUsed(VertxTestContext context) throws IOException
+//    {
+//        int sizeInBytes = 1024;
+//        Path oneKbFile = prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
+//        assertThat(oneKbFile).exists();
+//        serverFuture(oneKbFile.toString(), true)
+//        .compose(server -> {
+//            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(0);
+//            return client.get(server.actualPort(), "127.0.0.1", "/stream")
+//                         .as(BodyCodec.buffer())
+//                         .send();
+//        })
+//        .compose(response -> {
+//            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(1);
+//            assertThat(response.statusCode()).isEqualTo(OK.code());
+//            assertThat(response.body().length()).isEqualTo(sizeInBytes);
+//            return Future.succeededFuture();
+//        })
+//        .compose(v -> client.get(server.actualPort(), "127.0.0.1", "/stream")
+//                            .as(BodyCodec.buffer())
+//                            .send())
+//        .compose(response -> {
+//            // cache was used for the second request
+//            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(1);
+//            assertThat(response.statusCode()).isEqualTo(OK.code());
+//            assertThat(response.body().length()).isEqualTo(sizeInBytes);
+//            return Future.succeededFuture();
+//        })
+//        .compose(v -> {
+//            // force a cache invalidation
+//            assertThat(fileStreamHandler.filePropsCache).isNotNull();
+//            fileStreamHandler.filePropsCache.invalidateAll();
+//            return client.get(server.actualPort(), "127.0.0.1", "/stream")
+//                         .as(BodyCodec.buffer())
+//                         .send();
+//        })
+//        .onSuccess(response -> {
+//            // cache is empty, so we should have a cache miss for the third request
+//            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(2);
+//            assertThat(response.statusCode()).isEqualTo(OK.code());
+//            assertThat(response.body().length()).isEqualTo(sizeInBytes);
+//            context.completeNow();
+//        })
+//        .onFailure(context::failNow);
+//    }
 
     @Test
     void testAttemptToStreamDeletedFileThatHadFilePropsCached(VertxTestContext context) throws IOException
@@ -293,7 +288,6 @@ class FileStreamHandlerTest
         serverFuture(oneKbFile.toString(), true)
         .compose(server -> {
             // First let's stream a file that we just created
-            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(0);
             return client.get(server.actualPort(), "127.0.0.1", "/stream")
                          .as(BodyCodec.buffer())
                          .send();
@@ -301,7 +295,6 @@ class FileStreamHandlerTest
         .compose(response -> {
             assertThat(response.statusCode()).isEqualTo(OK.code());
             assertThat(response.body().length()).isEqualTo(sizeInBytes);
-            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(1);
             try
             {
                 // Delete the file, now we should see a 404 when trying to stream the file
@@ -323,7 +316,6 @@ class FileStreamHandlerTest
             .isEqualTo("The requested file does not exist");
             assertThat(responseJson.getInteger("code")).isEqualTo(404);
             assertThat(responseJson.getString("status")).isEqualTo("Not Found");
-            assertThat(fileStreamHandler.cacheMisses.get()).isEqualTo(1);
             context.completeNow();
         })
         .onFailure(context::failNow);
@@ -365,26 +357,16 @@ class FileStreamHandlerTest
     }
 
     /**
-     * Class that peeks into the {@link #ensureValidFileNonCached} method, and keeps track of non-cached access to
-     * the {@link FileProps}
+     *
      */
     static class TestFileStreamHandler extends FileStreamHandler
     {
-        final AtomicInteger cacheMisses = new AtomicInteger();
-
         public TestFileStreamHandler(InstanceMetadataFetcher metadataFetcher,
                                      ServiceConfiguration serviceConfiguration,
                                      FileStreamer fileStreamer,
                                      ExecutorPools executorPools)
         {
-            super(metadataFetcher, serviceConfiguration, fileStreamer, executorPools);
-        }
-
-        @Override
-        protected @NotNull Function<String, Future<FileProps>> ensureValidFileNonCached(FileSystem fs)
-        {
-            cacheMisses.incrementAndGet();
-            return super.ensureValidFileNonCached(fs);
+            super(metadataFetcher, fileStreamer, executorPools);
         }
     }
 }

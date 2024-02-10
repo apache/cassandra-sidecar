@@ -115,6 +115,7 @@ public class ListSnapshotHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "1.db");
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
@@ -124,6 +125,7 @@ public class ListSnapshotHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "2.db");
 
         client.get(server.actualPort(), "localhost", testRoute)
@@ -151,6 +153,7 @@ public class ListSnapshotHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "1.db"),
         new ListSnapshotFilesResponse.FileInfo(0,
                                                "localhost",
@@ -159,6 +162,7 @@ public class ListSnapshotHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                ".index/secondary.db")
         );
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
@@ -169,6 +173,7 @@ public class ListSnapshotHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "2.db");
 
         client.get(server.actualPort(), "localhost", testRoute)

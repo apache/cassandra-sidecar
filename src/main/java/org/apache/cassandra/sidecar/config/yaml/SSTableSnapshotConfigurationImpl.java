@@ -29,46 +29,20 @@ import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
  */
 public class SSTableSnapshotConfigurationImpl implements SSTableSnapshotConfiguration
 {
-    protected static final CacheConfiguration DEFAULT_TABLE_DIR_CACHE_CONFIGURATION =
-    new CacheConfigurationImpl(TimeUnit.HOURS.toMillis(2), 10_000);
     protected static final CacheConfiguration DEFAULT_SNAPSHOT_LIST_CACHE_CONFIGURATION =
     new CacheConfigurationImpl(TimeUnit.HOURS.toMillis(2), 10_000);
-    protected static final CacheConfiguration DEFAULT_SNAPSHOT_PATH_CACHE_CONFIGURATION =
-    new CacheConfigurationImpl(TimeUnit.MINUTES.toMillis(5), 10_000);
 
-    @JsonProperty(value = "table_dir_cache")
-    protected CacheConfiguration tableDirCacheConfiguration;
     @JsonProperty(value = "snapshot_list_cache")
     protected CacheConfiguration snapshotListCacheConfiguration;
-    @JsonProperty(value = "snapshot_path_cache")
-    protected CacheConfiguration snapshotPathCacheConfiguration;
 
     public SSTableSnapshotConfigurationImpl()
     {
-        this(DEFAULT_TABLE_DIR_CACHE_CONFIGURATION,
-             DEFAULT_SNAPSHOT_LIST_CACHE_CONFIGURATION,
-             DEFAULT_SNAPSHOT_PATH_CACHE_CONFIGURATION);
+        this(DEFAULT_SNAPSHOT_LIST_CACHE_CONFIGURATION);
     }
 
-    public SSTableSnapshotConfigurationImpl(CacheConfiguration tableDirCacheConfiguration,
-                                            CacheConfiguration snapshotListCacheConfiguration,
-                                            CacheConfiguration snapshotPathCacheConfiguration)
+    public SSTableSnapshotConfigurationImpl(CacheConfiguration snapshotListCacheConfiguration)
     {
-        this.tableDirCacheConfiguration = tableDirCacheConfiguration;
         this.snapshotListCacheConfiguration = snapshotListCacheConfiguration;
-        this.snapshotPathCacheConfiguration = snapshotPathCacheConfiguration;
-    }
-
-
-    /**
-     * @return the configuration for the cache used for table directories caches used for SSTable snapshot
-     * functionality
-     */
-    @Override
-    @JsonProperty(value = "table_dir_cache")
-    public CacheConfiguration tableDirCacheConfiguration()
-    {
-        return tableDirCacheConfiguration;
     }
 
     /**
@@ -79,12 +53,5 @@ public class SSTableSnapshotConfigurationImpl implements SSTableSnapshotConfigur
     public CacheConfiguration snapshotListCacheConfiguration()
     {
         return snapshotListCacheConfiguration;
-    }
-
-    @Override
-    @JsonProperty(value = "snapshot_path_cache")
-    public CacheConfiguration snapshotPathCacheConfiguration()
-    {
-        return snapshotPathCacheConfiguration;
     }
 }

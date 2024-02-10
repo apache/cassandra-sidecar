@@ -58,7 +58,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     private static final String SERVER_VERTICLE_INSTANCES_PROPERTY = "server_verticle_instances";
     private static final int DEFAULT_SERVER_VERTICLE_INSTANCES = 1;
     public static final String THROTTLE_PROPERTY = "throttle";
-    public static final String FILE_STREAM_PROPS_CACHE_PROPERTY = "file_stream_props_cache";
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
     public static final String SSTABLE_SNAPSHOT_PROPERTY = "sstable_snapshot";
@@ -103,9 +102,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
 
     @JsonProperty(value = THROTTLE_PROPERTY)
     protected final ThrottleConfiguration throttleConfiguration;
-
-    @JsonProperty(value = FILE_STREAM_PROPS_CACHE_PROPERTY)
-    protected final CacheConfiguration fileStreamPropsCache;
 
     @JsonProperty(value = SSTABLE_UPLOAD_PROPERTY)
     protected final SSTableUploadConfiguration ssTableUploadConfiguration;
@@ -152,7 +148,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         allowableSkewInMinutes = builder.allowableSkewInMinutes;
         serverVerticleInstances = builder.serverVerticleInstances;
         throttleConfiguration = builder.throttleConfiguration;
-        fileStreamPropsCache = builder.fileStreamPropsCache;
         ssTableUploadConfiguration = builder.ssTableUploadConfiguration;
         ssTableImportConfiguration = builder.ssTableImportConfiguration;
         sstableSnapshotConfiguration = builder.ssTableSnapshotConfiguration;
@@ -250,13 +245,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public ThrottleConfiguration throttleConfiguration()
     {
         return throttleConfiguration;
-    }
-
-    @Override
-    @JsonProperty(value = FILE_STREAM_PROPS_CACHE_PROPERTY)
-    public CacheConfiguration fileStreamPropsCache()
-    {
-        return fileStreamPropsCache;
     }
 
     /**
