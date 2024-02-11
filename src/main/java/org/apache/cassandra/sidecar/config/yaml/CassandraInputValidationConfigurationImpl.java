@@ -55,18 +55,16 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     @JsonProperty(FORBIDDEN_KEYSPACES_PROPERTY)
     protected final Set<String> forbiddenKeyspaces;
 
-    @JsonProperty(value = ALLOWED_CHARS_FOR_NAME_PROPERTY, defaultValue = DEFAULT_ALLOWED_CHARS_FOR_NAME)
+    @JsonProperty(value = ALLOWED_CHARS_FOR_NAME_PROPERTY)
     protected final String allowedPatternForName;
 
-    @JsonProperty(value = ALLOWED_CHARS_FOR_QUOTED_NAME_PROPERTY, defaultValue = DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME)
+    @JsonProperty(value = ALLOWED_CHARS_FOR_QUOTED_NAME_PROPERTY)
     protected final String allowedPatternForQuotedName;
 
-    @JsonProperty(value = ALLOWED_CHARS_FOR_COMPONENT_NAME_PROPERTY,
-    defaultValue = DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME)
+    @JsonProperty(value = ALLOWED_CHARS_FOR_COMPONENT_NAME_PROPERTY)
     protected final String allowedPatternForComponentName;
 
-    @JsonProperty(value = ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME_PROPERTY,
-    defaultValue = DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME)
+    @JsonProperty(value = ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME_PROPERTY)
     protected final String allowedPatternForRestrictedComponentName;
 
     public CassandraInputValidationConfigurationImpl()
@@ -105,7 +103,7 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = ALLOWED_CHARS_FOR_NAME_PROPERTY, defaultValue = DEFAULT_ALLOWED_CHARS_FOR_NAME)
+    @JsonProperty(value = ALLOWED_CHARS_FOR_NAME_PROPERTY)
     public String allowedPatternForName()
     {
         return allowedPatternForName;
@@ -115,7 +113,7 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = ALLOWED_CHARS_FOR_QUOTED_NAME_PROPERTY, defaultValue = DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME)
+    @JsonProperty(value = ALLOWED_CHARS_FOR_QUOTED_NAME_PROPERTY)
     public String allowedPatternForQuotedName()
     {
         return allowedPatternForQuotedName;
@@ -125,8 +123,7 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = ALLOWED_CHARS_FOR_COMPONENT_NAME_PROPERTY,
-    defaultValue = DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME)
+    @JsonProperty(value = ALLOWED_CHARS_FOR_COMPONENT_NAME_PROPERTY)
     public String allowedPatternForComponentName()
     {
         return allowedPatternForComponentName;
@@ -136,8 +133,7 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME_PROPERTY,
-    defaultValue = DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME)
+    @JsonProperty(value = ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME_PROPERTY)
     public String allowedPatternForRestrictedComponentName()
     {
         return allowedPatternForRestrictedComponentName;

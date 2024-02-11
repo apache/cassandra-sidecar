@@ -32,10 +32,10 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
     @JsonProperty("password")
     protected final String password;
 
-    @JsonProperty(value = "type", defaultValue = DEFAULT_TYPE)
+    @JsonProperty(value = "type")
     protected final String type;
 
-    @JsonProperty(value = "check_interval_sec", defaultValue = DEFAULT_CHECK_INTERVAL_SECONDS + "")
+    @JsonProperty(value = "check_interval_sec")
     protected final int checkIntervalInSeconds;
 
     public KeyStoreConfigurationImpl()
@@ -80,7 +80,7 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
      * @return the type of the store
      */
     @Override
-    @JsonProperty(value = "type", defaultValue = DEFAULT_TYPE)
+    @JsonProperty(value = "type")
     public String type()
     {
         return type;
@@ -90,7 +90,7 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
      * @return the interval, in seconds, in which the key store will be checked for changes in the filesystem
      */
     @Override
-    @JsonProperty(value = "check_interval_sec", defaultValue = DEFAULT_CHECK_INTERVAL_SECONDS + "")
+    @JsonProperty(value = "check_interval_sec")
     public int checkIntervalInSeconds()
     {
         return checkIntervalInSeconds;

@@ -97,16 +97,16 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = SERVER_VERTICLE_INSTANCES_PROPERTY, defaultValue = DEFAULT_SERVER_VERTICLE_INSTANCES + "")
     protected final int serverVerticleInstances;
 
-    @JsonProperty(value = THROTTLE_PROPERTY, required = true)
+    @JsonProperty(value = THROTTLE_PROPERTY)
     protected final ThrottleConfiguration throttleConfiguration;
 
-    @JsonProperty(value = SSTABLE_UPLOAD_PROPERTY, required = true)
+    @JsonProperty(value = SSTABLE_UPLOAD_PROPERTY)
     protected final SSTableUploadConfiguration ssTableUploadConfiguration;
 
-    @JsonProperty(value = SSTABLE_IMPORT_PROPERTY, required = true)
+    @JsonProperty(value = SSTABLE_IMPORT_PROPERTY)
     protected final SSTableImportConfiguration ssTableImportConfiguration;
 
-    @JsonProperty(value = WORKER_POOLS_PROPERTY, required = true)
+    @JsonProperty(value = WORKER_POOLS_PROPERTY)
     protected final Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration;
 
     @JsonProperty(value = JMX_PROPERTY)
@@ -154,7 +154,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = HOST_PROPERTY, defaultValue = DEFAULT_HOST)
+    @JsonProperty(value = HOST_PROPERTY)
     public String host()
     {
         return host;
@@ -164,7 +164,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = PORT_PROPERTY, defaultValue = DEFAULT_PORT + "")
+    @JsonProperty(value = PORT_PROPERTY)
     public int port()
     {
         return port;
@@ -174,7 +174,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = REQUEST_IDLE_TIMEOUT_MILLIS_PROPERTY, defaultValue = DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS + "")
+    @JsonProperty(value = REQUEST_IDLE_TIMEOUT_MILLIS_PROPERTY)
     public int requestIdleTimeoutMillis()
     {
         return requestIdleTimeoutMillis;
@@ -184,7 +184,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = REQUEST_TIMEOUT_MILLIS_PROPERTY, defaultValue = DEFAULT_REQUEST_TIMEOUT_MILLIS + "")
+    @JsonProperty(value = REQUEST_TIMEOUT_MILLIS_PROPERTY)
     public long requestTimeoutMillis()
     {
         return requestTimeoutMillis;
@@ -194,7 +194,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = TCP_KEEP_ALIVE_PROPERTY, defaultValue = DEFAULT_TCP_KEEP_ALIVE + "")
+    @JsonProperty(value = TCP_KEEP_ALIVE_PROPERTY)
     public boolean tcpKeepAlive()
     {
         return tcpKeepAlive;
@@ -204,7 +204,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = ACCEPT_BACKLOG_PROPERTY, defaultValue = DEFAULT_ACCEPT_BACKLOG + "")
+    @JsonProperty(value = ACCEPT_BACKLOG_PROPERTY)
     public int acceptBacklog()
     {
         return acceptBacklog;
@@ -214,7 +214,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = ALLOWABLE_SKEW_IN_MINUTES_PROPERTY, defaultValue = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES + "")
+    @JsonProperty(value = ALLOWABLE_SKEW_IN_MINUTES_PROPERTY)
     public int allowableSkewInMinutes()
     {
         return allowableSkewInMinutes;
@@ -224,7 +224,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = SERVER_VERTICLE_INSTANCES_PROPERTY, defaultValue = DEFAULT_SERVER_VERTICLE_INSTANCES + "")
+    @JsonProperty(value = SERVER_VERTICLE_INSTANCES_PROPERTY)
     public int serverVerticleInstances()
     {
         return serverVerticleInstances;
@@ -234,7 +234,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = THROTTLE_PROPERTY, required = true)
+    @JsonProperty(value = THROTTLE_PROPERTY)
     public ThrottleConfiguration throttleConfiguration()
     {
         return throttleConfiguration;
@@ -244,7 +244,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = SSTABLE_UPLOAD_PROPERTY, required = true)
+    @JsonProperty(value = SSTABLE_UPLOAD_PROPERTY)
     public SSTableUploadConfiguration ssTableUploadConfiguration()
     {
         return ssTableUploadConfiguration;
@@ -254,7 +254,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = SSTABLE_IMPORT_PROPERTY, required = true)
+    @JsonProperty(value = SSTABLE_IMPORT_PROPERTY)
     public SSTableImportConfiguration ssTableImportConfiguration()
     {
         return ssTableImportConfiguration;
@@ -264,7 +264,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = WORKER_POOLS_PROPERTY, required = true)
+    @JsonProperty(value = WORKER_POOLS_PROPERTY)
     public Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration()
     {
         return workerPoolsConfiguration;

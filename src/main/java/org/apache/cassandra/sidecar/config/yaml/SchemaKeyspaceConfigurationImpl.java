@@ -32,16 +32,16 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
     public static final String DEFAULT_REPLICATION_STRATEGY = "SimpleStrategy";
     public static final int DEFAULT_REPLICATION_FACTOR = 1;
 
-    @JsonProperty(value = "is_enabled", defaultValue = "false")
+    @JsonProperty(value = "is_enabled")
     protected final boolean isEnabled;
 
-    @JsonProperty(value = "keyspace", defaultValue = "sidecar_internal")
+    @JsonProperty(value = "keyspace")
     protected final String keyspace;
 
-    @JsonProperty(value = "replication_strategy", defaultValue = "SimpleStrategy")
+    @JsonProperty(value = "replication_strategy")
     protected final String replicationStrategy;
 
-    @JsonProperty(value = "replication_factor", defaultValue = "1")
+    @JsonProperty(value = "replication_factor")
     protected final int replicationFactor;
 
     protected SchemaKeyspaceConfigurationImpl()
@@ -61,7 +61,7 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "is_enabled", defaultValue = "false")
+    @JsonProperty(value = "is_enabled")
     public boolean isEnabled()
     {
         return isEnabled;
@@ -71,7 +71,7 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "keyspace", defaultValue = "sidecar_internal")
+    @JsonProperty(value = "keyspace")
     public String keyspace()
     {
         return keyspace;
@@ -81,7 +81,7 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "replication_strategy", defaultValue = "SimpleStrategy")
+    @JsonProperty(value = "replication_strategy")
     public String replicationStrategy()
     {
         return replicationStrategy;
@@ -91,7 +91,7 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "replication_factor", defaultValue = "1")
+    @JsonProperty(value = "replication_factor")
     public int replicationFactor()
     {
         return replicationFactor;

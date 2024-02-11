@@ -46,10 +46,10 @@ public class SslConfigurationImpl implements SslConfiguration
     @JsonProperty("enabled")
     protected final boolean enabled;
 
-    @JsonProperty(value = "use_openssl", defaultValue = "true")
+    @JsonProperty(value = "use_openssl")
     protected final boolean useOpenSsl;
 
-    @JsonProperty(value = "handshake_timeout_sec", defaultValue = "10")
+    @JsonProperty(value = "handshake_timeout_sec")
     protected final long handshakeTimeoutInSeconds;
 
     protected String clientAuth;
@@ -97,7 +97,7 @@ public class SslConfigurationImpl implements SslConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "use_openssl", defaultValue = "true")
+    @JsonProperty(value = "use_openssl")
     public boolean preferOpenSSL()
     {
         return useOpenSsl;
@@ -107,7 +107,7 @@ public class SslConfigurationImpl implements SslConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "handshake_timeout_sec", defaultValue = "10")
+    @JsonProperty(value = "handshake_timeout_sec")
     public long handshakeTimeoutInSeconds()
     {
         return handshakeTimeoutInSeconds;
@@ -117,13 +117,13 @@ public class SslConfigurationImpl implements SslConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "client_auth", defaultValue = "NONE")
+    @JsonProperty(value = "client_auth")
     public String clientAuth()
     {
         return clientAuth;
     }
 
-    @JsonProperty(value = "client_auth", defaultValue = "NONE")
+    @JsonProperty(value = "client_auth")
     public void setClientAuth(String clientAuth)
     {
         this.clientAuth = clientAuth;

@@ -190,6 +190,22 @@ class SidecarConfigurationTest
         assertThat(driverConfiguration.numConnections()).isEqualTo(6);
     }
 
+    @Test
+    void testReadCustomSchemaKeyspaceConfiguration() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_schema_keyspace_configuration.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+
+        SchemaKeyspaceConfiguration configuration = config.serviceConfiguration().schemaKeyspaceConfiguration();
+        assertThat(configuration).isNotNull();
+        assertThat(configuration.isEnabled()).isTrue();
+        assertThat(configuration.keyspace()).isEqualTo("sidecar_internal");
+        assertThat(configuration.replicationStrategy()).isEqualTo("SimpleStrategy");
+        assertThat(configuration.replicationFactor()).isEqualTo(3);
+        assertThat(configuration.createReplicationStrategyString())
+        .isEqualTo("{'class':'SimpleStrategy', 'replication_factor':'3'}");
+    }
+
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
     {
         assertThat(config.cassandraInstances()).isNotNull().hasSize(1);

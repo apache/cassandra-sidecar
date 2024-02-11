@@ -34,13 +34,13 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
     public static final long DEFAULT_THREAD_KEEP_ALIVE_SECONDS = 60;
     public static final int DEFAULT_S3_CLIENT_CONCURRENCY = 4;
 
-    @JsonProperty(value = "thread_name_prefix", defaultValue = "s3-client")
+    @JsonProperty(value = "thread_name_prefix")
     protected final String threadNamePrefix;
 
-    @JsonProperty(value = "concurrency", defaultValue = "4")
+    @JsonProperty(value = "concurrency")
     protected final int concurrency;
 
-    @JsonProperty(value = "thread_keep_alive_seconds", defaultValue = "60")
+    @JsonProperty(value = "thread_keep_alive_seconds")
     protected final long threadKeepAliveSeconds;
 
     @JsonProperty(value = PROXY_PROPERTY)
@@ -70,7 +70,7 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
      */
     @NotNull
     @Override
-    @JsonProperty(value = "thread_name_prefix", defaultValue = "s3-client")
+    @JsonProperty(value = "thread_name_prefix")
     public String threadNamePrefix()
     {
         return threadNamePrefix;
@@ -80,7 +80,7 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "concurrency", defaultValue = "4")
+    @JsonProperty(value = "concurrency")
     public int concurrency()
     {
         return concurrency;
@@ -90,7 +90,7 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "thread_keep_alive_seconds", defaultValue = "60")
+    @JsonProperty(value = "thread_keep_alive_seconds")
     public long threadKeepAliveSeconds()
     {
         return threadKeepAliveSeconds;

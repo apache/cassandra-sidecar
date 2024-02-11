@@ -57,10 +57,10 @@ sidecar:
     max_retries: 42
     retry_delay_millis: 1234
   schema:
-    is_enabled: false
+    is_enabled: true
     keyspace: sidecar_internal
     replication_strategy: SimpleStrategy
-    replication_factor: 1
+    replication_factor: 3
 
 #
 # Enable SSL configuration (Disabled by default)

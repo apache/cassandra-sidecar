@@ -33,11 +33,11 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
     public static final String TIMEOUT_SEC_PROPERTY = "timeout_sec";
     public static final String DELAY_SEC_PROPERTY = "delay_sec";
 
-    @JsonProperty(value = STREAM_REQUESTS_PER_SEC_PROPERTY, defaultValue = DEFAULT_STREAM_REQUESTS_PER_SEC + "")
+    @JsonProperty(value = STREAM_REQUESTS_PER_SEC_PROPERTY)
     protected final long rateLimitStreamRequestsPerSecond;
-    @JsonProperty(value = TIMEOUT_SEC_PROPERTY, defaultValue = DEFAULT_TIMEOUT_SEC + "")
+    @JsonProperty(value = TIMEOUT_SEC_PROPERTY)
     protected final long timeoutInSeconds;
-    @JsonProperty(value = DELAY_SEC_PROPERTY, defaultValue = DEFAULT_DELAY_SEC + "")
+    @JsonProperty(value = DELAY_SEC_PROPERTY)
     protected final long delayInSeconds;
 
     public ThrottleConfigurationImpl()
@@ -64,21 +64,21 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
     }
 
     @Override
-    @JsonProperty(value = STREAM_REQUESTS_PER_SEC_PROPERTY, defaultValue = DEFAULT_STREAM_REQUESTS_PER_SEC + "")
+    @JsonProperty(value = STREAM_REQUESTS_PER_SEC_PROPERTY)
     public long rateLimitStreamRequestsPerSecond()
     {
         return rateLimitStreamRequestsPerSecond;
     }
 
     @Override
-    @JsonProperty(value = TIMEOUT_SEC_PROPERTY, defaultValue = DEFAULT_TIMEOUT_SEC + "")
+    @JsonProperty(value = TIMEOUT_SEC_PROPERTY)
     public long timeoutInSeconds()
     {
         return timeoutInSeconds;
     }
 
     @Override
-    @JsonProperty(value = DELAY_SEC_PROPERTY, defaultValue = DEFAULT_DELAY_SEC + "")
+    @JsonProperty(value = DELAY_SEC_PROPERTY)
     public long delayInSeconds()
     {
         return delayInSeconds;

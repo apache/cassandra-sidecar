@@ -37,10 +37,10 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
     public static final String FILE_PERMISSIONS_PROPERTY = "file_permissions";
     public static final String DEFAULT_FILE_PERMISSIONS = "rw-r--r--";
 
-    @JsonProperty(value = CONCURRENT_UPLOAD_LIMIT_PROPERTY, defaultValue = DEFAULT_CONCURRENT_UPLOAD_LIMIT + "")
+    @JsonProperty(value = CONCURRENT_UPLOAD_LIMIT_PROPERTY)
     protected final int concurrentUploadsLimit;
 
-    @JsonProperty(value = MIN_FREE_SPACE_PERCENT_PROPERTY, defaultValue = DEFAULT_MIN_FREE_SPACE_PERCENT + "")
+    @JsonProperty(value = MIN_FREE_SPACE_PERCENT_PROPERTY)
     protected final float minimumSpacePercentageRequired;
 
     protected String filePermissions;
@@ -78,7 +78,7 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = CONCURRENT_UPLOAD_LIMIT_PROPERTY, defaultValue = DEFAULT_CONCURRENT_UPLOAD_LIMIT + "")
+    @JsonProperty(value = CONCURRENT_UPLOAD_LIMIT_PROPERTY)
     public int concurrentUploadsLimit()
     {
         return concurrentUploadsLimit;
@@ -88,7 +88,7 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = MIN_FREE_SPACE_PERCENT_PROPERTY, defaultValue = DEFAULT_MIN_FREE_SPACE_PERCENT + "")
+    @JsonProperty(value = MIN_FREE_SPACE_PERCENT_PROPERTY)
     public float minimumSpacePercentageRequired()
     {
         return minimumSpacePercentageRequired;
