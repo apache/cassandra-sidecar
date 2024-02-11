@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 /**
  * Encapsulates the basic configuration needed to connect to a single Cassandra instance
  */
+@Binds(to = InstanceConfiguration.class)
 public class InstanceConfigurationImpl implements InstanceConfiguration
 {
     @JsonProperty("id")

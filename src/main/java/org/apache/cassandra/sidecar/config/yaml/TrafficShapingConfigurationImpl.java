@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
  * Reads the configuration for the global traffic shaping options from a YAML file. These TCP server options enable
  * configuration of bandwidth limiting. Both inbound and outbound bandwidth can be limited through these options.
  */
+@Binds(to = TrafficShapingConfiguration.class)
 public class TrafficShapingConfigurationImpl implements TrafficShapingConfiguration
 {
     /**

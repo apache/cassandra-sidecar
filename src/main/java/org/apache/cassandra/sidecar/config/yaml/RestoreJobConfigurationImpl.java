@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 /**
  * Configuration needed restore jobs restoring data from blob
  */
+@Binds(to = RestoreJobConfiguration.class)
 public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
 {
     private static final long MIN_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(14);

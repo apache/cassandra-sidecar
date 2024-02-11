@@ -37,6 +37,7 @@ import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 /**
  * Configuration for the Sidecar Service and configuration of the REST endpoints in the service
  */
+@Binds(to = ServiceConfiguration.class)
 public class ServiceConfigurationImpl implements ServiceConfiguration
 {
     public static final String HOST_PROPERTY = "host";

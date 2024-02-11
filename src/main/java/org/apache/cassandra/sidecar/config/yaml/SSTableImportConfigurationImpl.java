@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 /**
  * Configuration for the SSTable Import functionality
  */
+@Binds(to = SSTableImportConfiguration.class)
 public class SSTableImportConfigurationImpl implements SSTableImportConfiguration
 {
     public static final String POLL_INTERVAL_MILLIS_PROPERTY = "poll_interval_millis";

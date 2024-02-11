@@ -24,6 +24,7 @@ import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 /**
  * The traffic shaping configuration options for the service
  */
+@Binds(to = ThrottleConfiguration.class)
 public class ThrottleConfigurationImpl implements ThrottleConfiguration
 {
     public static final long DEFAULT_STREAM_REQUESTS_PER_SEC = 5000;

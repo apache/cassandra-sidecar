@@ -25,6 +25,7 @@ import org.jetbrains.annotations.VisibleForTesting;
 /**
  * Configuration for the health checks
  */
+@Binds(to = HealthCheckConfiguration.class)
 public class HealthCheckConfigurationImpl implements HealthCheckConfiguration
 {
     public static final String INITIAL_DELAY_MILLIS_PROPERTY = "initial_delay_millis";

@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.config.SslConfiguration;
 /**
  * Encapsulates SSL Configuration
  */
+@Binds(to = SslConfiguration.class)
 public class SslConfigurationImpl implements SslConfiguration
 {
     public static final boolean DEFAULT_SSL_ENABLED = false;

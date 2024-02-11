@@ -18,38 +18,20 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.config.DriverConfiguration;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * The driver configuration to use when connecting to Cassandra
+ * Annotates a yaml type that binds to its super class
  */
-@Binds(to = DriverConfiguration.class)
-public class DriverConfigurationImpl implements DriverConfiguration
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface Binds
 {
-    private final List<InetSocketAddress> contactPoints = new ArrayList<>();
-    private String localDc;
-    private int numConnections;
-
-    @JsonProperty("contact_points")
-    public List<InetSocketAddress> contactPoints()
-    {
-        return contactPoints;
-    }
-
-    @JsonProperty("num_connections")
-    public int numConnections()
-    {
-        return numConnections;
-    }
-
-    @JsonProperty("local_dc")
-    public String localDc()
-    {
-        return localDc;
-    }
+    /**
+     * @return the super class of the annotated class
+     */
+    Class to();
 }

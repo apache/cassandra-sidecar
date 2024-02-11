@@ -26,33 +26,28 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.reflect.ClassPath;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
-import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
-import org.apache.cassandra.sidecar.config.JmxConfiguration;
-import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
-import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
-import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
-import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
-import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
-import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 /**
  * Configuration for this Sidecar process
  */
+@Binds(to = SidecarConfiguration.class)
 public class SidecarConfigurationImpl implements SidecarConfiguration
 {
     @Deprecated
@@ -211,49 +206,30 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
 
     public static SidecarConfigurationImpl readYamlConfiguration(Path yamlConfigurationPath) throws IOException
     {
-        SimpleModule simpleModule = new SimpleModule()
-                                    .addAbstractTypeMapping(CacheConfiguration.class,
-                                                            CacheConfigurationImpl.class)
-                                    .addAbstractTypeMapping(CassandraInputValidationConfiguration.class,
-                                                            CassandraInputValidationConfigurationImpl.class)
-                                    .addAbstractTypeMapping(HealthCheckConfiguration.class,
-                                                            HealthCheckConfigurationImpl.class)
-                                    .addAbstractTypeMapping(InstanceConfiguration.class,
-                                                            InstanceConfigurationImpl.class)
-                                    .addAbstractTypeMapping(KeyStoreConfiguration.class,
-                                                            KeyStoreConfigurationImpl.class)
-                                    .addAbstractTypeMapping(SSTableImportConfiguration.class,
-                                                            SSTableImportConfigurationImpl.class)
-                                    .addAbstractTypeMapping(SSTableUploadConfiguration.class,
-                                                            SSTableUploadConfigurationImpl.class)
-                                    .addAbstractTypeMapping(ServiceConfiguration.class,
-                                                            ServiceConfigurationImpl.class)
-                                    .addAbstractTypeMapping(SidecarConfiguration.class,
-                                                            SidecarConfigurationImpl.class)
-                                    .addAbstractTypeMapping(SslConfiguration.class,
-                                                            SslConfigurationImpl.class)
-                                    .addAbstractTypeMapping(ThrottleConfiguration.class,
-                                                            ThrottleConfigurationImpl.class)
-                                    .addAbstractTypeMapping(WorkerPoolConfiguration.class,
-                                                            WorkerPoolConfigurationImpl.class)
-                                    .addAbstractTypeMapping(JmxConfiguration.class,
-                                                            JmxConfigurationImpl.class)
-                                    .addAbstractTypeMapping(TrafficShapingConfiguration.class,
-                                                            TrafficShapingConfigurationImpl.class)
-                                    .addAbstractTypeMapping(DriverConfiguration.class,
-                                                            DriverConfigurationImpl.class)
-                                    .addAbstractTypeMapping(RestoreJobConfiguration.class,
-                                                            RestoreJobConfigurationImpl.class)
-                                    .addAbstractTypeMapping(S3ClientConfiguration.class,
-                                                            S3ClientConfigurationImpl.class);
-
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
                               .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
                               .configure(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS, true)
                               .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                              .registerModule(simpleModule);
+                              .registerModule(resolveYamlTypeMappings());
 
         return mapper.readValue(yamlConfigurationPath.toFile(), SidecarConfigurationImpl.class);
+    }
+
+    private static SimpleModule resolveYamlTypeMappings() throws IOException
+    {
+        String packageName = SidecarConfigurationImpl.class.getPackage().getName();
+        SimpleModule module = new SimpleModule();
+        ClassPath.from(ClassLoader.getSystemClassLoader()).getTopLevelClasses(packageName)
+                 .stream()
+                 .map(ClassPath.ClassInfo::load)
+                 .forEach(clazz -> {
+                     Binds binds = clazz.getAnnotation(Binds.class);
+                     if (binds != null)
+                     {
+                         module.addAbstractTypeMapping(binds.to(), clazz);
+                     }
+                 });
+        return module;
     }
 
     public static Builder builder()

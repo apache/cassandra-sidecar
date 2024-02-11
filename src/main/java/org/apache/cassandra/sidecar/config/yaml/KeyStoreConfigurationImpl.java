@@ -24,6 +24,7 @@ import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 /**
  * Encapsulates key or trust store option configurations
  */
+@Binds(to = KeyStoreConfiguration.class)
 public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
 {
     @JsonProperty("path")

@@ -29,6 +29,7 @@ import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration
 /**
  * Encapsulate configuration values for validation properties used for Cassandra inputs
  */
+@Binds(to = CassandraInputValidationConfiguration.class)
 public class CassandraInputValidationConfigurationImpl implements CassandraInputValidationConfiguration
 {
     public static final String FORBIDDEN_KEYSPACES_PROPERTY = "forbidden_keyspaces";
