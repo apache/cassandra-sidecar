@@ -28,7 +28,6 @@ import org.apache.cassandra.sidecar.config.DriverConfiguration;
 /**
  * The driver configuration to use when connecting to Cassandra
  */
-@Binds(to = DriverConfiguration.class)
 public class DriverConfigurationImpl implements DriverConfiguration
 {
     private final List<InetSocketAddress> contactPoints = new ArrayList<>();

@@ -25,7 +25,6 @@ import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 /**
  * Configuration for sidecar schema creation
  */
-@Binds(to = SchemaKeyspaceConfiguration.class)
 public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfiguration
 {
     public static final boolean DEFAULT_IS_ENABLED = false;

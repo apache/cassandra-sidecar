@@ -26,7 +26,6 @@ import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 /**
  * Encapsulates configurations for the worker pool
  */
-@Binds(to = WorkerPoolConfiguration.class)
 public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
 {
     @JsonProperty("name")

@@ -31,7 +31,6 @@ import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
 /**
  * Configuration needed to create S3 proxy
  */
-@Binds(to = S3ProxyConfiguration.class)
 public class S3ProxyConfigurationImpl implements S3ProxyConfiguration
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(S3ProxyConfigurationImpl.class);

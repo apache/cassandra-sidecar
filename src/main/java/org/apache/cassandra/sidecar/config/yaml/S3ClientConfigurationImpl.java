@@ -26,7 +26,6 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Encapsulates configuration needed to create S3 client
  */
-@Binds(to = S3ClientConfiguration.class)
 public class S3ClientConfigurationImpl implements S3ClientConfiguration
 {
     public static final String DEFAULT_THREAD_NAME_PREFIX = "s3-client";

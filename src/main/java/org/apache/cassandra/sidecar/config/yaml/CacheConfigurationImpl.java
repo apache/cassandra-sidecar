@@ -27,7 +27,6 @@ import org.jetbrains.annotations.VisibleForTesting;
 /**
  * Configuration class that encapsulates parameters needed for Caches
  */
-@Binds(to = CacheConfiguration.class)
 public class CacheConfigurationImpl implements CacheConfiguration
 {
     @JsonProperty("expire_after_access_millis")

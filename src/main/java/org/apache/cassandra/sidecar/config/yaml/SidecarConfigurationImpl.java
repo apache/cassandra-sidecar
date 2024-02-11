@@ -47,7 +47,6 @@ import org.apache.cassandra.sidecar.config.SslConfiguration;
 /**
  * Configuration for this Sidecar process
  */
-@Binds(to = SidecarConfiguration.class)
 public class SidecarConfigurationImpl implements SidecarConfiguration
 {
     @Deprecated
@@ -218,16 +217,37 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     private static SimpleModule resolveYamlTypeMappings() throws IOException
     {
         String packageName = SidecarConfigurationImpl.class.getPackage().getName();
+        String outerPackageName = SidecarConfiguration.class.getPackage().getName();
         SimpleModule module = new SimpleModule();
         ClassPath.from(ClassLoader.getSystemClassLoader()).getTopLevelClasses(packageName)
                  .stream()
                  .map(ClassPath.ClassInfo::load)
                  .forEach(clazz -> {
-                     Binds binds = clazz.getAnnotation(Binds.class);
-                     if (binds != null)
+                     if (clazz.isInterface())
                      {
-                         module.addAbstractTypeMapping(binds.to(), clazz);
+                         return;
                      }
+                     // find the configuration interface it implements
+                     // note: it assumes that the concrete implementation implement one and only one
+                     //       configuration interface, and the name of the configuration interface ends
+                     //       with "Configuration"
+                     Class[] interfaces = clazz.getInterfaces();
+                     Class configurationInterface = null;
+                     for (Class c : interfaces)
+                     {
+                         if (c.getPackage().getName().equals(outerPackageName) && c.getName().endsWith("Configuration"))
+                         {
+                             configurationInterface = c;
+                             break;
+                         }
+                     }
+                     // it does not implement any configuration interface
+                     if (configurationInterface == null)
+                     {
+                         return;
+                     }
+
+                     module.addAbstractTypeMapping(configurationInterface, clazz);
                  });
         return module;
     }

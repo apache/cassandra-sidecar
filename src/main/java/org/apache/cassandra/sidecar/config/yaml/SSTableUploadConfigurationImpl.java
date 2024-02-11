@@ -26,7 +26,6 @@ import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 /**
  * Configuration for SSTable component uploads on this service
  */
-@Binds(to = SSTableUploadConfiguration.class)
 public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguration
 {
     public static final String CONCURRENT_UPLOAD_LIMIT_PROPERTY = "concurrent_upload_limit";

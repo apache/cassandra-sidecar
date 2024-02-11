@@ -24,7 +24,6 @@ import org.apache.cassandra.sidecar.config.JmxConfiguration;
 /**
  * General JMX connectivity configuration that is not instance-specific.
  */
-@Binds(to = JmxConfiguration.class)
 public class JmxConfigurationImpl implements JmxConfiguration
 {
 
