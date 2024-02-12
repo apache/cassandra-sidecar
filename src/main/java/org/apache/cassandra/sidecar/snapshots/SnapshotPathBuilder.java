@@ -46,8 +46,8 @@ import io.vertx.core.file.FileProps;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
+import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.utils.BaseFileSystem;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.jetbrains.annotations.NotNull;
@@ -90,7 +90,10 @@ public class SnapshotPathBuilder extends BaseFileSystem
      * @param host    the name of the host
      * @param request the request to stream the SSTable component
      * @return the absolute path of the component
+     * @deprecated this method is deprecated and should be removed when we stop supporting legacy
+     * {@link StreamSSTableComponentHandler}'s streaming
      */
+    @Deprecated
     public Future<String> build(String host, StreamSSTableComponentRequest request)
     {
         validate(request);
@@ -114,14 +117,13 @@ public class SnapshotPathBuilder extends BaseFileSystem
      * @return the absolute path of the snapshot directory
      */
     // TODO : remove this method
-    public Future<String> build(String host, SnapshotRequest request)
-    {
-        return dataDirectories(host)
-               .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
-               .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.tableName()))
-               .compose(tableDirectory -> findSnapshotDirectory(tableDirectory, request.snapshotName()));
-    }
-
+//    public Future<String> build(String host, SnapshotRequest request)
+//    {
+//        return dataDirectories(host)
+//               .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
+//               .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.tableName()))
+//               .compose(tableDirectory -> findSnapshotDirectory(tableDirectory, request.snapshotName()));
+//    }
     public Future<Stream<SnapshotFile>> streamSnapshotFiles(List<String> tableDataDirectoryList,
                                                             String snapshotName,
                                                             boolean includeSecondaryIndexFiles)
@@ -338,28 +340,6 @@ public class SnapshotPathBuilder extends BaseFileSystem
     }
 
     /**
-     * Constructs the path to the snapshot directory using the {@code baseDirectory} and {@code snapshotName}
-     * and returns if it is a valid path to the snapshot directory, or a failure otherwise.
-     *
-     * @param baseDirectory the base directory where we search the snapshot directory
-     * @param snapshotName  the name of the snapshot
-     * @return a future for the path to the snapshot directory if it's valid, or a failed future otherwise
-     */
-    protected Future<String> findSnapshotDirectory(String baseDirectory, String snapshotName)
-    {
-        String snapshotDirectory = StringUtils.removeEnd(baseDirectory, File.separator) +
-                                   File.separator + SNAPSHOTS_DIR_NAME + File.separator + snapshotName;
-
-        return isValidDirectory(snapshotDirectory)
-               .recover(t ->
-                        {
-                            String errMsg = String.format("Snapshot directory '%s' does not exist", snapshotName);
-                            logger.warn("Snapshot directory {} does not exist in {}", snapshotName, baseDirectory);
-                            return Future.failedFuture(new NoSuchFileException(errMsg));
-                        });
-    }
-
-    /**
      * Constructs the path to the component using the {@code baseDirectory}, {@code snapshotName}, and
      * {@code componentName} and returns if it is a valid path to the component, or a failure otherwise.
      *
@@ -470,9 +450,15 @@ public class SnapshotPathBuilder extends BaseFileSystem
         return promise.future();
     }
 
-    private String tableUuid(Path snapshotDir)
+    private String tableUuid(@NotNull Path snapshotDir)
     {
-        String tableDirectory = snapshotDir.getParent().getParent().getFileName().toString();
+        Path fileName = snapshotDir.getName(snapshotDir.getNameCount() - 3).getFileName();
+        if (fileName == null)
+        {
+            return null;
+        }
+
+        String tableDirectory = fileName.toString();
         int index = tableDirectory.indexOf("-");
         if (index > 0 && index + 1 < tableDirectory.length())
         {

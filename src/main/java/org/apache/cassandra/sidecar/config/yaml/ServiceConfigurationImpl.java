@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
-import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
@@ -336,8 +335,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected int allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
         protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
         protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
-        protected CacheConfiguration fileStreamPropsCache = new CacheConfigurationImpl(TimeUnit.MINUTES.toMillis(5),
-                                                                                       10_000);
         protected SSTableUploadConfiguration ssTableUploadConfiguration = new SSTableUploadConfigurationImpl();
         protected SSTableImportConfiguration ssTableImportConfiguration = new SSTableImportConfigurationImpl();
         protected SSTableSnapshotConfiguration ssTableSnapshotConfiguration = new SSTableSnapshotConfigurationImpl();
@@ -454,17 +451,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         public Builder throttleConfiguration(ThrottleConfiguration throttleConfiguration)
         {
             return update(b -> b.throttleConfiguration = throttleConfiguration);
-        }
-
-        /**
-         * Sets the {@code fileStreamPropsCache} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param fileStreamPropsCache the {@code fileStreamPropsCache} to set
-         * @return a reference to this Builder
-         */
-        public Builder fileStreamPropsCache(CacheConfiguration fileStreamPropsCache)
-        {
-            return update(b -> b.fileStreamPropsCache = fileStreamPropsCache);
         }
 
         /**

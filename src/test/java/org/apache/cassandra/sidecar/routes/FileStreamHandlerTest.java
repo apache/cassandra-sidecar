@@ -45,7 +45,6 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
@@ -346,14 +345,11 @@ class FileStreamHandlerTest
         ServiceConfigurationImpl serviceConfiguration = cachingEnabled
                                                         ? new ServiceConfigurationImpl()
                                                         : ServiceConfigurationImpl.builder()
-                                                                                  // cache is not initialized when
-                                                                                  // config is null
-                                                                                  .fileStreamPropsCache(null)
                                                                                   .build();
         ExecutorPools executorPools = new ExecutorPools(vertx, serviceConfiguration);
         FileStreamer fileStreamer = new FileStreamer(executorPools, serviceConfiguration,
                                                      SidecarRateLimiter.create(0), SidecarStats.INSTANCE);
-        return new TestFileStreamHandler(null, serviceConfiguration, fileStreamer, executorPools);
+        return new TestFileStreamHandler(null, fileStreamer, executorPools);
     }
 
     /**
@@ -362,7 +358,6 @@ class FileStreamHandlerTest
     static class TestFileStreamHandler extends FileStreamHandler
     {
         public TestFileStreamHandler(InstanceMetadataFetcher metadataFetcher,
-                                     ServiceConfiguration serviceConfiguration,
                                      FileStreamer fileStreamer,
                                      ExecutorPools executorPools)
         {

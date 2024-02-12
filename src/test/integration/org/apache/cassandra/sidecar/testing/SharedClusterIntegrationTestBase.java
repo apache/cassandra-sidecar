@@ -176,7 +176,8 @@
 //        return withProperties;
 //    }
 //
-//    protected AbstractCluster<? extends IInstance> provisionClusterWithRetries(TestVersion testVersion) throws IOException
+//    protected AbstractCluster<? extends IInstance> provisionClusterWithRetries(TestVersion testVersion)
+//    throws IOException
 //    {
 //        for (int retry = 0; retry < MAX_CLUSTER_PROVISION_RETRIES; retry++)
 //        {
@@ -186,9 +187,10 @@
 //            }
 //            catch (RuntimeException runtimeException)
 //            {
-//                boolean addressAlreadyInUse = Throwables.anyCauseMatches(runtimeException,
-//                                                                         ex -> ex instanceof BindException &&
-//                                                                               StringUtils.contains(ex.getMessage(), "Address already in use"));
+//                boolean addressAlreadyInUse =
+//                Throwables.anyCauseMatches(runtimeException,
+//                                           ex -> ex instanceof BindException &&
+//                                                 StringUtils.contains(ex.getMessage(), "Address already in use"));
 //                if (addressAlreadyInUse)
 //                {
 //                    logger.warn("Failed to provision cluster after {} retries", retry, runtimeException);
@@ -381,8 +383,9 @@
 //            JmxConfiguration jmxConfiguration = configuration.serviceConfiguration().jmxConfiguration();
 //
 //            List<InetSocketAddress> contactPoints = buildContactPoints();
-//            CQLSessionProvider cqlSessionProvider = new TemporaryCqlSessionProvider(contactPoints,
-//                                                                                    SharedExecutorNettyOptions.INSTANCE);
+//            CQLSessionProvider cqlSessionProvider =
+//            new TemporaryCqlSessionProvider(contactPoints,
+//                                            SharedExecutorNettyOptions.INSTANCE);
 //
 //            List<InstanceMetadata> instanceMetadataList =
 //            IntStream.range(0, cluster.size())
@@ -402,7 +405,7 @@
 //        public SidecarConfiguration sidecarConfiguration()
 //        {
 //            ServiceConfiguration conf = ServiceConfigurationImpl.builder()
-//                                                                .host("0.0.0.0") // binds to all interfaces, potential security issue if left running for long
+//                                                                .host("0.0.0.0") // binds to all interfaces
 //                                                                .port(0) // let the test find an available port
 //                                                                .build();
 //            return SidecarConfigurationImpl.builder()
@@ -420,8 +423,9 @@
 //        private List<InetSocketAddress> buildContactPoints()
 //        {
 //            return cluster.stream()
-//                          .map(instance -> new InetSocketAddress(instance.config().broadcastAddress().getAddress(),
-//                                                                 tryGetIntConfig(instance.config(), "native_transport_port", 9042)))
+//                          .map(instance ->
+//                               new InetSocketAddress(instance.config().broadcastAddress().getAddress(),
+//                                                   tryGetIntConfig(instance.config(), "native_transport_port", 9042)))
 //                          .collect(Collectors.toList());
 //        }
 //

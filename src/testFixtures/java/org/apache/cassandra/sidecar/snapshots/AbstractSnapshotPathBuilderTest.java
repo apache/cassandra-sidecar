@@ -429,7 +429,7 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                                                       "snapshot",
                                                                                       "component.db")),
                                      "Keyspace 'non_existent' does not exist");
-        failsWithNoSuchFileException(instance.build("localhost",
+        failsWithNoSuchFileException(instance.streamSnapshotFiles("localhost",
                                                     SnapshotRequest.builder()
                                                                    .qualifiedTableName("non_existent", "table")
                                                                    .snapshotName("snapshot")
@@ -917,7 +917,7 @@ public abstract class AbstractSnapshotPathBuilderTest
         assertThat(future.result()).endsWith(expectedPath);
     }
 
-    protected void failsWithNoSuchFileException(Future<String> future, String expectedMessage)
+    protected void failsWithNoSuchFileException(Future<?> future, String expectedMessage)
     {
         VertxTestContext testContext = new VertxTestContext();
         future.onComplete(testContext.succeedingThenComplete());

@@ -95,12 +95,11 @@ class BaseUploadsHandlerTest
     protected CassandraTableOperations mockCFOperations;
 
 
-
     @BeforeEach
     void setup() throws InterruptedException, IOException
     {
         canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
-        testDelegate  = new TestCassandraAdapterDelegate();
+        testDelegate = new TestCassandraAdapterDelegate();
         TestModule testModule = new TestModule();
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
@@ -121,6 +120,7 @@ class BaseUploadsHandlerTest
                                 .requestTimeoutMillis(TimeUnit.SECONDS.toMillis(30))
                                 .ssTableUploadConfiguration(mockSSTableUploadConfiguration)
                                 .trafficShapingConfiguration(trafficShapingConfiguration)
+                                .port(0) // use a dynamic port for the server
                                 .build();
         sidecarConfiguration = SidecarConfigurationImpl.builder()
                                                        .serviceConfiguration(serviceConfiguration)

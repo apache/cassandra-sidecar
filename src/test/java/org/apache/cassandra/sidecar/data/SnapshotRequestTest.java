@@ -20,8 +20,6 @@ package org.apache.cassandra.sidecar.data;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -30,29 +28,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class SnapshotRequestTest
 {
-    @Test
-    void failsWhenKeyspaceIsNull()
-    {
-        assertThatThrownBy(() -> SnapshotRequest.builder()
-                                                .qualifiedTableName(new QualifiedTableName(null, "table", false))
-                                                .snapshotName("snapshot")
-                                                .build())
-        .isInstanceOf(NullPointerException.class)
-        .hasMessageContaining("keyspace must not be null");
-    }
-
-    @Test
-    void failsWhenTableNameIsNull()
-    {
-        assertThatThrownBy(() -> SnapshotRequest.builder()
-                                                .qualifiedTableName(new QualifiedTableName("ks", null, false))
-                                                .snapshotName("snapshot")
-                                                .includeSecondaryIndexFiles(true)
-                                                .build())
-        .isInstanceOf(NullPointerException.class)
-        .hasMessageContaining("tableName must not be null");
-    }
-
     @Test
     void failsWhenSnapshotNameIsNull()
     {
