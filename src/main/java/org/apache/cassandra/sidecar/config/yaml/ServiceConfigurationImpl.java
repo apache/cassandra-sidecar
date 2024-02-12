@@ -324,7 +324,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration =
         DEFAULT_WORKER_POOLS_CONFIGURATION;
         protected JmxConfiguration jmxConfiguration = new JmxConfigurationImpl();
-        protected TrafficShapingConfiguration trafficShapingConfiguration = null;// new TrafficShapingConfigurationImpl();
+        protected TrafficShapingConfiguration trafficShapingConfiguration = new TrafficShapingConfigurationImpl();
         protected SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = new SchemaKeyspaceConfigurationImpl();
 
         private Builder()
