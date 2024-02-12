@@ -33,6 +33,7 @@ import com.google.inject.Injector;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.net.TrafficShapingOptions;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -135,6 +136,27 @@ class ServerTest
               .onSuccess(v -> assertThatException().isThrownBy(() -> server.start())
                                                    .withMessageContaining("Vert.x closed"))
               .onFailure(context::failNow);
+    }
+
+    @Test
+    @DisplayName("Updating traffic shaping options should succeed")
+    void updatingTrafficShapingOptions(VertxTestContext context)
+    {
+        Checkpoint serverStarted = context.checkpoint();
+        Checkpoint waitUntilUpdate = context.checkpoint();
+
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+
+        server.start()
+              .compose(this::validateHealthEndpoint)
+              .onFailure(context::failNow)
+              .onSuccess(v -> {
+                  TrafficShapingOptions update = new TrafficShapingOptions()
+                                                 .setOutboundGlobalBandwidth(100 * 1024 * 1024);
+                  server.updateTrafficShapingOptions(update);
+                  waitUntilUpdate.flag();
+                  context.completeNow();
+              });
     }
 
     @Test
