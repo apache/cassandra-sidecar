@@ -33,10 +33,10 @@ public class HealthCheckConfigurationImpl implements HealthCheckConfiguration
     public static final String POLL_FREQ_MILLIS_PROPERTY = "poll_freq_millis";
     public static final int DEFAULT_CHECK_INTERVAL_MILLIS = 30000;
 
-    @JsonProperty(value = INITIAL_DELAY_MILLIS_PROPERTY, defaultValue = DEFAULT_INITIAL_DELAY_MILLIS + "")
+    @JsonProperty(value = INITIAL_DELAY_MILLIS_PROPERTY)
     protected final int initialDelayMillis;
 
-    @JsonProperty(value = POLL_FREQ_MILLIS_PROPERTY, defaultValue = DEFAULT_CHECK_INTERVAL_MILLIS + "")
+    @JsonProperty(value = POLL_FREQ_MILLIS_PROPERTY)
     protected final int checkIntervalMillis;
 
     public HealthCheckConfigurationImpl()
@@ -64,7 +64,7 @@ public class HealthCheckConfigurationImpl implements HealthCheckConfiguration
      * @return the interval, in milliseconds, in which the health checks will be performed
      */
     @Override
-    @JsonProperty(value = POLL_FREQ_MILLIS_PROPERTY, defaultValue = DEFAULT_CHECK_INTERVAL_MILLIS + "")
+    @JsonProperty(value = POLL_FREQ_MILLIS_PROPERTY)
     public int checkIntervalMillis()
     {
         return checkIntervalMillis;

@@ -64,23 +64,22 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
      */
     public static final long DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT = 0;
 
-    @JsonProperty(value = "inbound_global_bandwidth_bps", defaultValue = "0")
+    @JsonProperty(value = "inbound_global_bandwidth_bps")
     protected final long inboundGlobalBandwidthBytesPerSecond;
 
-    @JsonProperty(value = "outbound_global_bandwidth_bps", defaultValue = "0")
+    @JsonProperty(value = "outbound_global_bandwidth_bps")
     protected final long outboundGlobalBandwidthBytesPerSecond;
 
-    @JsonProperty(value = "peak_outbound_global_bandwidth_bps",
-    defaultValue = DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT + "")
+    @JsonProperty(value = "peak_outbound_global_bandwidth_bps")
     protected final long peakOutboundGlobalBandwidthBytesPerSecond;
 
-    @JsonProperty(value = "max_delay_to_wait_millis", defaultValue = DEFAULT_MAX_DELAY_TIME + "")
+    @JsonProperty(value = "max_delay_to_wait_millis")
     protected final long maxDelayToWaitMillis;
 
-    @JsonProperty(value = "check_interval_for_stats_millis", defaultValue = DEFAULT_CHECK_INTERVAL + "")
+    @JsonProperty(value = "check_interval_for_stats_millis")
     protected final long checkIntervalForStatsMillis;
 
-    @JsonProperty(value = "inbound_global_file_bandwidth_bps", defaultValue = "0")
+    @JsonProperty(value = "inbound_global_file_bandwidth_bps")
     protected final long inboundGlobalFileBandwidthBytesPerSecond;
 
     public TrafficShapingConfigurationImpl()
@@ -113,7 +112,7 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "inbound_global_bandwidth_bps", defaultValue = "0")
+    @JsonProperty(value = "inbound_global_bandwidth_bps")
     public long inboundGlobalBandwidthBytesPerSecond()
     {
         return inboundGlobalBandwidthBytesPerSecond;
@@ -123,7 +122,7 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "outbound_global_bandwidth_bps", defaultValue = "0")
+    @JsonProperty(value = "outbound_global_bandwidth_bps")
     public long outboundGlobalBandwidthBytesPerSecond()
     {
         return outboundGlobalBandwidthBytesPerSecond;
@@ -133,8 +132,7 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "peak_outbound_global_bandwidth_bps",
-    defaultValue = DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT + "")
+    @JsonProperty(value = "peak_outbound_global_bandwidth_bps")
     public long peakOutboundGlobalBandwidthBytesPerSecond()
     {
         return peakOutboundGlobalBandwidthBytesPerSecond;
@@ -144,7 +142,7 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "max_delay_to_wait_millis", defaultValue = DEFAULT_MAX_DELAY_TIME + "")
+    @JsonProperty(value = "max_delay_to_wait_millis")
     public long maxDelayToWaitMillis()
     {
         return maxDelayToWaitMillis;
@@ -154,14 +152,14 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "check_interval_for_stats_millis", defaultValue = DEFAULT_CHECK_INTERVAL + "")
+    @JsonProperty(value = "check_interval_for_stats_millis")
     public long checkIntervalForStatsMillis()
     {
         return checkIntervalForStatsMillis;
     }
 
     @Override
-    @JsonProperty(value = "inbound_global_file_bandwidth_bps", defaultValue = "0")
+    @JsonProperty(value = "inbound_global_file_bandwidth_bps")
     public long inboundGlobalFileBandwidthBytesPerSecond()
     {
         return inboundGlobalFileBandwidthBytesPerSecond;

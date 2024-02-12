@@ -37,19 +37,19 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     public static final int DEFAULT_PROCESS_MAX_CONCURRENCY = 20; // process at most 20 slices concurrently
     public static final long DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(90);
 
-    @JsonProperty(value = "job_discovery_active_loop_delay_millis", defaultValue = "5")
+    @JsonProperty(value = "job_discovery_active_loop_delay_millis")
     protected final long jobDiscoveryActiveLoopDelayMillis;
 
-    @JsonProperty(value = "job_discovery_idle_loop_delay_millis", defaultValue = "10")
+    @JsonProperty(value = "job_discovery_idle_loop_delay_millis")
     protected final long jobDiscoveryIdleLoopDelayMillis;
 
-    @JsonProperty(value = "job_discovery_recency_days", defaultValue = "5")
+    @JsonProperty(value = "job_discovery_recency_days")
     protected final int jobDiscoveryRecencyDays;
 
-    @JsonProperty(value = "slice_process_max_concurrency", defaultValue = "20")
+    @JsonProperty(value = "slice_process_max_concurrency")
     protected final int processMaxConcurrency;
 
-    @JsonProperty(value = "restore_job_tables_ttl_seconds", defaultValue = "90")
+    @JsonProperty(value = "restore_job_tables_ttl_seconds")
     protected final long restoreJobTablesTtlSeconds;
 
     protected RestoreJobConfigurationImpl()
@@ -86,7 +86,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "job_discovery_active_loop_delay_millis", defaultValue = "5")
+    @JsonProperty(value = "job_discovery_active_loop_delay_millis")
     public long jobDiscoveryActiveLoopDelayMillis()
     {
         return jobDiscoveryActiveLoopDelayMillis;
@@ -96,7 +96,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "job_discovery_idle_loop_delay_millis", defaultValue = "10")
+    @JsonProperty(value = "job_discovery_idle_loop_delay_millis")
     public long jobDiscoveryIdleLoopDelayMillis()
     {
         return jobDiscoveryActiveLoopDelayMillis;
@@ -106,7 +106,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "job_discovery_recency_days", defaultValue = "5")
+    @JsonProperty(value = "job_discovery_recency_days")
     public int jobDiscoveryRecencyDays()
     {
         return jobDiscoveryRecencyDays;
@@ -116,7 +116,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "slice_process_max_concurrency", defaultValue = "20")
+    @JsonProperty(value = "slice_process_max_concurrency")
     public int processMaxConcurrency()
     {
         return processMaxConcurrency;
@@ -126,7 +126,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "restore_job_tables_ttl_seconds", defaultValue = "90")
+    @JsonProperty(value = "restore_job_tables_ttl_seconds")
     public long restoreJobTablesTtlSeconds()
     {
         return restoreJobTablesTtlSeconds;

@@ -24,8 +24,14 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import com.google.common.collect.Sets;
 import com.google.common.reflect.ClassPath;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -59,8 +65,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @JsonProperty(value = "driver_parameters")
     protected final DriverConfiguration driverConfiguration;
 
-    @JsonProperty(value = "sidecar", required = true)
+    @JsonProperty(value = "sidecar")
     protected final ServiceConfiguration serviceConfiguration;
+
     @JsonProperty("ssl")
     protected final SslConfiguration sslConfiguration;
 
@@ -219,6 +226,13 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         String packageName = SidecarConfigurationImpl.class.getPackage().getName();
         String outerPackageName = SidecarConfiguration.class.getPackage().getName();
         SimpleModule module = new SimpleModule();
+        ClassPath path = ClassPath.from(ClassLoader.getSystemClassLoader());
+        Set<Class> declared = path.getTopLevelClasses(outerPackageName)
+            .stream()
+            .filter(c -> c.getName().endsWith("Configuration"))
+            .map(ClassPath.ClassInfo::load)
+            .collect(Collectors.toSet());
+        Set<Class> implemented = new HashSet<>();
         ClassPath.from(ClassLoader.getSystemClassLoader()).getTopLevelClasses(packageName)
                  .stream()
                  .map(ClassPath.ClassInfo::load)
@@ -238,6 +252,11 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
                          if (c.getPackage().getName().equals(outerPackageName) && c.getName().endsWith("Configuration"))
                          {
                              configurationInterface = c;
+                             if (!implemented.add(configurationInterface))
+                             {
+                                throw new IllegalStateException("Multiple implementations found for " +
+                                                                "configuration interface: " + configurationInterface);
+                             }
                              break;
                          }
                      }
@@ -249,6 +268,12 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
 
                      module.addAbstractTypeMapping(configurationInterface, clazz);
                  });
+
+        Set<Class> unimplemented = Sets.difference(declared, implemented);
+        if (!unimplemented.isEmpty())
+        {
+            throw new IllegalStateException("Found unimplemented configuration class(es): " + unimplemented);
+        }
         return module;
     }
 

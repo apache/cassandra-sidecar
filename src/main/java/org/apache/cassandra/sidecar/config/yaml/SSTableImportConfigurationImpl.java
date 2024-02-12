@@ -35,7 +35,7 @@ public class SSTableImportConfigurationImpl implements SSTableImportConfiguratio
     protected static final CacheConfiguration DEFAULT_CACHE_CONFIGURATION =
     new CacheConfigurationImpl(TimeUnit.HOURS.toMillis(2), 10_000);
 
-    @JsonProperty(value = POLL_INTERVAL_MILLIS_PROPERTY, defaultValue = DEFAULT_POLL_INTERVAL_MILLIS + "")
+    @JsonProperty(value = POLL_INTERVAL_MILLIS_PROPERTY)
     protected final int importIntervalMillis;
 
     @JsonProperty(value = CACHE_PROPERTY)
@@ -67,7 +67,7 @@ public class SSTableImportConfigurationImpl implements SSTableImportConfiguratio
      * @return the interval in milliseconds in which the SSTable Importer will process pending imports
      */
     @Override
-    @JsonProperty(value = POLL_INTERVAL_MILLIS_PROPERTY, defaultValue = DEFAULT_POLL_INTERVAL_MILLIS + "")
+    @JsonProperty(value = POLL_INTERVAL_MILLIS_PROPERTY)
     public int importIntervalMillis()
     {
         return importIntervalMillis;
