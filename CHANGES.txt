@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Relocate Sidecar common classes in vertx-client-shaded (CASSANDRASC-104)
  * Automated yaml type binding for deserialization (CASSANDRASC-103)
  * Upgrade Vert.x version in Sidecar to 4.5 (CASSANDRASC-101)
  * Break restore job into stage and import phases and persist restore slice status on phase completion (CASSANDRASC-99)

@@ -69,6 +69,7 @@ shadowJar {
     archiveClassifier.set('')
     // Our use of Jackson should be an implementation detail - shade everything so no matter what
     // version of Jackson is available in the classpath we don't break consumers of the client
+    relocate 'org.apache.cassandra.sidecar.common', 'o.a.c.sidecar.shaded.common'
     relocate 'com.fasterxml.jackson', 'o.a.c.sidecar.client.shaded.com.fasterxml.jackson'
     relocate 'io.netty', 'o.a.c.sidecar.client.shaded.io.netty'
     relocate 'io.vertx', 'o.a.c.sidecar.client.shaded.io.vertx'
