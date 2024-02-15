@@ -35,7 +35,7 @@ public class CacheConfigurationImpl implements CacheConfiguration
     @JsonProperty("maximum_size")
     protected final long maximumSize;
 
-    @JsonProperty(value = "enabled", defaultValue = "true")
+    @JsonProperty(value = "enabled")
     protected final boolean enabled;
 
     public CacheConfigurationImpl()
@@ -70,7 +70,7 @@ public class CacheConfigurationImpl implements CacheConfiguration
         return maximumSize;
     }
 
-    @JsonProperty(value = "enabled", defaultValue = "true")
+    @JsonProperty(value = "enabled")
     @Override
     public boolean enabled()
     {

@@ -92,7 +92,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
     {
         super(metadataFetcher, executorPools, validator);
         this.fs = vertx.fileSystem();
-        this.configuration = serviceConfiguration.ssTableUploadConfiguration();
+        this.configuration = serviceConfiguration.sstableUploadConfiguration();
         this.uploader = uploader;
         this.uploadPathBuilder = uploadPathBuilder;
         this.limiter = new ConcurrencyLimiter(configuration::concurrentUploadsLimit);

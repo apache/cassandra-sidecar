@@ -127,7 +127,7 @@ class SidecarConfigurationTest
 
         assertThat(config.serviceConfiguration()).isNotNull();
         SSTableUploadConfiguration uploadConfiguration = config.serviceConfiguration()
-                                                               .ssTableUploadConfiguration();
+                                                               .sstableUploadConfiguration();
         assertThat(uploadConfiguration).isNotNull();
 
         assertThat(uploadConfiguration.concurrentUploadsLimit()).isEqualTo(80);
@@ -150,8 +150,8 @@ class SidecarConfigurationTest
 
         assertThat(config).isNotNull();
         assertThat(config.serviceConfiguration()).isNotNull();
-        assertThat(config.serviceConfiguration().ssTableUploadConfiguration()).isNotNull();
-        assertThat(config.serviceConfiguration().ssTableUploadConfiguration().filePermissions()).isEqualTo("rw-rw-rw-");
+        assertThat(config.serviceConfiguration().sstableUploadConfiguration()).isNotNull();
+        assertThat(config.serviceConfiguration().sstableUploadConfiguration().filePermissions()).isEqualTo("rw-rw-rw-");
     }
 
     @Test

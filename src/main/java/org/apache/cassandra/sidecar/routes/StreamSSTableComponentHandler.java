@@ -109,8 +109,15 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
             }
 
             List<String> dataDirList = storageOperations.dataFileLocations();
-            String path = snapshotPathBuilder.resolveComponentPath(dataDirList.get(request.dataDirectoryIndex()),
-                                                                   request);
+            int dataDirIndex = request.dataDirectoryIndex();
+            if (dataDirIndex < 0 || dataDirIndex >= dataDirList.size())
+            {
+                promise.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                               "Invalid data directory index=" + dataDirIndex));
+                return;
+            }
+
+            String path = snapshotPathBuilder.resolveComponentPath(dataDirList.get(dataDirIndex), request);
 
             promise.complete(path);
         });

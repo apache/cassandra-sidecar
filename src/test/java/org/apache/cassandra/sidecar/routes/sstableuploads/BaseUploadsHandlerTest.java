@@ -118,7 +118,7 @@ class BaseUploadsHandlerTest
         ServiceConfigurationImpl.builder()
                                 .requestIdleTimeoutMillis(500)
                                 .requestTimeoutMillis(TimeUnit.SECONDS.toMillis(30))
-                                .ssTableUploadConfiguration(mockSSTableUploadConfiguration)
+                                .sstableUploadConfiguration(mockSSTableUploadConfiguration)
                                 .trafficShapingConfiguration(trafficShapingConfiguration)
                                 .port(0) // use a dynamic port for the server
                                 .build();

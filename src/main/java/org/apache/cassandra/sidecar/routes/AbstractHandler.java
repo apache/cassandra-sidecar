@@ -211,7 +211,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
 
         if (cause instanceof NoSuchSidecarInstanceException)
         {
-            return wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause.getMessage(), cause);
+            return wrapHttpException(HttpResponseStatus.MISDIRECTED_REQUEST, cause.getMessage(), cause);
         }
 
         if (cause instanceof IllegalArgumentException)
