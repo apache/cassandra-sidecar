@@ -19,10 +19,12 @@ package org.apache.cassandra.sidecar.data;
 
 import java.util.Objects;
 
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.routes.snapshots.ListSnapshotHandler;
 
 /**
- * Holder class for the {@link org.apache.cassandra.sidecar.routes.SnapshotsHandler}
+ * Holder class for the {@link ListSnapshotHandler}
  * request parameters
  */
 public class SnapshotRequest
@@ -33,32 +35,16 @@ public class SnapshotRequest
     private final String ttl;
 
     /**
-     * Constructor for the holder class
+     * Constructs a new object from the configured builder.
      *
-     * @param keyspace                   the keyspace in Cassandra
-     * @param tableName                  the table name in Cassandra
-     * @param snapshotName               the name of the snapshot
-     * @param includeSecondaryIndexFiles true if secondary index files are allowed, false otherwise
-     * @param ttl                        an optional TTL for snapshot creation
+     * @param builder the builder object used to construct this object
      */
-    public SnapshotRequest(String keyspace,
-                           String tableName,
-                           String snapshotName,
-                           boolean includeSecondaryIndexFiles,
-                           String ttl)
+    private SnapshotRequest(Builder builder)
     {
-        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, includeSecondaryIndexFiles, ttl);
-    }
-
-    public SnapshotRequest(QualifiedTableName qualifiedTableName,
-                           String snapshotName,
-                           boolean includeSecondaryIndexFiles,
-                           String ttl)
-    {
-        this.qualifiedTableName = qualifiedTableName;
-        this.snapshotName = Objects.requireNonNull(snapshotName, "snapshotName must not be null");
-        this.includeSecondaryIndexFiles = includeSecondaryIndexFiles;
-        this.ttl = ttl;
+        snapshotName = Objects.requireNonNull(builder.snapshotName, "snapshotName must not be null");
+        qualifiedTableName = Objects.requireNonNull(builder.qualifiedTableName, "qualifiedTableName must be not null");
+        includeSecondaryIndexFiles = builder.includeSecondaryIndexFiles;
+        ttl = builder.ttl;
     }
 
     /**
@@ -112,6 +98,7 @@ public class SnapshotRequest
     /**
      * {@inheritDoc}
      */
+    @Override
     public String toString()
     {
         return "SnapshotRequest{" +
@@ -121,5 +108,98 @@ public class SnapshotRequest
                ", includeSecondaryIndexFiles=" + includeSecondaryIndexFiles +
                ", ttl=" + ttl +
                '}';
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@code SnapshotRequest} builder static inner class.
+     */
+    public static final class Builder implements DataObjectBuilder<Builder, SnapshotRequest>
+    {
+        private String snapshotName;
+        private boolean includeSecondaryIndexFiles = false;
+        private QualifiedTableName qualifiedTableName;
+        private String ttl;
+
+        private Builder()
+        {
+        }
+
+        @Override
+        public Builder self()
+        {
+            return this;
+        }
+
+        /**
+         * Sets the {@code snapshotName} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param snapshotName the {@code snapshotName} to set
+         * @return a reference to this Builder
+         */
+        public Builder snapshotName(String snapshotName)
+        {
+            return update(b -> b.snapshotName = snapshotName);
+        }
+
+        /**
+         * Sets the {@code includeSecondaryIndexFiles} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param includeSecondaryIndexFiles the {@code includeSecondaryIndexFiles} to set
+         * @return a reference to this Builder
+         */
+        public Builder includeSecondaryIndexFiles(boolean includeSecondaryIndexFiles)
+        {
+            return update(b -> b.includeSecondaryIndexFiles = includeSecondaryIndexFiles);
+        }
+
+        /**
+         * Sets the {@code qualifiedTableName} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param keyspace the Cassandra keyspace
+         * @param table    the Cassandra table
+         * @return a reference to this Builder
+         */
+        public Builder qualifiedTableName(String keyspace, String table)
+        {
+            return update(b -> b.qualifiedTableName = new QualifiedTableName(keyspace, table));
+        }
+
+        /**
+         * Sets the {@code qualifiedTableName} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param qualifiedTableName the {@code qualifiedTableName} to set
+         * @return a reference to this Builder
+         */
+        public Builder qualifiedTableName(QualifiedTableName qualifiedTableName)
+        {
+            return update(b -> b.qualifiedTableName = qualifiedTableName);
+        }
+
+        /**
+         * Sets the {@code ttl} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param ttl the {@code ttl} to set
+         * @return a reference to this Builder
+         */
+        public Builder ttl(String ttl)
+        {
+            return update(b -> b.ttl = ttl);
+        }
+
+        /**
+         * Returns a {@code SnapshotRequest} built from the parameters previously set.
+         *
+         * @return a {@code SnapshotRequest} built with parameters of this {@code SnapshotRequest.Builder}
+         */
+        @Override
+        public SnapshotRequest build()
+        {
+            return new SnapshotRequest(this);
+        }
     }
 }

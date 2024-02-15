@@ -97,12 +97,17 @@ public interface ServiceConfiguration
     /**
      * @return the configuration for SSTable component uploads on this service
      */
-    SSTableUploadConfiguration ssTableUploadConfiguration();
+    SSTableUploadConfiguration sstableUploadConfiguration();
 
     /**
      * @return the configuration for the SSTable Import functionality
      */
-    SSTableImportConfiguration ssTableImportConfiguration();
+    SSTableImportConfiguration sstableImportConfiguration();
+
+    /**
+     * @return the configuration for the SSTable Snapshot functionality
+     */
+    SSTableSnapshotConfiguration sstableSnapshotConfiguration();
 
     /**
      * @return the configured worker pools for the service

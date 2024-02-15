@@ -22,12 +22,12 @@ import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -64,18 +64,18 @@ public class InstancesConfigImpl implements InstancesConfig
     }
 
     @Override
-    public InstanceMetadata instanceFromId(int id) throws NoSuchElementException
+    public InstanceMetadata instanceFromId(int id) throws NoSuchSidecarInstanceException
     {
         InstanceMetadata instanceMetadata = idToInstanceMetadata.get(id);
         if (instanceMetadata == null)
         {
-            throw new NoSuchElementException("Instance id " + id + " not found");
+            throw new NoSuchSidecarInstanceException("Instance id '" + id + "' not found");
         }
         return instanceMetadata;
     }
 
     @Override
-    public InstanceMetadata instanceFromHost(String host) throws NoSuchElementException
+    public InstanceMetadata instanceFromHost(String host) throws NoSuchSidecarInstanceException
     {
         InstanceMetadata instanceMetadata = hostToInstanceMetadata.get(host);
         if (instanceMetadata == null)
@@ -84,18 +84,15 @@ public class InstancesConfigImpl implements InstancesConfig
             {
                 instanceMetadata = hostToInstanceMetadata.get(dnsResolver.resolve(host));
             }
-            catch (UnknownHostException e)
+            catch (UnknownHostException cause)
             {
-                NoSuchElementException error = new NoSuchElementException("Instance with host address "
-                                                                          + host +
-                                                                          " not found, and an error occurred when " +
-                                                                          "attempting to resolve its IP address.");
-                error.initCause(e);
-                throw error;
+                throw new NoSuchSidecarInstanceException("Instance with host address '" + host + "' not found, "
+                                                         + "and an error occurred when attempting to resolve its "
+                                                         + "IP address.", cause);
             }
             if (instanceMetadata == null)
             {
-                throw new NoSuchElementException("Instance with host address " + host + " not found");
+                throw new NoSuchSidecarInstanceException("Instance with host address '" + host + "' not found");
             }
         }
         return instanceMetadata;

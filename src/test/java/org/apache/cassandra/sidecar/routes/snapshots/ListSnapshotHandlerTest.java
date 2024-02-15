@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.routes;
+package org.apache.cassandra.sidecar.routes.snapshots;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -60,12 +60,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 
 /**
- * Tests for the {@link SnapshotsHandler}
+ * Tests for the {@link ListSnapshotHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class SnapshotsHandlerTest
+public class ListSnapshotHandlerTest
 {
-    private static final Logger logger = LoggerFactory.getLogger(SnapshotsHandlerTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(ListSnapshotHandlerTest.class);
     private Vertx vertx;
     private Server server;
     @TempDir
@@ -115,6 +115,7 @@ public class SnapshotsHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "1.db");
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
@@ -124,6 +125,7 @@ public class SnapshotsHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "2.db");
 
         client.get(server.actualPort(), "localhost", testRoute)
@@ -151,6 +153,7 @@ public class SnapshotsHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "1.db"),
         new ListSnapshotFilesResponse.FileInfo(0,
                                                "localhost",
@@ -159,6 +162,7 @@ public class SnapshotsHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                ".index/secondary.db")
         );
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
@@ -169,6 +173,7 @@ public class SnapshotsHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "2.db");
 
         client.get(server.actualPort(), "localhost", testRoute)

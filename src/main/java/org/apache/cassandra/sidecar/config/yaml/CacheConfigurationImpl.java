@@ -35,17 +35,25 @@ public class CacheConfigurationImpl implements CacheConfiguration
     @JsonProperty("maximum_size")
     protected final long maximumSize;
 
+    @JsonProperty(value = "enabled")
+    protected final boolean enabled;
+
     public CacheConfigurationImpl()
     {
-        this(TimeUnit.HOURS.toMillis(1), 100);
+        this(TimeUnit.HOURS.toMillis(1), 100, true);
     }
 
     @VisibleForTesting
-    public CacheConfigurationImpl(long expireAfterAccessMillis,
-                                  long maximumSize)
+    public CacheConfigurationImpl(long expireAfterAccessMillis, long maximumSize)
+    {
+        this(expireAfterAccessMillis, maximumSize, true);
+    }
+
+    public CacheConfigurationImpl(long expireAfterAccessMillis, long maximumSize, boolean enabled)
     {
         this.expireAfterAccessMillis = expireAfterAccessMillis;
         this.maximumSize = maximumSize;
+        this.enabled = enabled;
     }
 
     @Override
@@ -60,5 +68,12 @@ public class CacheConfigurationImpl implements CacheConfiguration
     public long maximumSize()
     {
         return maximumSize;
+    }
+
+    @JsonProperty(value = "enabled")
+    @Override
+    public boolean enabled()
+    {
+        return enabled;
     }
 }

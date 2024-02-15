@@ -106,7 +106,7 @@ public class TestModule extends AbstractModule
                                 .port(0) // let the test find an available port
                                 .throttleConfiguration(throttleConfiguration)
                                 .schemaKeyspaceConfiguration(schemaKeyspaceConfiguration)
-                                .ssTableUploadConfiguration(uploadConfiguration)
+                                .sstableUploadConfiguration(uploadConfiguration)
                                 .build();
         RestoreJobConfiguration restoreJobConfiguration =
         RestoreJobConfigurationImpl.builder()

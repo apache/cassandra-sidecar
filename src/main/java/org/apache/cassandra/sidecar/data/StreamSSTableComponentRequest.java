@@ -23,6 +23,7 @@ import java.util.Objects;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.SSTableComponent;
+import org.apache.cassandra.sidecar.utils.RequestUtils;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -32,7 +33,10 @@ import org.jetbrains.annotations.VisibleForTesting;
  */
 public class StreamSSTableComponentRequest extends SSTableComponent
 {
+    private final String tableUuid;
     private final String snapshotName;
+    @Nullable
+    private final Integer dataDirectoryIndex;
 
     /**
      * Constructor for the holder class
@@ -45,23 +49,24 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     @VisibleForTesting
     public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName, String componentName)
     {
-        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, null, componentName);
+        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, null, componentName, null, null);
     }
 
     /**
      * Constructor for the holder class
      *
-     * @param keyspace      the keyspace in Cassandra
-     * @param tableName     the table name in Cassandra
-     * @param snapshotName  the name of the snapshot
+     * @param keyspace           the keyspace in Cassandra
+     * @param tableName          the table name in Cassandra
+     * @param snapshotName       the name of the snapshot
      * @param secondaryIndexName the name of the secondary index for the SSTable component
-     * @param componentName the name of the SSTable component
+     * @param componentName      the name of the SSTable component
      */
     @VisibleForTesting
     public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName,
                                          String secondaryIndexName, String componentName)
     {
-        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, secondaryIndexName, componentName);
+        this(new QualifiedTableName(keyspace, tableName, true), snapshotName,
+             secondaryIndexName, componentName, null, null);
     }
 
     /**
@@ -71,26 +76,20 @@ public class StreamSSTableComponentRequest extends SSTableComponent
      * @param snapshotName       the name of the snapshot
      * @param secondaryIndexName the name of the secondary index for the SSTable component
      * @param componentName      the name of the SSTable component
+     * @param tableUuid          the UUID for the Cassandra table
+     * @param dataDirectoryIndex the index of the Cassandra data directory where the component resides
      */
     public StreamSSTableComponentRequest(QualifiedTableName qualifiedTableName,
                                          String snapshotName,
                                          @Nullable String secondaryIndexName,
-                                         String componentName)
+                                         String componentName,
+                                         @Nullable String tableUuid,
+                                         @Nullable Integer dataDirectoryIndex)
     {
         super(qualifiedTableName, secondaryIndexName, componentName);
         this.snapshotName = Objects.requireNonNull(snapshotName, "snapshotName must not be null");
-    }
-
-    public static StreamSSTableComponentRequest from(QualifiedTableName qualifiedTableName, RoutingContext context)
-    {
-        String snapshotName = context.pathParam("snapshot");
-        String secondaryIndexName = context.pathParam("index");
-        String componentName = context.pathParam("component");
-
-        return new StreamSSTableComponentRequest(qualifiedTableName,
-                                                 snapshotName,
-                                                 secondaryIndexName,
-                                                 componentName);
+        this.tableUuid = tableUuid;
+        this.dataDirectoryIndex = dataDirectoryIndex;
     }
 
     /**
@@ -99,6 +98,22 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     public String snapshotName()
     {
         return snapshotName;
+    }
+
+    /**
+     * @return the Cassandra table UUID
+     */
+    public String tableUuid()
+    {
+        return tableUuid;
+    }
+
+    /**
+     * @return the index of the Cassandra data directory where the component resides
+     */
+    public @Nullable Integer dataDirectoryIndex()
+    {
+        return dataDirectoryIndex;
     }
 
     /**
@@ -112,6 +127,36 @@ public class StreamSSTableComponentRequest extends SSTableComponent
                ", snapshot='" + snapshotName + '\'' +
                ", secondaryIndexName='" + secondaryIndexName() + '\'' +
                ", componentName='" + componentName() + '\'' +
+               ", dataDirectoryIndex='" + dataDirectoryIndex + '\'' +
                '}';
+    }
+
+    public static StreamSSTableComponentRequest from(QualifiedTableName qualifiedTableName, RoutingContext context)
+    {
+        String snapshotName = context.pathParam("snapshot");
+        String secondaryIndexName = context.pathParam("index");
+        String componentName = context.pathParam("component");
+        String tableUuid = maybeGetTableUuid(context.pathParam("table"));
+        Integer dataDirectoryIndex = RequestUtils.parseIntegerQueryParam(context.request(), "dataDirectory", null);
+
+        return new StreamSSTableComponentRequest(qualifiedTableName,
+                                                 snapshotName,
+                                                 secondaryIndexName,
+                                                 componentName,
+                                                 tableUuid,
+                                                 dataDirectoryIndex);
+    }
+
+    static String maybeGetTableUuid(String table)
+    {
+        if (table != null)
+        {
+            int index = table.indexOf("-");
+            if (index > 0 && index + 1 < table.length())
+            {
+                return table.substring(index + 1);
+            }
+        }
+        return null;
     }
 }

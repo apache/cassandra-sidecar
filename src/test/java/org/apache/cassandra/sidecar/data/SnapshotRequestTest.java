@@ -29,25 +29,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class SnapshotRequestTest
 {
     @Test
-    void failsWhenKeyspaceIsNull()
-    {
-        assertThatThrownBy(() -> new SnapshotRequest(null, "table", "snapshot", false, null))
-        .isInstanceOf(NullPointerException.class)
-        .hasMessageContaining("keyspace must not be null");
-    }
-
-    @Test
-    void failsWhenTableNameIsNull()
-    {
-        assertThatThrownBy(() -> new SnapshotRequest("ks", null, "snapshot", true, null))
-        .isInstanceOf(NullPointerException.class)
-        .hasMessageContaining("tableName must not be null");
-    }
-
-    @Test
     void failsWhenSnapshotNameIsNull()
     {
-        assertThatThrownBy(() -> new SnapshotRequest("ks", "table", null, false, null))
+        assertThatThrownBy(() -> SnapshotRequest.builder().qualifiedTableName("ks", "table").build())
         .isInstanceOf(NullPointerException.class)
         .hasMessageContaining("snapshotName must not be null");
     }
@@ -55,7 +39,9 @@ class SnapshotRequestTest
     @Test
     void testValidRequest()
     {
-        SnapshotRequest request = new SnapshotRequest("ks", "table", "snapshot", false, null);
+        SnapshotRequest request = SnapshotRequest.builder().qualifiedTableName("ks", "table")
+                                                 .snapshotName("snapshot")
+                                                 .build();
 
         assertThat(request.qualifiedTableName()).isNotNull();
         assertThat(request.qualifiedTableName().keyspace()).isEqualTo("ks");
@@ -73,7 +59,10 @@ class SnapshotRequestTest
     @Test
     void testValidRequestWithTTL()
     {
-        SnapshotRequest request = new SnapshotRequest("ks", "table", "snapshot", false, "3d");
+        SnapshotRequest request = SnapshotRequest.builder().qualifiedTableName("ks", "table")
+                                                 .snapshotName("snapshot")
+                                                 .ttl("3d")
+                                                 .build();
 
         assertThat(request.qualifiedTableName()).isNotNull();
         assertThat(request.qualifiedTableName().keyspace()).isEqualTo("ks");

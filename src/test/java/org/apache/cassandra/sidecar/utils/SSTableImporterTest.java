@@ -61,7 +61,7 @@ class SSTableImporterTest
         vertx = Vertx.vertx();
         serviceConfiguration =
         ServiceConfigurationImpl.builder()
-                                .ssTableImportConfiguration(new SSTableImportConfigurationImpl(10))
+                                .sstableImportConfiguration(new SSTableImportConfigurationImpl(10))
                                 .build();
 
         mockMetadataFetcher = mock(InstanceMetadataFetcher.class);
@@ -206,7 +206,7 @@ class SSTableImporterTest
     {
         serviceConfiguration =
         ServiceConfigurationImpl.builder()
-                                .ssTableImportConfiguration(new SSTableImportConfigurationImpl(500))
+                                .sstableImportConfiguration(new SSTableImportConfigurationImpl(500))
                                 .build();
 
         SSTableImporter importer = new SSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools,

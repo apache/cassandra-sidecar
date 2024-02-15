@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -45,11 +46,13 @@ import io.vertx.core.file.FileProps;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
+import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.utils.BaseFileSystem;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * This class builds the snapshot path on a given host validating that it exists
@@ -87,7 +90,10 @@ public class SnapshotPathBuilder extends BaseFileSystem
      * @param host    the name of the host
      * @param request the request to stream the SSTable component
      * @return the absolute path of the component
+     * @deprecated this method is deprecated and should be removed when we stop supporting legacy
+     * {@link StreamSSTableComponentHandler}'s streaming
      */
+    @Deprecated
     public Future<String> build(String host, StreamSSTableComponentRequest request)
     {
         validate(request);
@@ -110,108 +116,83 @@ public class SnapshotPathBuilder extends BaseFileSystem
      * @param request the request to list the snapshot files
      * @return the absolute path of the snapshot directory
      */
-    public Future<String> build(String host, SnapshotRequest request)
-    {
-        return dataDirectories(host)
-               .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
-               .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.tableName()))
-               .compose(tableDirectory -> findSnapshotDirectory(tableDirectory, request.snapshotName()));
-    }
-
-    /**
-     * Lists the snapshot directory, if {@code includeSecondaryIndexFiles} is true, the future
-     * will include files inside secondary index directories.
-     *
-     * @param snapshotDirectory          the path to the snapshot directory
-     * @param includeSecondaryIndexFiles whether to include secondary index files
-     * @return a future with a list of files inside the snapshot directory
-     */
-    public Future<List<SnapshotFile>> listSnapshotDirectory(String snapshotDirectory,
+    // TODO : remove this method
+//    public Future<String> build(String host, SnapshotRequest request)
+//    {
+//        return dataDirectories(host)
+//               .compose(dataDirs -> findKeyspaceDirectory(dataDirs, request.keyspace()))
+//               .compose(keyspaceDirectory -> findTableDirectory(keyspaceDirectory, request.tableName()))
+//               .compose(tableDirectory -> findSnapshotDirectory(tableDirectory, request.snapshotName()));
+//    }
+    public Future<Stream<SnapshotFile>> streamSnapshotFiles(List<String> tableDataDirectoryList,
+                                                            String snapshotName,
                                                             boolean includeSecondaryIndexFiles)
     {
-        Promise<List<SnapshotFile>> promise = Promise.promise();
+        return executorPools.internal().executeBlocking(blockingPromise -> {
+            try
+            {
+                Stream<SnapshotFile> result =
+                IntStream.range(0, tableDataDirectoryList.size())
+                         // Get the index and resolved snapshot directory
+                         .mapToObj(dataDirIndex -> {
+                             String dataDir = tableDataDirectoryList.get(dataDirIndex);
+                             Path snapshotDir = Paths.get(dataDir)
+                                                     .resolve(SNAPSHOTS_DIR_NAME)
+                                                     .resolve(snapshotName);
+                             return pair(dataDirIndex, snapshotDir);
+                         })
+                         // The snapshot directory might not exist on every data directory.
+                         // For example, if there was only one row inserted in a table,
+                         // and we have 4 data directories, only a single data directory
+                         // will have SSTables, and only that data directory will create the
+                         // snapshot directory.
+                         .filter(entry -> Files.exists(entry.getValue()) && Files.isDirectory(entry.getValue()))
+                         // List all the files in the directory
+                         .flatMap(entry -> listSnapshotDir(entry.getKey(), entry.getValue(),
+                                                           includeSecondaryIndexFiles));
 
-        // List the snapshot directory
-        fs.readDir(snapshotDirectory)
-          .onFailure(promise::fail)
-          .onSuccess(list -> {
+                blockingPromise.complete(result);
+            }
+            catch (Throwable throwable)
+            {
+                blockingPromise.tryFail(throwable);
+            }
+        });
+    }
 
-              logger.debug("Found {} files in snapshot directory '{}'", list.size(), snapshotDirectory);
-
-              // Prepare futures to get properties for all the files from listing the snapshot directory
-              List<Future<FileProps>> futures = list.stream()
-                                                    .map(fs::props)
-                                                    .collect(Collectors.toList());
-
-              Future.all(futures)
-                    .onFailure(cause -> {
-                        logger.debug("Failed to get FileProps", cause);
-                        promise.fail(cause);
-                    })
-                    .onSuccess(ar -> {
-
-                        // Create a pair of path/fileProps for every regular file
-                        List<SnapshotFile> snapshotList =
-                        IntStream.range(0, list.size())
-                                 .filter(i -> ar.<FileProps>resultAt(i).isRegularFile())
-                                 .mapToObj(i -> {
-                                     long size = ar.<FileProps>resultAt(i).size();
-                                     return new SnapshotFile(list.get(i),
-                                                             size);
-                                 })
-                                 .collect(Collectors.toList());
-
-
-                        if (!includeSecondaryIndexFiles)
-                        {
-                            // We are done if we don't include secondary index files
-                            promise.complete(snapshotList);
-                            return;
-                        }
-
-                        // Find index directories and prepare futures listing the snapshot directory
-                        List<Future<List<SnapshotFile>>> idxListFutures =
-                        IntStream.range(0, list.size())
-                                 .filter(i -> {
-                                     if (ar.<FileProps>resultAt(i).isDirectory())
-                                     {
-                                         Path path = Paths.get(list.get(i));
-                                         int count = path.getNameCount();
-                                         return count > 0
-                                                && path.getName(count - 1)
-                                                       .toString()
-                                                       .startsWith(".");
-                                     }
-                                     return false;
-                                 })
-                                 .mapToObj(i -> listSnapshotDirectory(list.get(i), false))
-                                 .collect(Collectors.toList());
-                        if (idxListFutures.isEmpty())
-                        {
-                            // If there are no secondary index directories we are done
-                            promise.complete(snapshotList);
-                            return;
-                        }
-                        logger.debug("Found {} index directories in the '{}' snapshot",
-                                     idxListFutures.size(), snapshotDirectory);
-                        // if we have index directories, list them all
-                        Future.all(idxListFutures)
-                              .onFailure(promise::fail)
-                              .onSuccess(idx -> {
-                                  //noinspection unchecked
-                                  List<SnapshotFile> idxPropList =
-                                  idx.list()
-                                     .stream()
-                                     .flatMap(l -> ((List<SnapshotFile>) l).stream())
-                                     .collect(Collectors.toList());
-
-                                  // aggregate the results and return the full list
-                                  snapshotList.addAll(idxPropList);
-                                  promise.complete(snapshotList);
-                              });
-                    });
-          });
-        return promise.future();
+    protected Stream<SnapshotFile> listSnapshotDir(int dataDirectoryIndex,
+                                                   Path snapshotDir,
+                                                   boolean includeSecondaryIndexFiles)
+    {
+        String tableUuid = tableUuid(snapshotDir);
+        try
+        {
+            // flatmap will close the stream opened by Files.walk. From javadocs: "Each mapped stream is
+            // closed after its contents have been placed into this stream." See:
+            // java.util.stream.ReferencePipeline#flatMap
+            return Files.walk(snapshotDir, includeSecondaryIndexFiles ? 2 : 1)
+                        .map(snapshotFile -> {
+                            try
+                            {
+                                BasicFileAttributes attrs = Files.readAttributes(snapshotFile,
+                                                                                 BasicFileAttributes.class);
+                                return pair(snapshotFile, attrs);
+                            }
+                            catch (IOException e)
+                            {
+                                throw new RuntimeException("Unable to read file attributes for " + snapshotFile, e);
+                            }
+                        })
+                        .filter(entry -> entry.getValue().isRegularFile())
+                        .map(entry -> new SnapshotFile(entry.getKey(),
+                                                       entry.getValue().size(),
+                                                       dataDirectoryIndex,
+                                                       tableUuid));
+        }
+        catch (IOException ioException)
+        {
+            throw new RuntimeException("Unable to list directory " + snapshotDir, ioException);
+        }
     }
 
     /**
@@ -359,28 +340,6 @@ public class SnapshotPathBuilder extends BaseFileSystem
     }
 
     /**
-     * Constructs the path to the snapshot directory using the {@code baseDirectory} and {@code snapshotName}
-     * and returns if it is a valid path to the snapshot directory, or a failure otherwise.
-     *
-     * @param baseDirectory the base directory where we search the snapshot directory
-     * @param snapshotName  the name of the snapshot
-     * @return a future for the path to the snapshot directory if it's valid, or a failed future otherwise
-     */
-    protected Future<String> findSnapshotDirectory(String baseDirectory, String snapshotName)
-    {
-        String snapshotDirectory = StringUtils.removeEnd(baseDirectory, File.separator) +
-                                   File.separator + SNAPSHOTS_DIR_NAME + File.separator + snapshotName;
-
-        return isValidDirectory(snapshotDirectory)
-               .recover(t ->
-                        {
-                            String errMsg = String.format("Snapshot directory '%s' does not exist", snapshotName);
-                            logger.warn("Snapshot directory {} does not exist in {}", snapshotName, baseDirectory);
-                            return Future.failedFuture(new NoSuchFileException(errMsg));
-                        });
-    }
-
-    /**
      * Constructs the path to the component using the {@code baseDirectory}, {@code snapshotName}, and
      * {@code componentName} and returns if it is a valid path to the component, or a failure otherwise.
      *
@@ -412,6 +371,43 @@ public class SnapshotPathBuilder extends BaseFileSystem
                });
     }
 
+    @NotNull
+    public String resolveComponentPath(String baseDirectory,
+                                       StreamSSTableComponentRequest request)
+    {
+        validate(request);
+        StringBuilder sb = new StringBuilder(StringUtils.removeEnd(baseDirectory, File.separator))
+                           .append(File.separator).append(request.keyspace())
+                           .append(File.separator).append(request.tableName());
+        if (request.tableUuid() != null)
+        {
+            sb.append("-").append(request.tableUuid());
+        }
+        sb.append(File.separator).append(SNAPSHOTS_DIR_NAME)
+          .append(File.separator).append(request.snapshotName());
+        if (request.secondaryIndexName() != null)
+        {
+            sb.append(File.separator).append(request.secondaryIndexName());
+        }
+        return sb.append(File.separator).append(request.componentName()).toString();
+    }
+
+    /**
+     * Removes the table UUID portion from the table name if present.
+     *
+     * @param tableName the table name with or without the UUID
+     * @return the table name without the UUID
+     */
+    public String maybeRemoveTableId(String tableName)
+    {
+        int dashIndex = tableName.lastIndexOf("-");
+        if (dashIndex > 0)
+        {
+            return tableName.substring(0, dashIndex);
+        }
+        return tableName;
+    }
+
     /**
      * @param fileList  a list of files
      * @param tableName the name of the Cassandra table
@@ -426,7 +422,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
         }
 
         List<Future<FileProps>> futures = fileList.stream()
-                                                  .map(fs::props)
+                                                  .map(filePropsProvider())
                                                   .collect(Collectors.toList());
 
         Promise<String> promise = Promise.promise();
@@ -454,18 +450,45 @@ public class SnapshotPathBuilder extends BaseFileSystem
         return promise.future();
     }
 
+    private String tableUuid(@NotNull Path snapshotDir)
+    {
+        Path fileName = snapshotDir.getName(snapshotDir.getNameCount() - 3).getFileName();
+        if (fileName == null)
+        {
+            return null;
+        }
+
+        String tableDirectory = fileName.toString();
+        int index = tableDirectory.indexOf("-");
+        if (index > 0 && index + 1 < tableDirectory.length())
+        {
+            return tableDirectory.substring(index + 1);
+        }
+        return null;
+    }
+
+    @VisibleForTesting
+    protected @NotNull Function<String, Future<FileProps>> filePropsProvider()
+    {
+        return fs::props;
+    }
+
     /**
      * Class representing a snapshot component file
      */
     public static class SnapshotFile
     {
-        public final String path;
+        public final Path path;
         public final long size;
+        public final int dataDirectoryIndex;
+        public final String tableUuid;
 
-        SnapshotFile(String path, long size)
+        SnapshotFile(Path path, long size, int dataDirectoryIndex, String tableUuid)
         {
             this.path = path;
             this.size = size;
+            this.dataDirectoryIndex = dataDirectoryIndex;
+            this.tableUuid = tableUuid;
         }
     }
 

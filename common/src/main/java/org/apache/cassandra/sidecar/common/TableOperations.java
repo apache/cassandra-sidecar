@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.jetbrains.annotations.NotNull;
@@ -53,4 +54,14 @@ public interface TableOperations
                                    boolean invalidateCaches,
                                    boolean extendedVerify,
                                    boolean copyData);
+
+    /**
+     * Returns a list of data directories for the given {@code table}.
+     *
+     * @param keyspace the keyspace in Cassandra
+     * @param table    the table name in Cassandra
+     * @return a list of data paths for the Cassandra table
+     * @throws IOException when an error occurs reading the data paths
+     */
+    List<String> getDataPaths(@NotNull String keyspace, @NotNull String table) throws IOException;
 }

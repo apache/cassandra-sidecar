@@ -37,7 +37,12 @@ public class TestVersionSupplier
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(TestVersionSupplier.class);
 
-    Stream<TestVersion> testVersions()
+    private TestVersionSupplier()
+    {
+        throw new IllegalStateException(getClass() + " is static utility class and shall not be instantiated");
+    }
+
+    public static Stream<TestVersion> testVersions()
     {
         // By default, we test 2 versions that will exercise oldest and newest supported versions
         String versions = System.getProperty("cassandra.sidecar.versions_to_test", "4.0,5.1");

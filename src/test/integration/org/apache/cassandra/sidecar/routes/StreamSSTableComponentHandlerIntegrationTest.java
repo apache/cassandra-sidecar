@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.Session;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
@@ -88,16 +87,16 @@ class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
                 assertThat(fileInfo.fileName).matches(expectedFileList.get(i));
             }
 
-            List<Future> futures = new ArrayList<>();
+            List<Future<HttpResponse<Buffer>>> futures = new ArrayList<>();
             // Stream all the files including index files
             for (ListSnapshotFilesResponse.FileInfo fileInfo : filesToStream)
             {
                 futures.add(streamSSTableComponent(client, fileInfo));
             }
 
-            CompositeFuture.all(futures)
-                           .onSuccess(s -> context.completeNow())
-                           .onFailure(context::failNow);
+            Future.all(futures)
+                  .onSuccess(s -> context.completeNow())
+                  .onFailure(context::failNow);
         }));
 
         // wait until test completes

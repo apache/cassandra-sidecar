@@ -55,7 +55,7 @@ public class CacheFactory
     @VisibleForTesting
     CacheFactory(ServiceConfiguration configuration, SSTableImporter ssTableImporter, Ticker ticker)
     {
-        this.ssTableImportCache = initSSTableImportCache(configuration.ssTableImportConfiguration()
+        this.ssTableImportCache = initSSTableImportCache(configuration.sstableImportConfiguration()
                                                                       .cacheConfiguration(),
                                                          ssTableImporter, ticker);
     }
