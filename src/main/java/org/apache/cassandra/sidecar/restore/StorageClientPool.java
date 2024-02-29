@@ -77,7 +77,27 @@ public class StorageClientPool implements SdkAutoCloseable
         sharedExecutor.allowCoreThreadTimeOut(true);
     }
 
-    public StorageClient storageClient(String region)
+    public StorageClient storageClient(RestoreJob restoreJob) throws RestoreJobFatalException
+    {
+        String region = restoreJob.secrets.readCredentials().region();
+        StorageClient client = clientByJobId.computeIfAbsent(restoreJob.jobId, id -> storageClient(region));
+        return client.authenticate(restoreJob);
+    }
+
+    /**
+     * Revoke the credentials for the restore job that is identified by the id
+     *
+     * @param jobId id of the restore job
+     */
+    public void revokeCredentials(UUID jobId)
+    {
+        clientByJobId.computeIfPresent(jobId, (id, client) -> {
+            client.revokeCredentials(id);
+            return null;
+        });
+    }
+
+    private StorageClient storageClient(String region)
     {
         return clientPool.computeIfAbsent(region, k -> {
             Map<SdkAdvancedAsyncClientOption<?>, ?> advancedOptions = Collections.singletonMap(
@@ -108,26 +128,6 @@ public class StorageClientPool implements SdkAutoCloseable
             }
 
             return new StorageClient(clientBuilder.build(), ingressFileRateLimiter);
-        });
-    }
-
-    public StorageClient storageClient(RestoreJob restoreJob) throws RestoreJobFatalException
-    {
-        StorageClient client = storageClient(restoreJob.secrets.readCredentials().region());
-        client = clientByJobId.putIfAbsent(restoreJob.jobId, client);
-        return client.authenticate(restoreJob);
-    }
-
-    /**
-     * Revoke the credentials for the restore job that is identified by the id
-     *
-     * @param jobId id of the restore job
-     */
-    public void revokeCredentials(UUID jobId)
-    {
-        clientByJobId.computeIfPresent(jobId, (id, client) -> {
-            client.revokeCredentials(id);
-            return null;
         });
     }
 
