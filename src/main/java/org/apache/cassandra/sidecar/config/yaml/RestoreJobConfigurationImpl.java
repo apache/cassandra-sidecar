@@ -40,6 +40,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     private static final long DEFAULT_RESTORE_JOB_SLOW_TASK_THRESHOLD_SECONDS = TimeUnit.MINUTES.toSeconds(10);
     // report once a minute
     private static final long DEFAULT_RESTORE_JOB_SLOW_TASK_REPORT_DELAY_SECONDS = TimeUnit.MINUTES.toSeconds(1);
+    public static final long DEFAULT_RING_TOPOLOGY_REFRESH_DELAY_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
     @JsonProperty(value = "job_discovery_active_loop_delay_millis")
     protected final long jobDiscoveryActiveLoopDelayMillis;
@@ -62,6 +63,9 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     @JsonProperty(value = "slow_task_report_delay_seconds")
     protected final long slowTaskReportDelaySeconds;
 
+    @JsonProperty(value = "ring_topology_refresh_delay_millis")
+    private final long ringTopologyRefreshDelayMillis;
+
     protected RestoreJobConfigurationImpl()
     {
         this(builder());
@@ -76,6 +80,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.restoreJobTablesTtlSeconds = builder.restoreJobTablesTtlSeconds;
         this.slowTaskThresholdSeconds = builder.slowTaskThresholdSeconds;
         this.slowTaskReportDelaySeconds = builder.slowTaskReportDelaySeconds;
+        this.ringTopologyRefreshDelayMillis = builder.ringTopologyRefreshDelayMillis;
         validate();
     }
 
@@ -144,6 +149,9 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         return restoreJobTablesTtlSeconds;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @JsonProperty(value = "slow_task_threshold_seconds")
     public long slowTaskThresholdSeconds()
@@ -156,6 +164,16 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     public long slowTaskReportDelaySeconds()
     {
         return slowTaskReportDelaySeconds;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = "ring_topology_refresh_delay_millis")
+    public long ringTopologyRefreshDelayMillis()
+    {
+        return ringTopologyRefreshDelayMillis;
     }
 
     public static Builder builder()
@@ -175,6 +193,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         private int jobDiscoveryRecencyDays = DEFAULT_JOB_DISCOVERY_RECENCY_DAYS;
         private int processMaxConcurrency = DEFAULT_PROCESS_MAX_CONCURRENCY;
         private long restoreJobTablesTtlSeconds = DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS;
+        private long ringTopologyRefreshDelayMillis = DEFAULT_RING_TOPOLOGY_REFRESH_DELAY_MILLIS;
 
         protected Builder()
         {
@@ -268,6 +287,18 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         public Builder slowTaskReportDelaySeconds(long slowTaskReportDelaySeconds)
         {
             return update(b -> b.slowTaskReportDelaySeconds = slowTaskReportDelaySeconds);
+        }
+
+        /**
+         * Sets the {@code ringTopologyRefreshDelayMillis} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param ringTopologyRefreshDelayMillis the {@code ringTopologyRefreshDelayMillis} to set
+         * @return a reference to this Builder
+         */
+        public Builder ringTopologyRefreshDelayMillis(long ringTopologyRefreshDelayMillis)
+        {
+            return update(b -> b.ringTopologyRefreshDelayMillis = ringTopologyRefreshDelayMillis);
         }
 
         @Override

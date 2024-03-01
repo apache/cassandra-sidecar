@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
-import java.math.BigInteger;
 import java.net.UnknownHostException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -42,6 +41,8 @@ import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.R
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaMetadata;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioner;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRangeReplicas;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.GossipInfoParser;
@@ -51,7 +52,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.cassandra.sidecar.adapters.base.ClusterMembershipJmxOperations.FAILURE_DETECTOR_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
-import static org.apache.cassandra.sidecar.adapters.base.TokenRangeReplicas.generateTokenRangeReplicas;
+import static org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRangeReplicas.generateTokenRangeReplicas;
 
 /**
  * Aggregates the replica-set by token range
@@ -119,8 +120,8 @@ public class TokenRangeReplicaProvider
     {
         return replicaMappings.entrySet()
                               .stream()
-                              .map(entry -> generateTokenRangeReplicas(new BigInteger(entry.getKey().get(0)),
-                                                                       new BigInteger(entry.getKey().get(1)),
+                              .map(entry -> generateTokenRangeReplicas(Token.from(entry.getKey().get(0)),
+                                                                       Token.from(entry.getKey().get(1)),
                                                                        partitioner,
                                                                        new HashSet<>(entry.getValue())))
                               .flatMap(Collection::stream)
@@ -212,8 +213,8 @@ public class TokenRangeReplicaProvider
     {
         Map<String, List<String>> replicasByDc = replicasByDataCenter(hostToDatacenter, rep.replicaSet());
 
-        return new ReplicaInfo(rep.start().toString(),
-                               rep.end().toString(),
+        return new ReplicaInfo(rep.start().toBigInteger().toString(),
+                               rep.end().toBigInteger().toString(),
                                replicasByDc);
     }
 

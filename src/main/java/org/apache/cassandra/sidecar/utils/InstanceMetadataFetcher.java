@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.List;
+import java.util.Random;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
@@ -31,6 +34,8 @@ import org.jetbrains.annotations.Nullable;
 @Singleton
 public class InstanceMetadataFetcher
 {
+    private static final Random RANDOM = new Random();
+
     private final InstancesConfig instancesConfig;
 
     @Inject
@@ -82,8 +87,7 @@ public class InstanceMetadataFetcher
     }
 
     /**
-     * Returns the {@link CassandraAdapterDelegate} for the given {@code instanceId}, or the delegate for the first
-     * instance when {@code instanceId} is {@code null}.
+     * Returns the {@link CassandraAdapterDelegate} for the given {@code instanceId}
      *
      * @param instanceId the identifier for the Cassandra instance
      * @return the {@link CassandraAdapterDelegate} for the given {@code instanceId}, or the first instance when
@@ -100,10 +104,31 @@ public class InstanceMetadataFetcher
      */
     public InstanceMetadata firstInstance()
     {
+        ensureInstancesConfigured();
+        return instancesConfig.instances().get(0);
+    }
+
+    /**
+     * @return any instance from the list of configured instances
+     * @throws IllegalStateException when there are no configured instances
+     */
+    public InstanceMetadata anyInstance()
+    {
+        ensureInstancesConfigured();
+        List<InstanceMetadata> instances = instancesConfig.instances();
+        if (instances.size() == 1)
+        {
+            return instances.get(0);
+        }
+        int randomPick = RANDOM.nextInt(instances.size());
+        return instances.get(randomPick);
+    }
+
+    private void ensureInstancesConfigured()
+    {
         if (instancesConfig.instances().isEmpty())
         {
             throw new IllegalStateException("There are no instances configured!");
         }
-        return instancesConfig.instances().get(0);
     }
 }

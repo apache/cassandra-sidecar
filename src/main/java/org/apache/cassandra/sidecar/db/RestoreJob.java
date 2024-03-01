@@ -29,9 +29,12 @@ import com.datastax.driver.core.utils.Bytes;
 import com.datastax.driver.core.utils.UUIDs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
+import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -51,7 +54,7 @@ public class RestoreJob
     public final SSTableImportOptions importOptions;
     public final Date expireAt;
     public final short bucketCount;
-    public final String consistencyLevel;
+    public final ConsistencyLevel consistencyLevel;
     public final Manager restoreJobManager;
 
     private final String statusText;
@@ -148,6 +151,15 @@ public class RestoreJob
         return statusText;
     }
 
+    public RestoreRangeStatus expectedNextRangeStatus()
+    {
+        Preconditions.checkState(status.isReady(), "The restore job is not in a ready status. jobId: " + jobId + " status: " + status);
+
+        return status == RestoreJobStatus.STAGE_READY
+               ? RestoreRangeStatus.STAGED
+               : RestoreRangeStatus.SUCCEEDED;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -196,7 +208,7 @@ public class RestoreJob
         private SSTableImportOptions importOptions;
         private Date expireAt;
         private short bucketCount;
-        private String consistencyLevel;
+        private ConsistencyLevel consistencyLevel;
         private Manager manager;
 
         private Builder()
@@ -289,8 +301,8 @@ public class RestoreJob
         public Builder consistencyLevel(String consistencyLevel)
         {
             return update(b -> {
-                b.consistencyLevel = consistencyLevel;
-                b.manager = resolveManager(consistencyLevel);
+                b.consistencyLevel = ConsistencyLevel.fromString(consistencyLevel);
+                b.manager = resolveJobManager();
             });
         }
 
@@ -310,7 +322,7 @@ public class RestoreJob
          * Resolve the manager of the restore job based on the existence of consistencyLevel
          * @return the resolved Manager
          */
-        private Manager resolveManager(String consistencyLevel)
+        private Manager resolveJobManager()
         {
             // If spark is the manager, the restore job is created w/o specifying consistency level
             // If the manager of the restore job is sidecar, consistency level must present

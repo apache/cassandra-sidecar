@@ -49,6 +49,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
@@ -56,8 +57,9 @@ import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 import org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer;
 import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
+import org.apache.cassandra.sidecar.restore.RestoreJobProgressTracker;
 import org.apache.cassandra.sidecar.restore.RestoreProcessor;
-import org.apache.cassandra.sidecar.restore.RestoreSliceTracker;
+import org.apache.cassandra.sidecar.restore.RingTopologyRefresher;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
@@ -136,7 +138,7 @@ public abstract class BaseRestoreJobTests
     // The input of the func is the sliceId, and the func returns RestoreSliceTracker.Status
     // The implementation is used in the phase 1 of SBW-on-s3
     protected void mockSubmitRestoreSlice(ThrowableFunction<String,
-                                                           RestoreSliceTracker.Status,
+                                                           RestoreJobProgressTracker.Status,
                                                            RestoreJobFatalException> func)
     {
         testRestoreJobManagerGroup.submitFunc = func;
@@ -145,11 +147,6 @@ public abstract class BaseRestoreJobTests
     protected void mockCreateRestoreSlice(Function<RestoreSlice, RestoreSlice> func)
     {
         testRestoreSlices.createFunc = func;
-    }
-
-    protected void mockUpdateRestoreSliceStatus(Function<RestoreSlice, RestoreSlice> func)
-    {
-        testRestoreSlices.updateStatusFunc = func;
     }
 
     protected void mockLookupRestoreSlices(BiFunction<UUID, TokenRange, List<RestoreSlice>> func)
@@ -204,7 +201,6 @@ public abstract class BaseRestoreJobTests
         static class TestRestoreSliceDatabaseAccessor extends RestoreSliceDatabaseAccessor
         {
             Function<RestoreSlice, RestoreSlice> createFunc;
-            Function<RestoreSlice, RestoreSlice> updateStatusFunc;
             BiFunction<UUID, TokenRange, List<RestoreSlice>> selectByJobByRangeFunc;
 
             TestRestoreSliceDatabaseAccessor(SidecarSchema sidecarSchema)
@@ -219,38 +215,33 @@ public abstract class BaseRestoreJobTests
             }
 
             @Override
-            public RestoreSlice updateStatus(RestoreSlice slice)
+            public List<RestoreSlice> selectByJobByBucketByTokenRange(RestoreJob restoreJob, short bucketId, TokenRange range)
             {
-                return updateStatusFunc.apply(slice);
-            }
-
-            @Override
-            public List<RestoreSlice> selectByJobByBucketByTokenRange(UUID jobId, short bucketId, TokenRange range)
-            {
-                return selectByJobByRangeFunc.apply(jobId, range);
+                return selectByJobByRangeFunc.apply(restoreJob.jobId, range);
             }
         }
 
         static class TestRestoreJobManagerGroup extends RestoreJobManagerGroup
         {
-            ThrowableFunction<String, RestoreSliceTracker.Status, RestoreJobFatalException> submitFunc;
+            ThrowableFunction<String, RestoreJobProgressTracker.Status, RestoreJobFatalException> submitFunc;
 
             public TestRestoreJobManagerGroup(SidecarConfiguration configuration,
                                               InstancesConfig instancesConfig,
                                               ExecutorPools executorPools,
                                               PeriodicTaskExecutor periodicTaskExecutor,
                                               RestoreProcessor restoreProcessor,
-                                              RestoreJobDiscoverer jobDiscoverer)
+                                              RestoreJobDiscoverer jobDiscoverer,
+                                              RingTopologyRefresher ringTopologyRefresher)
             {
                 super(configuration, instancesConfig, executorPools, periodicTaskExecutor, restoreProcessor,
-                      jobDiscoverer);
+                      jobDiscoverer, ringTopologyRefresher);
             }
 
             @Override
-            public RestoreSliceTracker.Status trySubmit(InstanceMetadata instance, RestoreSlice slice,
-                                                        RestoreJob restoreJob) throws RestoreJobFatalException
+            public RestoreJobProgressTracker.Status trySubmit(InstanceMetadata instance, RestoreRange range,
+                                                              RestoreJob restoreJob) throws RestoreJobFatalException
             {
-                return submitFunc.apply(slice.sliceId());
+                return submitFunc.apply(null);
             }
         }
 
@@ -275,14 +266,16 @@ public abstract class BaseRestoreJobTests
                                                              ExecutorPools executorPools,
                                                              PeriodicTaskExecutor loopExecutor,
                                                              RestoreProcessor restoreProcessor,
-                                                             RestoreJobDiscoverer jobDiscoverer)
+                                                             RestoreJobDiscoverer jobDiscoverer,
+                                                             RingTopologyRefresher ringTopologyRefresher)
         {
             return new TestRestoreJobManagerGroup(configuration,
                                                   instancesConfig,
                                                   executorPools,
                                                   loopExecutor,
                                                   restoreProcessor,
-                                                  jobDiscoverer);
+                                                  jobDiscoverer,
+                                                  ringTopologyRefresher);
         }
     }
 }

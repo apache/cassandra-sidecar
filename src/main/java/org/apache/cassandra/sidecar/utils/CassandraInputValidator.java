@@ -69,14 +69,13 @@ public class CassandraInputValidator
      */
     public Name validateKeyspaceName(@NotNull String keyspace)
     {
-        Objects.requireNonNull(keyspace, "keyspace must not be null");
-        String unquoted = removeQuotesIfNecessary(keyspace);
-        // whether the input is quoted from the source
-        boolean isQuoted = !unquoted.equals(keyspace);
-        validatePattern(unquoted, keyspace, "keyspace", isQuoted);
-        if (validationConfiguration.forbiddenKeyspaces().contains(unquoted))
+        Name name = new Name(keyspace);
+        validateNamePattern(name, "keyspace");
+
+        if (validationConfiguration.forbiddenKeyspaces().contains(name.name()))
             throw new HttpException(HttpResponseStatus.FORBIDDEN.code(), "Forbidden keyspace: " + keyspace);
-        return new Name(unquoted, keyspace);
+
+        return name;
     }
 
     /**
@@ -90,11 +89,9 @@ public class CassandraInputValidator
      */
     public Name validateTableName(@NotNull String tableName)
     {
-        Objects.requireNonNull(tableName, "tableName must not be null");
-        String unquoted = removeQuotesIfNecessary(tableName);
-        boolean isQuoted = !unquoted.equals(tableName);
-        validatePattern(unquoted, tableName, "table name", isQuoted);
-        return new Name(unquoted, tableName);
+        Name name = new Name(tableName);
+        validateNamePattern(name, "table name");
+        return name;
     }
 
     /**
@@ -170,12 +167,13 @@ public class CassandraInputValidator
      * Validates that the {@code unquotedInput} matches the {@code patternWordChars}
      *
      * @param unquotedInput      the unquoted input
-     * @param quotedInput        the original input used for the exception message
-     * @param name               a name for the exception message
+     * @param maybeQuoted        the original input used for the exception message
+     * @param exceptionHint      hint to add in the exception message
      * @param isQuotedFromSource whether the name was quoted from source
      * @throws HttpException when the {@code unquotedInput} does not match the pattern
      */
-    public void validatePattern(String unquotedInput, String quotedInput, String name, boolean isQuotedFromSource)
+    public void validatePattern(String unquotedInput, String maybeQuoted,
+                                String exceptionHint, boolean isQuotedFromSource)
     {
         String pattern = isQuotedFromSource
                          ? validationConfiguration.allowedPatternForQuotedName()
@@ -183,7 +181,7 @@ public class CassandraInputValidator
 
         if (!unquotedInput.matches(pattern))
             throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
-                                    "Invalid characters in " + name + ": " + quotedInput);
+                                    "Invalid characters in " + exceptionHint + ": " + maybeQuoted);
     }
 
     /**
@@ -216,17 +214,14 @@ public class CassandraInputValidator
     /**
      * Removes the surrounding quotes for the name, if the quotes are present. Otherwise, returns the original
      * input.
+     * Validates that the {@code name} matches the {@code patternWordChars}
      *
-     * @param name the name
-     * @return the {@code name} without surrounding quotes
+     * @param name               name
+     * @param exceptionHint      hint to add in the exception message
+     * @throws HttpException when the {@code unquotedInput} does not match the pattern
      */
-    static String removeQuotesIfNecessary(String name)
+    public void validateNamePattern(Name name, String exceptionHint)
     {
-        if (name == null || name.length() <= 1
-            || name.charAt(0) != '"' || name.charAt(name.length() - 1) != '"')
-        {
-            return name;
-        }
-        return name.substring(1, name.length() - 1);
+        validatePattern(name.name(), name.maybeQuotedName(), exceptionHint, name.isSourceQuoted());
     }
 }

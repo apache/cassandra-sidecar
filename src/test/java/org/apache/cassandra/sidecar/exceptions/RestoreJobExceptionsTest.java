@@ -35,7 +35,7 @@ class RestoreJobExceptionsTest
 
         assertThat(RestoreJobExceptions.propagate("msg", new RestoreJobFatalException("fatal")))
         .isInstanceOf(RestoreJobFatalException.class)
-        .hasMessage("msg")
+        .hasMessage("msg:fatal")
         .hasRootCauseInstanceOf(RestoreJobFatalException.class)
         .hasRootCauseMessage("fatal");
     }

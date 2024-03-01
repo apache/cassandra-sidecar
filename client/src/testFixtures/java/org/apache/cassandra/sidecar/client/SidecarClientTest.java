@@ -64,7 +64,6 @@ import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
 import org.apache.cassandra.sidecar.common.request.Request;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
-import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
@@ -76,6 +75,7 @@ import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
@@ -1354,7 +1354,7 @@ abstract class SidecarClientTest
         validateResponseServed(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE
                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                                .replaceAll(TABLE_PATH_PARAM, "rank_by_year_and_name")
-                               .replaceAll(JOB_ID_PATH_PARAM, jobIdStr),
+                               .replaceAll(JOB_ID_PATH_PARAM.canonicalName, jobIdStr),
                                recordedRequest -> {
                                    String reqBodyString = recordedRequest.getBody()
                                                                          .readString(Charset.defaultCharset());
@@ -1390,7 +1390,7 @@ abstract class SidecarClientTest
         validateResponseServed(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE
                                .replaceAll(KEYSPACE_PATH_PARAM, "badkeyspace")
                                .replaceAll(TABLE_PATH_PARAM, "bad_table")
-                               .replaceAll(JOB_ID_PATH_PARAM, jobIdStr),
+                               .replaceAll(JOB_ID_PATH_PARAM.canonicalName, jobIdStr),
                                recordedRequest -> {
                                    String reqBodyString = recordedRequest.getBody()
                                                                          .readString(Charset.defaultCharset());

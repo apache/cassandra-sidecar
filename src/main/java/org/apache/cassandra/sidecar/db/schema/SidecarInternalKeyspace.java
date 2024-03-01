@@ -65,7 +65,7 @@ public class SidecarInternalKeyspace extends AbstractSchema
     @Override
     protected boolean exists(@NotNull Metadata metadata)
     {
-        return metadata.getKeyspace(keyspaceConfig.keyspace()) != null;
+        return metadata.getKeyspace(keyspaceName()) != null;
     }
 
     @Override
@@ -83,9 +83,15 @@ public class SidecarInternalKeyspace extends AbstractSchema
     }
 
     @Override
+    protected String keyspaceName()
+    {
+        return keyspaceConfig.keyspace();
+    }
+
+    @Override
     protected String createSchemaStatement()
     {
         return String.format("CREATE KEYSPACE IF NOT EXISTS %s WITH REPLICATION = %s",
-                             keyspaceConfig.keyspace(), keyspaceConfig.createReplicationStrategyString());
+                             keyspaceName(), keyspaceConfig.createReplicationStrategyString());
     }
 }

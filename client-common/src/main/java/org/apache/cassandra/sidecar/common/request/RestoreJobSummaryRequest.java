@@ -22,7 +22,7 @@ import java.util.UUID;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-import org.apache.cassandra.sidecar.common.request.data.RestoreJobSummaryResponsePayload;
+import org.apache.cassandra.sidecar.common.response.data.RestoreJobSummaryResponsePayload;
 
 /**
  * Represents a request to retrieve the summary of a restore job
@@ -52,6 +52,6 @@ public class RestoreJobSummaryRequest extends JsonRequest<RestoreJobSummaryRespo
         return ApiEndpointsV1.RESTORE_JOB_ROUTE
                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
-               .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, jobId.toString());
+               .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM.canonicalName, jobId.toString());
     }
 }

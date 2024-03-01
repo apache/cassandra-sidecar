@@ -25,13 +25,11 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
-import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -51,20 +49,17 @@ public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobReque
     private static final AbortRestoreJobRequestPayload EMPTY_PAYLOAD = new AbortRestoreJobRequestPayload(null);
 
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
-    private final RestoreJobManagerGroup restoreJobManagerGroup;
     private final RestoreMetrics metrics;
 
     @Inject
     public AbortRestoreJobHandler(ExecutorPools executorPools,
                                   InstanceMetadataFetcher instanceMetadataFetcher,
                                   RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
-                                  RestoreJobManagerGroup restoreJobManagerGroup,
                                   CassandraInputValidator validator,
                                   SidecarMetrics metrics)
     {
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
-        this.restoreJobManagerGroup = restoreJobManagerGroup;
         this.metrics = metrics.server().restore();
     }
 
@@ -78,7 +73,7 @@ public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobReque
         RoutingContextUtils
         .getAsFuture(context, SC_RESTORE_JOB)
         .map(job -> {
-            if (RestoreJobStatus.isFinalState(job.status))
+            if (job.status.isFinal())
             {
                 throw wrapHttpException(HttpResponseStatus.CONFLICT,
                                         "Job is already in final state: " + job.status);
@@ -87,7 +82,6 @@ public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobReque
             restoreJobDatabaseAccessor.abort(job.jobId, payload.reason());
             logger.info("Successfully aborted restore job. job={} remoteAddress={} instance={} reason='{}'",
                         job, remoteAddress, host, payload.reason());
-            restoreJobManagerGroup.signalRefreshRestoreJob();
             return job;
         })
         .onSuccess(job -> {

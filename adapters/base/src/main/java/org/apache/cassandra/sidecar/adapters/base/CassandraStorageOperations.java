@@ -33,7 +33,7 @@ import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
-import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioner;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.exceptions.NodeBootstrappingException;
@@ -181,7 +181,7 @@ public class CassandraStorageOperations implements StorageOperations
     @Override
     public TokenRangeReplicasResponse tokenRangeReplicas(@NotNull Name keyspace, @NotNull String partitioner)
     {
-        return tokenRangeReplicaProvider.tokenRangeReplicas(keyspace, Partitioner.fromClassName(partitioner));
+        return tokenRangeReplicaProvider.tokenRangeReplicas(keyspace, Partitioners.from(partitioner));
     }
 
     /**

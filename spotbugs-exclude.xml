@@ -44,7 +44,7 @@
             <Class name="org.apache.cassandra.sidecar.CassandraSidecarDaemon" />
             <Class name="org.apache.cassandra.sidecar.utils.SSTableImporter" />
             <Class name="org.apache.cassandra.sidecar.tasks.HealthCheckPeriodicTask" />
-            <Class name="org.apache.cassandra.sidecar.restore.RestoreSliceTaskTest" />
+            <Class name="org.apache.cassandra.sidecar.restore.RestoreRangeTaskTest" />
         </Or>
     </Match>
 
@@ -77,17 +77,12 @@
 
     <Match>
         <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
-        <Class name="org.apache.cassandra.sidecar.common.ResourceUtils" />
-    </Match>
-
-    <Match>
-        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
-        <Class name="org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder$SnapshotFile"/>
-    </Match>
-
-    <Match>
-        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
-        <Class name="org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandlerTest"/>
+        <Or>
+            <Class name="org.apache.cassandra.sidecar.common.ResourceUtils" />
+            <Class name="org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder$SnapshotFile" />
+            <Class name="org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandlerTest" />
+            <Class name="org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor" />
+        </Or>
     </Match>
 
     <Match>
@@ -113,6 +108,11 @@
     <Match>
         <Bug pattern="REC_CATCH_EXCEPTION" />
         <Class name="org.apache.cassandra.sidecar.restore.StorageClientTest" />
+    </Match>
+
+    <Match>
+        <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE" />
+        <Class name="org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher" />
     </Match>
 
 </FindBugsFilter>

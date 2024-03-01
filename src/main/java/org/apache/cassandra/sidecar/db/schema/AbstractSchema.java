@@ -28,6 +28,9 @@ import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Abstract schema
+ */
 abstract class AbstractSchema
 {
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -67,6 +70,8 @@ abstract class AbstractSchema
         prepareStatements(session);
         return true;
     }
+
+    protected abstract String keyspaceName();
 
     protected abstract void prepareStatements(@NotNull Session session);
 

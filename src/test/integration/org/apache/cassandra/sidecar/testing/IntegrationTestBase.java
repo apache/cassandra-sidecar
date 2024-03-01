@@ -315,9 +315,9 @@ public abstract class IntegrationTestBase
 
     private static QualifiedTableName uniqueTestTableFullName(String tablePrefix)
     {
-        String unquotedTableName = tablePrefix + TEST_TABLE_ID.getAndIncrement();
-        return new QualifiedTableName(new Name(TEST_KEYSPACE, Metadata.quoteIfNecessary(TEST_KEYSPACE)),
-                                      new Name(unquotedTableName, Metadata.quoteIfNecessary(unquotedTableName)));
+        String uniqueTableName = tablePrefix + TEST_TABLE_ID.getAndIncrement();
+        return new QualifiedTableName(new Name(Metadata.quoteIfNecessary(TEST_KEYSPACE)),
+                                      new Name(Metadata.quoteIfNecessary(uniqueTableName)));
     }
 
     /**

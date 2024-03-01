@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
@@ -32,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class RestoreSlicesSchema extends TableSchema
 {
-    private static final String RESTORE_SLICE_TABLE_NAME = "restore_slice_v2";
+    private static final String RESTORE_SLICE_TABLE_NAME = "restore_slice_v3";
 
     private final SchemaKeyspaceConfiguration keyspaceConfig;
     private final long tableTtlSeconds;
@@ -40,7 +38,6 @@ public class RestoreSlicesSchema extends TableSchema
     // prepared statements
     private PreparedStatement insertSlice;
     private PreparedStatement findAllByTokenRange;
-    private PreparedStatement updateStatus;
 
     public RestoreSlicesSchema(SchemaKeyspaceConfiguration keyspaceConfig, long tableTtlSeconds)
     {
@@ -49,20 +46,22 @@ public class RestoreSlicesSchema extends TableSchema
     }
 
     @Override
+    protected String keyspaceName()
+    {
+        return keyspaceConfig.keyspace();
+    }
+
+    @Override
     protected void prepareStatements(@NotNull Session session)
     {
         insertSlice = prepare(insertSlice, session, CqlLiterals.insertSlice(keyspaceConfig));
         findAllByTokenRange = prepare(findAllByTokenRange, session, CqlLiterals.findAllByTokenRange(keyspaceConfig));
-        updateStatus = prepare(updateStatus, session, CqlLiterals.updateStatus(keyspaceConfig));
     }
 
     @Override
-    protected boolean exists(@NotNull Metadata metadata)
+    protected String tableName()
     {
-        KeyspaceMetadata ksMetadata = metadata.getKeyspace(keyspaceConfig.keyspace());
-        if (ksMetadata == null)
-            return false;
-        return ksMetadata.getTable(RESTORE_SLICE_TABLE_NAME) != null;
+        return RESTORE_SLICE_TABLE_NAME;
     }
 
     @Override
@@ -79,9 +78,7 @@ public class RestoreSlicesSchema extends TableSchema
                              "  end_token varint," +
                              "  compressed_size bigint," +
                              "  uncompressed_size bigint," +
-                             "  status_by_replica map<text, text>," + // key is instance ID; value is RestoreSliceStatus
-                             "  all_replicas set<text>," +
-                             "  PRIMARY KEY ((job_id, bucket_id), start_token, slice_id)" +
+                             "  PRIMARY KEY ((job_id, bucket_id), start_token, end_token, slice_id)" +
                              ") WITH default_time_to_live = %s",
                              keyspaceConfig.keyspace(), RESTORE_SLICE_TABLE_NAME, tableTtlSeconds);
     }
@@ -94,11 +91,6 @@ public class RestoreSlicesSchema extends TableSchema
     public PreparedStatement findAllByTokenRange()
     {
         return findAllByTokenRange;
-    }
-
-    public PreparedStatement updateStatus()
-    {
-        return updateStatus;
     }
 
     private static class CqlLiterals
@@ -115,31 +107,20 @@ public class RestoreSlicesSchema extends TableSchema
                              "  start_token," +
                              "  end_token," +
                              "  compressed_size," +
-                             "  uncompressed_size," +
-                             "  status_by_replica," +
-                             "  all_replicas" +
-                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
+                             "  uncompressed_size" +
+                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
         }
 
         // ALLOW FILTERING within the same partition should have minimum impact on read performance.
-        // To locate all qualified (intersecting) ranges, for Range[T1, T2],
-        // the conditions is `end_token >= T1 AND start_token < T2`
+        // To locate all qualified (intersecting) ranges, for Range [T1, T2],
+        // the conditions is `start_token <= T2 AND end_token >= T1`
         static String findAllByTokenRange(SchemaKeyspaceConfiguration config)
         {
             return withTable("SELECT job_id, bucket_id, slice_id, bucket, key, checksum, " +
-                             "start_token, end_token, compressed_size, uncompressed_size, " +
-                             "status_by_replica, all_replicas " +
+                             "start_token, end_token, compressed_size, uncompressed_size " +
                              "FROM %s.%s " +
                              "WHERE job_id = ? AND bucket_id = ? AND " +
-                             "end_token >= ? AND start_token < ? ALLOW FILTERING", config);
-        }
-
-        static String updateStatus(SchemaKeyspaceConfiguration config)
-        {
-            return withTable("UPDATE %s.%s " +
-                             "SET status_by_replica = status_by_replica + ?, " +
-                             "all_replicas = all_replicas + ? " +
-                             "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND slice_id = ?", config);
+                             "start_token <= ? AND end_token >= ? ALLOW FILTERING", config);
         }
 
         private static String withTable(String format, SchemaKeyspaceConfiguration config)

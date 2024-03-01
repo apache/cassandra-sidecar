@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.common.request;
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
-import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobResponsePayload;
+import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
 
 /**
  * Represents a request to create a restore job

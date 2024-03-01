@@ -39,10 +39,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.common.data.StorageCredentials;
+import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.db.RestoreJob;
-import org.apache.cassandra.sidecar.db.RestoreSlice;
+import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
@@ -117,13 +117,13 @@ public class StorageClient
         credentialsProviders.remove(jobId);
     }
 
-    public CompletableFuture<HeadObjectResponse> objectExists(RestoreSlice slice)
+    public CompletableFuture<HeadObjectResponse> objectExists(RestoreRange range)
     {
-        Credentials credentials = credentialsProviders.get(slice.jobId());
+        Credentials credentials = credentialsProviders.get(range.jobId());
         if (credentials == null)
         {
             CompletableFuture<HeadObjectResponse> failedFuture = new CompletableFuture<>();
-            failedFuture.completeExceptionally(credentialsNotFound(slice));
+            failedFuture.completeExceptionally(credentialsNotFound(range));
             return failedFuture;
         }
 
@@ -131,32 +131,32 @@ public class StorageClient
         HeadObjectRequest request =
         HeadObjectRequest.builder()
                          .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
-                         .bucket(slice.bucket())
-                         .key(slice.key())
-                         .ifMatch(quoteIfNeeded(slice.checksum()))
+                         .bucket(range.source().bucket())
+                         .key(range.source().key())
+                         .ifMatch(quoteIfNeeded(range.source().checksum()))
                          .build();
 
         return client.headObject(request)
-                     .whenComplete(logCredentialOnRequestFailure(slice, credentials));
+                     .whenComplete(logCredentialOnRequestFailure(range, credentials));
     }
 
-    public CompletableFuture<File> downloadObjectIfAbsent(RestoreSlice slice)
+    public CompletableFuture<File> downloadObjectIfAbsent(RestoreRange range)
     {
-        Credentials credentials = credentialsProviders.get(slice.jobId());
+        Credentials credentials = credentialsProviders.get(range.jobId());
         if (credentials == null)
         {
-            LOGGER.warn("Credentials to download object not found. jobId={}", slice.jobId());
+            LOGGER.warn("Credentials to download object not found. jobId={}", range.jobId());
             CompletableFuture<File> failedFuture = new CompletableFuture<>();
-            failedFuture.completeExceptionally(credentialsNotFound(slice));
+            failedFuture.completeExceptionally(credentialsNotFound(range));
             return failedFuture;
         }
 
-        Path objectPath = slice.stagedObjectPath();
+        Path objectPath = range.stagedObjectPath();
         File object = objectPath.toFile();
         if (object.exists())
         {
             LOGGER.info("Skipping download, file already exists. jobId={} sliceKey={}",
-                         slice.jobId(), slice.key());
+                        range.jobId(), range.source().key());
             // Skip downloading if the file already exists on disk. It should be a rare scenario.
             // Note that the on-disk file could be different from the remote object, although the name matches.
             // TODO 1: verify etag does not change after s3 replication and batch copy
@@ -169,20 +169,20 @@ public class StorageClient
         if (!object.getParentFile().mkdirs())
         {
             LOGGER.warn("Error occurred while creating directory. jobId={} sliceKey={}",
-                        slice.jobId(), slice.key());
+                        range.jobId(), range.source().key());
 
         }
 
-        LOGGER.info("Downloading object. jobId={} sliceKey={}", slice.jobId(), slice.key());
+        LOGGER.info("Downloading object. jobId={} sliceKey={}", range.jobId(), range.source().key());
         // https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
         GetObjectRequest request =
         GetObjectRequest.builder()
                         .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
-                        .bucket(slice.bucket())
-                        .key(slice.key())
+                        .bucket(range.source().bucket())
+                        .key(range.source().key())
                         .build();
-        return rateLimitedGetObject(slice, client, request, objectPath)
-               .whenComplete(logCredentialOnRequestFailure(slice, credentials))
+        return rateLimitedGetObject(range, client, request, objectPath)
+               .whenComplete(logCredentialOnRequestFailure(range, credentials))
                .thenApply(res -> object);
     }
 
@@ -213,20 +213,20 @@ public class StorageClient
         return '"' + input + '"';
     }
 
-    private IllegalStateException credentialsNotFound(RestoreSlice slice)
+    private IllegalStateException credentialsNotFound(RestoreRange range)
     {
         return new IllegalStateException("No credential available. The job might already have failed." +
-                                         "jobId: " + slice.jobId());
+                                         "jobId: " + range.source().jobId());
     }
 
-    private BiConsumer<Object, ? super Throwable> logCredentialOnRequestFailure(RestoreSlice slice,
+    private BiConsumer<Object, ? super Throwable> logCredentialOnRequestFailure(RestoreRange range,
                                                                                 Credentials credentials)
     {
         return (ignored, cause) -> {
             if (cause != null)
             {
                 LOGGER.error("GetObjectRequest is not successful. jobId={} credentials={}",
-                             slice.jobId(), credentials.readCredentials, cause);
+                             range.jobId(), credentials.readCredentials, cause);
             }
         };
     }
@@ -235,19 +235,19 @@ public class StorageClient
      * Returns a {@link CompletableFuture} to the {@link GetObjectResponse}. It writes the object from S3 to a file
      * applying rate limiting on the download throughput.
      *
-     * @param slice           the slice to be restored
+     * @param range           the range to be restored
      * @param client          the S3 client
      * @param request         the {@link GetObjectRequest request}
      * @param destinationPath the path where the object will be persisted
      * @return a {@link CompletableFuture} of the {@link GetObjectResponse}
      */
-    private CompletableFuture<GetObjectResponse> rateLimitedGetObject(RestoreSlice slice,
+    private CompletableFuture<GetObjectResponse> rateLimitedGetObject(RestoreRange range,
                                                                       S3AsyncClient client,
                                                                       GetObjectRequest request,
                                                                       Path destinationPath)
     {
         return client.getObject(request, AsyncResponseTransformer.toPublisher())
-                     .thenCompose(responsePublisher -> subscribeRateLimitedWrite(slice,
+                     .thenCompose(responsePublisher -> subscribeRateLimitedWrite(range,
                                                                                  destinationPath,
                                                                                  responsePublisher));
     }
@@ -257,15 +257,16 @@ public class StorageClient
      * by subscribing to the {@code publisher}. Applying backpressure on the received bytes by rate limiting
      * the download throughput using the {@code downloadRateLimiter} object.
      *
-     * @param slice           the slice to be restored
+     * @param range           the range to be restored
      * @param destinationPath the path where the object will be persisted
      * @param publisher       the {@link ResponsePublisher}
      * @return a {@link CompletableFuture} to the {@link GetObjectResponse}
      */
-    CompletableFuture<GetObjectResponse> subscribeRateLimitedWrite(RestoreSlice slice,
+    CompletableFuture<GetObjectResponse> subscribeRateLimitedWrite(RestoreRange range,
                                                                    Path destinationPath,
                                                                    ResponsePublisher<GetObjectResponse> publisher)
     {
+        // closed at the completion of subscribeFuture
         WritableByteChannel channel;
         try
         {
@@ -278,13 +279,13 @@ public class StorageClient
         catch (FileAlreadyExistsException fileAlreadyExistsException)
         {
             LOGGER.info("Skipping download. File already exists. jobId={} sliceKey={}",
-                         slice.jobId(), slice.key());
+                        range.jobId(), range.source().key());
             return CompletableFuture.completedFuture(publisher.response());
         }
         catch (IOException e)
         {
             LOGGER.error("Error occurred while creating channel. destinationPath={} jobId={} sliceKey={}",
-                         destinationPath, slice.jobId(), slice.key(), e);
+                         destinationPath, range.jobId(), range.source().key(), e);
             throw new RuntimeException(e);
         }
         // CompletableFuture that will be notified when all events have been consumed or if an error occurs.
@@ -300,7 +301,7 @@ public class StorageClient
                    if (subscribeThrowable != null)
                    {
                        LOGGER.error("Error occurred while downloading. jobId={} sliceKey={}",
-                                    slice.jobId(), slice.key(), subscribeThrowable);
+                                    range.jobId(), range.source().key(), subscribeThrowable);
                    }
                })
                .thenApply(v -> publisher.response());

@@ -31,23 +31,24 @@ import org.jetbrains.annotations.Nullable;
 public interface CQLSessionProvider
 {
     /**
-     * Provides a Session connected to the cluster. If null it means the connection was
-     * could not be established. The session still might throw a NoHostAvailableException if the
-     * cluster is otherwise unreachable.
+     * Provides a Session connected to the cluster; otherwise, it tries to connect to the cluster.
+     * Returning null means the connection can not be established.
+     * The session still might throw a NoHostAvailableException if the cluster is unreachable.
      *
-     * @return Session
+     * @return Session or null
      */
     @Nullable Session get();
+
+    /**
+     * Gets the current Session object if it already exists.
+     * Unlike {@link #get()}, it does not attempt to connect to the cluster.
+     *
+     * @return the connected {@link Session} object if available. Null otherwise.
+     */
+    @Nullable Session getIfConnected();
 
     /**
      * Closes the CQLSessionProvider
      */
     void close();
-
-    /**
-     * Gets the current Session object if it already exists.
-     * Otherwise, returns null.
-     * @return the connected {@link Session} object if available. Null otherwise.
-     */
-    @Nullable Session getIfConnected();
 }

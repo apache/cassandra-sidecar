@@ -19,19 +19,26 @@
 package org.apache.cassandra.sidecar.common.data;
 
 /**
- * Holds all possible restore job statues
+ * Holds all possible restore job statuses
  */
 public enum RestoreJobStatus
 {
     CREATED,
+    STAGE_READY,
     STAGED,
+    IMPORT_READY,
     @Deprecated // replaced by ABORTED
     FAILED,
     ABORTED,
     SUCCEEDED;
 
-    public static boolean isFinalState(RestoreJobStatus status)
+    public boolean isFinal()
     {
-        return status == FAILED || status == ABORTED || status == SUCCEEDED;
+        return this == FAILED || this == ABORTED || this == SUCCEEDED;
+    }
+
+    public boolean isReady()
+    {
+        return this == STAGE_READY || this == IMPORT_READY;
     }
 }

@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
-import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioner;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.assertj.core.api.InstanceOfAssertFactories;
@@ -109,7 +109,7 @@ public class TokenRangeReplicaProviderTest
         when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
         when(clusterMembershipOperations.getAllEndpointStatesWithPort()).thenReturn("");
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Random);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.RANDOM);
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(1);
         // Single token range
@@ -154,7 +154,7 @@ public class TokenRangeReplicaProviderTest
         when(endpointOperations.getDatacenter(startsWith("127"))).thenReturn(TEST_DC1);
         when(endpointOperations.getDatacenter(startsWith("128"))).thenReturn(TEST_DC2);
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Random);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.RANDOM);
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(2);
         // Single token range
@@ -209,7 +209,7 @@ public class TokenRangeReplicaProviderTest
         when(endpointOperations.getDatacenter(startsWith("127"))).thenReturn(TEST_DC1);
         when(endpointOperations.getDatacenter(startsWith("128"))).thenReturn(TEST_DC2);
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Random);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.RANDOM);
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(2);
         // 2 token ranges
@@ -258,7 +258,7 @@ public class TokenRangeReplicaProviderTest
         when(endpointOperations.getDatacenter(startsWith("127"))).thenReturn(TEST_DC1);
         when(endpointOperations.getDatacenter(startsWith("128"))).thenReturn(TEST_DC2);
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Random);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.RANDOM);
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas().size()).isEqualTo(2);
         assertThat(result.readReplicas().size()).isEqualTo(1);
@@ -300,7 +300,7 @@ public class TokenRangeReplicaProviderTest
                                          "NORMAL",
                                          "LEAVING"));
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Murmur3);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.MURMUR3);
         assertThat(result).isNotNull();
         assertThat(result.readReplicas()).hasSize(3);
         assertThat(validateRangeExists(result.readReplicas(), "3074457345618258602",
@@ -348,7 +348,7 @@ public class TokenRangeReplicaProviderTest
                                                                                                          "NORMAL",
                                                                                                          "NORMAL"));
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Murmur3);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.MURMUR3);
         assertThat(result).isNotNull();
         assertThat(result.readReplicas()).hasSize(3);
         assertThat(result.writeReplicas()).hasSize(4);
@@ -400,7 +400,7 @@ public class TokenRangeReplicaProviderTest
                                                                                                          "NORMAL",
                                                                                                          "NORMAL"));
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Murmur3);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.MURMUR3);
         assertThat(result).isNotNull();
         assertThat(result.readReplicas()).hasSize(4);
         assertThat(result.writeReplicas()).hasSize(4);
@@ -449,7 +449,7 @@ public class TokenRangeReplicaProviderTest
                                                                                                          "NORMAL",
                                                                                                          true));
 
-        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioner.Murmur3);
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.MURMUR3);
         assertThat(result).isNotNull();
         assertThat(result.readReplicas()).hasSize(4);
         assertThat(result.writeReplicas()).hasSize(4);

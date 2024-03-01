@@ -30,11 +30,10 @@ import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
-import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobResponsePayload;
+import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
-import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -50,18 +49,15 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobRequestPayload>
 {
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
-    private final RestoreJobManagerGroup restoreJobManagerGroup;
 
     @Inject
     public CreateRestoreJobHandler(ExecutorPools executorPools,
                                    InstanceMetadataFetcher instanceMetadataFetcher,
                                    RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
-                                   RestoreJobManagerGroup restoreJobManagerGroup,
                                    CassandraInputValidator validator)
     {
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
-        this.restoreJobManagerGroup = restoreJobManagerGroup;
     }
 
     @Override
@@ -76,7 +72,6 @@ public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobReq
         .onSuccess(createdJob -> {
             logger.info("Successfully persisted a new job. job={} request={} remoteAddress={} instance={}",
                         createdJob, request, remoteAddress, host);
-            restoreJobManagerGroup.signalRefreshRestoreJob();
             context.response().setStatusCode(HttpResponseStatus.OK.code());
             context.json(new CreateRestoreJobResponsePayload(createdJob.jobId, createdJob.status.name()));
         })

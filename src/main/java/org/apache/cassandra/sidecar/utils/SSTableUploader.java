@@ -39,7 +39,7 @@ import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.core.streams.WriteStream;
-import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
+import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 
 /**
  * A class that handles SSTable Uploads

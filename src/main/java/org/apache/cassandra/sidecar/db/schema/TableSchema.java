@@ -18,10 +18,23 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
+import org.jetbrains.annotations.NotNull;
+
 /**
  * Abstract base schema class for table schema
  */
 public abstract class TableSchema extends AbstractSchema
 {
+    protected abstract String tableName();
 
+    @Override
+    protected boolean exists(@NotNull Metadata metadata)
+    {
+        KeyspaceMetadata ksMetadata = metadata.getKeyspace(keyspaceName());
+        if (ksMetadata == null)
+            return false;
+        return ksMetadata.getTable(tableName()) != null;
+    }
 }

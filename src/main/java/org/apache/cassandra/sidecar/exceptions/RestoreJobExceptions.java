@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.exceptions;
 
-import org.apache.cassandra.sidecar.db.RestoreSlice;
+import org.apache.cassandra.sidecar.db.RestoreRange;
 
 /**
  * Utility methods to create {@link RestoreJobException}
@@ -36,15 +36,20 @@ public class RestoreJobExceptions
      */
     public static RestoreJobException propagate(String message, Throwable cause)
     {
+        String concatMessage = message;
+        if (cause.getMessage() != null)
+        {
+            concatMessage = concatMessage + ':' + cause.getMessage();
+        }
         if (cause instanceof RestoreJobException)
         {
             RestoreJobException ex = (RestoreJobException) cause;
             return ex.retryable()
-                   ? new RestoreJobException(message, cause)
-                   : new RestoreJobFatalException(message, cause);
+                   ? new RestoreJobException(concatMessage, cause)
+                   : new RestoreJobFatalException(concatMessage, cause);
         }
 
-        return new RestoreJobException(message, cause);
+        return new RestoreJobException(concatMessage, cause);
     }
 
     public static RestoreJobFatalException toFatal(Throwable cause)
@@ -55,13 +60,13 @@ public class RestoreJobExceptions
         return new RestoreJobFatalException(cause.getMessage(), cause);
     }
 
-    public static RestoreJobException ofSlice(String title, RestoreSlice slice, Throwable cause)
+    public static RestoreJobException of(String title, RestoreRange range, Throwable cause)
     {
-        return new RestoreJobException(title + ". " + slice.shortDescription(), cause);
+        return new RestoreJobException(title + ". " + range.shortDescription(), cause);
     }
 
-    public static RestoreJobFatalException ofFatalSlice(String title, RestoreSlice slice, Throwable cause)
+    public static RestoreJobFatalException ofFatal(String title, RestoreRange range, Throwable cause)
     {
-        return new RestoreJobFatalException(title + ". " + slice.shortDescription(), cause);
+        return new RestoreJobFatalException(title + ". " + range.shortDescription(), cause);
     }
 }

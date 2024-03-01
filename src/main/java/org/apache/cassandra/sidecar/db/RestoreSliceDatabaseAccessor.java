@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.db;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
@@ -28,7 +27,9 @@ import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
@@ -37,71 +38,58 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
  * It encapsulates the CRUD operations for restore_slice table
  */
 @Singleton
-public class RestoreSliceDatabaseAccessor extends DatabaseAccessor
+public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlicesSchema>
 {
-    private final RestoreSlicesSchema restoreSlicesSchema;
     @Inject
     protected RestoreSliceDatabaseAccessor(SidecarSchema sidecarSchema,
                                            RestoreSlicesSchema restoreSlicesSchema,
                                            CQLSessionProvider cqlSessionProvider)
     {
-        super(sidecarSchema, cqlSessionProvider);
-        this.restoreSlicesSchema = restoreSlicesSchema;
+        super(sidecarSchema, restoreSlicesSchema, cqlSessionProvider);
     }
 
     public RestoreSlice create(RestoreSlice slice)
     {
-        BoundStatement statement = restoreSlicesSchema.insertSlice()
-                                                      .bind(slice.jobId(),
-                                                            slice.bucketId(),
-                                                            slice.sliceId(),
-                                                            slice.bucket(),
-                                                            slice.key(),
-                                                            slice.checksum(),
-                                                            slice.startToken(),
-                                                            slice.endToken(),
-                                                            slice.compressedSize(),
-                                                            slice.uncompressedSize(),
-                                                            slice.statusByReplica(),
-                                                            slice.replicas());
+        sidecarSchema.ensureInitialized();
+
+        BoundStatement statement = tableSchema.insertSlice()
+                                              .bind(slice.jobId(),
+                                                    slice.bucketId(),
+                                                    slice.sliceId(),
+                                                    slice.bucket(),
+                                                    slice.key(),
+                                                    slice.checksum(),
+                                                    slice.startToken(),
+                                                    slice.endToken(),
+                                                    slice.compressedSize(),
+                                                    slice.uncompressedSize());
         execute(statement);
         return slice;
     }
 
-    public RestoreSlice updateStatus(RestoreSlice slice)
+    /**
+     * Find all {@link RestoreSlice} that overlaps the range of the job and bucket.
+     * @param restoreJob restore job
+     * @param bucketId bucket id
+     * @param range range to check the overlaps
+     * @return list of overlapping {@link RestoreSlice}
+     */
+    public List<RestoreSlice> selectByJobByBucketByTokenRange(RestoreJob restoreJob, short bucketId, TokenRange range)
     {
         sidecarSchema.ensureInitialized();
+        Token firstToken = range.firstToken();
+        Preconditions.checkArgument(firstToken != null, "range cannot be empty");
 
-        BoundStatement statement = restoreSlicesSchema.updateStatus()
-                                                      .bind(slice.statusByReplica(),
-                                                            slice.replicas(),
-                                                            slice.jobId(),
-                                                            slice.bucketId(),
-                                                            slice.startToken(),
-                                                            slice.sliceId());
-        Row row = execute(statement).one();
-        if (row == null)
-        {
-            throw new RuntimeException("Unexpected result while updating slice information for slice_id="
-                                       + slice.sliceId());
-        }
-        return slice;
-    }
-
-    public List<RestoreSlice> selectByJobByBucketByTokenRange(UUID jobId, short bucketId, TokenRange range)
-    {
-        sidecarSchema.ensureInitialized();
-
-        BoundStatement statement = restoreSlicesSchema.findAllByTokenRange()
-                                                      .bind(jobId,
-                                                            bucketId,
-                                                            range.start().toBigInteger(),
-                                                            range.end().toBigInteger());
+        BoundStatement statement = tableSchema.findAllByTokenRange()
+                                              .bind(restoreJob.jobId,
+                                                    bucketId,
+                                                    firstToken.toBigInteger(),
+                                                    range.end().toBigInteger());
         ResultSet result = execute(statement);
         List<RestoreSlice> slices = new ArrayList<>();
         for (Row row : result)
         {
-            slices.add(RestoreSlice.from(row));
+            slices.add(RestoreSlice.from(row, restoreJob));
         }
         return slices;
     }

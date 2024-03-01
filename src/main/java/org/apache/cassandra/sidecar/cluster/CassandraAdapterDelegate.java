@@ -413,24 +413,28 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     @Override
     public void onAdd(Host host)
     {
+        LOGGER.info("Host added. host={}", host);
         runIfThisHost(host, this::healthCheck);
     }
 
     @Override
     public void onUp(Host host)
     {
+        LOGGER.info("Host up. host={}", host);
         runIfThisHost(host, this::healthCheck);
     }
 
     @Override
     public void onDown(Host host)
     {
+        LOGGER.info("Host down. host={}", host);
         runIfThisHost(host, this::markNativeDownAndMaybeNotifyDisconnection);
     }
 
     @Override
     public void onRemove(Host host)
     {
+        LOGGER.info("Host removed. host={}", host);
         runIfThisHost(host, this::healthCheck);
     }
 

@@ -27,8 +27,10 @@ import com.datastax.driver.core.utils.UUIDs;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
+import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Test restore job setup options
@@ -49,9 +51,17 @@ public class RestoreJobTest
                                               RestoreJobStatus status,
                                               String consistencyLevel) throws DataObjectMappingException
     {
+        return createTestingJob(jobId, "ks", status, consistencyLevel);
+    }
+
+    public static RestoreJob createTestingJob(UUID jobId,
+                                              String keyspace,
+                                              RestoreJobStatus status,
+                                              String consistencyLevel) throws DataObjectMappingException
+    {
         RestoreJob.Builder builder = RestoreJob.builder();
         builder.createdAt(RestoreJob.toLocalDate(jobId))
-               .keyspace("ks")
+               .keyspace(keyspace)
                .table("table")
                .jobId(jobId)
                .jobStatus(status)
@@ -80,5 +90,33 @@ public class RestoreJobTest
     {
         RestoreJob job = createNewTestingJob(UUIDs.timeBased());
         assertThat(job.importOptions).isEqualTo(SSTableImportOptions.defaults());
+    }
+
+    @Test
+    void testExpectedNextRangeStatus()
+    {
+        UUID jobId = UUIDs.timeBased();
+        for (RestoreJobStatus status : RestoreJobStatus.values())
+        {
+            RestoreJob job = createTestingJob(jobId, status);
+            if (!status.isReady())
+            {
+                assertThatThrownBy(job::expectedNextRangeStatus)
+                .hasMessage("The restore job is not in a ready status. jobId: " + jobId + " status: " + status);
+            }
+            else if (status == RestoreJobStatus.STAGE_READY)
+            {
+                assertThat(job.expectedNextRangeStatus())
+                .describedAs("Expecting the ranges in STAGE_READY job to enter STAGED")
+                .isEqualTo(RestoreRangeStatus.STAGED);
+            }
+            else
+            {
+                assertThat(job.status).isEqualTo(RestoreJobStatus.IMPORT_READY);
+                assertThat(job.expectedNextRangeStatus())
+                .describedAs("Expecting the ranges in IMPORT_READY job to enter SUCCEEDED")
+                .isEqualTo(RestoreRangeStatus.SUCCEEDED);
+            }
+        }
     }
 }

@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
@@ -53,6 +51,12 @@ public class RestoreJobsSchema extends TableSchema
     }
 
     @Override
+    protected String keyspaceName()
+    {
+        return keyspaceConfig.keyspace();
+    }
+
+    @Override
     protected void prepareStatements(@NotNull Session session)
     {
         insertJob = prepare(insertJob, session, CqlLiterals.insertJob(keyspaceConfig));
@@ -65,12 +69,9 @@ public class RestoreJobsSchema extends TableSchema
     }
 
     @Override
-    protected boolean exists(@NotNull Metadata metadata)
+    protected String tableName()
     {
-        KeyspaceMetadata ksMetadata = metadata.getKeyspace(keyspaceConfig.keyspace());
-        if (ksMetadata == null)
-            return false;
-        return ksMetadata.getTable(RESTORE_JOB_TABLE_NAME) != null;
+        return RESTORE_JOB_TABLE_NAME;
     }
 
     @Override

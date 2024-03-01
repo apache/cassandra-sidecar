@@ -179,6 +179,7 @@ blob_restore:
   restore_job_tables_ttl_seconds: 7776000
   slow_task_threshold_seconds: 600
   slow_task_report_delay_seconds: 60
+  ring_topology_refresh_delay_millis: 60000
 
 s3_client:
   concurrency: 4

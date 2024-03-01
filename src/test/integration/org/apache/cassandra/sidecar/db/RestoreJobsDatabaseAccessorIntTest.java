@@ -55,6 +55,7 @@ class RestoreJobsDatabaseAccessorIntTest extends IntegrationTestBase
              .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> latch.countDown());
 
         awaitLatchOrTimeout(latch, 10, TimeUnit.SECONDS);
+        assertThat(latch.getCount()).describedAs("Sidecar schema not initialized").isZero();
         assertThat(accessor.findAllRecent(3)).isEmpty();
 
         // update this job

@@ -34,6 +34,7 @@ public class RestoreJobConstants
     public static final String JOB_TABLE = "table";
     public static final String JOB_CONSISTENCY_LEVEL = "consistencyLevel";
     public static final String JOB_OPERATION_REASON = "reason";
+    public static final String JOB_LOCAL_DATA_CENTER = "localDatacenter";
     public static final String SLICE_ID = "sliceId";
     public static final String BUCKET_ID = "bucketId";
     public static final String SLICE_START_TOKEN = "startToken";
@@ -49,4 +50,12 @@ public class RestoreJobConstants
     public static final String CREDENTIALS_SECRET_ACCESS_KEY = "secretAccessKey";
     public static final String CREDENTIALS_SESSION_TOKEN = "sessionToken";
     public static final String CREDENTIALS_REGION = "region";
+
+    // -- restore job status fields
+    public static final String JOB_STATUS_MESSAGE = "message";
+    public static final String JOB_STATUS_SUMMARY = "summary";
+    public static final String JOB_STATUS_FAILED_RANGE = "failedRanges";
+    public static final String JOB_STATUS_ABORTED_RANGE = "abortedRanges";
+    public static final String JOB_STATUS_PENDING_RANGE = "pendingRanges";
+    public static final String JOB_STATUS_SUCCEEDED_RANGE = "succeededRanges";
 }

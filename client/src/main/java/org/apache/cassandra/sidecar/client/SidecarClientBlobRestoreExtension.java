@@ -24,10 +24,12 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
-import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
-import org.apache.cassandra.sidecar.common.request.data.RestoreJobSummaryResponsePayload;
+import org.apache.cassandra.sidecar.common.request.data.RestoreJobProgressRequestParams;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
+import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
+import org.apache.cassandra.sidecar.common.response.data.RestoreJobSummaryResponsePayload;
 
 /**
  * An extension to sidecar client interface.
@@ -105,4 +107,28 @@ public interface SidecarClientBlobRestoreExtension
                                                   String table,
                                                   UUID jobId,
                                                   CreateSliceRequestPayload payload);
+
+    /**
+     * Create a new slice in the restore job on any sidecar instance.
+     * Unlike {@link SidecarClientBlobRestoreExtension#createRestoreJobSlice(SidecarInstance, String, String, UUID, CreateSliceRequestPayload)},
+     * it does _not_ check the status of the indicated slice. Instead, use {@code #restoreJobStatus} to fetch the job status.
+     *
+     * @param keyspace name of the keyspace in the cluster
+     * @param table    name of the table in the cluster
+     * @param jobId    job ID of the restore job to create slice
+     * @param payload  request payload
+     * @return a completable future
+     */
+    CompletableFuture<Void> createRestoreJobSlice(String keyspace,
+                                                  String table,
+                                                  UUID jobId,
+                                                  CreateSliceRequestPayload payload);
+
+    /**
+     * Fetch the progress of the restore job
+     *
+     * @param params parameters to fetch the restore job progress
+     * @return a completable future of {@link RestoreJobProgressResponsePayload}
+     */
+    CompletableFuture<RestoreJobProgressResponsePayload> restoreJobProgress(RestoreJobProgressRequestParams params);
 }

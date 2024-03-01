@@ -38,4 +38,19 @@ public class Preconditions
             throw new IllegalArgumentException(errorMessage);
         }
     }
+
+    /**
+     * Throws an {@link IllegalStateException} when the {@code validCondition} is {@code false}, otherwise
+     * no action is taken.
+     *
+     * @param validCondition the condition to evaluate
+     * @param errorMessage   the error message to use for the {@link IllegalStateException}
+     */
+    public static void checkState(boolean validCondition, String errorMessage)
+    {
+        if (!validCondition)
+        {
+            throw new IllegalStateException(errorMessage);
+        }
+    }
 }
