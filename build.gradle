@@ -216,6 +216,7 @@ dependencies {
     testImplementation('org.mockito:mockito-inline:4.10.0')
     testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
     testImplementation(testFixtures(project(":common")))
+    testImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') // 3.x version do not support java 11
 
     implementation(project(":common"))
     implementation(project(":adapters:base"))

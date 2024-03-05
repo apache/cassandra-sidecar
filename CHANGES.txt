@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Fix ClosedChannelException when downloading from S3 (CASSANDRASC-112)
  * Fix NPE thrown when getting StorageClient from pool (CASSANDRASC-110)
  * Relocate Sidecar common classes in vertx-client-shaded (CASSANDRASC-104)
  * Automated yaml type binding for deserialization (CASSANDRASC-103)

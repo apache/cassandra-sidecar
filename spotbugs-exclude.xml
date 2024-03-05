@@ -90,4 +90,24 @@
         <Class name="org.apache.cassandra.sidecar.config.yaml.DriverConfigurationImpl" />
     </Match>
 
+    <Match>
+        <Bug pattern="OS_OPEN_STREAM" />
+        <Class name="org.apache.cassandra.sidecar.restore.StorageClient" />
+    </Match>
+
+    <Match>
+        <Bug pattern="DE_MIGHT_IGNORE" />
+        <Class name="org.apache.cassandra.sidecar.restore.StorageClientTest" />
+    </Match>
+
+    <Match>
+        <Bug pattern="DM_DEFAULT_ENCODING" />
+        <Class name="org.apache.cassandra.sidecar.restore.StorageClientTest" />
+    </Match>
+
+    <Match>
+        <Bug pattern="REC_CATCH_EXCEPTION" />
+        <Class name="org.apache.cassandra.sidecar.restore.StorageClientTest" />
+    </Match>
+
 </FindBugsFilter>

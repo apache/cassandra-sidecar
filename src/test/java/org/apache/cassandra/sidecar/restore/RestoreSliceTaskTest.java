@@ -24,27 +24,25 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.datastax.driver.core.utils.UUIDs;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.util.Modules;
 import io.vertx.core.Promise;
-import org.apache.cassandra.sidecar.TestModule;
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools.TaskExecutorPool;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.stats.TestRestoreJobStats;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
@@ -55,9 +53,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import static org.apache.cassandra.sidecar.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -66,11 +62,9 @@ class RestoreSliceTaskTest
 {
     private RestoreSlice restoreSlice;
     private StorageClient storageClient;
-    private TaskExecutorPool executorPool;
-    private SSTableImporter importer;
     private TestRestoreJobStats stats;
     private RestoreSliceTask task;
-    private RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
+    private TestRestoreSliceAccessor sliceDatabaseAccessor;
 
     @BeforeEach
     void setup()
@@ -81,11 +75,10 @@ class RestoreSliceTaskTest
         when(restoreSlice.key()).thenReturn("storage-key");
         when(restoreSlice.owner().id()).thenReturn(1);
         storageClient = mock(StorageClient.class);
-        importer = mock(SSTableImporter.class);
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
-        executorPool = injector.getInstance(ExecutorPools.class).internal();
+        SSTableImporter importer = mock(SSTableImporter.class);
+        TaskExecutorPool executorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
         stats = new TestRestoreJobStats();
-        sliceDatabaseAccessor = mock(RestoreSliceDatabaseAccessor.class);
+        sliceDatabaseAccessor = new TestRestoreSliceAccessor();
         task = new TestRestoreSliceTask(restoreSlice, storageClient,
                                         executorPool, importer, 0,
                                         sliceDatabaseAccessor, stats);
@@ -163,8 +156,8 @@ class RestoreSliceTaskTest
     void testSliceStaging()
     {
         // test specific setup
-        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED));
-        doReturn(true).when(job).isManagedBySidecar();
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, "QUORUM");
+        assertThat(job.isManagedBySidecar()).isTrue();
         when(restoreSlice.job()).thenReturn(job);
         when(restoreSlice.stagedObjectPath()).thenReturn(Paths.get("nonexist"));
         when(storageClient.objectExists(restoreSlice)).thenReturn(CompletableFuture.completedFuture(null));
@@ -177,15 +170,15 @@ class RestoreSliceTaskTest
 
         verify(restoreSlice, times(1)).completeStagePhase();
         verify(restoreSlice, times(0)).completeImportPhase(); // should not be called in this phase
-        verify(sliceDatabaseAccessor, times(1)).updateStatus(restoreSlice);
+        assertThat(sliceDatabaseAccessor.updateInvokedTimes.get()).isOne();
     }
 
     @Test
     void testSliceStagingWithExistingObject(@TempDir Path testFolder) throws IOException
     {
         // test specific setup
-        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED));
-        doReturn(true).when(job).isManagedBySidecar();
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, "QUORUM");
+        assertThat(job.isManagedBySidecar()).isTrue();
         when(restoreSlice.job()).thenReturn(job);
         Path stagedPath = testFolder.resolve("slice.zip");
         Files.createFile(stagedPath);
@@ -201,15 +194,15 @@ class RestoreSliceTaskTest
 
         verify(restoreSlice, times(1)).completeStagePhase();
         verify(restoreSlice, times(0)).completeImportPhase(); // should not be called in this phase
-        verify(sliceDatabaseAccessor, times(1)).updateStatus(restoreSlice);
+        assertThat(sliceDatabaseAccessor.updateInvokedTimes.get()).isOne();
     }
 
     @Test
     void testSliceImport()
     {
         // test specific setup
-        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED));
-        doReturn(true).when(job).isManagedBySidecar();
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, "QUORUM");
+        assertThat(job.isManagedBySidecar()).isTrue();
         when(restoreSlice.job()).thenReturn(job);
 
         Promise<RestoreSlice> promise = Promise.promise();
@@ -218,9 +211,25 @@ class RestoreSliceTaskTest
 
         verify(restoreSlice, times(0)).completeStagePhase(); // should not be called in the phase
         verify(restoreSlice, times(1)).completeImportPhase();
-        verify(sliceDatabaseAccessor, times(1)).updateStatus(restoreSlice);
+        assertThat(sliceDatabaseAccessor.updateInvokedTimes.get()).isOne();
     }
 
+    static class TestRestoreSliceAccessor extends RestoreSliceDatabaseAccessor
+    {
+        public final AtomicInteger updateInvokedTimes = new AtomicInteger(0);
+
+        protected TestRestoreSliceAccessor()
+        {
+            super(null, null, null);
+        }
+
+        @Override
+        public RestoreSlice updateStatus(RestoreSlice slice)
+        {
+            updateInvokedTimes.getAndIncrement();
+            return slice;
+        }
+    }
 
     static class TestRestoreSliceTask extends RestoreSliceTask
     {

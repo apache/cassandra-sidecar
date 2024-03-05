@@ -65,6 +65,7 @@ jobs:
     environment:
       skipIntegrationTest: true
     steps:
+     - setup_remote_docker
      - checkout
      - run: ./gradlew --info check -x integrationTest --stacktrace
 
@@ -133,6 +134,7 @@ jobs:
     environment:
       skipIntegrationTest: true
     steps:
+      - setup_remote_docker
       - checkout
       - run: ./gradlew --info check -x integrationTest --stacktrace
 

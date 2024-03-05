@@ -42,12 +42,20 @@ public class RestoreJobTest
 
     public static RestoreJob createTestingJob(UUID jobId, RestoreJobStatus status) throws DataObjectMappingException
     {
+        return createTestingJob(jobId, status, null);
+    }
+
+    public static RestoreJob createTestingJob(UUID jobId,
+                                              RestoreJobStatus status,
+                                              String consistencyLevel) throws DataObjectMappingException
+    {
         RestoreJob.Builder builder = RestoreJob.builder();
         builder.createdAt(RestoreJob.toLocalDate(jobId))
                .keyspace("ks")
                .table("table")
                .jobId(jobId)
                .jobStatus(status)
+               .consistencyLevel(consistencyLevel)
                .expireAt(new Date(System.currentTimeMillis() + 10000L));
         return builder.build();
     }

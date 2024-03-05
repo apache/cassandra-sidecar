@@ -275,10 +275,6 @@ public class StorageClient
                 throw new RuntimeException(e);
             }
         }).whenComplete((v, subscribeThrowable) -> closeChannel(channel));
-        if (channel.isOpen())
-        {
-            closeChannel(channel);
-        }
         return subscribeFuture.thenApply(v -> publisher.response());
     }
 
