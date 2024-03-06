@@ -115,7 +115,9 @@ class StorageClientTest
                                      // required to prevent client from "manipulating" the object path
                                      .forcePathStyle(true)
                                      .httpClient(NettyNioAsyncHttpClient.builder().buildWithDefaults(
-                                         AttributeMap.builder().put(TRUST_ALL_CERTIFICATES, Boolean.TRUE).build()))
+                                         AttributeMap.builder()
+                                                     .put(TRUST_ALL_CERTIFICATES, Boolean.TRUE)
+                                                     .build()))
                                      .build();
         client = new StorageClient(s3AsyncClient);
         client.authenticate(restoreJob);

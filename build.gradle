@@ -135,7 +135,7 @@ run {
                "-javaagent:$projectDir/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
 }
 
-// add integration test
+// add additional test source set
 sourceSets {
     integrationTest {
         java {
@@ -144,12 +144,21 @@ sourceSets {
             srcDir file('src/test/integration')
         }
     }
+
+    containerTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/test/containerTest')
+        }
+    }
 }
 
 // and mark it as test root
 idea {
     module {
         testSourceDirs += sourceSets.integrationTest.java.srcDirs
+        testSourceDirs += sourceSets.containerTest.java.srcDirs
     }
 }
 
@@ -157,6 +166,7 @@ configurations {
     jolokia
 
     integrationTestImplementation.extendsFrom testImplementation
+    containerTestImplementation.extendsFrom testImplementation
 
     runtime.exclude(group: "com.google.code.findbugs", module: "jsr305")
     runtime.exclude(group: "org.codehaus.mojo", module: "animal-sniffer-annotations")
@@ -216,7 +226,6 @@ dependencies {
     testImplementation('org.mockito:mockito-inline:4.10.0')
     testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
     testImplementation(testFixtures(project(":common")))
-    testImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') // 3.x version do not support java 11
 
     implementation(project(":common"))
     implementation(project(":adapters:base"))
@@ -239,6 +248,7 @@ dependencies {
     // Needed for snapshot manifest validation
     integrationTestImplementation(group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: "${project.jacksonVersion}")
 
+    containerTestImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') // 3.x version do not support java 11
 }
 
 jar {
@@ -314,24 +324,25 @@ test {
     }
 }
 
+def JDK11_OPTIONS = ['-Djdk.attach.allowAttachSelf=true',
+                     '--add-exports', 'java.base/jdk.internal.misc=ALL-UNNAMED',
+                     '--add-exports', 'java.base/jdk.internal.ref=ALL-UNNAMED',
+                     '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED',
+                     '--add-exports', 'java.management.rmi/com.sun.jmx.remote.internal.rmi=ALL-UNNAMED',
+                     '--add-exports', 'java.rmi/sun.rmi.registry=ALL-UNNAMED',
+                     '--add-exports', 'java.rmi/sun.rmi.server=ALL-UNNAMED',
+                     '--add-exports', 'java.sql/java.sql=ALL-UNNAMED',
+                     '--add-opens', 'java.base/java.lang.module=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.loader=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.ref=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.math=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.module=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.util.jar=ALL-UNNAMED',
+                     '--add-opens', 'jdk.management/com.sun.management.internal=ALL-UNNAMED']
+
 tasks.register("integrationTest", Test) {
     if (JavaVersion.current().isJava11Compatible()) {
-        def JDK11_OPTIONS = ['-Djdk.attach.allowAttachSelf=true',
-                             '--add-exports', 'java.base/jdk.internal.misc=ALL-UNNAMED',
-                             '--add-exports', 'java.base/jdk.internal.ref=ALL-UNNAMED',
-                             '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED',
-                             '--add-exports', 'java.management.rmi/com.sun.jmx.remote.internal.rmi=ALL-UNNAMED',
-                             '--add-exports', 'java.rmi/sun.rmi.registry=ALL-UNNAMED',
-                             '--add-exports', 'java.rmi/sun.rmi.server=ALL-UNNAMED',
-                             '--add-exports', 'java.sql/java.sql=ALL-UNNAMED',
-                             '--add-opens', 'java.base/java.lang.module=ALL-UNNAMED',
-                             '--add-opens', 'java.base/jdk.internal.loader=ALL-UNNAMED',
-                             '--add-opens', 'java.base/jdk.internal.ref=ALL-UNNAMED',
-                             '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED',
-                             '--add-opens', 'java.base/jdk.internal.math=ALL-UNNAMED',
-                             '--add-opens', 'java.base/jdk.internal.module=ALL-UNNAMED',
-                             '--add-opens', 'java.base/jdk.internal.util.jar=ALL-UNNAMED',
-                             '--add-opens', 'jdk.management/com.sun.management.internal=ALL-UNNAMED']
         jvmArgs(JDK11_OPTIONS)
         println("JVM arguments for $project.name are $allJvmArgs")
     }
@@ -367,6 +378,31 @@ tasks.register("integrationTest", Test) {
     forkEvery = 1 // DTest framework tends to have issues without forkEvery test class
     maxHeapSize = integrationMaxHeapSize
     maxParallelForks = integrationMaxParallelForks
+}
+
+tasks.register("containerTest", Test) {
+    if (JavaVersion.current().isJava11Compatible()) {
+        jvmArgs(JDK11_OPTIONS)
+        println("JVM arguments for $project.name are $allJvmArgs")
+    }
+
+    jacoco {
+        enabled = false
+    }
+    useJUnitPlatform()
+    reports {
+        junitXml.enabled = true
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "containerTest").toFile()
+        println("Destination directory for testcontainer tests: ${destDir}")
+        junitXml.destination = destDir
+        html.enabled = true
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+    testClassesDirs = sourceSets.containerTest.output.classesDirs
+    classpath = sourceSets.containerTest.runtimeClasspath
+    shouldRunAfter test
 }
 
 // copy the user documentation to the final build
@@ -453,10 +489,13 @@ rat {
 compileIntegrationTestJava.onlyIf { "true" != System.getenv("skipIntegrationTest") }
 checkstyleIntegrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
 spotbugsIntegrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
+compileContainerTestJava.onlyIf { "true" != System.getenv("skipContainerTest") }
+checkstyleContainerTest.onlyIf { "true" != System.getenv("skipContainerTest") }
+spotbugsContainerTest.onlyIf { "true" != System.getenv("skipContainerTest") }
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia
-check.dependsOn codeCheckTasks, integrationTest, jacocoTestReport
+check.dependsOn codeCheckTasks, containerTest, integrationTest, jacocoTestReport
 build.dependsOn copyDist, copyJolokia, copyDocs
 run.dependsOn build
 
