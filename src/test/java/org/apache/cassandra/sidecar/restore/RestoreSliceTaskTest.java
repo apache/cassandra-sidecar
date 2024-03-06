@@ -33,6 +33,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools.TaskExecutorPool;
@@ -46,7 +47,6 @@ import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.stats.TestRestoreJobStats;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
-import org.mockito.Mockito;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
@@ -60,37 +60,40 @@ import static org.mockito.Mockito.when;
 
 class RestoreSliceTaskTest
 {
-    private RestoreSlice restoreSlice;
-    private StorageClient storageClient;
+    private RestoreSlice mockSlice;
+    private StorageClient mockStorageClient;
+    private SSTableImporter mockSSTableImporter;
+    private TaskExecutorPool executorPool;
     private TestRestoreJobStats stats;
-    private RestoreSliceTask task;
     private TestRestoreSliceAccessor sliceDatabaseAccessor;
 
     @BeforeEach
     void setup()
     {
-        restoreSlice = mock(RestoreSlice.class, Mockito.RETURNS_DEEP_STUBS);
-        when(restoreSlice.stageDirectory()).thenReturn(Paths.get("."));
-        when(restoreSlice.sliceId()).thenReturn("testing-slice");
-        when(restoreSlice.key()).thenReturn("storage-key");
-        when(restoreSlice.owner().id()).thenReturn(1);
-        storageClient = mock(StorageClient.class);
-        SSTableImporter importer = mock(SSTableImporter.class);
-        TaskExecutorPool executorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
+        mockSlice = mock(RestoreSlice.class);
+        when(mockSlice.stageDirectory()).thenReturn(Paths.get("."));
+        when(mockSlice.sliceId()).thenReturn("testing-slice");
+        when(mockSlice.key()).thenReturn("storage-key");
+        InstanceMetadata instance = mock(InstanceMetadata.class);
+        when(instance.id()).thenReturn(1);
+        when(mockSlice.owner()).thenReturn(instance);
+        mockStorageClient = mock(StorageClient.class);
+        mockSSTableImporter = mock(SSTableImporter.class);
+        executorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
         stats = new TestRestoreJobStats();
         sliceDatabaseAccessor = new TestRestoreSliceAccessor();
-        task = new TestRestoreSliceTask(restoreSlice, storageClient,
-                                        executorPool, importer, 0,
-                                        sliceDatabaseAccessor, stats);
     }
 
     @Test
     void testRestoreSucceeds()
     {
-        when(storageClient.objectExists(restoreSlice)).thenReturn(CompletableFuture.completedFuture(null));
-        when(storageClient.downloadObjectIfAbsent(restoreSlice))
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
+        when(mockStorageClient.objectExists(mockSlice)).thenReturn(CompletableFuture.completedFuture(null));
+        when(mockStorageClient.downloadObjectIfAbsent(mockSlice))
         .thenReturn(CompletableFuture.completedFuture(new File(".")));
+
         Promise<RestoreSlice> promise = Promise.promise();
+        RestoreSliceTask task = createTask(mockSlice, job);
         task.handle(promise);
         getBlocking(promise.future()); // no error is thrown
 
@@ -110,12 +113,14 @@ class RestoreSliceTaskTest
     @Test
     void testCaptureSliceReplicationTimeOnlyOnce()
     {
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
         // the existence of the slice is already confirmed by the s3 client
-        when(restoreSlice.existsOnS3()).thenReturn(true);
-        when(storageClient.downloadObjectIfAbsent(restoreSlice))
+        when(mockSlice.existsOnS3()).thenReturn(true);
+        when(mockStorageClient.downloadObjectIfAbsent(mockSlice))
         .thenReturn(CompletableFuture.completedFuture(new File(".")));
 
         Promise<RestoreSlice> promise = Promise.promise();
+        RestoreSliceTask task = createTask(mockSlice, job);
         task.handle(promise);
         getBlocking(promise.future()); // no error is thrown
 
@@ -128,9 +133,11 @@ class RestoreSliceTaskTest
     @Test
     void testStopProcessingCancelledSlice()
     {
-        when(restoreSlice.isCancelled()).thenReturn(true);
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
+        when(mockSlice.isCancelled()).thenReturn(true);
 
         Promise<RestoreSlice> promise = Promise.promise();
+        RestoreSliceTask task = createTask(mockSlice, job);
         task.handle(promise);
 
         assertThatThrownBy(() -> getBlocking(promise.future()))
@@ -141,11 +148,13 @@ class RestoreSliceTaskTest
     @Test
     void testThrowRetryableExceptionOnS3ObjectNotFound()
     {
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
         CompletableFuture<HeadObjectResponse> failedFuture = new CompletableFuture<>();
         failedFuture.completeExceptionally(mock(NoSuchKeyException.class));
-        when(storageClient.objectExists(restoreSlice)).thenReturn(failedFuture);
+        when(mockStorageClient.objectExists(mockSlice)).thenReturn(failedFuture);
 
         Promise<RestoreSlice> promise = Promise.promise();
+        RestoreSliceTask task = createTask(mockSlice, job);
         task.handle(promise);
         assertThatThrownBy(() -> getBlocking(promise.future()))
         .hasRootCauseExactlyInstanceOf(RestoreJobException.class) // NOT a fatal exception
@@ -158,18 +167,18 @@ class RestoreSliceTaskTest
         // test specific setup
         RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, "QUORUM");
         assertThat(job.isManagedBySidecar()).isTrue();
-        when(restoreSlice.job()).thenReturn(job);
-        when(restoreSlice.stagedObjectPath()).thenReturn(Paths.get("nonexist"));
-        when(storageClient.objectExists(restoreSlice)).thenReturn(CompletableFuture.completedFuture(null));
-        when(storageClient.downloadObjectIfAbsent(restoreSlice))
+        when(mockSlice.stagedObjectPath()).thenReturn(Paths.get("nonexist"));
+        when(mockStorageClient.objectExists(mockSlice)).thenReturn(CompletableFuture.completedFuture(null));
+        when(mockStorageClient.downloadObjectIfAbsent(mockSlice))
         .thenReturn(CompletableFuture.completedFuture(new File(".")));
 
         Promise<RestoreSlice> promise = Promise.promise();
+        RestoreSliceTask task = createTask(mockSlice, job);
         task.handle(promise);
         getBlocking(promise.future()); // no error is thrown
 
-        verify(restoreSlice, times(1)).completeStagePhase();
-        verify(restoreSlice, times(0)).completeImportPhase(); // should not be called in this phase
+        verify(mockSlice, times(1)).completeStagePhase();
+        verify(mockSlice, times(0)).completeImportPhase(); // should not be called in this phase
         assertThat(sliceDatabaseAccessor.updateInvokedTimes.get()).isOne();
     }
 
@@ -179,39 +188,52 @@ class RestoreSliceTaskTest
         // test specific setup
         RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, "QUORUM");
         assertThat(job.isManagedBySidecar()).isTrue();
-        when(restoreSlice.job()).thenReturn(job);
         Path stagedPath = testFolder.resolve("slice.zip");
         Files.createFile(stagedPath);
-        when(restoreSlice.stagedObjectPath()).thenReturn(stagedPath);
-        when(storageClient.objectExists(restoreSlice))
+        when(mockSlice.stagedObjectPath()).thenReturn(stagedPath);
+        when(mockStorageClient.objectExists(mockSlice))
         .thenThrow(new RuntimeException("Should not call this method"));
-        when(storageClient.downloadObjectIfAbsent(restoreSlice))
+        when(mockStorageClient.downloadObjectIfAbsent(mockSlice))
         .thenThrow(new RuntimeException("Should not call this method"));
 
         Promise<RestoreSlice> promise = Promise.promise();
+        RestoreSliceTask task = createTask(mockSlice, job);
         task.handle(promise);
         getBlocking(promise.future()); // no error is thrown
 
-        verify(restoreSlice, times(1)).completeStagePhase();
-        verify(restoreSlice, times(0)).completeImportPhase(); // should not be called in this phase
+        verify(mockSlice, times(1)).completeStagePhase();
+        verify(mockSlice, times(0)).completeImportPhase(); // should not be called in this phase
         assertThat(sliceDatabaseAccessor.updateInvokedTimes.get()).isOne();
     }
 
     @Test
-    void testSliceImport()
+    void testSliceImport(@TempDir Path testFolder) throws IOException
     {
         // test specific setup
         RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, "QUORUM");
         assertThat(job.isManagedBySidecar()).isTrue();
-        when(restoreSlice.job()).thenReturn(job);
+        Path stagedPath = testFolder.resolve("slice.zip");
+        Files.createFile(stagedPath);
+        when(mockSlice.stagedObjectPath()).thenReturn(stagedPath);
 
         Promise<RestoreSlice> promise = Promise.promise();
+        RestoreSliceTask task = createTask(mockSlice, job);
         task.handle(promise);
         getBlocking(promise.future()); // no error is thrown
 
-        verify(restoreSlice, times(0)).completeStagePhase(); // should not be called in the phase
-        verify(restoreSlice, times(1)).completeImportPhase();
+        verify(mockSlice, times(0)).completeStagePhase(); // should not be called in the phase
+        verify(mockSlice, times(1)).completeImportPhase();
         assertThat(sliceDatabaseAccessor.updateInvokedTimes.get()).isOne();
+    }
+
+    private RestoreSliceTask createTask(RestoreSlice slice, RestoreJob job)
+    {
+        when(slice.job()).thenReturn(job);
+        assertThat(slice.job()).isSameAs(job);
+        assertThat(slice.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
+        assertThat(slice.job().status).isEqualTo(job.status);
+        return new TestRestoreSliceTask(slice, mockStorageClient, executorPool, mockSSTableImporter,
+                                        0, sliceDatabaseAccessor, stats);
     }
 
     static class TestRestoreSliceAccessor extends RestoreSliceDatabaseAccessor
@@ -252,11 +274,11 @@ class RestoreSliceTaskTest
             stats.captureSliceValidationTime(1, 123L);
             stats.captureSliceImportTime(1, 123L);
             slice.completeImportPhase();
-            event.tryComplete(slice);
             if (onSuccessCommit != null)
             {
                 onSuccessCommit.run();
             }
+            event.tryComplete(slice);
         }
 
         @Override
