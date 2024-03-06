@@ -31,8 +31,8 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
 {
     private static final long MIN_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(14);
 
-    public static final long DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY_MILLIS = 5;
-    public static final long DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY_MILLIS = 10;
+    public static final long DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY_MILLIS = TimeUnit.MINUTES.toMillis(5);
+    public static final long DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY_MILLIS = TimeUnit.MINUTES.toMillis(10);
     public static final int DEFAULT_JOB_DISCOVERY_RECENCY_DAYS = 5;
     public static final int DEFAULT_PROCESS_MAX_CONCURRENCY = 20; // process at most 20 slices concurrently
     public static final long DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(90);
