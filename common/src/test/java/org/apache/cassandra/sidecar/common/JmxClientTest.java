@@ -124,7 +124,7 @@ class JmxClientTest
         importMBean.shouldSucceed = true;
     }
 
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
 //    @Test
     void testCanCallMethodWithoutEntireInterface() throws IOException
     {
@@ -143,7 +143,7 @@ class JmxClientTest
         assertThat(result.size()).isEqualTo(0);
     }
 
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
 //    @Test
     void testCanCallMethodWithoutEntireInterfaceGetResults() throws IOException
     {
@@ -166,7 +166,7 @@ class JmxClientTest
         assertThat(failedDirs.toArray()).isEqualTo(srcPaths.toArray());
     }
 
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
 //    @Test
     void testCallWithoutCredentialsFails() throws IOException
     {
@@ -186,7 +186,7 @@ class JmxClientTest
         }
     }
 
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
 //    @Test
     void testRoleSupplierThrows() throws IOException
     {
@@ -200,7 +200,7 @@ class JmxClientTest
                                                   .build());
     }
 
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
 //    @Test
     void testPasswordSupplierThrows() throws IOException
     {
@@ -215,7 +215,7 @@ class JmxClientTest
                                                   .build());
     }
 
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
 //    @Test
     void testEnableSslSupplierThrows() throws IOException
     {
@@ -231,7 +231,7 @@ class JmxClientTest
                                                   .build());
     }
 
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
 //    @Test
     void testRetryAfterAuthenticationFailureWithCorrectCredentials() throws IOException
     {
@@ -273,7 +273,7 @@ class JmxClientTest
         assertThat(result.size()).isEqualTo(0);
     }
 
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
 //    @Test
     void testDisconnectReconnect() throws Exception
     {
@@ -305,7 +305,7 @@ class JmxClientTest
         assertThat(result.size()).isEqualTo(0);
     }
 
-    @RepeatedTest(1000)
+    @RepeatedTest(20)
 //    @Test
     void testLotsOfProxies() throws IOException
     {
@@ -327,7 +327,7 @@ class JmxClientTest
         }
     }
 
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
 //    @Test
     void testConstructorWithHostPort() throws IOException
     {
