@@ -47,7 +47,7 @@ import com.google.common.collect.Sets;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.platform.commons.util.Preconditions;
 
@@ -124,8 +124,7 @@ class JmxClientTest
         importMBean.shouldSucceed = true;
     }
 
-    @RepeatedTest(100)
-//    @Test
+    @Test
     void testCanCallMethodWithoutEntireInterface() throws IOException
     {
         List<String> result;
@@ -143,8 +142,7 @@ class JmxClientTest
         assertThat(result.size()).isEqualTo(0);
     }
 
-    @RepeatedTest(100)
-//    @Test
+    @Test
     void testCanCallMethodWithoutEntireInterfaceGetResults() throws IOException
     {
         importMBean.shouldSucceed = false;
@@ -166,8 +164,7 @@ class JmxClientTest
         assertThat(failedDirs.toArray()).isEqualTo(srcPaths.toArray());
     }
 
-    @RepeatedTest(100)
-//    @Test
+    @Test
     void testCallWithoutCredentialsFails() throws IOException
     {
         try (JmxClient client = JmxClient.builder().jmxServiceURL(serviceURL).build())
@@ -186,8 +183,7 @@ class JmxClientTest
         }
     }
 
-    @RepeatedTest(100)
-//    @Test
+    @Test
     void testRoleSupplierThrows() throws IOException
     {
         String errorMessage = "bad role state!";
@@ -200,8 +196,7 @@ class JmxClientTest
                                                   .build());
     }
 
-    @RepeatedTest(100)
-//    @Test
+    @Test
     void testPasswordSupplierThrows() throws IOException
     {
         String errorMessage = "bad password state!";
@@ -215,8 +210,7 @@ class JmxClientTest
                                                   .build());
     }
 
-    @RepeatedTest(100)
-//    @Test
+    @Test
     void testEnableSslSupplierThrows() throws IOException
     {
         String errorMessage = "bad ssl supplier state!";
@@ -231,8 +225,7 @@ class JmxClientTest
                                                   .build());
     }
 
-    @RepeatedTest(100)
-//    @Test
+    @Test
     void testRetryAfterAuthenticationFailureWithCorrectCredentials() throws IOException
     {
         AtomicInteger tryCount = new AtomicInteger(0);
@@ -273,8 +266,7 @@ class JmxClientTest
         assertThat(result.size()).isEqualTo(0);
     }
 
-    @RepeatedTest(100)
-//    @Test
+    @Test
     void testDisconnectReconnect() throws Exception
     {
         List<String> result;
@@ -305,8 +297,7 @@ class JmxClientTest
         assertThat(result.size()).isEqualTo(0);
     }
 
-    @RepeatedTest(20)
-//    @Test
+    @Test
     void testLotsOfProxies() throws IOException
     {
         try (JmxClient client = JmxClient.builder()
@@ -327,8 +318,7 @@ class JmxClientTest
         }
     }
 
-    @RepeatedTest(100)
-//    @Test
+    @Test
     void testConstructorWithHostPort() throws IOException
     {
         try (JmxClient client = JmxClient.builder()
