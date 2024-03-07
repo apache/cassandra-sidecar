@@ -29,8 +29,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.datastax.driver.core.Row;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.CreateSliceRequestPayload;
@@ -40,6 +38,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.restore.RestoreJobUtil;
+import org.apache.cassandra.sidecar.restore.RestoreSliceHandler;
 import org.apache.cassandra.sidecar.restore.RestoreSliceTask;
 import org.apache.cassandra.sidecar.restore.RestoreSliceTracker;
 import org.apache.cassandra.sidecar.restore.StorageClient;
@@ -229,17 +228,18 @@ public class RestoreSlice
     /**
      * @return {@link RestoreSliceTask} of the restore slice. See {@link RestoreSliceTask} for the steps.
      */
-    public Handler<Promise<RestoreSlice>> toAsyncTask(StorageClientPool s3ClientPool,
-                                                      ExecutorPools.TaskExecutorPool executorPool,
-                                                      SSTableImporter importer,
-                                                      double requiredUsableSpacePercentage,
-                                                      RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                                                      RestoreJobStats stats,
-                                                      RestoreJobUtil restoreJobUtil)
+    public RestoreSliceHandler toAsyncTask(StorageClientPool s3ClientPool,
+                                           ExecutorPools.TaskExecutorPool executorPool,
+                                           SSTableImporter importer,
+                                           double requiredUsableSpacePercentage,
+                                           RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
+                                           RestoreJobStats stats,
+                                           RestoreJobUtil restoreJobUtil)
     {
         if (isCancelled)
-            return promise -> promise.tryFail(RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
-                                                                                this, null));
+            return RestoreSliceTask.failed(RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
+                                                                                 this, null), this);
+
 
         try
         {
@@ -254,13 +254,13 @@ public class RestoreSlice
         catch (IllegalStateException illegalState)
         {
             // The slice is not registered with a tracker, retry later.
-            return promise -> promise.tryFail(RestoreJobExceptions.ofSlice("Restore slice is not started",
-                                                                           this, illegalState));
+            return RestoreSliceTask.failed(RestoreJobExceptions.ofSlice("Restore slice is not started",
+                                                                           this, illegalState), this);
         }
         catch (Exception cause)
         {
-            return promise -> promise.tryFail(RestoreJobExceptions.ofFatalSlice("Restore slice is failed",
-                                                                                this, cause));
+            return RestoreSliceTask.failed(RestoreJobExceptions.ofFatalSlice("Restore slice is failed",
+                                                                                this, cause), this);
         }
     }
 

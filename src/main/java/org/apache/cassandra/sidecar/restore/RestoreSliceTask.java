@@ -22,13 +22,13 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
@@ -59,9 +59,10 @@ import static org.apache.cassandra.sidecar.utils.AsyncFileSystemUtils.ensureSuff
  *
  * Note that the class is package private, and it is not intended to be referenced by other packages.
  */
-public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
+public class RestoreSliceTask implements RestoreSliceHandler
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreSliceTask.class);
+    private final Supplier<Long> currentTimeInNanosSupplier;
 
     private final RestoreSlice slice;
     private final StorageClient s3Client;
@@ -71,6 +72,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobStats stats;
     private final RestoreJobUtil restoreJobUtil;
+    private long startTimeNanos;
 
     public RestoreSliceTask(RestoreSlice slice,
                             StorageClient s3Client,
@@ -80,6 +82,20 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                             RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
                             RestoreJobStats stats,
                             RestoreJobUtil restoreJobUtil)
+    {
+        this(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage,
+             sliceDatabaseAccessor, stats, restoreJobUtil, System::nanoTime);
+    }
+
+    public RestoreSliceTask(RestoreSlice slice,
+                            StorageClient s3Client,
+                            ExecutorPools.TaskExecutorPool executorPool,
+                            SSTableImporter importer,
+                            double requiredUsableSpacePercentage,
+                            RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
+                            RestoreJobStats stats,
+                            RestoreJobUtil restoreJobUtil,
+                            Supplier<Long> currentTimeInNanosSupplier)
     {
         Preconditions.checkArgument(!slice.job().isManagedBySidecar()
                                     || sliceDatabaseAccessor != null,
@@ -92,11 +108,18 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
         this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.stats = stats;
         this.restoreJobUtil = restoreJobUtil;
+        this.currentTimeInNanosSupplier = currentTimeInNanosSupplier;
+    }
+
+    public static RestoreSliceHandler failed(RestoreJobException cause, RestoreSlice slice)
+    {
+        return new Failed(cause, slice);
     }
 
     @Override
     public void handle(Promise<RestoreSlice> event)
     {
+        this.startTimeNanos = getCurrentTimeInNanos();
         if (failOnCancelled(event))
             return;
 
@@ -192,7 +215,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
         .whenComplete((resp, cause) -> {
             if (cause == null)
             {
-                stats.captureSliceReplicationTime(System.nanoTime() - slice.creationTimeNanos());
+                stats.captureSliceReplicationTime(getCurrentTimeInNanos() - slice.creationTimeNanos());
                 slice.setExistsOnS3();
                 return;
             }
@@ -242,6 +265,11 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                 }
             }
         });
+    }
+
+    private long getCurrentTimeInNanos()
+    {
+        return currentTimeInNanosSupplier.get();
     }
 
     private CompletableFuture<File> downloadSlice(Promise<RestoreSlice> event)
@@ -520,5 +548,55 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
 
         LOGGER.warn("Committing slice failed with HttpException. slice={} statusCode={} exceptionPayload={}",
                     slice.sliceId(), httpException.getStatusCode(), httpException.getPayload(), httpException);
+    }
+
+    public long getDuration()
+    {
+        return getCurrentTimeInNanos() - startTimeNanos;
+    }
+
+    public RestoreSlice slice()
+    {
+        return slice;
+    }
+
+    /**
+     * A RestoreSliceHandler that immediately fails the slice/promise.
+     * Used when the processor already knows that a slice should not be processed for some reason.
+     */
+    public static class Failed implements RestoreSliceHandler
+    {
+
+        private final RestoreJobException cause;
+        private final Supplier<Long> currentTimeInNanosSupplier;
+        private final Long startTimeNanos;
+        private RestoreSlice slice;
+
+        public Failed(RestoreJobException cause, RestoreSlice slice)
+        {
+            this(cause, System::nanoTime, slice);
+        }
+        public Failed(RestoreJobException cause, Supplier<Long> currentTimeInNanosSupplier, RestoreSlice slice)
+        {
+            this.cause = cause;
+            this.startTimeNanos = currentTimeInNanosSupplier.get();
+            this.currentTimeInNanosSupplier = currentTimeInNanosSupplier;
+            this.slice = slice;
+        }
+
+        public void handle(Promise<RestoreSlice> promise)
+        {
+            promise.tryFail(cause);
+        }
+
+        public long getDuration()
+        {
+            return currentTimeInNanosSupplier.get() - this.startTimeNanos;
+        }
+
+        public RestoreSlice slice()
+        {
+            return slice;
+        }
     }
 }

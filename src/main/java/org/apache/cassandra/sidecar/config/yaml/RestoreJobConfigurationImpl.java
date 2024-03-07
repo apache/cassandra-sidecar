@@ -36,6 +36,10 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     public static final int DEFAULT_JOB_DISCOVERY_RECENCY_DAYS = 5;
     public static final int DEFAULT_PROCESS_MAX_CONCURRENCY = 20; // process at most 20 slices concurrently
     public static final long DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(90);
+    public static final String RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS =
+    "restore_job_long_running_threshold_seconds";
+    // A restore job handler is considered long-running if it has been in the "active" list for 10 minutes.
+    private static final long DEFAULT_RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS = 600;
 
     @JsonProperty(value = "job_discovery_active_loop_delay_millis")
     protected final long jobDiscoveryActiveLoopDelayMillis;
@@ -52,6 +56,11 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     @JsonProperty(value = "restore_job_tables_ttl_seconds")
     protected final long restoreJobTablesTtlSeconds;
 
+
+    @JsonProperty(value = RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS,
+    defaultValue = DEFAULT_RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS + "")
+    private final long restoreJobLongRunningThresholdSeconds;
+
     protected RestoreJobConfigurationImpl()
     {
         this(builder());
@@ -64,6 +73,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.jobDiscoveryRecencyDays = builder.jobDiscoveryRecencyDays;
         this.processMaxConcurrency = builder.processMaxConcurrency;
         this.restoreJobTablesTtlSeconds = builder.restoreJobTablesTtlSeconds;
+        this.restoreJobLongRunningThresholdSeconds = builder.restoreJobLongRunningThresholdSeconds;
         validate();
     }
 
@@ -132,6 +142,14 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         return restoreJobTablesTtlSeconds;
     }
 
+    @Override
+    @JsonProperty(value = RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS,
+                  defaultValue = DEFAULT_RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS + "")
+    public long restoreJobLongRunningHandlerThresholdSeconds()
+    {
+        return restoreJobLongRunningThresholdSeconds;
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -142,6 +160,8 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
      */
     public static class Builder implements DataObjectBuilder<Builder, RestoreJobConfigurationImpl>
     {
+        protected long restoreJobLongRunningThresholdSeconds =
+        DEFAULT_RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS;
         private long jobDiscoveryActiveLoopDelayMillis = DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY_MILLIS;
         private long jobDiscoveryIdleLoopDelayMillis = DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY_MILLIS;
         private int jobDiscoveryRecencyDays = DEFAULT_JOB_DISCOVERY_RECENCY_DAYS;
@@ -216,6 +236,18 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         public Builder restoreJobTablesTtlSeconds(long restoreJobTablesTtlSeconds)
         {
             return update(b -> b.restoreJobTablesTtlSeconds = restoreJobTablesTtlSeconds);
+        }
+
+        /**
+         * Sets the {@code restoreJobLongRunningThresholdSeconds} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param restoreJobLongRunningThresholdSeconds the {@code restoreJobLongRunningThresholdSeconds} to set
+         * @return a reference to this Builder
+         */
+        public Builder restoreJobLongRunningThresholdSeconds(long restoreJobLongRunningThresholdSeconds)
+        {
+            return update(b -> b.restoreJobLongRunningThresholdSeconds = restoreJobLongRunningThresholdSeconds);
         }
 
         @Override

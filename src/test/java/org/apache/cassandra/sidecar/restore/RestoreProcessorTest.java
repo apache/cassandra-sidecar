@@ -19,6 +19,9 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +31,10 @@ import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.server.MainModule;
@@ -170,14 +176,71 @@ class RestoreProcessorTest
         });
     }
 
+    @Test
+    public void testLongRunningHandlerDetection()
+    {
+
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        periodicTaskExecutor.schedule(processor);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicLong currentTime = new AtomicLong(0);
+        RestoreSlice slice = mockSlowSlice(latch, currentTime::get); // Sets the start time
+        long fiveMinutesInNanos = TimeUnit.NANOSECONDS.convert(5, TimeUnit.MINUTES);
+        currentTime.set(fiveMinutesInNanos);
+        processor.submit(slice);
+        loopAssert(3, () -> {
+            assertThat(stats.longRunningRestoreHandlers.size()).isEqualTo(1);
+            Long handlerTimeInNanos = stats.longRunningRestoreHandlers.get(slice.owner().id());
+            assertThat(handlerTimeInNanos).isNotNull();
+            assertThat(handlerTimeInNanos).isEqualTo(fiveMinutesInNanos);
+            assertThat(processor.activeHandlers()).isOne();
+        });
+
+        // Make slice completable.
+        latch.countDown();
+
+        // Make sure when the slice completes the active handler is removed
+        loopAssert(3, () -> {
+            assertThat(processor.activeHandlers()).isZero();
+        });
+    }
+
     private RestoreSlice mockSlowSlice(CountDownLatch latch)
+    {
+        return mockSlowSlice(latch, System::nanoTime);
+    }
+
+    private RestoreSlice mockSlowSlice(CountDownLatch latch, Supplier<Long> timeInNanosSupplier)
     {
         RestoreSlice slice = mock(RestoreSlice.class, Mockito.RETURNS_DEEP_STUBS);
         when(slice.jobId()).thenReturn(UUIDs.timeBased());
         when(slice.owner().id()).thenReturn(1);
-        when(slice.toAsyncTask(any(), any(), any(), anyDouble(), any(), any(), any())).thenReturn(promise -> {
-            Uninterruptibles.awaitUninterruptibly(latch);
-            promise.complete(slice);
+        when(slice.key()).thenReturn("SliceKey");
+        RestoreJob job = RestoreJob.builder()
+                                   .jobStatus(RestoreJobStatus.CREATED)
+                                   .build();
+        when(slice.job()).thenReturn(job);
+        when(slice.toAsyncTask(any(), any(), any(), anyDouble(), any(), any(), any())).thenReturn(
+        new RestoreSliceHandler()
+        {
+            private Long startTime = timeInNanosSupplier.get();
+
+            public void handle(Promise<RestoreSlice> promise)
+            {
+                Uninterruptibles.awaitUninterruptibly(latch);
+                promise.complete(slice);
+            }
+
+            public long getDuration()
+            {
+                return timeInNanosSupplier.get() - startTime;
+            }
+
+            public RestoreSlice slice()
+            {
+                return slice;
+            }
         });
         when(slice.hasImported()).thenReturn(true);
         return slice;

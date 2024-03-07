@@ -26,10 +26,21 @@ public interface RestoreJobStats
     /**
      * Captures the total time taken to complete a slice successfully
      *
-     * @param instanceId    instance that contains the slice
+     * @param instanceId    instance that is processing the slice
      * @param durationNanos duration in nanoseconds
      */
     default void captureSliceCompletionTime(int instanceId, long durationNanos)
+    {
+
+    }
+
+    /**
+     * Captures the total time taken to stage the slice
+     *
+     * @param instanceId    instance that contains the slice
+     * @param durationNanos duration in nanoseconds
+     */
+    default void captureSliceStageTime(int instanceId, long durationNanos)
     {
 
     }
@@ -214,6 +225,16 @@ public interface RestoreJobStats
      * Captures s3 token is expired
      */
     default void captureTokenExpired()
+    {
+
+    }
+
+    /**
+     * Captures a long-running restore job handler
+     * @param instanceId      instance that is processing the slice
+     * @param handlerDuration restore job current duration in nanoseconds
+     */
+    default void captureLongRunningRestoreHandler(int instanceId, long handlerDuration)
     {
 
     }

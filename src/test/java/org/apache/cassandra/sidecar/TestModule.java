@@ -112,6 +112,7 @@ public class TestModule extends AbstractModule
         RestoreJobConfigurationImpl.builder()
                                    .restoreJobTablesTtlSeconds(TimeUnit.DAYS.toSeconds(14) + 1)
                                    .processMaxConcurrency(RESTORE_MAX_CONCURRENCY)
+                                   .restoreJobLongRunningThresholdSeconds(1)
                                    .build();
         HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(200, 1000);
         return SidecarConfigurationImpl.builder()
