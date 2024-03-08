@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.utils;
 import io.vertx.core.MultiMap;
 import io.vertx.core.file.FileSystem;
 import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32_SEED;
@@ -31,7 +32,7 @@ import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CO
  */
 public class XXHash32DigestVerifier extends AsyncFileDigestVerifier<XXHash32Digest>
 {
-    protected XXHash32DigestVerifier(FileSystem fs, XXHash32Digest digest, Hasher hasher)
+    protected XXHash32DigestVerifier(@NotNull FileSystem fs, @NotNull XXHash32Digest digest, @NotNull Hasher hasher)
     {
         super(fs, digest, hasher);
     }

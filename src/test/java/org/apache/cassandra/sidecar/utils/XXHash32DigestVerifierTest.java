@@ -38,7 +38,6 @@ import org.assertj.core.api.InstanceOfAssertFactories;
 
 import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.from;
 
@@ -62,12 +61,6 @@ class XXHash32DigestVerifierTest
         restoreJobUtil = new RestoreJobUtil(new Lz4XXHash32Provider());
 
         randomFilePath = TestFileUtils.prepareTestFile(tempDir, "random-file.txt", 1024);
-    }
-
-    @Test
-    void failsWhenDigestIsNull()
-    {
-        assertThatNullPointerException().isThrownBy(() -> newVerifier(null)).withMessage("digest is required");
     }
 
     @Test

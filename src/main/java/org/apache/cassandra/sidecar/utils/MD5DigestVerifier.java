@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.vertx.core.MultiMap;
 import io.vertx.core.file.FileSystem;
 import org.apache.cassandra.sidecar.common.data.MD5Digest;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Implementation of {@link DigestVerifier}. Here we use MD5 implementation of {@link java.security.MessageDigest}
@@ -29,7 +30,7 @@ import org.apache.cassandra.sidecar.common.data.MD5Digest;
  */
 public class MD5DigestVerifier extends AsyncFileDigestVerifier<MD5Digest>
 {
-    protected MD5DigestVerifier(FileSystem fs, MD5Digest digest, Hasher hasher)
+    protected MD5DigestVerifier(@NotNull FileSystem fs, @NotNull MD5Digest digest, @NotNull Hasher hasher)
     {
         super(fs, digest, hasher);
     }
