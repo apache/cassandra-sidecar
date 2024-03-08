@@ -18,15 +18,9 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
-import io.vertx.core.Promise;
-import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
-import net.jpountz.xxhash.StreamingXXHash32;
-import net.jpountz.xxhash.XXHashFactory;
 import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
-import org.jetbrains.annotations.VisibleForTesting;
 
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32_SEED;
@@ -37,48 +31,25 @@ import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CO
  */
 public class XXHash32DigestVerifier extends AsyncFileDigestVerifier<XXHash32Digest>
 {
-    protected XXHash32DigestVerifier(FileSystem fs, XXHash32Digest digest)
+    protected XXHash32DigestVerifier(FileSystem fs, XXHash32Digest digest, Hasher hasher)
     {
-        super(fs, digest);
+        super(fs, digest, hasher);
     }
 
-    public static XXHash32DigestVerifier create(FileSystem fs, MultiMap headers)
+    public static XXHash32DigestVerifier create(FileSystem fs, MultiMap headers, HasherProvider hasherProvider)
     {
         XXHash32Digest digest = new XXHash32Digest(headers.get(CONTENT_XXHASH32), headers.get(CONTENT_XXHASH32_SEED));
-        return new XXHash32DigestVerifier(fs, digest);
+        Hasher hasher = hasherProvider.get(maybeGetSeedOrDefault(digest));
+        return new XXHash32DigestVerifier(fs, digest, hasher);
     }
 
-    @Override
-    @VisibleForTesting
-    protected Future<String> calculateDigest(AsyncFile file)
-    {
-        Promise<String> result = Promise.promise();
-        Future<String> future = result.future();
-
-        // might have shared hashers with ThreadLocal
-        XXHashFactory factory = XXHashFactory.safeInstance();
-
-        int seed = maybeGetSeedOrDefault();
-        StreamingXXHash32 hasher = factory.newStreamingHash32(seed);
-
-        future.onComplete(ignored -> hasher.close());
-
-        readFile(file, result, buf -> {
-                     byte[] bytes = buf.getBytes();
-                     hasher.update(bytes, 0, bytes.length);
-                 },
-                 _v -> result.complete(Long.toHexString(hasher.getValue())));
-
-        return future;
-    }
-
-    protected int maybeGetSeedOrDefault()
+    protected static int maybeGetSeedOrDefault(XXHash32Digest digest)
     {
         String seedHex = digest.seedHex();
         if (seedHex != null)
         {
             return (int) Long.parseLong(seedHex, 16);
         }
-        return 0x9747b28c; // random seed for initializing
+        return 0;
     }
 }

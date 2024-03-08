@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.io.IOException;
 import java.util.Objects;
 
 import org.slf4j.Logger;
@@ -46,11 +47,13 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
     protected final FileSystem fs;
     protected final D digest;
+    private final Hasher hasher;
 
-    protected AsyncFileDigestVerifier(FileSystem fs, D digest)
+    protected AsyncFileDigestVerifier(FileSystem fs, D digest, Hasher hasher)
     {
         this.fs = fs;
         this.digest = Objects.requireNonNull(digest, "digest is required");
+        this.hasher = hasher;
     }
 
     /**
@@ -86,7 +89,30 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
      * @param asyncFile the async file to use for digest calculation
      * @return a future with the computed digest for the provided {@link AsyncFile file}
      */
-    protected abstract Future<String> calculateDigest(AsyncFile asyncFile);
+    protected Future<String> calculateDigest(AsyncFile asyncFile)
+    {
+        Promise<String> result = Promise.promise();
+
+        readFile(asyncFile, result,
+                 buf -> {
+                     byte[] bytes = buf.getBytes();
+                     hasher.update(bytes, 0, bytes.length);
+                 },
+                 onReadComplete -> {
+                     result.complete(hasher.checksum());
+                     try
+                     {
+                         hasher.close();
+                     }
+                     catch (IOException e)
+                     {
+                         logger.warn("Potential memory leak due to failed to close hasher {}",
+                                     hasher.getClass().getSimpleName());
+                     }
+                 });
+
+        return result.future();
+    }
 
     protected void readFile(AsyncFile file, Promise<String> result, Handler<Buffer> onBufferAvailable,
                             Handler<Void> onReadComplete)

@@ -27,15 +27,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.netty.handler.codec.compression.Lz4XXHash32;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
+import org.apache.cassandra.sidecar.restore.RestoreJobUtil;
 import org.assertj.core.api.InstanceOfAssertFactories;
 
-import static org.apache.cassandra.sidecar.restore.RestoreJobUtil.checksum;
 import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
@@ -52,11 +53,14 @@ class XXHash32DigestVerifierTest
     @TempDir
     static Path tempDir;
     static Path randomFilePath;
+    static RestoreJobUtil restoreJobUtil;
 
     @BeforeAll
     static void setup() throws IOException
     {
         vertx = Vertx.vertx();
+
+        restoreJobUtil = new RestoreJobUtil(new Lz4XXHash32Provider());
 
         randomFilePath = TestFileUtils.prepareTestFile(tempDir, "random-file.txt", 1024);
     }
@@ -70,14 +74,14 @@ class XXHash32DigestVerifierTest
     @Test
     void testFileDescriptorsClosedWithValidDigest() throws IOException, InterruptedException
     {
-        XXHash32Digest digest = new XXHash32Digest(checksum(randomFilePath.toFile()));
+        XXHash32Digest digest = new XXHash32Digest(restoreJobUtil.checksum(randomFilePath.toFile()));
         runTestScenario(randomFilePath, digest, false);
     }
 
     @Test
     void failsWithNonDefaultSeedAndSeedIsNotPassedAsAnOption() throws IOException, InterruptedException
     {
-        XXHash32Digest digest = new XXHash32Digest(checksum(randomFilePath.toFile(), 0x55555555));
+        XXHash32Digest digest = new XXHash32Digest(restoreJobUtil.checksum(randomFilePath.toFile(), 0x55555555));
         runTestScenario(randomFilePath, digest, true);
     }
 
@@ -85,7 +89,7 @@ class XXHash32DigestVerifierTest
     void testWithCustomSeed() throws IOException, InterruptedException
     {
         int seed = 0x55555555;
-        XXHash32Digest digest = new XXHash32Digest(checksum(randomFilePath.toFile(), seed), seed);
+        XXHash32Digest digest = new XXHash32Digest(restoreJobUtil.checksum(randomFilePath.toFile(), seed), seed);
         runTestScenario(randomFilePath, digest, false);
     }
 
@@ -142,7 +146,7 @@ class XXHash32DigestVerifierTest
 
         public ExposeAsyncFileXXHash32DigestVerifier(FileSystem fs, XXHash32Digest digest)
         {
-            super(fs, digest);
+            super(fs, digest, new Lz4XXHash32Provider.Lz4XXHash32(maybeGetSeedOrDefault(digest)));
         }
 
         @Override

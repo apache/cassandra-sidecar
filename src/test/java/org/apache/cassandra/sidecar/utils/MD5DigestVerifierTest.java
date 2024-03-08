@@ -107,7 +107,7 @@ class MD5DigestVerifierTest
 
         public ExposeAsyncFileMD5DigestVerifier(FileSystem fs, MD5Digest md5Digest)
         {
-            super(fs, md5Digest);
+            super(fs, md5Digest, new JdkMd5DigestProvider.JdkMD5Digest());
         }
 
         @Override

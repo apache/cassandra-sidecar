@@ -43,11 +43,10 @@ class DigestVerifierFactoryTest
         options = new HeadersMultiMap();
     }
 
-
     @Test
     void testEmptyFactoryReturnsFallbackVerifier()
     {
-        DigestVerifier verifier = new DigestVerifierFactory(vertx).verifier(options);
+        DigestVerifier verifier = newFactory().verifier(options);
         assertThat(verifier).as("should fallback to the fallback verifier when no verifiers are configured")
                             .isNotNull()
                             .isSameAs(FALLBACK_VERIFIER);
@@ -57,7 +56,7 @@ class DigestVerifierFactoryTest
     void testMd5Verifier()
     {
         options.set("content-md5", "md5-header");
-        DigestVerifier verifier = new DigestVerifierFactory(vertx).verifier(options);
+        DigestVerifier verifier = newFactory().verifier(options);
 
         assertThat(verifier).as("MD5DigestVerifier can verify MD5 content headers")
                             .isNotNull()
@@ -68,7 +67,7 @@ class DigestVerifierFactoryTest
     void testXXHashVerifier()
     {
         options.set(CONTENT_XXHASH32, "xxhash-header");
-        DigestVerifier verifier = new DigestVerifierFactory(vertx).verifier(options);
+        DigestVerifier verifier = newFactory().verifier(options);
 
         assertThat(verifier).as("XXHashDigestVerifier can verify XXHash content headers")
                             .isNotNull()
@@ -80,10 +79,15 @@ class DigestVerifierFactoryTest
     {
         options.set("content-md5", "md5-header")
                .set(CONTENT_XXHASH32, "xxhash-header");
-        DigestVerifier verifier = new DigestVerifierFactory(vertx).verifier(options);
+        DigestVerifier verifier = newFactory().verifier(options);
 
         assertThat(verifier).as("XXHashDigestVerifier is selected when both headers are present")
                             .isNotNull()
                             .isInstanceOf(XXHash32DigestVerifier.class);
+    }
+
+    private DigestVerifierFactory newFactory()
+    {
+        return new DigestVerifierFactory(vertx, new Lz4XXHash32Provider(), new JdkMd5DigestProvider());
     }
 }

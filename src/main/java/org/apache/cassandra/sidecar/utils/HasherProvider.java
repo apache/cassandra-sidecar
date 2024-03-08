@@ -18,25 +18,22 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.vertx.core.MultiMap;
-import io.vertx.core.file.FileSystem;
-import org.apache.cassandra.sidecar.common.data.MD5Digest;
-
 /**
- * Implementation of {@link DigestVerifier}. Here we use MD5 implementation of {@link java.security.MessageDigest}
- * for calculating digest and match the calculated digest with expected digest obtained from request.
+ * Provides a hash algorithm implementation
  */
-public class MD5DigestVerifier extends AsyncFileDigestVerifier<MD5Digest>
+public interface HasherProvider
 {
-    protected MD5DigestVerifier(FileSystem fs, MD5Digest digest, Hasher hasher)
+    /**
+     * @return a new hasher instance with default seed 0
+     */
+    default Hasher get()
     {
-        super(fs, digest, hasher);
+        return get(0);
     }
 
-    public static DigestVerifier create(FileSystem fs, MultiMap headers, HasherProvider hasherProvider)
-    {
-        MD5Digest md5Digest = new MD5Digest(headers.get(HttpHeaderNames.CONTENT_MD5.toString()));
-        return new MD5DigestVerifier(fs, md5Digest, hasherProvider.get());
-    }
+    /**
+     * @param seed seed for hasher
+     * @return a new hasher instance with the provided seed
+     */
+    Hasher get(int seed);
 }

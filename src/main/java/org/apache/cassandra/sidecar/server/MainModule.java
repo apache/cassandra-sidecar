@@ -98,6 +98,9 @@ import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.stats.SidecarSchemaStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.utils.HasherProvider;
+import org.apache.cassandra.sidecar.utils.JdkMd5DigestProvider;
+import org.apache.cassandra.sidecar.utils.Lz4XXHash32Provider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 
 import static org.apache.cassandra.sidecar.common.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
@@ -505,6 +508,25 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
         return new SidecarSchema(vertx, executorPools, configuration,
                                  stats, sidecarInternalKeyspace, cqlSessionProvider);
+    }
+
+    /**
+     * The provided hasher is used in {@link org.apache.cassandra.sidecar.restore.RestoreJobUtil}
+     */
+    @Provides
+    @Singleton
+    @Named("xxhash32")
+    public HasherProvider xxHash32Provider()
+    {
+        return new Lz4XXHash32Provider();
+    }
+
+    @Provides
+    @Singleton
+    @Named("md5")
+    public HasherProvider md5Provider()
+    {
+        return new JdkMd5DigestProvider();
     }
 
     /**

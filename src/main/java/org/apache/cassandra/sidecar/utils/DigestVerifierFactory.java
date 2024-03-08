@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.utils;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
@@ -38,7 +39,8 @@ public class DigestVerifierFactory
     @VisibleForTesting
     static final DigestVerifier FALLBACK_VERIFIER = Future::succeededFuture;
     private final FileSystem fs;
-
+    private final HasherProvider xxhash32;
+    private final HasherProvider md5;
 
     /**
      * Constructs a new factory
@@ -46,9 +48,13 @@ public class DigestVerifierFactory
      * @param vertx the vertx instance
      */
     @Inject
-    public DigestVerifierFactory(Vertx vertx)
+    public DigestVerifierFactory(Vertx vertx,
+                                 @Named("xxhash32") HasherProvider xxhash32,
+                                 @Named("md5") HasherProvider md5)
     {
         this.fs = vertx.fileSystem();
+        this.xxhash32 = xxhash32;
+        this.md5 = md5;
     }
 
     /***
@@ -64,11 +70,11 @@ public class DigestVerifierFactory
     {
         if (headers.contains(CONTENT_XXHASH32))
         {
-            return XXHash32DigestVerifier.create(fs, headers);
+            return XXHash32DigestVerifier.create(fs, headers, xxhash32);
         }
         else if (headers.contains(HttpHeaderNames.CONTENT_MD5.toString()))
         {
-            return MD5DigestVerifier.create(fs, headers);
+            return MD5DigestVerifier.create(fs, headers, md5);
         }
         // Fallback to no-op validator
         return FALLBACK_VERIFIER;

@@ -34,23 +34,38 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.utils.UUIDs;
-import net.jpountz.xxhash.StreamingXXHash32;
-import net.jpountz.xxhash.XXHashFactory;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
+import org.apache.cassandra.sidecar.utils.Hasher;
+import org.apache.cassandra.sidecar.utils.HasherProvider;
 
 /**
- * Utilities that only makes sense in the context of restore jobs. Avoid using it in the other scenarios.
+ * Utilities that only makes sense in the context of restore jobs.
+ *
+ * Note: Avoid using it in the other scenarios.
+ *
  */
+@Singleton
 public class RestoreJobUtil
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJobUtil.class);
-    private RestoreJobUtil() {}
     private static final int KB_512 = 512 * 1024;
     // it is part of upload id and get validated by
     // org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder.UPLOAD_ID_PATTERN
     private static final String RESTORE_JOB_PREFIX = "c0ffee-";
     private static final int RESTORE_JOB_PREFIX_LEN = RESTORE_JOB_PREFIX.length();
+    private static final int RESTORE_JOB_DEFAULT_HASH_SEED = 0;
+
+    private HasherProvider hasherProvider;
+
+    @Inject
+    public RestoreJobUtil(@Named("xxhash32") HasherProvider hasherProvider)
+    {
+        this.hasherProvider = hasherProvider;
+    }
 
     /**
      * Unzip a restore slice zip
@@ -81,65 +96,6 @@ public class RestoreJobUtil
                 zipEntry = zis.getNextEntry();
             }
             zis.closeEntry();
-        }
-    }
-
-    /**
-     * Create a file that is protected from zip slip attack (https://security.snyk.io/research/zip-slip-vulnerability)
-     * @param zipEntry zip entry to be extracted
-     * @param targetDir directory to keep the unzipped files
-     * @return a new file
-     * @throws IOException failed to resolving path
-     * @throws RestoreJobException if the zip file is malicious
-     */
-    private static File newProtectedTargetFile(ZipEntry zipEntry, File targetDir)
-    throws IOException, RestoreJobException
-    {
-        File targetFile = new File(targetDir, zipEntry.getName());
-
-        // Normalize the paths of both target dir and file
-        String targetDirPath = targetDir.getCanonicalPath();
-        String targetFilePath = targetFile.getCanonicalPath();
-
-        if (!targetFilePath.startsWith(targetDirPath))
-        {
-            throw new RestoreJobException("Bad zip entry: " + zipEntry.getName());
-        }
-
-        return targetFile;
-    }
-
-    /**
-     * @param file the file to use to perform the checksum
-     * @return the checksum hex string of the file's content. XXHash32 is employed as the hash algorithm.
-     */
-    public static String checksum(File file) throws IOException
-    {
-        int seed = 0x9747b28c; // random seed for initializing
-        return checksum(file, seed);
-    }
-
-    /**
-     * @param file the file to use to perform the checksum
-     * @param seed the seed to use for the hasher
-     * @return the checksum hex string of the file's content. XXHash32 is employed as the hash algorithm.
-     */
-    public static String checksum(File file, int seed) throws IOException
-    {
-        try (FileInputStream fis = new FileInputStream(file))
-        {
-            // might have shared hashers with ThreadLocal
-            XXHashFactory factory = XXHashFactory.safeInstance();
-            try (StreamingXXHash32 hasher = factory.newStreamingHash32(seed))
-            {
-                byte[] buffer = new byte[KB_512];
-                int len;
-                while ((len = fis.read(buffer)) != -1)
-                {
-                    hasher.update(buffer, 0, len);
-                }
-                return Long.toHexString(hasher.getValue());
-            }
         }
     }
 
@@ -209,6 +165,62 @@ public class RestoreJobUtil
                     throw new RuntimeException(e);
                 }
             });
+        }
+    }
+
+    /**
+     * Create a file that is protected from zip slip attack (https://security.snyk.io/research/zip-slip-vulnerability)
+     * @param zipEntry zip entry to be extracted
+     * @param targetDir directory to keep the unzipped files
+     * @return a new file
+     * @throws IOException failed to resolving path
+     * @throws RestoreJobException if the zip file is malicious
+     */
+    private static File newProtectedTargetFile(ZipEntry zipEntry, File targetDir)
+    throws IOException, RestoreJobException
+    {
+        File targetFile = new File(targetDir, zipEntry.getName());
+
+        // Normalize the paths of both target dir and file
+        String targetDirPath = targetDir.getCanonicalPath();
+        String targetFilePath = targetFile.getCanonicalPath();
+
+        if (!targetFilePath.startsWith(targetDirPath))
+        {
+            throw new RestoreJobException("Bad zip entry: " + zipEntry.getName());
+        }
+
+        return targetFile;
+    }
+
+    /**
+     * @param file the file to use to perform the checksum
+     * @return the checksum hex string of the file's content. XXHash32 is employed as the hash algorithm.
+     */
+    public String checksum(File file) throws IOException
+    {
+        return checksum(file, RESTORE_JOB_DEFAULT_HASH_SEED);
+    }
+
+    /**
+     * @param file the file to use to perform the checksum
+     * @param seed the seed to use for the hasher
+     * @return the checksum hex string of the file's content. XXHash32 is employed as the hash algorithm.
+     */
+    public String checksum(File file, int seed) throws IOException
+    {
+        try (FileInputStream fis = new FileInputStream(file))
+        {
+            try (Hasher hasher = hasherProvider.get(seed))
+            {
+                byte[] buffer = new byte[KB_512];
+                int len;
+                while ((len = fis.read(buffer)) != -1)
+                {
+                    hasher.update(buffer, 0, len);
+                }
+                return hasher.checksum();
+            }
         }
     }
 }
