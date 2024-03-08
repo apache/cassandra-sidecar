@@ -20,11 +20,11 @@ package org.apache.cassandra.sidecar.common;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.net.MalformedURLException;
-import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.RemoteObject;
+import java.rmi.server.RemoteRef;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Arrays;
 import java.util.Collections;
@@ -52,6 +52,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.platform.commons.util.Preconditions;
 
 import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
+import sun.rmi.server.UnicastRef;
+import sun.rmi.transport.LiveRef;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -65,12 +67,12 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * to make JMX calls. This particular call happens to match the signature of the `importNewSSTables` method on
  * StorageServiceProxy in C* 4.0.
  */
-public class JmxClientTest
+class JmxClientTest
 {
-    private static final int port;
-    private static final JMXServiceURL serviceURL;
     private static final String objectName = "org.apache.cassandra.jmx:type=ExtendedImport";
     public static final int PROXIES_TO_TEST = 10_000;
+    private static int port;
+    private static JMXServiceURL serviceURL;
     private static StorageService importMBean;
     private static JMXConnectorServer jmxServer;
     private static MBeanServer mbs;
@@ -90,8 +92,13 @@ public class JmxClientTest
                                            .toString();
         Map<String, String> env = new HashMap<>();
         env.put("jmx.remote.x.password.file", passwordFile);
-        registry = LocateRegistry.createRegistry(port);
+        registry = LocateRegistry.createRegistry(0); // dynamically allocate a port number
         mbs = ManagementFactory.getPlatformMBeanServer();
+
+        port = determinePortNumber(registry);
+
+        serviceURL = new JMXServiceURL("service:jmx:rmi://127.0.0.1:" + port
+                                       + "/jndi/rmi://127.0.0.1:" + port + "/jmxrmi");
         jmxServer = JMXConnectorServerFactory.newJMXConnectorServer(serviceURL, env, mbs);
         jmxServer.start();
         importMBean = new StorageService();
@@ -118,7 +125,7 @@ public class JmxClientTest
     }
 
     @Test
-    public void testCanCallMethodWithoutEntireInterface() throws IOException
+    void testCanCallMethodWithoutEntireInterface() throws IOException
     {
         List<String> result;
         try (JmxClient client = JmxClient.builder()
@@ -136,7 +143,7 @@ public class JmxClientTest
     }
 
     @Test
-    public void testCanCallMethodWithoutEntireInterfaceGetResults() throws IOException
+    void testCanCallMethodWithoutEntireInterfaceGetResults() throws IOException
     {
         importMBean.shouldSucceed = false;
         HashSet<String> srcPaths;
@@ -158,7 +165,7 @@ public class JmxClientTest
     }
 
     @Test
-    public void testCallWithoutCredentialsFails() throws IOException
+    void testCallWithoutCredentialsFails() throws IOException
     {
         try (JmxClient client = JmxClient.builder().jmxServiceURL(serviceURL).build())
         {
@@ -177,7 +184,7 @@ public class JmxClientTest
     }
 
     @Test
-    public void testRoleSupplierThrows() throws IOException
+    void testRoleSupplierThrows() throws IOException
     {
         String errorMessage = "bad role state!";
         Supplier<String> roleSupplier = () -> {
@@ -190,7 +197,7 @@ public class JmxClientTest
     }
 
     @Test
-    public void testPasswordSupplierThrows() throws IOException
+    void testPasswordSupplierThrows() throws IOException
     {
         String errorMessage = "bad password state!";
         Supplier<String> passwordSupplier = () -> {
@@ -204,7 +211,7 @@ public class JmxClientTest
     }
 
     @Test
-    public void testEnableSslSupplierThrows() throws IOException
+    void testEnableSslSupplierThrows() throws IOException
     {
         String errorMessage = "bad ssl supplier state!";
         BooleanSupplier enableSslSupplier = () -> {
@@ -219,7 +226,7 @@ public class JmxClientTest
     }
 
     @Test
-    public void testRetryAfterAuthenticationFailureWithCorrectCredentials() throws IOException
+    void testRetryAfterAuthenticationFailureWithCorrectCredentials() throws IOException
     {
         AtomicInteger tryCount = new AtomicInteger(0);
         List<String> result;
@@ -260,7 +267,7 @@ public class JmxClientTest
     }
 
     @Test
-    public void testDisconnectReconnect() throws Exception
+    void testDisconnectReconnect() throws Exception
     {
         List<String> result;
         try (JmxClient client = JmxClient.builder()
@@ -291,7 +298,7 @@ public class JmxClientTest
     }
 
     @Test
-    public void testLotsOfProxies() throws IOException
+    void testLotsOfProxies() throws IOException
     {
         try (JmxClient client = JmxClient.builder()
                                          .jmxServiceURL(serviceURL)
@@ -312,7 +319,7 @@ public class JmxClientTest
     }
 
     @Test
-    public void testConstructorWithHostPort() throws IOException
+    void testConstructorWithHostPort() throws IOException
     {
         try (JmxClient client = JmxClient.builder()
                                          .host("127.0.0.1")
@@ -398,29 +405,18 @@ public class JmxClientTest
         }
     }
 
-    static
+    static int determinePortNumber(Registry registry)
     {
-        try
+        if (registry instanceof RemoteObject)
         {
-            port = availablePort();
-            serviceURL = new JMXServiceURL("service:jmx:rmi://127.0.0.1:" + port
-                                           + "/jndi/rmi://127.0.0.1:" + port + "/jmxrmi");
-        }
-        catch (MalformedURLException e)
-        {
-            throw new RuntimeException(e);
-        }
-    }
+            RemoteRef ref = ((RemoteObject) registry).getRef();
 
-    private static int availablePort()
-    {
-        try (ServerSocket socket = new ServerSocket(0))
-        {
-            return socket.getLocalPort();
+            if (ref instanceof UnicastRef)
+            {
+                LiveRef liveRef = ((UnicastRef) ref).getLiveRef();
+                return liveRef.getPort();
+            }
         }
-        catch (IOException exception)
-        {
-            return 9999;
-        }
+        throw new RuntimeException("Unable to determine port number");
     }
 }

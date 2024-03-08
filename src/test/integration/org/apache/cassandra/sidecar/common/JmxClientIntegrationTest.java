@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Test to ensure connectivity with the JMX client
  */
-public class JmxClientTest
+public class JmxClientIntegrationTest
 {
     private static final String SS_OBJ_NAME = "org.apache.cassandra.db:type=StorageService";
 
