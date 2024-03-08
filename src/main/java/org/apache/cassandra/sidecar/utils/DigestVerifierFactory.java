@@ -43,9 +43,11 @@ public class DigestVerifierFactory
     private final HasherProvider md5;
 
     /**
-     * Constructs a new factory
+     * Constructs a new factory with a list of hash algorithms it supports
      *
      * @param vertx the vertx instance
+     * @param xxhash32 xxhash32 hash algorithm it supports
+     * @param md5 md5 hash algorithm it supports
      */
     @Inject
     public DigestVerifierFactory(Vertx vertx,
