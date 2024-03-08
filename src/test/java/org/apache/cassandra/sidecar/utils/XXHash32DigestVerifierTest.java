@@ -27,7 +27,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import io.netty.handler.codec.compression.Lz4XXHash32;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.AsyncFile;

@@ -22,6 +22,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
+/**
+ * Provides the MD5 implementation from JDK
+ */
 public class JdkMd5DigestProvider implements HasherProvider
 {
     @Override
@@ -30,6 +33,9 @@ public class JdkMd5DigestProvider implements HasherProvider
         return new JdkMD5Digest();
     }
 
+    /**
+     * MD5 implementation from JDK
+     */
     public static class JdkMD5Digest implements Hasher
     {
         private final MessageDigest md5;
