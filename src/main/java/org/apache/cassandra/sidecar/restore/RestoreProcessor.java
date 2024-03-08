@@ -61,6 +61,8 @@ public class RestoreProcessor implements PeriodicTask
     private final double requiredUsableSpacePercentage; // value range: [0.0, 1.0)
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobStats stats;
+    private final RestoreJobUtil restoreJobUtil;
+
     private volatile boolean isClosed = false; // OK to run close twice, so relax the control to volatile
 
     @Inject
@@ -70,7 +72,8 @@ public class RestoreProcessor implements PeriodicTask
                             StorageClientPool s3ClientPool,
                             SSTableImporter importer,
                             RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                            RestoreJobStats stats)
+                            RestoreJobStats stats,
+                            RestoreJobUtil restoreJobUtil)
     {
         this.pool = executorPools.internal();
         this.s3ClientPool = s3ClientPool;
@@ -82,6 +85,7 @@ public class RestoreProcessor implements PeriodicTask
         this.importer = importer;
         this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.stats = stats;
+        this.restoreJobUtil = restoreJobUtil;
     }
 
     /**
@@ -131,7 +135,8 @@ public class RestoreProcessor implements PeriodicTask
             sliceQueue.captureImportQueueLength();
             pool.executeBlocking(slice.toAsyncTask(s3ClientPool, pool, importer,
                                                    requiredUsableSpacePercentage,
-                                                   sliceDatabaseAccessor, stats),
+                                                   sliceDatabaseAccessor, stats,
+                                                   restoreJobUtil),
                                  false) // unordered
             .onSuccess(restoreSlice -> {
                 if (slice.hasImported())

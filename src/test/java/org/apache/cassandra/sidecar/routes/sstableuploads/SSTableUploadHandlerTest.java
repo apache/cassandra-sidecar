@@ -97,7 +97,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-correct-xxhash.db",
-                                   new XXHash32Digest("7a28edc0"),
+                                   new XXHash32Digest("21228a35"),
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
                                    HttpResponseStatus.OK.code(),
                                    false);
@@ -108,7 +108,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     {
         UUID uploadId = UUID.randomUUID();
         sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-correct-xxhash.db",
-                                   new XXHash32Digest("ffffffffb9510d6b", "55555555"),
+                                   new XXHash32Digest("b9510d6b", "55555555"),
                                    Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
                                    HttpResponseStatus.OK.code(),
                                    false);
@@ -409,7 +409,12 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             }
 
             HttpResponse<Buffer> httpResponse = response.result();
-            assertThat(httpResponse.statusCode()).isEqualTo(expectedRetCode);
+            if (httpResponse.statusCode() != expectedRetCode)
+            {
+                context.failNow("Status code mismatched. Expected: " + expectedRetCode +
+                                "; actual: " + httpResponse.statusCode());
+                return;
+            }
 
             if (responseValidator != null)
             {

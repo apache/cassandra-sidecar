@@ -70,6 +70,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
     private final double requiredUsableSpacePercentage;
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobStats stats;
+    private final RestoreJobUtil restoreJobUtil;
 
     public RestoreSliceTask(RestoreSlice slice,
                             StorageClient s3Client,
@@ -77,7 +78,8 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                             SSTableImporter importer,
                             double requiredUsableSpacePercentage,
                             RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                            RestoreJobStats stats)
+                            RestoreJobStats stats,
+                            RestoreJobUtil restoreJobUtil)
     {
         Preconditions.checkArgument(!slice.job().isManagedBySidecar()
                                     || sliceDatabaseAccessor != null,
@@ -89,6 +91,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
         this.requiredUsableSpacePercentage = requiredUsableSpacePercentage;
         this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.stats = stats;
+        this.restoreJobUtil = restoreJobUtil;
     }
 
     @Override
@@ -442,7 +445,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
 
             try
             {
-                String actualChecksum = RestoreJobUtil.checksum(file);
+                String actualChecksum = restoreJobUtil.checksum(file);
                 if (!actualChecksum.equals(expectedChecksum))
                 {
                     String msg = "Checksum does not match. Expected: " + expectedChecksum +

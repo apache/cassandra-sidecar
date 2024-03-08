@@ -262,7 +262,8 @@ class RestoreSliceTaskTest
                                     SSTableImporter importer, double requiredUsableSpacePercentage,
                                     RestoreSliceDatabaseAccessor sliceDatabaseAccessor, RestoreJobStats stats)
         {
-            super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage, sliceDatabaseAccessor, stats);
+            super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage, sliceDatabaseAccessor, stats,
+                  null);
             this.slice = slice;
             this.stats = stats;
         }

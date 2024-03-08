@@ -29,6 +29,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.datastax.driver.core.utils.UUIDs;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
+import org.apache.cassandra.sidecar.utils.XXHash32Provider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -43,11 +44,12 @@ class RestoreJobUtilTest
     {
         File file = new File(testDirRoot, "checksum.txt");
         Files.write(file.toPath(), "XXHash32 is employed as the hash algorithm".getBytes(StandardCharsets.UTF_8));
-        String checksum = RestoreJobUtil.checksum(file);
+        RestoreJobUtil util = new RestoreJobUtil(new XXHash32Provider());
+        String checksum = util.checksum(file);
         assertThat(checksum)
-        .describedAs("Hasher should return 32 bits checksum == 8 characters")
-        .hasSize(16)
-        .isEqualTo("ffffffffa89219eb"); // hash of "XXHash32 is employed as the hash algorithm"
+        .describedAs("Hasher should return 32 bits checksum == 4 characters")
+        .hasSize(8)
+        .isEqualTo("a0051d07"); // hash of "XXHash32 is employed as the hash algorithm"
     }
 
     @Test
