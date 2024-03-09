@@ -18,16 +18,15 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import net.jpountz.xxhash.StreamingXXHash32;
-import net.jpountz.xxhash.XXHashFactory;
+import org.apache.commons.codec.digest.XXHash32;
 
 /**
- * Provides the XXHash32 implementation from LZ4
+ * Provides the XXHash32 implementation from commons-codec
  */
-public class Lz4XXHash32Provider implements HasherProvider
+public class XXHash32Provider implements DigestAlgorithmProvider
 {
     @Override
-    public Hasher get(int seed)
+    public DigestAlgorithm get(int seed)
     {
         return new Lz4XXHash32(seed);
     }
@@ -35,33 +34,31 @@ public class Lz4XXHash32Provider implements HasherProvider
     /**
      * XXHash32 implementation from LZ4
      */
-    public static class Lz4XXHash32 implements Hasher
+    public static class Lz4XXHash32 implements DigestAlgorithm
     {
-        private final StreamingXXHash32 hasher;
+        private final XXHash32 xxHash32;
 
         Lz4XXHash32(int seed)
         {
-            // might have shared hashers with ThreadLocal
-            XXHashFactory factory = XXHashFactory.safeInstance();
-            this.hasher = factory.newStreamingHash32(seed);
+            this.xxHash32 = new XXHash32(seed);
         }
 
         @Override
         public void update(byte[] buf, int off, int len)
         {
-            hasher.update(buf, off, len);
+            xxHash32.update(buf, off, len);
         }
 
         @Override
-        public String checksum()
+        public String digest()
         {
-            return Long.toHexString(hasher.getValue());
+            return Long.toHexString(xxHash32.getValue());
         }
 
         @Override
         public void close()
         {
-            hasher.close();
+            // XXHash32 does not require to be closed
         }
     }
 }

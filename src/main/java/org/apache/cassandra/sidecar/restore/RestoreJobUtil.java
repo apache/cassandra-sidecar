@@ -39,8 +39,8 @@ import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.utils.Hasher;
-import org.apache.cassandra.sidecar.utils.HasherProvider;
+import org.apache.cassandra.sidecar.utils.DigestAlgorithm;
+import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
 
 /**
  * Utilities that only makes sense in the context of restore jobs.
@@ -59,12 +59,12 @@ public class RestoreJobUtil
     private static final int RESTORE_JOB_PREFIX_LEN = RESTORE_JOB_PREFIX.length();
     private static final int RESTORE_JOB_DEFAULT_HASH_SEED = 0;
 
-    private HasherProvider hasherProvider;
+    private DigestAlgorithmProvider digestAlgorithmProvider;
 
     @Inject
-    public RestoreJobUtil(@Named("xxhash32") HasherProvider hasherProvider)
+    public RestoreJobUtil(@Named("xxhash32") DigestAlgorithmProvider digestAlgorithmProvider)
     {
-        this.hasherProvider = hasherProvider;
+        this.digestAlgorithmProvider = digestAlgorithmProvider;
     }
 
     /**
@@ -211,15 +211,15 @@ public class RestoreJobUtil
     {
         try (FileInputStream fis = new FileInputStream(file))
         {
-            try (Hasher hasher = hasherProvider.get(seed))
+            try (DigestAlgorithm digestAlgorithm = digestAlgorithmProvider.get(seed))
             {
                 byte[] buffer = new byte[KB_512];
                 int len;
                 while ((len = fis.read(buffer)) != -1)
                 {
-                    hasher.update(buffer, 0, len);
+                    digestAlgorithm.update(buffer, 0, len);
                 }
-                return hasher.checksum();
+                return digestAlgorithm.digest();
             }
         }
     }

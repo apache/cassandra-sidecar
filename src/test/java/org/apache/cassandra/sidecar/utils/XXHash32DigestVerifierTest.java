@@ -58,7 +58,7 @@ class XXHash32DigestVerifierTest
     {
         vertx = Vertx.vertx();
 
-        restoreJobUtil = new RestoreJobUtil(new Lz4XXHash32Provider());
+        restoreJobUtil = new RestoreJobUtil(new XXHash32Provider());
 
         randomFilePath = TestFileUtils.prepareTestFile(tempDir, "random-file.txt", 1024);
     }
@@ -138,7 +138,7 @@ class XXHash32DigestVerifierTest
 
         public ExposeAsyncFileXXHash32DigestVerifier(FileSystem fs, XXHash32Digest digest)
         {
-            super(fs, digest, new Lz4XXHash32Provider.Lz4XXHash32(maybeGetSeedOrDefault(digest)));
+            super(fs, digest, new XXHash32Provider.Lz4XXHash32(maybeGetSeedOrDefault(digest)));
         }
 
         @Override

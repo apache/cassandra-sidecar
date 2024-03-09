@@ -25,10 +25,10 @@ import java.util.Base64;
 /**
  * Provides the MD5 implementation from JDK
  */
-public class JdkMd5DigestProvider implements HasherProvider
+public class JdkMd5DigestProvider implements DigestAlgorithmProvider
 {
     @Override
-    public Hasher get(int seed)
+    public DigestAlgorithm get(int seed)
     {
         return new JdkMD5Digest();
     }
@@ -36,7 +36,7 @@ public class JdkMd5DigestProvider implements HasherProvider
     /**
      * MD5 implementation from JDK
      */
-    public static class JdkMD5Digest implements Hasher
+    public static class JdkMD5Digest implements DigestAlgorithm
     {
         private final MessageDigest md5;
 
@@ -59,7 +59,7 @@ public class JdkMd5DigestProvider implements HasherProvider
         }
 
         @Override
-        public String checksum()
+        public String digest()
         {
             return Base64.getEncoder().encodeToString(md5.digest());
         }

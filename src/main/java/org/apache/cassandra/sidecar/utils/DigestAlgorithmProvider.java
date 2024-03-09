@@ -18,26 +18,22 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.io.Closeable;
-
 /**
- * Abstraction of hash algorithm
+ * Provides a digest algorithm implementation
  */
-public interface Hasher extends Closeable
+public interface DigestAlgorithmProvider
 {
     /**
-     * Updates the value of the hash with buf[off:off+len].
-     *
-     * @param buf the input data
-     * @param off the start offset in buf
-     * @param len the number of bytes to hash
+     * @return a new digest algorithm instance with default seed 0
      */
-    void update(byte[] buf, int off, int len);
+    default DigestAlgorithm get()
+    {
+        return get(0);
+    }
 
     /**
-     * Returns the value of the checksum.
-     *
-     * @return the checksum
+     * @param seed seed for digest algorithm
+     * @return a new digest algorithm instance with the provided seed
      */
-    String checksum();
+    DigestAlgorithm get(int seed);
 }

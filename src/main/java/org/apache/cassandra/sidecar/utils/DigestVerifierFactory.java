@@ -39,8 +39,8 @@ public class DigestVerifierFactory
     @VisibleForTesting
     static final DigestVerifier FALLBACK_VERIFIER = Future::succeededFuture;
     private final FileSystem fs;
-    private final HasherProvider xxhash32;
-    private final HasherProvider md5;
+    private final DigestAlgorithmProvider xxhash32;
+    private final DigestAlgorithmProvider md5;
 
     /**
      * Constructs a new factory with a list of hash algorithms it supports
@@ -51,8 +51,8 @@ public class DigestVerifierFactory
      */
     @Inject
     public DigestVerifierFactory(Vertx vertx,
-                                 @Named("xxhash32") HasherProvider xxhash32,
-                                 @Named("md5") HasherProvider md5)
+                                 @Named("xxhash32") DigestAlgorithmProvider xxhash32,
+                                 @Named("md5") DigestAlgorithmProvider md5)
     {
         this.fs = vertx.fileSystem();
         this.xxhash32 = xxhash32;

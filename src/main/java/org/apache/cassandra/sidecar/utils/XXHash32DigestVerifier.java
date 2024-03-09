@@ -32,16 +32,18 @@ import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CO
  */
 public class XXHash32DigestVerifier extends AsyncFileDigestVerifier<XXHash32Digest>
 {
-    protected XXHash32DigestVerifier(@NotNull FileSystem fs, @NotNull XXHash32Digest digest, @NotNull Hasher hasher)
+    protected XXHash32DigestVerifier(@NotNull FileSystem fs, @NotNull XXHash32Digest digest,
+                                     @NotNull DigestAlgorithm digestAlgorithm)
     {
-        super(fs, digest, hasher);
+        super(fs, digest, digestAlgorithm);
     }
 
-    public static XXHash32DigestVerifier create(FileSystem fs, MultiMap headers, HasherProvider hasherProvider)
+    public static XXHash32DigestVerifier create(FileSystem fs, MultiMap headers,
+                                                DigestAlgorithmProvider digestAlgorithmProvider)
     {
         XXHash32Digest digest = new XXHash32Digest(headers.get(CONTENT_XXHASH32), headers.get(CONTENT_XXHASH32_SEED));
-        Hasher hasher = hasherProvider.get(maybeGetSeedOrDefault(digest));
-        return new XXHash32DigestVerifier(fs, digest, hasher);
+        DigestAlgorithm digestAlgorithm = digestAlgorithmProvider.get(maybeGetSeedOrDefault(digest));
+        return new XXHash32DigestVerifier(fs, digest, digestAlgorithm);
     }
 
     protected static int maybeGetSeedOrDefault(XXHash32Digest digest)

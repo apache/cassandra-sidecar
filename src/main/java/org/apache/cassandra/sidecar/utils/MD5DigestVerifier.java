@@ -30,14 +30,16 @@ import org.jetbrains.annotations.NotNull;
  */
 public class MD5DigestVerifier extends AsyncFileDigestVerifier<MD5Digest>
 {
-    protected MD5DigestVerifier(@NotNull FileSystem fs, @NotNull MD5Digest digest, @NotNull Hasher hasher)
+    protected MD5DigestVerifier(@NotNull FileSystem fs, @NotNull MD5Digest digest,
+                                @NotNull DigestAlgorithm digestAlgorithm)
     {
-        super(fs, digest, hasher);
+        super(fs, digest, digestAlgorithm);
     }
 
-    public static DigestVerifier create(FileSystem fs, MultiMap headers, HasherProvider hasherProvider)
+    public static DigestVerifier create(FileSystem fs, MultiMap headers,
+                                        DigestAlgorithmProvider digestAlgorithmProvider)
     {
         MD5Digest md5Digest = new MD5Digest(headers.get(HttpHeaderNames.CONTENT_MD5.toString()));
-        return new MD5DigestVerifier(fs, md5Digest, hasherProvider.get());
+        return new MD5DigestVerifier(fs, md5Digest, digestAlgorithmProvider.get());
     }
 }

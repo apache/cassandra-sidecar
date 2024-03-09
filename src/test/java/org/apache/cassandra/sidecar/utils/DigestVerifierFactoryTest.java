@@ -88,6 +88,6 @@ class DigestVerifierFactoryTest
 
     private DigestVerifierFactory newFactory()
     {
-        return new DigestVerifierFactory(vertx, new Lz4XXHash32Provider(), new JdkMd5DigestProvider());
+        return new DigestVerifierFactory(vertx, new XXHash32Provider(), new JdkMd5DigestProvider());
     }
 }

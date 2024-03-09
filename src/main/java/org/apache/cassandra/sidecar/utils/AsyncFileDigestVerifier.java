@@ -47,13 +47,13 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
     protected final FileSystem fs;
     protected final D digest;
-    private final Hasher hasher;
+    private final DigestAlgorithm digestAlgorithm;
 
-    protected AsyncFileDigestVerifier(FileSystem fs, D digest, Hasher hasher)
+    protected AsyncFileDigestVerifier(FileSystem fs, D digest, DigestAlgorithm digestAlgorithm)
     {
         this.fs = fs;
         this.digest = Objects.requireNonNull(digest, "digest is required");
-        this.hasher = hasher;
+        this.digestAlgorithm = digestAlgorithm;
     }
 
     /**
@@ -96,18 +96,18 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
         readFile(asyncFile, result,
                  buf -> {
                      byte[] bytes = buf.getBytes();
-                     hasher.update(bytes, 0, bytes.length);
+                     digestAlgorithm.update(bytes, 0, bytes.length);
                  },
                  onReadComplete -> {
-                     result.complete(hasher.checksum());
+                     result.complete(digestAlgorithm.digest());
                      try
                      {
-                         hasher.close();
+                         digestAlgorithm.close();
                      }
                      catch (IOException e)
                      {
                          logger.warn("Potential memory leak due to failed to close hasher {}",
-                                     hasher.getClass().getSimpleName());
+                                     digestAlgorithm.getClass().getSimpleName());
                      }
                  });
 

@@ -98,10 +98,10 @@ import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.stats.SidecarSchemaStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
-import org.apache.cassandra.sidecar.utils.HasherProvider;
+import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
 import org.apache.cassandra.sidecar.utils.JdkMd5DigestProvider;
-import org.apache.cassandra.sidecar.utils.Lz4XXHash32Provider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
+import org.apache.cassandra.sidecar.utils.XXHash32Provider;
 
 import static org.apache.cassandra.sidecar.common.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -516,15 +516,15 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     @Named("xxhash32")
-    public HasherProvider xxHash32Provider()
+    public DigestAlgorithmProvider xxHash32Provider()
     {
-        return new Lz4XXHash32Provider();
+        return new XXHash32Provider();
     }
 
     @Provides
     @Singleton
     @Named("md5")
-    public HasherProvider md5Provider()
+    public DigestAlgorithmProvider md5Provider()
     {
         return new JdkMd5DigestProvider();
     }
