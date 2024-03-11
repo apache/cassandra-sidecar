@@ -19,8 +19,8 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -209,7 +209,7 @@ public class RestoreJobUtil
      */
     public String checksum(File file, int seed) throws IOException
     {
-        try (FileInputStream fis = new FileInputStream(file))
+        try (InputStream fis = Files.newInputStream(file.toPath()))
         {
             try (DigestAlgorithm digestAlgorithm = digestAlgorithmProvider.get(seed))
             {
