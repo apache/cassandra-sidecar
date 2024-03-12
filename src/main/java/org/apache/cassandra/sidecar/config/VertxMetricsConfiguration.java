@@ -36,10 +36,10 @@ public interface VertxMetricsConfiguration
     String registryName();
 
     /**
-     * @return boolean indicating whether JMX metrics capture is enabled in Vert.x. If enabled JMX metrics
+     * @return boolean indicating whether Vert.x metrics will be exposed via JMX. If enabled JMX metrics
      * exposed by Vert.x are registered via configured {@link com.codahale.metrics.MetricRegistry}.
      */
-    boolean jmxEnabled();
+    boolean exposeViaJMX();
 
     /**
      * @return JMX domain to be used when JMX metrics are enabled for Vert.x.

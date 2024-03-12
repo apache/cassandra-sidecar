@@ -46,13 +46,13 @@ public class InstanceMetricRegistry extends MetricRegistry
      * A factory for creating instance specific {@link MetricRegistry} provided an instance id.
      */
     @Singleton
-    public static class Factory
+    public static class RegistryFactory
     {
         private final MetricRegistryNameFactory nameFactory;
         private final InstancesConfig instancesConfig;
 
         @Inject
-        public Factory(MetricRegistryNameFactory nameFactory, InstancesConfig instancesConfig)
+        public RegistryFactory(MetricRegistryNameFactory nameFactory, InstancesConfig instancesConfig)
         {
             this.nameFactory = nameFactory;
             this.instancesConfig = instancesConfig;

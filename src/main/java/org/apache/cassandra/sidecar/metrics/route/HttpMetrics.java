@@ -50,9 +50,9 @@ public class HttpMetrics
         this.route = Objects.requireNonNull(route, "Route required for tagging metrics related to route");
 
         requests
-        = metricRegistry.counter(new MetricName(FEATURE, "requests", "route=" + route).toString());
+        = metricRegistry.counter(new MetricName(FEATURE, "requests", new MetricName.Tag("route", route)).toString());
         responseTime
-        = metricRegistry.timer(new MetricName(FEATURE, "response_time", "route=" + route).toString());
+        = metricRegistry.timer(new MetricName(FEATURE, "response_time", new MetricName.Tag("route", route)).toString());
     }
 
     public String route()

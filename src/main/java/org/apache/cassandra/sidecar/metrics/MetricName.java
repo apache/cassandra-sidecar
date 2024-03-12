@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Representation of a metric name.
@@ -30,15 +31,15 @@ import java.util.Set;
 public class MetricName
 {
     private final String feature;
-    private final  String name;
-    private final Set<String> tags;
+    private final String name;
+    private final Set<Tag> tags;
 
     public MetricName(String feature, String name)
     {
         this(feature, name, Collections.emptySet());
     }
 
-    public MetricName(String feature, String name, String... tags)
+    public MetricName(String feature, String name, Tag... tags)
     {
         this(feature, name, new HashSet<>(Arrays.asList(tags)));
     }
@@ -51,7 +52,7 @@ public class MetricName
      * @param tags additional name tags optionally added to metric name for more clarity. Tags are usually like,
      *             component=data, route=/stream/component, etc.
      */
-    public MetricName(String feature, String name, Set<String> tags)
+    public MetricName(String feature, String name, Set<Tag> tags)
     {
         this.feature = Objects.requireNonNull(feature, "Feature can not be null");
         this.name = Objects.requireNonNull(name, "Name can not be null");
@@ -72,7 +73,7 @@ public class MetricName
      * component=data, route=/stream/component, etc.
      * @return a set containing additional metric name tags
      */
-    public Set<String> tags()
+    public Set<Tag> tags()
     {
         return tags;
     }
@@ -90,7 +91,37 @@ public class MetricName
     public String toString()
     {
         String featurePart = feature + ".";
-        String combinedTags = tags != null && !tags.isEmpty() ? String.join(".", tags) + "." : "";
+        String combinedTags = tags != null && !tags.isEmpty() ? combineTags() + "." : "";
         return featurePart + combinedTags + name;
+    }
+
+    private String combineTags()
+    {
+        return tags.stream().map(tag -> tag.key + "=" + tag.value).collect(Collectors.joining("."));
+    }
+
+    /**
+     * Used for tagging {@link MetricName} for additional context.
+     */
+    public static class Tag
+    {
+        private final String key;
+        private final String value;
+
+        public Tag(String key, String value)
+        {
+            this.key = Objects.requireNonNull(key, "Key can not be null");
+            this.value = Objects.requireNonNull(value, "Value can not be null");
+        }
+
+        public String key()
+        {
+            return key;
+        }
+
+        public String value()
+        {
+            return value;
+        }
     }
 }

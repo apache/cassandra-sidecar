@@ -147,9 +147,10 @@ metrics:
   vertx:
     enabled: true
     registry_name: cassandra_sidecar
-    jmx_enabled: false
+    expose_via_jmx: false
     jmx_domain_name: sidecar.vertx.jmx_domain
-    monitored_server_route_regexes: /api/v1/*      # list of regexes for matching server routes
+    monitored_server_route_regexes:               # list of regexes for matching server routes
+     - /api/v1/*
 
 cassandra_input_validation:
   forbidden_keyspaces:

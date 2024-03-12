@@ -153,7 +153,7 @@ public class MainModule extends AbstractModule
         VertxMetricsConfiguration metricsConfig = sidecarConfiguration.metricsConfiguration().vertxConfiguration();
         DropwizardMetricsOptions dropwizardMetricsOptions
         = new DropwizardMetricsOptions().setEnabled(metricsConfig.enabled())
-                                        .setJmxEnabled(metricsConfig.jmxEnabled())
+                                        .setJmxEnabled(metricsConfig.exposeViaJMX())
                                         .setJmxDomain(metricsConfig.jmxDomainName())
                                         .setRegistryName(metricsConfig.registryName());
         for (String regex : metricsConfig.monitoredServerRouteRegexes())
@@ -548,7 +548,7 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     public InstanceMetricProvider instanceMetricProvider(InstancesConfig instancesConfig,
-                                                         InstanceMetricRegistry.Factory instanceMetricRegistryFactory)
+                                                         InstanceMetricRegistry.RegistryFactory instanceMetricRegistryFactory)
     {
         return new InstanceMetricProviderImpl(instancesConfig, instanceMetricRegistryFactory);
     }

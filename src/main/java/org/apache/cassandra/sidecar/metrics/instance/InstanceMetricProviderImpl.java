@@ -32,10 +32,10 @@ public class InstanceMetricProviderImpl implements InstanceMetricProvider
     protected final Map<Integer, InstanceMetrics> idToMetrics = new ConcurrentHashMap<>();
     protected final Map<String, InstanceMetrics> hostToMetrics = new ConcurrentHashMap<>();
     protected final InstancesConfig instancesConfig;
-    protected final InstanceMetricRegistry.Factory instanceMetricRegistryFactory;
+    protected final InstanceMetricRegistry.RegistryFactory instanceMetricRegistryFactory;
 
     public InstanceMetricProviderImpl(InstancesConfig instancesConfig,
-                                      InstanceMetricRegistry.Factory instanceMetricRegistryFactory)
+                                      InstanceMetricRegistry.RegistryFactory instanceMetricRegistryFactory)
     {
         this.instancesConfig = instancesConfig;
         this.instanceMetricRegistryFactory = instanceMetricRegistryFactory;

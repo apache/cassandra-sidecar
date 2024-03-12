@@ -108,8 +108,11 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.bodyAsString()).isEqualTo("data");
-                  assertHttpMetricsRecorded();
-                  context.completeNow();
+                  // wait until the metric gets recorded
+                  vertx.setTimer(100, t -> {
+                      assertHttpMetricsRecorded();
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -295,8 +298,11 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.bodyAsString()).isEqualTo("data");
-                  assertHttpMetricsRecorded();
-                  context.completeNow();
+                  // wait until the metric gets recorded
+                  vertx.setTimer(100, t -> {
+                      assertHttpMetricsRecorded();
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -357,8 +363,11 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.bodyAsString()).isEqualTo("data");
-                  assertHttpMetricsRecorded();
-                  context.completeNow();
+                  // wait until the metric gets recorded
+                  vertx.setTimer(100, t -> {
+                      assertHttpMetricsRecorded();
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -374,8 +383,11 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
                   assertThat(response.bodyAsString()).isEqualTo("dat");
-                  assertHttpMetricsRecorded();
-                  context.completeNow();
+                  // wait until the metric gets recorded
+                  vertx.setTimer(100, t -> {
+                      assertHttpMetricsRecorded();
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -391,8 +403,11 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
                   assertThat(response.bodyAsString()).isEqualTo("ta");
-                  assertHttpMetricsRecorded();
-                  context.completeNow();
+                  // wait until the metric gets recorded
+                  vertx.setTimer(100, t -> {
+                      assertHttpMetricsRecorded();
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -409,8 +424,11 @@ public class StreamSSTableComponentHandlerTest
                   assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
                   .describedAs("Server should shrink the range to the file length")
                   .isEqualTo("4");
-                  assertHttpMetricsRecorded();
-                  context.completeNow();
+                  // wait until the metric gets recorded
+                  vertx.setTimer(100, t -> {
+                      assertHttpMetricsRecorded();
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -440,8 +458,11 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.bodyAsString()).isEqualTo("data");
-                  assertHttpMetricsRecorded();
-                  context.completeNow();
+                  // wait until the metric gets recorded
+                  vertx.setTimer(100, t -> {
+                      assertHttpMetricsRecorded();
+                      context.completeNow();
+                  });
               })));
     }
 

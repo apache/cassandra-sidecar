@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.metrics.instance;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 import org.apache.cassandra.sidecar.metrics.MetricName;
@@ -54,13 +53,15 @@ public class StreamSSTableComponentMetrics
         rateLimitedCalls
         = instanceMetricRegistry.meter(new MetricName(FEATURE,
                                                       "rate_limited_calls_429",
-                                                      "component=" + sstableComponent).toString());
-        timeTakenForSendFile = instanceMetricRegistry.timer(new MetricName(FEATURE,
-                                                                           "time_taken_for_sendfile",
-                                                                           "component=" + sstableComponent).toString());
-        waitTimeSent = instanceMetricRegistry.timer(new MetricName(FEATURE,
-                                                                   "429_wait_time",
-                                                                   "component=" + sstableComponent).toString());
+                                                      new MetricName.Tag("component", sstableComponent)).toString());
+        timeTakenForSendFile
+        = instanceMetricRegistry.timer(new MetricName(FEATURE,
+                                                      "time_taken_for_sendfile",
+                                                      new MetricName.Tag("component", sstableComponent)).toString());
+        waitTimeSent
+        = instanceMetricRegistry.timer(new MetricName(FEATURE,
+                                                      "429_wait_time",
+                                                      new MetricName.Tag("component", sstableComponent)).toString());
     }
 
     public String sstableComponent()

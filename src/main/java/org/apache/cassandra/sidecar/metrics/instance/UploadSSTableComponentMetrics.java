@@ -48,12 +48,14 @@ public class UploadSSTableComponentMetrics
             throw new IllegalArgumentException("SSTableComponent required for component specific metrics capture");
         }
 
-        rateLimitedCalls = instanceMetricRegistry.meter(new MetricName(FEATURE,
-                                                                       "rate_limited_calls_429",
-                                                                       "component=" + sstableComponent).toString());
-        diskUsageHighErrors = instanceMetricRegistry.meter(new MetricName(FEATURE,
-                                                                          "disk_usage_high_errors",
-                                                                          "component=" + sstableComponent).toString());
+        rateLimitedCalls
+        = instanceMetricRegistry.meter(new MetricName(FEATURE,
+                                                      "rate_limited_calls_429",
+                                                      new MetricName.Tag("component", sstableComponent)).toString());
+        diskUsageHighErrors
+        = instanceMetricRegistry.meter(new MetricName(FEATURE,
+                                                      "disk_usage_high_errors",
+                                                      new MetricName.Tag("component", sstableComponent)).toString());
     }
 
     public String sstableComponent()

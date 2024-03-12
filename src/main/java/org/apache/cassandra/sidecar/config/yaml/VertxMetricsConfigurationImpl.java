@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.Collections;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 
@@ -28,41 +31,41 @@ public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
 {
     public static final boolean DEFAULT_ENABLED = true;
     public static final String DEFAULT_DROPWIZARD_REGISTRY_NAME = "cassandra_sidecar";
-    public static final boolean DEFAULT_JMX_ENABLED = true;
+    public static final boolean DEFAULT_EXPOSE_VIA_JMX = false;
     public static final String DEFAULT_JMX_DOMAIN_NAME = "sidecar.vertx.jmx_domain";
-    public static final String DEFAULT_MONITORED_SERVER_ROUTES_REGEX = "/api/v1/*";
+    public static final List<String> DEFAULT_MONITORED_SERVER_ROUTE_REGEXES = Collections.singletonList("/api/v1/*");
 
     @JsonProperty(value = "enabled")
     protected final boolean enabled;
     @JsonProperty(value = "registry_name")
     protected final String registryName;
-    @JsonProperty(value = "jmx_enabled")
-    protected final boolean jmxEnabled;
+    @JsonProperty(value = "expose_via_jmx")
+    protected final boolean exposeViaJMX;
     @JsonProperty(value = "jmx_domain_name")
     protected final String jmxDomainName;
-    @JsonProperty(value = "monitored_server_routes_regex")
-    protected final String monitoredServerRoutesRegex;
+    @JsonProperty(value = "monitored_server_route_regexes")
+    protected final List<String> monitoredServerRouteRegexes;
 
     public VertxMetricsConfigurationImpl()
     {
         this(DEFAULT_ENABLED,
              DEFAULT_DROPWIZARD_REGISTRY_NAME,
-             DEFAULT_JMX_ENABLED,
+             DEFAULT_EXPOSE_VIA_JMX,
              DEFAULT_JMX_DOMAIN_NAME,
-             DEFAULT_MONITORED_SERVER_ROUTES_REGEX);
+             DEFAULT_MONITORED_SERVER_ROUTE_REGEXES);
     }
 
     public VertxMetricsConfigurationImpl(boolean enabled,
                                          String registryName,
-                                         boolean jmxEnabled,
+                                         boolean exposeViaJMX,
                                          String jmxDomainName,
-                                         String monitoredServerRoutesRegex)
+                                         List<String> monitoredServerRouteRegexes)
     {
         this.enabled = enabled;
         this.registryName = registryName;
-        this.jmxEnabled = jmxEnabled;
+        this.exposeViaJMX = exposeViaJMX;
         this.jmxDomainName = jmxDomainName;
-        this.monitoredServerRoutesRegex = monitoredServerRoutesRegex;
+        this.monitoredServerRouteRegexes = monitoredServerRouteRegexes;
     }
 
     /**
@@ -87,9 +90,9 @@ public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
      * {@inheritDoc}
      */
     @Override
-    public boolean jmxEnabled()
+    public boolean exposeViaJMX()
     {
-        return jmxEnabled;
+        return exposeViaJMX;
     }
 
     /**
@@ -105,8 +108,8 @@ public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
      * {@inheritDoc}
      */
     @Override
-    public String monitoredServerRoutesRegex()
+    public List<String> monitoredServerRouteRegexes()
     {
-        return monitoredServerRoutesRegex;
+        return monitoredServerRouteRegexes;
     }
 }
