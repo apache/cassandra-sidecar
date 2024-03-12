@@ -548,9 +548,9 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     public InstanceMetricProvider instanceMetricProvider(InstancesConfig instancesConfig,
-                                                         InstanceMetricRegistry.RegistryFactory instanceMetricRegistryFactory)
+                                                         InstanceMetricRegistry.RegistryFactory instanceRegistryFactory)
     {
-        return new InstanceMetricProviderImpl(instancesConfig, instanceMetricRegistryFactory);
+        return new InstanceMetricProviderImpl(instancesConfig, instanceRegistryFactory);
     }
 
     /**
