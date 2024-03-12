@@ -37,6 +37,9 @@ import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricProvider;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableComponentMetrics;
 import org.apache.cassandra.sidecar.models.HttpResponse;
 import org.apache.cassandra.sidecar.stats.SSTableStats;
 import org.apache.cassandra.sidecar.stats.SidecarStats;
@@ -44,6 +47,7 @@ import org.apache.cassandra.sidecar.stats.SidecarStats;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
 import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
+import static org.apache.cassandra.sidecar.utils.MetricUtils.sstableExtension;
 
 /**
  * General handler for serving files
@@ -57,17 +61,20 @@ public class FileStreamer
     private final ThrottleConfiguration config;
     private final SidecarRateLimiter rateLimiter;
     private final SSTableStats stats;
+    private final InstanceMetricProvider instanceMetricProvider;
 
     @Inject
     public FileStreamer(ExecutorPools executorPools,
                         ServiceConfiguration config,
                         @Named("StreamRequestRateLimiter") SidecarRateLimiter rateLimiter,
-                        SidecarStats stats)
+                        SidecarStats stats,
+                        InstanceMetricProvider instanceMetricProvider)
     {
         this.executorPools = executorPools;
         this.config = config.throttleConfiguration();
         this.rateLimiter = rateLimiter;
         this.stats = stats.ssTableStats();
+        this.instanceMetricProvider = instanceMetricProvider;
     }
 
     /**
@@ -75,15 +82,17 @@ public class FileStreamer
      * {@code rangeHeader} using the provided {@code response}.
      *
      * @param response    the response to use
+     * @param instanceId  Cassandra instance from which file is streamed
      * @param filename    the path to the file to serve
      * @param fileLength  the size of the file to serve
      * @param rangeHeader (optional) a string representing the requested range for the file
      * @return a future with the result of the streaming
      */
-    public Future<Void> stream(HttpResponse response, String filename, long fileLength, String rangeHeader)
+    public Future<Void> stream(HttpResponse response, int instanceId, String filename,
+                               long fileLength, String rangeHeader)
     {
         return parseRangeHeader(rangeHeader, fileLength)
-               .compose(range -> stream(response, filename, fileLength, range));
+               .compose(range -> stream(response, instanceId, filename, fileLength, range));
     }
 
     /**
@@ -91,15 +100,16 @@ public class FileStreamer
      * {@code range} using the provided {@code response}.
      *
      * @param response   the response to use
+     * @param instanceId  Cassandra instance from which file is streamed
      * @param filename   the path to the file to serve
      * @param fileLength the size of the file to serve
      * @param range      the range to stream
      * @return a future with the result of the streaming
      */
-    public Future<Void> stream(HttpResponse response, String filename, long fileLength, HttpRange range)
+    public Future<Void> stream(HttpResponse response, int instanceId, String filename, long fileLength, HttpRange range)
     {
         Promise<Void> promise = Promise.promise();
-        acquireAndSend(response, filename, fileLength, range, Instant.now(), promise);
+        acquireAndSend(response, instanceId, filename, fileLength, range, Instant.now(), promise);
         return promise.future();
     }
 
@@ -108,6 +118,7 @@ public class FileStreamer
      * {@link SidecarRateLimiter}.
      *
      * @param response   the response to use
+     * @param instanceId  Cassandra instance from which file is streamed
      * @param filename   the path to the file to serve
      * @param fileLength the size of the file to serve
      * @param range      the range to stream
@@ -115,20 +126,27 @@ public class FileStreamer
      * @param promise    a promise for the stream
      */
     private void acquireAndSend(HttpResponse response,
+                                int instanceId,
                                 String filename,
                                 long fileLength,
                                 HttpRange range,
                                 Instant startTime,
                                 Promise<Void> promise)
     {
-        if (acquire(response, filename, fileLength, range, startTime, promise))
+        InstanceMetrics instanceMetrics = instanceMetricProvider.metrics(instanceId);
+        String component = sstableExtension(filename);
+        StreamSSTableComponentMetrics componentMetrics = instanceMetrics.forStreamComponent(component);
+        if (acquire(response, instanceId, filename, fileLength, range, startTime, componentMetrics, promise))
         {
             // Stream data if rate limiting is disabled or if we acquire
             LOGGER.debug("Streaming range {} for file {} to client {}. Instance: {}", range, filename,
                          response.remoteAddress(), response.host());
+            long startTimeSendFile = System.nanoTime();
             response.sendFile(filename, fileLength, range)
                     .onSuccess(v ->
                                {
+                                   long d = System.nanoTime() - startTimeSendFile;
+                                   componentMetrics.recordTimeTakenForSendFile(d, TimeUnit.NANOSECONDS);
                                    LOGGER.debug("Streamed file {} successfully to client {}. Instance: {}", filename,
                                                 response.remoteAddress(), response.host());
                                    stats.onBytesStreamed(fileLength);
@@ -144,6 +162,7 @@ public class FileStreamer
      * retry timeout, in which case it will ask the client to retry later in the future.
      *
      * @param response   the response to use
+     * @param instanceId  Cassandra instance from which file is streamed
      * @param filename   the path to the file to serve
      * @param fileLength the size of the file to serve
      * @param range      the range to stream
@@ -151,8 +170,8 @@ public class FileStreamer
      * @param promise    a promise for the stream
      * @return {@code true} if the permit was acquired, {@code false} otherwise
      */
-    private boolean acquire(HttpResponse response, String filename, long fileLength, HttpRange range, Instant startTime,
-                            Promise<Void> promise)
+    private boolean acquire(HttpResponse response, int instanceId, String filename, long fileLength, HttpRange range,
+                            Instant startTime, StreamSSTableComponentMetrics componentMetrics, Promise<Void> promise)
     {
         if (rateLimiter.tryAcquire())
             return true;
@@ -173,13 +192,16 @@ public class FileStreamer
                          response.remoteAddress(), response.host());
             executorPools.service()
                          .setTimer(MICROSECONDS.toMillis(microsToWait),
-                                   t -> acquireAndSend(response, filename, fileLength, range, startTime, promise));
+                                   t -> acquireAndSend(response, instanceId, filename, fileLength, range,
+                                                       startTime, promise));
         }
         else
         {
             LOGGER.debug("Asking client {} to retry after {} micros. Instance: {}", response.remoteAddress(),
                          microsToWait, response.host());
             response.setRetryAfterHeader(microsToWait);
+            componentMetrics.recordRateLimitedCall();
+            componentMetrics.recordWaitTimeSent(microsToWait, MICROSECONDS);
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Ask client to retry later"));
         }
         return false;

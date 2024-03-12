@@ -23,10 +23,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import com.codahale.metrics.Gauge;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
@@ -39,8 +41,11 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.metrics.ServerMetrics;
 import org.mockito.stubbing.Answer;
 
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.getMetric;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -71,7 +76,14 @@ class HealthCheckPeriodicTaskTest
 
         Vertx vertx = Vertx.vertx();
         ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
-        healthCheck = new HealthCheckPeriodicTask(vertx, mockConfiguration, mockInstancesConfig, executorPools);
+        healthCheck = new HealthCheckPeriodicTask(vertx, mockConfiguration, mockInstancesConfig,
+                                                  executorPools, new ServerMetrics(registry()));
+    }
+
+    @AfterEach
+    void cleanup()
+    {
+        registry().removeMatching((name, metric) -> true);
     }
 
     @Test
@@ -89,7 +101,11 @@ class HealthCheckPeriodicTaskTest
         when(mockInstancesConfig.instances()).thenReturn(mockInstanceMetadata);
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
-        promise.future().onComplete(context.succeedingThenComplete());
+        promise.future().onComplete(context.succeeding(v -> {
+            assertThat(getMetric("sidecar.server.instances_up", Gauge.class).getValue()).isEqualTo(0);
+            assertThat(getMetric("sidecar.server.instances_down", Gauge.class).getValue()).isEqualTo(0);
+            context.completeNow();
+        }));
     }
 
     @Test
@@ -102,7 +118,11 @@ class HealthCheckPeriodicTaskTest
         when(mockInstancesConfig.instances()).thenReturn(mockInstanceMetadata);
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
-        promise.future().onComplete(context.succeedingThenComplete());
+        promise.future().onComplete(context.succeeding(v -> {
+            assertThat(getMetric("sidecar.server.instances_up", Gauge.class).getValue()).isEqualTo(5);
+            assertThat(getMetric("sidecar.server.instances_down", Gauge.class).getValue()).isEqualTo(0);
+            context.completeNow();
+        }));
     }
 
     @Test
@@ -118,7 +138,11 @@ class HealthCheckPeriodicTaskTest
         when(mockInstancesConfig.instances()).thenReturn(mockInstanceMetadata);
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
-        promise.future().onComplete(context.failingThenComplete());
+        promise.future().onComplete(context.failing(v -> {
+            assertThat(getMetric("sidecar.server.instances_up", Gauge.class).getValue()).isEqualTo(5);
+            assertThat(getMetric("sidecar.server.instances_down", Gauge.class).getValue()).isEqualTo(1);
+            context.completeNow();
+        }));
     }
 
     @Test
@@ -136,7 +160,11 @@ class HealthCheckPeriodicTaskTest
         when(mockInstancesConfig.instances()).thenReturn(mockInstanceMetadata);
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
-        promise.future().onComplete(context.succeedingThenComplete());
+        promise.future().onComplete(context.succeeding(v -> {
+            assertThat(getMetric("sidecar.server.instances_up", Gauge.class).getValue()).isEqualTo(5);
+            assertThat(getMetric("sidecar.server.instances_down", Gauge.class).getValue()).isEqualTo(1);
+            context.completeNow();
+        }));
     }
 
     private List<InstanceMetadata> buildMockInstanceMetadata(Checkpoint healthCheckCheckPoint, int numberOfInstances)

@@ -29,6 +29,8 @@ import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SharedMetricRegistries;
 import com.datastax.driver.core.NettyOptions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -39,6 +41,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
+import io.vertx.ext.dropwizard.Match;
+import io.vertx.ext.dropwizard.MatchType;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.ErrorHandler;
@@ -65,17 +69,24 @@ import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricProvider;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricProviderImpl;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricRegistry;
+import org.apache.cassandra.sidecar.metrics.route.HttpMetricProvider;
+import org.apache.cassandra.sidecar.metrics.route.MeteredEndpoints;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.GossipInfoHandler;
 import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
+import org.apache.cassandra.sidecar.routes.MeteredHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
@@ -137,12 +148,19 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Vertx vertx()
+    public Vertx vertx(SidecarConfiguration sidecarConfiguration)
     {
-        return Vertx.vertx(new VertxOptions().setMetricsOptions(new DropwizardMetricsOptions()
-                                                                .setEnabled(true)
-                                                                .setJmxEnabled(true)
-                                                                .setJmxDomain("cassandra-sidecar-metrics")));
+        VertxMetricsConfiguration metricsConfig = sidecarConfiguration.metricsConfiguration().vertxConfiguration();
+        DropwizardMetricsOptions dropwizardMetricsOptions
+        = new DropwizardMetricsOptions().setEnabled(metricsConfig.enabled())
+                                        .setJmxEnabled(metricsConfig.jmxEnabled())
+                                        .setJmxDomain(metricsConfig.jmxDomainName())
+                                        .setRegistryName(metricsConfig.registryName());
+        for (String regex : metricsConfig.monitoredServerRouteRegexes())
+        {
+            dropwizardMetricsOptions.addMonitoredHttpServerRoute(new Match().setType(MatchType.REGEX).setValue(regex));
+        }
+        return Vertx.vertx(new VertxOptions().setMetricsOptions(dropwizardMetricsOptions));
     }
 
     @Provides
@@ -171,7 +189,8 @@ public class MainModule extends AbstractModule
                               UpdateRestoreJobHandler updateRestoreJobHandler,
                               AbortRestoreJobHandler abortRestoreJobHandler,
                               CreateRestoreSliceHandler createRestoreSliceHandler,
-                              ErrorHandler errorHandler)
+                              ErrorHandler errorHandler,
+                              HttpMetricProvider httpMetricProvider)
     {
         Router router = Router.router(vertx);
         router.route()
@@ -209,15 +228,18 @@ public class MainModule extends AbstractModule
 
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_COMPONENTS_ROUTE)
+              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.STREAM_SSTABLE_COMPONENT_ROUTE)))
               .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
         router.get(ApiEndpointsV1.COMPONENTS_ROUTE)
+              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.STREAM_SSTABLE_COMPONENT_ROUTE)))
               .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
         // Support for routes that want to stream SStable index components
         router.get(ApiEndpointsV1.COMPONENTS_WITH_SECONDARY_INDEX_ROUTE_SUPPORT)
+              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.STREAM_SSTABLE_COMPONENT_ROUTE)))
               .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
@@ -253,6 +275,7 @@ public class MainModule extends AbstractModule
               .handler(ringHandler);
 
         router.put(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE)
+              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.SSTABLE_UPLOAD_ROUTE)))
               .handler(ssTableUploadHandler);
 
         router.get(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE)
@@ -275,30 +298,35 @@ public class MainModule extends AbstractModule
 
         router.post(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE)
               .handler(BodyHandler.create())
+              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.CREATE_RESTORE_ROUTE)))
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(createRestoreJobHandler);
 
         router.post(ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE)
               .handler(BodyHandler.create())
+              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.CREATE_RESTORE_SLICE_ROUTE)))
               .handler(diskSpaceProtection) // reject creating slice if short of disk space
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(createRestoreSliceHandler);
 
         router.get(ApiEndpointsV1.RESTORE_JOB_ROUTE)
+              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.RESTORE_SUMMARY_ROUTE)))
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(restoreJobSummaryHandler);
 
         router.patch(ApiEndpointsV1.RESTORE_JOB_ROUTE)
               .handler(BodyHandler.create())
+              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.RESTORE_UPDATE_ROUTE)))
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(updateRestoreJobHandler);
 
         // we don't expect users to send body for abort requests, hence we don't use BodyHandler
         router.post(ApiEndpointsV1.ABORT_RESTORE_JOB_ROUTE)
+              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.RESTORE_ABORT_ROUTE)))
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(abortRestoreJobHandler);
@@ -508,6 +536,21 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
         return new SidecarSchema(vertx, executorPools, configuration,
                                  stats, sidecarInternalKeyspace, cqlSessionProvider);
+    }
+
+    @Provides
+    @Singleton
+    public MetricRegistry globalMetricRegistry(SidecarConfiguration sidecarConfiguration)
+    {
+        return SharedMetricRegistries.getOrCreate(sidecarConfiguration.metricsConfiguration().registryName());
+    }
+
+    @Provides
+    @Singleton
+    public InstanceMetricProvider instanceMetricProvider(InstancesConfig instancesConfig,
+                                                         InstanceMetricRegistry.Factory instanceMetricRegistryFactory)
+    {
+        return new InstanceMetricProviderImpl(instancesConfig, instanceMetricRegistryFactory);
     }
 
     /**

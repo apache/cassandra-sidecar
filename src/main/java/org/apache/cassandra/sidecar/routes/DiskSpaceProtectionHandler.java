@@ -28,6 +28,8 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.exceptions.InsufficientStorageException;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricProvider;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -42,6 +44,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
 {
     private final ServiceConfiguration config;
+    private final InstanceMetricProvider metricProvider;
 
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -54,10 +57,12 @@ public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
     protected DiskSpaceProtectionHandler(ServiceConfiguration config,
                                          InstanceMetadataFetcher metadataFetcher,
                                          ExecutorPools executorPools,
-                                         CassandraInputValidator validator)
+                                         CassandraInputValidator validator,
+                                         InstanceMetricProvider metricProvider)
     {
         super(metadataFetcher, executorPools, validator);
         this.config = config;
+        this.metricProvider = metricProvider;
     }
 
     @Override
@@ -68,6 +73,7 @@ public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
                                   Void request)
     {
         InstanceMetadata instance = metadataFetcher.instance(host);
+        InstanceMetrics metrics = metricProvider.metrics(instance.id());
         String stagingDir = instance.stagingDir();
         if (stagingDir == null)
         {
@@ -99,6 +105,7 @@ public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
         .onFailure(throwable -> {
             if (throwable instanceof InsufficientStorageException)
             {
+                metrics.resource().recordInsufficientStorageError();
                 InsufficientStorageException exception = (InsufficientStorageException) throwable;
                 throwable = wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                               exception.getMessage(),

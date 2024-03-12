@@ -52,6 +52,7 @@ import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.metrics.ServerMetrics;
 import org.apache.cassandra.sidecar.tasks.HealthCheckPeriodicTask;
 import org.apache.cassandra.sidecar.tasks.KeyStoreCheckPeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
@@ -75,6 +76,7 @@ public class Server
     protected final Router router;
     protected final PeriodicTaskExecutor periodicTaskExecutor;
     protected final HttpServerOptionsProvider optionsProvider;
+    protected final ServerMetrics serverMetrics;
     protected final List<ServerVerticle> deployedServerVerticles = new CopyOnWriteArrayList<>();
     // Keeps track of all the Cassandra instance identifiers where CQL is ready
     private final Set<Integer> cqlReadyInstanceIds = Collections.synchronizedSet(new HashSet<>());
@@ -86,7 +88,8 @@ public class Server
                   InstancesConfig instancesConfig,
                   ExecutorPools executorPools,
                   PeriodicTaskExecutor periodicTaskExecutor,
-                  HttpServerOptionsProvider optionsProvider)
+                  HttpServerOptionsProvider optionsProvider,
+                  ServerMetrics serverMetrics)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -95,6 +98,7 @@ public class Server
         this.router = router;
         this.periodicTaskExecutor = periodicTaskExecutor;
         this.optionsProvider = optionsProvider;
+        this.serverMetrics = serverMetrics;
     }
 
     /**
@@ -274,7 +278,8 @@ public class Server
         periodicTaskExecutor.schedule(new HealthCheckPeriodicTask(vertx,
                                                                   sidecarConfiguration,
                                                                   instancesConfig,
-                                                                  executorPools));
+                                                                  executorPools,
+                                                                  serverMetrics));
         maybeScheduleKeyStoreCheckPeriodicTask();
 
         MessageConsumer<JsonObject> cqlReadyConsumer = vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address());

@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.tasks;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -31,6 +32,7 @@ import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.metrics.ServerMetrics;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_START;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -45,16 +47,19 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     private final SidecarConfiguration configuration;
     private final InstancesConfig instancesConfig;
     private final ExecutorPools.TaskExecutorPool internalPool;
+    private final ServerMetrics serverMetrics;
 
     public HealthCheckPeriodicTask(Vertx vertx,
                                    SidecarConfiguration configuration,
                                    InstancesConfig instancesConfig,
-                                   ExecutorPools executorPools)
+                                   ExecutorPools executorPools,
+                                   ServerMetrics serverMetrics)
     {
         eventBus = vertx.eventBus();
         this.configuration = configuration;
         this.instancesConfig = instancesConfig;
         internalPool = executorPools.internal();
+        this.serverMetrics = serverMetrics;
     }
 
     @Override
@@ -82,6 +87,7 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     @Override
     public void execute(Promise<Void> promise)
     {
+        AtomicInteger instanceDown = new AtomicInteger(0);
         List<Future<?>> futures = instancesConfig.instances()
                                                  .stream()
                                                  .map(instanceMetadata -> internalPool.executeBlocking(p -> {
@@ -92,6 +98,7 @@ public class HealthCheckPeriodicTask implements PeriodicTask
                                                      }
                                                      catch (Throwable cause)
                                                      {
+                                                         instanceDown.incrementAndGet();
                                                          p.fail(cause);
                                                          LOGGER.error("Unable to complete health check on instance={}",
                                                                       instanceMetadata.id(), cause);
@@ -101,6 +108,10 @@ public class HealthCheckPeriodicTask implements PeriodicTask
 
         // join always waits until all its futures are completed and will not fail as soon as one of the future fails
         Future.join(futures)
+              .onComplete(v -> {
+                  serverMetrics.recordInstanceUp(instancesConfig.instances().size() - instanceDown.get());
+                  serverMetrics.recordInstancesDown(instanceDown.get());
+              })
               .onSuccess(v -> promise.complete())
               .onFailure(promise::fail);
     }
