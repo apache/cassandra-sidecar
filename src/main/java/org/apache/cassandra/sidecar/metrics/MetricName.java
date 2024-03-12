@@ -49,7 +49,7 @@ public class MetricName
      *
      * @param feature feature for which metric is captured
      * @param name metric name
-     * @param tags additional name tags optionally added to metric name for more clarity. Tags are usually like,
+     * @param tags additional name tags optionally added to metric name for more clarity. Tags are usually added like,
      *             component=data, route=/stream/component, etc.
      */
     public MetricName(String feature, String name, Set<Tag> tags)
@@ -69,7 +69,7 @@ public class MetricName
     }
 
     /**
-     * If applicable, additional name tags added to metric name for more clarity. Tags are usually like,
+     * If applicable, additional name tags added to metric name for more clarity. Tags are usually added like,
      * component=data, route=/stream/component, etc.
      * @return a set containing additional metric name tags
      */

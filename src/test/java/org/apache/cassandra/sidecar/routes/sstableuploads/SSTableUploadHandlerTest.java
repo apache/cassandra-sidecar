@@ -417,7 +417,6 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                 "; actual: " + httpResponse.statusCode());
                 return;
             }
-            assertThat(httpResponse.statusCode()).isEqualTo(expectedRetCode);
             if (expectedRetCode == HttpResponseStatus.INSUFFICIENT_STORAGE.code())
             {
                 assertThat(getMetric(1, "sidecar.instance.upload.component=db.disk_usage_high_errors", Meter.class)

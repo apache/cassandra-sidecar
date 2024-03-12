@@ -235,6 +235,9 @@ class SidecarConfigurationTest
         // health check configuration
         validateHealthCheckConfigurationFromYaml(config.healthCheckConfiguration());
 
+        // metrics configuration
+        validateMetricsConfiguration(config.metricsConfiguration());
+
         // cassandra input validation configuration
         validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
     }
@@ -299,6 +302,9 @@ class SidecarConfigurationTest
 
         // health check configuration
         validateHealthCheckConfigurationFromYaml(config.healthCheckConfiguration());
+
+        // metrics configuration
+        validateMetricsConfiguration(config.metricsConfiguration());
 
         // cassandra input validation configuration
         validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
@@ -384,6 +390,12 @@ class SidecarConfigurationTest
                                                    "TLS_RSA_WITH_AES_128_GCM_SHA256",
                                                    "TLS_RSA_WITH_AES_128_CBC_SHA",
                                                    "TLS_RSA_WITH_AES_256_CBC_SHA");
+    }
+
+    void validateMetricsConfiguration(MetricsConfiguration config)
+    {
+        assertThat(config.vertxConfiguration()).isNotNull();
+        assertThat(config.vertxConfiguration().monitoredServerRouteRegexes()).isNotNull();
     }
 
     private Path yaml(String resourceName)
