@@ -31,13 +31,13 @@ public interface InstanceMetrics
     InstanceResourceMetrics resource();
 
     /**
-     * @param component SSTable component such as data
+     * @param component     SSTable component such as data
      * @return metrics that are tracked during streaming of provided SSTable component
      */
     StreamSSTableComponentMetrics forStreamComponent(String component);
 
     /**
-     * @param component SSTable component such as data
+     * @param component     SSTable component such as data
      * @return metrics that are tracked during upload of provided SSTable component
      */
     UploadSSTableComponentMetrics forUploadComponent(String component);

@@ -47,10 +47,10 @@ public class MetricName
     /**
      * Constructs a new instance of {@link MetricName} with given parameters.
      *
-     * @param feature feature for which metric is captured
-     * @param name metric name
-     * @param tags additional name tags optionally added to metric name for more clarity. Tags are usually added like,
-     *             component=data, route=/stream/component, etc.
+     * @param feature   feature for which metric is captured
+     * @param name      metric name
+     * @param tags      additional name tags optionally added to metric name for more clarity. Tags are usually added
+     *                  like, component=data, route=/stream/component, etc.
      */
     public MetricName(String feature, String name, Set<Tag> tags)
     {

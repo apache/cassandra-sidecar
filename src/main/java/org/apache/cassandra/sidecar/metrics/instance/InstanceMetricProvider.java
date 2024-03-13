@@ -24,14 +24,13 @@ package org.apache.cassandra.sidecar.metrics.instance;
 public interface InstanceMetricProvider
 {
     /**
-     *
-     * @param instanceId Cassandra instance id
+     * @param instanceId    Cassandra instance id
      * @return {@link InstanceMetrics} associated with provided Cassandra instance id
      */
     InstanceMetrics metrics(int instanceId);
 
     /**
-     * @param host Cassandra instance host name
+     * @param host          Cassandra instance host name
      * @return {@link InstanceMetrics} associated with provided Cassandra instance host name
      */
     InstanceMetrics metrics(String host);

@@ -47,7 +47,7 @@ public class ServerMetrics
                                                       () -> new DefaultSettableGauge<>(0));
     }
 
-    public void recordInstanceUp(int count)
+    public void recordInstancesUp(int count)
     {
         cassandraInstancesUp.setValue(count);
     }
