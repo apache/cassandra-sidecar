@@ -240,7 +240,6 @@ public class RestoreSlice
             return RestoreSliceTask.failed(RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
                                                                                  this, null), this);
 
-
         try
         {
             StorageClient s3Client = s3ClientPool.storageClient(job());

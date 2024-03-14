@@ -59,7 +59,7 @@ public class RestoreJobUtil
     private static final int RESTORE_JOB_PREFIX_LEN = RESTORE_JOB_PREFIX.length();
     private static final int RESTORE_JOB_DEFAULT_HASH_SEED = 0;
 
-    private DigestAlgorithmProvider digestAlgorithmProvider;
+    private final DigestAlgorithmProvider digestAlgorithmProvider;
 
     @Inject
     public RestoreJobUtil(@Named("xxhash32") DigestAlgorithmProvider digestAlgorithmProvider)
@@ -222,5 +222,13 @@ public class RestoreJobUtil
                 return digestAlgorithm.digest();
             }
         }
+    }
+
+    /**
+     * @return the current time in nanoseconds
+     */
+    public long currentTimeNanos()
+    {
+        return System.nanoTime();
     }
 }

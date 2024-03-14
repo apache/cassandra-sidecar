@@ -23,11 +23,17 @@ import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 
 /**
- * A handler that somehow processes a restore slice
+ * A handler that processes a restore slice
  */
 public interface RestoreSliceHandler extends Handler<Promise<RestoreSlice>>
 {
+    /**
+     * @return slice the handler processes
+     */
     RestoreSlice slice();
 
-    long getDuration();
+    /**
+     * @return the elapsed time in nanoseconds if the task has started processing, -1 otherwise
+     */
+    long elapsedInNanos();
 }

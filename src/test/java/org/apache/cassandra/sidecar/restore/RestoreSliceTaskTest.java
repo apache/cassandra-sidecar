@@ -310,8 +310,10 @@ class RestoreSliceTaskTest
         RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, "QUORUM");
         AtomicLong currentNanos = new AtomicLong(0);
         RestoreSliceTask task = createTask(mockSlice, job, currentNanos::get);
+        Promise<RestoreSlice> promise = Promise.promise();
+        task.handle(promise); // Task isn't considered started until it `handle` is called
         currentNanos.set(123L);
-        assertThat(task.getDuration()).isEqualTo(123L);
+        assertThat(task.elapsedInNanos()).isEqualTo(123L);
     }
 
     private RestoreSliceTask createTask(RestoreSlice slice, RestoreJob job)
@@ -325,8 +327,10 @@ class RestoreSliceTaskTest
         assertThat(slice.job()).isSameAs(job);
         assertThat(slice.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
         assertThat(slice.job().status).isEqualTo(job.status);
+        RestoreJobUtil util = mock(RestoreJobUtil.class);
+        when(util.currentTimeNanos()).thenAnswer(invok -> currentNanoTimeSupplier.get());
         return new TestRestoreSliceTask(slice, mockStorageClient, executorPool, mockSSTableImporter,
-                                        0, sliceDatabaseAccessor, stats, currentNanoTimeSupplier);
+                                        0, sliceDatabaseAccessor, stats, util);
     }
 
     private RestoreSliceTask createTaskWithExceptions(RestoreSlice slice, RestoreJob job)
@@ -364,10 +368,10 @@ class RestoreSliceTaskTest
         public TestRestoreSliceTask(RestoreSlice slice, StorageClient s3Client, TaskExecutorPool executorPool,
                                     SSTableImporter importer, double requiredUsableSpacePercentage,
                                     RestoreSliceDatabaseAccessor sliceDatabaseAccessor, RestoreJobStats stats,
-                                    Supplier<Long> currentNanoTimeSupplier)
+                                    RestoreJobUtil restoreJobUtil)
         {
             super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage,
-                  sliceDatabaseAccessor, stats, null, currentNanoTimeSupplier);
+                  sliceDatabaseAccessor, stats, restoreJobUtil);
             this.slice = slice;
             this.stats = stats;
         }

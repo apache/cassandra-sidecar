@@ -194,7 +194,7 @@ class RestoreProcessorTest
             Long handlerTimeInNanos = stats.longRunningRestoreHandlers.get(slice.owner().id());
             assertThat(handlerTimeInNanos).isNotNull();
             assertThat(handlerTimeInNanos).isEqualTo(fiveMinutesInNanos);
-            assertThat(processor.activeHandlers()).isOne();
+            assertThat(processor.activeTasks()).isOne();
         });
 
         // Make slice completable.
@@ -202,7 +202,7 @@ class RestoreProcessorTest
 
         // Make sure when the slice completes the active handler is removed
         loopAssert(3, () -> {
-            assertThat(processor.activeHandlers()).isZero();
+            assertThat(processor.activeTasks()).isZero();
         });
     }
 
@@ -232,7 +232,7 @@ class RestoreProcessorTest
                 promise.complete(slice);
             }
 
-            public long getDuration()
+            public long elapsedInNanos()
             {
                 return timeInNanosSupplier.get() - startTime;
             }
