@@ -107,7 +107,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                                 slice.compressedSize() + slice.uncompressedSize(),
                                 requiredUsableSpacePercentage,
                                 executorPool)
-        .onSuccess(ignored -> {
+        .map(v -> {
             RestoreJob job = slice.job();
             if (job.isManagedBySidecar())
             {
@@ -120,7 +120,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                         slice.completeStagePhase(); // update the flag if missed
                         sliceDatabaseAccessor.updateStatus(slice);
                         event.tryComplete(slice);
-                        return;
+                        return null;
                     }
 
                     // 1. check object existence and validate eTag / checksum
@@ -128,7 +128,13 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                     // 2. download slice/object when the remote object exists
                     .thenCompose(headObject -> downloadSlice(event))
                     // 3. persist status
-                    .thenAccept(x -> {
+                    .whenComplete((x, cause) -> {
+                        if (cause != null)
+                        {
+                            // handle unexpected errors thrown during download slice call, that do not close event
+                            event.tryFail(RestoreJobExceptions.ofSlice(cause.getMessage(), slice, cause));
+                            return;
+                        }
                         slice.completeStagePhase();
                         sliceDatabaseAccessor.updateStatus(slice);
                         // completed staging. A new task is produced when it comes to import
@@ -154,10 +160,10 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
             {
                 downloadSliceAndImport(event);
             }
+            return null;
         })
         .onFailure(cause -> {
-            String msg = "Unable to ensure enough space for the slice. Retry later";
-            event.tryFail(RestoreJobExceptions.ofSlice(msg, slice, cause));
+            event.tryFail(RestoreJobExceptions.ofSlice(cause.getMessage(), slice, cause));
         });
     }
 
@@ -168,7 +174,13 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
         // 2. download slice/object when the remote object exists
         .thenCompose(headObject -> downloadSlice(event))
         // 3. unzip the file and import/commit
-        .thenAccept(file -> unzipAndImport(event, file));
+        .thenAccept(file -> unzipAndImport(event, file))
+        .whenComplete((x, cause) -> {
+            if (cause != null)
+            {
+                event.tryFail(RestoreJobExceptions.ofSlice(cause.getMessage(), slice, cause));
+            }
+        });
     }
 
     private CompletableFuture<?> checkObjectExistence(Promise<RestoreSlice> event)
