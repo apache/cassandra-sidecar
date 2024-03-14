@@ -31,11 +31,6 @@ public interface VertxMetricsConfiguration
     boolean enabled();
 
     /**
-     * @return registry name to be used for registering Vert.x metrics
-     */
-    String registryName();
-
-    /**
      * @return boolean indicating whether Vert.x metrics will be exposed via JMX
      */
     boolean exposeViaJMX();

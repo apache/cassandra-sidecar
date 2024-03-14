@@ -30,15 +30,12 @@ import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
 {
     public static final boolean DEFAULT_ENABLED = true;
-    public static final String DEFAULT_DROPWIZARD_REGISTRY_NAME = "cassandra_sidecar";
     public static final boolean DEFAULT_EXPOSE_VIA_JMX = false;
     public static final String DEFAULT_JMX_DOMAIN_NAME = "sidecar.vertx.jmx_domain";
     public static final List<String> DEFAULT_MONITORED_SERVER_ROUTE_REGEXES = Collections.singletonList("/api/v1/*");
 
     @JsonProperty(value = "enabled")
     protected final boolean enabled;
-    @JsonProperty(value = "registry_name")
-    protected final String registryName;
     @JsonProperty(value = "expose_via_jmx")
     protected final boolean exposeViaJMX;
     @JsonProperty(value = "jmx_domain_name")
@@ -49,20 +46,17 @@ public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
     public VertxMetricsConfigurationImpl()
     {
         this(DEFAULT_ENABLED,
-             DEFAULT_DROPWIZARD_REGISTRY_NAME,
              DEFAULT_EXPOSE_VIA_JMX,
              DEFAULT_JMX_DOMAIN_NAME,
              DEFAULT_MONITORED_SERVER_ROUTE_REGEXES);
     }
 
     public VertxMetricsConfigurationImpl(boolean enabled,
-                                         String registryName,
                                          boolean exposeViaJMX,
                                          String jmxDomainName,
                                          List<String> monitoredServerRouteRegexes)
     {
         this.enabled = enabled;
-        this.registryName = registryName;
         this.exposeViaJMX = exposeViaJMX;
         this.jmxDomainName = jmxDomainName;
         this.monitoredServerRouteRegexes = monitoredServerRouteRegexes;
@@ -75,15 +69,6 @@ public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
     public boolean enabled()
     {
         return enabled;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String registryName()
-    {
-        return registryName;
     }
 
     /**
