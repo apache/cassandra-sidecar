@@ -70,8 +70,8 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
                  .compose(computedDigest -> {
                      if (!computedDigest.equals(digest.value()))
                      {
-                         logger.error("Digest mismatch. computed_digest={}, expected_digest={}, algorithm=MD5",
-                                      computedDigest, digest.value());
+                         logger.error("Digest mismatch. computed_digest={}, expected_digest={}, algorithm={}",
+                                      computedDigest, digest.value(), digest.algorithm());
                          return Future.failedFuture(new HttpException(CHECKSUM_MISMATCH.code(),
                                                                       String.format("Digest mismatch. "
                                                                                     + "expected_digest=%s, "
