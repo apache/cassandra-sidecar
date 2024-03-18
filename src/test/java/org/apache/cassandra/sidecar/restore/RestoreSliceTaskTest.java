@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.datastax.driver.core.utils.UUIDs;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -354,7 +355,7 @@ class RestoreSliceTaskTest
         }
 
         @Override
-        void unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
+        Future<Void> unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
         {
             stats.captureSliceUnzipTime(1, 123L);
             stats.captureSliceValidationTime(1, 123L);
@@ -365,19 +366,18 @@ class RestoreSliceTaskTest
                 onSuccessCommit.run();
             }
             event.tryComplete(slice);
+            return Future.succeededFuture();
         }
 
         @Override
-        void unzipAndImport(Promise<RestoreSlice> event, File file)
+        Future<Void> unzipAndImport(Promise<RestoreSlice> event, File file)
         {
-            unzipAndImport(event, file, null);
+            return unzipAndImport(event, file, null);
         }
     }
 
     static class TestUnexpectedExceptionInRestoreSliceTask extends RestoreSliceTask
     {
-        private final RestoreSlice slice;
-
         public TestUnexpectedExceptionInRestoreSliceTask(RestoreSlice slice, StorageClient s3Client,
                                                          TaskExecutorPool executorPool, SSTableImporter importer,
                                                          double requiredUsableSpacePercentage,
@@ -386,11 +386,10 @@ class RestoreSliceTaskTest
         {
             super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage, sliceDatabaseAccessor, stats,
                   null);
-            this.slice = slice;
         }
 
         @Override
-        void unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
+        Future<Void> unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
         {
             throw new RuntimeException("Random exception");
         }
