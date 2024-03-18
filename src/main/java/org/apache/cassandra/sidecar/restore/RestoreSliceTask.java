@@ -107,7 +107,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                                 slice.compressedSize() + slice.uncompressedSize(),
                                 requiredUsableSpacePercentage,
                                 executorPool)
-        .onSuccess(ignored -> {
+        .compose(v -> {
             RestoreJob job = slice.job();
             if (job.isManagedBySidecar())
             {
@@ -120,55 +120,63 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                         slice.completeStagePhase(); // update the flag if missed
                         sliceDatabaseAccessor.updateStatus(slice);
                         event.tryComplete(slice);
-                        return;
+                        return Future.succeededFuture();
                     }
 
                     // 1. check object existence and validate eTag / checksum
-                    checkObjectExistence(event)
+                    CompletableFuture<Void> fut = checkObjectExistence(event)
                     // 2. download slice/object when the remote object exists
                     .thenCompose(headObject -> downloadSlice(event))
                     // 3. persist status
-                    .thenAccept(x -> {
+                    .thenAccept(file -> {
                         slice.completeStagePhase();
                         sliceDatabaseAccessor.updateStatus(slice);
                         // completed staging. A new task is produced when it comes to import
                         event.tryComplete(slice);
+                    })
+                    .whenComplete((x, cause) -> {
+                        if (cause != null)
+                        {
+                            // handle unexpected errors thrown during download slice call, that do not close event
+                            event.tryFail(RestoreJobExceptions.ofSlice(cause.getMessage(), slice, cause));
+                        }
                     });
+
+                    return Future.fromCompletionStage(fut);
                 }
                 else if (job.status == RestoreJobStatus.STAGED)
                 {
-                    unzipAndImport(event, slice.stagedObjectPath().toFile(),
-                                   // persist status
-                                   () -> sliceDatabaseAccessor.updateStatus(slice));
+                    return unzipAndImport(event, slice.stagedObjectPath().toFile(),
+                                          // persist status
+                                          () -> sliceDatabaseAccessor.updateStatus(slice));
                 }
                 else
                 {
                     String msg = "Unexpected restore job status. Expected only CREATED or STAGED when " +
                                  "processing active slices. Found status: " + job.status;
                     Exception unexpectedState = new IllegalStateException(msg);
-                    event.tryFail(RestoreJobExceptions.ofFatalSlice("Unexpected restore job status",
-                                                                    slice, unexpectedState));
+                    return Future.failedFuture(RestoreJobExceptions.ofFatalSlice("Unexpected restore job status",
+                                                                                 slice, unexpectedState));
                 }
             }
             else
             {
-                downloadSliceAndImport(event);
+                return downloadSliceAndImport(event);
             }
         })
-        .onFailure(cause -> {
-            String msg = "Unable to ensure enough space for the slice. Retry later";
-            event.tryFail(RestoreJobExceptions.ofSlice(msg, slice, cause));
-        });
+        .onSuccess(v -> event.tryComplete(slice))
+        .onFailure(cause -> event.tryFail(RestoreJobExceptions.ofSlice(cause.getMessage(), slice, cause)));
     }
 
-    private void downloadSliceAndImport(Promise<RestoreSlice> event)
+    private Future<Void> downloadSliceAndImport(Promise<RestoreSlice> event)
     {
         // 1. check object existence and validate eTag / checksum
-        checkObjectExistence(event)
+        CompletableFuture<File> fut = checkObjectExistence(event)
         // 2. download slice/object when the remote object exists
-        .thenCompose(headObject -> downloadSlice(event))
+        .thenCompose(headObject -> downloadSlice(event));
         // 3. unzip the file and import/commit
-        .thenAccept(file -> unzipAndImport(event, file));
+        return Future.fromCompletionStage(fut)
+                     .compose(file -> unzipAndImport(event, file));
     }
 
     private CompletableFuture<?> checkObjectExistence(Promise<RestoreSlice> event)
@@ -281,21 +289,21 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
     }
 
     @VisibleForTesting
-    void unzipAndImport(Promise<RestoreSlice> event, File file)
+    Future<Void> unzipAndImport(Promise<RestoreSlice> event, File file)
     {
-        unzipAndImport(event, file, null);
+        return unzipAndImport(event, file, null);
     }
 
-    void unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
+    Future<Void> unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
     {
         if (file == null) // the condition should never happen. Having it here for logic completeness
         {
-            event.tryFail(RestoreJobExceptions.ofFatalSlice("Object not found from disk", slice, null));
-            return;
+            return Future.failedFuture(RestoreJobExceptions.ofFatalSlice("Object not found from disk",
+                                                                         slice, null));
         }
 
         // run the rest in the executor pool, instead of S3 client threadpool
-        unzip(file)
+        return unzip(file)
         .compose(this::validateFiles)
         .compose(this::commit)
         .compose(x -> {
@@ -304,7 +312,7 @@ public class RestoreSliceTask implements Handler<Promise<RestoreSlice>>
                 return Future.succeededFuture();
             }
 
-            return executorPool.executeBlocking(promise -> {
+            return executorPool.<Void>executeBlocking(promise -> {
                 onSuccessCommit.run();
                 promise.tryComplete();
             });

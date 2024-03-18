@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.datastax.driver.core.utils.UUIDs;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -226,6 +227,81 @@ class RestoreSliceTaskTest
         assertThat(sliceDatabaseAccessor.updateInvokedTimes.get()).isOne();
     }
 
+    @Test
+    void testHandlingUnexpectedExceptionInObjectExistsCheck(@TempDir Path testFolder)
+    {
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, "QUORUM");
+        when(mockStorageClient.objectExists(mockSlice)).thenThrow(new RuntimeException("Random exception"));
+        Path stagedPath = testFolder.resolve("slice.zip");
+        when(mockSlice.stagedObjectPath()).thenReturn(stagedPath);
+
+        Promise<RestoreSlice> promise = Promise.promise();
+
+        RestoreSliceTask task = createTask(mockSlice, job);
+        task.handle(promise);
+
+        assertThatThrownBy(() -> getBlocking(promise.future()))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Random exception");
+    }
+
+    @Test
+    void testHandlingUnexpectedExceptionDuringDownloadSliceCheck(@TempDir Path testFolder)
+    {
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, "QUORUM");
+        Path stagedPath = testFolder.resolve("slice.zip");
+        when(mockSlice.stagedObjectPath()).thenReturn(stagedPath);
+        when(mockSlice.isCancelled()).thenReturn(false);
+        when(mockStorageClient.objectExists(mockSlice)).thenReturn(CompletableFuture.completedFuture(null));
+        when(mockStorageClient.downloadObjectIfAbsent(mockSlice)).thenThrow(new RuntimeException("Random exception"));
+
+        Promise<RestoreSlice> promise = Promise.promise();
+
+        RestoreSliceTask task = createTask(mockSlice, job);
+        task.handle(promise);
+
+        assertThatThrownBy(() -> getBlocking(promise.future()))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Random exception");
+    }
+
+    @Test
+    void testHandlingUnexpectedExceptionDuringUnzip(@TempDir Path testFolder) throws IOException
+    {
+
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, "QUORUM");
+        Path stagedPath = testFolder.resolve("slice.zip");
+        Files.createFile(stagedPath);
+        when(mockSlice.stagedObjectPath()).thenReturn(stagedPath);
+        Promise<RestoreSlice> promise = Promise.promise();
+        RestoreSliceTask task = createTaskWithExceptions(mockSlice, job);
+        task.handle(promise);
+
+        assertThatThrownBy(() -> getBlocking(promise.future()))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Random exception");
+    }
+
+    @Test
+    void testHandlingUnexpectedExceptionDuringDownloadAndImport(@TempDir Path testFolder)
+    {
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, null);
+        Path stagedPath = testFolder.resolve("slice.zip");
+        when(mockSlice.stagedObjectPath()).thenReturn(stagedPath);
+        when(mockSlice.isCancelled()).thenReturn(false);
+        when(mockStorageClient.objectExists(mockSlice)).thenReturn(CompletableFuture.completedFuture(null));
+        when(mockStorageClient.downloadObjectIfAbsent(mockSlice)).thenReturn(CompletableFuture.completedFuture(null));
+
+        Promise<RestoreSlice> promise = Promise.promise();
+
+        RestoreSliceTask task = createTaskWithExceptions(mockSlice, job);
+        task.handle(promise);
+
+        assertThatThrownBy(() -> getBlocking(promise.future()))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Random exception");
+    }
+
     private RestoreSliceTask createTask(RestoreSlice slice, RestoreJob job)
     {
         when(slice.job()).thenReturn(job);
@@ -234,6 +310,16 @@ class RestoreSliceTaskTest
         assertThat(slice.job().status).isEqualTo(job.status);
         return new TestRestoreSliceTask(slice, mockStorageClient, executorPool, mockSSTableImporter,
                                         0, sliceDatabaseAccessor, stats);
+    }
+
+    private RestoreSliceTask createTaskWithExceptions(RestoreSlice slice, RestoreJob job)
+    {
+        when(slice.job()).thenReturn(job);
+        assertThat(slice.job()).isSameAs(job);
+        assertThat(slice.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
+        assertThat(slice.job().status).isEqualTo(job.status);
+        return new TestUnexpectedExceptionInRestoreSliceTask(slice, mockStorageClient, executorPool,
+                                                             mockSSTableImporter, 0, sliceDatabaseAccessor, stats);
     }
 
     static class TestRestoreSliceAccessor extends RestoreSliceDatabaseAccessor
@@ -269,7 +355,7 @@ class RestoreSliceTaskTest
         }
 
         @Override
-        void unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
+        Future<Void> unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
         {
             stats.captureSliceUnzipTime(1, 123L);
             stats.captureSliceValidationTime(1, 123L);
@@ -280,12 +366,32 @@ class RestoreSliceTaskTest
                 onSuccessCommit.run();
             }
             event.tryComplete(slice);
+            return Future.succeededFuture();
         }
 
         @Override
-        void unzipAndImport(Promise<RestoreSlice> event, File file)
+        Future<Void> unzipAndImport(Promise<RestoreSlice> event, File file)
         {
-            unzipAndImport(event, file, null);
+            return unzipAndImport(event, file, null);
+        }
+    }
+
+    static class TestUnexpectedExceptionInRestoreSliceTask extends RestoreSliceTask
+    {
+        public TestUnexpectedExceptionInRestoreSliceTask(RestoreSlice slice, StorageClient s3Client,
+                                                         TaskExecutorPool executorPool, SSTableImporter importer,
+                                                         double requiredUsableSpacePercentage,
+                                                         RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
+                                                         RestoreJobStats stats)
+        {
+            super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage, sliceDatabaseAccessor, stats,
+                  null);
+        }
+
+        @Override
+        Future<Void> unzipAndImport(Promise<RestoreSlice> event, File file, Runnable onSuccessCommit)
+        {
+            throw new RuntimeException("Random exception");
         }
     }
 }
