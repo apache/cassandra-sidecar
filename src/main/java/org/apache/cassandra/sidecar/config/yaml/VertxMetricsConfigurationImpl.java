@@ -32,7 +32,7 @@ public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
     public static final boolean DEFAULT_ENABLED = true;
     public static final boolean DEFAULT_EXPOSE_VIA_JMX = false;
     public static final String DEFAULT_JMX_DOMAIN_NAME = "sidecar.vertx.jmx_domain";
-    public static final List<String> DEFAULT_MONITORED_SERVER_ROUTE_REGEXES = Collections.singletonList("/api/v1/*");
+    public static final List<String> DEFAULT_MONITORED_SERVER_ROUTE_REGEXES = Collections.singletonList("/api/v1/.*");
 
     @JsonProperty(value = "enabled")
     protected final boolean enabled;

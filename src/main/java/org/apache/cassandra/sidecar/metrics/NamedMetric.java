@@ -133,9 +133,9 @@ public class NamedMetric<T extends Metric>
 
         private String makeFullName()
         {
-            String featurePart = domain + '.';
+            String domainPart = domain + '.';
             String combinedTags = !tags.isEmpty() ? combineTags() + '.' : "";
-            return featurePart + combinedTags + name;
+            return domainPart + combinedTags + name;
         }
 
         private String combineTags()

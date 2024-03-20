@@ -145,14 +145,14 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Vertx vertx(SidecarConfiguration sidecarConfiguration, MetricRegistry metricRegistry)
+    public Vertx vertx(SidecarConfiguration sidecarConfiguration)
     {
         VertxMetricsConfiguration metricsConfig = sidecarConfiguration.metricsConfiguration().vertxConfiguration();
         DropwizardMetricsOptions dropwizardMetricsOptions
         = new DropwizardMetricsOptions().setEnabled(metricsConfig.enabled())
                                         .setJmxEnabled(metricsConfig.exposeViaJMX())
                                         .setJmxDomain(metricsConfig.jmxDomainName())
-                                        .setMetricRegistry(metricRegistry);
+                                        .setRegistryName(sidecarConfiguration.metricsConfiguration().registryName());
         for (String regex : metricsConfig.monitoredServerRouteRegexes())
         {
             dropwizardMetricsOptions.addMonitoredHttpServerRoute(new Match().setType(MatchType.REGEX).setValue(regex));

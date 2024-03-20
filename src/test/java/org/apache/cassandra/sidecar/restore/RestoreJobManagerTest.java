@@ -36,10 +36,8 @@ import org.junit.jupiter.api.io.TempDir;
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
-import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
@@ -68,7 +66,7 @@ class RestoreJobManagerTest
     @BeforeEach
     void setup()
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
+        Injector injector = Guice.createInjector(new MainModule());
         vertx = injector.getInstance(Vertx.class);
         executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
         RestoreProcessor processor = mock(RestoreProcessor.class);
