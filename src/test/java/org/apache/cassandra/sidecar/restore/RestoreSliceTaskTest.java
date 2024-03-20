@@ -69,6 +69,7 @@ class RestoreSliceTaskTest
     private TaskExecutorPool executorPool;
     private TestRestoreJobStats stats;
     private TestRestoreSliceAccessor sliceDatabaseAccessor;
+    private RestoreJobUtil util;
 
     @BeforeEach
     void setup()
@@ -84,6 +85,7 @@ class RestoreSliceTaskTest
         mockSSTableImporter = mock(SSTableImporter.class);
         executorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
         stats = new TestRestoreJobStats();
+        util = mock(RestoreJobUtil.class);
         sliceDatabaseAccessor = new TestRestoreSliceAccessor();
     }
 
@@ -340,7 +342,7 @@ class RestoreSliceTaskTest
         assertThat(slice.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
         assertThat(slice.job().status).isEqualTo(job.status);
         return new TestUnexpectedExceptionInRestoreSliceTask(slice, mockStorageClient, executorPool,
-                                                             mockSSTableImporter, 0, sliceDatabaseAccessor, stats);
+                                                             mockSSTableImporter, 0, sliceDatabaseAccessor, stats, util);
     }
 
     static class TestRestoreSliceAccessor extends RestoreSliceDatabaseAccessor
@@ -404,10 +406,10 @@ class RestoreSliceTaskTest
                                                          TaskExecutorPool executorPool, SSTableImporter importer,
                                                          double requiredUsableSpacePercentage,
                                                          RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                                                         RestoreJobStats stats)
+                                                         RestoreJobStats stats, RestoreJobUtil util)
         {
             super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage, sliceDatabaseAccessor, stats,
-                  null);
+                  util);
         }
 
         @Override
