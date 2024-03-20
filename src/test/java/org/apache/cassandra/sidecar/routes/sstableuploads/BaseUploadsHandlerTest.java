@@ -240,6 +240,7 @@ class BaseUploadsHandlerTest
             super(Vertx.vertx(), 1, null, null, null, null, null, "localhost", 9043);
         }
 
+        @Override
         protected JmxNotificationListener initializeJmxListener()
         {
             return null;

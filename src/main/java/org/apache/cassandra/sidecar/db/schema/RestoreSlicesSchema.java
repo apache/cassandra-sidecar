@@ -48,6 +48,7 @@ public class RestoreSlicesSchema extends AbstractSchema.TableSchema
         this.tableTtlSeconds = tableTtlSeconds;
     }
 
+    @Override
     protected void prepareStatements(@NotNull Session session)
     {
         insertSlice = prepare(insertSlice, session, CqlLiterals.insertSlice(keyspaceConfig));

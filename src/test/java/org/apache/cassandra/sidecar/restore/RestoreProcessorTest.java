@@ -226,17 +226,20 @@ class RestoreProcessorTest
         {
             private Long startTime = timeInNanosSupplier.get();
 
+            @Override
             public void handle(Promise<RestoreSlice> promise)
             {
                 Uninterruptibles.awaitUninterruptibly(latch);
                 promise.complete(slice);
             }
 
+            @Override
             public long elapsedInNanos()
             {
                 return timeInNanosSupplier.get() - startTime;
             }
 
+            @Override
             public RestoreSlice slice()
             {
                 return slice;

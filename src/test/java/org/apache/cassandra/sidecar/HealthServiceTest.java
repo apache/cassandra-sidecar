@@ -30,6 +30,7 @@ import io.vertx.junit5.VertxExtension;
 @ExtendWith(VertxExtension.class)
 public class HealthServiceTest extends AbstractHealthServiceTest
 {
+    @Override
     public boolean isSslEnabled()
     {
         return false;

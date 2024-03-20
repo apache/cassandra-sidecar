@@ -48,11 +48,13 @@ class SharedExecutorNettyOptions extends NettyOptions
     private final HashedWheelTimer sharedHWT = new HashedWheelTimer(threadFactory);
     private final EventLoopGroup sharedEventLoopGroup = new NioEventLoopGroup(0, threadFactory);
 
+    @Override
     public EventLoopGroup eventLoopGroup(ThreadFactory threadFactory)
     {
         return sharedEventLoopGroup;
     }
 
+    @Override
     public void onClusterClose(EventLoopGroup eventLoopGroup)
     {
     }
@@ -63,6 +65,7 @@ class SharedExecutorNettyOptions extends NettyOptions
         return sharedHWT;
     }
 
+    @Override
     public void onClusterClose(Timer timer)
     {
     }

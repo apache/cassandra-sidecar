@@ -119,6 +119,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
      *
      * @return Session
      */
+    @Override
     @Nullable
     public synchronized Session get()
     {

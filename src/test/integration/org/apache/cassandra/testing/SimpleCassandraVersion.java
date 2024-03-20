@@ -100,6 +100,7 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
     }
 
 
+    @Override
     public int compareTo(SimpleCassandraVersion other)
     {
         if (major < other.major)

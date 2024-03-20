@@ -122,6 +122,7 @@ public class TestRestoreJobStats implements RestoreJobStats
         tokenRefreshCount += 1;
     }
 
+    @Override
     public void captureLongRunningRestoreHandler(int instanceId, long handlerDuration)
     {
         longRunningRestoreHandlers.put(instanceId, handlerDuration);

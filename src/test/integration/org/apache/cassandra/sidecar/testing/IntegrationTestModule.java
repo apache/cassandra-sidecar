@@ -118,6 +118,7 @@ public class IntegrationTestModule extends AbstractModule
          * @return instance meta information
          * @throws NoSuchElementException when the instance with {@code id} does not exist
          */
+        @Override
         public InstanceMetadata instanceFromId(int id) throws NoSuchElementException
         {
             return cassandraTestContext.instancesConfig().instanceFromId(id);
@@ -130,6 +131,7 @@ public class IntegrationTestModule extends AbstractModule
          * @return instance meta information
          * @throws NoSuchElementException when the instance for {@code host} does not exist
          */
+        @Override
         public InstanceMetadata instanceFromHost(String host) throws NoSuchElementException
         {
             return cassandraTestContext.instancesConfig().instanceFromHost(host);

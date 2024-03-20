@@ -533,12 +533,14 @@ public class RestoreSliceTask implements RestoreSliceHandler
                     slice.sliceId(), httpException.getStatusCode(), httpException.getPayload(), httpException);
     }
 
+    @Override
     public long elapsedInNanos()
     {
         return taskStartTimeNanos == -1 ? -1 :
         currentTimeInNanos() - taskStartTimeNanos;
     }
 
+    @Override
     public RestoreSlice slice()
     {
         return slice;
@@ -560,17 +562,20 @@ public class RestoreSliceTask implements RestoreSliceHandler
             this.slice = slice;
         }
 
+        @Override
         public void handle(Promise<RestoreSlice> promise)
         {
             promise.tryFail(cause);
         }
 
+        @Override
         public long elapsedInNanos()
         {
             // it fails immediately
             return 0;
         }
 
+        @Override
         public RestoreSlice slice()
         {
             return slice;

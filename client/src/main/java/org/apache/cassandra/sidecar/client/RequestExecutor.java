@@ -155,6 +155,7 @@ public class RequestExecutor implements AutoCloseable
     /**
      * Closes the underlying HTTP client
      */
+    @Override
     public void close() throws Exception
     {
         httpClient.close();
