@@ -23,14 +23,20 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.VertxMetricsConfigurationImpl;
 import org.assertj.core.api.Condition;
 
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.COMPONENTS_ROUTE;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TIME_SKEW_ROUTE;
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
@@ -204,6 +210,18 @@ class SidecarConfigurationTest
         assertThat(configuration.replicationFactor()).isEqualTo(3);
         assertThat(configuration.createReplicationStrategyString())
         .isEqualTo("{'class':'SimpleStrategy', 'replication_factor':'3'}");
+    }
+
+    @Test
+    void testRoutesAllowedWithDefaultMonitoredRegex()
+    {
+        List<String> defaultMonitoredRegexes = VertxMetricsConfigurationImpl.DEFAULT_MONITORED_SERVER_ROUTE_REGEXES;
+        assertThat(defaultMonitoredRegexes.size()).isOne();
+        Pattern pattern = Pattern.compile(defaultMonitoredRegexes.get(0));
+        assertThat(pattern.matcher(COMPONENTS_ROUTE)).matches();
+        assertThat(pattern.matcher(KEYSPACE_SCHEMA_ROUTE)).matches();
+        assertThat(pattern.matcher(TIME_SKEW_ROUTE)).matches();
+        assertThat(pattern.matcher(RESTORE_JOB_SLICES_ROUTE)).matches();
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
