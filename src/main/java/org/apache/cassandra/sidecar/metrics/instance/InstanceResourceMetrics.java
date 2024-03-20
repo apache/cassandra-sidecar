@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.metrics.instance;
 import java.util.Objects;
 
 import com.codahale.metrics.Meter;
-import org.apache.cassandra.sidecar.metrics.MetricName;
+import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
 
@@ -31,20 +31,18 @@ import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INST
  */
 public class InstanceResourceMetrics
 {
-    public static final String FEATURE = INSTANCE_PREFIX + ".resource";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".resource";
     protected final InstanceMetricRegistry metricRegistry;
-    protected final Meter insufficientStorageErrors;
+    public final Meter insufficientStorageErrors;
 
     public InstanceResourceMetrics(InstanceMetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
         insufficientStorageErrors
-        = metricRegistry.meter(new MetricName(FEATURE, "insufficient_storage_errors").toString());
-    }
-
-    public void recordInsufficientStorageError()
-    {
-        insufficientStorageErrors.mark();
+        = NamedMetric.builder(metricRegistry::meter)
+                     .withDomain(DOMAIN)
+                     .withName("insufficient_storage_errors")
+                     .build().metric;
     }
 }

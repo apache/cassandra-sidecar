@@ -105,7 +105,7 @@ public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
         .onFailure(throwable -> {
             if (throwable instanceof InsufficientStorageException)
             {
-                metrics.resource().recordInsufficientStorageError();
+                metrics.resource().insufficientStorageErrors.mark();
                 InsufficientStorageException exception = (InsufficientStorageException) throwable;
                 throwable = wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                               exception.getMessage(),

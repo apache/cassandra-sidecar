@@ -31,29 +31,25 @@ import com.google.inject.Singleton;
 @Singleton
 public class ServerMetrics
 {
-    public static final String FEATURE = "sidecar.server";
+    public static final String DOMAIN = "sidecar.server";
     protected final MetricRegistry metricRegistry;
-    protected final DefaultSettableGauge<Integer> cassandraInstancesUp;
-    protected final DefaultSettableGauge<Integer> cassandraInstancesDown;
+    public final DefaultSettableGauge<Integer> cassandraInstancesUp;
+    public final DefaultSettableGauge<Integer> cassandraInstancesDown;
 
     @Inject
     public ServerMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "MetricRegistry can not be null");
 
-        cassandraInstancesUp = metricRegistry.gauge(new MetricName(FEATURE, "instances_up").toString(),
-                                                    () -> new DefaultSettableGauge<>(0));
-        cassandraInstancesDown = metricRegistry.gauge(new MetricName(FEATURE, "instances_down").toString(),
-                                                      () -> new DefaultSettableGauge<>(0));
-    }
-
-    public void recordInstancesUp(int count)
-    {
-        cassandraInstancesUp.setValue(count);
-    }
-
-    public void recordInstancesDown(int count)
-    {
-        cassandraInstancesDown.setValue(count);
+        cassandraInstancesUp =
+        NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                   .withDomain(DOMAIN)
+                   .withName("instances_up")
+                   .build().metric;
+        cassandraInstancesDown =
+        NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                   .withDomain(DOMAIN)
+                   .withName("instances_down")
+                   .build().metric;
     }
 }

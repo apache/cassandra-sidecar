@@ -109,8 +109,9 @@ public class HealthCheckPeriodicTask implements PeriodicTask
         // join always waits until all its futures are completed and will not fail as soon as one of the future fails
         Future.join(futures)
               .onComplete(v -> {
-                  serverMetrics.recordInstancesUp(instancesConfig.instances().size() - instanceDown.get());
-                  serverMetrics.recordInstancesDown(instanceDown.get());
+                  int instancesUp = instancesConfig.instances().size() - instanceDown.get();
+                  serverMetrics.cassandraInstancesUp.setValue(instancesUp);
+                  serverMetrics.cassandraInstancesDown.setValue(instanceDown.get());
               })
               .onSuccess(v -> promise.complete())
               .onFailure(promise::fail);

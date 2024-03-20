@@ -19,11 +19,10 @@
 package org.apache.cassandra.sidecar.metrics.instance;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
-import org.apache.cassandra.sidecar.metrics.MetricName;
+import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
 
@@ -32,12 +31,12 @@ import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INST
  */
 public class StreamSSTableComponentMetrics
 {
-    public static final String FEATURE = INSTANCE_PREFIX + ".stream";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".stream";
     protected final InstanceMetricRegistry instanceMetricRegistry;
-    protected final String sstableComponent;
-    protected final Meter rateLimitedCalls;
-    protected final Timer timeTakenForSendFile;
-    protected final Timer waitTimeSent;
+    public final String sstableComponent;
+    public final Meter rateLimitedCalls;
+    public final Timer timeTakenForSendFile;
+    public final Timer waitTimeSent;
 
     public StreamSSTableComponentMetrics(InstanceMetricRegistry instanceMetricRegistry,
                                          String sstableComponent)
@@ -50,37 +49,25 @@ public class StreamSSTableComponentMetrics
             throw new IllegalArgumentException("SSTableComponent required for component specific metrics capture");
         }
 
+        NamedMetric.Tag componentTag = NamedMetric.Tag.of("component", sstableComponent);
+
         rateLimitedCalls
-        = instanceMetricRegistry.meter(new MetricName(FEATURE,
-                                                      "rate_limited_calls_429",
-                                                      new MetricName.Tag("component", sstableComponent)).toString());
+        = NamedMetric.builder(instanceMetricRegistry::meter)
+                     .withDomain(DOMAIN)
+                     .withName("rate_limited_calls_429")
+                     .addTag(componentTag)
+                     .build().metric;
         timeTakenForSendFile
-        = instanceMetricRegistry.timer(new MetricName(FEATURE,
-                                                      "time_taken_for_sendfile",
-                                                      new MetricName.Tag("component", sstableComponent)).toString());
+        = NamedMetric.builder(instanceMetricRegistry::timer)
+                     .withDomain(DOMAIN)
+                     .withName("time_taken_for_sendfile")
+                     .addTag(componentTag)
+                     .build().metric;
         waitTimeSent
-        = instanceMetricRegistry.timer(new MetricName(FEATURE,
-                                                      "429_wait_time",
-                                                      new MetricName.Tag("component", sstableComponent)).toString());
-    }
-
-    public String sstableComponent()
-    {
-        return sstableComponent;
-    }
-
-    public void recordRateLimitedCall()
-    {
-        rateLimitedCalls.mark();
-    }
-
-    public void recordTimeTakenForSendFile(long duration, TimeUnit unit)
-    {
-        timeTakenForSendFile.update(duration, unit);
-    }
-
-    public void recordWaitTimeSent(long duration, TimeUnit unit)
-    {
-        waitTimeSent.update(duration, unit);
+        = NamedMetric.builder(instanceMetricRegistry::timer)
+                     .withDomain(DOMAIN)
+                     .withName("429_wait_time")
+                     .addTag(componentTag)
+                     .build().metric;
     }
 }

@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.metrics.instance;
 import java.util.Objects;
 
 import com.codahale.metrics.Meter;
-import org.apache.cassandra.sidecar.metrics.MetricName;
+import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
 
@@ -30,11 +30,11 @@ import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INST
  */
 public class UploadSSTableComponentMetrics
 {
-    public static final String FEATURE = INSTANCE_PREFIX + ".upload";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".upload";
     protected final InstanceMetricRegistry instanceMetricRegistry;
-    protected final String sstableComponent;
-    protected final Meter rateLimitedCalls;
-    protected final Meter diskUsageHighErrors;
+    public final String sstableComponent;
+    public final Meter rateLimitedCalls;
+    public final Meter diskUsageHighErrors;
 
     public UploadSSTableComponentMetrics(InstanceMetricRegistry instanceMetricRegistry,
                                          String sstableComponent)
@@ -48,28 +48,19 @@ public class UploadSSTableComponentMetrics
             throw new IllegalArgumentException("SSTableComponent required for component specific metrics capture");
         }
 
+        NamedMetric.Tag componentTag = NamedMetric.Tag.of("component", sstableComponent);
+
         rateLimitedCalls
-        = instanceMetricRegistry.meter(new MetricName(FEATURE,
-                                                      "rate_limited_calls_429",
-                                                      new MetricName.Tag("component", sstableComponent)).toString());
+        = NamedMetric.builder(instanceMetricRegistry::meter)
+                     .withDomain(DOMAIN)
+                     .withName("rate_limited_calls_429")
+                     .addTag(componentTag)
+                     .build().metric;
         diskUsageHighErrors
-        = instanceMetricRegistry.meter(new MetricName(FEATURE,
-                                                      "disk_usage_high_errors",
-                                                      new MetricName.Tag("component", sstableComponent)).toString());
-    }
-
-    public String sstableComponent()
-    {
-        return sstableComponent;
-    }
-
-    public void recordRateLimitedCall()
-    {
-        rateLimitedCalls.mark();
-    }
-
-    public void recordDiskUsageHighError()
-    {
-        diskUsageHighErrors.mark();
+        = NamedMetric.builder(instanceMetricRegistry::meter)
+                     .withDomain(DOMAIN)
+                     .withName("disk_usage_high_errors")
+                     .addTag(componentTag)
+                     .build().metric;
     }
 }

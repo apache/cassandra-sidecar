@@ -79,14 +79,11 @@ import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricProvider;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricProviderImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricRegistry;
-import org.apache.cassandra.sidecar.metrics.route.HttpMetricProvider;
-import org.apache.cassandra.sidecar.metrics.route.MeteredEndpoints;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.GossipInfoHandler;
 import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
-import org.apache.cassandra.sidecar.routes.MeteredHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
@@ -189,8 +186,7 @@ public class MainModule extends AbstractModule
                               UpdateRestoreJobHandler updateRestoreJobHandler,
                               AbortRestoreJobHandler abortRestoreJobHandler,
                               CreateRestoreSliceHandler createRestoreSliceHandler,
-                              ErrorHandler errorHandler,
-                              HttpMetricProvider httpMetricProvider)
+                              ErrorHandler errorHandler)
     {
         Router router = Router.router(vertx);
         router.route()
@@ -228,18 +224,15 @@ public class MainModule extends AbstractModule
 
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_COMPONENTS_ROUTE)
-              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.STREAM_SSTABLE_COMPONENT_ROUTE)))
               .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
         router.get(ApiEndpointsV1.COMPONENTS_ROUTE)
-              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.STREAM_SSTABLE_COMPONENT_ROUTE)))
               .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
         // Support for routes that want to stream SStable index components
         router.get(ApiEndpointsV1.COMPONENTS_WITH_SECONDARY_INDEX_ROUTE_SUPPORT)
-              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.STREAM_SSTABLE_COMPONENT_ROUTE)))
               .handler(streamSSTableComponentHandler)
               .handler(fileStreamHandler);
 
@@ -275,7 +268,6 @@ public class MainModule extends AbstractModule
               .handler(ringHandler);
 
         router.put(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE)
-              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.SSTABLE_UPLOAD_ROUTE)))
               .handler(ssTableUploadHandler);
 
         router.get(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE)
@@ -298,35 +290,30 @@ public class MainModule extends AbstractModule
 
         router.post(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE)
               .handler(BodyHandler.create())
-              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.CREATE_RESTORE_ROUTE)))
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(createRestoreJobHandler);
 
         router.post(ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE)
               .handler(BodyHandler.create())
-              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.CREATE_RESTORE_SLICE_ROUTE)))
               .handler(diskSpaceProtection) // reject creating slice if short of disk space
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(createRestoreSliceHandler);
 
         router.get(ApiEndpointsV1.RESTORE_JOB_ROUTE)
-              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.RESTORE_SUMMARY_ROUTE)))
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(restoreJobSummaryHandler);
 
         router.patch(ApiEndpointsV1.RESTORE_JOB_ROUTE)
               .handler(BodyHandler.create())
-              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.RESTORE_UPDATE_ROUTE)))
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(updateRestoreJobHandler);
 
         // we don't expect users to send body for abort requests, hence we don't use BodyHandler
         router.post(ApiEndpointsV1.ABORT_RESTORE_JOB_ROUTE)
-              .handler(new MeteredHandler(httpMetricProvider.metrics(MeteredEndpoints.RESTORE_ABORT_ROUTE)))
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(abortRestoreJobHandler);

@@ -146,7 +146,7 @@ public class FileStreamer
                     .onSuccess(v ->
                                {
                                    long d = System.nanoTime() - startTimeSendFile;
-                                   componentMetrics.recordTimeTakenForSendFile(d, TimeUnit.NANOSECONDS);
+                                   componentMetrics.timeTakenForSendFile.update(d, TimeUnit.NANOSECONDS);
                                    LOGGER.debug("Streamed file {} successfully to client {}. Instance: {}", filename,
                                                 response.remoteAddress(), response.host());
                                    stats.onBytesStreamed(fileLength);
@@ -200,8 +200,8 @@ public class FileStreamer
             LOGGER.debug("Asking client {} to retry after {} micros. Instance: {}", response.remoteAddress(),
                          microsToWait, response.host());
             response.setRetryAfterHeader(microsToWait);
-            componentMetrics.recordRateLimitedCall();
-            componentMetrics.recordWaitTimeSent(microsToWait, MICROSECONDS);
+            componentMetrics.rateLimitedCalls.mark();
+            componentMetrics.waitTimeSent.update(microsToWait, MICROSECONDS);
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Ask client to retry later"));
         }
         return false;

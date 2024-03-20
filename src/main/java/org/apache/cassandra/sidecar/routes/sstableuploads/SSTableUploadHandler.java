@@ -131,7 +131,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         if (!limiter.tryAcquire())
         {
             String message = String.format("Concurrent upload limit (%d) exceeded", limiter.limit());
-            componentMetrics.recordRateLimitedCall();
+            componentMetrics.rateLimitedCalls.mark();
             context.fail(wrapHttpException(HttpResponseStatus.TOO_MANY_REQUESTS, message));
             return;
         }
@@ -262,7 +262,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                          logger.warn("Insufficient space available for upload in stagingDir={}, available={}%, " +
                                      "required={}%", uploadDirectory,
                                      availableDiskSpacePercentage, minimumPercentageRequired);
-                         metrics.recordDiskUsageHighError();
+                         metrics.diskUsageHighErrors.mark();
                          return Future.failedFuture(wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                                                       "Insufficient space available for upload"));
                      }
