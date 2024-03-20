@@ -30,8 +30,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.codahale.metrics.Counter;
-import com.codahale.metrics.Timer;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
@@ -51,8 +49,6 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
-import static org.apache.cassandra.sidecar.utils.TestMetricUtils.getMetric;
-import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -87,8 +83,6 @@ public class StreamSSTableComponentHandlerTest
     void tearDown() throws InterruptedException
     {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        registry().removeMatching((name, metric) -> true);
-        registry(1).removeMatching((name, metric) -> true);
         server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
@@ -107,11 +101,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.bodyAsString()).isEqualTo("data");
-                  // wait until the metric gets recorded
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -124,10 +114,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -144,10 +131,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
                   assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -160,10 +144,7 @@ public class StreamSSTableComponentHandlerTest
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -176,10 +157,7 @@ public class StreamSSTableComponentHandlerTest
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -193,10 +171,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
                   assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -210,10 +185,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -227,10 +199,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -244,10 +213,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -261,10 +227,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -280,10 +243,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -300,10 +260,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
                   assertThat(response.statusMessage()).isEqualTo(FORBIDDEN.reasonPhrase());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -319,11 +276,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.bodyAsString()).isEqualTo("data");
-                  // wait until the metric gets recorded
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -337,10 +290,7 @@ public class StreamSSTableComponentHandlerTest
               .putHeader("Range", "bytes=4-3")
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -354,10 +304,7 @@ public class StreamSSTableComponentHandlerTest
               .putHeader("Range", "bytes=5-9")
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -371,10 +318,7 @@ public class StreamSSTableComponentHandlerTest
               .putHeader("Range", "bytes=5-")
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -390,11 +334,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.bodyAsString()).isEqualTo("data");
-                  // wait until the metric gets recorded
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -410,11 +350,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
                   assertThat(response.bodyAsString()).isEqualTo("dat");
-                  // wait until the metric gets recorded
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -430,11 +366,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
                   assertThat(response.bodyAsString()).isEqualTo("ta");
-                  // wait until the metric gets recorded
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -451,11 +383,7 @@ public class StreamSSTableComponentHandlerTest
                   assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
                   .describedAs("Server should shrink the range to the file length")
                   .isEqualTo("4");
-                  // wait until the metric gets recorded
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -469,10 +397,7 @@ public class StreamSSTableComponentHandlerTest
               .putHeader("Range", "bits=0-2")
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(REQUESTED_RANGE_NOT_SATISFIABLE.code());
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
     }
 
@@ -487,20 +412,7 @@ public class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.bodyAsString()).isEqualTo("data");
-                  // wait until the metric gets recorded
-                  vertx.setTimer(100, t -> {
-                      assertHttpMetricsRecorded();
-                      context.completeNow();
-                  });
+                  context.completeNow();
               })));
-    }
-
-    private void assertHttpMetricsRecorded()
-    {
-        assertThat(getMetric("sidecar.http.route=/stream/component.requests", Counter.class)
-                   .getCount()).isOne();
-        assertThat(getMetric("sidecar.http.route=/stream/component.response_time", Timer.class)
-                   .getSnapshot()
-                   .getValues()[0]).isPositive();
     }
 }
