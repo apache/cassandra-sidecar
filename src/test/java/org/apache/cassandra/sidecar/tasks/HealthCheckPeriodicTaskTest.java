@@ -160,7 +160,7 @@ class HealthCheckPeriodicTaskTest
         when(mockInstancesConfig.instances()).thenReturn(mockInstanceMetadata);
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
-        promise.future().onComplete(context.succeeding(v -> {
+        promise.future().onComplete(context.failing(v -> {
             assertThat(getMetric("sidecar.server.instances_up", Gauge.class).getValue()).isEqualTo(5);
             assertThat(getMetric("sidecar.server.instances_down", Gauge.class).getValue()).isEqualTo(1);
             context.completeNow();
