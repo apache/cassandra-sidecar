@@ -212,6 +212,8 @@ public class InstanceMetadataImpl implements InstanceMetadata
         public Builder globalMetricRegistryName(String registryName)
 
         {
+            Objects.requireNonNull(registryName);
+
             String instanceRegistryName = instanceRegistryName(registryName);
             MetricRegistry instanceMetricRegistry = SharedMetricRegistries.getOrCreate(instanceRegistryName);
             InstanceMetricsImpl instanceMetrics = new InstanceMetricsImpl(instanceMetricRegistry);
