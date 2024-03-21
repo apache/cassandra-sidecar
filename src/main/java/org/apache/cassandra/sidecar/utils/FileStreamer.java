@@ -135,7 +135,7 @@ public class FileStreamer
         InstanceMetrics instanceMetrics = instanceMetadataFetcher.instance(instanceId).metrics();
         String component = sstableExtension(filename);
         StreamSSTableMetrics.StreamSSTableComponentMetrics componentMetrics
-        = instanceMetrics.forStreamSSTable().forComponent(component);
+        = instanceMetrics.streamSSTable().forComponent(component);
         if (acquire(response, instanceId, filename, fileLength, range, startTime, componentMetrics, promise))
         {
             // Stream data if rate limiting is disabled or if we acquire

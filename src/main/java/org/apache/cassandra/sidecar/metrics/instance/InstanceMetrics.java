@@ -28,15 +28,15 @@ public interface InstanceMetrics
     /**
      * @return resource metrics tracked for cassandra instance
      */
-    InstanceResourceMetrics forResource();
+    InstanceResourceMetrics resource();
 
     /**
      * @return metrics that are tracked during streaming of SSTable components from a cassandra instance
      */
-    StreamSSTableMetrics forStreamSSTable();
+    StreamSSTableMetrics streamSSTable();
 
     /**
      * @return metrics that are tracked during upload of SSTable components to a cassandra instance
      */
-    UploadSSTableMetrics forUploadSSTable();
+    UploadSSTableMetrics uploadSSTable();
 }

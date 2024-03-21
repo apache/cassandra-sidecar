@@ -419,7 +419,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                 return;
             }
             UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics
-            = new InstanceMetricsImpl(registry(1)).forUploadSSTable().forComponent("db");
+            = new InstanceMetricsImpl(registry(1)).uploadSSTable().forComponent("db");
             if (expectedRetCode == HttpResponseStatus.INSUFFICIENT_STORAGE.code())
             {
                 assertThat(componentMetrics.diskUsageHighErrors.metric.getCount()).isOne();

@@ -42,19 +42,19 @@ public class InstanceMetricsImpl implements InstanceMetrics
     }
 
     @Override
-    public InstanceResourceMetrics forResource()
+    public InstanceResourceMetrics resource()
     {
         return resourceMetrics;
     }
 
     @Override
-    public StreamSSTableMetrics forStreamSSTable()
+    public StreamSSTableMetrics streamSSTable()
     {
         return new StreamSSTableMetrics(metricRegistry);
     }
 
     @Override
-    public UploadSSTableMetrics forUploadSSTable()
+    public UploadSSTableMetrics uploadSSTable()
     {
         return new UploadSSTableMetrics(metricRegistry);
     }

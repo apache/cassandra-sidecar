@@ -97,7 +97,7 @@ public class ThrottleTest
         }
 
         StreamSSTableMetrics.StreamSSTableComponentMetrics dbComponentMetrics
-        = new InstanceMetricsImpl(registry(1)).forStreamSSTable().forComponent("db");
+        = new InstanceMetricsImpl(registry(1)).streamSSTable().forComponent("db");
 
         HttpResponse response = blockingClientRequest(testRoute);
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TOO_MANY_REQUESTS.code());
