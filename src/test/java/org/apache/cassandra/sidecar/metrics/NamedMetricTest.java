@@ -24,7 +24,10 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -51,7 +54,7 @@ public class NamedMetricTest
     }
 
     @Test
-    void testMetricTypeRetrieved()
+    void testGaugeRetrieved()
     {
         NamedMetric namedMetric = NamedMetric.builder(name -> registry.gauge(name))
                                              .withName("testGauge")
@@ -60,5 +63,41 @@ public class NamedMetricTest
                                              .build();
         assertThat(namedMetric.metric).isInstanceOf(Gauge.class);
         assertThat(namedMetric.canonicalName).isEqualTo("testDomain.key=value.testGauge");
+    }
+
+    @Test
+    void testCounterRetrieved()
+    {
+        NamedMetric namedMetric = NamedMetric.builder(name -> registry.counter(name))
+                                             .withName("testCounter")
+                                             .withDomain("testDomain")
+                                             .addTag("key", "value")
+                                             .build();
+        assertThat(namedMetric.metric).isInstanceOf(Counter.class);
+        assertThat(namedMetric.canonicalName).isEqualTo("testDomain.key=value.testCounter");
+    }
+
+    @Test
+    void testHistogramRetrieved()
+    {
+        NamedMetric namedMetric = NamedMetric.builder(name -> registry.histogram(name))
+                                             .withName("testHistogram")
+                                             .withDomain("testDomain")
+                                             .addTag("key", "value")
+                                             .build();
+        assertThat(namedMetric.metric).isInstanceOf(Histogram.class);
+        assertThat(namedMetric.canonicalName).isEqualTo("testDomain.key=value.testHistogram");
+    }
+
+    @Test
+    void testMeterRetrieved()
+    {
+        NamedMetric namedMetric = NamedMetric.builder(name -> registry.meter(name))
+                                             .withName("testMeter")
+                                             .withDomain("testDomain")
+                                             .addTag("key", "value")
+                                             .build();
+        assertThat(namedMetric.metric).isInstanceOf(Meter.class);
+        assertThat(namedMetric.canonicalName).isEqualTo("testDomain.key=value.testMeter");
     }
 }

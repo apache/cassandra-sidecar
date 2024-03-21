@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.cluster.instance;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
@@ -231,6 +232,8 @@ public class InstanceMetadataImpl implements InstanceMetadata
         @Override
         public InstanceMetadataImpl build()
         {
+            Objects.requireNonNull(metrics);
+
             return new InstanceMetadataImpl(this);
         }
     }
