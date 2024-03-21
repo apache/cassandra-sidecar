@@ -22,9 +22,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SharedMetricRegistries;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -200,15 +203,24 @@ public class InstanceMetadataImpl implements InstanceMetadata
         }
 
         /**
-         * Sets the {@code metrics} and returns a reference to this Builder enabling method chaining.
+         * Builds instance specific {@link com.codahale.metrics.MetricRegistry} given the global registry name.
          *
-         * @param metrics the {@code metrics} to set
+         * @param registryName global {@link com.codahale.metrics.MetricRegistry} name
          * @return a reference to this Builder
          */
-        public Builder metrics(InstanceMetrics metrics)
+        public Builder globalMetricRegistryName(String registryName)
 
         {
-            return update(b -> b.metrics = metrics);
+            String instanceRegistryName = instanceRegistryName(registryName);
+            MetricRegistry instanceMetricRegistry = SharedMetricRegistries.getOrCreate(instanceRegistryName);
+            InstanceMetricsImpl instanceMetrics = new InstanceMetricsImpl(instanceMetricRegistry);
+
+            return update(b -> b.metrics = instanceMetrics);
+        }
+
+        private String instanceRegistryName(String globalRegistryName)
+        {
+            return globalRegistryName + "_" + id;
         }
 
         /**
