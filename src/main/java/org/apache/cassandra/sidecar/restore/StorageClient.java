@@ -105,6 +105,8 @@ public class StorageClient
     /**
      * Revoke the credentials of a {@link RestoreJob}
      * It should be called when the job is in a final {@link org.apache.cassandra.sidecar.common.data.RestoreJobStatus}
+     *
+     * @param jobId the unique identifier for the job
      */
     public void revokeCredentials(UUID jobId)
     {
@@ -132,7 +134,7 @@ public class StorageClient
                          .build();
 
         return client.headObject(request)
-                     .whenComplete(logCredentialOnRequestFailure(credentials));
+                     .whenComplete(logCredentialOnRequestFailure(slice, credentials));
     }
 
     public CompletableFuture<File> downloadObjectIfAbsent(RestoreSlice slice)
@@ -140,6 +142,7 @@ public class StorageClient
         Credentials credentials = credentialsProviders.get(slice.jobId());
         if (credentials == null)
         {
+            LOGGER.debug("Credentials to download object not found. jobId={}", slice.jobId());
             CompletableFuture<File> failedFuture = new CompletableFuture<>();
             failedFuture.completeExceptionally(credentialsNotFound(slice));
             return failedFuture;
@@ -156,6 +159,8 @@ public class StorageClient
         File object = objectPath.toFile();
         if (object.exists())
         {
+            LOGGER.debug("Skipping download, file already exists. jobId={} s3_object={}",
+                         slice.jobId(), slice.stagedObjectPath());
             // Skip downloading if the file already exists on disk. It should be a rare scenario.
             // Note that the on-disk file could be different from the remote object, although the name matches.
             // TODO 1: verify etag does not change after s3 replication and batch copy
@@ -166,10 +171,12 @@ public class StorageClient
         }
         if (!object.getParentFile().mkdirs())
         {
-            LOGGER.warn("Error occurred while creating directory for S3 object {}", objectPath);
+            LOGGER.warn("Error occurred while creating directory. jobId={} s3_object={}",
+                        slice.jobId(), slice.stagedObjectPath());
         }
-        return rateLimitedGetObject(client, request, objectPath)
-               .whenComplete(logCredentialOnRequestFailure(credentials))
+        LOGGER.info("Downloading object. jobId={} s3_object={}", slice.jobId(), slice.stagedObjectPath());
+        return rateLimitedGetObject(slice, client, request, objectPath)
+               .whenComplete(logCredentialOnRequestFailure(slice, credentials))
                .thenApply(res -> object);
     }
 
@@ -206,13 +213,14 @@ public class StorageClient
                                          "jobId: " + slice.jobId());
     }
 
-    private BiConsumer<Object, ? super Throwable> logCredentialOnRequestFailure(Credentials credentials)
+    private BiConsumer<Object, ? super Throwable> logCredentialOnRequestFailure(RestoreSlice slice,
+                                                                                Credentials credentials)
     {
         return (ignored, cause) -> {
             if (cause != null)
             {
-                LOGGER.error("GetObjectRequest is not successful. credentials={}",
-                             credentials.readCredentials, cause);
+                LOGGER.error("GetObjectRequest is not successful. jobId={} credentials={}",
+                             slice.jobId(), credentials.readCredentials, cause);
             }
         };
     }
@@ -221,17 +229,21 @@ public class StorageClient
      * Returns a {@link CompletableFuture} to the {@link GetObjectResponse}. It writes the object from S3 to a file
      * applying rate limiting on the download throughput.
      *
+     * @param slice           the slice to be restored
      * @param client          the S3 client
      * @param request         the {@link GetObjectRequest request}
      * @param destinationPath the path where the object will be persisted
      * @return a {@link CompletableFuture} of the {@link GetObjectResponse}
      */
-    private CompletableFuture<GetObjectResponse> rateLimitedGetObject(S3AsyncClient client,
+    private CompletableFuture<GetObjectResponse> rateLimitedGetObject(RestoreSlice slice,
+                                                                      S3AsyncClient client,
                                                                       GetObjectRequest request,
                                                                       Path destinationPath)
     {
         return client.getObject(request, AsyncResponseTransformer.toPublisher())
-                     .thenCompose(responsePublisher -> subscribeRateLimitedWrite(destinationPath, responsePublisher));
+                     .thenCompose(responsePublisher -> subscribeRateLimitedWrite(slice,
+                                                                                 destinationPath,
+                                                                                 responsePublisher));
     }
 
     /**
@@ -239,11 +251,13 @@ public class StorageClient
      * by subscribing to the {@code publisher}. Applying backpressure on the received bytes by rate limiting
      * the download throughput using the {@code downloadRateLimiter} object.
      *
+     * @param slice           the slice to be restored
      * @param destinationPath the path where the object will be persisted
      * @param publisher       the {@link ResponsePublisher}
      * @return a {@link CompletableFuture} to the {@link GetObjectResponse}
      */
-    CompletableFuture<GetObjectResponse> subscribeRateLimitedWrite(Path destinationPath,
+    CompletableFuture<GetObjectResponse> subscribeRateLimitedWrite(RestoreSlice slice,
+                                                                   Path destinationPath,
                                                                    ResponsePublisher<GetObjectResponse> publisher)
     {
         WritableByteChannel channel;
@@ -257,10 +271,14 @@ public class StorageClient
         }
         catch (FileAlreadyExistsException fileAlreadyExistsException)
         {
+            LOGGER.debug("Skipping download, file already exists. jobId={} s3_object={}",
+                         slice.jobId(), slice.stagedObjectPath());
             return CompletableFuture.completedFuture(publisher.response());
         }
         catch (IOException e)
         {
+            LOGGER.error("Error occurred while creating channel. destinationPath={} jobId={} s3_object={}",
+                         destinationPath, slice.jobId(), slice.stagedObjectPath(), e);
             throw new RuntimeException(e);
         }
         // CompletableFuture that will be notified when all events have been consumed or if an error occurs.
@@ -272,6 +290,8 @@ public class StorageClient
             }
             catch (IOException e)
             {
+                LOGGER.error("Error occurred while downloading. jobId={} s3_object={}",
+                             slice.jobId(), slice.stagedObjectPath(), e);
                 throw new RuntimeException(e);
             }
         }).whenComplete((v, subscribeThrowable) -> closeChannel(channel));

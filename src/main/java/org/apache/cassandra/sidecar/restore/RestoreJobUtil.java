@@ -78,9 +78,9 @@ public class RestoreJobUtil
     {
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile.toPath())))
         {
-            ZipEntry zipEntry = zis.getNextEntry();
+            ZipEntry zipEntry;
 
-            while (zipEntry != null)
+            while ((zipEntry = zis.getNextEntry()) != null)
             {
                 // Encounters a directory inside the zip file
                 // It is not expected. The zip file should have the directory depth of 1.
@@ -92,8 +92,6 @@ public class RestoreJobUtil
 
                 File targetFile = newProtectedTargetFile(zipEntry, targetDir);
                 Files.copy(zis, targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-                zipEntry = zis.getNextEntry();
             }
             zis.closeEntry();
         }
@@ -161,7 +159,7 @@ public class RestoreJobUtil
                 }
                 catch (IOException e)
                 {
-                    LOGGER.error("Unexpected error occurred while cleaning directory {}, ", path, e);
+                    LOGGER.error("Unexpected error occurred while cleaning directory {}", path, e);
                     throw new RuntimeException(e);
                 }
             });

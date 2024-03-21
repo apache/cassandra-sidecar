@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Improve logging for slice restore task (CASSANDRASC-107)
  * Add restore task watcher to report long running tasks (CASSANDRASC-106)
  * RestoreSliceTask could be stuck due to missing exception handling (CASSANDRASC-105)
  * Make hash algorithm implementation pluggable (CASSANDRASC-114)
