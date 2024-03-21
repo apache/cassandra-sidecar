@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.restore;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -48,6 +47,7 @@ import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import static io.vertx.core.Future.fromCompletionStage;
 import static org.apache.cassandra.sidecar.utils.AsyncFileSystemUtils.ensureSufficientStorage;
 
 /**
@@ -55,7 +55,7 @@ import static org.apache.cassandra.sidecar.utils.AsyncFileSystemUtils.ensureSuff
  * and imports SSTables into Cassandra.
  * It the execution ever fails, the cause should only be
  * {@link org.apache.cassandra.sidecar.exceptions.RestoreJobException}
- *
+ * <p>
  * Note that the class is package private, and it is not intended to be referenced by other packages.
  */
 public class RestoreSliceTask implements RestoreSliceHandler
@@ -130,25 +130,19 @@ public class RestoreSliceTask implements RestoreSliceHandler
                     }
 
                     // 1. check object existence and validate eTag / checksum
-                    CompletableFuture<Void> fut = checkObjectExistence(event)
-                    // 2. download slice/object when the remote object exists
-                    .thenCompose(headObject -> downloadSlice(event))
-                    // 3. persist status
-                    .thenAccept(file -> {
-                        slice.completeStagePhase();
-                        sliceDatabaseAccessor.updateStatus(slice);
-                        // completed staging. A new task is produced when it comes to import
-                        event.tryComplete(slice);
-                    })
-                    .whenComplete((x, cause) -> {
-                        if (cause != null)
-                        {
-                            // handle unexpected errors thrown during download slice call, that do not close event
-                            event.tryFail(RestoreJobExceptions.ofSlice(cause.getMessage(), slice, cause));
-                        }
-                    });
-
-                    return Future.fromCompletionStage(fut);
+                    return checkObjectExistence(event)
+                           .compose(headObject -> downloadSlice(event))
+                           .<Void>compose(file -> Future.succeededFuture())
+                           .onSuccess(file -> {
+                               slice.completeStagePhase();
+                               sliceDatabaseAccessor.updateStatus(slice);
+                               // completed staging. A new task is produced when it comes to import
+                               event.tryComplete(slice);
+                           })
+                           .onFailure(cause -> {
+                               // handle unexpected errors thrown during download slice call, that do not close event
+                               event.tryFail(RestoreJobExceptions.ofSlice(cause.getMessage(), slice, cause));
+                           });
                 }
                 else if (job.status == RestoreJobStatus.STAGED)
                 {
@@ -177,75 +171,73 @@ public class RestoreSliceTask implements RestoreSliceHandler
     private Future<Void> downloadSliceAndImport(Promise<RestoreSlice> event)
     {
         // 1. check object existence and validate eTag / checksum
-        CompletableFuture<File> fut = checkObjectExistence(event)
-        // 2. download slice/object when the remote object exists
-        .thenCompose(headObject -> downloadSlice(event));
-        // 3. unzip the file and import/commit
-        return Future.fromCompletionStage(fut)
-                     .compose(file -> unzipAndImport(event, file));
+        return checkObjectExistence(event)
+               // 2. download slice/object when the remote object exists
+               .compose(headObject -> downloadSlice(event))
+               // 3. unzip the file and import/commit
+               .compose(file -> unzipAndImport(event, file));
     }
 
-    private CompletableFuture<?> checkObjectExistence(Promise<RestoreSlice> event)
+    private Future<?> checkObjectExistence(Promise<RestoreSlice> event)
     {
         // skip query s3 if the object existence is already confirmed
         if (slice.existsOnS3())
         {
-            return CompletableFuture.completedFuture(null);
+            LOGGER.debug("The slice already exists on S3. jobId={} sliceKey={}", slice.jobId(), slice.key());
+            return Future.succeededFuture();
         }
 
-        return s3Client
-        .objectExists(slice) // even if the file already exists on disk, we should still check the object existence
-        .whenComplete((resp, cause) -> {
-            if (cause == null)
-            {
-                stats.captureSliceReplicationTime(currentTimeInNanos() - slice.creationTimeNanos());
-                slice.setExistsOnS3();
-                return;
-            }
-
+        // even if the file already exists on disk, we should still check the object existence
+        return
+        fromCompletionStage(s3Client.objectExists(slice))
+        .onSuccess(exists -> {
+            long durationNanos = currentTimeInNanos() - slice.creationTimeNanos();
+            stats.captureSliceReplicationTime(durationNanos);
+            slice.setExistsOnS3();
+            LOGGER.debug("Slice is now available on S3. jobId={} sliceKey={} replicationTimeNanos={}",
+                         slice.jobId(), slice.key(), durationNanos);
+        })
+        .onFailure(cause -> {
             S3Exception s3Exception = ThrowableUtils.getCause(cause, S3Exception.class);
             if (s3Exception == null) // has non-null cause, but not S3Exception
             {
                 event.tryFail(RestoreJobExceptions.ofFatalSlice("Unexpected error when checking object existence",
                                                                 slice, cause));
             }
+            else if (s3Exception instanceof NoSuchKeyException)
+            {
+                event.tryFail(RestoreJobExceptions.ofSlice("Object not found", slice, null));
+            }
+            else if (s3Exception.statusCode() == 412)
+            {
+                // When checksum/eTag does not match, it should be an unrecoverable error and fail immediately.
+                // For such scenario, we expect "S3Exception: (Status Code: 412)". Also see,
+                // https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
+                event.tryFail(RestoreJobExceptions.ofFatalSlice("Object checksum mismatched",
+                                                                slice, s3Exception));
+                stats.captureSliceChecksumMismatch(slice.owner().id());
+            }
+            else if (s3Exception.statusCode() == 403)
+            {
+                // Fail immediately if 403 forbidden is returned.
+                // There might be permission issue on accessing the object.
+                event.tryFail(RestoreJobExceptions.ofFatalSlice("Object access is forbidden",
+                                                                slice, s3Exception));
+                stats.captureTokenUnauthorized();
+            }
+            else if (s3Exception.statusCode() == 400 &&
+                     s3Exception.getMessage().contains("token has expired"))
+            {
+                // Fail the job if 400, token has expired.
+                // https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList
+                event.tryFail(RestoreJobExceptions.ofFatalSlice("Token has expired", slice, s3Exception));
+                stats.captureTokenExpired();
+            }
             else
             {
-                if (s3Exception instanceof NoSuchKeyException)
-                {
-                    event.tryFail(RestoreJobExceptions.ofSlice("Object not found", slice, null));
-                }
-                else if (s3Exception.statusCode() == 412)
-                {
-                    // When checksum/eTag does not match, it should be an unrecoverable error and fail immediately.
-                    // For such scenario, we expect "S3Exception: (Status Code: 412)". Also see,
-                    // https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
-                    event.tryFail(RestoreJobExceptions.ofFatalSlice("Object checksum mismatched",
-                                                                    slice, s3Exception));
-                    stats.captureSliceChecksumMismatch(slice.owner().id());
-                }
-                else if (s3Exception.statusCode() == 403)
-                {
-                    // Fail immediately if 403 forbidden is returned.
-                    // There might be permission issue on accessing the object.
-                    event.tryFail(RestoreJobExceptions.ofFatalSlice("Object access is forbidden",
-                                                                    slice, s3Exception));
-                    stats.captureTokenUnauthorized();
-                }
-                else if (s3Exception.statusCode() == 400 &&
-                         s3Exception.getMessage().contains("token has expired"))
-                {
-                    // Fail the job if 400, token has expired.
-                    // https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList
-                    event.tryFail(RestoreJobExceptions.ofFatalSlice("Token has expired", slice, s3Exception));
-                    stats.captureTokenExpired();
-                }
-                else
-                {
-                    // Retry the other S3Exceptions
-                    event.tryFail(RestoreJobExceptions.ofSlice("Unable to check object existence",
-                                                               slice, s3Exception));
-                }
+                // Retry the other S3Exceptions
+                event.tryFail(RestoreJobExceptions.ofSlice("Unable to check object existence",
+                                                           slice, s3Exception));
             }
         });
     }
@@ -255,16 +247,14 @@ public class RestoreSliceTask implements RestoreSliceHandler
         return restoreJobUtil.currentTimeNanos();
     }
 
-    private CompletableFuture<File> downloadSlice(Promise<RestoreSlice> event)
+    private Future<File> downloadSlice(Promise<RestoreSlice> event)
     {
         if (slice.isCancelled())
         {
             RestoreJobFatalException ex = RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
                                                                             slice, null);
             event.tryFail(ex);
-            CompletableFuture<File> failedFuture = new CompletableFuture<>();
-            failedFuture.completeExceptionally(ex);
-            return failedFuture;
+            return Future.failedFuture(ex);
         }
 
         if (slice.downloadAttempt() > 0)
@@ -274,20 +264,16 @@ public class RestoreSliceTask implements RestoreSliceHandler
         }
 
         LOGGER.info("Begin downloading restore slice. sliceKey={}", slice.key());
-        CompletableFuture<File> future = s3Client
-        .downloadObjectIfAbsent(slice)
-        .whenComplete((file, cause) -> {
-            if (cause != null)
+        Future<File> future =
+        fromCompletionStage(s3Client.downloadObjectIfAbsent(slice)).onFailure(cause -> {
+            slice.incrementDownloadAttempt();
+            if (ThrowableUtils.getCause(cause, ApiCallTimeoutException.class) != null)
             {
-                slice.incrementDownloadAttempt();
-                if (ThrowableUtils.getCause(cause, ApiCallTimeoutException.class) != null)
-                {
-                    LOGGER.warn("Downloading restore slice times out. sliceKey={}", slice.key());
-                    stats.captureSliceDownloadTimeout(slice.owner().id());
-                }
-                event.tryFail(RestoreJobExceptions.ofFatalSlice("Unrecoverable error when downloading object",
-                                                                slice, cause));
+                LOGGER.warn("Downloading restore slice times out. sliceKey={}", slice.key());
+                stats.captureSliceDownloadTimeout(slice.owner().id());
             }
+            event.tryFail(RestoreJobExceptions.ofFatalSlice("Unrecoverable error when downloading object",
+                                                            slice, cause));
         });
 
         return Timer.measureTimeTaken(future, duration -> {
@@ -315,28 +301,28 @@ public class RestoreSliceTask implements RestoreSliceHandler
 
         // run the rest in the executor pool, instead of S3 client threadpool
         return unzip(file)
-        .compose(this::validateFiles)
-        .compose(this::commit)
-        .compose(x -> {
-            if (onSuccessCommit == null)
-            {
-                return Future.succeededFuture();
-            }
+               .compose(this::validateFiles)
+               .compose(this::commit)
+               .compose(x -> {
+                   if (onSuccessCommit == null)
+                   {
+                       return Future.succeededFuture();
+                   }
 
-            return executorPool.<Void>executeBlocking(promise -> {
-                onSuccessCommit.run();
-                promise.tryComplete();
-            });
-        })
-        .onSuccess(x -> {
-            slice.completeImportPhase();
-            event.tryComplete(slice);
-        })
-        .onFailure(failure -> {
-            logWarnIfHasHttpExceptionCauseOnCommit(failure, slice);
-            event.tryFail(RestoreJobExceptions.propagate("Fail to commit slice. "
-                                                         + slice.shortDescription(), failure));
-        });
+                   return executorPool.<Void>executeBlocking(promise -> {
+                       onSuccessCommit.run();
+                       promise.tryComplete();
+                   });
+               })
+               .onSuccess(x -> {
+                   slice.completeImportPhase();
+                   event.tryComplete(slice);
+               })
+               .onFailure(failure -> {
+                   logWarnIfHasHttpExceptionCauseOnCommit(failure, slice);
+                   event.tryFail(RestoreJobExceptions.propagate("Fail to commit slice. "
+                                                                + slice.shortDescription(), failure));
+               });
     }
 
     private Future<File> unzip(File zipFile)
@@ -358,7 +344,8 @@ public class RestoreSliceTask implements RestoreSliceHandler
             {
                 if (targetDirExist)
                 {
-                    LOGGER.debug("The files in slice are already extracted. Maybe it is a retried task?");
+                    LOGGER.debug("The files in slice are already extracted. Maybe it is a retried task? " +
+                                 "jobId={} sliceKey={}", slice.jobId(), slice.key());
                     promise.complete(targetDir);
                 }
                 else
@@ -381,8 +368,8 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 // Then, delete the downloaded zip file
                 if (!zipFile.delete())
                 {
-                    LOGGER.warn("File deletion attempt failed. file={}",
-                                zipFile.getAbsolutePath());
+                    LOGGER.warn("File deletion attempt failed. jobId={} sliceKey={} file={}",
+                                slice.jobId(), slice.key(), zipFile.getAbsolutePath());
                 }
             }
             catch (Exception cause)
@@ -487,7 +474,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
             return Future.failedFuture(RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
                                                                          slice, null));
 
-        LOGGER.info("Begin committing SSTables. sliceKey={}", slice.key());
+        LOGGER.info("Begin committing SSTables. jobId={} sliceKey={}", slice.jobId(), slice.key());
 
         SSTableImportOptions options = slice.job().importOptions;
         SSTableImporter.ImportOptions importOptions = new SSTableImporter.ImportOptions.Builder()
@@ -505,8 +492,8 @@ public class RestoreSliceTask implements RestoreSliceHandler
                                                       .uploadId(slice.uploadId())
                                                       .build();
         Future<Void> future = importer.scheduleImport(importOptions)
-                                      .onSuccess(ignored -> LOGGER.info("Finish committing SSTables. sliceKey={}",
-                                                                        slice.key()));
+                                      .onSuccess(ignored -> LOGGER.info("Finish committing SSTables. jobId={} sliceKey={}",
+                                                                        slice.jobId(), slice.key()));
         return Timer.measureTimeTaken(future, d -> stats.captureSliceImportTime(slice.owner().id(), d));
     }
 
@@ -529,15 +516,16 @@ public class RestoreSliceTask implements RestoreSliceHandler
             return;
         }
 
-        LOGGER.warn("Committing slice failed with HttpException. slice={} statusCode={} exceptionPayload={}",
-                    slice.sliceId(), httpException.getStatusCode(), httpException.getPayload(), httpException);
+        LOGGER.warn("Committing slice failed with HttpException. jobId={} sliceKey={} statusCode={} " +
+                    "exceptionPayload={}", slice.jobId(), slice.key(), httpException.getStatusCode(),
+                    httpException.getPayload(), httpException);
     }
 
     @Override
     public long elapsedInNanos()
     {
         return taskStartTimeNanos == -1 ? -1 :
-        currentTimeInNanos() - taskStartTimeNanos;
+               currentTimeInNanos() - taskStartTimeNanos;
     }
 
     @Override
