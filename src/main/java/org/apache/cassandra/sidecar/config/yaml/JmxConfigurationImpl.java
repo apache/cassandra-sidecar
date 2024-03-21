@@ -47,6 +47,7 @@ public class JmxConfigurationImpl implements JmxConfiguration
     /**
      * @return the maximum number of connection retry attempts to make before failing
      */
+    @Override
     @JsonProperty("max_retries")
     public int maxRetries()
     {
@@ -56,6 +57,7 @@ public class JmxConfigurationImpl implements JmxConfiguration
     /**
      * @return the delay, in milliseconds, between retry attempts
      */
+    @Override
     @JsonProperty("retry_delay_millis")
     public long retryDelayMillis()
     {

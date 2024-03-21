@@ -48,4 +48,9 @@ public interface RestoreJobConfiguration
      * @return time to live for restore job tables: restore_job and restore_slice
      */
     long restoreJobTablesTtlSeconds();
+
+    /**
+     * @return the number of seconds above which a restore handler is considered "long-running"
+     */
+    long restoreJobLongRunningHandlerThresholdSeconds();
 }

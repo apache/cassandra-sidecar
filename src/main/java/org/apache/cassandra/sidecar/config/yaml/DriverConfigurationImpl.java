@@ -34,18 +34,21 @@ public class DriverConfigurationImpl implements DriverConfiguration
     private String localDc;
     private int numConnections;
 
+    @Override
     @JsonProperty("contact_points")
     public List<InetSocketAddress> contactPoints()
     {
         return contactPoints;
     }
 
+    @Override
     @JsonProperty("num_connections")
     public int numConnections()
     {
         return numConnections;
     }
 
+    @Override
     @JsonProperty("local_dc")
     public String localDc()
     {

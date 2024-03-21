@@ -16,23 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar;
+package org.apache.cassandra.sidecar.restore;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import io.vertx.junit5.VertxExtension;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import org.apache.cassandra.sidecar.db.RestoreSlice;
 
 /**
- * Health Service SSL Tests
+ * A handler that processes a restore slice
  */
-@DisplayName("Health Service SSL Test")
-@ExtendWith(VertxExtension.class)
-public class HealthServiceSslTest extends AbstractHealthServiceTest
+public interface RestoreSliceHandler extends Handler<Promise<RestoreSlice>>
 {
-    @Override
-    public boolean isSslEnabled()
-    {
-        return true;
-    }
+    /**
+     * @return slice the handler processes
+     */
+    RestoreSlice slice();
+
+    /**
+     * @return the elapsed time in nanoseconds if the task has started processing, -1 otherwise
+     */
+    long elapsedInNanos();
 }

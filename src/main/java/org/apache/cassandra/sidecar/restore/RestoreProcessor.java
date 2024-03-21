@@ -21,8 +21,10 @@ package org.apache.cassandra.sidecar.restore;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -62,6 +64,8 @@ public class RestoreProcessor implements PeriodicTask
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobStats stats;
     private final RestoreJobUtil restoreJobUtil;
+    private final Set<RestoreSliceHandler> activeTasks = ConcurrentHashMap.newKeySet();
+    private final long longRunningHandlerThresholdInSeconds;
 
     private volatile boolean isClosed = false; // OK to run close twice, so relax the control to volatile
 
@@ -82,6 +86,8 @@ public class RestoreProcessor implements PeriodicTask
                                                                         .processMaxConcurrency());
         this.requiredUsableSpacePercentage
         = config.serviceConfiguration().ssTableUploadConfiguration().minimumSpacePercentageRequired() / 100.0;
+        this.longRunningHandlerThresholdInSeconds = config.restoreJobConfiguration()
+                                                          .restoreJobLongRunningHandlerThresholdSeconds();
         this.importer = importer;
         this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.stats = stats;
@@ -128,26 +134,28 @@ public class RestoreProcessor implements PeriodicTask
             if (slice == null) // it should never happen, and is only to make ide happy
             {
                 processMaxConcurrency.releasePermit();
-                return;
+                break;
             }
 
             // capture the new queue length after polling
             sliceQueue.captureImportQueueLength();
-            pool.executeBlocking(slice.toAsyncTask(s3ClientPool, pool, importer,
-                                                   requiredUsableSpacePercentage,
-                                                   sliceDatabaseAccessor, stats,
-                                                   restoreJobUtil),
-                                 false) // unordered
+            RestoreSliceHandler task = slice.toAsyncTask(s3ClientPool, pool, importer,
+                                                         requiredUsableSpacePercentage,
+                                                         sliceDatabaseAccessor, stats,
+                                                         restoreJobUtil);
+            activeTasks.add(task);
+            pool.executeBlocking(task, false) // unordered; run in parallel
             .onSuccess(restoreSlice -> {
+                int instanceId = slice.owner().id();
                 if (slice.hasImported())
                 {
-                    stats.captureSliceCompletionTime(slice.owner().id(), System.nanoTime() - slice.creationTimeNanos());
+                    stats.captureSliceCompletionTime(instanceId, System.nanoTime() - slice.creationTimeNanos());
                     LOGGER.info("Slice completes successfully. sliceKey={}", slice.key());
                     slice.complete();
                 }
                 else if (slice.hasStaged())
                 {
-                    // todo: report stat of time taken to stage
+                    stats.captureSliceStageTime(instanceId, task.elapsedInNanos());
                     LOGGER.info("Slice has been staged successfully. sliceKey={}", slice.key());
                     // the slice is not fully complete yet. Re-enqueue the slice.
                     sliceQueue.offer(slice);
@@ -186,10 +194,36 @@ public class RestoreProcessor implements PeriodicTask
                 // decrement the active slices and capture the new queue length
                 sliceQueue.decrementActiveSliceCount(slice);
                 sliceQueue.captureImportQueueLength();
+                activeTasks.remove(task);
             });
         }
         promise.tryComplete();
+        checkForLongRunningTasks();
         sliceQueue.capturePendingSliceCount();
+    }
+
+    private void checkForLongRunningTasks()
+    {
+        for (RestoreSliceHandler task : activeTasks)
+        {
+            long elapsedInNanos = task.elapsedInNanos();
+            if (elapsedInNanos == -1)
+            {
+                continue;
+            }
+            long elapsedInSeconds = TimeUnit.SECONDS.convert(elapsedInNanos, TimeUnit.NANOSECONDS);
+            if (elapsedInSeconds > longRunningHandlerThresholdInSeconds)
+            {
+                LOGGER.warn("Long-running restore slice task detected. " +
+                            "elapsedSeconds={} thresholdSeconds={} sliceKey={} jobId={} status={}",
+                            elapsedInSeconds,
+                            longRunningHandlerThresholdInSeconds,
+                            task.slice().key(),
+                            task.slice().jobId(),
+                            task.slice().job().status);
+                stats.captureLongRunningRestoreHandler(task.slice().owner().id(), elapsedInNanos);
+            }
+        }
     }
 
     @Override
@@ -204,6 +238,12 @@ public class RestoreProcessor implements PeriodicTask
     int activeSlices()
     {
         return sliceQueue.activeSliceCount();
+    }
+
+    @VisibleForTesting
+    int activeTasks()
+    {
+        return activeTasks.size();
     }
 
     @VisibleForTesting

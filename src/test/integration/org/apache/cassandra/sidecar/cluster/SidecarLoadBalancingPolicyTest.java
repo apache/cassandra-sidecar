@@ -55,6 +55,7 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
                     .collect(Collectors.toList());
     }
 
+    @Override
     protected int getNumInstancesToManage(int clusterSize)
     {
         return SIDECAR_MANAGED_INSTANCES; // we only want to manage the first 2 instances in the "cluster"

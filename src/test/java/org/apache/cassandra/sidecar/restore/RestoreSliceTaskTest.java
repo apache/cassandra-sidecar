@@ -25,6 +25,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,6 +69,7 @@ class RestoreSliceTaskTest
     private TaskExecutorPool executorPool;
     private TestRestoreJobStats stats;
     private TestRestoreSliceAccessor sliceDatabaseAccessor;
+    private RestoreJobUtil util;
 
     @BeforeEach
     void setup()
@@ -82,6 +85,7 @@ class RestoreSliceTaskTest
         mockSSTableImporter = mock(SSTableImporter.class);
         executorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
         stats = new TestRestoreJobStats();
+        util = mock(RestoreJobUtil.class);
         sliceDatabaseAccessor = new TestRestoreSliceAccessor();
     }
 
@@ -302,14 +306,33 @@ class RestoreSliceTaskTest
         .hasMessageContaining("Random exception");
     }
 
+    @Test
+    void testSliceDuration()
+    {
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, "QUORUM");
+        AtomicLong currentNanos = new AtomicLong(0);
+        RestoreSliceTask task = createTask(mockSlice, job, currentNanos::get);
+        Promise<RestoreSlice> promise = Promise.promise();
+        task.handle(promise); // Task isn't considered started until it `handle` is called
+        currentNanos.set(123L);
+        assertThat(task.elapsedInNanos()).isEqualTo(123L);
+    }
+
     private RestoreSliceTask createTask(RestoreSlice slice, RestoreJob job)
+    {
+        return createTask(slice, job, System::nanoTime);
+    }
+
+    private RestoreSliceTask createTask(RestoreSlice slice, RestoreJob job, Supplier<Long> currentNanoTimeSupplier)
     {
         when(slice.job()).thenReturn(job);
         assertThat(slice.job()).isSameAs(job);
         assertThat(slice.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
         assertThat(slice.job().status).isEqualTo(job.status);
+        RestoreJobUtil util = mock(RestoreJobUtil.class);
+        when(util.currentTimeNanos()).thenAnswer(invok -> currentNanoTimeSupplier.get());
         return new TestRestoreSliceTask(slice, mockStorageClient, executorPool, mockSSTableImporter,
-                                        0, sliceDatabaseAccessor, stats);
+                                        0, sliceDatabaseAccessor, stats, util);
     }
 
     private RestoreSliceTask createTaskWithExceptions(RestoreSlice slice, RestoreJob job)
@@ -319,7 +342,7 @@ class RestoreSliceTaskTest
         assertThat(slice.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
         assertThat(slice.job().status).isEqualTo(job.status);
         return new TestUnexpectedExceptionInRestoreSliceTask(slice, mockStorageClient, executorPool,
-                                                             mockSSTableImporter, 0, sliceDatabaseAccessor, stats);
+                                                             mockSSTableImporter, 0, sliceDatabaseAccessor, stats, util);
     }
 
     static class TestRestoreSliceAccessor extends RestoreSliceDatabaseAccessor
@@ -346,10 +369,11 @@ class RestoreSliceTaskTest
 
         public TestRestoreSliceTask(RestoreSlice slice, StorageClient s3Client, TaskExecutorPool executorPool,
                                     SSTableImporter importer, double requiredUsableSpacePercentage,
-                                    RestoreSliceDatabaseAccessor sliceDatabaseAccessor, RestoreJobStats stats)
+                                    RestoreSliceDatabaseAccessor sliceDatabaseAccessor, RestoreJobStats stats,
+                                    RestoreJobUtil restoreJobUtil)
         {
-            super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage, sliceDatabaseAccessor, stats,
-                  null);
+            super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage,
+                  sliceDatabaseAccessor, stats, restoreJobUtil);
             this.slice = slice;
             this.stats = stats;
         }
@@ -382,10 +406,10 @@ class RestoreSliceTaskTest
                                                          TaskExecutorPool executorPool, SSTableImporter importer,
                                                          double requiredUsableSpacePercentage,
                                                          RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                                                         RestoreJobStats stats)
+                                                         RestoreJobStats stats, RestoreJobUtil util)
         {
             super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage, sliceDatabaseAccessor, stats,
-                  null);
+                  util);
         }
 
         @Override

@@ -19,7 +19,9 @@
 package org.apache.cassandra.sidecar.stats;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Test implementation for testing restore job related stats captured
@@ -39,6 +41,7 @@ public class TestRestoreJobStats implements RestoreJobStats
     public long failedJobCount;
     public long activeJobCount;
     public long tokenRefreshCount;
+    public Map<Integer, Long> longRunningRestoreHandlers = new HashMap<>();
 
     @Override
     public void captureSliceCompletionTime(int instanceId, long durationNanos)
@@ -117,5 +120,11 @@ public class TestRestoreJobStats implements RestoreJobStats
     public void captureTokenRefreshed()
     {
         tokenRefreshCount += 1;
+    }
+
+    @Override
+    public void captureLongRunningRestoreHandler(int instanceId, long handlerDuration)
+    {
+        longRunningRestoreHandlers.put(instanceId, handlerDuration);
     }
 }

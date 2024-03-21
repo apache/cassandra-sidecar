@@ -373,11 +373,13 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         return nodeSettingsFromJmx;
     }
 
+    @Override
     public ResultSet executeLocal(Statement statement)
     {
         return fromAdapter(adapter -> adapter.executeLocal(statement));
     }
 
+    @Override
     public InetSocketAddress localNativeTransportPort()
     {
         return fromAdapter(ICassandraAdapter::localNativeTransportPort);

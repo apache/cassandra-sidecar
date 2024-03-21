@@ -47,6 +47,7 @@ public class OrderedInstanceSelectionPolicy implements InstanceSelectionPolicy
      *
      * @return an iterator of {@link SidecarInstance instances}
      */
+    @Override
     @NotNull
     public Iterator<SidecarInstance> iterator()
     {
