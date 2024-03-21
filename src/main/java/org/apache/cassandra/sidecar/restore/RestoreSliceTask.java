@@ -132,17 +132,15 @@ public class RestoreSliceTask implements RestoreSliceHandler
                     // 1. check object existence and validate eTag / checksum
                     return checkObjectExistence(event)
                            .compose(headObject -> downloadSlice(event))
-                           .<Void>compose(file -> Future.succeededFuture())
-                           .onSuccess(file -> {
+                           .<Void>compose(file -> {
                                slice.completeStagePhase();
                                sliceDatabaseAccessor.updateStatus(slice);
-                               // completed staging. A new task is produced when it comes to import
-                               event.tryComplete(slice);
+                               return Future.succeededFuture();
                            })
-                           .onFailure(cause -> {
-                               // handle unexpected errors thrown during download slice call, that do not close event
-                               event.tryFail(RestoreJobExceptions.ofSlice(cause.getMessage(), slice, cause));
-                           });
+                           // completed staging. A new task is produced when it comes to import
+                           .onSuccess(_v -> event.tryComplete(slice))
+                           // handle unexpected errors thrown during download slice call, that do not close event
+                           .onFailure(cause -> event.tryFail(RestoreJobExceptions.ofSlice(cause.getMessage(), slice, cause)));
                 }
                 else if (job.status == RestoreJobStatus.STAGED)
                 {
