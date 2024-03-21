@@ -33,8 +33,8 @@ public class ServerMetrics
 {
     public static final String DOMAIN = "sidecar.server";
     protected final MetricRegistry metricRegistry;
-    public final DefaultSettableGauge<Integer> cassandraInstancesUp;
-    public final DefaultSettableGauge<Integer> cassandraInstancesDown;
+    public final NamedMetric<DefaultSettableGauge<Integer>> cassandraInstancesUp;
+    public final NamedMetric<DefaultSettableGauge<Integer>> cassandraInstancesDown;
 
     @Inject
     public ServerMetrics(MetricRegistry metricRegistry)
@@ -45,11 +45,11 @@ public class ServerMetrics
         NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                    .withDomain(DOMAIN)
                    .withName("instances_up")
-                   .build().metric;
+                   .build();
         cassandraInstancesDown =
         NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                    .withDomain(DOMAIN)
                    .withName("instances_down")
-                   .build().metric;
+                   .build();
     }
 }

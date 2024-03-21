@@ -40,7 +40,7 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
-import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableComponentMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -96,14 +96,12 @@ public class ThrottleTest
             unblockingClientRequest(testRoute);
         }
 
-        StreamSSTableComponentMetrics dbComponentMetrics
-        = new InstanceMetricsImpl(registry(1)).forStreamComponent("db");
+        StreamSSTableMetrics.StreamSSTableComponentMetrics dbComponentMetrics
+        = new InstanceMetricsImpl(registry(1)).forStreamSSTable().forComponent("db");
 
         HttpResponse response = blockingClientRequest(testRoute);
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TOO_MANY_REQUESTS.code());
-        assertThat(dbComponentMetrics.rateLimitedCalls.getCount()).isGreaterThanOrEqualTo(1);
-        assertThat(dbComponentMetrics.waitTimeSent.getSnapshot().getValues().length).isGreaterThanOrEqualTo(1);
-        assertThat(dbComponentMetrics.waitTimeSent.getSnapshot().getValues()[0]).isPositive();
+        assertThat(dbComponentMetrics.rateLimitedCalls.metric.getCount()).isGreaterThanOrEqualTo(1);
 
         long secsToWait = Long.parseLong(response.getHeader("Retry-After"));
         Thread.sleep(SECONDS.toMillis(secsToWait));

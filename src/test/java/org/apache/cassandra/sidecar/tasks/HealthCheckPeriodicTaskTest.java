@@ -104,8 +104,8 @@ class HealthCheckPeriodicTaskTest
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
         promise.future().onComplete(context.succeeding(v -> {
-            assertThat(serverMetrics.cassandraInstancesUp.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(serverMetrics.cassandraInstancesDown.getValue()).isEqualTo(expectedDownInstances);
+            assertThat(serverMetrics.cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+            assertThat(serverMetrics.cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
             context.completeNow();
         }));
     }
@@ -123,8 +123,8 @@ class HealthCheckPeriodicTaskTest
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
         promise.future().onComplete(context.succeeding(v -> {
-            assertThat(serverMetrics.cassandraInstancesUp.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(serverMetrics.cassandraInstancesDown.getValue()).isEqualTo(expectedDownInstances);
+            assertThat(serverMetrics.cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+            assertThat(serverMetrics.cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
             context.completeNow();
         }));
     }
@@ -145,8 +145,8 @@ class HealthCheckPeriodicTaskTest
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
         promise.future().onComplete(context.failing(v -> {
-            assertThat(serverMetrics.cassandraInstancesUp.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(serverMetrics.cassandraInstancesDown.getValue()).isEqualTo(expectedDownInstances);
+            assertThat(serverMetrics.cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+            assertThat(serverMetrics.cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
             context.completeNow();
         }));
     }
@@ -169,8 +169,8 @@ class HealthCheckPeriodicTaskTest
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
         promise.future().onComplete(context.failing(v -> {
-            assertThat(serverMetrics.cassandraInstancesUp.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(serverMetrics.cassandraInstancesDown.getValue()).isEqualTo(expectedDownInstances);
+            assertThat(serverMetrics.cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+            assertThat(serverMetrics.cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
             context.completeNow();
         }));
     }

@@ -76,9 +76,6 @@ import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
-import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricProvider;
-import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricProviderImpl;
-import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricRegistry;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
@@ -530,14 +527,6 @@ public class MainModule extends AbstractModule
     public MetricRegistry globalMetricRegistry(SidecarConfiguration sidecarConfiguration)
     {
         return SharedMetricRegistries.getOrCreate(sidecarConfiguration.metricsConfiguration().registryName());
-    }
-
-    @Provides
-    @Singleton
-    public InstanceMetricProvider instanceMetricProvider(InstancesConfig instancesConfig,
-                                                         InstanceMetricRegistry.RegistryFactory instanceRegistryFactory)
-    {
-        return new InstanceMetricProviderImpl(instancesConfig, instanceRegistryFactory);
     }
 
     /**

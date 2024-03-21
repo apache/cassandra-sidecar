@@ -23,22 +23,20 @@ package org.apache.cassandra.sidecar.metrics.instance;
  */
 public interface InstanceMetrics
 {
-    String INSTANCE_PREFIX = "sidecar.instance";
+    String INSTANCE_PREFIX = "sidecar.cas_instance";
 
     /**
-     * @return resource metrics tracked for instance
+     * @return resource metrics tracked for cassandra instance
      */
-    InstanceResourceMetrics resource();
+    InstanceResourceMetrics forResource();
 
     /**
-     * @param component     SSTable component such as data
-     * @return metrics that are tracked during streaming of provided SSTable component
+     * @return metrics that are tracked during streaming of SSTable components from a cassandra instance
      */
-    StreamSSTableComponentMetrics forStreamComponent(String component);
+    StreamSSTableMetrics forStreamSSTable();
 
     /**
-     * @param component     SSTable component such as data
-     * @return metrics that are tracked during upload of provided SSTable component
+     * @return metrics that are tracked during upload of SSTable components to a cassandra instance
      */
-    UploadSSTableComponentMetrics forUploadComponent(String component);
+    UploadSSTableMetrics forUploadSSTable();
 }

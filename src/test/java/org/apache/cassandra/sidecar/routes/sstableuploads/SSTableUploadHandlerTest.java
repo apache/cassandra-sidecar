@@ -48,7 +48,7 @@ import org.apache.cassandra.sidecar.common.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
-import org.apache.cassandra.sidecar.metrics.instance.UploadSSTableComponentMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.UploadSSTableMetrics;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 import org.assertj.core.data.Percentage;
 
@@ -418,15 +418,15 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                 "; actual: " + httpResponse.statusCode());
                 return;
             }
-            UploadSSTableComponentMetrics componentMetrics
-            = new InstanceMetricsImpl(registry(1)).forUploadComponent("db");
+            UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics
+            = new InstanceMetricsImpl(registry(1)).forUploadSSTable().forComponent("db");
             if (expectedRetCode == HttpResponseStatus.INSUFFICIENT_STORAGE.code())
             {
-                assertThat(componentMetrics.diskUsageHighErrors.getCount()).isOne();
+                assertThat(componentMetrics.diskUsageHighErrors.metric.getCount()).isOne();
             }
             if (expectedRetCode == HttpResponseStatus.TOO_MANY_REQUESTS.code())
             {
-                assertThat(componentMetrics.rateLimitedCalls.getCount()).isOne();
+                assertThat(componentMetrics.rateLimitedCalls.metric.getCount()).isOne();
             }
 
             if (responseValidator != null)

@@ -18,47 +18,44 @@
 
 package org.apache.cassandra.sidecar.metrics.instance;
 
-import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
+
+import com.codahale.metrics.MetricRegistry;
 
 /**
  * Tracks metrics related to a Cassandra instance that Sidecar maintains.
  */
 public class InstanceMetricsImpl implements InstanceMetrics
 {
-    protected final InstanceMetricRegistry instanceMetricRegistry;
-    protected final Map<String, StreamSSTableComponentMetrics> streamComponentMetrics = new ConcurrentHashMap<>();
-    protected final Map<String, UploadSSTableComponentMetrics> uploadComponentMetrics = new ConcurrentHashMap<>();
-    protected final InstanceResourceMetrics instanceResourceMetrics;
+    protected final MetricRegistry metricRegistry;
+    protected final StreamSSTableMetrics streamSSTableMetrics;
+    protected final UploadSSTableMetrics uploadSSTableMetrics;
+    protected final InstanceResourceMetrics resourceMetrics;
 
-    public InstanceMetricsImpl(InstanceMetricRegistry instanceMetricRegistry)
+    public InstanceMetricsImpl(MetricRegistry metricRegistry)
     {
-        this.instanceMetricRegistry
-        = Objects.requireNonNull(instanceMetricRegistry, "Metrics registry can not be null");
+        this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metrics registry can not be null");
 
-        this.instanceResourceMetrics = new InstanceResourceMetrics(instanceMetricRegistry);
+        this.resourceMetrics = new InstanceResourceMetrics(metricRegistry);
+        this.streamSSTableMetrics = new StreamSSTableMetrics(metricRegistry);
+        this.uploadSSTableMetrics = new UploadSSTableMetrics(metricRegistry);
     }
 
     @Override
-    public InstanceResourceMetrics resource()
+    public InstanceResourceMetrics forResource()
     {
-        return instanceResourceMetrics;
+        return resourceMetrics;
     }
 
     @Override
-    public StreamSSTableComponentMetrics forStreamComponent(String component)
+    public StreamSSTableMetrics forStreamSSTable()
     {
-        return streamComponentMetrics
-               .computeIfAbsent(component, sstableComponent -> new StreamSSTableComponentMetrics(instanceMetricRegistry,
-                                                                                                 sstableComponent));
+        return new StreamSSTableMetrics(metricRegistry);
     }
 
     @Override
-    public UploadSSTableComponentMetrics forUploadComponent(String component)
+    public UploadSSTableMetrics forUploadSSTable()
     {
-        return uploadComponentMetrics
-               .computeIfAbsent(component, sstableComponent -> new UploadSSTableComponentMetrics(instanceMetricRegistry,
-                                                                                                 sstableComponent));
+        return new UploadSSTableMetrics(metricRegistry);
     }
 }

@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.utils;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
-import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricRegistry;
 
 /**
  * Utility methods to retrieve {@link MetricRegistry} during testing
@@ -32,11 +31,9 @@ public class TestMetricUtils
         return SharedMetricRegistries.getOrCreate("cassandra_sidecar");
     }
 
-    public static InstanceMetricRegistry registry(int instanceId)
+    public static MetricRegistry registry(int instanceId)
     {
         String registryName = "cassandra_sidecar_" + instanceId;
-        InstanceMetricRegistry instanceMetricRegistry = new InstanceMetricRegistry(instanceId);
-        SharedMetricRegistries.add(registryName, instanceMetricRegistry);
-        return (InstanceMetricRegistry) SharedMetricRegistries.getOrCreate(registryName);
+        return SharedMetricRegistries.getOrCreate(registryName);
     }
 }

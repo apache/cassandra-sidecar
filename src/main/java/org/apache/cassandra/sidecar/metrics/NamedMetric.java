@@ -31,8 +31,7 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
  * {@link NamedMetric} is for creating {@link Metric} with a structured name. Metric name should contain domain it
  * is captured for and optional tags for additional context.
  *
- * @param <T>   {@link NamedMetric} can be created for any {@link Metric} type. T represents the Metric type
- *              {@link NamedMetric} represents
+ * @param <T> Metric type
  */
 public class NamedMetric<T extends Metric>
 {
@@ -51,10 +50,9 @@ public class NamedMetric<T extends Metric>
     }
 
     /**
-     * {@link NamedMetric} builder static inner class.
+     * Builder for {@link NamedMetric}
      *
-     * @param <T>    {@link NamedMetric} can be created for any {@link Metric} type. T represents the Metric type
-     *               {@link NamedMetric} represents
+     * @param <T> Metric type
      */
     public static class Builder<T extends Metric> implements DataObjectBuilder<Builder<T>, NamedMetric<T>>
     {
@@ -69,7 +67,7 @@ public class NamedMetric<T extends Metric>
         }
 
         /**
-         * Sets {@code domain} of metric and returns a reference to this builder to enable method chaining.
+         * Sets {@code domain} of metric.
          *
          * @param domain domain metric is part of
          * @return a reference to this Builder
@@ -80,7 +78,7 @@ public class NamedMetric<T extends Metric>
         }
 
         /**
-         * Sets {@code name} of metric and returns a reference to this builder to enable method chaining.
+         * Sets {@code name} of metric.
          *
          * @param name metric name
          * @return a reference to this Builder
@@ -92,7 +90,7 @@ public class NamedMetric<T extends Metric>
 
         /**
          * Additional name tag added to metric name for more clarity. Tags are usually added like,
-         * component=data, route=/stream/component, etc. Returns a reference to this Builder enabling method chaining.
+         * component=data, route=/stream/component, etc.
          *
          * @param tag tag added to {@code tags}
          * @return a reference to this Builder
@@ -104,7 +102,7 @@ public class NamedMetric<T extends Metric>
 
         /**
          * Additional name tag added to metric name for more clarity. Tags are usually added like,
-         * component=data, route=/stream/component, etc. Returns a reference to this Builder enabling method chaining.
+         * component=data, route=/stream/component, etc.
          *
          * @param key key of tag to be added
          * @param value value of tag to be added

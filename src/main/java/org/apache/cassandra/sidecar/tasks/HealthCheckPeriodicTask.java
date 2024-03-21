@@ -110,8 +110,8 @@ public class HealthCheckPeriodicTask implements PeriodicTask
         Future.join(futures)
               .onComplete(v -> {
                   int instancesUp = instancesConfig.instances().size() - instanceDown.get();
-                  serverMetrics.cassandraInstancesUp.setValue(instancesUp);
-                  serverMetrics.cassandraInstancesDown.setValue(instanceDown.get());
+                  serverMetrics.cassandraInstancesUp.metric.setValue(instancesUp);
+                  serverMetrics.cassandraInstancesDown.metric.setValue(instanceDown.get());
               })
               .onSuccess(v -> promise.complete())
               .onFailure(promise::fail);

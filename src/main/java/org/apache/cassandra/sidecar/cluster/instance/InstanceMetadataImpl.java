@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -38,6 +39,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
     private final String stagingDir;
     @Nullable
     private final CassandraAdapterDelegate delegate;
+    private final InstanceMetrics metrics;
 
     protected InstanceMetadataImpl(Builder builder)
     {
@@ -47,6 +49,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         dataDirs = Collections.unmodifiableList(builder.dataDirs);
         stagingDir = builder.stagingDir;
         delegate = builder.delegate;
+        metrics = builder.metrics;
     }
 
     @Override
@@ -85,6 +88,12 @@ public class InstanceMetadataImpl implements InstanceMetadata
         return delegate;
     }
 
+    @Override
+    public InstanceMetrics metrics()
+    {
+        return metrics;
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -101,6 +110,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         protected List<String> dataDirs;
         protected String stagingDir;
         protected CassandraAdapterDelegate delegate;
+        protected InstanceMetrics metrics;
 
         protected Builder()
         {
@@ -114,6 +124,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
             dataDirs = new ArrayList<>(instanceMetadata.dataDirs);
             stagingDir = instanceMetadata.stagingDir;
             delegate = instanceMetadata.delegate;
+            metrics = instanceMetadata.metrics;
         }
 
         @Override
@@ -186,6 +197,18 @@ public class InstanceMetadataImpl implements InstanceMetadata
         public Builder delegate(CassandraAdapterDelegate delegate)
         {
             return update(b -> b.delegate = delegate);
+        }
+
+        /**
+         * Sets the {@code metrics} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param metrics the {@code metrics} to set
+         * @return a reference to this Builder
+         */
+        public Builder metrics(InstanceMetrics metrics)
+
+        {
+            return update(b -> b.metrics = metrics);
         }
 
         /**
