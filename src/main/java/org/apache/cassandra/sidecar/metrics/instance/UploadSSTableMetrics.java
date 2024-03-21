@@ -45,8 +45,7 @@ public class UploadSSTableMetrics
     public UploadSSTableComponentMetrics forComponent(String component)
     {
         return uploadComponentMetrics
-               .computeIfAbsent(component, sstableComponent -> new UploadSSTableComponentMetrics(metricRegistry,
-                                                                                                 sstableComponent));
+               .computeIfAbsent(component, sstableComponent -> new UploadSSTableComponentMetrics(metricRegistry, sstableComponent));
     }
 
     /**

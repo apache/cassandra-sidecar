@@ -46,8 +46,7 @@ public class StreamSSTableMetrics
     public StreamSSTableComponentMetrics forComponent(String component)
     {
         return streamComponentMetrics
-               .computeIfAbsent(component, sstableComponent -> new StreamSSTableComponentMetrics(metricRegistry,
-                                                                                                 sstableComponent));
+               .computeIfAbsent(component, sstableComponent -> new StreamSSTableComponentMetrics(metricRegistry, sstableComponent));
     }
 
     /**

@@ -383,7 +383,8 @@ public class MainModule extends AbstractModule
                                                       sidecarVersionProvider.sidecarVersion(),
                                                       jmxConfiguration,
                                                       cqlSessionProvider,
-                                                      driverUtils);
+                                                      driverUtils,
+                                                      configuration.metricsConfiguration().registryName());
                      })
                      .collect(Collectors.toList());
 
@@ -552,12 +553,13 @@ public class MainModule extends AbstractModule
      * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
      * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
      *
-     * @param vertx             the vertx instance
-     * @param cassandraInstance the cassandra instance configuration
-     * @param versionProvider   a Cassandra version provider
-     * @param sidecarVersion    the version of the Sidecar from the current binary
-     * @param jmxConfiguration  the configuration for the JMX Client
-     * @param session           the CQL Session provider
+     * @param vertx                 the vertx instance
+     * @param cassandraInstance     the cassandra instance configuration
+     * @param versionProvider       a Cassandra version provider
+     * @param sidecarVersion        the version of the Sidecar from the current binary
+     * @param jmxConfiguration      the configuration for the JMX Client
+     * @param session               the CQL Session provider
+     * @param globalRegistryName    global registry name used for tracking Sidecar metrics
      * @return the build instance metadata object
      */
     private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
@@ -566,7 +568,8 @@ public class MainModule extends AbstractModule
                                                           String sidecarVersion,
                                                           JmxConfiguration jmxConfiguration,
                                                           CQLSessionProvider session,
-                                                          DriverUtils driverUtils)
+                                                          DriverUtils driverUtils,
+                                                          String globalRegistryName)
     {
         String host = cassandraInstance.host();
         int port = cassandraInstance.port();
@@ -596,6 +599,7 @@ public class MainModule extends AbstractModule
                                    .dataDirs(cassandraInstance.dataDirs())
                                    .stagingDir(cassandraInstance.stagingDir())
                                    .delegate(delegate)
+                                   .globalMetricRegistryName(globalRegistryName)
                                    .build();
     }
 }
