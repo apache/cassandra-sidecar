@@ -263,7 +263,8 @@ public class RestoreSliceTask implements RestoreSliceHandler
 
         LOGGER.info("Begin downloading restore slice. sliceKey={}", slice.key());
         Future<File> future =
-        fromCompletionStage(s3Client.downloadObjectIfAbsent(slice)).onFailure(cause -> {
+        fromCompletionStage(s3Client.downloadObjectIfAbsent(slice))
+        .onFailure(cause -> {
             slice.incrementDownloadAttempt();
             if (ThrowableUtils.getCause(cause, ApiCallTimeoutException.class) != null)
             {

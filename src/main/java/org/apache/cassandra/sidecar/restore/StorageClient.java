@@ -159,7 +159,7 @@ public class StorageClient
         File object = objectPath.toFile();
         if (object.exists())
         {
-            LOGGER.debug("Skipping download, file already exists. jobId={}, s3_object={}",
+            LOGGER.debug("Skipping download, file already exists. jobId={} s3_object={}",
                          slice.jobId(), slice.stagedObjectPath());
             // Skip downloading if the file already exists on disk. It should be a rare scenario.
             // Note that the on-disk file could be different from the remote object, although the name matches.
@@ -271,7 +271,7 @@ public class StorageClient
         }
         catch (FileAlreadyExistsException fileAlreadyExistsException)
         {
-            LOGGER.debug("Skipping download, file already exists. jobId={}, s3_object={}",
+            LOGGER.debug("Skipping download, file already exists. jobId={} s3_object={}",
                          slice.jobId(), slice.stagedObjectPath());
             return CompletableFuture.completedFuture(publisher.response());
         }
