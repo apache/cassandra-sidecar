@@ -32,7 +32,6 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.codahale.metrics.Meter;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
@@ -48,6 +47,8 @@ import org.apache.cassandra.sidecar.common.data.Digest;
 import org.apache.cassandra.sidecar.common.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
+import org.apache.cassandra.sidecar.metrics.instance.UploadSSTableComponentMetrics;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 import org.assertj.core.data.Percentage;
 
@@ -61,7 +62,7 @@ import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.prepareTestFile;
-import static org.apache.cassandra.sidecar.utils.TestMetricUtils.getMetric;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -417,15 +418,15 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                 "; actual: " + httpResponse.statusCode());
                 return;
             }
+            UploadSSTableComponentMetrics componentMetrics
+            = new InstanceMetricsImpl(registry(1)).forUploadComponent("db");
             if (expectedRetCode == HttpResponseStatus.INSUFFICIENT_STORAGE.code())
             {
-                assertThat(getMetric(1, "sidecar.instance.upload.component=db.disk_usage_high_errors", Meter.class)
-                           .getCount()).isOne();
+                assertThat(componentMetrics.diskUsageHighErrors.getCount()).isOne();
             }
             if (expectedRetCode == HttpResponseStatus.TOO_MANY_REQUESTS.code())
             {
-                assertThat(getMetric(1, "sidecar.instance.upload.component=db.rate_limited_calls_429", Meter.class)
-                           .getCount()).isOne();
+                assertThat(componentMetrics.rateLimitedCalls.getCount()).isOne();
             }
 
             if (responseValidator != null)

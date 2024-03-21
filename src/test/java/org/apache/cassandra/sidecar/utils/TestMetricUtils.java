@@ -18,37 +18,15 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricRegistry;
 
 /**
- * Utility methods to retrieve metrics during testing
+ * Utility methods to retrieve {@link MetricRegistry} during testing
  */
 public class TestMetricUtils
 {
-    public static <T extends Metric> T getMetric(String name, Class<T> type)
-    {
-        Metric metric = registry().getMetrics().get(name);
-        if (!type.isInstance(metric))
-        {
-            throw new RuntimeException("Unexpected metric type " + metric.getClass() + " found, expected " + type);
-        }
-        return type.cast(metric);
-    }
-
-    public static <T extends Metric> T getMetric(int instanceId, String name, Class<T> type)
-    {
-        InstanceMetricRegistry instanceMetricRegistry = registry(instanceId);
-        Metric metric = instanceMetricRegistry.getMetrics().get(name);
-        if (!type.isInstance(metric))
-        {
-            throw new RuntimeException("Unexpected metric type " + metric.getClass() + " found, expected " + type);
-        }
-        return type.cast(metric);
-    }
-
     public static MetricRegistry registry()
     {
         return SharedMetricRegistries.getOrCreate("cassandra_sidecar");

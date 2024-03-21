@@ -29,8 +29,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.Timer;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
@@ -41,11 +39,12 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
+import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableComponentMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.cassandra.sidecar.utils.TestMetricUtils.getMetric;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -97,9 +96,14 @@ public class ThrottleTest
             unblockingClientRequest(testRoute);
         }
 
+        StreamSSTableComponentMetrics dbComponentMetrics
+        = new InstanceMetricsImpl(registry(1)).forStreamComponent("db");
+
         HttpResponse response = blockingClientRequest(testRoute);
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TOO_MANY_REQUESTS.code());
-        assertRateLimitedMetricsRecorded();
+        assertThat(dbComponentMetrics.rateLimitedCalls.getCount()).isGreaterThanOrEqualTo(1);
+        assertThat(dbComponentMetrics.waitTimeSent.getSnapshot().getValues().length).isGreaterThanOrEqualTo(1);
+        assertThat(dbComponentMetrics.waitTimeSent.getSnapshot().getValues()[0]).isPositive();
 
         long secsToWait = Long.parseLong(response.getHeader("Retry-After"));
         Thread.sleep(SECONDS.toMillis(secsToWait));
@@ -128,18 +132,5 @@ public class ThrottleTest
               .as(BodyCodec.buffer())
               .send(resp -> future.complete(resp.result()));
         return future.get();
-    }
-
-    private void assertRateLimitedMetricsRecorded()
-    {
-        assertThat(getMetric(1, "sidecar.instance.stream.component=db.rate_limited_calls_429", Meter.class)
-                   .getCount()).isGreaterThanOrEqualTo(1);
-        assertThat(getMetric(1, "sidecar.instance.stream.component=db.429_wait_time", Timer.class)
-                   .getSnapshot()
-                   .getValues()
-                   .length).isGreaterThanOrEqualTo(1);
-        assertThat(getMetric(1, "sidecar.instance.stream.component=db.429_wait_time", Timer.class)
-                   .getSnapshot()
-                   .getValues()[0]).isPositive();
     }
 }
