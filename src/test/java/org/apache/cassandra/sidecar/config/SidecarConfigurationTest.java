@@ -38,6 +38,8 @@ import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE_SCHEMA
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TIME_SKEW_ROUTE;
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
+import static org.apache.cassandra.sidecar.config.yaml.MetricsConfigurationImpl.DEFAULT_DROPWIZARD_REGISTRY_NAME;
+import static org.apache.cassandra.sidecar.config.yaml.VertxMetricsConfigurationImpl.DEFAULT_JMX_DOMAIN_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 
@@ -210,6 +212,23 @@ class SidecarConfigurationTest
         assertThat(configuration.replicationFactor()).isEqualTo(3);
         assertThat(configuration.createReplicationStrategyString())
         .isEqualTo("{'class':'SimpleStrategy', 'replication_factor':'3'}");
+    }
+
+    @Test
+    void testMetricOptionsParsedFromYaml() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_metrics.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+
+        MetricsConfiguration configuration = config.metricsConfiguration();
+        assertThat(configuration.registryName()).isEqualTo(DEFAULT_DROPWIZARD_REGISTRY_NAME);
+        VertxMetricsConfiguration vertxMetricsConfiguration = configuration.vertxConfiguration();
+        assertThat(vertxMetricsConfiguration.enabled()).isTrue();
+        assertThat(vertxMetricsConfiguration.exposeViaJMX()).isFalse();
+        assertThat(vertxMetricsConfiguration.jmxDomainName()).isEqualTo(DEFAULT_JMX_DOMAIN_NAME);
+        assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().size()).isEqualTo(2);
+        assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().get(0)).isEqualTo("/api/v1/keyspaces/.*");
+        assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().get(1)).isEqualTo("/api/v1/cassandra/.*");
     }
 
     @Test

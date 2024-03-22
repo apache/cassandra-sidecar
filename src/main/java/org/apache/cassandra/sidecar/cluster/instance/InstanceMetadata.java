@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -60,7 +61,7 @@ public interface InstanceMetadata
     @Nullable CassandraAdapterDelegate delegate();
 
     /**
-     * @return {@link InstanceMetrics} metrics specific for the cassandra instance
+     * @return {@link InstanceMetrics} metrics specific for the Cassandra instance
      */
-    InstanceMetrics metrics();
+    @NotNull InstanceMetrics metrics();
 }

@@ -108,12 +108,13 @@ public class InstanceMetadataImpl implements InstanceMetadata
      */
     public static class Builder implements DataObjectBuilder<Builder, InstanceMetadataImpl>
     {
-        protected int id;
+        protected Integer id;
         protected String host;
         protected int port;
         protected List<String> dataDirs;
         protected String stagingDir;
         protected CassandraAdapterDelegate delegate;
+        protected String globalRegistryName;
         protected InstanceMetrics metrics;
 
         protected Builder()
@@ -204,7 +205,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         }
 
         /**
-         * Builds instance specific {@link com.codahale.metrics.MetricRegistry} given the global registry name.
+         * Sets the {@code globalRegistryName} and returns a reference to this Builder enabling method chaining.
          *
          * @param registryName global {@link com.codahale.metrics.MetricRegistry} name
          * @return a reference to this Builder
@@ -212,18 +213,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         public Builder globalMetricRegistryName(String registryName)
 
         {
-            Objects.requireNonNull(registryName);
-
-            String instanceRegistryName = instanceRegistryName(registryName);
-            MetricRegistry instanceMetricRegistry = SharedMetricRegistries.getOrCreate(instanceRegistryName);
-            InstanceMetricsImpl instanceMetrics = new InstanceMetricsImpl(instanceMetricRegistry);
-
-            return update(b -> b.metrics = instanceMetrics);
-        }
-
-        private String instanceRegistryName(String globalRegistryName)
-        {
-            return globalRegistryName + "_" + id;
+            return update(b -> b.globalRegistryName = registryName);
         }
 
         /**
@@ -234,9 +224,19 @@ public class InstanceMetadataImpl implements InstanceMetadata
         @Override
         public InstanceMetadataImpl build()
         {
-            Objects.requireNonNull(metrics);
+            Objects.requireNonNull(id);
+            Objects.requireNonNull(globalRegistryName);
+
+            String instanceRegistryName = instanceRegistryName(globalRegistryName);
+            MetricRegistry instanceMetricRegistry = SharedMetricRegistries.getOrCreate(instanceRegistryName);
+            metrics = new InstanceMetricsImpl(instanceMetricRegistry);
 
             return new InstanceMetadataImpl(this);
+        }
+
+        private String instanceRegistryName(String globalRegistryName)
+        {
+            return globalRegistryName + "_" + id;
         }
     }
 }
