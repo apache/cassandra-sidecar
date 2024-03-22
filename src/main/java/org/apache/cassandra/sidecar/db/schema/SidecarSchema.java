@@ -32,7 +32,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
-import org.apache.cassandra.sidecar.stats.SidecarSchemaStats;
+import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -50,25 +50,25 @@ public class SidecarSchema
     private final ExecutorPools executorPools;
     private final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
     private final SidecarInternalKeyspace sidecarInternalKeyspace;
-    private final SidecarSchemaStats stats;
     private final AtomicLong initializationTimerId = new AtomicLong(-1L);
     private final CQLSessionProvider cqlSessionProvider;
+    private final SchemaMetrics metrics;
 
     private boolean isInitialized = false;
 
     public SidecarSchema(Vertx vertx,
                          ExecutorPools executorPools,
                          SidecarConfiguration config,
-                         SidecarSchemaStats stats,
                          SidecarInternalKeyspace sidecarInternalKeyspace,
-                         CQLSessionProvider cqlSessionProvider)
+                         CQLSessionProvider cqlSessionProvider,
+                         SchemaMetrics metrics)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
         this.schemaKeyspaceConfiguration = config.serviceConfiguration().schemaKeyspaceConfiguration();
         this.sidecarInternalKeyspace = sidecarInternalKeyspace;
         this.cqlSessionProvider = cqlSessionProvider;
-        this.stats = stats;
+        this.metrics = metrics;
         if (this.schemaKeyspaceConfiguration.isEnabled())
         {
             configureSidecarServerEventListeners();
@@ -160,9 +160,9 @@ public class SidecarSchema
             if (ex instanceof SidecarSchemaModificationException)
             {
                 LOGGER.warn("Failed to modify schema", ex);
-                stats.captureSchemaModificationFailed();
+                metrics.failedModifications.metric.mark();
             }
-            stats.captureSchemaInitializationFailed();
+            metrics.failedInitializations.metric.mark();
         }
     }
 

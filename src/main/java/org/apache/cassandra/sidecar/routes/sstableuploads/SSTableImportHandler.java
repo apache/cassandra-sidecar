@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.common.data.SSTableImportResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.data.SSTableImportRequest;
+import org.apache.cassandra.sidecar.metrics.instance.SSTableImportMetrics;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.utils.CacheFactory;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -89,16 +90,17 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
                                SocketAddress remoteAddress,
                                SSTableImportRequest request)
     {
+        SSTableImportMetrics metrics = metadataFetcher.instance(host).metrics().sstableImport();
         uploadPathBuilder.build(host, request)
                          .onSuccess(uploadDirectory -> {
                              SSTableImporter.ImportOptions importOptions =
                              importOptions(host, request, uploadDirectory);
 
-                             Future<Void> importResult = cache.get(importOptions, this::importSSTablesAsync);
+                             Future<Void> importResult = cache.get(importOptions, key -> importSSTablesAsync(key, metrics));
                              if (importResult == null)
                              {
                                  // cache is disabled
-                                 importResult = importSSTablesAsync(importOptions);
+                                 importResult = importSSTablesAsync(importOptions, metrics);
                              }
 
                              if (!importResult.isComplete())
@@ -162,11 +164,12 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
      * @param importOptions the import options
      * @return a future for the import
      */
-    private Future<Void> importSSTablesAsync(SSTableImporter.ImportOptions importOptions)
+    private Future<Void> importSSTablesAsync(SSTableImporter.ImportOptions importOptions, SSTableImportMetrics metrics)
     {
         CassandraAdapterDelegate cassandra = metadataFetcher.delegate(importOptions.host());
         if (cassandra == null)
         {
+            metrics.cassandraUnavailable.metric.setValue(1);
             return Future.failedFuture(cassandraServiceUnavailable());
         }
 
@@ -174,6 +177,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
 
         if (tableOperations == null)
         {
+            metrics.cassandraUnavailable.metric.setValue(1);
             return Future.failedFuture(cassandraServiceUnavailable());
         }
         else

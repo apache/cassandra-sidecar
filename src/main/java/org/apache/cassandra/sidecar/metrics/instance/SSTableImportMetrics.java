@@ -21,36 +21,34 @@ package org.apache.cassandra.sidecar.metrics.instance;
 import java.util.Objects;
 
 import com.codahale.metrics.DefaultSettableGauge;
-import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
 
 /**
- * {@link InstanceResourceMetrics} contains metrics to track resource usage of a Cassandra instance maintained
- * by Sidecar.
+ * Tracks metrics during SSTable import operation done in Cassandra instance
  */
-public class InstanceResourceMetrics
+public class SSTableImportMetrics
 {
-    public static final String DOMAIN = INSTANCE_PREFIX + ".resource";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".sstable_import";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<Meter> insufficientStagingSpace;
-    public final NamedMetric<DefaultSettableGauge<Long>> usableStagingSpace;
+    public final NamedMetric<DefaultSettableGauge<Integer>> cassandraUnavailable;
+    public final NamedMetric<DefaultSettableGauge<Integer>> pendingImports;
 
-    public InstanceResourceMetrics(MetricRegistry metricRegistry)
+    public SSTableImportMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        insufficientStagingSpace
-        = NamedMetric.builder(metricRegistry::meter)
+        cassandraUnavailable
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("insufficient_staging_space")
+                     .withName("cassandra_unavailable_503")
                      .build();
-        usableStagingSpace
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+        pendingImports
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("usable_staging_space")
+                     .withName("pending_imports")
                      .build();
     }
 }

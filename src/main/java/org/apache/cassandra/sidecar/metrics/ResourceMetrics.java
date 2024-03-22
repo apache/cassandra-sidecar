@@ -16,41 +16,53 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.metrics.instance;
+package org.apache.cassandra.sidecar.metrics;
 
 import java.util.Objects;
 
-import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import org.apache.cassandra.sidecar.metrics.NamedMetric;
-
-import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
+import com.codahale.metrics.Timer;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
 /**
- * {@link InstanceResourceMetrics} contains metrics to track resource usage of a Cassandra instance maintained
- * by Sidecar.
+ * Tracks resource metrics, for resources maintained by Sidecar.
  */
-public class InstanceResourceMetrics
+@Singleton
+public class ResourceMetrics
 {
-    public static final String DOMAIN = INSTANCE_PREFIX + ".resource";
+    public static final String DOMAIN = "sidecar.resource";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<Meter> insufficientStagingSpace;
-    public final NamedMetric<DefaultSettableGauge<Long>> usableStagingSpace;
+    public final NamedMetric<Meter> shortLivedTasks;
+    public final NamedMetric<Meter> longTasks;
+    public final NamedMetric<Timer> shortTaskTimeTaken;
+    public final NamedMetric<Timer> longTaskTimeTaken;
 
-    public InstanceResourceMetrics(MetricRegistry metricRegistry)
+    @Inject
+    public ResourceMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        insufficientStagingSpace
+        shortLivedTasks
         = NamedMetric.builder(metricRegistry::meter)
                      .withDomain(DOMAIN)
-                     .withName("insufficient_staging_space")
+                     .withName("short_lived_tasks")
                      .build();
-        usableStagingSpace
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+        longTasks
+        = NamedMetric.builder(metricRegistry::meter)
                      .withDomain(DOMAIN)
-                     .withName("usable_staging_space")
+                     .withName("long_tasks")
+                     .build();
+        shortTaskTimeTaken
+        = NamedMetric.builder(metricRegistry::timer)
+                     .withDomain(DOMAIN)
+                     .withName("short_task_time_taken")
+                     .build();
+        longTaskTimeTaken
+        = NamedMetric.builder(metricRegistry::timer)
+                     .withDomain(DOMAIN)
+                     .withName("long_task_time_taken")
                      .build();
     }
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.stats;
+package org.apache.cassandra.sidecar.metrics;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.LongConsumer;

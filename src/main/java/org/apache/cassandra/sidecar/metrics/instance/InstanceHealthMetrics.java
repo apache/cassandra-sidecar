@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.metrics.instance;
 
 import java.util.Objects;
 
-import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
@@ -28,29 +27,28 @@ import org.apache.cassandra.sidecar.metrics.NamedMetric;
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
 
 /**
- * {@link InstanceResourceMetrics} contains metrics to track resource usage of a Cassandra instance maintained
- * by Sidecar.
+ * Tracks health related metrics of a Cassandra instance maintained by Sidecar.
  */
-public class InstanceResourceMetrics
+public class InstanceHealthMetrics
 {
-    public static final String DOMAIN = INSTANCE_PREFIX + ".resource";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".health";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<Meter> insufficientStagingSpace;
-    public final NamedMetric<DefaultSettableGauge<Long>> usableStagingSpace;
+    public final NamedMetric<Meter> jmxDown;
+    public final NamedMetric<Meter> nativeDown;
 
-    public InstanceResourceMetrics(MetricRegistry metricRegistry)
+    public InstanceHealthMetrics(MetricRegistry registry)
     {
-        this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
+        this.metricRegistry = Objects.requireNonNull(registry, "Metric registry can not be null");
 
-        insufficientStagingSpace
+        jmxDown
         = NamedMetric.builder(metricRegistry::meter)
                      .withDomain(DOMAIN)
-                     .withName("insufficient_staging_space")
+                     .withName("jmx_down")
                      .build();
-        usableStagingSpace
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+        nativeDown
+        = NamedMetric.builder(metricRegistry::meter)
                      .withDomain(DOMAIN)
-                     .withName("usable_staging_space")
+                     .withName("native_down")
                      .build();
     }
 }

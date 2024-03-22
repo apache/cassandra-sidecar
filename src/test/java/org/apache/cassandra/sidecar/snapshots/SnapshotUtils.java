@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 import org.apache.cassandra.sidecar.metrics.MetricFilter;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,7 +121,8 @@ public class SnapshotUtils
         {
             JmxClient mockJmxClient = mock(JmxClient.class);
             delegate = new CassandraAdapterDelegate(vertx, 1, versionProvider, cqlSessionProvider1, mockJmxClient,
-                                                    new DriverUtils(), null, "localhost1", 9042);
+                                                    new DriverUtils(), null, "localhost1", 9042,
+                                                    new InstanceHealthMetrics(METRIC_REGISTRY_PROVIDER.getOrCreate(1)));
         }
 
         InstanceMetadataImpl localhost = InstanceMetadataImpl.builder()

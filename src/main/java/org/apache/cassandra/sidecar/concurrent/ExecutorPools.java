@@ -31,6 +31,11 @@ import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.metrics.ResourceMetrics;
+import org.apache.cassandra.sidecar.metrics.Timer;
+
+import static org.apache.cassandra.sidecar.config.ServiceConfiguration.INTERNAL_POOL;
+import static org.apache.cassandra.sidecar.config.ServiceConfiguration.SERVICE_POOL;
 
 /**
  * Manages dedicated worker pools to schedule and execute _blocking_ tasks to avoid blocking netty eventloop.
@@ -45,11 +50,16 @@ public class ExecutorPools
     // they are not expected to complete immediately and can be queued if all the threads are busy
     private final TaskExecutorPool internalTaskExecutors;
 
-    @Inject
     public ExecutorPools(Vertx vertx, ServiceConfiguration configuration)
     {
-        this.taskExecutors = new TaskExecutorPool(vertx, configuration.serverWorkerPoolConfiguration());
-        this.internalTaskExecutors = new TaskExecutorPool(vertx, configuration.serverInternalWorkerPoolConfiguration());
+        this(vertx, configuration, null);
+    }
+
+    @Inject
+    public ExecutorPools(Vertx vertx, ServiceConfiguration configuration, ResourceMetrics metrics)
+    {
+        this.taskExecutors = new TaskExecutorPool(vertx, configuration.serverWorkerPoolConfiguration(), metrics);
+        this.internalTaskExecutors = new TaskExecutorPool(vertx, configuration.serverInternalWorkerPoolConfiguration(), metrics);
     }
 
     /**
@@ -82,15 +92,19 @@ public class ExecutorPools
     public static class TaskExecutorPool implements WorkerExecutor
     {
         private final Vertx vertx;
+        private final String workerPoolName;
         private final WorkerExecutor workerExecutor;
+        private final ResourceMetrics metrics;
 
-        private TaskExecutorPool(Vertx vertx, WorkerPoolConfiguration config)
+        private TaskExecutorPool(Vertx vertx, WorkerPoolConfiguration config, ResourceMetrics metrics)
         {
             this.vertx = vertx;
+            this.workerPoolName = config.workerPoolName();
             this.workerExecutor = vertx.createSharedWorkerExecutor(config.workerPoolName(),
                                                                    config.workerPoolSize(),
                                                                    config.workerMaxExecutionTimeMillis(),
                                                                    TimeUnit.MILLISECONDS);
+            this.metrics = metrics;
         }
 
         /**
@@ -153,7 +167,10 @@ public class ExecutorPools
             return vertx.setPeriodic(initialDelay,
                                      delay,
                                      id -> workerExecutor.executeBlocking(() -> {
+                                         recordTask();
+                                         long startTime = System.nanoTime();
                                          handler.handle(id);
+                                         recordTimeTaken(System.nanoTime() - startTime);
                                          return id;
                                      }, ordered));
         }
@@ -169,7 +186,12 @@ public class ExecutorPools
         public long setTimer(long delay, Handler<Long> handler)
         {
             return vertx.setTimer(delay, id ->
-                                         workerExecutor.executeBlocking(promise -> handler.handle(id), false));
+                                         workerExecutor.executeBlocking(promise -> {
+                                             recordTask();
+                                             long startTime = System.nanoTime();
+                                             handler.handle(id);
+                                             recordTimeTaken(System.nanoTime() - startTime);
+                                         }, false));
         }
 
         /**
@@ -186,9 +208,29 @@ public class ExecutorPools
         public long setTimer(long delay, Handler<Long> handler, boolean ordered)
         {
             return vertx.setTimer(delay, id -> workerExecutor.executeBlocking(() -> {
+                recordTask();
+                long startTime = System.nanoTime();
                 handler.handle(id);
+                recordTimeTaken(System.nanoTime() - startTime);
                 return id;
             }, ordered));
+        }
+
+        private void recordTimeTaken(long duration)
+        {
+            if (metrics == null)
+            {
+                return;
+            }
+
+            if (workerPoolName.equals(SERVICE_POOL))
+            {
+                metrics.shortTaskTimeTaken.metric.update(duration, TimeUnit.NANOSECONDS);
+            }
+            else if (workerPoolName.equals(INTERNAL_POOL))
+            {
+                metrics.longTaskTimeTaken.metric.update(duration, TimeUnit.NANOSECONDS);
+            }
         }
 
         /**
@@ -207,6 +249,7 @@ public class ExecutorPools
                                         boolean ordered,
                                         Handler<AsyncResult<T>> asyncResultHandler)
         {
+            recordTask();
             workerExecutor.executeBlocking(blockingCodeHandler, ordered, asyncResultHandler);
         }
 
@@ -214,26 +257,47 @@ public class ExecutorPools
         public <T> Future<T> executeBlocking(Handler<Promise<T>> blockingCodeHandler,
                                              boolean ordered)
         {
-            return workerExecutor.executeBlocking(blockingCodeHandler, ordered);
+            recordTask();
+            return Timer.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler, ordered), this::recordTimeTaken);
         }
 
         @Override
         public <T> Future<T> executeBlocking(Callable<T> blockingCodeHandler, boolean ordered)
         {
-            return workerExecutor.executeBlocking(blockingCodeHandler, ordered);
+            recordTask();
+            return Timer.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler, ordered), this::recordTimeTaken);
         }
 
         @Override
         public <T> void executeBlocking(Handler<Promise<T>> blockingCodeHandler,
                                         Handler<AsyncResult<T>> asyncResultHandler)
         {
+            recordTask();
             workerExecutor.executeBlocking(blockingCodeHandler, asyncResultHandler);
         }
 
         @Override
         public <T> Future<T> executeBlocking(Handler<Promise<T>> blockingCodeHandler)
         {
-            return workerExecutor.executeBlocking(blockingCodeHandler);
+            recordTask();
+            return Timer.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler), this::recordTimeTaken);
+        }
+
+        private void recordTask()
+        {
+            if (metrics == null)
+            {
+                return;
+            }
+
+            if (workerPoolName.equals("sidecar-worker-pool"))
+            {
+                metrics.shortLivedTasks.metric.mark();
+            }
+            else if (workerPoolName.equals("sidecar-internal-worker-pool"))
+            {
+                metrics.longTasks.metric.mark();
+            }
         }
 
         @Override

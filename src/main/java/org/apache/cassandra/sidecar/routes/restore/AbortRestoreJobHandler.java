@@ -28,10 +28,10 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
+import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
-import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -47,7 +47,7 @@ public class AbortRestoreJobHandler extends AbstractHandler<String>
 {
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
     private final RestoreJobManagerGroup restoreJobManagerGroup;
-    private final RestoreJobStats stats;
+    private final RestoreMetrics metrics;
 
     @Inject
     public AbortRestoreJobHandler(ExecutorPools executorPools,
@@ -55,12 +55,12 @@ public class AbortRestoreJobHandler extends AbstractHandler<String>
                                   RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
                                   RestoreJobManagerGroup restoreJobManagerGroup,
                                   CassandraInputValidator validator,
-                                  RestoreJobStats stats)
+                                  RestoreMetrics metrics)
     {
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
         this.restoreJobManagerGroup = restoreJobManagerGroup;
-        this.stats = stats;
+        this.metrics = metrics;
     }
 
     @Override
@@ -86,7 +86,7 @@ public class AbortRestoreJobHandler extends AbstractHandler<String>
         .onSuccess(job -> {
             logger.info("Successfully aborted restore job. job={}, remoteAddress={}, instance={}",
                         job, remoteAddress, host);
-            stats.captureFailedJob();
+            metrics.failedJobs.metric.mark();
             context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, jobId));

@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
@@ -36,10 +37,17 @@ public class UploadSSTableMetrics
     public static final String DOMAIN = INSTANCE_PREFIX + ".upload_sstable";
     protected final MetricRegistry metricRegistry;
     protected final Map<String, UploadSSTableComponentMetrics> uploadComponentMetrics = new ConcurrentHashMap<>();
+    public final NamedMetric<DefaultSettableGauge<Long>> totalBytesUploaded;
 
     public UploadSSTableMetrics(MetricRegistry metricRegistry)
     {
-        this.metricRegistry = metricRegistry;
+        this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
+
+        totalBytesUploaded
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+                     .withDomain(DOMAIN)
+                     .withName("total_bytes_uploaded")
+                     .build();
     }
 
     public UploadSSTableComponentMetrics forComponent(String component)
@@ -57,6 +65,7 @@ public class UploadSSTableMetrics
         public final String sstableComponent;
         public final NamedMetric<Meter> rateLimitedCalls;
         public final NamedMetric<Meter> diskUsageHigh;
+        public final NamedMetric<DefaultSettableGauge<Long>> bytesUploaded;
 
         public UploadSSTableComponentMetrics(MetricRegistry metricRegistry, String sstableComponent)
         {
@@ -80,6 +89,12 @@ public class UploadSSTableMetrics
             = NamedMetric.builder(metricRegistry::meter)
                          .withDomain(DOMAIN)
                          .withName("disk_usage_high")
+                         .addTag(componentTag)
+                         .build();
+            bytesUploaded
+            = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+                         .withDomain(DOMAIN)
+                         .withName("bytes_uploaded")
                          .addTag(componentTag)
                          .build();
         }

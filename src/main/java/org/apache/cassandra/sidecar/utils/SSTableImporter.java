@@ -159,15 +159,36 @@ public class SSTableImporter
      */
     private void processPendingImports(Long timerId)
     {
-        for (ImportQueue queue : importQueuePerHost.values())
+        for (Map.Entry<String, ImportQueue> entry : importQueuePerHost.entrySet())
         {
+            ImportQueue queue = entry.getValue();
             if (!queue.isEmpty())
             {
+                metadataFetcher.instance(hostFromKey(entry.getKey()))
+                               .metrics()
+                               .sstableImport().pendingImports.metric.setValue(entry.getValue().size());
                 executorPools.internal()
                              .executeBlocking(p -> maybeDrainImportQueue(queue));
             }
         }
     }
+
+    /**
+     * Host is extracted from key for publishing Cassandra instance specific metrics related to {@link ImportQueue}
+     *
+     * @param key a key for one of the import queues
+     * @return host for which the import queue is maintained
+     */
+    protected String hostFromKey(String key)
+    {
+        String[] keyParts = key.split("\\$");
+        if (keyParts.length != 3)
+        {
+            return null;
+        }
+        return keyParts[0];
+    }
+
 
     /**
      * Tries to lock the queue to perform the draining. If the queue is already being drained, then it will

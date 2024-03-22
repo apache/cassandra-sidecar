@@ -56,8 +56,6 @@ import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ThrottleConfigurationImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
-import org.apache.cassandra.sidecar.stats.RestoreJobStats;
-import org.apache.cassandra.sidecar.stats.TestRestoreJobStats;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -196,13 +194,6 @@ public class TestModule extends AbstractModule
         when(delegate.isNativeUp()).thenReturn(isUp);
         when(instanceMeta.delegate()).thenReturn(delegate);
         return instanceMeta;
-    }
-
-    @Provides
-    @Singleton
-    public RestoreJobStats restoreJobStats()
-    {
-        return new TestRestoreJobStats();
     }
 
     /**

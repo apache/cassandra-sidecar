@@ -40,8 +40,6 @@ import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
 import org.apache.cassandra.sidecar.models.HttpResponse;
-import org.apache.cassandra.sidecar.stats.SSTableStats;
-import org.apache.cassandra.sidecar.stats.SidecarStats;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
@@ -59,20 +57,17 @@ public class FileStreamer
     private final ExecutorPools executorPools;
     private final ThrottleConfiguration config;
     private final SidecarRateLimiter rateLimiter;
-    private final SSTableStats stats;
     private final InstanceMetadataFetcher instanceMetadataFetcher;
 
     @Inject
     public FileStreamer(ExecutorPools executorPools,
                         ServiceConfiguration config,
                         @Named("StreamRequestRateLimiter") SidecarRateLimiter rateLimiter,
-                        SidecarStats stats,
                         InstanceMetadataFetcher instanceMetadataFetcher)
     {
         this.executorPools = executorPools;
         this.config = config.throttleConfiguration();
         this.rateLimiter = rateLimiter;
-        this.stats = stats.ssTableStats();
         this.instanceMetadataFetcher = instanceMetadataFetcher;
     }
 
@@ -149,7 +144,8 @@ public class FileStreamer
                                    componentMetrics.sendFileLatency.metric.update(d, TimeUnit.NANOSECONDS);
                                    LOGGER.debug("Streamed file {} successfully to client {}. Instance: {}", filename,
                                                 response.remoteAddress(), response.host());
-                                   stats.onBytesStreamed(fileLength);
+                                   componentMetrics.bytesStreamed.metric.setValue(range.length());
+                                   instanceMetrics.streamSSTable().totalBytesStreamed.metric.setValue(range.length());
                                    promise.complete();
                                })
                     .onFailure(promise::fail);

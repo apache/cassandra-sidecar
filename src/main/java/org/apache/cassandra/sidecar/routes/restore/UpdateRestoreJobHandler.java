@@ -35,10 +35,10 @@ import org.apache.cassandra.sidecar.common.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
+import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
-import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -53,7 +53,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
 {
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
     private final RestoreJobManagerGroup restoreJobManagerGroup;
-    private final RestoreJobStats stats;
+    private final RestoreMetrics metrics;
 
     @Inject
     public UpdateRestoreJobHandler(ExecutorPools executorPools,
@@ -61,12 +61,12 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                                    RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
                                    RestoreJobManagerGroup restoreJobManagerGroup,
                                    CassandraInputValidator validator,
-                                   RestoreJobStats stats)
+                                   RestoreMetrics metrics)
     {
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
         this.restoreJobManagerGroup = restoreJobManagerGroup;
-        this.stats = stats;
+        this.metrics = metrics;
     }
 
     @Override
@@ -97,16 +97,16 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                         job, requestPayload, remoteAddress, host);
             if (job.status == RestoreJobStatus.SUCCEEDED)
             {
-                stats.captureSuccessJob();
+                metrics.successfulJobs.metric.mark();
                 long startMillis = UUIDs.unixTimestamp(job.jobId);
                 long durationMillis = System.currentTimeMillis() - startMillis;
                 // toNanos does not overflow. Nanos in `long` can at most represent 106,751 days.
-                stats.captureJobCompletionTime(TimeUnit.MILLISECONDS.toNanos(durationMillis));
+                metrics.jobCompletionTime.metric.update(durationMillis, TimeUnit.MILLISECONDS);
             }
 
             if (job.secrets != null)
             {
-                stats.captureTokenRefreshed();
+                metrics.tokenRefreshes.metric.mark();
             }
 
             restoreJobManagerGroup.signalRefreshRestoreJob();

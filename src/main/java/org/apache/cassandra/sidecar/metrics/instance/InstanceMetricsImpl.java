@@ -30,15 +30,27 @@ public class InstanceMetricsImpl implements InstanceMetrics
     protected final MetricRegistry metricRegistry;
     protected final StreamSSTableMetrics streamSSTableMetrics;
     protected final UploadSSTableMetrics uploadSSTableMetrics;
+    protected final InstanceHealthMetrics healthMetrics;
     protected final InstanceResourceMetrics resourceMetrics;
+    protected final InstanceRestoreMetrics restoreMetrics;
+    protected final SSTableImportMetrics ssTableImportMetrics;
 
     public InstanceMetricsImpl(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metrics registry can not be null");
 
+        this.healthMetrics = new InstanceHealthMetrics(metricRegistry);
         this.resourceMetrics = new InstanceResourceMetrics(metricRegistry);
         this.streamSSTableMetrics = new StreamSSTableMetrics(metricRegistry);
         this.uploadSSTableMetrics = new UploadSSTableMetrics(metricRegistry);
+        this.restoreMetrics = new InstanceRestoreMetrics(metricRegistry);
+        this.ssTableImportMetrics = new SSTableImportMetrics(metricRegistry);
+    }
+
+    @Override
+    public InstanceHealthMetrics health()
+    {
+        return healthMetrics;
     }
 
     @Override
@@ -50,12 +62,24 @@ public class InstanceMetricsImpl implements InstanceMetrics
     @Override
     public StreamSSTableMetrics streamSSTable()
     {
-        return new StreamSSTableMetrics(metricRegistry);
+        return streamSSTableMetrics;
     }
 
     @Override
     public UploadSSTableMetrics uploadSSTable()
     {
-        return new UploadSSTableMetrics(metricRegistry);
+        return uploadSSTableMetrics;
+    }
+
+    @Override
+    public InstanceRestoreMetrics restore()
+    {
+        return restoreMetrics;
+    }
+
+    @Override
+    public SSTableImportMetrics sstableImport()
+    {
+        return ssTableImportMetrics;
     }
 }

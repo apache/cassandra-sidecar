@@ -27,31 +27,40 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.metrics.ResourceMetrics;
 
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Test {@link ExecutorPools}
  */
+@ExtendWith(VertxExtension.class)
 public class ExecutorPoolsTest
 {
     private ExecutorPools pools;
+    private ResourceMetrics metrics;
     private Vertx vertx;
 
     @BeforeEach
     public void before()
     {
         vertx = Vertx.vertx();
-        pools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+        metrics = new ResourceMetrics(registry());
+        pools = new ExecutorPools(vertx, new ServiceConfigurationImpl(), metrics);
     }
 
     @AfterEach
     public void after()
     {
+        registry().removeMatching((name, metric) -> true);
         vertx.close().onComplete(v -> pools.close()).result();
     }
 
@@ -68,7 +77,7 @@ public class ExecutorPoolsTest
     }
 
     @Test
-    public void testOrdered()
+    public void testOrdered(VertxTestContext context)
     {
         // not thread-safe
         class IntWrapper
@@ -97,6 +106,12 @@ public class ExecutorPoolsTest
                 }, true);
             }, false);
         }
+
+        vertx.setTimer(100, handle -> {
+            assertThat(metrics.longTasks.metric.getCount()).isEqualTo(200);
+            context.completeNow();
+        });
+
         assertThat(Uninterruptibles.awaitUninterruptibly(stop, 10, TimeUnit.SECONDS))
         .describedAs("Test should finish in 10 seconds")
         .isTrue();

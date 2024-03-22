@@ -16,41 +16,39 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.metrics.instance;
+package org.apache.cassandra.sidecar.metrics;
 
-import java.util.Objects;
-
-import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import org.apache.cassandra.sidecar.metrics.NamedMetric;
-
-import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
 /**
- * {@link InstanceResourceMetrics} contains metrics to track resource usage of a Cassandra instance maintained
- * by Sidecar.
+ * Tracks metrics for {@link org.apache.cassandra.sidecar.db.schema.SidecarSchema} and other schema related handling
+ * done by Sidecar
  */
-public class InstanceResourceMetrics
+@Singleton
+public class SchemaMetrics
 {
-    public static final String DOMAIN = INSTANCE_PREFIX + ".resource";
+    public static final String DOMAIN = "sidecar.schema";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<Meter> insufficientStagingSpace;
-    public final NamedMetric<DefaultSettableGauge<Long>> usableStagingSpace;
+    public final NamedMetric<Meter> failedInitializations;
+    public final NamedMetric<Meter> failedModifications;
 
-    public InstanceResourceMetrics(MetricRegistry metricRegistry)
+    @Inject
+    public SchemaMetrics(MetricRegistry metricRegistry)
     {
-        this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
+        this.metricRegistry = metricRegistry;
 
-        insufficientStagingSpace
+        failedInitializations
         = NamedMetric.builder(metricRegistry::meter)
                      .withDomain(DOMAIN)
-                     .withName("insufficient_staging_space")
+                     .withName("failed_initializations")
                      .build();
-        usableStagingSpace
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+        failedModifications
+        = NamedMetric.builder(metricRegistry::meter)
                      .withDomain(DOMAIN)
-                     .withName("usable_staging_space")
+                     .withName("failed_modifications")
                      .build();
     }
 }

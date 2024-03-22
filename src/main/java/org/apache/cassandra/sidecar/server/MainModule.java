@@ -76,6 +76,8 @@ import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
@@ -99,9 +101,6 @@ import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableCleanupHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
 import org.apache.cassandra.sidecar.routes.validations.ValidateTableExistenceHandler;
-import org.apache.cassandra.sidecar.stats.RestoreJobStats;
-import org.apache.cassandra.sidecar.stats.SidecarSchemaStats;
-import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
 import org.apache.cassandra.sidecar.utils.JdkMd5DigestProvider;
@@ -463,31 +462,6 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarStats sidecarStats()
-    {
-        return SidecarStats.INSTANCE;
-    }
-
-    @Provides
-    @Singleton
-    public RestoreJobStats restoreJobStats()
-    {
-        return new RestoreJobStats()
-        {
-        };
-    }
-
-    @Provides
-    @Singleton
-    public SidecarSchemaStats sidecarSchemaStats()
-    {
-        return new SidecarSchemaStats()
-        {
-        };
-    }
-
-    @Provides
-    @Singleton
     public RestoreJobsSchema restoreJobsSchema(SidecarConfiguration configuration)
     {
         return new RestoreJobsSchema(configuration.serviceConfiguration()
@@ -511,17 +485,17 @@ public class MainModule extends AbstractModule
     public SidecarSchema sidecarSchema(Vertx vertx,
                                        ExecutorPools executorPools,
                                        SidecarConfiguration configuration,
-                                       SidecarSchemaStats stats,
                                        CQLSessionProvider cqlSessionProvider,
                                        RestoreJobsSchema restoreJobsSchema,
-                                       RestoreSlicesSchema restoreSlicesSchema)
+                                       RestoreSlicesSchema restoreSlicesSchema,
+                                       SchemaMetrics metrics)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
         sidecarInternalKeyspace.registerTableSchema(restoreJobsSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
         return new SidecarSchema(vertx, executorPools, configuration,
-                                 stats, sidecarInternalKeyspace, cqlSessionProvider);
+                                 sidecarInternalKeyspace, cqlSessionProvider, metrics);
     }
 
     @Provides
@@ -584,6 +558,7 @@ public class MainModule extends AbstractModule
                                        .connectionMaxRetries(jmxConfiguration.maxRetries())
                                        .connectionRetryDelayMillis(jmxConfiguration.retryDelayMillis())
                                        .build();
+        MetricRegistry instanceSpecificRegistry = registryFactory.getOrCreate(cassandraInstance.id());
         CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
                                                                          cassandraInstance.id(),
                                                                          versionProvider,
@@ -592,8 +567,8 @@ public class MainModule extends AbstractModule
                                                                          driverUtils,
                                                                          sidecarVersion,
                                                                          host,
-                                                                         port);
-
+                                                                         port,
+                                                                         new InstanceHealthMetrics(instanceSpecificRegistry));
         return InstanceMetadataImpl.builder()
                                    .id(cassandraInstance.id())
                                    .host(host)
@@ -601,7 +576,7 @@ public class MainModule extends AbstractModule
                                    .dataDirs(cassandraInstance.dataDirs())
                                    .stagingDir(cassandraInstance.stagingDir())
                                    .delegate(delegate)
-                                   .metricRegistry(registryFactory.getOrCreate(cassandraInstance.id()))
+                                   .metricRegistry(instanceSpecificRegistry)
                                    .build();
     }
 }

@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.Session;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.distributed.UpgradeableCluster;
@@ -48,6 +49,7 @@ import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.DriverUtils;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
@@ -246,6 +248,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
             Path stagingPath = dataDirParentPath.resolve("staging");
             String stagingDir = stagingPath.toFile().getAbsolutePath();
 
+            MetricRegistry instanceSpecificRegistry = metricRegistryProvider.getOrCreate(i + 1);
             CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
                                                                              i + 1,
                                                                              versionProvider,
@@ -254,7 +257,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                                                              new DriverUtils(),
                                                                              "1.0-TEST",
                                                                              hostName,
-                                                                             nativeTransportPort);
+                                                                             nativeTransportPort,
+                                                                             new InstanceHealthMetrics(instanceSpecificRegistry));
             metadata.add(InstanceMetadataImpl.builder()
                                              .id(i + 1)
                                              .host(config.broadcastAddress().getAddress().getHostAddress())
@@ -262,7 +266,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                              .dataDirs(Arrays.asList(dataDirectories))
                                              .stagingDir(stagingDir)
                                              .delegate(delegate)
-                                             .metricRegistry(metricRegistryProvider.getOrCreate(i + 1))
+                                             .metricRegistry(instanceSpecificRegistry)
                                              .build());
         }
         return new InstancesConfigImpl(metadata, dnsResolver);

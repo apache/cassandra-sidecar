@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -37,10 +38,17 @@ public class StreamSSTableMetrics
     public static final String DOMAIN = INSTANCE_PREFIX + ".stream_sstable";
     protected final MetricRegistry metricRegistry;
     protected final Map<String, StreamSSTableComponentMetrics> streamComponentMetrics = new ConcurrentHashMap<>();
+    public final NamedMetric<DefaultSettableGauge<Long>> totalBytesStreamed;
 
     public StreamSSTableMetrics(MetricRegistry metricRegistry)
     {
-        this.metricRegistry = metricRegistry;
+        this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
+
+        totalBytesStreamed
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+                     .withDomain(DOMAIN)
+                     .withName("total_bytes_streamed")
+                     .build();
     }
 
     public StreamSSTableComponentMetrics forComponent(String component)
@@ -58,6 +66,7 @@ public class StreamSSTableMetrics
         public final String sstableComponent;
         public final NamedMetric<Meter> rateLimitedCalls;
         public final NamedMetric<Timer> sendFileLatency;
+        public final NamedMetric<DefaultSettableGauge<Long>> bytesStreamed;
 
         public StreamSSTableComponentMetrics(MetricRegistry metricRegistry, String sstableComponent)
         {
@@ -81,6 +90,12 @@ public class StreamSSTableMetrics
             = NamedMetric.builder(metricRegistry::timer)
                          .withDomain(DOMAIN)
                          .withName("sendfile_latency")
+                         .addTag(componentTag)
+                         .build();
+            bytesStreamed
+            = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+                         .withDomain(DOMAIN)
+                         .withName("bytes_streamed")
                          .addTag(componentTag)
                          .build();
         }

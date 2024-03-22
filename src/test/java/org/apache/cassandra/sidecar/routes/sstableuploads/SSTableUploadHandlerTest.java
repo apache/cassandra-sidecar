@@ -418,8 +418,8 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                 "; actual: " + httpResponse.statusCode());
                 return;
             }
-            UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics
-            = new InstanceMetricsImpl(registry(1)).uploadSSTable().forComponent("db");
+            UploadSSTableMetrics uploadMetrics = new InstanceMetricsImpl(registry(1)).uploadSSTable();
+            UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics = uploadMetrics.forComponent("db");
             if (expectedRetCode == HttpResponseStatus.INSUFFICIENT_STORAGE.code())
             {
                 assertThat(componentMetrics.diskUsageHigh.metric.getCount()).isOne();
@@ -439,6 +439,22 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                 Path targetFilePath = Paths.get(SnapshotUtils.makeStagingDir(canonicalTemporaryPath),
                                                 uploadId, keyspace, tableName, targetFileName);
                 assertThat(Files.exists(targetFilePath)).isTrue();
+                try
+                {
+                    long expectedSize = Files.size(targetFilePath);
+                    assertThat(componentMetrics.bytesUploaded.metric.getValue()).isEqualTo(expectedSize);
+                    assertThat(uploadMetrics.totalBytesUploaded.metric.getValue()).isEqualTo(Files.size(targetFilePath));
+                }
+                catch (Exception e)
+                {
+                    if (latch != null)
+                    {
+                        latch.countDown();
+                    }
+                    context.failNow(e);
+                    client.close();
+                    return;
+                }
             }
 
             if (latch != null)

@@ -59,6 +59,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
@@ -238,7 +239,7 @@ class BaseUploadsHandlerTest
 
         public TestCassandraAdapterDelegate()
         {
-            super(Vertx.vertx(), 1, null, null, null, null, null, "localhost", 9042);
+            super(Vertx.vertx(), 1, null, null, null, null, null, "localhost", 9042, new InstanceHealthMetrics(registry(1)));
         }
 
         @Override

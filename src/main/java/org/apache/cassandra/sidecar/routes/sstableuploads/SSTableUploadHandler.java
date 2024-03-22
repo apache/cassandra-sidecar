@@ -39,10 +39,9 @@ import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.data.SSTableUploadRequest;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceResourceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.UploadSSTableMetrics;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
-import org.apache.cassandra.sidecar.stats.SSTableStats;
-import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.DigestVerifier;
 import org.apache.cassandra.sidecar.utils.DigestVerifierFactory;
@@ -66,7 +65,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
     private final SSTableUploader uploader;
     private final SSTableUploadsPathBuilder uploadPathBuilder;
     private final ConcurrencyLimiter limiter;
-    private final SSTableStats stats;
     private final DigestVerifierFactory digestVerifierFactory;
 
     /**
@@ -79,7 +77,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
      * @param uploadPathBuilder    a class that provides SSTableUploads directories
      * @param executorPools        executor pools for blocking executions
      * @param validator            a validator instance to validate Cassandra-specific input
-     * @param sidecarStats         an interface holding all stats related to main sidecar process
      * @param digestVerifierFactory a factory of checksum verifiers
      */
     @Inject
@@ -90,7 +87,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                                    SSTableUploadsPathBuilder uploadPathBuilder,
                                    ExecutorPools executorPools,
                                    CassandraInputValidator validator,
-                                   SidecarStats sidecarStats,
                                    DigestVerifierFactory digestVerifierFactory)
     {
         super(metadataFetcher, executorPools, validator);
@@ -99,7 +95,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         this.uploader = uploader;
         this.uploadPathBuilder = uploadPathBuilder;
         this.limiter = new ConcurrencyLimiter(configuration::concurrentUploadsLimit);
-        this.stats = sidecarStats.ssTableStats();
         this.digestVerifierFactory = digestVerifierFactory;
     }
 
@@ -137,7 +132,8 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         validateKeyspaceAndTable(host, request)
         .compose(validRequest -> uploadPathBuilder.resolveStagingDirectory(host))
         .compose(uploadDir -> ensureSufficientSpaceAvailable(uploadDir,
-                                                             componentMetrics))
+                                                             componentMetrics,
+                                                             instanceMetrics.resource()))
         .compose(v -> uploadPathBuilder.build(host, request))
         .compose(uploadDirectory -> {
             DigestVerifier digestVerifier = digestVerifierFactory.verifier(httpRequest.headers());
@@ -153,7 +149,9 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
             logger.info("Successfully uploaded SSTable component for request={}, remoteAddress={}, " +
                         "instance={}, sizeInBytes={}, serviceTimeMillis={}",
                         request, remoteAddress, host, fileProps.size(), serviceTimeMillis);
-            stats.onBytesUploaded(fileProps.size());
+            componentMetrics.bytesUploaded.metric.setValue(fileProps.size());
+            instanceMetrics.uploadSSTable().totalBytesUploaded.metric.setValue(fileProps.size());
+
             context.json(new SSTableUploadResponse(request.uploadId(), fileProps.size(), serviceTimeMillis));
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
@@ -233,7 +231,8 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
      * @return a succeeded future if there is sufficient space available, or failed future otherwise
      */
     private Future<String> ensureSufficientSpaceAvailable(String uploadDirectory,
-                                                          UploadSSTableMetrics.UploadSSTableComponentMetrics metrics)
+                                                          UploadSSTableMetrics.UploadSSTableComponentMetrics metrics,
+                                                          InstanceResourceMetrics resourceMetrics)
     {
         float minimumPercentageRequired = configuration.minimumSpacePercentageRequired();
         if (minimumPercentageRequired == 0)
@@ -245,6 +244,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                      // calculate available disk space percentage
                      long totalSpace = fsProps.totalSpace();
                      long usableSpace = fsProps.usableSpace();
+                     resourceMetrics.usableStagingSpace.metric.setValue(usableSpace);
 
                      // using double for higher precision
                      double spacePercentAvailable = (usableSpace > 0L && totalSpace > 0L)

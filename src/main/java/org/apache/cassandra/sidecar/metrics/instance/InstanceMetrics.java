@@ -26,6 +26,11 @@ public interface InstanceMetrics
     String INSTANCE_PREFIX = "sidecar.cas_instance";
 
     /**
+     * @return health metrics tracked for cassandra instance
+     */
+    InstanceHealthMetrics health();
+
+    /**
      * @return resource metrics tracked for cassandra instance
      */
     InstanceResourceMetrics resource();
@@ -39,4 +44,14 @@ public interface InstanceMetrics
      * @return metrics that are tracked during upload of SSTable components to a cassandra instance
      */
     UploadSSTableMetrics uploadSSTable();
+
+    /**
+     * @return metrics that are tracked during restore of SSTables
+     */
+    InstanceRestoreMetrics restore();
+
+    /**
+     * @return metrics that are tracked during import of SSTables
+     */
+    SSTableImportMetrics sstableImport();
 }
