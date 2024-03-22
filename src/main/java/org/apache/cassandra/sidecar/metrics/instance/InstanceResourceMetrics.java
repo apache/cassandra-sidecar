@@ -34,13 +34,13 @@ public class InstanceResourceMetrics
 {
     public static final String DOMAIN = INSTANCE_PREFIX + ".resource";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<Meter> insufficientStagingSpaceErrors;
+    public final NamedMetric<Meter> insufficientStagingSpace;
 
     public InstanceResourceMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        insufficientStagingSpaceErrors
+        insufficientStagingSpace
         = NamedMetric.builder(metricRegistry::meter)
                      .withDomain(DOMAIN)
                      .withName("insufficient_staging_space")

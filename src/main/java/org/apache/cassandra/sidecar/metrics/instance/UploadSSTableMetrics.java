@@ -56,7 +56,7 @@ public class UploadSSTableMetrics
         protected final MetricRegistry metricRegistry;
         public final String sstableComponent;
         public final NamedMetric<Meter> rateLimitedCalls;
-        public final NamedMetric<Meter> diskUsageHighErrors;
+        public final NamedMetric<Meter> diskUsageHigh;
 
         public UploadSSTableComponentMetrics(MetricRegistry metricRegistry, String sstableComponent)
         {
@@ -76,10 +76,10 @@ public class UploadSSTableMetrics
                          .withName("throttled_429")
                          .addTag(componentTag)
                          .build();
-            diskUsageHighErrors
+            diskUsageHigh
             = NamedMetric.builder(metricRegistry::meter)
                          .withDomain(DOMAIN)
-                         .withName("disk_usage_high_errors")
+                         .withName("disk_usage_high")
                          .addTag(componentTag)
                          .build();
         }
