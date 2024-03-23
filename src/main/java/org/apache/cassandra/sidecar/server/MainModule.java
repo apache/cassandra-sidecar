@@ -29,6 +29,8 @@ import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SharedMetricRegistries;
 import com.datastax.driver.core.NettyOptions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -39,6 +41,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
+import io.vertx.ext.dropwizard.Match;
+import io.vertx.ext.dropwizard.MatchType;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.ErrorHandler;
@@ -65,6 +69,7 @@ import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
@@ -137,12 +142,19 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Vertx vertx()
+    public Vertx vertx(SidecarConfiguration sidecarConfiguration)
     {
-        return Vertx.vertx(new VertxOptions().setMetricsOptions(new DropwizardMetricsOptions()
-                                                                .setEnabled(true)
-                                                                .setJmxEnabled(true)
-                                                                .setJmxDomain("cassandra-sidecar-metrics")));
+        VertxMetricsConfiguration metricsConfig = sidecarConfiguration.metricsConfiguration().vertxConfiguration();
+        DropwizardMetricsOptions dropwizardMetricsOptions
+        = new DropwizardMetricsOptions().setEnabled(metricsConfig.enabled())
+                                        .setJmxEnabled(metricsConfig.exposeViaJMX())
+                                        .setJmxDomain(metricsConfig.jmxDomainName())
+                                        .setRegistryName(sidecarConfiguration.metricsConfiguration().registryName());
+        for (String regex : metricsConfig.monitoredServerRouteRegexes())
+        {
+            dropwizardMetricsOptions.addMonitoredHttpServerRoute(new Match().setType(MatchType.REGEX).setValue(regex));
+        }
+        return Vertx.vertx(new VertxOptions().setMetricsOptions(dropwizardMetricsOptions));
     }
 
     @Provides
@@ -371,7 +383,8 @@ public class MainModule extends AbstractModule
                                                       sidecarVersionProvider.sidecarVersion(),
                                                       jmxConfiguration,
                                                       cqlSessionProvider,
-                                                      driverUtils);
+                                                      driverUtils,
+                                                      configuration.metricsConfiguration().registryName());
                      })
                      .collect(Collectors.toList());
 
@@ -510,6 +523,13 @@ public class MainModule extends AbstractModule
                                  stats, sidecarInternalKeyspace, cqlSessionProvider);
     }
 
+    @Provides
+    @Singleton
+    public MetricRegistry globalMetricRegistry(SidecarConfiguration sidecarConfiguration)
+    {
+        return SharedMetricRegistries.getOrCreate(sidecarConfiguration.metricsConfiguration().registryName());
+    }
+
     /**
      * The provided hasher is used in {@link org.apache.cassandra.sidecar.restore.RestoreJobUtil}
      */
@@ -533,12 +553,13 @@ public class MainModule extends AbstractModule
      * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
      * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
      *
-     * @param vertx             the vertx instance
-     * @param cassandraInstance the cassandra instance configuration
-     * @param versionProvider   a Cassandra version provider
-     * @param sidecarVersion    the version of the Sidecar from the current binary
-     * @param jmxConfiguration  the configuration for the JMX Client
-     * @param session           the CQL Session provider
+     * @param vertx                 the vertx instance
+     * @param cassandraInstance     the cassandra instance configuration
+     * @param versionProvider       a Cassandra version provider
+     * @param sidecarVersion        the version of the Sidecar from the current binary
+     * @param jmxConfiguration      the configuration for the JMX Client
+     * @param session               the CQL Session provider
+     * @param globalRegistryName    global registry name used for tracking Sidecar metrics
      * @return the build instance metadata object
      */
     private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
@@ -547,7 +568,8 @@ public class MainModule extends AbstractModule
                                                           String sidecarVersion,
                                                           JmxConfiguration jmxConfiguration,
                                                           CQLSessionProvider session,
-                                                          DriverUtils driverUtils)
+                                                          DriverUtils driverUtils,
+                                                          String globalRegistryName)
     {
         String host = cassandraInstance.host();
         int port = cassandraInstance.port();
@@ -577,6 +599,7 @@ public class MainModule extends AbstractModule
                                    .dataDirs(cassandraInstance.dataDirs())
                                    .stagingDir(cassandraInstance.stagingDir())
                                    .delegate(delegate)
+                                   .globalMetricRegistryName(globalRegistryName)
                                    .build();
     }
 }

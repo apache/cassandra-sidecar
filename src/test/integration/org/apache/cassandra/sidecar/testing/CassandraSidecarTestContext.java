@@ -257,6 +257,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                              .dataDirs(Arrays.asList(dataDirectories))
                                              .stagingDir(stagingDir)
                                              .delegate(delegate)
+                                             .globalMetricRegistryName("cassandra_sidecar")
                                              .build());
         }
         return new InstancesConfigImpl(metadata, dnsResolver);

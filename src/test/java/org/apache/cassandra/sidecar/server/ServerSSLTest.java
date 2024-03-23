@@ -106,7 +106,6 @@ class ServerSSLTest
         injector = Guice.createInjector(Modules.override(new MainModule())
                                                .with(Modules.override(new TestModule())
                                                             .with(new ServerSSLTestModule(builder))));
-        vertx = injector.getInstance(Vertx.class);
     }
 
     @AfterEach
@@ -124,6 +123,7 @@ class ServerSSLTest
     void failsWhenKeyStoreIsNotConfigured()
     {
         builder.sslConfiguration(SslConfigurationImpl.builder().enabled(true).build());
+        vertx = vertx();
         server = server();
 
         assertThatRuntimeException()
@@ -143,6 +143,7 @@ class ServerSSLTest
                             .keystore(new KeyStoreConfigurationImpl(serverKeyStoreP12Path.toString(), "badpassword"))
                             .build();
         builder.sslConfiguration(ssl);
+        vertx = vertx();
         server = server();
 
         assertThatRuntimeException()
@@ -162,6 +163,7 @@ class ServerSSLTest
                             .truststore(new KeyStoreConfigurationImpl(trustStoreP12Path.toString(), "badpassword"))
                             .build();
         builder.sslConfiguration(ssl);
+        vertx = vertx();
         server = server();
 
         assertThatRuntimeException()
@@ -186,6 +188,7 @@ class ServerSSLTest
                                                              .host("127.0.0.1")
                                                              .port(0)
                                                              .build());
+        vertx = vertx();
         server = server();
 
         server.start()
@@ -208,6 +211,7 @@ class ServerSSLTest
                                                              .host("127.0.0.1")
                                                              .port(0)
                                                              .build());
+        vertx = vertx();
         server = server();
 
         server.start()
@@ -231,7 +235,7 @@ class ServerSSLTest
                                                              .host("127.0.0.1")
                                                              .port(9043)
                                                              .build());
-
+        vertx = vertx();
         server = server();
 
         server.start()
@@ -256,6 +260,7 @@ class ServerSSLTest
                                                              .host("127.0.0.1")
                                                              .port(0)
                                                              .build());
+        vertx = vertx();
         server = server();
 
         server.start()
@@ -280,6 +285,7 @@ class ServerSSLTest
                                                              .host("127.0.0.1")
                                                              .port(0)
                                                              .build());
+        vertx = vertx();
         server = server();
 
         server.start()
@@ -307,6 +313,7 @@ class ServerSSLTest
                                                              .host("127.0.0.1")
                                                              .port(0)
                                                              .build());
+        vertx = vertx();
         server = server();
 
         server.start()
@@ -329,6 +336,7 @@ class ServerSSLTest
                                                              .host("127.0.0.1")
                                                              .port(0)
                                                              .build());
+        vertx = vertx();
         server = server();
 
         server.start()
@@ -357,7 +365,7 @@ class ServerSSLTest
                                                              .host("127.0.0.1")
                                                              .port(9043)
                                                              .build());
-
+        vertx = vertx();
         server = server();
 
         // Remove default protocols enabled for the server and only add an unsupported protocol to the client
@@ -400,6 +408,7 @@ class ServerSSLTest
                                                              .serverVerticleInstances(serverVerticleInstances)
                                                              .port(9043)
                                                              .build());
+        vertx = vertx();
 
         server = server();
         WebClient client = clientWithP12Keystore(true, false);
@@ -458,6 +467,14 @@ class ServerSSLTest
     Server server()
     {
         return injector.getInstance(Server.class);
+    }
+
+    /**
+     * @return vertx, once {@link SidecarConfiguration} is built
+     */
+    Vertx vertx()
+    {
+        return injector.getInstance(Vertx.class);
     }
 
     Future<Void> validateHealthEndpoint(WebClient client)

@@ -1,0 +1,69 @@
+#
+# Cassandra SideCar configuration file
+#
+cassandra:
+  host: localhost
+  port: 9042
+  data_dirs: /cassandra/d1/data, /cassandra/d2/data
+  jmx_host: 127.0.0.1
+  jmx_port: 7199
+  jmx_role: controlRole
+  jmx_role_password: controlPassword
+  jmx_ssl_enabled: true
+
+cassandra_instances:
+  - id: 1
+    host: localhost1
+    port: 9042
+    data_dirs: /cassandra/d1/data, /cassandra/d2/data
+    jmx_host: 127.0.0.1
+    jmx_port: 7100
+    jmx_role: controlRole
+    jmx_role_password: controlPassword
+    jmx_ssl_enabled: true
+  - id: 2
+    host: localhost2
+    port: 9042
+    data_dirs: /cassandra/d3/data, /cassandra/d4/data
+    jmx_host: 127.0.0.1
+    jmx_port: 7200
+    jmx_role: controlRole
+    jmx_role_password: controlPassword
+    jmx_ssl_enabled: true
+
+sidecar:
+  host: 0.0.0.0
+  port: 9043
+  throttle:
+    stream_requests_per_sec: 5000
+    delay_sec: 5
+    timeout_sec: 10
+  allowable_time_skew_in_minutes: 60
+  jmx:
+    connection:
+      max_retries: 40
+      retry_delay_millis: 2000
+#
+# Enable SSL configuration (Disabled by default)
+#
+#  - ssl:
+#      - enabled: true
+#      - keystore:
+#          - path: "path/to/keystore.p12"
+#          - password: password
+#      - truststore:
+#          - path: "path/to/truststore.p12"
+#          - password: password
+
+metrics:
+  registry_name: cassandra_sidecar
+  vertx:
+    enabled: true
+    expose_via_jmx: false
+    jmx_domain_name: sidecar.vertx.jmx_domain
+    monitored_server_route_regexes:                # regex list to match server routes
+      - /api/v1/keyspaces/.*
+      - /api/v1/cassandra/.*
+
+healthcheck:
+  poll_freq_millis: 30000

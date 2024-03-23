@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
+import org.apache.cassandra.sidecar.config.MetricsConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -72,6 +73,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @JsonProperty("healthcheck")
     protected final HealthCheckConfiguration healthCheckConfiguration;
 
+    @JsonProperty("metrics")
+    protected final MetricsConfiguration metricsConfiguration;
+
     @JsonProperty("cassandra_input_validation")
     protected final CassandraInputValidationConfiguration cassandraInputValidationConfiguration;
 
@@ -93,6 +97,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         serviceConfiguration = builder.serviceConfiguration;
         sslConfiguration = builder.sslConfiguration;
         healthCheckConfiguration = builder.healthCheckConfiguration;
+        metricsConfiguration = builder.metricsConfiguration;
         cassandraInputValidationConfiguration = builder.cassandraInputValidationConfiguration;
         driverConfiguration = builder.driverConfiguration;
         restoreJobConfiguration = builder.restoreJobConfiguration;
@@ -157,6 +162,16 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     public HealthCheckConfiguration healthCheckConfiguration()
     {
         return healthCheckConfiguration;
+    }
+
+    /**
+     * @return the configuration needed for metrics capture
+     */
+    @Override
+    @JsonProperty("metrics")
+    public MetricsConfiguration metricsConfiguration()
+    {
+        return metricsConfiguration;
     }
 
     @Override
@@ -290,6 +305,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         private ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl();
         private SslConfiguration sslConfiguration = null;
         private HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl();
+        private MetricsConfiguration metricsConfiguration = new MetricsConfigurationImpl();
         private CassandraInputValidationConfiguration cassandraInputValidationConfiguration
         = new CassandraInputValidationConfigurationImpl();
         private DriverConfiguration driverConfiguration = new DriverConfigurationImpl();
@@ -359,6 +375,17 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder healthCheckConfiguration(HealthCheckConfiguration healthCheckConfiguration)
         {
             return update(b -> b.healthCheckConfiguration = healthCheckConfiguration);
+        }
+
+        /**
+         * Sets the {@code metricsConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param metricsConfiguration the {@code metricsConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder metricsConfiguration(MetricsConfiguration metricsConfiguration)
+        {
+            return update(b -> b.metricsConfiguration = metricsConfiguration);
         }
 
         /**

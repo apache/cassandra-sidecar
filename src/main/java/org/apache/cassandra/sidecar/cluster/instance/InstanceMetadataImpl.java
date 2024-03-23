@@ -21,9 +21,14 @@ package org.apache.cassandra.sidecar.cluster.instance;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SharedMetricRegistries;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -38,6 +43,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
     private final String stagingDir;
     @Nullable
     private final CassandraAdapterDelegate delegate;
+    private final InstanceMetrics metrics;
 
     protected InstanceMetadataImpl(Builder builder)
     {
@@ -47,6 +53,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         dataDirs = Collections.unmodifiableList(builder.dataDirs);
         stagingDir = builder.stagingDir;
         delegate = builder.delegate;
+        metrics = builder.metrics;
     }
 
     @Override
@@ -85,6 +92,12 @@ public class InstanceMetadataImpl implements InstanceMetadata
         return delegate;
     }
 
+    @Override
+    public InstanceMetrics metrics()
+    {
+        return metrics;
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -95,12 +108,14 @@ public class InstanceMetadataImpl implements InstanceMetadata
      */
     public static class Builder implements DataObjectBuilder<Builder, InstanceMetadataImpl>
     {
-        protected int id;
+        protected Integer id;
         protected String host;
         protected int port;
         protected List<String> dataDirs;
         protected String stagingDir;
         protected CassandraAdapterDelegate delegate;
+        protected String globalRegistryName;
+        protected InstanceMetrics metrics;
 
         protected Builder()
         {
@@ -114,6 +129,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
             dataDirs = new ArrayList<>(instanceMetadata.dataDirs);
             stagingDir = instanceMetadata.stagingDir;
             delegate = instanceMetadata.delegate;
+            metrics = instanceMetadata.metrics;
         }
 
         @Override
@@ -189,6 +205,18 @@ public class InstanceMetadataImpl implements InstanceMetadata
         }
 
         /**
+         * Sets the {@code globalRegistryName} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param registryName global {@link com.codahale.metrics.MetricRegistry} name
+         * @return a reference to this Builder
+         */
+        public Builder globalMetricRegistryName(String registryName)
+
+        {
+            return update(b -> b.globalRegistryName = registryName);
+        }
+
+        /**
          * Returns a {@code InstanceMetadataImpl} built from the parameters previously set.
          *
          * @return a {@code InstanceMetadataImpl} built with parameters of this {@code InstanceMetadataImpl.Builder}
@@ -196,7 +224,19 @@ public class InstanceMetadataImpl implements InstanceMetadata
         @Override
         public InstanceMetadataImpl build()
         {
+            Objects.requireNonNull(id);
+            Objects.requireNonNull(globalRegistryName);
+
+            String instanceRegistryName = instanceRegistryName(globalRegistryName);
+            MetricRegistry instanceMetricRegistry = SharedMetricRegistries.getOrCreate(instanceRegistryName);
+            metrics = new InstanceMetricsImpl(instanceMetricRegistry);
+
             return new InstanceMetadataImpl(this);
+        }
+
+        private String instanceRegistryName(String globalRegistryName)
+        {
+            return globalRegistryName + "_" + id;
         }
     }
 }

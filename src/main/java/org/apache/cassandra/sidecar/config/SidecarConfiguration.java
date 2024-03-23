@@ -52,6 +52,11 @@ public interface SidecarConfiguration
     HealthCheckConfiguration healthCheckConfiguration();
 
     /**
+     * @return configuration needed for metrics capture
+     */
+    MetricsConfiguration metricsConfiguration();
+
+    /**
      * @return the configuration for Cassandra input validation
      */
     CassandraInputValidationConfiguration cassandraInputValidationConfiguration();

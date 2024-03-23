@@ -39,11 +39,14 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
+import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test rate limiting stream requests
@@ -73,6 +76,8 @@ public class ThrottleTest
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
+        registry().removeMatching((name, metric) -> true);
+        registry(1).removeMatching((name, metric) -> true);
         server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, SECONDS))
             logger.info("Close event received before timeout.");
@@ -91,15 +96,19 @@ public class ThrottleTest
             unblockingClientRequest(testRoute);
         }
 
+        StreamSSTableMetrics.StreamSSTableComponentMetrics dbComponentMetrics
+        = new InstanceMetricsImpl(registry(1)).streamSSTable().forComponent("db");
+
         HttpResponse response = blockingClientRequest(testRoute);
-        assertEquals(HttpResponseStatus.TOO_MANY_REQUESTS.code(), response.statusCode());
+        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TOO_MANY_REQUESTS.code());
+        assertThat(dbComponentMetrics.rateLimitedCalls.metric.getCount()).isGreaterThanOrEqualTo(1);
 
         long secsToWait = Long.parseLong(response.getHeader("Retry-After"));
         Thread.sleep(SECONDS.toMillis(secsToWait));
 
         HttpResponse finalResp = blockingClientRequest(testRoute);
-        assertEquals(HttpResponseStatus.OK.code(), finalResp.statusCode());
-        assertEquals("data", finalResp.bodyAsString());
+        assertThat(finalResp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+        assertThat(finalResp.bodyAsString()).isEqualTo("data");
     }
 
     private void unblockingClientRequest(String route)

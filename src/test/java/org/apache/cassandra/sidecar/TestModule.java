@@ -55,10 +55,12 @@ import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ThrottleConfigurationImpl;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.stats.TestRestoreJobStats;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -172,6 +174,7 @@ public class TestModule extends AbstractModule
         when(instanceMeta.port()).thenReturn(6475);
         when(instanceMeta.stagingDir()).thenReturn(stagingDir);
         when(instanceMeta.dataDirs()).thenReturn(Collections.singletonList(dataDir));
+        when(instanceMeta.metrics()).thenReturn(new InstanceMetricsImpl(registry(id)));
 
         CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
         Metadata metadata = mock(Metadata.class);

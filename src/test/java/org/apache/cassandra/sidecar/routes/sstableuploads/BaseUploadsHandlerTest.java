@@ -70,6 +70,7 @@ import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurati
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -157,6 +158,8 @@ class BaseUploadsHandlerTest
     void tearDown() throws InterruptedException
     {
         final CountDownLatch closeLatch = new CountDownLatch(1);
+        registry().removeMatching((name, metric) -> true);
+        registry(1).removeMatching((name, metric) -> true);
         server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.debug("Close event received before timeout.");

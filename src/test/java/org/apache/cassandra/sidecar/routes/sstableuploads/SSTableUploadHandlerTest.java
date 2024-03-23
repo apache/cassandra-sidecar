@@ -47,6 +47,8 @@ import org.apache.cassandra.sidecar.common.data.Digest;
 import org.apache.cassandra.sidecar.common.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
+import org.apache.cassandra.sidecar.metrics.instance.UploadSSTableMetrics;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 import org.assertj.core.data.Percentage;
 
@@ -60,6 +62,7 @@ import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.prepareTestFile;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -414,6 +417,16 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                 context.failNow("Status code mismatched. Expected: " + expectedRetCode +
                                 "; actual: " + httpResponse.statusCode());
                 return;
+            }
+            UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics
+            = new InstanceMetricsImpl(registry(1)).uploadSSTable().forComponent("db");
+            if (expectedRetCode == HttpResponseStatus.INSUFFICIENT_STORAGE.code())
+            {
+                assertThat(componentMetrics.diskUsageHigh.metric.getCount()).isOne();
+            }
+            if (expectedRetCode == HttpResponseStatus.TOO_MANY_REQUESTS.code())
+            {
+                assertThat(componentMetrics.rateLimitedCalls.metric.getCount()).isOne();
             }
 
             if (responseValidator != null)

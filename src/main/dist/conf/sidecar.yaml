@@ -142,6 +142,15 @@ healthcheck:
   initial_delay_millis: 0
   poll_freq_millis: 30000
 
+metrics:
+  registry_name: cassandra_sidecar
+  vertx:
+    enabled: true
+    expose_via_jmx: false
+    jmx_domain_name: sidecar.vertx.jmx_domain
+    monitored_server_route_regexes:                # regex list to match server routes
+     - /api/v1/.*
+
 cassandra_input_validation:
   forbidden_keyspaces:
     - system_schema

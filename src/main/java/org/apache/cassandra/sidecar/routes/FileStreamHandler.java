@@ -26,6 +26,7 @@ import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.models.HttpResponse;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
@@ -59,11 +60,13 @@ public class FileStreamHandler extends AbstractHandler<String>
                                SocketAddress remoteAddress,
                                String localFile)
     {
+        InstanceMetadata instanceMetadata = metadataFetcher.instance(host);
         FileSystem fs = context.vertx().fileSystem();
         fs.exists(localFile)
           .compose(exists -> ensureValidFile(fs, localFile, exists))
-          .compose(fileProps -> fileStreamer.stream(new HttpResponse(httpRequest, context.response()), localFile,
-                                                    fileProps.size(), httpRequest.getHeader(HttpHeaderNames.RANGE)))
+          .compose(fileProps -> fileStreamer.stream(new HttpResponse(httpRequest, context.response()),
+                                                    instanceMetadata.id(), localFile, fileProps.size(),
+                                                    httpRequest.getHeader(HttpHeaderNames.RANGE)))
           .onSuccess(v -> logger.debug("Completed streaming file '{}'", localFile))
           .onFailure(context::fail);
     }

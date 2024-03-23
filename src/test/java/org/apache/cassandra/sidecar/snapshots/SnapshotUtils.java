@@ -124,6 +124,7 @@ public class SnapshotUtils
                                                              .dataDirs(Collections.singletonList(rootPath + "/d1"))
                                                              .stagingDir(stagingDir)
                                                              .delegate(delegate)
+                                                             .globalMetricRegistryName("cassandra_sidecar")
                                                              .build();
         InstanceMetadataImpl localhost2 = InstanceMetadataImpl.builder()
                                                               .id(2)
@@ -132,6 +133,7 @@ public class SnapshotUtils
                                                               .dataDirs(Collections.singletonList(rootPath + "/d2"))
                                                               .stagingDir(stagingDir)
                                                               .delegate(delegate)
+                                                              .globalMetricRegistryName("cassandra_sidecar")
                                                               .build();
         List<InstanceMetadata> instanceMetas = Arrays.asList(localhost, localhost2);
         return new InstancesConfigImpl(instanceMetas, DnsResolver.DEFAULT);
