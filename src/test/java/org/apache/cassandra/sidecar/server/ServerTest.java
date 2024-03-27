@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.server;
 
 import java.nio.file.Path;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.MetricRegistry;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -38,6 +40,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryProvider;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,6 +57,7 @@ class ServerTest
     @TempDir
     private Path confPath;
 
+    private Injector injector;
     private Server server;
     private Vertx vertx;
     private WebClient client;
@@ -63,7 +67,7 @@ class ServerTest
     {
         ClassLoader classLoader = ServerTest.class.getClassLoader();
         Path yamlPath = writeResourceToPath(classLoader, confPath, "config/sidecar_single_instance.yaml");
-        Injector injector = Guice.createInjector(new MainModule(yamlPath));
+        injector = Guice.createInjector(new MainModule(yamlPath));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
         client = WebClient.create(vertx);
@@ -178,6 +182,29 @@ class ServerTest
                   waitUntilUpdate.flag();
                   context.completeNow();
               });
+    }
+
+    @Test
+    void excludingMetrics(VertxTestContext context)
+    {
+        Checkpoint serverStarted = context.checkpoint();
+
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+
+        MetricRegistryProvider registryProvider = injector.getInstance(MetricRegistryProvider.class);
+        server.start()
+              .compose(this::validateHealthEndpoint)
+              .onComplete(context.succeeding(v -> {
+                  Pattern excludedPattern = Pattern.compile("vertx.eventbus.*");
+                  MetricRegistry globalRegistry = registryProvider.registry();
+                  assertThat(globalRegistry.getMetrics().size()).isGreaterThanOrEqualTo(1);
+                  assertThat(globalRegistry.getMetrics()
+                                           .keySet()
+                                           .stream()
+                                           .noneMatch(key -> excludedPattern.matcher(key).matches()))
+                  .isTrue();
+                  context.completeNow();
+              }));
     }
 
     Future<String> validateHealthEndpoint(String deploymentId)

@@ -150,6 +150,10 @@ metrics:
     jmx_domain_name: sidecar.vertx.jmx_domain
     monitored_server_route_regexes:                # regex list to match server routes
      - /api/v1/.*
+  filtering:
+    - type: "regex"                                # other possible value is "equals"
+      pattern: ".*"
+      inverse: false                               # If true excludes matches instead of including them
 
 cassandra_input_validation:
   forbidden_keyspaces:

@@ -18,25 +18,23 @@
 
 package org.apache.cassandra.sidecar.config;
 
-import java.util.List;
-
 /**
- * Configuration needed for capturing metrics.
+ * Filtering configuration needed for filtering metrics captured.
  */
-public interface MetricsConfiguration
+public interface MetricsFilteringConfiguration
 {
     /**
-     * @return global registry name to be used for registering sidecar metrics
+     * @return type of metric filter. Possible values are regex, equals.
      */
-    String registryName();
+    String type();
 
     /**
-     * @return configuration needed for capturing metrics released by Vert.x framework.
+     * @return pattern supported by the filter.
      */
-    VertxMetricsConfiguration vertxConfiguration();
+    String pattern();
 
     /**
-     * @return filter configurations for metrics.
+     * @return boolean. If true, metrics matching the filter are excluded instead of including.
      */
-    List<MetricsFilteringConfiguration> filteringConfigurations();
+    boolean inverse();
 }

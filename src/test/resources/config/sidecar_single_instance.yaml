@@ -83,6 +83,22 @@ sidecar:
 #      path: "path/to/truststore.p12"
 #      password: password
 
+metrics:
+  registry_name: cassandra_sidecar
+  vertx:
+    enabled: true
+    expose_via_jmx: false
+    jmx_domain_name: sidecar.vertx.jmx_domain
+    monitored_server_route_regexes:                # regex list to match server routes
+      - /api/v1/keyspaces/.*
+      - /api/v1/cassandra/.*
+  filtering:
+    - type: "regex"
+      pattern: "vertx.eventbus.*"
+      inverse: true
+    - type: "equals"
+      pattern: "instances_up"
+      inverse: true
 
 healthcheck:
   initial_delay_millis: 100

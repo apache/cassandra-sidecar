@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
+import org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.VertxMetricsConfigurationImpl;
 import org.assertj.core.api.Condition;
@@ -229,6 +230,24 @@ class SidecarConfigurationTest
         assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().size()).isEqualTo(2);
         assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().get(0)).isEqualTo("/api/v1/keyspaces/.*");
         assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().get(1)).isEqualTo("/api/v1/cassandra/.*");
+        List<MetricsFilteringConfiguration> filteringConfigurations = configuration.filteringConfigurations();
+        assertThat(filteringConfigurations.size()).isEqualTo(2);
+        if (filteringConfigurations.get(0).type().equals("regex"))
+        {
+            assertThat(filteringConfigurations.get(0).inverse()).isTrue();
+            assertThat(filteringConfigurations.get(0).pattern()).isEqualTo("vertx.eventbus.*");
+            assertThat(filteringConfigurations.get(1).type()).isEqualTo("equals");
+            assertThat(filteringConfigurations.get(1).pattern()).isEqualTo("instances_up");
+            assertThat(filteringConfigurations.get(1).inverse()).isTrue();
+        }
+        else
+        {
+            assertThat(filteringConfigurations.get(1).inverse()).isTrue();
+            assertThat(filteringConfigurations.get(1).pattern()).isEqualTo("vertx.eventbus.*");
+            assertThat(filteringConfigurations.get(1).type()).isEqualTo("regex");
+            assertThat(filteringConfigurations.get(0).pattern()).isEqualTo("instances_up");
+            assertThat(filteringConfigurations.get(0).inverse()).isTrue();
+        }
     }
 
     @Test
@@ -241,6 +260,16 @@ class SidecarConfigurationTest
         assertThat(pattern.matcher(KEYSPACE_SCHEMA_ROUTE)).matches();
         assertThat(pattern.matcher(TIME_SKEW_ROUTE)).matches();
         assertThat(pattern.matcher(RESTORE_JOB_SLICES_ROUTE)).matches();
+    }
+
+    @Test
+    void testMetricsAllowedWithDefaultRegexFilter()
+    {
+        Pattern pattern = Pattern.compile(MetricsFilteringConfigurationImpl.DEFAULT_PATTERN);
+        assertThat(pattern.matcher("vertx.http.servers.localhost:0.responses-5xx")).matches();
+        assertThat(pattern.matcher("sidecar.schema.cassandra_instances_up")).matches();
+        assertThat(pattern.matcher("vertx.eventbus.messages.bytes-read")).matches();
+        assertThat(pattern.matcher("throttled_429")).matches();
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
@@ -431,8 +460,10 @@ class SidecarConfigurationTest
 
     void validateMetricsConfiguration(MetricsConfiguration config)
     {
+        assertThat(config.registryName()).isNotEmpty();
         assertThat(config.vertxConfiguration()).isNotNull();
         assertThat(config.vertxConfiguration().monitoredServerRouteRegexes()).isNotNull();
+        assertThat(config.filteringConfigurations()).isNotNull();
     }
 
     private Path yaml(String resourceName)

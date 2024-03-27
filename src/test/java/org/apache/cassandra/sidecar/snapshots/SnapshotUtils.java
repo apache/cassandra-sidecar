@@ -40,6 +40,7 @@ import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.DriverUtils;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryProvider;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,6 +52,8 @@ import static org.mockito.Mockito.mock;
 public class SnapshotUtils
 {
     public static final String STAGING_DIR = "staging";
+    public static final MetricRegistryProvider METRIC_REGISTRY_PROVIDER = new MetricRegistryProvider("cassandra_sidecar",
+                                                                                                     Collections.emptyList());
 
     public static String makeStagingDir(String rootPath)
     {
@@ -124,7 +127,7 @@ public class SnapshotUtils
                                                              .dataDirs(Collections.singletonList(rootPath + "/d1"))
                                                              .stagingDir(stagingDir)
                                                              .delegate(delegate)
-                                                             .globalMetricRegistryName("cassandra_sidecar")
+                                                             .metricRegistry(METRIC_REGISTRY_PROVIDER.registry(1))
                                                              .build();
         InstanceMetadataImpl localhost2 = InstanceMetadataImpl.builder()
                                                               .id(2)
@@ -133,7 +136,7 @@ public class SnapshotUtils
                                                               .dataDirs(Collections.singletonList(rootPath + "/d2"))
                                                               .stagingDir(stagingDir)
                                                               .delegate(delegate)
-                                                              .globalMetricRegistryName("cassandra_sidecar")
+                                                              .metricRegistry(METRIC_REGISTRY_PROVIDER.registry(2))
                                                               .build();
         List<InstanceMetadata> instanceMetas = Arrays.asList(localhost, localhost2);
         return new InstancesConfigImpl(instanceMetas, DnsResolver.DEFAULT);

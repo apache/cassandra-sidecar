@@ -18,8 +18,12 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.Collections;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.MetricsConfiguration;
+import org.apache.cassandra.sidecar.config.MetricsFilteringConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 
 /**
@@ -35,16 +39,21 @@ public class MetricsConfigurationImpl implements MetricsConfiguration
     protected final String registryName;
     @JsonProperty(value = "vertx")
     protected final VertxMetricsConfiguration vertxConfiguration;
+    @JsonProperty(value = "filtering")
+    protected final List<MetricsFilteringConfiguration> filteringConfigurations;
 
     public MetricsConfigurationImpl()
     {
-        this(DEFAULT_DROPWIZARD_REGISTRY_NAME, DEFAULT_VERTX_METRICS_CONFIGURATION);
+        this(DEFAULT_DROPWIZARD_REGISTRY_NAME, DEFAULT_VERTX_METRICS_CONFIGURATION, Collections.emptyList());
     }
 
-    public MetricsConfigurationImpl(String registryName, VertxMetricsConfiguration vertxConfiguration)
+    public MetricsConfigurationImpl(String registryName,
+                                    VertxMetricsConfiguration vertxConfiguration,
+                                    List<MetricsFilteringConfiguration> filteringConfigurations)
     {
         this.registryName = registryName;
         this.vertxConfiguration = vertxConfiguration;
+        this.filteringConfigurations = filteringConfigurations;
     }
 
     /**
@@ -63,5 +72,14 @@ public class MetricsConfigurationImpl implements MetricsConfiguration
     public VertxMetricsConfiguration vertxConfiguration()
     {
         return vertxConfiguration;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<MetricsFilteringConfiguration> filteringConfigurations()
+    {
+        return filteringConfigurations;
     }
 }
