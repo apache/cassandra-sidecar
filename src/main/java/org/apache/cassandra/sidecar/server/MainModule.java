@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.SharedMetricRegistries;
 import com.datastax.driver.core.NettyOptions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -76,6 +75,7 @@ import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryProvider;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
@@ -142,14 +142,14 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Vertx vertx(SidecarConfiguration sidecarConfiguration)
+    public Vertx vertx(SidecarConfiguration sidecarConfiguration, MetricRegistryProvider registryProvider)
     {
         VertxMetricsConfiguration metricsConfig = sidecarConfiguration.metricsConfiguration().vertxConfiguration();
         DropwizardMetricsOptions dropwizardMetricsOptions
         = new DropwizardMetricsOptions().setEnabled(metricsConfig.enabled())
                                         .setJmxEnabled(metricsConfig.exposeViaJMX())
                                         .setJmxDomain(metricsConfig.jmxDomainName())
-                                        .setRegistryName(sidecarConfiguration.metricsConfiguration().registryName());
+                                        .setMetricRegistry(registryProvider.registry());
         for (String regex : metricsConfig.monitoredServerRouteRegexes())
         {
             dropwizardMetricsOptions.addMonitoredHttpServerRoute(new Match().setType(MatchType.REGEX).setValue(regex));
@@ -370,7 +370,8 @@ public class MainModule extends AbstractModule
                                            SidecarVersionProvider sidecarVersionProvider,
                                            DnsResolver dnsResolver,
                                            CQLSessionProvider cqlSessionProvider,
-                                           DriverUtils driverUtils)
+                                           DriverUtils driverUtils,
+                                           MetricRegistryProvider registryProvider)
     {
         List<InstanceMetadata> instanceMetadataList =
         configuration.cassandraInstances()
@@ -384,7 +385,7 @@ public class MainModule extends AbstractModule
                                                       jmxConfiguration,
                                                       cqlSessionProvider,
                                                       driverUtils,
-                                                      configuration.metricsConfiguration().registryName());
+                                                      registryProvider);
                      })
                      .collect(Collectors.toList());
 
@@ -525,9 +526,9 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public MetricRegistry globalMetricRegistry(SidecarConfiguration sidecarConfiguration)
+    public MetricRegistry globalMetricRegistry(MetricRegistryProvider registryProvider)
     {
-        return SharedMetricRegistries.getOrCreate(sidecarConfiguration.metricsConfiguration().registryName());
+        return registryProvider.registry();
     }
 
     /**
@@ -559,7 +560,7 @@ public class MainModule extends AbstractModule
      * @param sidecarVersion        the version of the Sidecar from the current binary
      * @param jmxConfiguration      the configuration for the JMX Client
      * @param session               the CQL Session provider
-     * @param globalRegistryName    global registry name used for tracking Sidecar metrics
+     * @param registryProvider      provider for getting cassandra instance specific registry
      * @return the build instance metadata object
      */
     private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
@@ -569,7 +570,7 @@ public class MainModule extends AbstractModule
                                                           JmxConfiguration jmxConfiguration,
                                                           CQLSessionProvider session,
                                                           DriverUtils driverUtils,
-                                                          String globalRegistryName)
+                                                          MetricRegistryProvider registryProvider)
     {
         String host = cassandraInstance.host();
         int port = cassandraInstance.port();
@@ -592,6 +593,7 @@ public class MainModule extends AbstractModule
                                                                          sidecarVersion,
                                                                          host,
                                                                          port);
+
         return InstanceMetadataImpl.builder()
                                    .id(cassandraInstance.id())
                                    .host(host)
@@ -599,7 +601,7 @@ public class MainModule extends AbstractModule
                                    .dataDirs(cassandraInstance.dataDirs())
                                    .stagingDir(cassandraInstance.stagingDir())
                                    .delegate(delegate)
-                                   .globalMetricRegistryName(globalRegistryName)
+                                   .metricRegistry(registryProvider.registry(cassandraInstance.id()))
                                    .build();
     }
 }
