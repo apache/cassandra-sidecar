@@ -22,20 +22,33 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.NoopMetricRegistry;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import io.vertx.core.Vertx;
 import io.vertx.ext.dropwizard.ThroughputMeter;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.server.Server;
+import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 
+import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 /**
  * Test for filtering of metrics
  */
+@ExtendWith(VertxExtension.class)
 public class FilteringMetricRegistryTest
 {
     private static final MetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry();
@@ -145,5 +158,36 @@ public class FilteringMetricRegistryTest
 
         metricRegistry.timer("vertx.eventbus.message_transfer_time");
         assertThat(metricRegistry.getMetrics().containsKey("vertx.eventbus.message_transfer_time")).isTrue();
+    }
+
+    @Test
+    void testWithServer(VertxTestContext context)
+    {
+        ClassLoader classLoader = FilteringMetricRegistryTest.class.getClassLoader();
+        Path yamlPath = writeResourceToPath(classLoader, confPath, "config/sidecar_metrics.yaml");
+        Injector injector = Guice.createInjector(new MainModule(yamlPath));
+        Server server = injector.getInstance(Server.class);
+        Vertx vertx = injector.getInstance(Vertx.class);
+
+        Checkpoint serverStarted = context.checkpoint();
+        Checkpoint waitUntilCheck = context.checkpoint();
+
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+
+        server.start()
+              .onFailure(context::failNow)
+              .onSuccess(v -> {
+                  MetricRegistryProvider registryProvider = injector.getInstance(MetricRegistryProvider.class);
+                  Pattern excludedPattern = Pattern.compile("vertx.eventbus.*");
+                  MetricRegistry globalRegistry = registryProvider.registry();
+                  assertThat(globalRegistry.getMetrics().size()).isGreaterThanOrEqualTo(1);
+                  assertThat(globalRegistry.getMetrics()
+                                           .keySet()
+                                           .stream()
+                                           .noneMatch(key -> excludedPattern.matcher(key).matches()))
+                  .isTrue();
+                  waitUntilCheck.flag();
+                  context.completeNow();
+              });
     }
 }

@@ -49,6 +49,11 @@ public class FilteringMetricRegistry extends MetricRegistry
         filters.addAll(newFilters);
     }
 
+    public synchronized void resetFilters()
+    {
+        filters.clear();
+    }
+
     /**
      * Check if the metric is allowed to register. Yes if any of the metric filters match the metric.
      * @param metricName name
