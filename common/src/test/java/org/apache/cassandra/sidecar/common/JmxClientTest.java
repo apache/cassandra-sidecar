@@ -336,6 +336,51 @@ class JmxClientTest
         }
     }
 
+    @Test
+    void testExtendingJmxClient() throws IOException
+    {
+        try (JmxClientExtended extended = new JmxClientExtended(JmxClient.builder()
+                                                                         .host("127.0.0.1")
+                                                                         .port(port)
+                                                                         .roleSupplier(() -> "controlRole")
+                                                                         .passwordSupplier(() -> "password")))
+        {
+            assertThat(extended.proxyInterceptionCount.get()).isEqualTo(0);
+            List<String> result = extended.proxy(Import.class, objectName)
+                                          .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
+                                                             true, true, true, true,
+                                                             true);
+            assertThat(result.size()).isEqualTo(0);
+            assertThat(extended.proxyInterceptionCount.get()).isEqualTo(1);
+
+            extended.proxy(Import.class, objectName)
+                    .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
+                                       true, true, true, true,
+                                       true);
+            assertThat(extended.proxyInterceptionCount.get()).isEqualTo(2);
+        }
+    }
+
+    /**
+     * Extends from JmxClient and keeps tracks of the number of proxy calls
+     */
+    static class JmxClientExtended extends JmxClient
+    {
+        AtomicInteger proxyInterceptionCount = new AtomicInteger(0);
+
+        protected JmxClientExtended(Builder builder)
+        {
+            super(builder);
+        }
+
+        @Override
+        public <C> C proxy(Class<C> clientClass, String remoteName)
+        {
+            proxyInterceptionCount.incrementAndGet();
+            return super.proxy(clientClass, remoteName);
+        }
+    }
+
     /**
      * Simulates to C*'s `nodetool import` call
      */

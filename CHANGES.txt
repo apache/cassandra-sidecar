@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Allow for JmxClient to be extensible (CASSANDRASC-116)
  * Improve observability in Sidecar (CASSANDRASC-111)
  * Improve logging for slice restore task (CASSANDRASC-107)
  * Add restore task watcher to report long running tasks (CASSANDRASC-106)
