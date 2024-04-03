@@ -77,7 +77,7 @@ public class JmxClient implements NotificationListener, Closeable
      *
      * @param builder the builder options
      */
-    private JmxClient(Builder builder)
+    protected JmxClient(Builder builder)
     {
         if (builder.jmxServiceURL != null)
         {
@@ -151,7 +151,7 @@ public class JmxClient implements NotificationListener, Closeable
                : RMISocketFactory.getDefaultSocketFactory();
     }
 
-    private synchronized void checkConnection()
+    protected synchronized void checkConnection()
     {
         if (!this.connected)
         {
@@ -159,7 +159,7 @@ public class JmxClient implements NotificationListener, Closeable
         }
     }
 
-    private void connect()
+    protected void connect()
     {
         int attempts = 1;
         int maxAttempts = connectionMaxRetries;
@@ -204,7 +204,7 @@ public class JmxClient implements NotificationListener, Closeable
         throw new RuntimeException(error, lastThrown);
     }
 
-    private void connectInternal(int currentAttempt) throws IOException
+    protected void connectInternal(int currentAttempt) throws IOException
     {
         jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, buildJmxEnv());
         jmxConnector.addConnectionNotificationListener(this, null, null);
