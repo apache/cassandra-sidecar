@@ -30,7 +30,7 @@ import org.apache.cassandra.sidecar.config.MetricsFilteringConfiguration;
  */
 public abstract class MetricFilter
 {
-    public abstract boolean isAllowed(String name);
+    public abstract boolean matches(String name);
 
     public static List<MetricFilter> parse(List<MetricsFilteringConfiguration> filterConfigurations)
     {
@@ -39,11 +39,11 @@ public abstract class MetricFilter
         {
             if (filterConfiguration.type().equalsIgnoreCase("regex"))
             {
-                filters.add(new Regex(filterConfiguration.pattern(), filterConfiguration.inverse()));
+                filters.add(new Regex(filterConfiguration.value()));
             }
             else if (filterConfiguration.type().equalsIgnoreCase("equals"))
             {
-                filters.add(new Equals(filterConfiguration.pattern(), filterConfiguration.inverse()));
+                filters.add(new Equals(filterConfiguration.value()));
             }
         }
         return filters;
@@ -55,21 +55,15 @@ public abstract class MetricFilter
     public static class Regex extends MetricFilter
     {
         private final Pattern pattern;
-        private final boolean inverse;
 
-        public Regex(String regex, boolean inverse)
+        public Regex(String regex)
         {
             Objects.requireNonNull(regex);
             this.pattern = Pattern.compile(regex);
-            this.inverse = inverse;
         }
 
-        public boolean isAllowed(String name)
+        public boolean matches(String name)
         {
-            if (inverse)
-            {
-                return !pattern.matcher(name).matches();
-            }
             return pattern.matcher(name).matches();
         }
     }
@@ -80,21 +74,15 @@ public abstract class MetricFilter
     public static class Equals extends MetricFilter
     {
         private final String value;
-        private final boolean inverse;
 
-        public Equals(String value, boolean inverse)
+        public Equals(String value)
         {
             Objects.requireNonNull(value);
             this.value = value;
-            this.inverse = inverse;
         }
 
-        public boolean isAllowed(String name)
+        public boolean matches(String name)
         {
-            if (inverse)
-            {
-                return !name.equals(value);
-            }
             return name.equals(value);
         }
     }

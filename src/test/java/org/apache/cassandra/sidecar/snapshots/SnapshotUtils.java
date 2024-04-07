@@ -40,6 +40,7 @@ import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.DriverUtils;
+import org.apache.cassandra.sidecar.metrics.MetricFilter;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryProvider;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
@@ -52,7 +53,9 @@ import static org.mockito.Mockito.mock;
 public class SnapshotUtils
 {
     public static final String STAGING_DIR = "staging";
+    public static final List<MetricFilter> INCLUDE_ALL = Collections.singletonList(new MetricFilter.Regex(".*"));
     public static final MetricRegistryProvider METRIC_REGISTRY_PROVIDER = new MetricRegistryProvider("cassandra_sidecar",
+                                                                                                     INCLUDE_ALL,
                                                                                                      Collections.emptyList());
 
     public static String makeStagingDir(String rootPath)

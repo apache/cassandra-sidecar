@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.metrics;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -51,6 +52,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 @ExtendWith(VertxExtension.class)
 public class FilteringMetricRegistryTest
 {
+    private static final List<MetricFilter> includeAll = Collections.singletonList(new MetricFilter.Regex(".*"));
     private static final MetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry();
     @TempDir
     private Path confPath;
@@ -58,8 +60,9 @@ public class FilteringMetricRegistryTest
     @Test
     void testNoopInstanceRetrieved()
     {
-        MetricFilter.Equals testFilter = new MetricFilter.Equals("testMetric", true);
+        MetricFilter.Equals testFilter = new MetricFilter.Equals("testMetric");
         MetricRegistryProvider registryProvider = new MetricRegistryProvider("cassandra_sidecar_" + UUID.randomUUID(),
+                                                                             includeAll,
                                                                              Collections.singletonList(testFilter));
         MetricRegistry metricRegistry = registryProvider.registry();
 
@@ -79,10 +82,11 @@ public class FilteringMetricRegistryTest
     @Test
     void testOneMatchingFilter()
     {
-        MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact", false);
-        MetricFilter.Regex regexFilter = new MetricFilter.Regex("vertx.*", true);
+        MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact");
+        MetricFilter.Regex regexFilter = new MetricFilter.Regex("vertx.*");
         MetricRegistryProvider registryProvider = new MetricRegistryProvider("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                             Arrays.asList(exactFilter, regexFilter));
+                                                                             Collections.singletonList(exactFilter),
+                                                                             Collections.singletonList(regexFilter));
         MetricRegistry metricRegistry = registryProvider.registry();
 
         metricRegistry.meter("sidecar.metric.exact");
@@ -92,10 +96,11 @@ public class FilteringMetricRegistryTest
     @Test
     void testMultipleMatchingFilter()
     {
-        MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact", false);
-        MetricFilter.Regex regexFilter = new MetricFilter.Regex("sidecar.*", false);
+        MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact");
+        MetricFilter.Regex regexFilter = new MetricFilter.Regex("sidecar.*");
         MetricRegistryProvider registryProvider = new MetricRegistryProvider("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                             Arrays.asList(exactFilter, regexFilter));
+                                                                             Arrays.asList(exactFilter, regexFilter),
+                                                                             Collections.emptyList());
         MetricRegistry metricRegistry = registryProvider.registry();
 
         metricRegistry.meter("sidecar.metric.exact");
@@ -105,8 +110,9 @@ public class FilteringMetricRegistryTest
     @Test
     void testExcludingEqualsMetricFilter()
     {
-        MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact", true);
+        MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact");
         MetricRegistryProvider registryProvider = new MetricRegistryProvider("cassandra_sidecar_" + UUID.randomUUID(),
+                                                                             includeAll,
                                                                              Collections.singletonList(exactFilter));
         MetricRegistry metricRegistry = registryProvider.registry();
 
@@ -117,10 +123,11 @@ public class FilteringMetricRegistryTest
     @Test
     void testExcludingRegexMetricFilter()
     {
-        MetricFilter.Regex vertxFilter = new MetricFilter.Regex("vertx.*", true);
-        MetricFilter.Regex sidecarFilter = new MetricFilter.Regex("sidecar.*", false);
+        MetricFilter.Regex vertxFilter = new MetricFilter.Regex("vertx.*");
+        MetricFilter.Regex sidecarFilter = new MetricFilter.Regex("sidecar.*");
         MetricRegistryProvider registryProvider = new MetricRegistryProvider("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                             Arrays.asList(vertxFilter, sidecarFilter));
+                                                                             Collections.singletonList(sidecarFilter),
+                                                                             Collections.singletonList(vertxFilter));
         MetricRegistry metricRegistry = registryProvider.registry();
 
         metricRegistry.meter("sidecar.metric.exact");
@@ -130,12 +137,13 @@ public class FilteringMetricRegistryTest
     }
 
     @Test
-    void testMultipleMatchingFilterWithOneInverse()
+    void testMultipleMatchingFilterWithOneExclude()
     {
-        MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact", true);
-        MetricFilter.Regex regexFilter = new MetricFilter.Regex("sidecar.*", false);
+        MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact");
+        MetricFilter.Regex regexFilter = new MetricFilter.Regex("sidecar.*");
         MetricRegistryProvider registryProvider = new MetricRegistryProvider("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                             Arrays.asList(exactFilter, regexFilter));
+                                                                             Collections.singletonList(regexFilter),
+                                                                             Collections.singletonList(exactFilter));
         MetricRegistry metricRegistry = registryProvider.registry();
 
         metricRegistry.meter("sidecar.metric.exact");
@@ -145,16 +153,16 @@ public class FilteringMetricRegistryTest
     @Test
     void testReconfiguringMetricFilters()
     {
-        MetricFilter.Regex vertxFilterInverse = new MetricFilter.Regex("vertx.*", true);
+        MetricFilter.Regex vertxFilter = new MetricFilter.Regex("vertx.*");
         MetricRegistryProvider registryProvider = new MetricRegistryProvider("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                             Collections.singletonList(vertxFilterInverse));
+                                                                             includeAll,
+                                                                             Collections.singletonList(vertxFilter));
         MetricRegistry metricRegistry = registryProvider.registry();
 
         metricRegistry.timer("vertx.eventbus.message_transfer_time");
         assertThat(metricRegistry.getMetrics().containsKey("vertx.eventbus.message_transfer_time")).isFalse();
 
-        MetricFilter.Regex vertxFilter = new MetricFilter.Regex("vertx.*", false);
-        ((FilteringMetricRegistry) metricRegistry).configureFilters(Collections.singletonList(vertxFilter));
+        ((FilteringMetricRegistry) metricRegistry).configureFilters(includeAll, Collections.emptyList());
 
         metricRegistry.timer("vertx.eventbus.message_transfer_time");
         assertThat(metricRegistry.getMetrics().containsKey("vertx.eventbus.message_transfer_time")).isTrue();

@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.config;
 
 /**
- * Filtering configuration needed for filtering metrics captured.
+ * Configuration needed for filtering metrics captured.
  */
 public interface MetricsFilteringConfiguration
 {
@@ -31,10 +31,5 @@ public interface MetricsFilteringConfiguration
     /**
      * @return pattern supported by the filter.
      */
-    String pattern();
-
-    /**
-     * @return boolean. If true, metrics matching the filter are excluded instead of including.
-     */
-    boolean inverse();
+    String value();
 }

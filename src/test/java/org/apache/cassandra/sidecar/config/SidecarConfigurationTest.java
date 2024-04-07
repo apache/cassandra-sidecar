@@ -229,23 +229,23 @@ class SidecarConfigurationTest
         assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().size()).isEqualTo(2);
         assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().get(0)).isEqualTo("/api/v1/keyspaces/.*");
         assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().get(1)).isEqualTo("/api/v1/cassandra/.*");
-        List<MetricsFilteringConfiguration> filteringConfigurations = configuration.filteringConfigurations();
-        assertThat(filteringConfigurations.size()).isEqualTo(2);
-        if (filteringConfigurations.get(0).type().equals("regex"))
+        List<MetricsFilteringConfiguration> includeConfigurations = configuration.includeConfigurations();
+        List<MetricsFilteringConfiguration> excludeConfigurations = configuration.excludeConfigurations();
+        assertThat(includeConfigurations.size()).isEqualTo(1);
+        assertThat(excludeConfigurations.size()).isEqualTo(2);
+        assertThat(includeConfigurations.get(0).type()).isEqualTo("regex");
+        assertThat(includeConfigurations.get(0).value()).isEqualTo(".*");
+        if (excludeConfigurations.get(0).type().equals("regex"))
         {
-            assertThat(filteringConfigurations.get(0).inverse()).isTrue();
-            assertThat(filteringConfigurations.get(0).pattern()).isEqualTo("vertx.eventbus.*");
-            assertThat(filteringConfigurations.get(1).type()).isEqualTo("equals");
-            assertThat(filteringConfigurations.get(1).pattern()).isEqualTo("instances_up");
-            assertThat(filteringConfigurations.get(1).inverse()).isTrue();
+            assertThat(excludeConfigurations.get(0).value()).isEqualTo("vertx.eventbus.*");
+            assertThat(excludeConfigurations.get(1).type()).isEqualTo("equals");
+            assertThat(excludeConfigurations.get(1).value()).isEqualTo("instances_up");
         }
         else
         {
-            assertThat(filteringConfigurations.get(1).inverse()).isTrue();
-            assertThat(filteringConfigurations.get(1).pattern()).isEqualTo("vertx.eventbus.*");
-            assertThat(filteringConfigurations.get(1).type()).isEqualTo("regex");
-            assertThat(filteringConfigurations.get(0).pattern()).isEqualTo("instances_up");
-            assertThat(filteringConfigurations.get(0).inverse()).isTrue();
+            assertThat(excludeConfigurations.get(1).value()).isEqualTo("vertx.eventbus.*");
+            assertThat(excludeConfigurations.get(1).type()).isEqualTo("regex");
+            assertThat(excludeConfigurations.get(0).value()).isEqualTo("instances_up");
         }
     }
 
@@ -264,7 +264,7 @@ class SidecarConfigurationTest
     @Test
     void testMetricsAllowedWithDefaultRegexFilter()
     {
-        Pattern pattern = Pattern.compile(MetricsFilteringConfigurationImpl.DEFAULT_PATTERN);
+        Pattern pattern = Pattern.compile(MetricsFilteringConfigurationImpl.DEFAULT_VALUE);
         assertThat(pattern.matcher("vertx.http.servers.localhost:0.responses-5xx")).matches();
         assertThat(pattern.matcher("sidecar.schema.cassandra_instances_up")).matches();
         assertThat(pattern.matcher("vertx.eventbus.messages.bytes-read")).matches();
@@ -462,7 +462,8 @@ class SidecarConfigurationTest
         assertThat(config.registryName()).isNotEmpty();
         assertThat(config.vertxConfiguration()).isNotNull();
         assertThat(config.vertxConfiguration().monitoredServerRouteRegexes()).isNotNull();
-        assertThat(config.filteringConfigurations()).isNotNull();
+        assertThat(config.includeConfigurations()).isNotNull();
+        assertThat(config.excludeConfigurations()).isNotNull();
     }
 
     private Path yaml(String resourceName)

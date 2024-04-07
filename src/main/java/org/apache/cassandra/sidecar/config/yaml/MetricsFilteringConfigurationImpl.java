@@ -27,25 +27,21 @@ import org.apache.cassandra.sidecar.config.MetricsFilteringConfiguration;
 public class MetricsFilteringConfigurationImpl implements MetricsFilteringConfiguration
 {
     public static final String DEFAULT_TYPE = "regex";
-    public static final String DEFAULT_PATTERN = ".*"; // include all metrics
-    public static final boolean DEFAULT_INVERSE = false;
+    public static final String DEFAULT_VALUE = ".*"; // include all metrics
     @JsonProperty("type")
     private final String type;
-    @JsonProperty("pattern")
-    private final String pattern;
-    @JsonProperty("inverse")
-    private final boolean inverse;
+    @JsonProperty("value")
+    private final String value;
 
     public MetricsFilteringConfigurationImpl()
     {
-        this(DEFAULT_TYPE, DEFAULT_PATTERN, DEFAULT_INVERSE);
+        this(DEFAULT_TYPE, DEFAULT_VALUE);
     }
 
-    public MetricsFilteringConfigurationImpl(String type, String pattern, boolean inverse)
+    public MetricsFilteringConfigurationImpl(String type, String value)
     {
         this.type = type;
-        this.pattern = pattern;
-        this.inverse = inverse;
+        this.value = value;
     }
 
     /**
@@ -60,16 +56,8 @@ public class MetricsFilteringConfigurationImpl implements MetricsFilteringConfig
     /**
      * {@inheritDoc}
      */
-    public String pattern()
+    public String value()
     {
-        return pattern;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public boolean inverse()
-    {
-        return inverse;
+        return value;
     }
 }

@@ -36,7 +36,12 @@ public interface MetricsConfiguration
     VertxMetricsConfiguration vertxConfiguration();
 
     /**
-     * @return filter configurations for metrics.
+     * @return filters for metrics to be recorded
      */
-    List<MetricsFilteringConfiguration> filteringConfigurations();
+    List<MetricsFilteringConfiguration> includeConfigurations();
+
+    /**
+     * @return filters for excluding metrics during capture
+     */
+    List<MetricsFilteringConfiguration> excludeConfigurations();
 }

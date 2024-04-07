@@ -34,26 +34,33 @@ public class MetricsConfigurationImpl implements MetricsConfiguration
     public static final String DEFAULT_DROPWIZARD_REGISTRY_NAME = "cassandra_sidecar";
     public static final VertxMetricsConfiguration DEFAULT_VERTX_METRICS_CONFIGURATION
     = new VertxMetricsConfigurationImpl();
+    public static final List<MetricsFilteringConfiguration> DEFAULT_INCLUDE_CONFIGURATIONS
+    = Collections.singletonList(new MetricsFilteringConfigurationImpl());
 
     @JsonProperty(value = "registry_name")
     protected final String registryName;
     @JsonProperty(value = "vertx")
     protected final VertxMetricsConfiguration vertxConfiguration;
-    @JsonProperty(value = "filtering")
-    protected final List<MetricsFilteringConfiguration> filteringConfigurations;
+    @JsonProperty(value = "include")
+    protected final List<MetricsFilteringConfiguration> includeConfigurations;
+    @JsonProperty(value = "exclude")
+    protected final List<MetricsFilteringConfiguration> excludeConfigurations;
 
     public MetricsConfigurationImpl()
     {
-        this(DEFAULT_DROPWIZARD_REGISTRY_NAME, DEFAULT_VERTX_METRICS_CONFIGURATION, Collections.emptyList());
+        this(DEFAULT_DROPWIZARD_REGISTRY_NAME, DEFAULT_VERTX_METRICS_CONFIGURATION,
+             DEFAULT_INCLUDE_CONFIGURATIONS, Collections.emptyList());
     }
 
     public MetricsConfigurationImpl(String registryName,
                                     VertxMetricsConfiguration vertxConfiguration,
-                                    List<MetricsFilteringConfiguration> filteringConfigurations)
+                                    List<MetricsFilteringConfiguration> includeConfigurations,
+                                    List<MetricsFilteringConfiguration> excludeConfigurations)
     {
         this.registryName = registryName;
         this.vertxConfiguration = vertxConfiguration;
-        this.filteringConfigurations = filteringConfigurations;
+        this.includeConfigurations = includeConfigurations;
+        this.excludeConfigurations = excludeConfigurations;
     }
 
     /**
@@ -78,8 +85,17 @@ public class MetricsConfigurationImpl implements MetricsConfiguration
      * {@inheritDoc}
      */
     @Override
-    public List<MetricsFilteringConfiguration> filteringConfigurations()
+    public List<MetricsFilteringConfiguration> includeConfigurations()
     {
-        return filteringConfigurations;
+        return includeConfigurations;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<MetricsFilteringConfiguration> excludeConfigurations()
+    {
+        return excludeConfigurations;
     }
 }

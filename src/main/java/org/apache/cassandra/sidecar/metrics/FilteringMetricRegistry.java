@@ -36,32 +36,39 @@ import com.codahale.metrics.Timer;
 public class FilteringMetricRegistry extends MetricRegistry
 {
     private static final NoopMetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry(); // supplies no-op metrics
-    private final List<MetricFilter> filters = new ArrayList<>();
+    private final List<MetricFilter> include = new ArrayList<>();
+    private final List<MetricFilter> exclude = new ArrayList<>();
 
-    public FilteringMetricRegistry(List<MetricFilter> filters)
+    public FilteringMetricRegistry(List<MetricFilter> includeFilters, List<MetricFilter> excludeFilters)
     {
-        this.filters.addAll(filters);
+        this.include.addAll(includeFilters);
+        this.exclude.addAll(excludeFilters);
     }
 
-    public synchronized void configureFilters(List<MetricFilter> newFilters)
+    public synchronized void configureFilters(List<MetricFilter> include, List<MetricFilter> exclude)
     {
-        filters.clear();
-        filters.addAll(newFilters);
+        this.include.clear();
+        this.include.addAll(include);
+        this.exclude.clear();
+        this.exclude.addAll(exclude);
     }
 
     public synchronized void resetFilters()
     {
-        filters.clear();
+        include.clear();
+        exclude.clear();
     }
 
     /**
-     * Check if the metric is allowed to register. Yes if any of the metric filters match the metric.
-     * @param metricName name
+     * Check if the metric is allowed to register. .
+     * @param name  metric name
      * @return true if allowed; false otherwise
      */
-    public boolean isAllowed(String metricName)
+    public boolean isAllowed(String name)
     {
-        return filters.stream().allMatch(filter -> filter.isAllowed(metricName));
+        boolean included = include.stream().anyMatch(filter -> filter.matches(name));
+        boolean excluded = exclude.stream().anyMatch(filter -> filter.matches(name));
+        return included && !excluded;
     }
 
     @Override

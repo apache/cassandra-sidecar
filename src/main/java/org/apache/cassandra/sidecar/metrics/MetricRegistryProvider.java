@@ -36,26 +36,31 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 public class MetricRegistryProvider
 {
     private final String globalRegistryName;
-    private final List<MetricFilter> filters = new ArrayList<>();
+    private final List<MetricFilter> include = new ArrayList<>();
+    private final List<MetricFilter> exclude = new ArrayList<>();
 
     @Inject
     public MetricRegistryProvider(SidecarConfiguration sidecarConfiguration)
     {
         this(sidecarConfiguration.metricsConfiguration().registryName(),
-             MetricFilter.parse(sidecarConfiguration.metricsConfiguration().filteringConfigurations()));
+             MetricFilter.parse(sidecarConfiguration.metricsConfiguration().includeConfigurations()),
+             MetricFilter.parse(sidecarConfiguration.metricsConfiguration().excludeConfigurations()));
     }
 
     @VisibleForTesting
-    public MetricRegistryProvider(String globalRegistryName, List<MetricFilter> filters)
+    public MetricRegistryProvider(String globalRegistryName, List<MetricFilter> include, List<MetricFilter> exclude)
     {
         this.globalRegistryName = globalRegistryName;
-        this.filters.addAll(filters);
+        this.include.addAll(include);
+        this.exclude.addAll(exclude);
     }
 
-    public synchronized void configureFilters(List<MetricFilter> newFilters)
+    public synchronized void configureFilters(List<MetricFilter> include, List<MetricFilter> exclude)
     {
-        filters.clear();
-        filters.addAll(newFilters);
+        this.include.clear();
+        this.exclude.clear();
+        this.include.addAll(include);
+        this.exclude.addAll(exclude);
     }
 
     public MetricRegistry registry()
@@ -71,7 +76,7 @@ public class MetricRegistryProvider
 
     public MetricRegistry registry(String name)
     {
-        FilteringMetricRegistry metricRegistry = new FilteringMetricRegistry(filters);
+        FilteringMetricRegistry metricRegistry = new FilteringMetricRegistry(include, exclude);
         SharedMetricRegistries.add(name, metricRegistry);
         return SharedMetricRegistries.getOrCreate(name);
     }

@@ -67,13 +67,14 @@ metrics:
     monitored_server_route_regexes:                # regex list to match server routes
       - /api/v1/keyspaces/.*
       - /api/v1/cassandra/.*
-  filtering:
+  include:
     - type: "regex"
-      pattern: "vertx.eventbus.*"
-      inverse: true
+      value: ".*"
+  exclude:
+    - type: "regex"
+      value: "vertx.eventbus.*"
     - type: "equals"
-      pattern: "instances_up"
-      inverse: true
+      value: "instances_up"
 
 healthcheck:
   initial_delay_millis: 100
