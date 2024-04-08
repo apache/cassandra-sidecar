@@ -151,7 +151,7 @@ metrics:
     monitored_server_route_regexes:                # regex list to match server routes
      - /api/v1/.*
   include:
-    - type: "regex"                                # other possible value is "equals"
+    - type: "regex"                                # other possible type           is "equals"
       value: ".*"
   exclude:
 #    - type: "regex"

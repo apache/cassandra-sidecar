@@ -75,7 +75,7 @@ import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
-import org.apache.cassandra.sidecar.metrics.MetricRegistryProvider;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
@@ -142,14 +142,14 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Vertx vertx(SidecarConfiguration sidecarConfiguration, MetricRegistryProvider registryProvider)
+    public Vertx vertx(SidecarConfiguration sidecarConfiguration, MetricRegistryFactory metricRegistryFactory)
     {
         VertxMetricsConfiguration metricsConfig = sidecarConfiguration.metricsConfiguration().vertxConfiguration();
         DropwizardMetricsOptions dropwizardMetricsOptions
         = new DropwizardMetricsOptions().setEnabled(metricsConfig.enabled())
                                         .setJmxEnabled(metricsConfig.exposeViaJMX())
                                         .setJmxDomain(metricsConfig.jmxDomainName())
-                                        .setMetricRegistry(registryProvider.registry());
+                                        .setMetricRegistry(metricRegistryFactory.getOrCreate());
         for (String regex : metricsConfig.monitoredServerRouteRegexes())
         {
             dropwizardMetricsOptions.addMonitoredHttpServerRoute(new Match().setType(MatchType.REGEX).setValue(regex));
@@ -371,7 +371,7 @@ public class MainModule extends AbstractModule
                                            DnsResolver dnsResolver,
                                            CQLSessionProvider cqlSessionProvider,
                                            DriverUtils driverUtils,
-                                           MetricRegistryProvider registryProvider)
+                                           MetricRegistryFactory registryProvider)
     {
         List<InstanceMetadata> instanceMetadataList =
         configuration.cassandraInstances()
@@ -526,9 +526,9 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public MetricRegistry globalMetricRegistry(MetricRegistryProvider registryProvider)
+    public MetricRegistry globalMetricRegistry(MetricRegistryFactory registryProvider)
     {
-        return registryProvider.registry();
+        return registryProvider.getOrCreate();
     }
 
     /**
@@ -560,7 +560,7 @@ public class MainModule extends AbstractModule
      * @param sidecarVersion        the version of the Sidecar from the current binary
      * @param jmxConfiguration      the configuration for the JMX Client
      * @param session               the CQL Session provider
-     * @param registryProvider      provider for getting cassandra instance specific registry
+     * @param registryFactory       factory for creating cassandra instance specific registry
      * @return the build instance metadata object
      */
     private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
@@ -570,7 +570,7 @@ public class MainModule extends AbstractModule
                                                           JmxConfiguration jmxConfiguration,
                                                           CQLSessionProvider session,
                                                           DriverUtils driverUtils,
-                                                          MetricRegistryProvider registryProvider)
+                                                          MetricRegistryFactory registryFactory)
     {
         String host = cassandraInstance.host();
         int port = cassandraInstance.port();
@@ -601,7 +601,7 @@ public class MainModule extends AbstractModule
                                    .dataDirs(cassandraInstance.dataDirs())
                                    .stagingDir(cassandraInstance.stagingDir())
                                    .delegate(delegate)
-                                   .metricRegistry(registryProvider.registry(cassandraInstance.id()))
+                                   .metricRegistry(registryFactory.getOrCreate(cassandraInstance.id()))
                                    .build();
     }
 }

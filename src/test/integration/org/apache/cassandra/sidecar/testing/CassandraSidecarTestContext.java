@@ -47,7 +47,7 @@ import org.apache.cassandra.sidecar.common.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.JmxClient;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.utils.DriverUtils;
-import org.apache.cassandra.sidecar.metrics.MetricRegistryProvider;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
@@ -61,9 +61,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class CassandraSidecarTestContext implements AutoCloseable
 {
     public final SimpleCassandraVersion version;
-    private final MetricRegistryProvider metricRegistryProvider = new MetricRegistryProvider("cassandra_sidecar",
-                                                                                             Collections.emptyList(),
-                                                                                             Collections.emptyList());
+    private final MetricRegistryFactory metricRegistryProvider = new MetricRegistryFactory("cassandra_sidecar",
+                                                                                           Collections.emptyList(),
+                                                                                           Collections.emptyList());
     private final CassandraVersionProvider versionProvider;
     private final DnsResolver dnsResolver;
     private final AbstractCassandraTestContext abstractCassandraTestContext;
@@ -262,7 +262,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                              .dataDirs(Arrays.asList(dataDirectories))
                                              .stagingDir(stagingDir)
                                              .delegate(delegate)
-                                             .metricRegistry(metricRegistryProvider.registry(i + 1))
+                                             .metricRegistry(metricRegistryProvider.getOrCreate(i + 1))
                                              .build());
         }
         return new InstancesConfigImpl(metadata, dnsResolver);

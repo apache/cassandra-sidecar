@@ -18,8 +18,11 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
@@ -36,141 +39,115 @@ import com.codahale.metrics.Timer;
 public class FilteringMetricRegistry extends MetricRegistry
 {
     private static final NoopMetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry(); // supplies no-op metrics
-    private final List<MetricFilter> include = new ArrayList<>();
-    private final List<MetricFilter> exclude = new ArrayList<>();
+    private final Predicate<String> isAllowed;
+    // all metrics including the allowed and disallowed
+    private final ConcurrentMap<String, Metric> allMetrics = new ConcurrentHashMap<>();
 
-    public FilteringMetricRegistry(List<MetricFilter> includeFilters, List<MetricFilter> excludeFilters)
+    public FilteringMetricRegistry(Predicate<String> isAllowed)
     {
-        this.include.addAll(includeFilters);
-        this.exclude.addAll(excludeFilters);
-    }
-
-    public synchronized void configureFilters(List<MetricFilter> include, List<MetricFilter> exclude)
-    {
-        this.include.clear();
-        this.include.addAll(include);
-        this.exclude.clear();
-        this.exclude.addAll(exclude);
-    }
-
-    public synchronized void resetFilters()
-    {
-        include.clear();
-        exclude.clear();
-    }
-
-    /**
-     * Check if the metric is allowed to register. .
-     * @param name  metric name
-     * @return true if allowed; false otherwise
-     */
-    public boolean isAllowed(String name)
-    {
-        boolean included = include.stream().anyMatch(filter -> filter.matches(name));
-        boolean excluded = exclude.stream().anyMatch(filter -> filter.matches(name));
-        return included && !excluded;
+        this.isAllowed = isAllowed;
     }
 
     @Override
     public Counter counter(String name)
     {
-        if (isAllowed(name))
-        {
-            return super.counter(name);
-        }
-        return NO_OP_METRIC_REGISTRY.counter(name);
+        // allMetrics is populated in order to let vertx internal know that the metric has been registered and
+        // to avoid registration loop
+        Counter counter = isAllowed.test(name) ? super.counter(name) : NO_OP_METRIC_REGISTRY.counter(name);
+        allMetrics.putIfAbsent(name, counter);
+        return counter;
     }
 
     @Override
     public Counter counter(String name, MetricSupplier<Counter> supplier)
     {
-        if (isAllowed(name))
-        {
-            return super.counter(name, supplier);
-        }
-        return NO_OP_METRIC_REGISTRY.counter(name);
+        Counter counter = isAllowed.test(name) ? super.counter(name, supplier) : NO_OP_METRIC_REGISTRY.counter(name);
+        allMetrics.putIfAbsent(name, counter);
+        return counter;
     }
 
     @Override
     public Histogram histogram(String name)
     {
-        if (isAllowed(name))
-        {
-            return super.histogram(name);
-        }
-        return NO_OP_METRIC_REGISTRY.histogram(name);
+        Histogram histogram = isAllowed.test(name) ? super.histogram(name) : NO_OP_METRIC_REGISTRY.histogram(name);
+        allMetrics.putIfAbsent(name, histogram);
+        return histogram;
     }
 
     @Override
     public Histogram histogram(String name, MetricSupplier<Histogram> supplier)
     {
-        if (isAllowed(name))
-        {
-            return super.histogram(name, supplier);
-        }
-        return NO_OP_METRIC_REGISTRY.histogram(name);
+        Histogram histogram = isAllowed.test(name) ? super.histogram(name, supplier) : NO_OP_METRIC_REGISTRY.histogram(name);
+        allMetrics.putIfAbsent(name, histogram);
+        return histogram;
     }
 
     @Override
     public Meter meter(String name)
     {
-        if (isAllowed(name))
-        {
-            return super.meter(name);
-        }
-        return NO_OP_METRIC_REGISTRY.meter(name);
+        Meter meter = isAllowed.test(name) ? super.meter(name) : NO_OP_METRIC_REGISTRY.meter(name);
+        allMetrics.putIfAbsent(name, meter);
+        return meter;
     }
 
     @Override
     public Meter meter(String name, MetricSupplier<Meter> supplier)
     {
-        if (isAllowed(name))
-        {
-            return super.meter(name, supplier);
-        }
-        return NO_OP_METRIC_REGISTRY.meter(name);
+        Meter meter = isAllowed.test(name) ? super.meter(name, supplier) : NO_OP_METRIC_REGISTRY.meter(name);
+        allMetrics.putIfAbsent(name, meter);
+        return meter;
     }
 
     @Override
     public Timer timer(String name)
     {
-        if (isAllowed(name))
-        {
-            return super.timer(name);
-        }
-        return NO_OP_METRIC_REGISTRY.timer(name);
+        Timer timer = isAllowed.test(name) ? super.timer(name) : NO_OP_METRIC_REGISTRY.timer(name);
+        allMetrics.putIfAbsent(name, timer);
+        return timer;
     }
 
     @Override
     public Timer timer(String name, MetricSupplier<Timer> supplier)
     {
-        if (isAllowed(name))
-        {
-            return super.timer(name, supplier);
-        }
-        return NO_OP_METRIC_REGISTRY.timer(name);
+        Timer timer = isAllowed.test(name) ? super.timer(name, supplier) : NO_OP_METRIC_REGISTRY.timer(name);
+        allMetrics.putIfAbsent(name, timer);
+        return timer;
     }
 
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public <T extends Gauge> T gauge(String name)
     {
-        if (isAllowed(name))
-        {
-            return super.gauge(name);
-        }
-        return NO_OP_METRIC_REGISTRY.gauge(name);
+        T gauge = isAllowed.test(name) ? super.gauge(name) : NO_OP_METRIC_REGISTRY.gauge(name);
+        allMetrics.putIfAbsent(name, gauge);
+        return gauge;
     }
 
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public <T extends Gauge> T gauge(String name, MetricSupplier<T> supplier)
     {
-        if (isAllowed(name))
-        {
-            return super.gauge(name, supplier);
-        }
-        return supplier.newMetric(); // unregistered metric
+        T gauge = isAllowed.test(name) ? super.gauge(name, supplier) : supplier.newMetric() /* unregistered metric */;
+        allMetrics.putIfAbsent(name, gauge);
+        return gauge;
+    }
+
+    /**
+     * @return all the metrics including the allowed and disallowed metrics
+     */
+    @Override
+    public Map<String, Metric> getMetrics()
+    {
+        return Collections.unmodifiableMap(allMetrics);
+    }
+
+    /**
+     * @return metrics registered with register. This will be useful for testing purposes to check
+     * what metrics are captured
+     */
+    public Map<String, Metric> getIncludedMetrics()
+    {
+        return super.getMetrics();
     }
 
     /**
@@ -182,15 +159,13 @@ public class FilteringMetricRegistry extends MetricRegistry
     @SuppressWarnings({"rawtypes", "unchecked"})
     public <T extends Metric> T register(String name, T metric) throws IllegalArgumentException
     {
-        if (isAllowed(name))
-        {
-            return super.register(name, metric);
-        }
-
         if (metric == null)
         {
             throw new IllegalArgumentException("Metric can not be null");
         }
-        return metric;
+
+        T registeredMetric = isAllowed.test(name) ? super.register(name, metric) : metric;
+        allMetrics.putIfAbsent(name, registeredMetric);
+        return registeredMetric;
     }
 }

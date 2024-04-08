@@ -34,8 +34,6 @@ public class MetricsConfigurationImpl implements MetricsConfiguration
     public static final String DEFAULT_DROPWIZARD_REGISTRY_NAME = "cassandra_sidecar";
     public static final VertxMetricsConfiguration DEFAULT_VERTX_METRICS_CONFIGURATION
     = new VertxMetricsConfigurationImpl();
-    public static final List<MetricsFilteringConfiguration> DEFAULT_INCLUDE_CONFIGURATIONS
-    = Collections.singletonList(new MetricsFilteringConfigurationImpl());
 
     @JsonProperty(value = "registry_name")
     protected final String registryName;
@@ -49,7 +47,7 @@ public class MetricsConfigurationImpl implements MetricsConfiguration
     public MetricsConfigurationImpl()
     {
         this(DEFAULT_DROPWIZARD_REGISTRY_NAME, DEFAULT_VERTX_METRICS_CONFIGURATION,
-             DEFAULT_INCLUDE_CONFIGURATIONS, Collections.emptyList());
+             Collections.emptyList(), Collections.emptyList());
     }
 
     public MetricsConfigurationImpl(String registryName,
