@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.metrics;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -72,7 +71,7 @@ public class FilteringMetricRegistryTest
 
         assertThat(metricRegistry.gauge("testMetric", () -> new DefaultSettableGauge<>(0L)))
         .isInstanceOf(DefaultSettableGauge.class);
-        assertThat(metricRegistry.getMetrics().containsKey("testMetric")).isFalse();
+        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetric")).isFalse();
 
         metricRegistry.register("testMetric", new ThroughputMeter());
         assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetric")).isFalse();
@@ -168,9 +167,9 @@ public class FilteringMetricRegistryTest
               .onSuccess(v -> {
                   MetricRegistryFactory registryFactory = injector.getInstance(MetricRegistryFactory.class);
                   Pattern excludedPattern = Pattern.compile("vertx.eventbus.*");
-                  MetricRegistry globalRegistry = registryFactory.getOrCreate();
-                  assertThat(globalRegistry.getMetrics().size()).isGreaterThanOrEqualTo(1);
-                  assertThat(globalRegistry.getMetrics()
+                  FilteringMetricRegistry globalRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
+                  assertThat(globalRegistry.getIncludedMetrics().size()).isGreaterThanOrEqualTo(1);
+                  assertThat(globalRegistry.getIncludedMetrics()
                                            .keySet()
                                            .stream()
                                            .noneMatch(key -> excludedPattern.matcher(key).matches()))
