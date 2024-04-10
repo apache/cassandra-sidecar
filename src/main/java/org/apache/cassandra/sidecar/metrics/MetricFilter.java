@@ -25,6 +25,9 @@ import java.util.regex.Pattern;
 
 import org.apache.cassandra.sidecar.config.MetricsFilteringConfiguration;
 
+import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.EQUALS_TYPE;
+import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.REGEX_TYPE;
+
 /**
  * Filter for deciding whether a metric should be captured
  */
@@ -40,11 +43,11 @@ public abstract class MetricFilter
         List<MetricFilter> filters = new ArrayList<>();
         for (MetricsFilteringConfiguration filterConfiguration : filterConfigurations)
         {
-            if (filterConfiguration.type().equalsIgnoreCase("regex"))
+            if (filterConfiguration.type().equalsIgnoreCase(REGEX_TYPE))
             {
                 filters.add(new Regex(filterConfiguration.value()));
             }
-            else if (filterConfiguration.type().equalsIgnoreCase("equals"))
+            else if (filterConfiguration.type().equalsIgnoreCase(EQUALS_TYPE))
             {
                 filters.add(new Equals(filterConfiguration.value()));
             }

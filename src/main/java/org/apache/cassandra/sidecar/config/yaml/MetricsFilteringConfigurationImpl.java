@@ -26,7 +26,9 @@ import org.apache.cassandra.sidecar.config.MetricsFilteringConfiguration;
  */
 public class MetricsFilteringConfigurationImpl implements MetricsFilteringConfiguration
 {
-    public static final String DEFAULT_TYPE = "regex";
+    public static final String REGEX_TYPE = "regex";
+    public static final String EQUALS_TYPE = "equals";
+    public static final String DEFAULT_TYPE = REGEX_TYPE;
     public static final String DEFAULT_VALUE = ".*"; // include all metrics
     @JsonProperty("type")
     private final String type;
@@ -41,7 +43,18 @@ public class MetricsFilteringConfigurationImpl implements MetricsFilteringConfig
     public MetricsFilteringConfigurationImpl(String type, String value)
     {
         this.type = type;
+        verifyType(type);
         this.value = value;
+    }
+
+    private void verifyType(String type)
+    {
+        if (type.equalsIgnoreCase(REGEX_TYPE) || type.equalsIgnoreCase(EQUALS_TYPE))
+        {
+            return;
+        }
+        throw new IllegalArgumentException(type + " passed for metric filtering is not recognized. Expected types are "
+                                           + REGEX_TYPE + " or " + EQUALS_TYPE);
     }
 
     /**
