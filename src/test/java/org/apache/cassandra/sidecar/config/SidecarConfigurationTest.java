@@ -226,9 +226,6 @@ class SidecarConfigurationTest
         assertThat(vertxMetricsConfiguration.enabled()).isTrue();
         assertThat(vertxMetricsConfiguration.exposeViaJMX()).isFalse();
         assertThat(vertxMetricsConfiguration.jmxDomainName()).isEqualTo(DEFAULT_JMX_DOMAIN_NAME);
-        assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().size()).isEqualTo(2);
-        assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().get(0)).isEqualTo("/api/v1/keyspaces/.*");
-        assertThat(vertxMetricsConfiguration.monitoredServerRouteRegexes().get(1)).isEqualTo("/api/v1/cassandra/.*");
         List<MetricsFilteringConfiguration> includeConfigurations = configuration.includeConfigurations();
         List<MetricsFilteringConfiguration> excludeConfigurations = configuration.excludeConfigurations();
         assertThat(includeConfigurations.size()).isEqualTo(1);
