@@ -148,14 +148,14 @@ metrics:
     enabled: true
     expose_via_jmx: false
     jmx_domain_name: sidecar.vertx.jmx_domain
-    monitored_server_route_regexes:                # regex list to match server routes
-     - /api/v1/.*
-  include:
-    - type: "regex"                                # other possible type is "equals"
-      value: ".*"
-  exclude:
-#    - type: "regex"
-#      value: "vertx.*"
+  include:                                    # empty include list means include all
+    - type: "regex"                           # possible filter types are "regex" and "equals"
+      value: "sidecar.*"
+    - type: "regex"
+      value: "vertx.*"
+  exclude:                                    # empty exclude list means exclude nothing
+#    - type: "regex"                          # possible filter types are "regex" and "equals"
+#      value: "vertx.eventbus.*"              # exclude all metrics starts with vertx.eventbus
 
 cassandra_input_validation:
   forbidden_keyspaces:

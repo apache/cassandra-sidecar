@@ -44,6 +44,7 @@ import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 /**
  * Test for filtering of metrics
@@ -58,23 +59,40 @@ public class FilteringMetricRegistryTest
     @Test
     void testNoopInstanceRetrieved()
     {
-        MetricFilter.Equals testFilter = new MetricFilter.Equals("testMetric");
+        MetricFilter.Regex testFilter = new MetricFilter.Regex("testMetric.*");
         MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
                                                                           Collections.emptyList(),
                                                                           Collections.singletonList(testFilter));
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
 
-        assertThat(metricRegistry.timer("testMetric")).isSameAs(NO_OP_METRIC_REGISTRY.timer("any"));
-        assertThat(metricRegistry.meter("testMetric")).isSameAs(NO_OP_METRIC_REGISTRY.meter("any"));
-        assertThat(metricRegistry.counter("testMetric")).isSameAs(NO_OP_METRIC_REGISTRY.counter("any"));
-        assertThat(metricRegistry.histogram("testMetric")).isSameAs(NO_OP_METRIC_REGISTRY.histogram("any"));
+        assertThat(metricRegistry.timer("testMetricTimer")).isSameAs(NO_OP_METRIC_REGISTRY.timer("any"));
+        assertThat(metricRegistry.meter("testMetricMeter")).isSameAs(NO_OP_METRIC_REGISTRY.meter("any"));
+        assertThat(metricRegistry.counter("testMetricCounter")).isSameAs(NO_OP_METRIC_REGISTRY.counter("any"));
+        assertThat(metricRegistry.histogram("testMetricHistogram")).isSameAs(NO_OP_METRIC_REGISTRY.histogram("any"));
 
-        assertThat(metricRegistry.gauge("testMetric", () -> new DefaultSettableGauge<>(0L)))
+        assertThat(metricRegistry.gauge("testMetricGauge", () -> new DefaultSettableGauge<>(0L)))
         .isInstanceOf(DefaultSettableGauge.class);
-        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetric")).isFalse();
+        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricGauge")).isFalse();
 
-        metricRegistry.register("testMetric", new ThroughputMeter());
-        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetric")).isFalse();
+        metricRegistry.register("testMetricThroughputMeter", new ThroughputMeter());
+        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricThroughputMeter")).isFalse();
+
+        metricRegistry.register("testMetricDefaultSettableGaugeLong", new DefaultSettableGauge<>(0L));
+        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricDefaultSettableGaugeLong")).isFalse();
+
+        metricRegistry.register("testMetricDefaultSettableGaugeDouble", new DefaultSettableGauge<>(0d));
+        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricDefaultSettableGaugeDouble")).isFalse();
+    }
+
+    @Test
+    void testDuplicateMetricsNotAllowed()
+    {
+        MetricRegistry metricRegistry = new MetricRegistry();
+        assertThat(metricRegistry.timer("testMetric")).isNotNull();
+        assertThatThrownBy(() -> {
+            metricRegistry.meter("testMetric");
+        })
+        .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

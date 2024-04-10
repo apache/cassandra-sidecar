@@ -21,7 +21,9 @@ package org.apache.cassandra.sidecar.metrics;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.codahale.metrics.Counter;
@@ -32,6 +34,7 @@ import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.NoopMetricRegistry;
 import com.codahale.metrics.Timer;
+import io.vertx.core.impl.ConcurrentHashSet;
 
 /**
  * Allows filtering of metrics based on configured allow list. Metrics are filtered out before registering them.
@@ -40,7 +43,9 @@ public class FilteringMetricRegistry extends MetricRegistry
 {
     private static final NoopMetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry(); // supplies no-op metrics
     private final Predicate<String> isAllowed;
-    private final Map<String, Metric> excludedRegisteredMetrics = new ConcurrentHashMap<>();
+    private final Set<String> included = new ConcurrentHashSet<>();
+    private final Map<Class, Metric> cachedMetricPerType = new ConcurrentHashMap<>();
+    private final Map<String, Metric> excludedMetrics = new ConcurrentHashMap<>();
 
     public FilteringMetricRegistry(Predicate<String> isAllowed)
     {
@@ -50,74 +55,125 @@ public class FilteringMetricRegistry extends MetricRegistry
     @Override
     public Counter counter(String name)
     {
-        return isAllowed.test(name) ? super.counter(name) : NO_OP_METRIC_REGISTRY.counter(name);
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.counter(name);
+        }
+        return (Counter) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::counter);
     }
 
     @Override
     public Counter counter(String name, MetricSupplier<Counter> supplier)
     {
-        return isAllowed.test(name) ? super.counter(name, supplier) : NO_OP_METRIC_REGISTRY.counter(name);
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.counter(name, supplier);
+        }
+        return (Counter) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::counter);
     }
 
     @Override
     public Histogram histogram(String name)
     {
-        return isAllowed.test(name) ? super.histogram(name) : NO_OP_METRIC_REGISTRY.histogram(name);
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.histogram(name);
+        }
+        return (Histogram) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::histogram);
     }
 
     @Override
     public Histogram histogram(String name, MetricSupplier<Histogram> supplier)
     {
-        return isAllowed.test(name) ? super.histogram(name, supplier) : NO_OP_METRIC_REGISTRY.histogram(name);
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.histogram(name, supplier);
+        }
+        return (Histogram) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::histogram);
     }
 
     @Override
     public Meter meter(String name)
     {
-        return isAllowed.test(name) ? super.meter(name) : NO_OP_METRIC_REGISTRY.meter(name);
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.meter(name);
+        }
+        return (Meter) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::meter);
     }
 
     @Override
     public Meter meter(String name, MetricSupplier<Meter> supplier)
     {
-        return isAllowed.test(name) ? super.meter(name, supplier) : NO_OP_METRIC_REGISTRY.meter(name);
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.meter(name, supplier);
+        }
+        return (Meter) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::meter);
     }
 
     @Override
     public Timer timer(String name)
     {
-        return isAllowed.test(name) ? super.timer(name) : NO_OP_METRIC_REGISTRY.timer(name);
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.timer(name);
+        }
+        return (Timer) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::timer);
     }
 
     @Override
     public Timer timer(String name, MetricSupplier<Timer> supplier)
     {
-        return isAllowed.test(name) ? super.timer(name, supplier) : NO_OP_METRIC_REGISTRY.timer(name);
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.timer(name, supplier);
+        }
+        return (Timer) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::timer);
     }
 
     @Override
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public <T extends Gauge> T gauge(String name)
     {
-        return isAllowed.test(name) ? super.gauge(name) : NO_OP_METRIC_REGISTRY.gauge(name);
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.gauge(name);
+        }
+        return (T) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::gauge);
     }
 
     @Override
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public <T extends Gauge> T gauge(String name, MetricSupplier<T> supplier)
     {
-        return isAllowed.test(name) ? super.gauge(name, supplier) : supplier.newMetric() /* unregistered metric */;
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.gauge(name, supplier);
+        }
+        return (T) excludedMetrics.computeIfAbsent(name, k -> supplier.newMetric() /* unregistered metric */);
     }
 
     /**
-     * @return all the metrics including the allowed and disallowed metrics
+     * @return all the metrics including the allowed and disallowed metrics. This is to prevent re-registering of
+     * excluded metrics
      */
     @Override
     public Map<String, Metric> getMetrics()
     {
         Map<String, Metric> allMetrics = new HashMap<>();
         allMetrics.putAll(super.getMetrics());
-        allMetrics.putAll(excludedRegisteredMetrics);
+        allMetrics.putAll(excludedMetrics);
         return Collections.unmodifiableMap(allMetrics);
     }
 
@@ -135,16 +191,37 @@ public class FilteringMetricRegistry extends MetricRegistry
      * Prefer calling those over register method, register method returns an unregistered metric if the metric is
      * filtered. In some cases Noop metric instance has a performance advantage.
      */
-    @Override
-    @SuppressWarnings({ "unchecked" })
     public <T extends Metric> T register(String name, T metric) throws IllegalArgumentException
     {
         if (metric == null)
         {
             throw new IllegalArgumentException("Metric can not be null");
         }
-        // excludedRegisteredMetrics is populated in order to let vertx internal know that the metric has been
-        // registered and to avoid registration loop
-        return isAllowed.test(name) ? super.register(name, metric) : (T) excludedRegisteredMetrics.computeIfAbsent(name, k -> metric);
+
+        if (included.contains(name))
+        {
+            // Call super register to retrieve the included metric
+            return super.register(name, metric);
+        }
+
+        // The metric is registered by calling the register() directly
+        // We need to test whether it is allowed first
+        if (isAllowed.test(name))
+        {
+            included.add(name);
+            return super.register(name, metric);
+        }
+
+        // The metric is disallowed, but it is a guage, which can have type variants.
+        // Simply add the metric to the excluded map and return the same metric instance back.
+        if (metric instanceof Gauge)
+        {
+            return (T) excludedMetrics.computeIfAbsent(name, k -> metric);
+        }
+
+        // For other metrics (including custom metrics), cache the instance for the metric type
+        // and return the cached instance
+        T cached = (T) cachedMetricPerType.computeIfAbsent(metric.getClass(), k -> metric);
+        return (T) excludedMetrics.computeIfAbsent(name, key -> cached);
     }
 }
