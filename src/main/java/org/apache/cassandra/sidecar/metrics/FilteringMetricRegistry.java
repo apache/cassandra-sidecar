@@ -39,19 +39,19 @@ import com.codahale.metrics.Timer;
 public class FilteringMetricRegistry extends MetricRegistry
 {
     private static final NoopMetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry(); // supplies no-op metrics
-    private final Predicate<String> isAllowed;
+    private final Predicate<String> isAllowedPredicate;
     private final Map<Class, Metric> cachedMetricPerType = new ConcurrentHashMap<>();
     private final Map<String, Metric> excludedMetrics = new ConcurrentHashMap<>();
 
-    public FilteringMetricRegistry(Predicate<String> isAllowed)
+    public FilteringMetricRegistry(Predicate<String> isAllowedPredicate)
     {
-        this.isAllowed = new CachedPredicate(isAllowed);
+        this.isAllowedPredicate = new CachedPredicate(isAllowedPredicate);
     }
 
     @Override
     public Counter counter(String name)
     {
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.counter(name);
         }
@@ -61,7 +61,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     @Override
     public Counter counter(String name, MetricSupplier<Counter> supplier)
     {
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.counter(name, supplier);
         }
@@ -71,7 +71,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     @Override
     public Histogram histogram(String name)
     {
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.histogram(name);
         }
@@ -81,7 +81,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     @Override
     public Histogram histogram(String name, MetricSupplier<Histogram> supplier)
     {
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.histogram(name, supplier);
         }
@@ -91,7 +91,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     @Override
     public Meter meter(String name)
     {
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.meter(name);
         }
@@ -101,7 +101,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     @Override
     public Meter meter(String name, MetricSupplier<Meter> supplier)
     {
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.meter(name, supplier);
         }
@@ -111,7 +111,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     @Override
     public Timer timer(String name)
     {
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.timer(name);
         }
@@ -121,7 +121,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     @Override
     public Timer timer(String name, MetricSupplier<Timer> supplier)
     {
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.timer(name, supplier);
         }
@@ -132,7 +132,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public <T extends Gauge> T gauge(String name)
     {
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.gauge(name);
         }
@@ -143,7 +143,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public <T extends Gauge> T gauge(String name, MetricSupplier<T> supplier)
     {
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.gauge(name, supplier);
         }
@@ -186,7 +186,7 @@ public class FilteringMetricRegistry extends MetricRegistry
 
         // The metric is registered by calling the register() directly
         // We need to test whether it is allowed first
-        if (isAllowed.test(name))
+        if (isAllowedPredicate.test(name))
         {
             return super.register(name, metric);
         }
