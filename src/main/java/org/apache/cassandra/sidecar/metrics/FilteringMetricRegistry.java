@@ -59,7 +59,7 @@ public class FilteringMetricRegistry extends MetricRegistry
             included.add(name);
             return super.counter(name);
         }
-        return (Counter) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::counter);
+        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::counter), Counter.class);
     }
 
     @Override
@@ -70,7 +70,7 @@ public class FilteringMetricRegistry extends MetricRegistry
             included.add(name);
             return super.counter(name, supplier);
         }
-        return (Counter) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::counter);
+        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::counter), Counter.class);
     }
 
     @Override
@@ -81,7 +81,7 @@ public class FilteringMetricRegistry extends MetricRegistry
             included.add(name);
             return super.histogram(name);
         }
-        return (Histogram) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::histogram);
+        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::histogram), Histogram.class);
     }
 
     @Override
@@ -92,7 +92,7 @@ public class FilteringMetricRegistry extends MetricRegistry
             included.add(name);
             return super.histogram(name, supplier);
         }
-        return (Histogram) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::histogram);
+        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::histogram), Histogram.class);
     }
 
     @Override
@@ -103,7 +103,7 @@ public class FilteringMetricRegistry extends MetricRegistry
             included.add(name);
             return super.meter(name);
         }
-        return (Meter) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::meter);
+        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::meter), Meter.class);
     }
 
     @Override
@@ -114,7 +114,7 @@ public class FilteringMetricRegistry extends MetricRegistry
             included.add(name);
             return super.meter(name, supplier);
         }
-        return (Meter) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::meter);
+        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::meter), Meter.class);
     }
 
     @Override
@@ -125,7 +125,7 @@ public class FilteringMetricRegistry extends MetricRegistry
             included.add(name);
             return super.timer(name);
         }
-        return (Timer) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::timer);
+        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::timer), Timer.class);
     }
 
     @Override
@@ -136,7 +136,7 @@ public class FilteringMetricRegistry extends MetricRegistry
             included.add(name);
             return super.timer(name, supplier);
         }
-        return (Timer) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::timer);
+        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::timer), Timer.class);
     }
 
     @Override
@@ -222,5 +222,14 @@ public class FilteringMetricRegistry extends MetricRegistry
         // and return the cached instance
         T cached = (T) cachedMetricPerType.computeIfAbsent(metric.getClass(), k -> metric);
         return (T) excludedMetrics.computeIfAbsent(name, key -> cached);
+    }
+
+    private <T extends Metric> T typeChecked(Metric metric, Class<T> type)
+    {
+        if (type.isInstance(metric))
+        {
+            return (T) metric;
+        }
+        throw new IllegalArgumentException("Metric already present with type " + metric.getClass());
     }
 }

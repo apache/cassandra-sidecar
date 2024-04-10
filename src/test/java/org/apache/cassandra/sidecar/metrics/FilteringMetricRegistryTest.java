@@ -70,18 +70,8 @@ public class FilteringMetricRegistryTest
         assertThat(metricRegistry.counter("testMetricCounter")).isSameAs(NO_OP_METRIC_REGISTRY.counter("any"));
         assertThat(metricRegistry.histogram("testMetricHistogram")).isSameAs(NO_OP_METRIC_REGISTRY.histogram("any"));
 
-        assertThat(metricRegistry.gauge("testMetricGauge", () -> new DefaultSettableGauge<>(0L)))
-        .isInstanceOf(DefaultSettableGauge.class);
-        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricGauge")).isFalse();
-
         metricRegistry.register("testMetricThroughputMeter", new ThroughputMeter());
         assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricThroughputMeter")).isFalse();
-
-        metricRegistry.register("testMetricDefaultSettableGaugeLong", new DefaultSettableGauge<>(0L));
-        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricDefaultSettableGaugeLong")).isFalse();
-
-        metricRegistry.register("testMetricDefaultSettableGaugeDouble", new DefaultSettableGauge<>(0d));
-        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricDefaultSettableGaugeDouble")).isFalse();
     }
 
     @Test
@@ -89,10 +79,37 @@ public class FilteringMetricRegistryTest
     {
         MetricRegistry metricRegistry = new MetricRegistry();
         assertThat(metricRegistry.timer("testMetric")).isNotNull();
-        assertThatThrownBy(() -> {
-            metricRegistry.meter("testMetric");
-        })
+        assertThatThrownBy(() -> metricRegistry.meter("testMetric"))
         .isInstanceOf(IllegalArgumentException.class);
+
+        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
+                                                                          Collections.emptyList(),
+                                                                          Collections.emptyList());
+        FilteringMetricRegistry filteringMetricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
+
+        filteringMetricRegistry.timer("testMetric");
+        assertThatThrownBy(() -> filteringMetricRegistry.meter("testMetric"))
+        .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void testGaugeMetricExclusion()
+    {
+        MetricFilter.Regex testFilter = new MetricFilter.Regex("testMetric.*");
+        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
+                                                                          Collections.emptyList(),
+                                                                          Collections.singletonList(testFilter));
+        FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
+
+        assertThat(metricRegistry.gauge("testMetricGauge", () -> new DefaultSettableGauge<>(0L)))
+        .isInstanceOf(DefaultSettableGauge.class);
+        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricGauge")).isFalse();
+
+        metricRegistry.register("testMetricDefaultSettableGaugeLong", new DefaultSettableGauge<>(0L));
+        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricDefaultSettableGaugeLong")).isFalse();
+
+        metricRegistry.register("testMetricDefaultSettableGaugeDouble", new DefaultSettableGauge<>(0d));
+        assertThat(metricRegistry.getIncludedMetrics().containsKey("testMetricDefaultSettableGaugeDouble")).isFalse();
     }
 
     @Test
