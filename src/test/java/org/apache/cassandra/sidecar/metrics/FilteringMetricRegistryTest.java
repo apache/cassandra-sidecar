@@ -71,7 +71,7 @@ public class FilteringMetricRegistryTest
         assertThat(metricRegistry.histogram("testMetricHistogram")).isSameAs(NO_OP_METRIC_REGISTRY.histogram("any"));
 
         metricRegistry.register("testMetricThroughputMeter", new ThroughputMeter());
-        assertThat(metricRegistry.getIncludedMetrics()).containsKey("testMetricThroughputMeter");
+        assertThat(metricRegistry.getIncludedMetrics()).doesNotContainKey("testMetricThroughputMeter");
     }
 
     @Test
@@ -103,13 +103,13 @@ public class FilteringMetricRegistryTest
 
         assertThat(metricRegistry.gauge("testMetricGauge", () -> new DefaultSettableGauge<>(0L)))
         .isInstanceOf(DefaultSettableGauge.class);
-        assertThat(metricRegistry.getIncludedMetrics()).containsKey("testMetricGauge");
+        assertThat(metricRegistry.getIncludedMetrics()).doesNotContainKey("testMetricGauge");
 
         metricRegistry.register("testMetricDefaultSettableGaugeLong", new DefaultSettableGauge<>(0L));
-        assertThat(metricRegistry.getIncludedMetrics()).containsKey("testMetricDefaultSettableGaugeLong");
+        assertThat(metricRegistry.getIncludedMetrics()).doesNotContainKey("testMetricDefaultSettableGaugeLong");
 
         metricRegistry.register("testMetricDefaultSettableGaugeDouble", new DefaultSettableGauge<>(0d));
-        assertThat(metricRegistry.getIncludedMetrics()).containsKey("testMetricDefaultSettableGaugeDouble");
+        assertThat(metricRegistry.getIncludedMetrics()).doesNotContainKey("testMetricDefaultSettableGaugeDouble");
     }
 
     @Test
@@ -150,7 +150,7 @@ public class FilteringMetricRegistryTest
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
 
         metricRegistry.meter("sidecar.metric.exact");
-        assertThat(metricRegistry.getIncludedMetrics()).containsKey("sidecar.metric.exact");
+        assertThat(metricRegistry.getIncludedMetrics()).doesNotContainKey("sidecar.metric.exact");
     }
 
     @Test
@@ -164,9 +164,9 @@ public class FilteringMetricRegistryTest
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryProvider.getOrCreate();
 
         metricRegistry.meter("sidecar.metric.exact");
-        assertThat(metricRegistry.getMetrics().containsKey("sidecar.metric.exact")).isTrue();
+        assertThat(metricRegistry.getMetrics()).containsKey("sidecar.metric.exact");
         metricRegistry.timer("vertx.eventbus.message_transfer_time");
-        assertThat(metricRegistry.getIncludedMetrics()).containsKey("vertx.eventbus.message_transfer_time");
+        assertThat(metricRegistry.getIncludedMetrics()).doesNotContainKey("vertx.eventbus.message_transfer_time");
     }
 
     @Test
@@ -180,7 +180,7 @@ public class FilteringMetricRegistryTest
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
 
         metricRegistry.meter("sidecar.metric.exact");
-        assertThat(metricRegistry.getIncludedMetrics()).containsKey("sidecar.metric.exact");
+        assertThat(metricRegistry.getIncludedMetrics()).doesNotContainKey("sidecar.metric.exact");
     }
 
     @Test

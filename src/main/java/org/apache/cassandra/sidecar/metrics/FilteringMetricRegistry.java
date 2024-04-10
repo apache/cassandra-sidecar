@@ -40,7 +40,6 @@ public class FilteringMetricRegistry extends MetricRegistry
 {
     private static final NoopMetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry(); // supplies no-op metrics
     private final Predicate<String> isAllowedPredicate;
-    private final Map<Class, Metric> cachedMetricPerType = new ConcurrentHashMap<>();
     private final Map<String, Metric> excludedMetrics = new ConcurrentHashMap<>();
 
     public FilteringMetricRegistry(Predicate<String> isAllowedPredicate)
@@ -136,7 +135,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.gauge(name);
         }
-        return (T) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::gauge);
+        return (T) typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::gauge), Gauge.class);
     }
 
     @Override
@@ -147,7 +146,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.gauge(name, supplier);
         }
-        return (T) excludedMetrics.computeIfAbsent(name, k -> supplier.newMetric() /* unregistered metric */);
+        return (T) typeChecked(excludedMetrics.computeIfAbsent(name, k -> supplier.newMetric() /* unregistered metric */), Gauge.class);
     }
 
     /**
@@ -191,17 +190,7 @@ public class FilteringMetricRegistry extends MetricRegistry
             return super.register(name, metric);
         }
 
-        // The metric is disallowed, but it is a guage, which can have type variants.
-        // Simply add the metric to the excluded map and return the same metric instance back.
-        if (metric instanceof Gauge)
-        {
-            return (T) excludedMetrics.computeIfAbsent(name, k -> metric);
-        }
-
-        // For other metrics (including custom metrics), cache the instance for the metric type
-        // and return the cached instance
-        T cached = (T) cachedMetricPerType.computeIfAbsent(metric.getClass(), k -> metric);
-        return (T) excludedMetrics.computeIfAbsent(name, key -> cached);
+        return (T) typeChecked(excludedMetrics.computeIfAbsent(name, key -> metric), metric.getClass());
     }
 
     private <T extends Metric> T typeChecked(Metric metric, Class<T> type)
