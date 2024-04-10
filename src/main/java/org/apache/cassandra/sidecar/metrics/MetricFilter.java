@@ -30,6 +30,9 @@ import org.apache.cassandra.sidecar.config.MetricsFilteringConfiguration;
  */
 public abstract class MetricFilter
 {
+    /**
+     * @return Boolean indicating whether the {@link MetricFilter} is satisfied for provided metric name.
+     */
     public abstract boolean matches(String name);
 
     public static List<MetricFilter> parse(List<MetricsFilteringConfiguration> filterConfigurations)
@@ -62,6 +65,7 @@ public abstract class MetricFilter
             this.pattern = Pattern.compile(regex);
         }
 
+        @Override
         public boolean matches(String name)
         {
             return pattern.matcher(name).matches();
@@ -81,6 +85,7 @@ public abstract class MetricFilter
             this.value = value;
         }
 
+        @Override
         public boolean matches(String name)
         {
             return name.equals(value);
