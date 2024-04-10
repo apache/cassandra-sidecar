@@ -20,8 +20,6 @@ package org.apache.cassandra.sidecar.metrics;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -38,7 +36,6 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 public class MetricRegistryFactory
 {
     private final String globalRegistryName;
-    private final ReadWriteLock readWriteLock;
     private final List<MetricFilter> inclusions;
     private final List<MetricFilter> exclusions;
 
@@ -54,7 +51,6 @@ public class MetricRegistryFactory
     public MetricRegistryFactory(String globalRegistryName, List<MetricFilter> inclusions, List<MetricFilter> exclusions)
     {
         this.globalRegistryName = globalRegistryName;
-        this.readWriteLock = new ReentrantReadWriteLock();
         this.inclusions = new ArrayList<>(inclusions);
         this.exclusions = new ArrayList<>(exclusions);
     }
@@ -83,16 +79,7 @@ public class MetricRegistryFactory
             return SharedMetricRegistries.getOrCreate(name);
         }
 
-        FilteringMetricRegistry metricRegistry;
-        readWriteLock.readLock().lock();
-        try
-        {
-            metricRegistry = new FilteringMetricRegistry(this::isAllowed);
-        }
-        finally
-        {
-            readWriteLock.readLock().unlock();
-        }
+        FilteringMetricRegistry metricRegistry = new FilteringMetricRegistry(this::isAllowed);
         SharedMetricRegistries.add(name, metricRegistry);
         return SharedMetricRegistries.getOrCreate(name);
     }

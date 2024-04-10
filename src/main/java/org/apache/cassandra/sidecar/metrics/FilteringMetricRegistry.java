@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.metrics;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
@@ -33,7 +32,6 @@ import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.NoopMetricRegistry;
 import com.codahale.metrics.Timer;
-import io.vertx.core.impl.ConcurrentHashSet;
 
 /**
  * Allows filtering of metrics based on configured allow list. Metrics are filtered out before registering them.
@@ -42,13 +40,12 @@ public class FilteringMetricRegistry extends MetricRegistry
 {
     private static final NoopMetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry(); // supplies no-op metrics
     private final Predicate<String> isAllowed;
-    private final Set<String> included = new ConcurrentHashSet<>();
     private final Map<Class, Metric> cachedMetricPerType = new ConcurrentHashMap<>();
     private final Map<String, Metric> excludedMetrics = new ConcurrentHashMap<>();
 
     public FilteringMetricRegistry(Predicate<String> isAllowed)
     {
-        this.isAllowed = isAllowed;
+        this.isAllowed = new CachedPredicate(isAllowed);
     }
 
     @Override
@@ -56,7 +53,6 @@ public class FilteringMetricRegistry extends MetricRegistry
     {
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.counter(name);
         }
         return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::counter), Counter.class);
@@ -67,7 +63,6 @@ public class FilteringMetricRegistry extends MetricRegistry
     {
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.counter(name, supplier);
         }
         return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::counter), Counter.class);
@@ -78,7 +73,6 @@ public class FilteringMetricRegistry extends MetricRegistry
     {
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.histogram(name);
         }
         return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::histogram), Histogram.class);
@@ -89,7 +83,6 @@ public class FilteringMetricRegistry extends MetricRegistry
     {
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.histogram(name, supplier);
         }
         return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::histogram), Histogram.class);
@@ -100,7 +93,6 @@ public class FilteringMetricRegistry extends MetricRegistry
     {
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.meter(name);
         }
         return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::meter), Meter.class);
@@ -111,7 +103,6 @@ public class FilteringMetricRegistry extends MetricRegistry
     {
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.meter(name, supplier);
         }
         return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::meter), Meter.class);
@@ -122,7 +113,6 @@ public class FilteringMetricRegistry extends MetricRegistry
     {
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.timer(name);
         }
         return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::timer), Timer.class);
@@ -133,7 +123,6 @@ public class FilteringMetricRegistry extends MetricRegistry
     {
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.timer(name, supplier);
         }
         return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::timer), Timer.class);
@@ -145,7 +134,6 @@ public class FilteringMetricRegistry extends MetricRegistry
     {
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.gauge(name);
         }
         return (T) excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::gauge);
@@ -157,7 +145,6 @@ public class FilteringMetricRegistry extends MetricRegistry
     {
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.gauge(name, supplier);
         }
         return (T) excludedMetrics.computeIfAbsent(name, k -> supplier.newMetric() /* unregistered metric */);
@@ -197,17 +184,10 @@ public class FilteringMetricRegistry extends MetricRegistry
             throw new IllegalArgumentException("Metric can not be null");
         }
 
-        if (included.contains(name))
-        {
-            // Call super register to retrieve the included metric
-            return super.register(name, metric);
-        }
-
         // The metric is registered by calling the register() directly
         // We need to test whether it is allowed first
         if (isAllowed.test(name))
         {
-            included.add(name);
             return super.register(name, metric);
         }
 
@@ -231,5 +211,26 @@ public class FilteringMetricRegistry extends MetricRegistry
             return (T) metric;
         }
         throw new IllegalArgumentException("Metric already present with type " + metric.getClass());
+    }
+
+    /**
+     * {@link CachedPredicate} remembers results of the {@link Predicate} it maintains. This is to avoid
+     * redundant calls to delegate predicate.
+     */
+    static class CachedPredicate implements Predicate<String>
+    {
+        private final Predicate<String> delegate;
+        private final Map<String, Boolean> results = new ConcurrentHashMap<>();
+
+        CachedPredicate(Predicate<String> delegate)
+        {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public boolean test(String s)
+        {
+            return results.computeIfAbsent(s, t -> delegate.test(s));
+        }
     }
 }
