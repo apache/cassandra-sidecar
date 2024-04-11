@@ -152,7 +152,6 @@ public class RestoreProcessor implements PeriodicTask
             activeTasks.add(task);
             pool.executeBlocking(task, false) // unordered; run in parallel
             .onSuccess(restoreSlice -> {
-                int instanceId = slice.owner().id();
                 if (slice.hasImported())
                 {
                     slice.owner()

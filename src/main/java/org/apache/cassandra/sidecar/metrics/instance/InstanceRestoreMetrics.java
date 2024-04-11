@@ -72,7 +72,7 @@ public class InstanceRestoreMetrics
         sliceDownloadRetries
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("SliceCompletionRetries")
+                     .withName("SliceDownloadRetries")
                      .build();
         sliceChecksumMismatches
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
@@ -93,7 +93,7 @@ public class InstanceRestoreMetrics
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
                      .withDomain(DOMAIN)
                      .withName("RestoreDataSizeBytes")
-                     .addTag("Component", "db")
+                     .addTag("Component", "Data.db")
                      .build();
         sliceDownloadTime
         = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceDownloadTime").build();
