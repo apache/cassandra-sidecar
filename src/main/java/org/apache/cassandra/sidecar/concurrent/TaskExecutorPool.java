@@ -203,7 +203,7 @@ public abstract class TaskExecutorPool implements WorkerExecutor
      * Records time taken for tasks executed by {@link TaskExecutorPool}
      * @param duration time taken by a task
      */
-    protected abstract void recordTimeTaken(long duration);
+    protected abstract void recordTimeTaken(long durationNanos);
 
     @Override
     public void close(Handler<AsyncResult<Void>> handler)
