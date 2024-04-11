@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Objects;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.SharedMetricRegistries;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
@@ -114,7 +113,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         protected List<String> dataDirs;
         protected String stagingDir;
         protected CassandraAdapterDelegate delegate;
-        protected String globalRegistryName;
+        protected MetricRegistry metricRegistry;
         protected InstanceMetrics metrics;
 
         protected Builder()
@@ -205,15 +204,14 @@ public class InstanceMetadataImpl implements InstanceMetadata
         }
 
         /**
-         * Sets the {@code globalRegistryName} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code metricRegistry} and returns a reference to this Builder enabling method chaining.
          *
-         * @param registryName global {@link com.codahale.metrics.MetricRegistry} name
+         * @param metricRegistry instance specific metric registry
          * @return a reference to this Builder
          */
-        public Builder globalMetricRegistryName(String registryName)
-
+        public Builder metricRegistry(MetricRegistry metricRegistry)
         {
-            return update(b -> b.globalRegistryName = registryName);
+            return update(b -> b.metricRegistry = metricRegistry);
         }
 
         /**
@@ -225,18 +223,11 @@ public class InstanceMetadataImpl implements InstanceMetadata
         public InstanceMetadataImpl build()
         {
             Objects.requireNonNull(id);
-            Objects.requireNonNull(globalRegistryName);
+            Objects.requireNonNull(metricRegistry);
 
-            String instanceRegistryName = instanceRegistryName(globalRegistryName);
-            MetricRegistry instanceMetricRegistry = SharedMetricRegistries.getOrCreate(instanceRegistryName);
-            metrics = new InstanceMetricsImpl(instanceMetricRegistry);
+            metrics = new InstanceMetricsImpl(metricRegistry);
 
             return new InstanceMetadataImpl(this);
-        }
-
-        private String instanceRegistryName(String globalRegistryName)
-        {
-            return globalRegistryName + "_" + id;
         }
     }
 }
