@@ -32,7 +32,6 @@ public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
     public static final boolean DEFAULT_ENABLED = true;
     public static final boolean DEFAULT_EXPOSE_VIA_JMX = false;
     public static final String DEFAULT_JMX_DOMAIN_NAME = "sidecar.vertx.jmx_domain";
-    public static final List<String> DEFAULT_MONITORED_SERVER_ROUTE_REGEXES = Collections.singletonList("/api/v1/.*");
 
     @JsonProperty(value = "enabled")
     protected final boolean enabled;
@@ -40,26 +39,21 @@ public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
     protected final boolean exposeViaJMX;
     @JsonProperty(value = "jmx_domain_name")
     protected final String jmxDomainName;
-    @JsonProperty(value = "monitored_server_route_regexes")
-    protected final List<String> monitoredServerRouteRegexes;
 
     public VertxMetricsConfigurationImpl()
     {
         this(DEFAULT_ENABLED,
              DEFAULT_EXPOSE_VIA_JMX,
-             DEFAULT_JMX_DOMAIN_NAME,
-             DEFAULT_MONITORED_SERVER_ROUTE_REGEXES);
+             DEFAULT_JMX_DOMAIN_NAME);
     }
 
     public VertxMetricsConfigurationImpl(boolean enabled,
                                          boolean exposeViaJMX,
-                                         String jmxDomainName,
-                                         List<String> monitoredServerRouteRegexes)
+                                         String jmxDomainName)
     {
         this.enabled = enabled;
         this.exposeViaJMX = exposeViaJMX;
         this.jmxDomainName = jmxDomainName;
-        this.monitoredServerRouteRegexes = monitoredServerRouteRegexes;
     }
 
     /**
@@ -87,14 +81,5 @@ public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
     public String jmxDomainName()
     {
         return jmxDomainName;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<String> monitoredServerRouteRegexes()
-    {
-        return monitoredServerRouteRegexes;
     }
 }

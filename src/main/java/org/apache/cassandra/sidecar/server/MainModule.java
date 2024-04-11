@@ -149,10 +149,6 @@ public class MainModule extends AbstractModule
                                         .setJmxEnabled(metricsConfig.exposeViaJMX())
                                         .setJmxDomain(metricsConfig.jmxDomainName())
                                         .setMetricRegistry(metricRegistryFactory.getOrCreate());
-        for (String regex : metricsConfig.monitoredServerRouteRegexes())
-        {
-            dropwizardMetricsOptions.addMonitoredHttpServerRoute(new Match().setType(MatchType.REGEX).setValue(regex));
-        }
         return Vertx.vertx(new VertxOptions().setMetricsOptions(dropwizardMetricsOptions));
     }
 

@@ -39,9 +39,4 @@ public interface VertxMetricsConfiguration
      * @return JMX domain to be used when metrics are exposed via JMX
      */
     String jmxDomainName();
-
-    /**
-     * @return List of regexes used for identifying what server routes will be monitored
-     */
-    List<String> monitoredServerRouteRegexes();
 }
