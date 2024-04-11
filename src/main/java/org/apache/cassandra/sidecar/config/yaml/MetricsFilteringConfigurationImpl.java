@@ -30,8 +30,7 @@ public class MetricsFilteringConfigurationImpl implements MetricsFilteringConfig
     public static final String EQUALS_TYPE = "equals";
     public static final String DEFAULT_TYPE = REGEX_TYPE;
     public static final String DEFAULT_VALUE = ".*"; // include all metrics
-    @JsonProperty("type")
-    private final String type;
+    private String type;
     @JsonProperty("value")
     private final String value;
 
@@ -64,6 +63,13 @@ public class MetricsFilteringConfigurationImpl implements MetricsFilteringConfig
     public String type()
     {
         return type;
+    }
+
+    @JsonProperty(value = "type")
+    public void setType(String type)
+    {
+        verifyType(type);
+        this.type = type;
     }
 
     /**

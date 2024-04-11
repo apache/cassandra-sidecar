@@ -39,9 +39,10 @@ import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE_SCHEMA
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TIME_SKEW_ROUTE;
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
+import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.EQUALS_TYPE;
+import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.REGEX_TYPE;
 import static org.apache.cassandra.sidecar.config.yaml.VertxMetricsConfigurationImpl.DEFAULT_JMX_DOMAIN_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 
 /**
@@ -251,9 +252,11 @@ class SidecarConfigurationTest
     void testInvalidMetricOptions()
     {
         Path yamlPath = yaml("config/sidecar_invalid_metrics.yaml");
-        assertThatThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("passed for metric filtering is not recognized");
+        assertThatExceptionOfType(JsonMappingException.class)
+        .isThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
+        .withRootCauseInstanceOf(IllegalArgumentException.class)
+        .withMessageContaining("contains passed for metric filtering is not recognized. Expected types are "
+                               + REGEX_TYPE + " or " + EQUALS_TYPE);
     }
 
     @Test
