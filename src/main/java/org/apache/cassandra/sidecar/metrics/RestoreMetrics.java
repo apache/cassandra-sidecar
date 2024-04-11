@@ -32,7 +32,7 @@ import com.google.inject.Singleton;
 @Singleton
 public class RestoreMetrics
 {
-    public static final String DOMAIN = "sidecar.restore";
+    public static final String DOMAIN = "Sidecar.Restore";
     protected final MetricRegistry metricRegistry;
     public final NamedMetric<Timer> sliceReplicationTime;
     public final NamedMetric<Timer> jobCompletionTime;
