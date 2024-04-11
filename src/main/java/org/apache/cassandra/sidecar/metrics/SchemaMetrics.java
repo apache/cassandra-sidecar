@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import com.codahale.metrics.Meter;
+import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -30,10 +30,10 @@ import com.google.inject.Singleton;
 @Singleton
 public class SchemaMetrics
 {
-    public static final String DOMAIN = "sidecar.schema";
+    public static final String DOMAIN = "Sidecar.Schema";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<Meter> failedInitializations;
-    public final NamedMetric<Meter> failedModifications;
+    public final NamedMetric<DefaultSettableGauge<Integer>> failedInitializations;
+    public final NamedMetric<DefaultSettableGauge<Integer>> failedModifications;
 
     @Inject
     public SchemaMetrics(MetricRegistry metricRegistry)
@@ -41,14 +41,14 @@ public class SchemaMetrics
         this.metricRegistry = metricRegistry;
 
         failedInitializations
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("failed_initializations")
+                     .withName("FailedInitializations")
                      .build();
         failedModifications
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("failed_modifications")
+                     .withName("FailedModifications")
                      .build();
     }
 }

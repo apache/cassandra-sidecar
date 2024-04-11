@@ -160,9 +160,9 @@ public class SidecarSchema
             if (ex instanceof SidecarSchemaModificationException)
             {
                 LOGGER.warn("Failed to modify schema", ex);
-                metrics.failedModifications.metric.mark();
+                metrics.failedModifications.metric.setValue(1);
             }
-            metrics.failedInitializations.metric.mark();
+            metrics.failedInitializations.metric.setValue(1);
         }
     }
 

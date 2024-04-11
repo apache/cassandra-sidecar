@@ -97,7 +97,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                         job, requestPayload, remoteAddress, host);
             if (job.status == RestoreJobStatus.SUCCEEDED)
             {
-                metrics.successfulJobs.metric.mark();
+                metrics.successfulJobs.metric.setValue(1);
                 long startMillis = UUIDs.unixTimestamp(job.jobId);
                 long durationMillis = System.currentTimeMillis() - startMillis;
                 // toNanos does not overflow. Nanos in `long` can at most represent 106,751 days.
@@ -106,7 +106,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
 
             if (job.secrets != null)
             {
-                metrics.tokenRefreshes.metric.mark();
+                metrics.tokenRefreshed.metric.setValue(1);
             }
 
             restoreJobManagerGroup.signalRefreshRestoreJob();

@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.metrics.instance;
 
 import java.util.Objects;
 
-import com.codahale.metrics.Meter;
+import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
@@ -31,24 +31,24 @@ import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INST
  */
 public class InstanceHealthMetrics
 {
-    public static final String DOMAIN = INSTANCE_PREFIX + ".health";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".Health";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<Meter> jmxDown;
-    public final NamedMetric<Meter> nativeDown;
+    public final NamedMetric<DefaultSettableGauge<Integer>> jmxDown;
+    public final NamedMetric<DefaultSettableGauge<Integer>> nativeDown;
 
     public InstanceHealthMetrics(MetricRegistry registry)
     {
         this.metricRegistry = Objects.requireNonNull(registry, "Metric registry can not be null");
 
         jmxDown
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> registry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("jmx_down")
+                     .withName("JmxDown")
                      .build();
         nativeDown
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> registry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("native_down")
+                     .withName("NativeDown")
                      .build();
     }
 }

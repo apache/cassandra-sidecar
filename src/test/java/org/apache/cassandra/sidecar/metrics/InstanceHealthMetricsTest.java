@@ -72,6 +72,6 @@ public class InstanceHealthMetricsTest
         when(jmxClient.proxy(any(), anyString())).thenThrow(new RuntimeException("Expected exception"));
 
         delegate.healthCheck();
-        assertThat(metrics.jmxDown.metric.getCount()).isOne();
+        assertThat(metrics.jmxDown.metric.getValue()).isOne();
     }
 }

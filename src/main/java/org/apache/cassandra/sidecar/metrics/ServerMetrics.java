@@ -31,9 +31,8 @@ import com.google.inject.Singleton;
 @Singleton
 public class ServerMetrics
 {
-    public static final String DOMAIN = "sidecar.server";
+    public static final String DOMAIN = "Sidecar.Server";
     protected final MetricRegistry metricRegistry;
-
     public final NamedMetric<DefaultSettableGauge<Integer>> cassandraInstancesUp;
     public final NamedMetric<DefaultSettableGauge<Integer>> cassandraInstancesDown;
 
@@ -45,12 +44,12 @@ public class ServerMetrics
         cassandraInstancesUp =
         NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                    .withDomain(DOMAIN)
-                   .withName("instances_up")
+                   .withName("CassInstancesUp")
                    .build();
         cassandraInstancesDown =
         NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                    .withDomain(DOMAIN)
-                   .withName("instances_down")
+                   .withName("CassInstancesDown")
                    .build();
     }
 }

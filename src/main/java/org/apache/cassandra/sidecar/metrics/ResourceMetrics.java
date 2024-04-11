@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.metrics;
 
 import java.util.Objects;
 
-import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.google.inject.Inject;
@@ -32,37 +31,25 @@ import com.google.inject.Singleton;
 @Singleton
 public class ResourceMetrics
 {
-    public static final String DOMAIN = "sidecar.resource";
+    public static final String DOMAIN = "Sidecar.Resource";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<Meter> shortLivedTasks;
-    public final NamedMetric<Meter> longTasks;
-    public final NamedMetric<Timer> shortTaskTimeTaken;
-    public final NamedMetric<Timer> longTaskTimeTaken;
+    public final NamedMetric<Timer> serviceTaskTime;
+    public final NamedMetric<Timer> internalTaskTime;
 
     @Inject
     public ResourceMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        shortLivedTasks
-        = NamedMetric.builder(metricRegistry::meter)
-                     .withDomain(DOMAIN)
-                     .withName("short_lived_tasks")
-                     .build();
-        longTasks
-        = NamedMetric.builder(metricRegistry::meter)
-                     .withDomain(DOMAIN)
-                     .withName("long_tasks")
-                     .build();
-        shortTaskTimeTaken
+        serviceTaskTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("short_task_time_taken")
+                     .withName("ShortTaskTime")
                      .build();
-        longTaskTimeTaken
+        internalTaskTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("long_task_time_taken")
+                     .withName("LongTaskTime")
                      .build();
     }
 }

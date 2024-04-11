@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.metrics;
 import java.util.Objects;
 
 import com.codahale.metrics.DefaultSettableGauge;
-import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.google.inject.Inject;
@@ -37,12 +36,12 @@ public class RestoreMetrics
     protected final MetricRegistry metricRegistry;
     public final NamedMetric<Timer> sliceReplicationTime;
     public final NamedMetric<Timer> jobCompletionTime;
-    public final NamedMetric<Meter> successfulJobs;
-    public final NamedMetric<Meter> failedJobs;
+    public final NamedMetric<DefaultSettableGauge<Integer>> successfulJobs;
+    public final NamedMetric<DefaultSettableGauge<Integer>> failedJobs;
     public final NamedMetric<DefaultSettableGauge<Integer>> activeJobs;
-    public final NamedMetric<Meter> tokenRefreshes;
-    public final NamedMetric<Meter> tokenUnauthorized;
-    public final NamedMetric<Meter> tokenExpired;
+    public final NamedMetric<DefaultSettableGauge<Integer>> tokenRefreshed;
+    public final NamedMetric<DefaultSettableGauge<Integer>> tokenUnauthorized;
+    public final NamedMetric<DefaultSettableGauge<Integer>> tokenExpired;
 
     @Inject
     public RestoreMetrics(MetricRegistry metricRegistry)
@@ -52,42 +51,42 @@ public class RestoreMetrics
         sliceReplicationTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("slice_replication_time")
+                     .withName("SliceReplicationTime")
                      .build();
         jobCompletionTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("job_completion_time")
+                     .withName("JobCompletionTime")
                      .build();
         successfulJobs
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("successful_jobs")
+                     .withName("SuccessfulJobs")
                      .build();
         failedJobs
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("failed_jobs")
+                     .withName("FailedJobs")
                      .build();
         activeJobs
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("active_jobs")
+                     .withName("ActiveJobs")
                      .build();
-        tokenRefreshes
-        = NamedMetric.builder(metricRegistry::meter)
+        tokenRefreshed
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("token_refreshes")
+                     .withName("TokenRefreshed")
                      .build();
         tokenUnauthorized
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("token_unauthorized")
+                     .withName("TokenUnauthorized")
                      .build();
         tokenExpired
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("token_expired")
+                     .withName("TokenExpired")
                      .build();
     }
 }

@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.data.SSTableUploadResponse;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.data.SSTableUploadRequest;
@@ -122,7 +123,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         if (!limiter.tryAcquire())
         {
             String message = String.format("Concurrent upload limit (%d) exceeded", limiter.limit());
-            componentMetrics.rateLimitedCalls.metric.mark();
+            componentMetrics.rateLimitedCalls.metric.setValue(1);
             context.fail(wrapHttpException(HttpResponseStatus.TOO_MANY_REQUESTS, message));
             return;
         }
@@ -190,7 +191,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
     private Future<SSTableUploadRequest> validateKeyspaceAndTable(String host,
                                                                   SSTableUploadRequest request)
     {
-        ExecutorPools.TaskExecutorPool pool = executorPools.service();
+        TaskExecutorPool pool = executorPools.service();
         return pool.<Metadata>executeBlocking(promise -> {
                        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
                        Metadata metadata = delegate.metadata();
@@ -258,7 +259,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                          logger.warn("Insufficient space available for upload in stagingDir={}, available={}%, " +
                                      "required={}%", uploadDirectory,
                                      availableDiskSpacePercentage, minimumPercentageRequired);
-                         metrics.diskUsageHigh.metric.mark();
+                         metrics.diskUsageHigh.metric.setValue(1);
                          return Future.failedFuture(wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                                                       "Insufficient space available for upload"));
                      }

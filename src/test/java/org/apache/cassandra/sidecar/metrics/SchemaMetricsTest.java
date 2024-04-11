@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +36,6 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.CQLSessionProvider;
@@ -60,7 +58,6 @@ import static org.mockito.Mockito.when;
 /**
  * Tests metrics emitted for {@link SidecarSchema}
  */
-@ExtendWith(VertxExtension.class)
 public class SchemaMetricsTest
 {
     private static final Logger logger = LoggerFactory.getLogger(SidecarSchemaTest.class);
@@ -104,7 +101,7 @@ public class SchemaMetricsTest
     {
         sidecarSchema.startSidecarSchemaInitializer();
         loopAssert(3, () -> {
-            assertThat(metrics.failedInitializations.metric.getCount())
+            assertThat(metrics.failedInitializations.metric.getValue())
             .isGreaterThanOrEqualTo(1);
         });
     }

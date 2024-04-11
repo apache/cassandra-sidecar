@@ -86,7 +86,7 @@ public class AbortRestoreJobHandler extends AbstractHandler<String>
         .onSuccess(job -> {
             logger.info("Successfully aborted restore job. job={}, remoteAddress={}, instance={}",
                         job, remoteAddress, host);
-            metrics.failedJobs.metric.mark();
+            metrics.failedJobs.metric.setValue(1);
             context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, jobId));

@@ -175,11 +175,11 @@ class RestoreProcessorTest
         currentTime.set(fiveMinutesInNanos);
         processor.submit(slice);
         loopAssert(3, () -> {
-            long[] longRunningHandlers = instanceMetrics()
-                                         .restore()
-                                         .longRunningRestoreHandler.metric.getSnapshot().getValues();
-            assertThat(longRunningHandlers.length).isGreaterThanOrEqualTo(1);
-            Long handlerTimeInNanos = longRunningHandlers[0];
+            long[] slowRestoreTaskTimes = instanceMetrics()
+                                          .restore()
+                                          .slowRestoreTaskTime.metric.getSnapshot().getValues();
+            assertThat(slowRestoreTaskTimes.length).isGreaterThanOrEqualTo(1);
+            Long handlerTimeInNanos = slowRestoreTaskTimes[0];
             assertThat(handlerTimeInNanos).isNotNull();
             assertThat(handlerTimeInNanos).isEqualTo(fiveMinutesInNanos);
             assertThat(processor.activeTasks()).isOne();

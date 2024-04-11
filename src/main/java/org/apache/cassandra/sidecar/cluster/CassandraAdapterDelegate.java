@@ -227,7 +227,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         catch (RuntimeException e)
         {
             LOGGER.error("Unable to connect JMX to Cassandra instance {}", cassandraInstanceId, e);
-            healthMetrics.jmxDown.metric.mark();
+            healthMetrics.jmxDown.metric.setValue(1);
             // The cassandra node JMX connectivity is unavailable.
             markJmxDownAndMaybeNotifyDisconnection();
         }
@@ -287,7 +287,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         catch (IllegalArgumentException | NoHostAvailableException e)
         {
             LOGGER.error("Unexpected error querying Cassandra instance {}", cassandraInstanceId, e);
-            healthMetrics.nativeDown.metric.mark();
+            healthMetrics.nativeDown.metric.setValue(1);
             // The cassandra native protocol connection to the node is down.
             markNativeDownAndMaybeNotifyDisconnection();
             // Unregister the host listener.

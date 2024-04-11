@@ -27,11 +27,8 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.metrics.ResourceMetrics;
 
@@ -42,7 +39,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Test {@link ExecutorPools}
  */
-@ExtendWith(VertxExtension.class)
 public class ExecutorPoolsTest
 {
     private ExecutorPools pools;
@@ -77,7 +73,7 @@ public class ExecutorPoolsTest
     }
 
     @Test
-    public void testOrdered(VertxTestContext context)
+    public void testOrdered()
     {
         // not thread-safe
         class IntWrapper
@@ -90,7 +86,7 @@ public class ExecutorPoolsTest
             }
         }
 
-        ExecutorPools.TaskExecutorPool pool = pools.internal();
+        TaskExecutorPool pool = pools.internal();
         IntWrapper v = new IntWrapper();
         int total = 100;
         CountDownLatch stop = new CountDownLatch(total);
@@ -103,14 +99,10 @@ public class ExecutorPoolsTest
                     v.increment();
                     threadNames.add(Thread.currentThread().getName());
                     stop.countDown();
+                    assertThat(metrics.internalTaskTime.metric.getCount()).isEqualTo(200);
                 }, true);
             }, false);
         }
-
-        vertx.setTimer(100, handle -> {
-            assertThat(metrics.longTasks.metric.getCount()).isEqualTo(200);
-            context.completeNow();
-        });
 
         assertThat(Uninterruptibles.awaitUninterruptibly(stop, 10, TimeUnit.SECONDS))
         .describedAs("Test should finish in 10 seconds")

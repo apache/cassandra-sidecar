@@ -197,7 +197,7 @@ public class FileStreamer
             LOGGER.debug("Asking client {} to retry after {} micros. Instance: {}", response.remoteAddress(),
                          microsToWait, response.host());
             response.setRetryAfterHeader(microsToWait);
-            componentMetrics.rateLimitedCalls.metric.mark();
+            componentMetrics.rateLimitedCalls.metric.setValue(1);
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Ask client to retry later"));
         }
         return false;

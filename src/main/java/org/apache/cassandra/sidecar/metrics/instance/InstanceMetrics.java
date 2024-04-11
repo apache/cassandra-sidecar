@@ -23,7 +23,7 @@ package org.apache.cassandra.sidecar.metrics.instance;
  */
 public interface InstanceMetrics
 {
-    String INSTANCE_PREFIX = "sidecar.cas_instance";
+    String INSTANCE_PREFIX = "Sidecar.CassInstance";
 
     /**
      * @return health metrics tracked for cassandra instance

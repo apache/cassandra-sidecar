@@ -36,6 +36,7 @@ import com.google.inject.Singleton;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
@@ -55,7 +56,7 @@ public class RestoreProcessor implements PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreProcessor.class);
 
-    private final ExecutorPools.TaskExecutorPool pool;
+    private final TaskExecutorPool pool;
     private final StorageClientPool s3ClientPool;
     private final SidecarSchema sidecarSchema;
     private final SSTableImporter importer;
@@ -233,7 +234,7 @@ public class RestoreProcessor implements PeriodicTask
                 task.slice()
                     .owner()
                     .metrics()
-                    .restore().longRunningRestoreHandler.metric.update(elapsedInNanos, TimeUnit.NANOSECONDS);
+                    .restore().slowRestoreTaskTime.metric.update(elapsedInNanos, TimeUnit.NANOSECONDS);
             }
         }
     }

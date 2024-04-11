@@ -18,24 +18,12 @@
 
 package org.apache.cassandra.sidecar.concurrent;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.WorkerExecutor;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 import org.apache.cassandra.sidecar.metrics.ResourceMetrics;
-import org.apache.cassandra.sidecar.metrics.Timer;
-
-import static org.apache.cassandra.sidecar.config.ServiceConfiguration.INTERNAL_POOL;
-import static org.apache.cassandra.sidecar.config.ServiceConfiguration.SERVICE_POOL;
 
 /**
  * Manages dedicated worker pools to schedule and execute _blocking_ tasks to avoid blocking netty eventloop.
@@ -58,8 +46,10 @@ public class ExecutorPools
     @Inject
     public ExecutorPools(Vertx vertx, ServiceConfiguration configuration, ResourceMetrics metrics)
     {
-        this.taskExecutors = new TaskExecutorPool(vertx, configuration.serverWorkerPoolConfiguration(), metrics);
-        this.internalTaskExecutors = new TaskExecutorPool(vertx, configuration.serverInternalWorkerPoolConfiguration(), metrics);
+        this.taskExecutors
+        = new TaskExecutorPool.ServiceTaskExecutorPool(vertx, configuration.serverWorkerPoolConfiguration(), metrics);
+        this.internalTaskExecutors
+        = new TaskExecutorPool.InternalTaskExecutorPool(vertx, configuration.serverInternalWorkerPoolConfiguration(), metrics);
     }
 
     /**
@@ -84,240 +74,6 @@ public class ExecutorPools
     public Future<Void> close()
     {
         return taskExecutors.closeInternal().onComplete(v -> internalTaskExecutors.closeInternal());
-    }
-
-    /**
-     * A pool of executors backed by {@link WorkerExecutor} and {@link Vertx}
-     */
-    public static class TaskExecutorPool implements WorkerExecutor
-    {
-        private final Vertx vertx;
-        private final String workerPoolName;
-        private final WorkerExecutor workerExecutor;
-        private final ResourceMetrics metrics;
-
-        private TaskExecutorPool(Vertx vertx, WorkerPoolConfiguration config, ResourceMetrics metrics)
-        {
-            this.vertx = vertx;
-            this.workerPoolName = config.workerPoolName();
-            this.workerExecutor = vertx.createSharedWorkerExecutor(config.workerPoolName(),
-                                                                   config.workerPoolSize(),
-                                                                   config.workerMaxExecutionTimeMillis(),
-                                                                   TimeUnit.MILLISECONDS);
-            this.metrics = metrics;
-        }
-
-        /**
-         * Like {@link #setPeriodic(long, Handler, boolean)} with the handler guaranteed to be executed in a
-         * worker thread and ordered = false.
-         *
-         * @param delay   the delay in milliseconds, after which the timer will fire
-         * @param handler the handler that will be called with the timer ID when the timer fires
-         * @return the unique identifier for the timer
-         */
-        public long setPeriodic(long delay, Handler<Long> handler)
-        {
-            return setPeriodic(delay, handler, false);
-        }
-
-        /**
-         * Like {@link Vertx#setPeriodic(long, Handler)} with the handler guaranteed to be executed in a worker thread.
-         *
-         * @param delay   the delay in milliseconds, after which the timer will fire
-         * @param handler the handler that will be called with the timer ID when the timer fires
-         * @param ordered if true and if executeBlocking is called several times on the same context, the executions
-         *                for that context will be executed serially, not in parallel. The periodic scheduled
-         *                executions could be delayed if the prior execution on the same context is taking longer.
-         *                If false then they will be no ordering guarantees
-         * @return the unique identifier for the timer
-         */
-        public long setPeriodic(long delay, Handler<Long> handler, boolean ordered)
-        {
-            return setPeriodic(delay, delay, handler, ordered);
-        }
-
-        /**
-         * Set a periodic timer to fire every {@code delay} milliseconds with initial delay, at which point
-         * {@code handler} will be called with the id of the timer.
-         *
-         * @param initialDelay the initial delay in milliseconds
-         * @param delay        the delay in milliseconds, after which the timer will fire
-         * @param handler      the handler that will be called with the timer ID when the timer fires
-         * @return the unique ID of the timer
-         */
-        public long setPeriodic(long initialDelay, long delay, Handler<Long> handler)
-        {
-            return setPeriodic(initialDelay, delay, handler, false);
-        }
-
-        /**
-         * Set a periodic timer to fire every {@code delay} milliseconds with initial delay, at which point
-         * {@code handler} will be called with the id of the timer.
-         *
-         * @param initialDelay the initial delay in milliseconds
-         * @param delay        the delay in milliseconds, after which the timer will fire
-         * @param handler      the handler that will be called with the timer ID when the timer fires
-         * @param ordered      if true then executeBlocking is called several times on the same context, the
-         *                     executions for that context will be executed serially, not in parallel. if false
-         *                     then they will be no ordering guarantees
-         * @return the unique ID of the timer
-         */
-        public long setPeriodic(long initialDelay, long delay, Handler<Long> handler, boolean ordered)
-        {
-            return vertx.setPeriodic(initialDelay,
-                                     delay,
-                                     id -> workerExecutor.executeBlocking(() -> {
-                                         recordTask();
-                                         long startTime = System.nanoTime();
-                                         handler.handle(id);
-                                         recordTimeTaken(System.nanoTime() - startTime);
-                                         return id;
-                                     }, ordered));
-        }
-
-        /**
-         * Like {@link #setTimer(long, Handler)} with the handler guaranteed to be executed in a
-         * worker thread and ordered = false.
-         *
-         * @param delay   the delay in milliseconds, after which the timer will fire
-         * @param handler the handler that will be called with the timer ID when the timer fires
-         * @return the unique identifier for the timer
-         */
-        public long setTimer(long delay, Handler<Long> handler)
-        {
-            return vertx.setTimer(delay, id ->
-                                         workerExecutor.executeBlocking(promise -> {
-                                             recordTask();
-                                             long startTime = System.nanoTime();
-                                             handler.handle(id);
-                                             recordTimeTaken(System.nanoTime() - startTime);
-                                         }, false));
-        }
-
-        /**
-         * Like {@link Vertx#setTimer(long, Handler)} with the handler guaranteed to be executed in a worker thread.
-         *
-         * @param delay   the delay in milliseconds, after which the timer will fire
-         * @param handler the handler that will be called with the timer ID when the timer fires
-         * @param ordered if true and if executeBlocking is called several times on the same context, the executions
-         *                for that context will be executed serially, not in parallel. The periodic scheduled
-         *                executions could be delayed if the prior execution on the same context is taking longer.
-         *                If false then they will be no ordering guarantees
-         * @return the unique identifier for the timer
-         */
-        public long setTimer(long delay, Handler<Long> handler, boolean ordered)
-        {
-            return vertx.setTimer(delay, id -> workerExecutor.executeBlocking(() -> {
-                recordTask();
-                long startTime = System.nanoTime();
-                handler.handle(id);
-                recordTimeTaken(System.nanoTime() - startTime);
-                return id;
-            }, ordered));
-        }
-
-        private void recordTimeTaken(long duration)
-        {
-            if (metrics == null)
-            {
-                return;
-            }
-
-            if (workerPoolName.equals(SERVICE_POOL))
-            {
-                metrics.shortTaskTimeTaken.metric.update(duration, TimeUnit.NANOSECONDS);
-            }
-            else if (workerPoolName.equals(INTERNAL_POOL))
-            {
-                metrics.longTaskTimeTaken.metric.update(duration, TimeUnit.NANOSECONDS);
-            }
-        }
-
-        /**
-         * Delegate to {@link Vertx#cancelTimer(long)}
-         *
-         * @param id The id of the timer to cancel
-         * @return {@code true} if the timer was successfully cancelled, {@code false} otherwise
-         */
-        public boolean cancelTimer(long id)
-        {
-            return vertx.cancelTimer(id);
-        }
-
-        @Override
-        public <T> void executeBlocking(Handler<Promise<T>> blockingCodeHandler,
-                                        boolean ordered,
-                                        Handler<AsyncResult<T>> asyncResultHandler)
-        {
-            recordTask();
-            workerExecutor.executeBlocking(blockingCodeHandler, ordered, asyncResultHandler);
-        }
-
-        @Override
-        public <T> Future<T> executeBlocking(Handler<Promise<T>> blockingCodeHandler,
-                                             boolean ordered)
-        {
-            recordTask();
-            return Timer.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler, ordered), this::recordTimeTaken);
-        }
-
-        @Override
-        public <T> Future<T> executeBlocking(Callable<T> blockingCodeHandler, boolean ordered)
-        {
-            recordTask();
-            return Timer.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler, ordered), this::recordTimeTaken);
-        }
-
-        @Override
-        public <T> void executeBlocking(Handler<Promise<T>> blockingCodeHandler,
-                                        Handler<AsyncResult<T>> asyncResultHandler)
-        {
-            recordTask();
-            workerExecutor.executeBlocking(blockingCodeHandler, asyncResultHandler);
-        }
-
-        @Override
-        public <T> Future<T> executeBlocking(Handler<Promise<T>> blockingCodeHandler)
-        {
-            recordTask();
-            return Timer.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler), this::recordTimeTaken);
-        }
-
-        private void recordTask()
-        {
-            if (metrics == null)
-            {
-                return;
-            }
-
-            if (workerPoolName.equals("sidecar-worker-pool"))
-            {
-                metrics.shortLivedTasks.metric.mark();
-            }
-            else if (workerPoolName.equals("sidecar-internal-worker-pool"))
-            {
-                metrics.longTasks.metric.mark();
-            }
-        }
-
-        @Override
-        public void close(Handler<AsyncResult<Void>> handler)
-        {
-            throw new UnsupportedOperationException("Closing TaskExecutorPool is not supported!");
-        }
-
-        @Override
-        public Future<Void> close()
-        {
-            throw new UnsupportedOperationException("Closing TaskExecutorPool is not supported!");
-        }
-
-        private Future<Void> closeInternal()
-        {
-            return workerExecutor == null
-                   ? Future.succeededFuture()
-                   : workerExecutor.close();
-        }
     }
 }
 

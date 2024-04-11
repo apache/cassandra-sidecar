@@ -34,7 +34,7 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.RestoreSliceStatus;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
@@ -229,7 +229,7 @@ public class RestoreSlice
      * @return {@link RestoreSliceTask} of the restore slice. See {@link RestoreSliceTask} for the steps.
      */
     public RestoreSliceHandler toAsyncTask(StorageClientPool s3ClientPool,
-                                           ExecutorPools.TaskExecutorPool executorPool,
+                                           TaskExecutorPool executorPool,
                                            SSTableImporter importer,
                                            double requiredUsableSpacePercentage,
                                            RestoreSliceDatabaseAccessor sliceDatabaseAccessor,

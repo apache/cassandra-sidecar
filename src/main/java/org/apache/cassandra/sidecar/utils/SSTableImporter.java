@@ -164,12 +164,20 @@ public class SSTableImporter
             ImportQueue queue = entry.getValue();
             if (!queue.isEmpty())
             {
-                metadataFetcher.instance(hostFromKey(entry.getKey()))
-                               .metrics()
-                               .sstableImport().pendingImports.metric.setValue(entry.getValue().size());
+                recordPendingImports(hostFromKey(entry.getKey()), entry.getValue().size());
                 executorPools.internal()
                              .executeBlocking(p -> maybeDrainImportQueue(queue));
             }
+        }
+    }
+
+    private void recordPendingImports(String host, int pendingImports)
+    {
+        if (host != null)
+        {
+            metadataFetcher.instance(host)
+                           .metrics()
+                           .sstableImport().pendingImports.metric.setValue(pendingImports);
         }
     }
 

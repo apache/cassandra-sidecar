@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.metrics.instance;
 import java.util.Objects;
 
 import com.codahale.metrics.DefaultSettableGauge;
-import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
@@ -40,16 +39,16 @@ public class InstanceRestoreMetrics
     public final NamedMetric<Timer> sliceStageTime;
     public final NamedMetric<Timer> sliceUnzipTime;
     public final NamedMetric<Timer> sliceValidationTime;
-    public final NamedMetric<Meter> sliceDownloadTimeouts;
-    public final NamedMetric<Meter> sliceDownloadRetries;
-    public final NamedMetric<Meter> sliceChecksumMismatches;
+    public final NamedMetric<DefaultSettableGauge<Integer>> sliceDownloadTimeouts;
+    public final NamedMetric<DefaultSettableGauge<Integer>> sliceDownloadRetries;
+    public final NamedMetric<DefaultSettableGauge<Integer>> sliceChecksumMismatches;
     public final NamedMetric<DefaultSettableGauge<Integer>> sliceImportQueueLength;
     public final NamedMetric<DefaultSettableGauge<Integer>> pendingSliceCount;
     public final NamedMetric<DefaultSettableGauge<Long>> dataSSTableComponentSize;
     public final NamedMetric<Timer> sliceDownloadTime;
     public final NamedMetric<DefaultSettableGauge<Long>> sliceCompressedSizeInBytes;
     public final NamedMetric<DefaultSettableGauge<Long>> sliceUncompressedSizeInBytes;
-    public final NamedMetric<Timer> longRunningRestoreHandler;
+    public final NamedMetric<Timer> slowRestoreTaskTime;
 
     public InstanceRestoreMetrics(MetricRegistry metricRegistry)
     {
@@ -58,78 +57,78 @@ public class InstanceRestoreMetrics
         sliceCompletionTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("slice_completion_time")
+                     .withName("SliceCompletionTime")
                      .build();
         sliceImportTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("slice_import_time")
+                     .withName("SliceImportTime")
                      .build();
         sliceStageTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("slice_stage_time")
+                     .withName("SliceStageTime")
                      .build();
         sliceUnzipTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("slice_unzip_time")
+                     .withName("SliceUnzipTime")
                      .build();
         sliceValidationTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("slice_validation_time")
+                     .withName("SliceValidationTime")
                      .build();
         sliceDownloadTimeouts
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("slice_download_timeouts")
+                     .withName("SliceDownloadTimeouts")
                      .build();
         sliceDownloadRetries
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("slice_completion_retries")
+                     .withName("SliceCompletionRetries")
                      .build();
         sliceChecksumMismatches
-        = NamedMetric.builder(metricRegistry::meter)
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("slice_checksum_mismatches")
+                     .withName("SliceChecksumMismatches")
                      .build();
         sliceImportQueueLength
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("slice_import_queue_length")
+                     .withName("SliceImportQueueLength")
                      .build();
         pendingSliceCount
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("pending_slice_count")
+                     .withName("PendingSliceCount")
                      .build();
         dataSSTableComponentSize
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
                      .withDomain(DOMAIN)
-                     .withName("restore_size")
-                     .addTag("component", "db")
+                     .withName("RestoreDataSizeBytes")
+                     .addTag("Component", "db")
                      .build();
         sliceDownloadTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("slice_download_time")
+                     .withName("SliceDownloadTime")
                      .build();
         sliceCompressedSizeInBytes
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
                      .withDomain(DOMAIN)
-                     .withName("slice_compressed_size_bytes")
+                     .withName("SliceCompressedSizeBytes")
                      .build();
         sliceUncompressedSizeInBytes
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
                      .withDomain(DOMAIN)
-                     .withName("slice_uncompressed_size_bytes")
+                     .withName("SliceUncompressedSizeBytes")
                      .build();
-        longRunningRestoreHandler
+        slowRestoreTaskTime
         = NamedMetric.builder(metricRegistry::timer)
                      .withDomain(DOMAIN)
-                     .withName("long_running_restore_handler")
+                     .withName("SlowRestoreTaskTime")
                      .build();
     }
 }

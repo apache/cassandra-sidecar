@@ -31,6 +31,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.metrics.ServerMetrics;
 
@@ -46,7 +47,7 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     private final EventBus eventBus;
     private final SidecarConfiguration configuration;
     private final InstancesConfig instancesConfig;
-    private final ExecutorPools.TaskExecutorPool internalPool;
+    private final TaskExecutorPool internalPool;
     private final ServerMetrics serverMetrics;
 
     public HealthCheckPeriodicTask(Vertx vertx,

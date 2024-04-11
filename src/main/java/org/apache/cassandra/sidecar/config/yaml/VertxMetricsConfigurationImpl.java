@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.util.Collections;
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 

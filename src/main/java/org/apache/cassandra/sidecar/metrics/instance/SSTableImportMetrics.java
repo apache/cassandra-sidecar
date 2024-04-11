@@ -31,7 +31,7 @@ import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INST
  */
 public class SSTableImportMetrics
 {
-    public static final String DOMAIN = INSTANCE_PREFIX + ".sstable_import";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".SSTableImport";
     protected final MetricRegistry metricRegistry;
     public final NamedMetric<DefaultSettableGauge<Integer>> cassandraUnavailable;
     public final NamedMetric<DefaultSettableGauge<Integer>> pendingImports;
@@ -43,12 +43,12 @@ public class SSTableImportMetrics
         cassandraUnavailable
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("cassandra_unavailable_503")
+                     .withName("CassandraUnavailable503")
                      .build();
         pendingImports
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("pending_imports")
+                     .withName("PendingImports")
                      .build();
     }
 }

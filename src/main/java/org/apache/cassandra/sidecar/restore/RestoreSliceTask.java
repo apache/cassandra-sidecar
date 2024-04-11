@@ -33,7 +33,7 @@ import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
@@ -66,7 +66,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
 
     private final RestoreSlice slice;
     private final StorageClient s3Client;
-    private final ExecutorPools.TaskExecutorPool executorPool;
+    private final TaskExecutorPool executorPool;
     private final SSTableImporter importer;
     private final double requiredUsableSpacePercentage;
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
@@ -77,7 +77,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
 
     public RestoreSliceTask(RestoreSlice slice,
                             StorageClient s3Client,
-                            ExecutorPools.TaskExecutorPool executorPool,
+                            TaskExecutorPool executorPool,
                             SSTableImporter importer,
                             double requiredUsableSpacePercentage,
                             RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
@@ -218,7 +218,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 // https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
                 event.tryFail(RestoreJobExceptions.ofFatalSlice("Object checksum mismatched",
                                                                 slice, s3Exception));
-                instanceMetrics.restore().sliceChecksumMismatches.metric.mark();
+                instanceMetrics.restore().sliceChecksumMismatches.metric.setValue(1);
             }
             else if (s3Exception.statusCode() == 403)
             {
@@ -226,7 +226,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 // There might be permission issue on accessing the object.
                 event.tryFail(RestoreJobExceptions.ofFatalSlice("Object access is forbidden",
                                                                 slice, s3Exception));
-                restoreMetrics.tokenUnauthorized.metric.mark();
+                restoreMetrics.tokenUnauthorized.metric.setValue(1);
             }
             else if (s3Exception.statusCode() == 400 &&
                      s3Exception.getMessage().contains("token has expired"))
@@ -234,7 +234,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 // Fail the job if 400, token has expired.
                 // https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList
                 event.tryFail(RestoreJobExceptions.ofFatalSlice("Token has expired", slice, s3Exception));
-                restoreMetrics.tokenExpired.metric.mark();
+                restoreMetrics.tokenExpired.metric.setValue(1);
             }
             else
             {
@@ -263,7 +263,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
         if (slice.downloadAttempt() > 0)
         {
             LOGGER.debug("Retrying downloading slice. sliceKey={}", slice.key());
-            instanceMetrics.restore().sliceDownloadRetries.metric.mark();
+            instanceMetrics.restore().sliceDownloadRetries.metric.setValue(1);
         }
 
         LOGGER.info("Begin downloading restore slice. sliceKey={}", slice.key());
@@ -274,7 +274,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
             if (ThrowableUtils.getCause(cause, ApiCallTimeoutException.class) != null)
             {
                 LOGGER.warn("Downloading restore slice times out. sliceKey={}", slice.key());
-                instanceMetrics.restore().sliceDownloadTimeouts.metric.mark();
+                instanceMetrics.restore().sliceDownloadTimeouts.metric.setValue(1);
             }
             event.tryFail(RestoreJobExceptions.ofFatalSlice("Unrecoverable error when downloading object",
                                                             slice, cause));

@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.config;
 
-import java.util.List;
-
 /**
  * Holds configuration needed for enabling metrics capture in Vert.x framework, for analyzing from Sidecar.
  */
