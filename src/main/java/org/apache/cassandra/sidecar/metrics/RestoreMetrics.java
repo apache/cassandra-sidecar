@@ -49,15 +49,9 @@ public class RestoreMetrics
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
         sliceReplicationTime
-        = NamedMetric.builder(metricRegistry::timer)
-                     .withDomain(DOMAIN)
-                     .withName("SliceReplicationTime")
-                     .build();
+        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceReplicationTime").build();
         jobCompletionTime
-        = NamedMetric.builder(metricRegistry::timer)
-                     .withDomain(DOMAIN)
-                     .withName("JobCompletionTime")
-                     .build();
+        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("JobCompletionTime").build();
         successfulJobs
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)

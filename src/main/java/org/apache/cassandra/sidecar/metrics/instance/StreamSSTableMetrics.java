@@ -86,11 +86,7 @@ public class StreamSSTableMetrics
                          .addTag(componentTag)
                          .build();
             sendFileLatency
-            = NamedMetric.builder(metricRegistry::timer)
-                         .withDomain(DOMAIN)
-                         .withName("SendfileLatency")
-                         .addTag(componentTag)
-                         .build();
+            = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SendfileLatency").addTag(componentTag).build();
             bytesStreamed
             = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
                          .withDomain(DOMAIN)

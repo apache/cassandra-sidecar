@@ -55,30 +55,15 @@ public class InstanceRestoreMetrics
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
         sliceCompletionTime
-        = NamedMetric.builder(metricRegistry::timer)
-                     .withDomain(DOMAIN)
-                     .withName("SliceCompletionTime")
-                     .build();
+        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceCompletionTime").build();
         sliceImportTime
-        = NamedMetric.builder(metricRegistry::timer)
-                     .withDomain(DOMAIN)
-                     .withName("SliceImportTime")
-                     .build();
+        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceImportTime").build();
         sliceStageTime
-        = NamedMetric.builder(metricRegistry::timer)
-                     .withDomain(DOMAIN)
-                     .withName("SliceStageTime")
-                     .build();
+        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceStageTime").build();
         sliceUnzipTime
-        = NamedMetric.builder(metricRegistry::timer)
-                     .withDomain(DOMAIN)
-                     .withName("SliceUnzipTime")
-                     .build();
+        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceUnzipTime").build();
         sliceValidationTime
-        = NamedMetric.builder(metricRegistry::timer)
-                     .withDomain(DOMAIN)
-                     .withName("SliceValidationTime")
-                     .build();
+        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceValidationTime").build();
         sliceDownloadTimeouts
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
@@ -111,10 +96,7 @@ public class InstanceRestoreMetrics
                      .addTag("Component", "db")
                      .build();
         sliceDownloadTime
-        = NamedMetric.builder(metricRegistry::timer)
-                     .withDomain(DOMAIN)
-                     .withName("SliceDownloadTime")
-                     .build();
+        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceDownloadTime").build();
         sliceCompressedSizeInBytes
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
                      .withDomain(DOMAIN)
@@ -126,9 +108,6 @@ public class InstanceRestoreMetrics
                      .withName("SliceUncompressedSizeBytes")
                      .build();
         slowRestoreTaskTime
-        = NamedMetric.builder(metricRegistry::timer)
-                     .withDomain(DOMAIN)
-                     .withName("SlowRestoreTaskTime")
-                     .build();
+        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SlowRestoreTaskTime").build();
     }
 }
