@@ -33,6 +33,7 @@ public class ServerMetrics
 {
     public static final String DOMAIN = "sidecar.server";
     protected final MetricRegistry metricRegistry;
+
     public final NamedMetric<DefaultSettableGauge<Integer>> cassandraInstancesUp;
     public final NamedMetric<DefaultSettableGauge<Integer>> cassandraInstancesDown;
 
