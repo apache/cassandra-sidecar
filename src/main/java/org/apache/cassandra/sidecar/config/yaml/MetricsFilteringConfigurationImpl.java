@@ -49,7 +49,7 @@ public class MetricsFilteringConfigurationImpl implements MetricsFilteringConfig
 
     private void verifyType(String type)
     {
-        if (type.equalsIgnoreCase(REGEX_TYPE) || type.equalsIgnoreCase(EQUALS_TYPE))
+        if (REGEX_TYPE.equalsIgnoreCase(type) || EQUALS_TYPE.equalsIgnoreCase(type))
         {
             return;
         }

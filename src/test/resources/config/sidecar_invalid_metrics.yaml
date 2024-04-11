@@ -1,0 +1,47 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+#
+# Cassandra SideCar configuration file
+#
+cassandra:
+  host: localhost
+  port: 9042
+  data_dirs: /cassandra/d1/data, /cassandra/d2/data
+  jmx_host: 127.0.0.1
+  jmx_port: 7199
+  jmx_role: controlRole
+  jmx_role_password: controlPassword
+  jmx_ssl_enabled: true
+
+sidecar:
+  host: 0.0.0.0
+  port: 1234
+  request_idle_timeout_millis: 500000 # this field expects integer value
+  request_timeout_millis: 1200000
+  allowable_time_skew_in_minutes: 1
+
+metrics:
+  registry_name: cassandra_sidecar_metrics
+  vertx:
+    enabled: true
+    expose_via_jmx: false
+    jmx_domain_name: sidecar.vertx.jmx_domain
+  exclude:
+    - type: "contains"
+      value: "vertx"

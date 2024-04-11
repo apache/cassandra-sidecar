@@ -41,6 +41,7 @@ import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TIME_SKEW_ROUTE
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.apache.cassandra.sidecar.config.yaml.VertxMetricsConfigurationImpl.DEFAULT_JMX_DOMAIN_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 
 /**
@@ -244,6 +245,15 @@ class SidecarConfigurationTest
             assertThat(excludeConfigurations.get(1).type()).isEqualTo("regex");
             assertThat(excludeConfigurations.get(0).value()).isEqualTo("instances_up");
         }
+    }
+
+    @Test
+    void testInvalidMetricOptions()
+    {
+        Path yamlPath = yaml("config/sidecar_invalid_metrics.yaml");
+        assertThatThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("passed for metric filtering is not recognized");
     }
 
     @Test
