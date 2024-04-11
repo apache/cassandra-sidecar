@@ -32,7 +32,7 @@ import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INST
  */
 public class InstanceRestoreMetrics
 {
-    public static final String DOMAIN = INSTANCE_PREFIX + ".restore";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".Restore";
     protected final MetricRegistry metricRegistry;
     public final NamedMetric<Timer> sliceCompletionTime;
     public final NamedMetric<Timer> sliceImportTime;
