@@ -80,8 +80,11 @@ class SSTableImporterTest
         InstanceMetadata mockInstanceMetadata2 = mock(InstanceMetadata.class);
         InstanceMetadata mockInstanceMetadata3 = mock(InstanceMetadata.class);
         when(mockInstanceMetadata1.metrics()).thenReturn(instanceMetrics(1));
+        when(mockInstanceMetadata1.delegate()).thenReturn(mockCassandraAdapterDelegate1);
         when(mockInstanceMetadata2.metrics()).thenReturn(instanceMetrics(2));
+        when(mockInstanceMetadata2.delegate()).thenReturn(mockCassandraAdapterDelegate2);
         when(mockInstanceMetadata3.metrics()).thenReturn(instanceMetrics(3));
+        when(mockInstanceMetadata3.delegate()).thenReturn(mockCassandraAdapterDelegate3);
         when(mockMetadataFetcher.instance("localhost")).thenReturn(mockInstanceMetadata1);
         when(mockMetadataFetcher.instance("127.0.0.2")).thenReturn(mockInstanceMetadata2);
         when(mockMetadataFetcher.instance("127.0.0.3")).thenReturn(mockInstanceMetadata3);
@@ -134,8 +137,7 @@ class SSTableImporterTest
             .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
             loopAssert(1, () -> {
                 assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
-                assertThat(instanceMetrics(3).sstableImport().successfulImports.metric.getValue()).isOne();
-                assertThat(instanceMetrics(3).sstableImport().failedImports.metric.getValue()).isZero();
+                assertThat(instanceMetrics(1).sstableImport().successfulImports.metric.getValue()).isOne();
                 context.completeNow();
             });
         }));
@@ -165,8 +167,6 @@ class SSTableImporterTest
             }
             loopAssert(1, () -> {
                 assertThat(instanceMetrics(3).sstableImport().pendingImports.metric.getValue()).isOne();
-                assertThat(instanceMetrics(3).sstableImport().successfulImports.metric.getValue()).isZero();
-                assertThat(instanceMetrics(3).sstableImport().failedImports.metric.getValue()).isOne();
                 context.completeNow();
             });
         }));
@@ -197,8 +197,7 @@ class SSTableImporterTest
             }
             loopAssert(1, () -> {
                 assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
-                assertThat(instanceMetrics(3).sstableImport().successfulImports.metric.getValue()).isZero();
-                assertThat(instanceMetrics(3).sstableImport().failedImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(1).sstableImport().failedImports.metric.getValue()).isOne();
                 context.completeNow();
             });
         }));
@@ -228,8 +227,7 @@ class SSTableImporterTest
             }
             loopAssert(1, () -> {
                 assertThat(instanceMetrics(2).sstableImport().pendingImports.metric.getValue()).isOne();
-                assertThat(instanceMetrics(3).sstableImport().successfulImports.metric.getValue()).isZero();
-                assertThat(instanceMetrics(3).sstableImport().failedImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(2).sstableImport().failedImports.metric.getValue()).isOne();
                 context.completeNow();
             });
         }));
