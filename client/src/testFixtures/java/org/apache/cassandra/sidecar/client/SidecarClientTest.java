@@ -1293,7 +1293,7 @@ abstract class SidecarClientTest
 
     private void validateResponseServed(String expectedEndpointPath) throws InterruptedException
     {
-        validateResponseServed(expectedEndpointPath, req -> {});
+        validateResponseServed(expectedEndpointPath, req -> { });
     }
 
     private void validateResponseServed(String expectedEndpointPath,
