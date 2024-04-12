@@ -259,7 +259,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                          logger.warn("Insufficient space available for upload in stagingDir={}, available={}%, " +
                                      "required={}%", uploadDirectory,
                                      availableDiskSpacePercentage, minimumPercentageRequired);
-                         metrics.highDiskUsage.metric.setValue(1);
                          return Future.failedFuture(wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                                                       "Insufficient space available for upload"));
                      }
