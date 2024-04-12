@@ -32,8 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.apache.cassandra.sidecar.client.request.DecodableRequest;
 import org.apache.cassandra.sidecar.client.request.Request;
+import org.apache.cassandra.sidecar.client.request.ResponseBytesDecoder;
 
 import static java.util.Objects.requireNonNull;
 
@@ -344,10 +344,10 @@ public class RequestExecutor implements AutoCloseable
 
         try
         {
-            if (request instanceof DecodableRequest)
+            ResponseBytesDecoder<?> responseDecoder = request.responseBytesDecoder();
+            if (responseDecoder != null)
             {
-                DecodableRequest<T> decodableRequest = (DecodableRequest<T>) request;
-                future.complete(decodableRequest.decode(response.raw()));
+                future.complete((T) responseDecoder.decode(response.raw()));
             }
             else
             {

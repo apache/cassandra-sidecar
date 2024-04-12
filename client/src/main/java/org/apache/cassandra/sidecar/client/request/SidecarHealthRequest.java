@@ -25,7 +25,7 @@ import org.apache.cassandra.sidecar.common.data.HealthResponse;
 /**
  * Represents a request to retrieve the Sidecar health
  */
-public class SidecarHealthRequest extends DecodableRequest<HealthResponse>
+public class SidecarHealthRequest extends JsonRequest<HealthResponse>
 {
     /**
      * Constructs a request to retrieve the Sidecar health

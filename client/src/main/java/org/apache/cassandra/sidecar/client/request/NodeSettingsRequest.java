@@ -25,7 +25,7 @@ import org.apache.cassandra.sidecar.common.NodeSettings;
 /**
  * Represents a request to retrieve the node settings
  */
-public class NodeSettingsRequest extends DecodableRequest<NodeSettings>
+public class NodeSettingsRequest extends JsonRequest<NodeSettings>
 {
     /**
      * Constructs a request to retrieve the node settings

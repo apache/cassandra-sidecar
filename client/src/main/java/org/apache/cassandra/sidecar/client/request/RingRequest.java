@@ -25,7 +25,7 @@ import org.apache.cassandra.sidecar.common.data.RingResponse;
 /**
  * Represents a request to retrieve the Cassandra ring information
  */
-public class RingRequest extends DecodableRequest<RingResponse>
+public class RingRequest extends JsonRequest<RingResponse>
 {
     /**
      * Constructs a request to retrieve the Cassandra ring information

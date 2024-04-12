@@ -27,7 +27,7 @@ import org.apache.cassandra.sidecar.common.data.UpdateRestoreJobRequestPayload;
 /**
  * Represents a request to update a restore job
  */
-public class UpdateRestoreJobRequest extends Request implements JsonPayloadRequest
+public class UpdateRestoreJobRequest extends Request
 {
     private final UpdateRestoreJobRequestPayload requestPayload;
 
@@ -53,7 +53,7 @@ public class UpdateRestoreJobRequest extends Request implements JsonPayloadReque
     }
 
     @Override
-    public Object json()
+    public Object requestBody()
     {
         return requestPayload;
     }

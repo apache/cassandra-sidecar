@@ -21,34 +21,18 @@ package org.apache.cassandra.sidecar.client.request;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.NodeSettings;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
- * Unit tests for the {@link DecodableRequest} class
+ * Unit tests for the {@link JsonRequest} class
  */
-class DecodableRequestTest
+class JsonResponseBytesDecoderTest
 {
-    DecodableRequest<NodeSettings> instance;
-
-    @BeforeEach
-    void setup()
-    {
-        instance = new DecodableRequest<NodeSettings>("https://cassandra-sidecar.com/api/test")
-        {
-            @Override
-            public HttpMethod method()
-            {
-                return HttpMethod.GET;
-            }
-        };
-    }
+    JsonResponseBytesDecoder<NodeSettings> instance = new JsonResponseBytesDecoder<>(NodeSettings.class);
 
     @Test
     void testDecode() throws IOException
@@ -70,12 +54,5 @@ class DecodableRequestTest
         NodeSettings nodeSettings = instance.decode(nodeSettingsAsJsonString.getBytes(StandardCharsets.UTF_8));
         assertThat(nodeSettings.partitioner()).isEqualTo("partitioner-value");
         assertThat(nodeSettings.releaseVersion()).isEqualTo("1.0-TEST");
-    }
-
-    @Test
-    void testHeadersAreImmutable()
-    {
-        assertThatExceptionOfType(UnsupportedOperationException.class)
-        .isThrownBy(() -> instance.headers().put("not", "allowed"));
     }
 }

@@ -25,7 +25,7 @@ import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
 /**
  * Represents a request to retrieve the Cassandra gossip information
  */
-public class GossipInfoRequest extends DecodableRequest<GossipInfoResponse>
+public class GossipInfoRequest extends JsonRequest<GossipInfoResponse>
 {
     /**
      * Constructs a request to retrieve the Cassandra gossip information

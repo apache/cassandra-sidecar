@@ -80,6 +80,22 @@ public abstract class Request
     }
 
     /**
+     * @return the request body. Returns null, when there is no request body.
+     */
+    public Object requestBody()
+    {
+        return null;
+    }
+
+    /**
+     * @return the response bytes decoder if configured, or null
+     */
+    public ResponseBytesDecoder<?> responseBytesDecoder()
+    {
+        return null;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

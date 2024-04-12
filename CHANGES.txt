@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Support sending json request (CASSANDRASC-118)
  * Add FilteringMetricRegistry to allow filtering of metrics (CASSANDRASC-115)
  * Allow for JmxClient to be extensible (CASSANDRASC-116)
  * Improve observability in Sidecar (CASSANDRASC-111)

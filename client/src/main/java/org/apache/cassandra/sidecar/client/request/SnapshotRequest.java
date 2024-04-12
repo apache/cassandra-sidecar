@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param <T> the type of the decodable request
  */
-abstract class SnapshotRequest<T> extends DecodableRequest<T>
+abstract class SnapshotRequest<T> extends JsonRequest<T>
 {
     SnapshotRequest(String keyspace, String table, String snapshotName)
     {

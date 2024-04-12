@@ -25,7 +25,7 @@ import org.apache.cassandra.sidecar.common.data.SchemaResponse;
 /**
  * Represents a request to retrieve the schema
  */
-public class SchemaRequest extends DecodableRequest<SchemaResponse>
+public class SchemaRequest extends JsonRequest<SchemaResponse>
 {
     /**
      * Constructs a request to retrieve the full Cassandra schema
