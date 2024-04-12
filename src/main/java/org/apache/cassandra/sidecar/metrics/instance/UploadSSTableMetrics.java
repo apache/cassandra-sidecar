@@ -69,7 +69,6 @@ public class UploadSSTableMetrics
     {
         protected final MetricRegistry metricRegistry;
         public final String sstableComponent;
-        public final NamedMetric<DefaultSettableGauge<Integer>> highDiskUsage;
         public final NamedMetric<DefaultSettableGauge<Long>> bytesUploaded;
 
         public UploadSSTableComponentMetrics(MetricRegistry metricRegistry, String sstableComponent)
@@ -83,13 +82,6 @@ public class UploadSSTableMetrics
             }
 
             NamedMetric.Tag componentTag = NamedMetric.Tag.of("component", sstableComponent);
-
-            highDiskUsage
-            = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
-                         .withDomain(DOMAIN)
-                         .withName("DiskUsageHigh")
-                         .addTag(componentTag)
-                         .build();
             bytesUploaded
             = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
                          .withDomain(DOMAIN)
