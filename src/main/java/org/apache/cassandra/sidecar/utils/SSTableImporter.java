@@ -38,6 +38,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -159,44 +160,15 @@ public class SSTableImporter
      */
     private void processPendingImports(Long timerId)
     {
-        for (Map.Entry<String, ImportQueue> entry : importQueuePerHost.entrySet())
+        for (ImportQueue queue : importQueuePerHost.values())
         {
-            ImportQueue queue = entry.getValue();
             if (!queue.isEmpty())
             {
-                recordPendingImports(hostFromKey(entry.getKey()), entry.getValue().size());
                 executorPools.internal()
                              .executeBlocking(p -> maybeDrainImportQueue(queue));
             }
         }
     }
-
-    private void recordPendingImports(String host, int pendingImports)
-    {
-        if (host != null)
-        {
-            metadataFetcher.instance(host)
-                           .metrics()
-                           .sstableImport().pendingImports.metric.setValue(pendingImports);
-        }
-    }
-
-    /**
-     * Host is extracted from key for publishing Cassandra instance specific metrics related to {@link ImportQueue}
-     *
-     * @param key a key for one of the import queues
-     * @return host for which the import queue is maintained
-     */
-    protected String hostFromKey(String key)
-    {
-        String[] keyParts = key.split("\\$");
-        if (keyParts.length != 3)
-        {
-            return null;
-        }
-        return keyParts[0];
-    }
-
 
     /**
      * Tries to lock the queue to perform the draining. If the queue is already being drained, then it will
@@ -228,6 +200,7 @@ public class SSTableImporter
     private void drainImportQueue(ImportQueue queue)
     {
         int successCount = 0, failureCount = 0;
+        boolean recorded = false;
         while (!queue.isEmpty())
         {
             LOGGER.info("Starting SSTable import session");
@@ -235,17 +208,26 @@ public class SSTableImporter
             Promise<Void> promise = pair.getKey();
             ImportOptions options = pair.getValue();
 
-            CassandraAdapterDelegate cassandra = metadataFetcher.delegate(options.host);
-            if (cassandra == null)
+            InstanceMetadata instance = metadataFetcher.instance(options.host);
+            CassandraAdapterDelegate delegate = instance.delegate();
+            if (delegate == null)
             {
+                instance.metrics().sstableImport().cassandraUnavailable.metric.setValue(1);
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
                 continue;
             }
 
-            TableOperations tableOperations = cassandra.tableOperations();
+            if (!recorded)
+            {
+                // +1 offset added to consider already polled entry
+                instance.metrics().sstableImport().pendingImports.metric.setValue(queue.size() + 1);
+                recorded = true;
+            }
 
+            TableOperations tableOperations = delegate.tableOperations();
             if (tableOperations == null)
             {
+                instance.metrics().sstableImport().cassandraUnavailable.metric.setValue(1);
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
             }
             else
@@ -268,6 +250,7 @@ public class SSTableImporter
                     if (!failedDirectories.isEmpty())
                     {
                         failureCount++;
+                        instance.metrics().sstableImport().failedImports.metric.setValue(1);
                         LOGGER.error("Failed to import SSTables with options={}, serviceTimeMillis={}, " +
                                      "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos),
                                      failedDirectories);
@@ -277,6 +260,7 @@ public class SSTableImporter
                     else
                     {
                         successCount++;
+                        instance.metrics().sstableImport().successfulImports.metric.setValue(1);
                         LOGGER.info("Successfully imported SSTables with options={}, serviceTimeMillis={}",
                                     options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
                         promise.complete();
@@ -286,6 +270,7 @@ public class SSTableImporter
                 catch (Exception exception)
                 {
                     failureCount++;
+                    instance.metrics().sstableImport().failedImports.metric.setValue(1);
                     LOGGER.error("Failed to import SSTables with options={}", options, exception);
                     promise.fail(exception);
                 }

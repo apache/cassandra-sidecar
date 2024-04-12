@@ -44,7 +44,7 @@ import org.apache.cassandra.sidecar.models.HttpResponse;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
 import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
-import static org.apache.cassandra.sidecar.utils.MetricUtils.sstableExtension;
+import static org.apache.cassandra.sidecar.utils.MetricUtils.parseSSTableComponent;
 
 /**
  * General handler for serving files
@@ -128,10 +128,8 @@ public class FileStreamer
                                 Promise<Void> promise)
     {
         InstanceMetrics instanceMetrics = instanceMetadataFetcher.instance(instanceId).metrics();
-        String component = sstableExtension(filename);
-        StreamSSTableMetrics.StreamSSTableComponentMetrics componentMetrics
-        = instanceMetrics.streamSSTable().forComponent(component);
-        if (acquire(response, instanceId, filename, fileLength, range, startTime, componentMetrics, promise))
+        StreamSSTableMetrics streamSSTableMetrics = instanceMetrics.streamSSTable();
+        if (acquire(response, instanceId, filename, fileLength, range, startTime, streamSSTableMetrics, promise))
         {
             // Stream data if rate limiting is disabled or if we acquire
             LOGGER.debug("Streaming range {} for file {} to client {}. Instance: {}", range, filename,
@@ -140,11 +138,12 @@ public class FileStreamer
             response.sendFile(filename, fileLength, range)
                     .onSuccess(v ->
                                {
+                                   String component = parseSSTableComponent(filename);
                                    long d = System.nanoTime() - startTimeSendFile;
-                                   componentMetrics.sendFileLatency.metric.update(d, TimeUnit.NANOSECONDS);
+                                   streamSSTableMetrics.forComponent(component).sendFileLatency.metric.update(d, TimeUnit.NANOSECONDS);
                                    LOGGER.debug("Streamed file {} successfully to client {}. Instance: {}", filename,
                                                 response.remoteAddress(), response.host());
-                                   componentMetrics.bytesStreamed.metric.setValue(range.length());
+                                   streamSSTableMetrics.forComponent(component).bytesStreamed.metric.setValue(range.length());
                                    instanceMetrics.streamSSTable().totalBytesStreamed.metric.setValue(range.length());
                                    promise.complete();
                                })
@@ -157,18 +156,18 @@ public class FileStreamer
      * delay. Otherwise, it will retry acquiring the permit later in the future until it exhausts the
      * retry timeout, in which case it will ask the client to retry later in the future.
      *
-     * @param response          the response to use
-     * @param instanceId        Cassandra instance from which file is streamed
-     * @param filename          the path to the file to serve
-     * @param fileLength        the size of the file to serve
-     * @param range             the range to stream
-     * @param startTime         the start time of this request
-     * @param componentMetrics  metrics captured during streaming of specific SSTable component
-     * @param promise       a promise for the stream
+     * @param response              the response to use
+     * @param instanceId            Cassandra instance from which file is streamed
+     * @param filename              the path to the file to serve
+     * @param fileLength            the size of the file to serve
+     * @param range                 the range to stream
+     * @param startTime             the start time of this request
+     * @param streamSSTableMetrics  metrics captured during streaming of SSTables
+     * @param promise               a promise for the stream
      * @return {@code true} if the permit was acquired, {@code false} otherwise
      */
     private boolean acquire(HttpResponse response, int instanceId, String filename, long fileLength, HttpRange range,
-                            Instant startTime, StreamSSTableMetrics.StreamSSTableComponentMetrics componentMetrics, Promise<Void> promise)
+                            Instant startTime, StreamSSTableMetrics streamSSTableMetrics, Promise<Void> promise)
     {
         if (rateLimiter.tryAcquire())
             return true;
@@ -197,7 +196,7 @@ public class FileStreamer
             LOGGER.debug("Asking client {} to retry after {} micros. Instance: {}", response.remoteAddress(),
                          microsToWait, response.host());
             response.setRetryAfterHeader(microsToWait);
-            componentMetrics.rateLimitedCalls.metric.setValue(1);
+            streamSSTableMetrics.rateLimitedCalls.metric.setValue(1);
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Ask client to retry later"));
         }
         return false;

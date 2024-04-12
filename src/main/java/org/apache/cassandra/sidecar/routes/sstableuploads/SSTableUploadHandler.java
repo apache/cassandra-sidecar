@@ -53,7 +53,7 @@ import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
-import static org.apache.cassandra.sidecar.utils.MetricUtils.sstableExtension;
+import static org.apache.cassandra.sidecar.utils.MetricUtils.parseSSTableComponent;
 
 /**
  * Handler for managing uploaded SSTable components
@@ -117,13 +117,13 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
 
         InstanceMetrics instanceMetrics = metadataFetcher.instance(host).metrics();
         UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics
-        = instanceMetrics.uploadSSTable().forComponent(sstableExtension(request.component()));
+        = instanceMetrics.uploadSSTable().forComponent(parseSSTableComponent(request.component()));
 
         long startTimeInNanos = System.nanoTime();
         if (!limiter.tryAcquire())
         {
             String message = String.format("Concurrent upload limit (%d) exceeded", limiter.limit());
-            componentMetrics.rateLimitedCalls.metric.setValue(1);
+            instanceMetrics.streamSSTable().rateLimitedCalls.metric.setValue(1);
             context.fail(wrapHttpException(HttpResponseStatus.TOO_MANY_REQUESTS, message));
             return;
         }
@@ -259,7 +259,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                          logger.warn("Insufficient space available for upload in stagingDir={}, available={}%, " +
                                      "required={}%", uploadDirectory,
                                      availableDiskSpacePercentage, minimumPercentageRequired);
-                         metrics.diskUsageHigh.metric.setValue(1);
+                         metrics.highDiskUsage.metric.setValue(1);
                          return Future.failedFuture(wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                                                       "Insufficient space available for upload"));
                      }

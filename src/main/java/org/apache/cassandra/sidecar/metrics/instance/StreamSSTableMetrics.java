@@ -38,6 +38,7 @@ public class StreamSSTableMetrics
     protected final MetricRegistry metricRegistry;
     protected final Map<String, StreamSSTableComponentMetrics> streamComponentMetrics = new ConcurrentHashMap<>();
     public final NamedMetric<DefaultSettableGauge<Long>> totalBytesStreamed;
+    public final NamedMetric<DefaultSettableGauge<Integer>> rateLimitedCalls;
 
     public StreamSSTableMetrics(MetricRegistry metricRegistry)
     {
@@ -47,6 +48,11 @@ public class StreamSSTableMetrics
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
                      .withDomain(DOMAIN)
                      .withName("TotalBytesStreamed")
+                     .build();
+        rateLimitedCalls
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                     .withDomain(DOMAIN)
+                     .withName("Throttled429")
                      .build();
     }
 
@@ -63,7 +69,6 @@ public class StreamSSTableMetrics
     {
         protected final MetricRegistry metricRegistry;
         public final String sstableComponent;
-        public final NamedMetric<DefaultSettableGauge<Integer>> rateLimitedCalls;
         public final NamedMetric<Timer> sendFileLatency;
         public final NamedMetric<DefaultSettableGauge<Long>> bytesStreamed;
 
@@ -79,12 +84,6 @@ public class StreamSSTableMetrics
 
             NamedMetric.Tag componentTag = NamedMetric.Tag.of("component", sstableComponent);
 
-            rateLimitedCalls
-            = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
-                         .withDomain(DOMAIN)
-                         .withName("Throttled429")
-                         .addTag(componentTag)
-                         .build();
             sendFileLatency
             = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SendfileLatency").addTag(componentTag).build();
             bytesStreamed

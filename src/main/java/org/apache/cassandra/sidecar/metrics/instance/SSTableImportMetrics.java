@@ -35,6 +35,8 @@ public class SSTableImportMetrics
     protected final MetricRegistry metricRegistry;
     public final NamedMetric<DefaultSettableGauge<Integer>> cassandraUnavailable;
     public final NamedMetric<DefaultSettableGauge<Integer>> pendingImports;
+    public final NamedMetric<DefaultSettableGauge<Integer>> successfulImports;
+    public final NamedMetric<DefaultSettableGauge<Integer>> failedImports;
 
     public SSTableImportMetrics(MetricRegistry metricRegistry)
     {
@@ -49,6 +51,16 @@ public class SSTableImportMetrics
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
                      .withName("PendingImports")
+                     .build();
+        successfulImports
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                     .withDomain(DOMAIN)
+                     .withName("SuccessfulImports")
+                     .build();
+        failedImports
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                     .withDomain(DOMAIN)
+                     .withName("FailedImports")
                      .build();
     }
 }

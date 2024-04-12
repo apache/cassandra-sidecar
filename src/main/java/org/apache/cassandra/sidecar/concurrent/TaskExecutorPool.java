@@ -201,7 +201,7 @@ public abstract class TaskExecutorPool implements WorkerExecutor
 
     /**
      * Records time taken for tasks executed by {@link TaskExecutorPool}
-     * @param duration time taken by a task
+     * @param durationNanos time taken by a task
      */
     protected abstract void recordTimeTaken(long durationNanos);
 
@@ -239,13 +239,13 @@ public abstract class TaskExecutorPool implements WorkerExecutor
         }
 
         @Override
-        protected void recordTimeTaken(long duration)
+        protected void recordTimeTaken(long durationNanos)
         {
             if (metrics == null)
             {
                 return;
             }
-            metrics.serviceTaskTime.metric.update(duration, TimeUnit.NANOSECONDS);
+            metrics.serviceTaskTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -265,13 +265,13 @@ public abstract class TaskExecutorPool implements WorkerExecutor
         }
 
         @Override
-        protected void recordTimeTaken(long duration)
+        protected void recordTimeTaken(long durationNanos)
         {
             if (metrics == null)
             {
                 return;
             }
-            metrics.internalTaskTime.metric.update(duration, TimeUnit.NANOSECONDS);
+            metrics.internalTaskTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
         }
     }
 }

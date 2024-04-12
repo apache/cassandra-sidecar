@@ -134,6 +134,8 @@ class SSTableImporterTest
             .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
             loopAssert(1, () -> {
                 assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(3).sstableImport().successfulImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(3).sstableImport().failedImports.metric.getValue()).isZero();
                 context.completeNow();
             });
         }));
@@ -163,6 +165,8 @@ class SSTableImporterTest
             }
             loopAssert(1, () -> {
                 assertThat(instanceMetrics(3).sstableImport().pendingImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(3).sstableImport().successfulImports.metric.getValue()).isZero();
+                assertThat(instanceMetrics(3).sstableImport().failedImports.metric.getValue()).isOne();
                 context.completeNow();
             });
         }));
@@ -193,6 +197,8 @@ class SSTableImporterTest
             }
             loopAssert(1, () -> {
                 assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(3).sstableImport().successfulImports.metric.getValue()).isZero();
+                assertThat(instanceMetrics(3).sstableImport().failedImports.metric.getValue()).isOne();
                 context.completeNow();
             });
         }));
@@ -222,6 +228,8 @@ class SSTableImporterTest
             }
             loopAssert(1, () -> {
                 assertThat(instanceMetrics(2).sstableImport().pendingImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(3).sstableImport().successfulImports.metric.getValue()).isZero();
+                assertThat(instanceMetrics(3).sstableImport().failedImports.metric.getValue()).isOne();
                 context.completeNow();
             });
         }));

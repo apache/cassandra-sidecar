@@ -18,24 +18,58 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.Objects;
+
 /**
  * Utilities for Metrics related operations
  */
 public class MetricUtils
 {
+    private static final String DATA = "Data.db";
+    private static final String COMPRESSION = "CompressionInfo.db";
+    private static final String DIGEST = "Digest.crc32";
+    private static final String FILTER = "Filter.db";
+    private static final String INDEX = "Index.db";
+    private static final String STATISTICS = "Statistics.db";
+    private static final String SUMMARY = "Summary.db";
+
     /**
-     * Returns extension of SSTable components. For e.g. for nb-1-big-Data.db component returns db. This extension
-     * is used for marking metrics that are captured specific to SSTable components.
+     * Returns extracted SSTable component. For e.g. for nb-1-big-Data.db component returns Data.db. This is used for
+     * marking metrics that are captured specific to SSTable components.
      *
      * @param filename name of SSTable component
-     * @return String extension of SSTable component, if none found "default" is returned
+     * @return SSTable component, if none found "default" is returned
      */
-    public static String sstableExtension(String filename)
+    public static String parseSSTableComponent(String filename)
     {
-        int index = filename.lastIndexOf('.');
-        if (index != -1)
+        Objects.requireNonNull(filename, "Filename can not be null for SSTable component parsing");
+        if (filename.endsWith(DATA))
         {
-            return filename.substring(index + 1);
+            return DATA;
+        }
+        if (filename.endsWith(COMPRESSION))
+        {
+            return COMPRESSION;
+        }
+        if (filename.endsWith(DIGEST))
+        {
+            return DIGEST;
+        }
+        if (filename.endsWith(FILTER))
+        {
+            return FILTER;
+        }
+        if (filename.endsWith(INDEX))
+        {
+            return INDEX;
+        }
+        if (filename.endsWith(STATISTICS))
+        {
+            return STATISTICS;
+        }
+        if (filename.endsWith(SUMMARY))
+        {
+            return SUMMARY;
         }
         return "default";
     }

@@ -37,6 +37,7 @@ public class UploadSSTableMetrics
     protected final MetricRegistry metricRegistry;
     protected final Map<String, UploadSSTableComponentMetrics> uploadComponentMetrics = new ConcurrentHashMap<>();
     public final NamedMetric<DefaultSettableGauge<Long>> totalBytesUploaded;
+    public final NamedMetric<DefaultSettableGauge<Integer>> rateLimitedCalls;
 
     public UploadSSTableMetrics(MetricRegistry metricRegistry)
     {
@@ -46,6 +47,12 @@ public class UploadSSTableMetrics
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
                      .withDomain(DOMAIN)
                      .withName("TotalBytesUploaded")
+                     .build();
+
+        rateLimitedCalls
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                     .withDomain(DOMAIN)
+                     .withName("Throttled429")
                      .build();
     }
 
@@ -62,8 +69,7 @@ public class UploadSSTableMetrics
     {
         protected final MetricRegistry metricRegistry;
         public final String sstableComponent;
-        public final NamedMetric<DefaultSettableGauge<Integer>> rateLimitedCalls;
-        public final NamedMetric<DefaultSettableGauge<Integer>> diskUsageHigh;
+        public final NamedMetric<DefaultSettableGauge<Integer>> highDiskUsage;
         public final NamedMetric<DefaultSettableGauge<Long>> bytesUploaded;
 
         public UploadSSTableComponentMetrics(MetricRegistry metricRegistry, String sstableComponent)
@@ -78,13 +84,7 @@ public class UploadSSTableMetrics
 
             NamedMetric.Tag componentTag = NamedMetric.Tag.of("component", sstableComponent);
 
-            rateLimitedCalls
-            = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
-                         .withDomain(DOMAIN)
-                         .withName("Throttled429")
-                         .addTag(componentTag)
-                         .build();
-            diskUsageHigh
+            highDiskUsage
             = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                          .withDomain(DOMAIN)
                          .withName("DiskUsageHigh")

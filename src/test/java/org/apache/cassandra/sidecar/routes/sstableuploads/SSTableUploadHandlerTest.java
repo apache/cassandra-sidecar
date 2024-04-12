@@ -419,14 +419,14 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                 return;
             }
             UploadSSTableMetrics uploadMetrics = new InstanceMetricsImpl(registry(1)).uploadSSTable();
-            UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics = uploadMetrics.forComponent("db");
+            UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics = uploadMetrics.forComponent("Data.db");
             if (expectedRetCode == HttpResponseStatus.INSUFFICIENT_STORAGE.code())
             {
-                assertThat(componentMetrics.diskUsageHigh.metric.getValue()).isOne();
+                assertThat(componentMetrics.highDiskUsage.metric.getValue()).isOne();
             }
             if (expectedRetCode == HttpResponseStatus.TOO_MANY_REQUESTS.code())
             {
-                assertThat(componentMetrics.rateLimitedCalls.metric.getValue()).isOne();
+                assertThat(uploadMetrics.rateLimitedCalls.metric.getValue()).isOne();
             }
 
             if (responseValidator != null)
