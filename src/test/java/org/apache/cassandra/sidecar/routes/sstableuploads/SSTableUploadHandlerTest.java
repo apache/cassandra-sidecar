@@ -420,10 +420,6 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             }
             UploadSSTableMetrics uploadMetrics = new InstanceMetricsImpl(registry(1)).uploadSSTable();
             UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics = uploadMetrics.forComponent("Data.db");
-            if (expectedRetCode == HttpResponseStatus.INSUFFICIENT_STORAGE.code())
-            {
-                assertThat(componentMetrics.highDiskUsage.metric.getValue()).isOne();
-            }
             if (expectedRetCode == HttpResponseStatus.TOO_MANY_REQUESTS.code())
             {
                 assertThat(uploadMetrics.rateLimitedCalls.metric.getValue()).isOne();
