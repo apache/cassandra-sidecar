@@ -271,7 +271,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                      .resolve(uploadId)
                                      .resolve("ks")
                                      .resolve("tbl")
-                                     .resolve("without-md5.db");
+                                     .resolve("without-md5-Data.db");
 
             try
             {

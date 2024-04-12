@@ -123,7 +123,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         if (!limiter.tryAcquire())
         {
             String message = String.format("Concurrent upload limit (%d) exceeded", limiter.limit());
-            instanceMetrics.streamSSTable().rateLimitedCalls.metric.setValue(1);
+            instanceMetrics.uploadSSTable().rateLimitedCalls.metric.setValue(1);
             context.fail(wrapHttpException(HttpResponseStatus.TOO_MANY_REQUESTS, message));
             return;
         }
