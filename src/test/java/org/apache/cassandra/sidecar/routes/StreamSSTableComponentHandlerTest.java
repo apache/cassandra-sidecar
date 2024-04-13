@@ -109,8 +109,8 @@ public class StreamSSTableComponentHandlerTest
                       assertThat(response.statusCode()).isEqualTo(OK.code());
                       assertThat(response.bodyAsString()).isEqualTo("data");
                       assertThat(instanceMetrics(1).streamSSTable()
-                                                   .forComponent("Data.db").bytesStreamed.metric.getValue()).isEqualTo(4);
-                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamed.metric.getValue()).isEqualTo(4);
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
                       context.completeNow();
                   });
               })));
@@ -289,8 +289,8 @@ public class StreamSSTableComponentHandlerTest
                       assertThat(response.statusCode()).isEqualTo(OK.code());
                       assertThat(response.bodyAsString()).isEqualTo("data");
                       assertThat(instanceMetrics(1).streamSSTable()
-                                                   .forComponent("Data.db").bytesStreamed.metric.getValue()).isEqualTo(4);
-                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamed.metric.getValue()).isEqualTo(4);
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
                       context.completeNow();
                   });
               })));
@@ -352,8 +352,8 @@ public class StreamSSTableComponentHandlerTest
                       assertThat(response.statusCode()).isEqualTo(OK.code());
                       assertThat(response.bodyAsString()).isEqualTo("data");
                       assertThat(instanceMetrics(1).streamSSTable()
-                                                   .forComponent("Data.db").bytesStreamed.metric.getValue()).isEqualTo(4);
-                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamed.metric.getValue()).isEqualTo(4);
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
                       context.completeNow();
                   });
               })));
@@ -373,8 +373,8 @@ public class StreamSSTableComponentHandlerTest
                       assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
                       assertThat(response.bodyAsString()).isEqualTo("dat");
                       assertThat(instanceMetrics(1).streamSSTable()
-                                                   .forComponent("Data.db").bytesStreamed.metric.getValue()).isEqualTo(3);
-                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamed.metric.getValue()).isEqualTo(3);
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(3);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(3);
                       context.completeNow();
                   });
               })));
@@ -394,8 +394,8 @@ public class StreamSSTableComponentHandlerTest
                       assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
                       assertThat(response.bodyAsString()).isEqualTo("ta");
                       assertThat(instanceMetrics(1).streamSSTable()
-                                                   .forComponent("Data.db").bytesStreamed.metric.getValue()).isEqualTo(2);
-                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamed.metric.getValue()).isEqualTo(2);
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(2);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(2);
                       context.completeNow();
                   });
               })));
@@ -416,8 +416,8 @@ public class StreamSSTableComponentHandlerTest
                       .describedAs("Server should shrink the range to the file length")
                       .isEqualTo("4");
                       assertThat(instanceMetrics(1).streamSSTable()
-                                                   .forComponent("Data.db").bytesStreamed.metric.getValue()).isEqualTo(4);
-                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamed.metric.getValue()).isEqualTo(4);
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
                       context.completeNow();
                   });
               })));
@@ -450,8 +450,8 @@ public class StreamSSTableComponentHandlerTest
                       assertThat(response.statusCode()).isEqualTo(OK.code());
                       assertThat(response.bodyAsString()).isEqualTo("data");
                       assertThat(instanceMetrics(2).streamSSTable()
-                                                   .forComponent("Data.db").bytesStreamed.metric.getValue()).isEqualTo(4);
-                      assertThat(instanceMetrics(2).streamSSTable().totalBytesStreamed.metric.getValue()).isEqualTo(4);
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      assertThat(instanceMetrics(2).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
                       context.completeNow();
                   });
               })));

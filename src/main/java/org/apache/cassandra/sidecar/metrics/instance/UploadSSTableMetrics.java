@@ -23,6 +23,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.codahale.metrics.DefaultSettableGauge;
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
@@ -36,19 +37,18 @@ public class UploadSSTableMetrics
     public static final String DOMAIN = INSTANCE_PREFIX + ".UploadSSTable";
     protected final MetricRegistry metricRegistry;
     protected final Map<String, UploadSSTableComponentMetrics> uploadComponentMetrics = new ConcurrentHashMap<>();
-    public final NamedMetric<DefaultSettableGauge<Long>> totalBytesUploaded;
+    public final NamedMetric<Meter> totalBytesUploadedRate;
     public final NamedMetric<DefaultSettableGauge<Integer>> rateLimitedCalls;
 
     public UploadSSTableMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        totalBytesUploaded
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+        totalBytesUploadedRate
+        = NamedMetric.builder(metricRegistry::meter)
                      .withDomain(DOMAIN)
-                     .withName("TotalBytesUploaded")
+                     .withName("TotalBytesUploadedRate")
                      .build();
-
         rateLimitedCalls
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
@@ -69,7 +69,7 @@ public class UploadSSTableMetrics
     {
         protected final MetricRegistry metricRegistry;
         public final String sstableComponent;
-        public final NamedMetric<DefaultSettableGauge<Long>> bytesUploaded;
+        public final NamedMetric<Meter> bytesUploadedRate;
 
         public UploadSSTableComponentMetrics(MetricRegistry metricRegistry, String sstableComponent)
         {
@@ -82,10 +82,10 @@ public class UploadSSTableMetrics
             }
 
             NamedMetric.Tag componentTag = NamedMetric.Tag.of("component", sstableComponent);
-            bytesUploaded
-            = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+            bytesUploadedRate
+            = NamedMetric.builder(metricRegistry::meter)
                          .withDomain(DOMAIN)
-                         .withName("BytesUploaded")
+                         .withName("BytesUploadedRate")
                          .addTag(componentTag)
                          .build();
         }

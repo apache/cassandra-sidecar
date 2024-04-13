@@ -438,8 +438,8 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                 try
                 {
                     long expectedSize = Files.size(targetFilePath);
-                    assertThat(componentMetrics.bytesUploaded.metric.getValue()).isEqualTo(expectedSize);
-                    assertThat(uploadMetrics.totalBytesUploaded.metric.getValue()).isEqualTo(Files.size(targetFilePath));
+                    assertThat(componentMetrics.bytesUploadedRate.metric.getCount()).isEqualTo(expectedSize);
+                    assertThat(uploadMetrics.totalBytesUploadedRate.metric.getCount()).isEqualTo(Files.size(targetFilePath));
                 }
                 catch (Exception e)
                 {

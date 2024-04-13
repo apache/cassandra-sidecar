@@ -134,17 +134,14 @@ public class FileStreamer
             // Stream data if rate limiting is disabled or if we acquire
             LOGGER.debug("Streaming range {} for file {} to client {}. Instance: {}", range, filename,
                          response.remoteAddress(), response.host());
-            long startTimeSendFile = System.nanoTime();
             response.sendFile(filename, fileLength, range)
                     .onSuccess(v ->
                                {
                                    String component = parseSSTableComponent(filename);
-                                   long d = System.nanoTime() - startTimeSendFile;
-                                   streamSSTableMetrics.forComponent(component).sendFileLatency.metric.update(d, TimeUnit.NANOSECONDS);
                                    LOGGER.debug("Streamed file {} successfully to client {}. Instance: {}", filename,
                                                 response.remoteAddress(), response.host());
-                                   streamSSTableMetrics.forComponent(component).bytesStreamed.metric.setValue(range.length());
-                                   instanceMetrics.streamSSTable().totalBytesStreamed.metric.setValue(range.length());
+                                   streamSSTableMetrics.forComponent(component).bytesStreamedRate.metric.mark(range.length());
+                                   instanceMetrics.streamSSTable().totalBytesStreamedRate.metric.mark(range.length());
                                    promise.complete();
                                })
                     .onFailure(promise::fail);

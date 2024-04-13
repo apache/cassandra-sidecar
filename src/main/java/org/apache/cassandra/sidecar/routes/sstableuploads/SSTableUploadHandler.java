@@ -150,8 +150,8 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
             logger.info("Successfully uploaded SSTable component for request={}, remoteAddress={}, " +
                         "instance={}, sizeInBytes={}, serviceTimeMillis={}",
                         request, remoteAddress, host, fileProps.size(), serviceTimeMillis);
-            componentMetrics.bytesUploaded.metric.setValue(fileProps.size());
-            instanceMetrics.uploadSSTable().totalBytesUploaded.metric.setValue(fileProps.size());
+            componentMetrics.bytesUploadedRate.metric.mark(fileProps.size());
+            instanceMetrics.uploadSSTable().totalBytesUploadedRate.metric.mark(fileProps.size());
 
             context.json(new SSTableUploadResponse(request.uploadId(), fileProps.size(), serviceTimeMillis));
         })

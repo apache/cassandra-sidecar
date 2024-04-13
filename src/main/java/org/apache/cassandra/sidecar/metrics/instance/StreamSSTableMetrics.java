@@ -23,8 +23,8 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.codahale.metrics.DefaultSettableGauge;
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
@@ -37,17 +37,17 @@ public class StreamSSTableMetrics
     public static final String DOMAIN = INSTANCE_PREFIX + ".StreamSSTable";
     protected final MetricRegistry metricRegistry;
     protected final Map<String, StreamSSTableComponentMetrics> streamComponentMetrics = new ConcurrentHashMap<>();
-    public final NamedMetric<DefaultSettableGauge<Long>> totalBytesStreamed;
+    public final NamedMetric<Meter> totalBytesStreamedRate;
     public final NamedMetric<DefaultSettableGauge<Integer>> rateLimitedCalls;
 
     public StreamSSTableMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        totalBytesStreamed
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+        totalBytesStreamedRate
+        = NamedMetric.builder(metricRegistry::meter)
                      .withDomain(DOMAIN)
-                     .withName("TotalBytesStreamed")
+                     .withName("TotalBytesStreamedRate")
                      .build();
         rateLimitedCalls
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
@@ -69,8 +69,7 @@ public class StreamSSTableMetrics
     {
         protected final MetricRegistry metricRegistry;
         public final String sstableComponent;
-        public final NamedMetric<Timer> sendFileLatency;
-        public final NamedMetric<DefaultSettableGauge<Long>> bytesStreamed;
+        public final NamedMetric<Meter> bytesStreamedRate;
 
         public StreamSSTableComponentMetrics(MetricRegistry metricRegistry, String sstableComponent)
         {
@@ -84,12 +83,10 @@ public class StreamSSTableMetrics
 
             NamedMetric.Tag componentTag = NamedMetric.Tag.of("component", sstableComponent);
 
-            sendFileLatency
-            = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SendfileLatency").addTag(componentTag).build();
-            bytesStreamed
-            = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+            bytesStreamedRate
+            = NamedMetric.builder(metricRegistry::meter)
                          .withDomain(DOMAIN)
-                         .withName("BytesStreamed")
+                         .withName("BytesStreamedRate")
                          .addTag(componentTag)
                          .build();
         }
