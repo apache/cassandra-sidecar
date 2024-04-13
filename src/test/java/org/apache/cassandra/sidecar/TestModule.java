@@ -52,8 +52,8 @@ import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.RestoreJobConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SSTableUploadConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ThrottleConfigurationImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.stats.RestoreJobStats;
@@ -103,9 +103,7 @@ public class TestModule extends AbstractModule
                                        .replicationStrategy("SimpleStrategy")
                                        .build();
         ServiceConfiguration serviceConfiguration =
-        ServiceConfigurationImpl.builder()
-                                .host("127.0.0.1")
-                                .port(0) // let the test find an available port
+        TestServiceConfiguration.builder()
                                 .throttleConfiguration(throttleConfiguration)
                                 .schemaKeyspaceConfiguration(schemaKeyspaceConfiguration)
                                 .ssTableUploadConfiguration(uploadConfiguration)

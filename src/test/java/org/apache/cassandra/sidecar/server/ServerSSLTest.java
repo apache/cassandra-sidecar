@@ -54,9 +54,9 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.assertj.core.api.InstanceOfAssertFactories;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
@@ -184,10 +184,7 @@ class ServerSSLTest
                             .build();
 
         builder.sslConfiguration(ssl)
-               .serviceConfiguration(ServiceConfigurationImpl.builder()
-                                                             .host("127.0.0.1")
-                                                             .port(0)
-                                                             .build());
+               .serviceConfiguration(TestServiceConfiguration.newInstance());
         vertx = vertx();
         server = server();
 
@@ -207,10 +204,7 @@ class ServerSSLTest
                             .build();
 
         builder.sslConfiguration(ssl)
-               .serviceConfiguration(ServiceConfigurationImpl.builder()
-                                                             .host("127.0.0.1")
-                                                             .port(0)
-                                                             .build());
+               .serviceConfiguration(TestServiceConfiguration.newInstance());
         vertx = vertx();
         server = server();
 
@@ -231,10 +225,7 @@ class ServerSSLTest
                             .build();
 
         builder.sslConfiguration(ssl)
-               .serviceConfiguration(ServiceConfigurationImpl.builder()
-                                                             .host("127.0.0.1")
-                                                             .port(9043)
-                                                             .build());
+               .serviceConfiguration(TestServiceConfiguration.newInstance());
         vertx = vertx();
         server = server();
 
@@ -256,10 +247,7 @@ class ServerSSLTest
                             .build();
 
         builder.sslConfiguration(ssl)
-               .serviceConfiguration(ServiceConfigurationImpl.builder()
-                                                             .host("127.0.0.1")
-                                                             .port(0)
-                                                             .build());
+               .serviceConfiguration(TestServiceConfiguration.newInstance());
         vertx = vertx();
         server = server();
 
@@ -281,10 +269,7 @@ class ServerSSLTest
                             .build();
 
         builder.sslConfiguration(ssl)
-               .serviceConfiguration(ServiceConfigurationImpl.builder()
-                                                             .host("127.0.0.1")
-                                                             .port(0)
-                                                             .build());
+               .serviceConfiguration(TestServiceConfiguration.newInstance());
         vertx = vertx();
         server = server();
 
@@ -309,10 +294,7 @@ class ServerSSLTest
                             .build();
 
         builder.sslConfiguration(ssl)
-               .serviceConfiguration(ServiceConfigurationImpl.builder()
-                                                             .host("127.0.0.1")
-                                                             .port(0)
-                                                             .build());
+               .serviceConfiguration(TestServiceConfiguration.newInstance());
         vertx = vertx();
         server = server();
 
@@ -332,10 +314,7 @@ class ServerSSLTest
                             .build();
 
         builder.sslConfiguration(ssl)
-               .serviceConfiguration(ServiceConfigurationImpl.builder()
-                                                             .host("127.0.0.1")
-                                                             .port(0)
-                                                             .build());
+               .serviceConfiguration(TestServiceConfiguration.newInstance());
         vertx = vertx();
         server = server();
 
@@ -361,10 +340,7 @@ class ServerSSLTest
                             .build();
 
         builder.sslConfiguration(ssl)
-               .serviceConfiguration(ServiceConfigurationImpl.builder()
-                                                             .host("127.0.0.1")
-                                                             .port(9043)
-                                                             .build());
+               .serviceConfiguration(TestServiceConfiguration.newInstance());
         vertx = vertx();
         server = server();
 
@@ -401,12 +377,10 @@ class ServerSSLTest
 
         int serverVerticleInstances = 16;
         builder.sslConfiguration(ssl)
-               .serviceConfiguration(ServiceConfigurationImpl.builder()
-                                                             .host("127.0.0.1")
+               .serviceConfiguration(TestServiceConfiguration.builder()
                                                              // > 1 to ensure that hot reloading works for all
                                                              // the deployed servers on each verticle instance
                                                              .serverVerticleInstances(serverVerticleInstances)
-                                                             .port(9043)
                                                              .build());
         vertx = vertx();
 

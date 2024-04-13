@@ -35,7 +35,7 @@ import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SSTableImportConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -60,7 +60,7 @@ class SSTableImporterTest
     {
         vertx = Vertx.vertx();
         serviceConfiguration =
-        ServiceConfigurationImpl.builder()
+        TestServiceConfiguration.builder()
                                 .ssTableImportConfiguration(new SSTableImportConfigurationImpl(10))
                                 .build();
 
@@ -205,7 +205,7 @@ class SSTableImporterTest
     void testCancelImportSucceeds(VertxTestContext context)
     {
         serviceConfiguration =
-        ServiceConfigurationImpl.builder()
+        TestServiceConfiguration.builder()
                                 .ssTableImportConfiguration(new SSTableImportConfigurationImpl(500))
                                 .build();
 

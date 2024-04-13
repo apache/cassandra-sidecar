@@ -208,14 +208,15 @@ public class Server
     /**
      * Expose the port of the first deployed verticle for testing purposes
      *
-     * @return the port where the first verticle is deployed, or -1 if the server has not been deployed
+     * @return the port where the first verticle is deployed
+     * @throws IllegalStateException if the server has not been deployed
      */
     @VisibleForTesting
     public int actualPort()
     {
         if (!deployedServerVerticles.isEmpty())
             return deployedServerVerticles.get(0).actualPort();
-        return -1;
+        throw new IllegalStateException("No deployed server verticles. Maybe server failed to deploy due to port conflict");
     }
 
     protected Future<String> notifyServerStart(String deploymentId)
