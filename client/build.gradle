@@ -86,6 +86,7 @@ dependencies {
     testFixturesImplementation("org.assertj:assertj-core:3.24.2")
     testFixturesImplementation('org.mockito:mockito-core:4.10.0')
     testFixturesImplementation('com.squareup.okhttp3:mockwebserver:4.10.0')
+    testFixturesImplementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
     testFixturesCompileOnly(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
 }
 

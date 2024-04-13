@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.client;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,6 +35,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterEach;
@@ -41,6 +43,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import okhttp3.mockwebserver.MockResponse;
@@ -80,6 +83,9 @@ import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.JOB_ID_PATH_PARAM;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE_PATH_PARAM;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32_SEED;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -283,7 +289,7 @@ abstract class SidecarClientTest
         assertThat(result.keyspace()).isEqualTo("cycling");
         assertThat(result.schema()).isEqualTo("CREATE KEYSPACE sample_ks.sample_table ...");
 
-        validateResponseServed(ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM,
+        validateResponseServed(ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE.replaceAll(KEYSPACE_PATH_PARAM,
                                                                                "cycling"));
     }
 
@@ -312,7 +318,7 @@ abstract class SidecarClientTest
         assertThat(entry.fqdn()).isEqualTo("local");
         assertThat(entry.hostId()).isEqualTo("000");
 
-        validateResponseServed(ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM,
+        validateResponseServed(ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE.replaceAll(KEYSPACE_PATH_PARAM,
                                                                                  "cycling"));
     }
 
@@ -450,7 +456,7 @@ abstract class SidecarClientTest
         assertThat(instanceMetadata.datacenter()).isEqualTo("datacenter1");
 
         validateResponseServed(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE.replaceAll(
-        ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace));
+        KEYSPACE_PATH_PARAM, keyspace));
     }
 
     @Test
@@ -484,7 +490,7 @@ abstract class SidecarClientTest
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
         assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
-                                                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                                                 .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                                                 .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11")
                                                 + "?includeSecondaryIndexFiles=true");
@@ -522,7 +528,7 @@ abstract class SidecarClientTest
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
         assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
-                                                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                                                 .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                                                 .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11"));
     }
@@ -542,7 +548,7 @@ abstract class SidecarClientTest
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
         assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
-                                                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                                                 .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                                                 .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11"));
         assertThat(request.getMethod()).isEqualTo("DELETE");
@@ -562,7 +568,7 @@ abstract class SidecarClientTest
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
         assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
-                                                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                                                 .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                                                 .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11"));
         assertThat(request.getMethod()).isEqualTo("PUT");
@@ -582,7 +588,7 @@ abstract class SidecarClientTest
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
         String expected = ApiEndpointsV1.SNAPSHOTS_ROUTE
-                          .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                          .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                           .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                           .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11") + "?ttl=2d";
         assertThat(request.getPath()).isEqualTo(expected);
@@ -634,7 +640,7 @@ abstract class SidecarClientTest
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
         assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_IMPORT_ROUTE
-                                                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                                                 .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                                                 .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000"));
         assertThat(request.getMethod()).isEqualTo("PUT");
@@ -670,7 +676,7 @@ abstract class SidecarClientTest
         assertThat(mockWebServer.getRequestCount()).isEqualTo(5);
         RecordedRequest request = mockWebServer.takeRequest();
         assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_IMPORT_ROUTE
-                                                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                                                 .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                                                 .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000"));
         assertThat(request.getMethod()).isEqualTo("PUT");
@@ -715,7 +721,7 @@ abstract class SidecarClientTest
             assertThat(request.getPath())
             .isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
                        .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
-                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                        .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
             assertThat(request.getMethod()).isEqualTo("PUT");
@@ -748,7 +754,7 @@ abstract class SidecarClientTest
             assertThat(request.getPath())
             .isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
                        .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
-                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                        .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
             assertThat(request.getMethod()).isEqualTo("PUT");
@@ -782,7 +788,7 @@ abstract class SidecarClientTest
             assertThat(request.getPath())
             .isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
                        .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
-                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                        .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
             assertThat(request.getMethod()).isEqualTo("PUT");
@@ -817,7 +823,7 @@ abstract class SidecarClientTest
             assertThat(request.getPath())
             .isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
                        .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
-                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                        .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
             assertThat(request.getMethod()).isEqualTo("PUT");
@@ -895,7 +901,7 @@ abstract class SidecarClientTest
             RecordedRequest request = server.takeRequest();
             assertThat(request.getPath())
             .isEqualTo(ApiEndpointsV1.COMPONENTS_ROUTE
-                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                        .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
                        .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db"));
@@ -974,7 +980,7 @@ abstract class SidecarClientTest
             RecordedRequest request = server.takeRequest();
             assertThat(request.getPath())
             .isEqualTo(ApiEndpointsV1.COMPONENTS_ROUTE
-                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                        .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
                        .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db"));
@@ -1057,7 +1063,7 @@ abstract class SidecarClientTest
             RecordedRequest request = server.takeRequest();
             assertThat(request.getPath())
             .isEqualTo(ApiEndpointsV1.COMPONENTS_ROUTE
-                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                        .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
                        .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db"));
@@ -1126,7 +1132,7 @@ abstract class SidecarClientTest
             RecordedRequest request3 = server.takeRequest();
             assertThat(request3.getPath())
             .isEqualTo(ApiEndpointsV1.COMPONENTS_ROUTE
-                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, "cycling")
+                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
                        .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
                        .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db"));
@@ -1206,13 +1212,14 @@ abstract class SidecarClientTest
     }
 
     @Test
-    void testAcceptCreateRestoreJobRequest()
+    void testAcceptCreateRestoreJobRequest() throws Exception
     {
+        String jobIdStr = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
         enqueue(new MockResponse()
                 .setResponseCode(OK.code())
-                .setBody("{\"jobId\":\"8e5799a4-d277-11ed-8d85-6916bb9b8056\",\"status\":\"CREATED\"}"));
+                .setBody("{\"jobId\":\"" + jobIdStr + "\",\"status\":\"CREATED\"}"));
 
-        UUID jobId = UUID.fromString("8e5799a4-d277-11ed-8d85-6916bb9b8056");
+        UUID jobId = UUID.fromString(jobIdStr);
         long expireAt = System.currentTimeMillis() + 10000;
         RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
         CreateRestoreJobRequestPayload requestPayload = CreateRestoreJobRequestPayload.builder(secrets, expireAt)
@@ -1226,17 +1233,30 @@ abstract class SidecarClientTest
         assertThat(responsePayload).isNotNull();
         assertThat(responsePayload.jobId()).isEqualTo(jobId);
         assertThat(responsePayload.status()).isEqualTo("CREATED");
+
+        ObjectMapper mapper = new ObjectMapper();
+        String expectedReqBodyString = mapper.writeValueAsString(requestPayload);
+        validateResponseServed(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE
+                               .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                               .replaceAll(TABLE_PATH_PARAM, "rank_by_year_and_name")
+                               .replaceAll(JOB_ID_PATH_PARAM, jobIdStr),
+                               recordedRequest -> {
+                                   String reqBodyString = recordedRequest.getBody()
+                                                                         .readString(Charset.defaultCharset());
+                                   assertThat(reqBodyString).isEqualTo(expectedReqBodyString);
+                               });
     }
 
     @Test
-    void testCreateRestoreJobShouldNotRetryOnDifferentHostWithBadRequest()
+    void testCreateRestoreJobShouldNotRetryOnDifferentHostWithBadRequest() throws Exception
     {
+        String jobIdStr = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
         enqueue(new MockResponse()
                 .setResponseCode(BAD_REQUEST.code())
                 .setBody("{\"status\":\"Fail\"," +
                          "\"message\":\"Error while decoding values, check your request body\"}"));
 
-        UUID jobId = UUID.fromString("8e5799a4-d277-11ed-8d85-6916bb9b8056");
+        UUID jobId = UUID.fromString(jobIdStr);
         long expireAt = System.currentTimeMillis() + 10000;
         RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
         CreateRestoreJobRequestPayload requestPayload = CreateRestoreJobRequestPayload.builder(secrets, expireAt)
@@ -1249,6 +1269,18 @@ abstract class SidecarClientTest
                              .withCauseInstanceOf(RetriesExhaustedException.class)
                              .withMessageContaining("Unable to complete request '/api/v1/keyspaces/" +
                                                     "badkeyspace/tables/bad_table/restore-jobs' after 1 attempt");
+
+        ObjectMapper mapper = new ObjectMapper();
+        String expectedReqBodyString = mapper.writeValueAsString(requestPayload);
+        validateResponseServed(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE
+                               .replaceAll(KEYSPACE_PATH_PARAM, "badkeyspace")
+                               .replaceAll(TABLE_PATH_PARAM, "bad_table")
+                               .replaceAll(JOB_ID_PATH_PARAM, jobIdStr),
+                               recordedRequest -> {
+                                   String reqBodyString = recordedRequest.getBody()
+                                                                         .readString(Charset.defaultCharset());
+                                   assertThat(reqBodyString).isEqualTo(expectedReqBodyString);
+                               });
     }
 
     private void enqueue(MockResponse response)
@@ -1261,12 +1293,19 @@ abstract class SidecarClientTest
 
     private void validateResponseServed(String expectedEndpointPath) throws InterruptedException
     {
+        validateResponseServed(expectedEndpointPath, req -> { });
+    }
+
+    private void validateResponseServed(String expectedEndpointPath,
+                                        Consumer<RecordedRequest> serverReceivedRequestVerifier) throws InterruptedException
+    {
         for (MockWebServer server : servers)
         {
             if (server.getRequestCount() > 0)
             {
                 assertThat(server.getRequestCount()).isEqualTo(1);
                 RecordedRequest request = server.takeRequest();
+                serverReceivedRequestVerifier.accept(request);
                 assertThat(request.getPath()).isEqualTo(expectedEndpointPath);
                 return;
             }

@@ -29,7 +29,7 @@ import org.apache.cassandra.sidecar.common.data.SSTableImportResponse;
 /**
  * Represents a request to import SSTable components previously uploaded for an upload identifier
  */
-public class ImportSSTableRequest extends DecodableRequest<SSTableImportResponse>
+public class ImportSSTableRequest extends JsonRequest<SSTableImportResponse>
 {
     /**
      * Constructs a decodable request with the provided {@code requestURI}

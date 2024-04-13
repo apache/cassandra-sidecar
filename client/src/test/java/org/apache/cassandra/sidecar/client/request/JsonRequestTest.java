@@ -18,27 +18,29 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
+
+import org.junit.jupiter.api.Test;
+
 import io.netty.handler.codec.http.HttpMethod;
-import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.NodeSettings;
 
-/**
- * Represents a request to retrieve information from the token-range replicas endpoint
- */
-public class TokenRangeReplicasRequest extends JsonRequest<TokenRangeReplicasResponse>
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+class JsonRequestTest
 {
-    /**
-     * Constructs a new request to retrieve information by keyspace from token-range replicas endpoint
-     * @param keyspace the keyspace for which the token range replicas will be retrieved.
-     */
-    public TokenRangeReplicasRequest(String keyspace)
+    @Test
+    void testHeadersAreImmutable()
     {
-        super(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace));
-    }
+        JsonRequest<NodeSettings> instance = new JsonRequest<NodeSettings>("https://cassandra-sidecar.com/api/test")
+        {
+            @Override
+            public HttpMethod method()
+            {
+                return HttpMethod.GET;
+            }
+        };
 
-    @Override
-    public HttpMethod method()
-    {
-        return HttpMethod.GET;
+        assertThatExceptionOfType(UnsupportedOperationException.class)
+        .isThrownBy(() -> instance.headers().put("not", "allowed"));
     }
 }

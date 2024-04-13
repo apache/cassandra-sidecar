@@ -26,8 +26,7 @@ import org.apache.cassandra.sidecar.common.data.CreateRestoreJobResponsePayload;
 /**
  * Represents a request to create a restore job
  */
-public class CreateRestoreJobRequest extends DecodableRequest<CreateRestoreJobResponsePayload>
-implements JsonPayloadRequest
+public class CreateRestoreJobRequest extends JsonRequest<CreateRestoreJobResponsePayload>
 {
     private final CreateRestoreJobRequestPayload requestPayload;
 
@@ -51,7 +50,7 @@ implements JsonPayloadRequest
     }
 
     @Override
-    public Object json()
+    public Object requestBody()
     {
         return requestPayload;
     }

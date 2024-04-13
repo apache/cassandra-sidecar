@@ -27,7 +27,7 @@ import org.apache.cassandra.sidecar.common.data.RestoreJobSummaryResponsePayload
 /**
  * Represents a request to retrieve the summary of a restore job
  */
-public class RestoreJobSummaryRequest extends DecodableRequest<RestoreJobSummaryResponsePayload>
+public class RestoreJobSummaryRequest extends JsonRequest<RestoreJobSummaryResponsePayload>
 {
     /**
      * Constructs a Sidecar request with the given {@code requestURI}. Defaults to {@code ssl} enabled.

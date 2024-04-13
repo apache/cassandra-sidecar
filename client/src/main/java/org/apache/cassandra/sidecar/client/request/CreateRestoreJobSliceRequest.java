@@ -27,7 +27,7 @@ import org.apache.cassandra.sidecar.common.data.CreateSliceRequestPayload;
 /**
  * Represents a request to create a restore job slice
  */
-public class CreateRestoreJobSliceRequest extends Request implements JsonPayloadRequest
+public class CreateRestoreJobSliceRequest extends Request
 {
     private final CreateSliceRequestPayload payload;
 
@@ -59,7 +59,7 @@ public class CreateRestoreJobSliceRequest extends Request implements JsonPayload
     }
 
     @Override
-    public Object json()
+    public Object requestBody()
     {
         return payload;
     }

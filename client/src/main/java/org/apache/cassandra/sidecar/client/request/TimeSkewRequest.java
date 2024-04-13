@@ -25,7 +25,7 @@ import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
 /**
  * Represents a request to retrieve information from the time skew endpoint
  */
-public class TimeSkewRequest extends DecodableRequest<TimeSkewResponse>
+public class TimeSkewRequest extends JsonRequest<TimeSkewResponse>
 {
     /**
      * Constructs a new request to retrieve information from the time skew endpoint

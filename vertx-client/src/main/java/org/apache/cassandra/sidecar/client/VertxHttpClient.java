@@ -130,22 +130,29 @@ public class VertxHttpClient implements HttpClient
 
     protected CompletableFuture<HttpResponse> executeInternal(SidecarInstance sidecarInstance, RequestContext context)
     {
-        HttpRequest<Buffer> vertxRequest = vertxRequest(sidecarInstance, context);
-        Promise<HttpResponse> promise = Promise.promise();
-        vertxRequest.ssl(config.ssl())
-                    .timeout(config.timeoutMillis())
-                    .send()
-                    .onFailure(promise::fail)
-                    .onSuccess(response -> {
-                        byte[] raw = response.body() != null ? response.body().getBytes() : null;
-                        promise.complete(new HttpResponseImpl(response.statusCode(),
+        Future<HttpRequest<Buffer>> future = Future.future(promise -> promise.complete(vertxRequest(sidecarInstance, context)
+                                                                                       .ssl(config.ssl())
+                                                                                       .timeout(config.timeoutMillis())));
+
+        return future
+               .compose(vertxRequest -> {
+                   Request request = context.request();
+                   if (request.requestBody() != null)
+                   {
+                       return vertxRequest.sendJson(request.requestBody());
+                   }
+                   return vertxRequest.send();
+               })
+               .map(response -> {
+                   byte[] raw = response.body() != null ? response.body().getBytes() : null;
+                   return (HttpResponse) new HttpResponseImpl(response.statusCode(),
                                                               response.statusMessage(),
                                                               raw,
                                                               mapHeaders(response.headers()),
                                                               sidecarInstance
-                        ));
-                    });
-        return promise.future().toCompletionStage().toCompletableFuture();
+                   );
+               })
+               .toCompletionStage().toCompletableFuture();
     }
 
     protected CompletableFuture<HttpResponse> executeUploadFileInternal(SidecarInstance sidecarInstance,

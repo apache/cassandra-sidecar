@@ -25,7 +25,7 @@ import org.apache.cassandra.sidecar.common.data.HealthResponse;
 /**
  * Represents a request to retrieve the connectivity health checks performed against the Cassandra native protocol
  */
-public class CassandraNativeHealthRequest extends DecodableRequest<HealthResponse>
+public class CassandraNativeHealthRequest extends JsonRequest<HealthResponse>
 {
     /**
      * Constructs a request to retrieve the Cassandra native health

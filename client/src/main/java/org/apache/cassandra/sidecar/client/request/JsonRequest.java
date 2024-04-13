@@ -18,53 +18,36 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
-import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
- * A request that can decode to the type {@code <T>}
+ * Json request that returns json response
  *
- * @param <T> the type to decode
+ * @param <T> response type
  */
-public abstract class DecodableRequest<T> extends Request
+public abstract class JsonRequest<T> extends Request
 {
-    static final ObjectMapper MAPPER = new ObjectMapper()
-                                       // ignore all the properties that are not declared
-                                       .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    private final JavaType javaType = MAPPER.constructType(((ParameterizedType) this.getClass().getGenericSuperclass())
-                                                           .getActualTypeArguments()[0]);
+    private final JsonResponseBytesDecoder<T> responseDecoder;
 
     /**
      * Constructs a decodable request with the provided {@code requestURI}
      *
      * @param requestURI the URI of the request
      */
-    protected DecodableRequest(String requestURI)
+    protected JsonRequest(String requestURI)
     {
         super(requestURI);
+        Class<T> type = (Class<T>) ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        this.responseDecoder = new JsonResponseBytesDecoder<>(type);
     }
 
-    /**
-     * Decodes the provided {@code bytes} to an instance of the type {@code <T>}
-     *
-     * @param bytes the raw bytes of the response
-     * @return the decoded instance for the given {@code bytes}
-     * @throws IOException when the decoder is unable to decode successfully
-     */
-    public T decode(byte[] bytes) throws IOException
+    @Override
+    public ResponseBytesDecoder<T> responseBytesDecoder()
     {
-        if (bytes == null)
-        {
-            return null;
-        }
-        return MAPPER.readValue(bytes, javaType);
+        return responseDecoder;
     }
 
     @Override

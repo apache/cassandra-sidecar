@@ -18,13 +18,20 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
+import java.io.IOException;
+
 /**
- * A request that contains json payload
+ * Decode response bytes into given java type {@code <T>}
+ * @param <T> expected java type
  */
-public interface JsonPayloadRequest
+public interface ResponseBytesDecoder<T>
 {
     /**
-     * @return the JSON payload for the request
+     * Decodes the provided {@code bytes} to an instance of the type {@code <T>}
+     *
+     * @param bytes the raw bytes of the response
+     * @return the decoded instance for the given {@code bytes}, or null for null input
+     * @throws IOException when the decoder is unable to decode successfully
      */
-    Object json();
+    T decode(byte[] bytes) throws IOException;
 }

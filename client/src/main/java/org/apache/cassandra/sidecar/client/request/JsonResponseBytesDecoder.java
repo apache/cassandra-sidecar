@@ -18,27 +18,34 @@
 
 package org.apache.cassandra.sidecar.client.request;
 
-import io.netty.handler.codec.http.HttpMethod;
-import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
+import java.io.IOException;
+
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Represents a request to retrieve information from the token-range replicas endpoint
+ * Decoder for json response body bytes
+ * @param <T> expected java type
  */
-public class TokenRangeReplicasRequest extends JsonRequest<TokenRangeReplicasResponse>
+public class JsonResponseBytesDecoder<T> implements ResponseBytesDecoder<T>
 {
-    /**
-     * Constructs a new request to retrieve information by keyspace from token-range replicas endpoint
-     * @param keyspace the keyspace for which the token range replicas will be retrieved.
-     */
-    public TokenRangeReplicasRequest(String keyspace)
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+                                       // ignore all the properties that are not declared
+                                       .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final Class<T> type;
+
+    public JsonResponseBytesDecoder(Class<T> type)
     {
-        super(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace));
+        this.type = type;
     }
 
     @Override
-    public HttpMethod method()
+    public T decode(byte[] bytes) throws IOException
     {
-        return HttpMethod.GET;
+        if (bytes == null)
+        {
+            return null;
+        }
+        return MAPPER.readValue(bytes, type);
     }
 }
