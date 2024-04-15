@@ -43,31 +43,32 @@ public class MetricUtils
     public static String parseSSTableComponent(String filename)
     {
         Objects.requireNonNull(filename, "Filename can not be null for SSTable component parsing");
-        if (filename.endsWith(DATA))
+        String trimmedFilename = filename.trim();
+        if (trimmedFilename.endsWith(DATA))
         {
             return DATA;
         }
-        if (filename.endsWith(COMPRESSION))
+        if (trimmedFilename.endsWith(COMPRESSION))
         {
             return COMPRESSION;
         }
-        if (filename.endsWith(DIGEST))
+        if (trimmedFilename.endsWith(DIGEST))
         {
             return DIGEST;
         }
-        if (filename.endsWith(FILTER))
+        if (trimmedFilename.endsWith(FILTER))
         {
             return FILTER;
         }
-        if (filename.endsWith(INDEX))
+        if (trimmedFilename.endsWith(INDEX))
         {
             return INDEX;
         }
-        if (filename.endsWith(STATISTICS))
+        if (trimmedFilename.endsWith(STATISTICS))
         {
             return STATISTICS;
         }
-        if (filename.endsWith(SUMMARY))
+        if (trimmedFilename.endsWith(SUMMARY))
         {
             return SUMMARY;
         }
