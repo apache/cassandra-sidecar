@@ -37,8 +37,8 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -67,9 +67,7 @@ public class IntegrationTestModule extends AbstractModule
     public SidecarConfiguration configuration()
     {
         ServiceConfiguration conf
-        = ServiceConfigurationImpl.builder()
-                                  .host("127.0.0.1")
-                                  .port(0) // let the test find an available port
+        = TestServiceConfiguration.builder()
                                   .schemaKeyspaceConfiguration(SchemaKeyspaceConfigurationImpl.builder()
                                                                                               .isEnabled(true)
                                                                                               .build())

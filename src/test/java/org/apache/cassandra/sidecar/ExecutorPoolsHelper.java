@@ -27,7 +27,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.WorkerPoolConfigurationImpl;
 
 import static org.apache.cassandra.sidecar.config.ServiceConfiguration.INTERNAL_POOL;
@@ -41,7 +41,7 @@ public class ExecutorPoolsHelper
     public static ExecutorPools createdSharedTestPool(Vertx vertx)
     {
         ServiceConfiguration serviceConfiguration
-        = ServiceConfigurationImpl.builder()
+        = TestServiceConfiguration.builder()
                                   .workerPoolsConfiguration(buildTestWorkerPoolConfiguration())
                                   .build();
         return new ExecutorPools(vertx, serviceConfiguration);

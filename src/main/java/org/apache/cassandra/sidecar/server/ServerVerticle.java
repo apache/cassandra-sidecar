@@ -131,13 +131,14 @@ public class ServerVerticle extends AbstractVerticle
     }
 
     /**
-     * @return the actual port of the first deployed server, or -1 if no servers are deployed
+     * @return the actual port of the first deployed server
+     * @throws IllegalStateException if no servers are deployed
      */
     @VisibleForTesting
     int actualPort()
     {
         if (deployedServers != null && !deployedServers.isEmpty())
             return deployedServers.get(0).actualPort();
-        return -1;
+        throw new IllegalStateException("No deployed server. Maybe server failed to deploy due to port conflict");
     }
 }

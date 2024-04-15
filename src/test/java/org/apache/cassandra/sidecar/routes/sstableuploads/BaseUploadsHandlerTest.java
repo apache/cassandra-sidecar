@@ -57,8 +57,8 @@ import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
@@ -95,8 +95,6 @@ class BaseUploadsHandlerTest
     protected SidecarRateLimiter ingressFileRateLimiter;
     protected CassandraTableOperations mockCFOperations;
 
-
-
     @BeforeEach
     void setup() throws InterruptedException, IOException
     {
@@ -117,7 +115,7 @@ class BaseUploadsHandlerTest
         when(trafficShapingConfiguration.inboundGlobalFileBandwidthBytesPerSecond())
         .thenReturn(DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT);
         ServiceConfiguration serviceConfiguration =
-        ServiceConfigurationImpl.builder()
+        TestServiceConfiguration.builder()
                                 .requestIdleTimeoutMillis(500)
                                 .requestTimeoutMillis(TimeUnit.SECONDS.toMillis(30))
                                 .ssTableUploadConfiguration(mockSSTableUploadConfiguration)
@@ -240,7 +238,7 @@ class BaseUploadsHandlerTest
 
         public TestCassandraAdapterDelegate()
         {
-            super(Vertx.vertx(), 1, null, null, null, null, null, "localhost", 9043);
+            super(Vertx.vertx(), 1, null, null, null, null, null, "localhost", 9042);
         }
 
         @Override

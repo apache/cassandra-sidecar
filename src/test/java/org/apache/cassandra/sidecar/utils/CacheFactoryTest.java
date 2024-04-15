@@ -36,7 +36,7 @@ import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SSTableImportConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -63,7 +63,7 @@ class CacheFactoryTest
         SSTableImportConfiguration ssTableImportConfiguration =
         new SSTableImportConfigurationImpl(ssTableImportCacheConfiguration);
         ServiceConfiguration serviceConfiguration =
-        ServiceConfigurationImpl.builder()
+        TestServiceConfiguration.builder()
                                 .ssTableImportConfiguration(ssTableImportConfiguration)
                                 .build();
         SSTableImporter mockSSTableImporter = mock(SSTableImporter.class);
