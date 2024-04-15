@@ -22,6 +22,7 @@ import java.util.Objects;
 
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
+import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
@@ -35,8 +36,8 @@ public class SSTableImportMetrics
     protected final MetricRegistry metricRegistry;
     public final NamedMetric<DefaultSettableGauge<Integer>> cassandraUnavailable;
     public final NamedMetric<DefaultSettableGauge<Integer>> pendingImports;
-    public final NamedMetric<DefaultSettableGauge<Integer>> successfulImports;
-    public final NamedMetric<DefaultSettableGauge<Integer>> failedImports;
+    public final NamedMetric<DeltaGauge> successfulImports;
+    public final NamedMetric<DeltaGauge> failedImports;
 
     public SSTableImportMetrics(MetricRegistry metricRegistry)
     {
@@ -53,12 +54,12 @@ public class SSTableImportMetrics
                      .withName("PendingImports")
                      .build();
         successfulImports
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("SuccessfulImports")
                      .build();
         failedImports
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("FailedImports")
                      .build();

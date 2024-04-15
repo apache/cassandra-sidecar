@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -201,6 +202,7 @@ public class SSTableImporter
     {
         int successCount = 0, failureCount = 0;
         boolean recorded = false;
+        InstanceMetrics instanceMetrics = null;
         while (!queue.isEmpty())
         {
             LOGGER.info("Starting SSTable import session");
@@ -210,9 +212,14 @@ public class SSTableImporter
 
             InstanceMetadata instance = metadataFetcher.instance(options.host);
             CassandraAdapterDelegate delegate = instance.delegate();
+            if (instanceMetrics == null)
+            {
+                instanceMetrics = instance.metrics();
+            }
+
             if (delegate == null)
             {
-                instance.metrics().sstableImport().cassandraUnavailable.metric.setValue(1);
+                instanceMetrics.sstableImport().cassandraUnavailable.metric.setValue(1);
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
                 continue;
             }
@@ -250,7 +257,6 @@ public class SSTableImporter
                     if (!failedDirectories.isEmpty())
                     {
                         failureCount++;
-                        instance.metrics().sstableImport().failedImports.metric.setValue(1);
                         LOGGER.error("Failed to import SSTables with options={}, serviceTimeMillis={}, " +
                                      "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos),
                                      failedDirectories);
@@ -260,7 +266,6 @@ public class SSTableImporter
                     else
                     {
                         successCount++;
-                        instance.metrics().sstableImport().successfulImports.metric.setValue(1);
                         LOGGER.info("Successfully imported SSTables with options={}, serviceTimeMillis={}",
                                     options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
                         promise.complete();
@@ -270,7 +275,6 @@ public class SSTableImporter
                 catch (Exception exception)
                 {
                     failureCount++;
-                    instance.metrics().sstableImport().failedImports.metric.setValue(1);
                     LOGGER.error("Failed to import SSTables with options={}", options, exception);
                     promise.fail(exception);
                 }
@@ -281,6 +285,8 @@ public class SSTableImporter
         {
             LOGGER.info("Finished SSTable import session with successCount={}, failureCount={}",
                         successCount, failureCount);
+            instanceMetrics.sstableImport().successfulImports.metric.update(successCount);
+            instanceMetrics.sstableImport().failedImports.metric.update(failureCount);
         }
     }
 

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.utils;
 
 import java.util.Collections;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -116,6 +117,15 @@ class SSTableImporterTest
                                        mockUploadPathBuilder);
     }
 
+    @AfterEach
+    void clear()
+    {
+        registry().removeMatching((name, metric) -> true);
+        registry(1).removeMatching((name, metric) -> true);
+        registry(2).removeMatching((name, metric) -> true);
+        registry(3).removeMatching((name, metric) -> true);
+    }
+
     @Test
     void testImportSucceeds(VertxTestContext context)
     {
@@ -135,7 +145,7 @@ class SSTableImporterTest
             }
             verify(mockTableOperations1, times(1))
             .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
-            loopAssert(1, () -> {
+            vertx.setTimer(100, handle -> {
                 assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
                 assertThat(instanceMetrics(1).sstableImport().successfulImports.metric.getValue()).isOne();
                 context.completeNow();
@@ -195,7 +205,7 @@ class SSTableImporterTest
             {
                 assertThat(queue).isEmpty();
             }
-            loopAssert(1, () -> {
+            vertx.setTimer(100, v -> {
                 assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
                 assertThat(instanceMetrics(1).sstableImport().failedImports.metric.getValue()).isOne();
                 context.completeNow();
@@ -225,7 +235,7 @@ class SSTableImporterTest
             {
                 assertThat(queue).isEmpty();
             }
-            loopAssert(1, () -> {
+            vertx.setTimer(100, v -> {
                 assertThat(instanceMetrics(2).sstableImport().pendingImports.metric.getValue()).isOne();
                 assertThat(instanceMetrics(2).sstableImport().failedImports.metric.getValue()).isOne();
                 context.completeNow();
