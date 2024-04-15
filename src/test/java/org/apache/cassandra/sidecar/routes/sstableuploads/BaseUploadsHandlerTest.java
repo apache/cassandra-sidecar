@@ -238,7 +238,7 @@ class BaseUploadsHandlerTest
 
         public TestCassandraAdapterDelegate()
         {
-            super(Vertx.vertx(), 1, null, null, null, null, null, "localhost", 9043);
+            super(Vertx.vertx(), 1, null, null, null, null, null, "localhost", 9042);
         }
 
         @Override
