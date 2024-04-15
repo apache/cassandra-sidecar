@@ -45,7 +45,7 @@ public class SSTableImportMetrics
         cassandraUnavailable
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("CassandraUnavailable503")
+                     .withName("CassandraUnavailable")
                      .build();
         pendingImports
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))

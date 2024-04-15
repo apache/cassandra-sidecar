@@ -52,7 +52,7 @@ public class StreamSSTableMetrics
         rateLimitedCalls
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)
-                     .withName("Throttled429")
+                     .withName("Throttled")
                      .build();
     }
 
