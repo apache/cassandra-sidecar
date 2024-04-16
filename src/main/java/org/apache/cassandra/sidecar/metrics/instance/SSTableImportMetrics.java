@@ -34,7 +34,6 @@ public class SSTableImportMetrics
 {
     public static final String DOMAIN = INSTANCE_PREFIX + ".SSTableImport";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<DefaultSettableGauge<Integer>> cassandraUnavailable;
     public final NamedMetric<DefaultSettableGauge<Integer>> pendingImports;
     public final NamedMetric<DeltaGauge> successfulImports;
     public final NamedMetric<DeltaGauge> failedImports;
@@ -43,11 +42,6 @@ public class SSTableImportMetrics
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        cassandraUnavailable
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
-                     .withDomain(DOMAIN)
-                     .withName("CassandraUnavailable")
-                     .build();
         pendingImports
         = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
                      .withDomain(DOMAIN)

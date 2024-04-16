@@ -422,7 +422,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics = uploadMetrics.forComponent("Data.db");
             if (expectedRetCode == HttpResponseStatus.TOO_MANY_REQUESTS.code())
             {
-                assertThat(uploadMetrics.rateLimitedCalls.metric.getValue()).isOne();
+                assertThat(uploadMetrics.throttled.metric.getValue()).isOne();
             }
 
             if (responseValidator != null)

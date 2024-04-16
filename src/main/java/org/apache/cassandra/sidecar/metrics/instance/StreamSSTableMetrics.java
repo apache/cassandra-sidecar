@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
@@ -38,7 +39,7 @@ public class StreamSSTableMetrics
     protected final MetricRegistry metricRegistry;
     protected final Map<String, StreamSSTableComponentMetrics> streamComponentMetrics = new ConcurrentHashMap<>();
     public final NamedMetric<Meter> totalBytesStreamedRate;
-    public final NamedMetric<DefaultSettableGauge<Integer>> rateLimitedCalls;
+    public final NamedMetric<DeltaGauge> throttled;
 
     public StreamSSTableMetrics(MetricRegistry metricRegistry)
     {
@@ -49,8 +50,8 @@ public class StreamSSTableMetrics
                      .withDomain(DOMAIN)
                      .withName("TotalBytesStreamedRate")
                      .build();
-        rateLimitedCalls
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        throttled
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("Throttled")
                      .build();

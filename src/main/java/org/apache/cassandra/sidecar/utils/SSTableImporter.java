@@ -219,7 +219,7 @@ public class SSTableImporter
 
             if (delegate == null)
             {
-                instanceMetrics.sstableImport().cassandraUnavailable.metric.setValue(1);
+                failureCount++;
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
                 continue;
             }
@@ -234,7 +234,7 @@ public class SSTableImporter
             TableOperations tableOperations = delegate.tableOperations();
             if (tableOperations == null)
             {
-                instance.metrics().sstableImport().cassandraUnavailable.metric.setValue(1);
+                failureCount++;
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
             }
             else

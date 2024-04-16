@@ -100,7 +100,7 @@ public class ThrottleTest
 
         HttpResponse response = blockingClientRequest(testRoute);
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TOO_MANY_REQUESTS.code());
-        assertThat(streamSSTableMetrics.rateLimitedCalls.metric.getValue()).isGreaterThanOrEqualTo(1);
+        assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(1);
 
         long secsToWait = Long.parseLong(response.getHeader("Retry-After"));
         Thread.sleep(SECONDS.toMillis(secsToWait));
