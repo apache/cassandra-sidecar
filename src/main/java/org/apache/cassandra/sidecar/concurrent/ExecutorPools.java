@@ -23,7 +23,7 @@ import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.metrics.ResourceMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 /**
  * Manages dedicated worker pools to schedule and execute _blocking_ tasks to avoid blocking netty eventloop.
@@ -44,7 +44,7 @@ public class ExecutorPools
     }
 
     @Inject
-    public ExecutorPools(Vertx vertx, ServiceConfiguration configuration, ResourceMetrics metrics)
+    public ExecutorPools(Vertx vertx, ServiceConfiguration configuration, SidecarMetrics metrics)
     {
         this.taskExecutors
         = new TaskExecutorPool.ServiceTaskExecutorPool(vertx, configuration.serverWorkerPoolConfiguration(), metrics);

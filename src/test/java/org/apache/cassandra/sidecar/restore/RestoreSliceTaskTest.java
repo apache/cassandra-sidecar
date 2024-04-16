@@ -49,10 +49,13 @@ import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceRestoreMetrics;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
@@ -72,8 +75,7 @@ class RestoreSliceTaskTest
     private StorageClient mockStorageClient;
     private SSTableImporter mockSSTableImporter;
     private TaskExecutorPool executorPool;
-    private RestoreMetrics restoreMetrics;
-    private InstanceMetrics instanceMetrics;
+    private SidecarMetrics metrics;
     private TestRestoreSliceAccessor sliceDatabaseAccessor;
     private RestoreJobUtil util;
 
@@ -86,12 +88,17 @@ class RestoreSliceTaskTest
         when(mockSlice.key()).thenReturn("storage-key");
         InstanceMetadata instance = mock(InstanceMetadata.class);
         when(instance.id()).thenReturn(1);
+        when(instance.metrics()).thenReturn(new InstanceMetricsImpl(registry(1)));
+        InstanceMetadataFetcher mockInstanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
+        when(mockInstanceMetadataFetcher.instance(1)).thenReturn(instance);
         when(mockSlice.owner()).thenReturn(instance);
         mockStorageClient = mock(StorageClient.class);
         mockSSTableImporter = mock(SSTableImporter.class);
         executorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
-        restoreMetrics = new RestoreMetrics(registry());
-        instanceMetrics = new InstanceMetricsImpl(registry(1));
+        MetricRegistryFactory mockRegistryFactory = mock(MetricRegistryFactory.class);
+        when(mockRegistryFactory.getOrCreate()).thenReturn(registry());
+        when(mockRegistryFactory.getOrCreate(1)).thenReturn(registry(1));
+        metrics = new SidecarMetricsImpl(mockRegistryFactory, mockInstanceMetadataFetcher);
         util = mock(RestoreJobUtil.class);
         sliceDatabaseAccessor = new TestRestoreSliceAccessor();
     }
@@ -117,9 +124,9 @@ class RestoreSliceTaskTest
         getBlocking(promise.future()); // no error is thrown
 
         // assert on the stats collected
-        InstanceRestoreMetrics instanceRestoreMetrics = instanceMetrics.restore();
-        assertThat(restoreMetrics.sliceReplicationTime.metric.getSnapshot().getValues()).hasSize(1);
-        assertThat(restoreMetrics.sliceReplicationTime.metric.getSnapshot().getValues()[0]).isPositive();
+        InstanceRestoreMetrics instanceRestoreMetrics = metrics.instance(1).restore();
+        assertThat(metrics.server().restore().sliceReplicationTime.metric.getSnapshot().getValues()).hasSize(1);
+        assertThat(metrics.server().restore().sliceReplicationTime.metric.getSnapshot().getValues()[0]).isPositive();
         assertThat(instanceRestoreMetrics.sliceDownloadTime.metric.getSnapshot().getValues()).hasSize(1);
         assertThat(instanceRestoreMetrics.sliceDownloadTime.metric.getSnapshot().getValues()[0]).isPositive();
         assertThat(instanceRestoreMetrics.sliceUnzipTime.metric.getSnapshot().getValues()).hasSize(1);
@@ -144,7 +151,7 @@ class RestoreSliceTaskTest
         task.handle(promise);
         getBlocking(promise.future()); // no error is thrown
 
-        assertThat(restoreMetrics.sliceReplicationTime.metric.getSnapshot().getValues())
+        assertThat(metrics.server().restore().sliceReplicationTime.metric.getSnapshot().getValues())
         .describedAs("The replication time of the slice has been captured when confirming the existence." +
                      "It should not be captured again in this run.")
         .isEmpty();
@@ -347,8 +354,7 @@ class RestoreSliceTaskTest
         RestoreJobUtil util = mock(RestoreJobUtil.class);
         when(util.currentTimeNanos()).thenAnswer(invok -> currentNanoTimeSupplier.get());
         return new TestRestoreSliceTask(slice, mockStorageClient, executorPool, mockSSTableImporter,
-                                        0, sliceDatabaseAccessor, util, instanceMetrics,
-                                        restoreMetrics);
+                                        0, sliceDatabaseAccessor, util, metrics);
     }
 
     private RestoreSliceTask createTaskWithExceptions(RestoreSlice slice, RestoreJob job)
@@ -358,8 +364,8 @@ class RestoreSliceTaskTest
         assertThat(slice.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
         assertThat(slice.job().status).isEqualTo(job.status);
         return new TestUnexpectedExceptionInRestoreSliceTask(slice, mockStorageClient, executorPool,
-                                                             mockSSTableImporter, 0, sliceDatabaseAccessor, util,
-                                                             instanceMetrics, restoreMetrics);
+                                                             mockSSTableImporter, 0, sliceDatabaseAccessor,
+                                                             util, metrics);
     }
 
     static class TestRestoreSliceAccessor extends RestoreSliceDatabaseAccessor
@@ -387,12 +393,12 @@ class RestoreSliceTaskTest
         public TestRestoreSliceTask(RestoreSlice slice, StorageClient s3Client, TaskExecutorPool executorPool,
                                     SSTableImporter importer, double requiredUsableSpacePercentage,
                                     RestoreSliceDatabaseAccessor sliceDatabaseAccessor, RestoreJobUtil restoreJobUtil,
-                                    InstanceMetrics instanceMetrics, RestoreMetrics restoreMetrics)
+                                    SidecarMetrics metrics)
         {
             super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage,
-                  sliceDatabaseAccessor, restoreJobUtil, instanceMetrics, restoreMetrics);
+                  sliceDatabaseAccessor, restoreJobUtil, metrics);
             this.slice = slice;
-            this.instanceMetrics = instanceMetrics;
+            this.instanceMetrics = metrics.instance(slice.owner().id());
         }
 
         @Override
@@ -423,11 +429,10 @@ class RestoreSliceTaskTest
                                                          TaskExecutorPool executorPool, SSTableImporter importer,
                                                          double requiredUsableSpacePercentage,
                                                          RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                                                         RestoreJobUtil util, InstanceMetrics instanceMetrics,
-                                                         RestoreMetrics restoreMetrics)
+                                                         RestoreJobUtil util, SidecarMetrics metrics)
         {
-            super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage, sliceDatabaseAccessor, util,
-                  instanceMetrics, restoreMetrics);
+            super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage,
+                  sliceDatabaseAccessor, util, metrics);
         }
 
         @Override

@@ -40,7 +40,10 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
-import org.apache.cassandra.sidecar.metrics.ServerMetrics;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.mockito.stubbing.Answer;
 
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -60,7 +63,7 @@ class HealthCheckPeriodicTaskTest
     HealthCheckConfiguration mockHealthCheckConfiguration;
     HealthCheckPeriodicTask healthCheck;
     InstancesConfig mockInstancesConfig;
-    ServerMetrics serverMetrics;
+    SidecarMetrics metrics;
 
     @BeforeEach
     void setup()
@@ -74,10 +77,13 @@ class HealthCheckPeriodicTaskTest
         mockInstancesConfig = mock(InstancesConfig.class);
 
         Vertx vertx = Vertx.vertx();
-        serverMetrics = new ServerMetrics(registry());
+        MetricRegistryFactory mockRegistryFactory = mock(MetricRegistryFactory.class);
+        when(mockRegistryFactory.getOrCreate()).thenReturn(registry());
+        InstanceMetadataFetcher mockInstanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
+        metrics = new SidecarMetricsImpl(mockRegistryFactory, mockInstanceMetadataFetcher);
         ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         healthCheck = new HealthCheckPeriodicTask(vertx, mockConfiguration, mockInstancesConfig,
-                                                  executorPools, serverMetrics);
+                                                  executorPools, metrics);
     }
 
     @AfterEach
@@ -104,8 +110,8 @@ class HealthCheckPeriodicTaskTest
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
         promise.future().onComplete(context.succeeding(v -> {
-            assertThat(serverMetrics.cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(serverMetrics.cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
+            assertThat(metrics.server().health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+            assertThat(metrics.server().health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
             context.completeNow();
         }));
     }
@@ -123,8 +129,8 @@ class HealthCheckPeriodicTaskTest
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
         promise.future().onComplete(context.succeeding(v -> {
-            assertThat(serverMetrics.cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(serverMetrics.cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
+            assertThat(metrics.server().health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+            assertThat(metrics.server().health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
             context.completeNow();
         }));
     }
@@ -145,8 +151,8 @@ class HealthCheckPeriodicTaskTest
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
         promise.future().onComplete(context.failing(v -> {
-            assertThat(serverMetrics.cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(serverMetrics.cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
+            assertThat(metrics.server().health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+            assertThat(metrics.server().health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
             context.completeNow();
         }));
     }
@@ -169,8 +175,8 @@ class HealthCheckPeriodicTaskTest
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
         promise.future().onComplete(context.failing(v -> {
-            assertThat(serverMetrics.cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(serverMetrics.cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
+            assertThat(metrics.server().health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+            assertThat(metrics.server().health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
             context.completeNow();
         }));
     }

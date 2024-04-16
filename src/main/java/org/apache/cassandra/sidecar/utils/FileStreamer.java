@@ -127,7 +127,7 @@ public class FileStreamer
                                 Instant startTime,
                                 Promise<Void> promise)
     {
-        InstanceMetrics instanceMetrics = instanceMetadataFetcher.instance(instanceId).instanceMetrics();
+        InstanceMetrics instanceMetrics = instanceMetadataFetcher.instance(instanceId).metrics();
         StreamSSTableMetrics streamSSTableMetrics = instanceMetrics.streamSSTable();
         if (acquire(response, instanceId, filename, fileLength, range, startTime, streamSSTableMetrics, promise))
         {

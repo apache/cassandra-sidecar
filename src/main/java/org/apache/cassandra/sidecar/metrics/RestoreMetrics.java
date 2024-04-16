@@ -24,12 +24,14 @@ import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 
+import static org.apache.cassandra.sidecar.metrics.ServerMetrics.SERVER_PREFIX;
+
 /**
  * Tracks metrics related to restore functionality provided by Sidecar.
  */
 public class RestoreMetrics
 {
-    public static final String DOMAIN = "Sidecar.Restore";
+    public static final String DOMAIN = SERVER_PREFIX + ".Restore";
     protected final MetricRegistry metricRegistry;
     public final NamedMetric<Timer> sliceReplicationTime;
     public final NamedMetric<Timer> jobCompletionTime;

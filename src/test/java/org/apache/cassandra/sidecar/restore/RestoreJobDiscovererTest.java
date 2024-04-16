@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
@@ -42,8 +43,11 @@ import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
-import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.mockito.ArgumentCaptor;
 
 import static org.apache.cassandra.sidecar.db.RestoreJobTest.createNewTestingJob;
@@ -60,21 +64,31 @@ class RestoreJobDiscovererTest
     private static final long activeLoopDelay = 1000;
     private static final long idleLoopDelay = 2000;
     private static final int recencyDays = 10;
-    private final RestoreMetrics restoreMetrics = new RestoreMetrics(registry());
     private final RestoreJobDatabaseAccessor mockJobAccessor = mock(RestoreJobDatabaseAccessor.class);
     private final RestoreSliceDatabaseAccessor mockSliceAccessor = mock(RestoreSliceDatabaseAccessor.class);
     private final RestoreJobManagerGroup mockManagers = mock(RestoreJobManagerGroup.class);
     private final LocalTokenRangesProvider rangesProvider = mock(LocalTokenRangesProvider.class);
     private final PeriodicTaskExecutor executor = mock(PeriodicTaskExecutor.class);
     private final SidecarSchema sidecarSchema = mock(SidecarSchema.class);
-    private final RestoreJobDiscoverer loop = new RestoreJobDiscoverer(testConfig(),
-                                                                       sidecarSchema,
-                                                                       mockJobAccessor,
-                                                                       mockSliceAccessor,
-                                                                       () -> mockManagers,
-                                                                       rangesProvider,
-                                                                       null,
-                                                                       restoreMetrics);
+    private SidecarMetrics metrics;
+    private RestoreJobDiscoverer loop;
+
+    @BeforeEach
+    void setup()
+    {
+        MetricRegistryFactory mockRegistryFactory = mock(MetricRegistryFactory.class);
+        when(mockRegistryFactory.getOrCreate()).thenReturn(registry());
+        InstanceMetadataFetcher mockMetadataFetcher = mock(InstanceMetadataFetcher.class);
+        metrics = new SidecarMetricsImpl(mockRegistryFactory, mockMetadataFetcher);
+        loop = new RestoreJobDiscoverer(testConfig(),
+                                        sidecarSchema,
+                                        mockJobAccessor,
+                                        mockSliceAccessor,
+                                        () -> mockManagers,
+                                        rangesProvider,
+                                        null,
+                                        metrics);
+    }
 
     @AfterEach
     void clear()
@@ -100,7 +114,7 @@ class RestoreJobDiscovererTest
                                                         .build()));
         loop.registerPeriodicTaskExecutor(executor);
         executeBlocking();
-        assertThat(restoreMetrics.activeJobs.metric.getValue()).describedAs("active jobs count is updated")
+        assertThat(metrics.server().restore().activeJobs.metric.getValue()).describedAs("active jobs count is updated")
                                                                .isOne();
         assertThat(loop.delay()).isEqualTo(activeLoopDelay);
         // when no more jobs are active, the delay is reset back to idle loop delay accordingly.
@@ -113,7 +127,7 @@ class RestoreJobDiscovererTest
                                                         .expireAt(new Date(System.currentTimeMillis() + 10000L))
                                                         .build()));
         executeBlocking();
-        assertThat(restoreMetrics.activeJobs.metric.getValue()).describedAs("active jobs count is updated")
+        assertThat(metrics.server().restore().activeJobs.metric.getValue()).describedAs("active jobs count is updated")
                                                                .isZero();
         assertThat(loop.delay()).isEqualTo(idleLoopDelay);
     }
@@ -149,12 +163,12 @@ class RestoreJobDiscovererTest
         assertThat(loop.jobDiscoveryRecencyDays())
         .describedAs("Initial recency days should be " + recencyDays)
         .isEqualTo(recencyDays);
-        assertThat(restoreMetrics.activeJobs.metric.getValue()).isZero();
+        assertThat(metrics.server().restore().activeJobs.metric.getValue()).isZero();
 
         // Execution 1
         executeBlocking();
 
-        assertThat(restoreMetrics.activeJobs.metric.getValue()).isOne();
+        assertThat(metrics.server().restore().activeJobs.metric.getValue()).isOne();
         assertThat(jobIdCapture.getAllValues()).containsExactlyInAnyOrder(failedJobId, succeededJobId);
         assertThat(loop.hasInflightJobs())
         .describedAs("An inflight job should be found")
@@ -169,7 +183,7 @@ class RestoreJobDiscovererTest
                                                                RestoreJobStatus.SUCCEEDED, null, new Date())));
         executeBlocking();
 
-        assertThat(restoreMetrics.activeJobs.metric.getValue()).isZero();
+        assertThat(metrics.server().restore().activeJobs.metric.getValue()).isZero();
         assertThat(loop.hasInflightJobs())
         .describedAs("There should be no more inflight jobs")
         .isFalse();
@@ -190,7 +204,7 @@ class RestoreJobDiscovererTest
 
         executeBlocking();
 
-        assertThat(restoreMetrics.activeJobs.metric.getValue()).isOne();
+        assertThat(metrics.server().restore().activeJobs.metric.getValue()).isOne();
         assertThat(loop.hasInflightJobs())
         .describedAs("It should find a new inflight job")
         .isTrue();
@@ -204,7 +218,7 @@ class RestoreJobDiscovererTest
                                                                RestoreJobStatus.ABORTED, null, new Date())));
         executeBlocking();
 
-        assertThat(restoreMetrics.activeJobs.metric.getValue()).isZero();
+        assertThat(metrics.server().restore().activeJobs.metric.getValue()).isZero();
         assertThat(loop.hasInflightJobs())
         .describedAs("Last job failed, no more inflight jobs")
         .isFalse();

@@ -28,7 +28,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
-import org.apache.cassandra.sidecar.metrics.ResourceMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.StopWatch;
 
 /**
@@ -170,16 +170,7 @@ public abstract class TaskExecutorPool implements WorkerExecutor
                                          boolean ordered)
     {
         // TODO: migrate to org.apache.cassandra.sidecar.concurrent.TaskExecutorPool.executeBlocking(java.util.concurrent.Callable<T>, boolean)
-        return executeBlocking(() -> {
-            Promise<T> promise = Promise.promise();
-            blockingCodeHandler.handle(promise); // no need to handle exceptions, as they are handled by the delegation workerExecutor
-            Future<T> future = promise.future();
-            if (!future.isComplete())
-            {
-                throw new IllegalStateException("Unfulfilled promised detected");
-            }
-            return future.result(); // future is complete
-        }, ordered);
+        return StopWatch.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler), this::recordTimeTaken);
     }
 
     @Override
@@ -219,9 +210,9 @@ public abstract class TaskExecutorPool implements WorkerExecutor
      */
     static class ServiceTaskExecutorPool extends TaskExecutorPool
     {
-        private final ResourceMetrics metrics;
+        private final SidecarMetrics metrics;
 
-        ServiceTaskExecutorPool(Vertx vertx, WorkerPoolConfiguration config, ResourceMetrics metrics)
+        ServiceTaskExecutorPool(Vertx vertx, WorkerPoolConfiguration config, SidecarMetrics metrics)
         {
             super(vertx, config);
             this.metrics = metrics;
@@ -234,7 +225,7 @@ public abstract class TaskExecutorPool implements WorkerExecutor
             {
                 return;
             }
-            metrics.serviceTaskTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
+            metrics.server().resource().serviceTaskTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -245,9 +236,9 @@ public abstract class TaskExecutorPool implements WorkerExecutor
      */
     static class InternalTaskExecutorPool extends TaskExecutorPool
     {
-        private final ResourceMetrics metrics;
+        private final SidecarMetrics metrics;
 
-        InternalTaskExecutorPool(Vertx vertx, WorkerPoolConfiguration config, ResourceMetrics metrics)
+        InternalTaskExecutorPool(Vertx vertx, WorkerPoolConfiguration config, SidecarMetrics metrics)
         {
             super(vertx, config);
             this.metrics = metrics;
@@ -260,7 +251,7 @@ public abstract class TaskExecutorPool implements WorkerExecutor
             {
                 return;
             }
-            metrics.internalTaskTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
+            metrics.server().resource().internalTaskTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
         }
     }
 }

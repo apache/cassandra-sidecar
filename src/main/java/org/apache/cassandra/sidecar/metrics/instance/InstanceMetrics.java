@@ -18,12 +18,14 @@
 
 package org.apache.cassandra.sidecar.metrics.instance;
 
+import static org.apache.cassandra.sidecar.metrics.SidecarMetrics.APP_PREFIX;
+
 /**
  * {@link InstanceMetrics} tracks metrics related to a Cassandra instance that Sidecar maintains.
  */
 public interface InstanceMetrics
 {
-    String INSTANCE_PREFIX = "Sidecar.CassInstance";
+    String INSTANCE_PREFIX = APP_PREFIX + ".CassInstance";
 
     /**
      * @return health metrics tracked for cassandra instance

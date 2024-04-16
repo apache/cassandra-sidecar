@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
@@ -42,7 +41,7 @@ import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
-import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.StopWatch;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
@@ -72,8 +71,8 @@ public class RestoreSliceTask implements RestoreSliceHandler
     private final double requiredUsableSpacePercentage;
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobUtil restoreJobUtil;
+    private final SidecarMetrics metrics;
     private final InstanceMetrics instanceMetrics;
-    private final RestoreMetrics restoreMetrics;
     private long taskStartTimeNanos = -1;
 
     public RestoreSliceTask(RestoreSlice slice,
@@ -83,7 +82,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
                             double requiredUsableSpacePercentage,
                             RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
                             RestoreJobUtil restoreJobUtil,
-                            InstanceMetadata owner)
+                            SidecarMetrics metrics)
     {
         Preconditions.checkArgument(!slice.job().isManagedBySidecar()
                                     || sliceDatabaseAccessor != null,
@@ -95,8 +94,8 @@ public class RestoreSliceTask implements RestoreSliceHandler
         this.requiredUsableSpacePercentage = requiredUsableSpacePercentage;
         this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.restoreJobUtil = restoreJobUtil;
-        this.instanceMetrics = owner.instanceMetrics();
-        this.restoreMetrics = owner.serverMetrics().restoreMetrics;
+        this.metrics = metrics;
+        this.instanceMetrics = metrics.instance(slice.owner().id());
     }
 
     public static RestoreSliceHandler failed(RestoreJobException cause, RestoreSlice slice)
@@ -195,7 +194,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
         fromCompletionStage(s3Client.objectExists(slice))
         .onSuccess(exists -> {
             long durationNanos = currentTimeInNanos() - slice.creationTimeNanos();
-            restoreMetrics.sliceReplicationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
+            metrics.server().restore().sliceReplicationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
             slice.setExistsOnS3();
             LOGGER.debug("Slice is now available on S3. jobId={} sliceKey={} replicationTimeNanos={}",
                          slice.jobId(), slice.key(), durationNanos);
@@ -218,7 +217,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 // https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
                 event.tryFail(RestoreJobExceptions.ofFatalSlice("Object checksum mismatched",
                                                                 slice, s3Exception));
-                instanceMetrics.restore().sliceChecksumMismatches.metric.setValue(1);
+                instanceMetrics.restore().sliceChecksumMismatches.metric.update(1);
             }
             else if (s3Exception.statusCode() == 403)
             {
@@ -226,15 +225,14 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 // There might be permission issue on accessing the object.
                 event.tryFail(RestoreJobExceptions.ofFatalSlice("Object access is forbidden",
                                                                 slice, s3Exception));
-                restoreMetrics.tokenUnauthorized.metric.update(1);
+                metrics.server().restore().tokenUnauthorized.metric.update(1);
             }
             else if (s3Exception.statusCode() == 400 &&
                      s3Exception.getMessage().contains("token has expired"))
             {
                 // Fail the job if 400, token has expired.
                 // https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList
-                event.tryFail(RestoreJobExceptions.ofFatalSlice("Token has expired", slice, s3Exception));
-                restoreMetrics.tokenExpired.metric.update(1);
+                metrics.server().restore().tokenExpired.metric.update(1);
             }
             else
             {
@@ -263,7 +261,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
         if (slice.downloadAttempt() > 0)
         {
             LOGGER.debug("Retrying downloading slice. sliceKey={}", slice.key());
-            instanceMetrics.restore().sliceDownloadRetries.metric.setValue(1);
+            instanceMetrics.restore().sliceDownloadRetries.metric.update(1);
         }
 
         LOGGER.info("Begin downloading restore slice. sliceKey={}", slice.key());
@@ -274,7 +272,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
             if (ThrowableUtils.getCause(cause, ApiCallTimeoutException.class) != null)
             {
                 LOGGER.warn("Downloading restore slice times out. sliceKey={}", slice.key());
-                instanceMetrics.restore().sliceDownloadTimeouts.metric.setValue(1);
+                instanceMetrics.restore().sliceDownloadTimeouts.metric.update(1);
             }
             event.tryFail(RestoreJobExceptions.ofFatalSlice("Unrecoverable error when downloading object",
                                                             slice, cause));

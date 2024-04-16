@@ -77,6 +77,8 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
@@ -103,6 +105,7 @@ import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
 import org.apache.cassandra.sidecar.routes.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.JdkMd5DigestProvider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.apache.cassandra.sidecar.utils.XXHash32Provider;
@@ -489,21 +492,22 @@ public class MainModule extends AbstractModule
                                        CQLSessionProvider cqlSessionProvider,
                                        RestoreJobsSchema restoreJobsSchema,
                                        RestoreSlicesSchema restoreSlicesSchema,
-                                       SchemaMetrics metrics)
+                                       SidecarMetrics metrics)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
         sidecarInternalKeyspace.registerTableSchema(restoreJobsSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
+        SchemaMetrics schemaMetrics = metrics.server().schema();
         return new SidecarSchema(vertx, executorPools, configuration,
-                                 sidecarInternalKeyspace, cqlSessionProvider, metrics);
+                                 sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
     }
 
     @Provides
     @Singleton
-    public MetricRegistry globalMetricRegistry(MetricRegistryFactory registryProvider)
+    public SidecarMetrics metrics(MetricRegistryFactory registryFactory, InstanceMetadataFetcher metadataFetcher)
     {
-        return registryProvider.getOrCreate();
+        return new SidecarMetricsImpl(registryFactory, metadataFetcher);
     }
 
     /**

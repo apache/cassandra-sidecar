@@ -33,7 +33,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.metrics.ServerMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_START;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -48,19 +48,19 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     private final SidecarConfiguration configuration;
     private final InstancesConfig instancesConfig;
     private final TaskExecutorPool internalPool;
-    private final ServerMetrics serverMetrics;
+    private final SidecarMetrics metrics;
 
     public HealthCheckPeriodicTask(Vertx vertx,
                                    SidecarConfiguration configuration,
                                    InstancesConfig instancesConfig,
                                    ExecutorPools executorPools,
-                                   ServerMetrics serverMetrics)
+                                   SidecarMetrics metrics)
     {
         eventBus = vertx.eventBus();
         this.configuration = configuration;
         this.instancesConfig = instancesConfig;
         internalPool = executorPools.internal();
-        this.serverMetrics = serverMetrics;
+        this.metrics = metrics;
     }
 
     @Override
@@ -112,8 +112,8 @@ public class HealthCheckPeriodicTask implements PeriodicTask
               .onComplete(v -> {
                   int instanceDownCount = instanceDown.get();
                   int instanceUpCount = instancesConfig.instances().size() - instanceDownCount;
-                  serverMetrics.cassandraInstancesUp.metric.setValue(instanceUpCount);
-                  serverMetrics.cassandraInstancesDown.metric.setValue(instanceDownCount);
+                  metrics.server().health().cassandraInstancesUp.metric.setValue(instanceUpCount);
+                  metrics.server().health().cassandraInstancesDown.metric.setValue(instanceDownCount);
               })
               .onSuccess(v -> promise.complete())
               .onFailure(promise::fail);

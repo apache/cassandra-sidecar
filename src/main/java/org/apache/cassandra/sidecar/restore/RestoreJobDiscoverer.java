@@ -41,7 +41,7 @@ import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.locator.CachedLocalTokenRanges;
 import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.locator.TokenRange;
-import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -61,7 +61,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
     private final Provider<RestoreJobManagerGroup> restoreJobManagerGroupSingleton;
     private final LocalTokenRangesProvider localTokenRangesProvider;
     private final InstanceMetadataFetcher instanceMetadataFetcher;
-    private final RestoreMetrics metrics;
+    private final SidecarMetrics metrics;
     private volatile boolean refreshSignaled = true;
     private int inflightJobsCount = 0;
     private int jobDiscoveryRecencyDays;
@@ -75,7 +75,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                                 Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
                                 CachedLocalTokenRanges cachedLocalTokenRanges,
                                 InstanceMetadataFetcher instanceMetadataFetcher,
-                                RestoreMetrics metrics)
+                                SidecarMetrics metrics)
     {
         this(config.restoreJobConfiguration(),
              sidecarSchema,
@@ -95,7 +95,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                          Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
                          LocalTokenRangesProvider cachedLocalTokenRanges,
                          InstanceMetadataFetcher instanceMetadataFetcher,
-                         RestoreMetrics metrics)
+                         SidecarMetrics metrics)
     {
         this.restoreJobConfig = restoreJobConfig;
         this.sidecarSchema = sidecarSchema;
@@ -207,7 +207,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                     "expiredJobs={} " +
                     "abortedJobs={}",
                     refreshSignaled, inflightJobsCount, jobDiscoveryRecencyDays, expiredJobs, abortedJobs);
-        metrics.activeJobs.metric.setValue(inflightJobsCount);
+        metrics.server().restore().activeJobs.metric.setValue(inflightJobsCount);
 
         boolean hasInflightJobsNow = hasInflightJobs();
         // need to update delay time; reschedule self

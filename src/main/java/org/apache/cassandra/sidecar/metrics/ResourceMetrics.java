@@ -22,21 +22,19 @@ import java.util.Objects;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
+
+import static org.apache.cassandra.sidecar.metrics.ServerMetrics.SERVER_PREFIX;
 
 /**
  * Tracks resource metrics, for resources maintained by Sidecar.
  */
-@Singleton
 public class ResourceMetrics
 {
-    public static final String DOMAIN = "Sidecar.Resource";
+    public static final String DOMAIN = SERVER_PREFIX + ".Resource";
     protected final MetricRegistry metricRegistry;
     public final NamedMetric<Timer> serviceTaskTime;
     public final NamedMetric<Timer> internalTaskTime;
 
-    @Inject
     public ResourceMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");

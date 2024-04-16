@@ -24,6 +24,7 @@ import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
@@ -40,9 +41,9 @@ public class InstanceRestoreMetrics
     public final NamedMetric<Timer> sliceStageTime;
     public final NamedMetric<Timer> sliceUnzipTime;
     public final NamedMetric<Timer> sliceValidationTime;
-    public final NamedMetric<DefaultSettableGauge<Integer>> sliceDownloadTimeouts;
-    public final NamedMetric<DefaultSettableGauge<Integer>> sliceDownloadRetries;
-    public final NamedMetric<DefaultSettableGauge<Integer>> sliceChecksumMismatches;
+    public final NamedMetric<DeltaGauge> sliceDownloadTimeouts;
+    public final NamedMetric<DeltaGauge> sliceDownloadRetries;
+    public final NamedMetric<DeltaGauge> sliceChecksumMismatches;
     public final NamedMetric<DefaultSettableGauge<Integer>> sliceImportQueueLength;
     public final NamedMetric<DefaultSettableGauge<Integer>> pendingSliceCount;
     public final NamedMetric<Histogram> dataSSTableComponentSize;
@@ -66,17 +67,17 @@ public class InstanceRestoreMetrics
         sliceValidationTime
         = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceValidationTime").build();
         sliceDownloadTimeouts
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("SliceDownloadTimeouts")
                      .build();
         sliceDownloadRetries
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("SliceDownloadRetries")
                      .build();
         sliceChecksumMismatches
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("SliceChecksumMismatches")
                      .build();

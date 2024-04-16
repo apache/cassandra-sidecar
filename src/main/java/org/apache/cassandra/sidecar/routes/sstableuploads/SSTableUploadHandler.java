@@ -115,7 +115,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         // accept the upload.
         httpRequest.pause();
 
-        InstanceMetrics instanceMetrics = metadataFetcher.instance(host).instanceMetrics();
+        InstanceMetrics instanceMetrics = metadataFetcher.instance(host).metrics();
         UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics
         = instanceMetrics.uploadSSTable().forComponent(parseSSTableComponent(request.component()));
 
@@ -133,7 +133,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         validateKeyspaceAndTable(host, request)
         .compose(validRequest -> uploadPathBuilder.resolveStagingDirectory(host))
         .compose(uploadDir -> ensureSufficientSpaceAvailable(uploadDir,
-                                                             componentMetrics,
                                                              instanceMetrics.resource()))
         .compose(v -> uploadPathBuilder.build(host, request))
         .compose(uploadDirectory -> {
@@ -232,7 +231,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
      * @return a succeeded future if there is sufficient space available, or failed future otherwise
      */
     private Future<String> ensureSufficientSpaceAvailable(String uploadDirectory,
-                                                          UploadSSTableMetrics.UploadSSTableComponentMetrics metrics,
                                                           InstanceResourceMetrics resourceMetrics)
     {
         float minimumPercentageRequired = configuration.minimumSpacePercentageRequired();

@@ -63,7 +63,7 @@ public class SchemaMetricsTest
     private static final Logger logger = LoggerFactory.getLogger(SidecarSchemaTest.class);
     private Vertx vertx;
     private SidecarSchema sidecarSchema;
-    private SchemaMetrics metrics;
+    private SidecarMetrics metrics;
     Server server;
 
     @BeforeEach
@@ -75,7 +75,7 @@ public class SchemaMetricsTest
         this.vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
         sidecarSchema = injector.getInstance(SidecarSchema.class);
-        metrics = injector.getInstance(SchemaMetrics.class);
+        metrics = injector.getInstance(SidecarMetrics.class);
 
         VertxTestContext context = new VertxTestContext();
         server.start()
@@ -101,7 +101,7 @@ public class SchemaMetricsTest
     {
         sidecarSchema.startSidecarSchemaInitializer();
         loopAssert(3, () -> {
-            assertThat(metrics.failedInitializations.metric.getValue())
+            assertThat(metrics.server().schema().failedInitializations.metric.getValue())
             .isGreaterThanOrEqualTo(1);
         });
     }
@@ -126,15 +126,16 @@ public class SchemaMetricsTest
         public SidecarSchema sidecarSchema(Vertx vertx,
                                            ExecutorPools executorPools,
                                            SidecarConfiguration configuration,
-                                           SchemaMetrics metrics,
-                                           CQLSessionProvider cqlSessionProvider)
+                                           CQLSessionProvider cqlSessionProvider,
+                                           SidecarMetrics metrics)
         {
             SidecarInternalKeyspace sidecarInternalKeyspace = mock(SidecarInternalKeyspace.class);
             when(sidecarInternalKeyspace.initialize(any()))
             .thenThrow(new SidecarSchemaModificationException("Simulated failure",
                                                               new RuntimeException("Simulated exception")));
+            SchemaMetrics schemaMetrics = metrics.server().schema();
             return new SidecarSchema(vertx, executorPools, configuration,
-                                     sidecarInternalKeyspace, cqlSessionProvider, metrics);
+                                     sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
         }
     }
 }

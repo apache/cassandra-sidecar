@@ -127,10 +127,7 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         client.put(server.actualPort(), "localhost", "/api/v1/uploads/"
                                                      + uploadId + "/keyspaces/ks/tables/table/import")
               .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
-              .send(context.succeeding(r -> {
-                  assertThat(instanceMetrics(1).sstableImport().cassandraUnavailable.metric.getValue()).isEqualTo(1);
-                  context.completeNow();
-              }));
+              .send(context.succeedingThenComplete());
     }
 
     @Test

@@ -37,7 +37,7 @@ import org.apache.cassandra.sidecar.common.data.RestoreSliceStatus;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.restore.RestoreJobUtil;
 import org.apache.cassandra.sidecar.restore.RestoreSliceHandler;
 import org.apache.cassandra.sidecar.restore.RestoreSliceTask;
@@ -233,7 +233,8 @@ public class RestoreSlice
                                            SSTableImporter importer,
                                            double requiredUsableSpacePercentage,
                                            RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                                           RestoreJobUtil restoreJobUtil)
+                                           RestoreJobUtil restoreJobUtil,
+                                           SidecarMetrics metrics)
     {
         if (isCancelled)
             return RestoreSliceTask.failed(RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
@@ -247,7 +248,7 @@ public class RestoreSlice
                                         requiredUsableSpacePercentage,
                                         sliceDatabaseAccessor,
                                         restoreJobUtil,
-                                        owner);
+                                        metrics);
         }
         catch (IllegalStateException illegalState)
         {

@@ -18,35 +18,36 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
+import java.util.Objects;
+
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
 
 import static org.apache.cassandra.sidecar.metrics.ServerMetrics.SERVER_PREFIX;
 
 /**
- * Tracks metrics for {@link org.apache.cassandra.sidecar.db.schema.SidecarSchema} and other schema related handling
- * done by Sidecar
+ * Tracks availability of Cassandra instances maintained by Sidecar.
  */
-public class SchemaMetrics
+public class HealthMetrics
 {
-    public static final String DOMAIN = SERVER_PREFIX + ".Schema";
+    public static final String DOMAIN = SERVER_PREFIX + ".Health";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<DefaultSettableGauge<Integer>> failedInitializations;
-    public final NamedMetric<DefaultSettableGauge<Integer>> failedModifications;
+    public final NamedMetric<DefaultSettableGauge<Integer>> cassandraInstancesUp;
+    public final NamedMetric<DefaultSettableGauge<Integer>> cassandraInstancesDown;
 
-    public SchemaMetrics(MetricRegistry metricRegistry)
+    public HealthMetrics(MetricRegistry metricRegistry)
     {
-        this.metricRegistry = metricRegistry;
+        this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        failedInitializations
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
-                     .withDomain(DOMAIN)
-                     .withName("FailedInitializations")
-                     .build();
-        failedModifications
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
-                     .withDomain(DOMAIN)
-                     .withName("FailedModifications")
-                     .build();
+        cassandraInstancesUp =
+        NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                   .withDomain(DOMAIN)
+                   .withName("CassInstancesUp")
+                   .build();
+        cassandraInstancesDown =
+        NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                   .withDomain(DOMAIN)
+                   .withName("CassInstancesDown")
+                   .build();
     }
 }

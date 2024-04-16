@@ -26,10 +26,8 @@ import java.util.Objects;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
-import org.apache.cassandra.sidecar.metrics.ServerMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -44,8 +42,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
     private final String stagingDir;
     @Nullable
     private final CassandraAdapterDelegate delegate;
-    private final InstanceMetrics instanceMetrics;
-    private final ServerMetrics serverMetrics;
+    private final InstanceMetrics metrics;
 
     protected InstanceMetadataImpl(Builder builder)
     {
@@ -55,8 +52,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         dataDirs = Collections.unmodifiableList(builder.dataDirs);
         stagingDir = builder.stagingDir;
         delegate = builder.delegate;
-        instanceMetrics = builder.instanceMetrics;
-        serverMetrics = builder.serverMetrics;
+        metrics = builder.metrics;
     }
 
     @Override
@@ -96,15 +92,9 @@ public class InstanceMetadataImpl implements InstanceMetadata
     }
 
     @Override
-    public InstanceMetrics instanceMetrics()
+    public InstanceMetrics metrics()
     {
-        return instanceMetrics;
-    }
-
-    @Override
-    public @NotNull ServerMetrics serverMetrics()
-    {
-        return serverMetrics;
+        return metrics;
     }
 
     public static Builder builder()
@@ -124,8 +114,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         protected String stagingDir;
         protected CassandraAdapterDelegate delegate;
         protected MetricRegistry metricRegistry;
-        protected InstanceMetrics instanceMetrics;
-        protected ServerMetrics serverMetrics;
+        protected InstanceMetrics metrics;
 
         protected Builder()
         {
@@ -139,8 +128,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
             dataDirs = new ArrayList<>(instanceMetadata.dataDirs);
             stagingDir = instanceMetadata.stagingDir;
             delegate = instanceMetadata.delegate;
-            instanceMetrics = instanceMetadata.instanceMetrics;
-            serverMetrics = instanceMetadata.serverMetrics;
+            metrics = instanceMetadata.metrics;
         }
 
         @Override
@@ -226,8 +214,6 @@ public class InstanceMetadataImpl implements InstanceMetadata
             return update(b -> b.metricRegistry = metricRegistry);
         }
 
-        // todo: Saranya, add builder method to point to the shared server level metrics
-
         /**
          * Returns a {@code InstanceMetadataImpl} built from the parameters previously set.
          *
@@ -239,7 +225,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
             Objects.requireNonNull(id);
             Objects.requireNonNull(metricRegistry);
 
-            instanceMetrics = new InstanceMetricsImpl(metricRegistry);
+            metrics = new InstanceMetricsImpl(metricRegistry);
 
             return new InstanceMetadataImpl(this);
         }

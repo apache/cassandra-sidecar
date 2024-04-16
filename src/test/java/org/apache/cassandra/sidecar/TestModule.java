@@ -170,7 +170,7 @@ public class TestModule extends AbstractModule
         when(instanceMeta.port()).thenReturn(6475);
         when(instanceMeta.stagingDir()).thenReturn(stagingDir);
         when(instanceMeta.dataDirs()).thenReturn(Collections.singletonList(dataDir));
-        when(instanceMeta.instanceMetrics()).thenReturn(new InstanceMetricsImpl(registry(id)));
+        when(instanceMeta.metrics()).thenReturn(new InstanceMetricsImpl(registry(id)));
 
         CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
         Metadata metadata = mock(Metadata.class);
