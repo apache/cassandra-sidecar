@@ -210,7 +210,7 @@ class RestoreProcessorTest
         when(slice.jobId()).thenReturn(UUIDs.timeBased());
         when(slice.owner().id()).thenReturn(1);
         when(slice.key()).thenReturn("SliceKey");
-        when(slice.owner().metrics()).thenReturn(instanceMetrics());
+        when(slice.owner().instanceMetrics()).thenReturn(instanceMetrics());
         RestoreJob job = RestoreJob.builder()
                                    .jobStatus(RestoreJobStatus.CREATED)
                                    .build();

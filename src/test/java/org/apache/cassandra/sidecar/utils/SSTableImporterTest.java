@@ -80,11 +80,11 @@ class SSTableImporterTest
         InstanceMetadata mockInstanceMetadata1 = mock(InstanceMetadata.class);
         InstanceMetadata mockInstanceMetadata2 = mock(InstanceMetadata.class);
         InstanceMetadata mockInstanceMetadata3 = mock(InstanceMetadata.class);
-        when(mockInstanceMetadata1.metrics()).thenReturn(instanceMetrics(1));
+        when(mockInstanceMetadata1.instanceMetrics()).thenReturn(instanceMetrics(1));
         when(mockInstanceMetadata1.delegate()).thenReturn(mockCassandraAdapterDelegate1);
-        when(mockInstanceMetadata2.metrics()).thenReturn(instanceMetrics(2));
+        when(mockInstanceMetadata2.instanceMetrics()).thenReturn(instanceMetrics(2));
         when(mockInstanceMetadata2.delegate()).thenReturn(mockCassandraAdapterDelegate2);
-        when(mockInstanceMetadata3.metrics()).thenReturn(instanceMetrics(3));
+        when(mockInstanceMetadata3.instanceMetrics()).thenReturn(instanceMetrics(3));
         when(mockInstanceMetadata3.delegate()).thenReturn(mockCassandraAdapterDelegate3);
         when(mockMetadataFetcher.instance("localhost")).thenReturn(mockInstanceMetadata1);
         when(mockMetadataFetcher.instance("127.0.0.2")).thenReturn(mockInstanceMetadata2);

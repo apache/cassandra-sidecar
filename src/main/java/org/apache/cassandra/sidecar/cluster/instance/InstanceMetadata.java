@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.cluster.instance;
 import java.util.List;
 
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.metrics.ServerMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -63,5 +64,10 @@ public interface InstanceMetadata
     /**
      * @return {@link InstanceMetrics} metrics specific for the Cassandra instance
      */
-    @NotNull InstanceMetrics metrics();
+    @NotNull InstanceMetrics instanceMetrics();
+
+    /**
+     * @return {@link ServerMetrics} metrics of sidecar server
+     */
+    @NotNull ServerMetrics serverMetrics();
 }

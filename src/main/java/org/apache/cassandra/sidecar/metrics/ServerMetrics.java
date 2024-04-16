@@ -33,8 +33,12 @@ public class ServerMetrics
 {
     public static final String DOMAIN = "Sidecar.Server";
     protected final MetricRegistry metricRegistry;
+    // TODO - Saranya, should those be in HealthMetrics?
     public final NamedMetric<DefaultSettableGauge<Integer>> cassandraInstancesUp;
     public final NamedMetric<DefaultSettableGauge<Integer>> cassandraInstancesDown;
+
+    public final RestoreMetrics restoreMetrics;
+    public final SchemaMetrics schemaMetrics;
 
     @Inject
     public ServerMetrics(MetricRegistry metricRegistry)
@@ -51,5 +55,9 @@ public class ServerMetrics
                    .withDomain(DOMAIN)
                    .withName("CassInstancesDown")
                    .build();
+
+        restoreMetrics = new RestoreMetrics(metricRegistry);
+        schemaMetrics = new SchemaMetrics(metricRegistry);
+        // TODO - Saranya, group other server level metrics under ServerMetrics; the individual metrics does not need to be declared as @Singleton
     }
 }

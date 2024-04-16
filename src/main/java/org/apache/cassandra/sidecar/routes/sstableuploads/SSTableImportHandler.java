@@ -90,7 +90,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
                                SocketAddress remoteAddress,
                                SSTableImportRequest request)
     {
-        SSTableImportMetrics metrics = metadataFetcher.instance(host).metrics().sstableImport();
+        SSTableImportMetrics metrics = metadataFetcher.instance(host).instanceMetrics().sstableImport();
         uploadPathBuilder.build(host, request)
                          .onSuccess(uploadDirectory -> {
                              SSTableImporter.ImportOptions importOptions =

@@ -115,7 +115,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         // accept the upload.
         httpRequest.pause();
 
-        InstanceMetrics instanceMetrics = metadataFetcher.instance(host).metrics();
+        InstanceMetrics instanceMetrics = metadataFetcher.instance(host).instanceMetrics();
         UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics
         = instanceMetrics.uploadSSTable().forComponent(parseSSTableComponent(request.component()));
 

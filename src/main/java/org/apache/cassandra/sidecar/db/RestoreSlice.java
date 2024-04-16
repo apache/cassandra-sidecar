@@ -233,8 +233,7 @@ public class RestoreSlice
                                            SSTableImporter importer,
                                            double requiredUsableSpacePercentage,
                                            RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                                           RestoreJobUtil restoreJobUtil,
-                                           RestoreMetrics restoreMetrics)
+                                           RestoreJobUtil restoreJobUtil)
     {
         if (isCancelled)
             return RestoreSliceTask.failed(RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
@@ -248,8 +247,7 @@ public class RestoreSlice
                                         requiredUsableSpacePercentage,
                                         sliceDatabaseAccessor,
                                         restoreJobUtil,
-                                        owner.metrics(),
-                                        restoreMetrics);
+                                        owner);
         }
         catch (IllegalStateException illegalState)
         {

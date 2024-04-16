@@ -23,13 +23,10 @@ import java.util.Objects;
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 
 /**
  * Tracks metrics related to restore functionality provided by Sidecar.
  */
-@Singleton
 public class RestoreMetrics
 {
     public static final String DOMAIN = "Sidecar.Restore";
@@ -39,11 +36,10 @@ public class RestoreMetrics
     public final NamedMetric<DefaultSettableGauge<Integer>> successfulJobs;
     public final NamedMetric<DefaultSettableGauge<Integer>> failedJobs;
     public final NamedMetric<DefaultSettableGauge<Integer>> activeJobs;
-    public final NamedMetric<DefaultSettableGauge<Integer>> tokenRefreshed;
-    public final NamedMetric<DefaultSettableGauge<Integer>> tokenUnauthorized;
-    public final NamedMetric<DefaultSettableGauge<Integer>> tokenExpired;
+    public final NamedMetric<DeltaGauge> tokenRefreshed;
+    public final NamedMetric<DeltaGauge> tokenUnauthorized;
+    public final NamedMetric<DeltaGauge> tokenExpired;
 
-    @Inject
     public RestoreMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
@@ -68,17 +64,17 @@ public class RestoreMetrics
                      .withName("ActiveJobs")
                      .build();
         tokenRefreshed
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("TokenRefreshed")
                      .build();
         tokenUnauthorized
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("TokenUnauthorized")
                      .build();
         tokenExpired
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("TokenExpired")
                      .build();

@@ -25,6 +25,7 @@ public final class ApiEndpointsV1
 {
     public static final String API = "/api";
     public static final String API_V1 = API + "/v1";
+    public static final String API_V1_ALL_ROUTES = API_V1 + "/.*";
 
     public static final String HEALTH = "/__health";
     public static final String CASSANDRA = "/cassandra";

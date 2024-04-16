@@ -179,6 +179,8 @@ public class SidecarSchema
 
     protected void reportSidecarSchemaInitialized()
     {
+        metrics.failedInitializations.metric.setValue(0);
+        metrics.failedInitializations.metric.setValue(0);
         vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), "SidecarSchema initialized");
     }
 }

@@ -29,7 +29,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 import org.apache.cassandra.sidecar.metrics.ResourceMetrics;
-import org.apache.cassandra.sidecar.metrics.Timer;
+import org.apache.cassandra.sidecar.metrics.StopWatch;
 
 /**
  * A pool of executors backed by {@link WorkerExecutor} and {@link Vertx}
@@ -108,9 +108,7 @@ public abstract class TaskExecutorPool implements WorkerExecutor
         return vertx.setPeriodic(initialDelay,
                                  delay,
                                  id -> workerExecutor.executeBlocking(() -> {
-                                     long startTime = System.nanoTime();
                                      handler.handle(id);
-                                     recordTimeTaken(System.nanoTime() - startTime);
                                      return id;
                                  }, ordered));
     }
@@ -125,12 +123,7 @@ public abstract class TaskExecutorPool implements WorkerExecutor
      */
     public long setTimer(long delay, Handler<Long> handler)
     {
-        return vertx.setTimer(delay, id ->
-                                     workerExecutor.executeBlocking(promise -> {
-                                         long startTime = System.nanoTime();
-                                         handler.handle(id);
-                                         recordTimeTaken(System.nanoTime() - startTime);
-                                     }, false));
+        return setTimer(delay, handler, false);
     }
 
     /**
@@ -147,9 +140,7 @@ public abstract class TaskExecutorPool implements WorkerExecutor
     public long setTimer(long delay, Handler<Long> handler, boolean ordered)
     {
         return vertx.setTimer(delay, id -> workerExecutor.executeBlocking(() -> {
-            long startTime = System.nanoTime();
             handler.handle(id);
-            recordTimeTaken(System.nanoTime() - startTime);
             return id;
         }, ordered));
     }
@@ -170,33 +161,31 @@ public abstract class TaskExecutorPool implements WorkerExecutor
                                     boolean ordered,
                                     Handler<AsyncResult<T>> asyncResultHandler)
     {
-        workerExecutor.executeBlocking(blockingCodeHandler, ordered, asyncResultHandler);
+        // No existing use cases; and do not expect new use cases of this deprecated API
+        throw new UnsupportedOperationException("Operation is unsupported!");
     }
 
     @Override
     public <T> Future<T> executeBlocking(Handler<Promise<T>> blockingCodeHandler,
                                          boolean ordered)
     {
-        return Timer.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler, ordered), this::recordTimeTaken);
+        // TODO: migrate to org.apache.cassandra.sidecar.concurrent.TaskExecutorPool.executeBlocking(java.util.concurrent.Callable<T>, boolean)
+        return executeBlocking(() -> {
+            Promise<T> promise = Promise.promise();
+            blockingCodeHandler.handle(promise); // no need to handle exceptions, as they are handled by the delegation workerExecutor
+            Future<T> future = promise.future();
+            if (!future.isComplete())
+            {
+                throw new IllegalStateException("Unfulfilled promised detected");
+            }
+            return future.result(); // future is complete
+        }, ordered);
     }
 
     @Override
     public <T> Future<T> executeBlocking(Callable<T> blockingCodeHandler, boolean ordered)
     {
-        return Timer.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler, ordered), this::recordTimeTaken);
-    }
-
-    @Override
-    public <T> void executeBlocking(Handler<Promise<T>> blockingCodeHandler,
-                                    Handler<AsyncResult<T>> asyncResultHandler)
-    {
-        workerExecutor.executeBlocking(blockingCodeHandler, asyncResultHandler);
-    }
-
-    @Override
-    public <T> Future<T> executeBlocking(Handler<Promise<T>> blockingCodeHandler)
-    {
-        return Timer.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler), this::recordTimeTaken);
+        return StopWatch.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler, ordered), this::recordTimeTaken);
     }
 
     /**

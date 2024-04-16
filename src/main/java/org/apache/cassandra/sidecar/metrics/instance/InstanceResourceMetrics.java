@@ -22,6 +22,7 @@ import java.util.Objects;
 
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
+import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
@@ -34,7 +35,7 @@ public class InstanceResourceMetrics
 {
     public static final String DOMAIN = INSTANCE_PREFIX + ".Resource";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<DefaultSettableGauge<Integer>> insufficientStagingSpace;
+    public final NamedMetric<DeltaGauge> insufficientStagingSpace;
     public final NamedMetric<DefaultSettableGauge<Long>> usableStagingSpace;
 
     public InstanceResourceMetrics(MetricRegistry metricRegistry)
@@ -42,7 +43,7 @@ public class InstanceResourceMetrics
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
         insufficientStagingSpace
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("InsufficientStagingSpace")
                      .build();

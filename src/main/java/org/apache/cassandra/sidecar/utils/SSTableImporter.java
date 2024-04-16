@@ -214,7 +214,7 @@ public class SSTableImporter
             CassandraAdapterDelegate delegate = instance.delegate();
             if (instanceMetrics == null)
             {
-                instanceMetrics = instance.metrics();
+                instanceMetrics = instance.instanceMetrics();
             }
 
             if (delegate == null)
@@ -227,7 +227,7 @@ public class SSTableImporter
             if (!recorded)
             {
                 // +1 offset added to consider already polled entry
-                instance.metrics().sstableImport().pendingImports.metric.setValue(queue.size() + 1);
+                instance.instanceMetrics().sstableImport().pendingImports.metric.setValue(queue.size() + 1);
                 recorded = true;
             }
 

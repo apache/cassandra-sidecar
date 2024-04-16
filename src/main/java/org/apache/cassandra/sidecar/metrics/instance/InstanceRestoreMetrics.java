@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.metrics.instance;
 import java.util.Objects;
 
 import com.codahale.metrics.DefaultSettableGauge;
+import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
@@ -44,10 +45,10 @@ public class InstanceRestoreMetrics
     public final NamedMetric<DefaultSettableGauge<Integer>> sliceChecksumMismatches;
     public final NamedMetric<DefaultSettableGauge<Integer>> sliceImportQueueLength;
     public final NamedMetric<DefaultSettableGauge<Integer>> pendingSliceCount;
-    public final NamedMetric<DefaultSettableGauge<Long>> dataSSTableComponentSize;
+    public final NamedMetric<Histogram> dataSSTableComponentSize;
     public final NamedMetric<Timer> sliceDownloadTime;
-    public final NamedMetric<DefaultSettableGauge<Long>> sliceCompressedSizeInBytes;
-    public final NamedMetric<DefaultSettableGauge<Long>> sliceUncompressedSizeInBytes;
+    public final NamedMetric<Histogram> sliceCompressedSizeInBytes;
+    public final NamedMetric<Histogram> sliceUncompressedSizeInBytes;
     public final NamedMetric<Timer> slowRestoreTaskTime;
 
     public InstanceRestoreMetrics(MetricRegistry metricRegistry)
@@ -90,7 +91,7 @@ public class InstanceRestoreMetrics
                      .withName("PendingSliceCount")
                      .build();
         dataSSTableComponentSize
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+        = NamedMetric.builder(metricRegistry::histogram)
                      .withDomain(DOMAIN)
                      .withName("RestoreDataSizeBytes")
                      .addTag("Component", "Data.db")
@@ -98,12 +99,12 @@ public class InstanceRestoreMetrics
         sliceDownloadTime
         = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceDownloadTime").build();
         sliceCompressedSizeInBytes
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+        = NamedMetric.builder(metricRegistry::histogram)
                      .withDomain(DOMAIN)
                      .withName("SliceCompressedSizeBytes")
                      .build();
         sliceUncompressedSizeInBytes
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+        = NamedMetric.builder(metricRegistry::histogram)
                      .withDomain(DOMAIN)
                      .withName("SliceUncompressedSizeBytes")
                      .build();

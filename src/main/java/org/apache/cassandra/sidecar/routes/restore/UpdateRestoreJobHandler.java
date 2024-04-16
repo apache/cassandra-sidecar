@@ -106,7 +106,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
 
             if (job.secrets != null)
             {
-                metrics.tokenRefreshed.metric.setValue(1);
+                metrics.tokenRefreshed.metric.update(1);
             }
 
             restoreJobManagerGroup.signalRefreshRestoreJob();

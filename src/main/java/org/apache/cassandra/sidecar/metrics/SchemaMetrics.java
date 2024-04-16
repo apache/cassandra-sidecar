@@ -20,14 +20,11 @@ package org.apache.cassandra.sidecar.metrics;
 
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 
 /**
  * Tracks metrics for {@link org.apache.cassandra.sidecar.db.schema.SidecarSchema} and other schema related handling
  * done by Sidecar
  */
-@Singleton
 public class SchemaMetrics
 {
     public static final String DOMAIN = "Sidecar.Schema";
@@ -35,7 +32,6 @@ public class SchemaMetrics
     public final NamedMetric<DefaultSettableGauge<Integer>> failedInitializations;
     public final NamedMetric<DefaultSettableGauge<Integer>> failedModifications;
 
-    @Inject
     public SchemaMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = metricRegistry;
