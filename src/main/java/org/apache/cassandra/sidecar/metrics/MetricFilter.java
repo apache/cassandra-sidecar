@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.metrics;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -40,6 +41,10 @@ public abstract class MetricFilter
 
     public static List<MetricFilter> parse(List<MetricsFilteringConfiguration> filterConfigurations)
     {
+        if (filterConfigurations == null)
+        {
+            return Collections.emptyList();
+        }
         List<MetricFilter> filters = new ArrayList<>();
         for (MetricsFilteringConfiguration filterConfiguration : filterConfigurations)
         {

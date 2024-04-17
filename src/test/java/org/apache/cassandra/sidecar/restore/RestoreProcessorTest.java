@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,13 +38,15 @@ import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceRestoreMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
-import org.apache.cassandra.sidecar.stats.RestoreJobStats;
-import org.apache.cassandra.sidecar.stats.TestRestoreJobStats;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.mockito.Mockito;
 
 import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
@@ -56,7 +59,6 @@ class RestoreProcessorTest
     private RestoreProcessor processor;
     private SidecarSchema sidecarSchema;
     private PeriodicTaskExecutor periodicTaskExecutor;
-    private TestRestoreJobStats stats;
 
     @BeforeEach
     void setup()
@@ -68,7 +70,13 @@ class RestoreProcessorTest
         when(processor.delay()).thenReturn(100L);
         when(processor.sidecarSchema()).thenReturn(sidecarSchema);
         periodicTaskExecutor = injector.getInstance(PeriodicTaskExecutor.class);
-        stats = (TestRestoreJobStats) injector.getInstance(RestoreJobStats.class);
+    }
+
+    @AfterEach
+    void clear()
+    {
+        registry().removeMatching((name, metric) -> true);
+        registry(1).removeMatching((name, metric) -> true);
     }
 
     @Test
@@ -80,7 +88,6 @@ class RestoreProcessorTest
         int concurrency = TestModule.RESTORE_MAX_CONCURRENCY;
         periodicTaskExecutor.schedule(processor);
 
-        assertThat(stats.sliceImportQueueLengths).isEmpty();
         assertThat(processor.activeSlices()).isZero();
 
         CountDownLatch latch = new CountDownLatch(1);
@@ -91,18 +98,16 @@ class RestoreProcessorTest
             processor.submit(mockSlowSlice(latch));
         }
 
+        InstanceRestoreMetrics instanceRestoreMetrics = instanceMetrics().restore();
+
         // assert before any slice can be completed
         loopAssert(3, () -> {
             // expect slice import queue has the size of concurrency
-            assertThat(stats.sliceImportQueueLengths).isNotEmpty();
-            int lastValueIndex = stats.sliceImportQueueLengths.size() - 1;
-            assertThat(stats.sliceImportQueueLengths.get(lastValueIndex))
+            assertThat(instanceRestoreMetrics.sliceImportQueueLength.metric.getValue())
             .isLessThanOrEqualTo(concurrency);
 
             // expect the pending slices count equals to "total - concurrency"
-            assertThat(stats.pendingSliceCounts).isNotEmpty();
-            lastValueIndex = stats.pendingSliceCounts.size() - 1;
-            assertThat(stats.pendingSliceCounts.get(lastValueIndex))
+            assertThat(instanceRestoreMetrics.pendingSliceCount.metric.getValue())
             .isLessThanOrEqualTo(total - concurrency);
 
             assertThat(processor.activeSlices()).isEqualTo(concurrency);
@@ -123,32 +128,13 @@ class RestoreProcessorTest
         // and the pending slices should be back to 0
         loopAssert(3, () -> {
             assertThat(processor.activeSlices()).isZero();
-            int lastValueIndex = stats.sliceImportQueueLengths.size() - 1;
-            assertThat(stats.sliceImportQueueLengths.get(lastValueIndex)).isZero();
-            lastValueIndex = stats.pendingSliceCounts.size() - 1;
-            assertThat(stats.pendingSliceCounts.get(lastValueIndex)).isZero();
+            assertThat(instanceRestoreMetrics.sliceImportQueueLength.metric.getValue()).isZero();
+            assertThat(instanceRestoreMetrics.pendingSliceCount.metric.getValue()).isZero();
         });
 
-        // assert on the historic captured values
-        for (long historicQueueSize : stats.sliceImportQueueLengths)
-        {
-            assertThat(historicQueueSize)
-            .describedAs("All captured queue size should be in the range of [0, concurrency]")
-            .isNotNegative()
-            .isLessThanOrEqualTo(concurrency);
-        }
-
-        for (long historicPendingCount : stats.pendingSliceCounts)
-        {
-            assertThat(historicPendingCount)
-            .describedAs("All captured counts should be in the range of [0, total - concurrency]")
-            .isNotNegative()
-            .isLessThanOrEqualTo(total - concurrency);
-        }
-
         // all slices complete successfully
-        assertThat(stats.sliceCompletionTimes).hasSize(total);
-        for (long sliceCompleteDuration : stats.sliceCompletionTimes)
+        assertThat(instanceRestoreMetrics.sliceCompletionTime.metric.getSnapshot().getValues()).hasSize(total);
+        for (long sliceCompleteDuration : instanceRestoreMetrics.sliceCompletionTime.metric.getSnapshot().getValues())
         {
             assertThat(sliceCompleteDuration).isPositive();
         }
@@ -179,7 +165,6 @@ class RestoreProcessorTest
     @Test
     public void testLongRunningHandlerDetection()
     {
-
         when(sidecarSchema.isInitialized()).thenReturn(true);
         periodicTaskExecutor.schedule(processor);
 
@@ -190,8 +175,11 @@ class RestoreProcessorTest
         currentTime.set(fiveMinutesInNanos);
         processor.submit(slice);
         loopAssert(3, () -> {
-            assertThat(stats.longRunningRestoreHandlers.size()).isEqualTo(1);
-            Long handlerTimeInNanos = stats.longRunningRestoreHandlers.get(slice.owner().id());
+            long[] slowRestoreTaskTimes = instanceMetrics()
+                                          .restore()
+                                          .slowRestoreTaskTime.metric.getSnapshot().getValues();
+            assertThat(slowRestoreTaskTimes.length).isGreaterThanOrEqualTo(1);
+            Long handlerTimeInNanos = slowRestoreTaskTimes[0];
             assertThat(handlerTimeInNanos).isNotNull();
             assertThat(handlerTimeInNanos).isEqualTo(fiveMinutesInNanos);
             assertThat(processor.activeTasks()).isOne();
@@ -206,6 +194,11 @@ class RestoreProcessorTest
         });
     }
 
+    private InstanceMetrics instanceMetrics()
+    {
+        return new InstanceMetricsImpl(registry(1));
+    }
+
     private RestoreSlice mockSlowSlice(CountDownLatch latch)
     {
         return mockSlowSlice(latch, System::nanoTime);
@@ -217,6 +210,7 @@ class RestoreProcessorTest
         when(slice.jobId()).thenReturn(UUIDs.timeBased());
         when(slice.owner().id()).thenReturn(1);
         when(slice.key()).thenReturn("SliceKey");
+        when(slice.owner().metrics()).thenReturn(instanceMetrics());
         RestoreJob job = RestoreJob.builder()
                                    .jobStatus(RestoreJobStatus.CREATED)
                                    .build();

@@ -28,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools.TaskExecutorPool;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.InsufficientStorageException;
 
 /**

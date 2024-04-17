@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.exceptions.NodeBootstrappingException;
 import org.apache.cassandra.sidecar.common.exceptions.SnapshotAlreadyExistsException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.snapshots.SnapshotDirectory;
@@ -235,7 +236,7 @@ public class SnapshotsHandler extends AbstractHandler<SnapshotRequest>
                                 SocketAddress remoteAddress,
                                 SnapshotRequest requestParams)
     {
-        ExecutorPools.TaskExecutorPool pool = executorPools.service();
+        TaskExecutorPool pool = executorPools.service();
         pool.executeBlocking(promise -> {
                 CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
                 if (delegate == null)

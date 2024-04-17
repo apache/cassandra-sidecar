@@ -35,14 +35,14 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.data.SSTableUploadResponse;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.data.SSTableUploadRequest;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceResourceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.UploadSSTableMetrics;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
-import org.apache.cassandra.sidecar.stats.SSTableStats;
-import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.DigestVerifier;
 import org.apache.cassandra.sidecar.utils.DigestVerifierFactory;
@@ -53,7 +53,7 @@ import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
-import static org.apache.cassandra.sidecar.utils.MetricUtils.sstableExtension;
+import static org.apache.cassandra.sidecar.utils.MetricUtils.parseSSTableComponent;
 
 /**
  * Handler for managing uploaded SSTable components
@@ -66,7 +66,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
     private final SSTableUploader uploader;
     private final SSTableUploadsPathBuilder uploadPathBuilder;
     private final ConcurrencyLimiter limiter;
-    private final SSTableStats stats;
     private final DigestVerifierFactory digestVerifierFactory;
 
     /**
@@ -79,7 +78,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
      * @param uploadPathBuilder    a class that provides SSTableUploads directories
      * @param executorPools        executor pools for blocking executions
      * @param validator            a validator instance to validate Cassandra-specific input
-     * @param sidecarStats         an interface holding all stats related to main sidecar process
      * @param digestVerifierFactory a factory of checksum verifiers
      */
     @Inject
@@ -90,7 +88,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                                    SSTableUploadsPathBuilder uploadPathBuilder,
                                    ExecutorPools executorPools,
                                    CassandraInputValidator validator,
-                                   SidecarStats sidecarStats,
                                    DigestVerifierFactory digestVerifierFactory)
     {
         super(metadataFetcher, executorPools, validator);
@@ -99,7 +96,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         this.uploader = uploader;
         this.uploadPathBuilder = uploadPathBuilder;
         this.limiter = new ConcurrencyLimiter(configuration::concurrentUploadsLimit);
-        this.stats = sidecarStats.ssTableStats();
         this.digestVerifierFactory = digestVerifierFactory;
     }
 
@@ -121,13 +117,13 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
 
         InstanceMetrics instanceMetrics = metadataFetcher.instance(host).metrics();
         UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics
-        = instanceMetrics.uploadSSTable().forComponent(sstableExtension(request.component()));
+        = instanceMetrics.uploadSSTable().forComponent(parseSSTableComponent(request.component()));
 
         long startTimeInNanos = System.nanoTime();
         if (!limiter.tryAcquire())
         {
             String message = String.format("Concurrent upload limit (%d) exceeded", limiter.limit());
-            componentMetrics.rateLimitedCalls.metric.mark();
+            instanceMetrics.uploadSSTable().throttled.metric.update(1);
             context.fail(wrapHttpException(HttpResponseStatus.TOO_MANY_REQUESTS, message));
             return;
         }
@@ -137,7 +133,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
         validateKeyspaceAndTable(host, request)
         .compose(validRequest -> uploadPathBuilder.resolveStagingDirectory(host))
         .compose(uploadDir -> ensureSufficientSpaceAvailable(uploadDir,
-                                                             componentMetrics))
+                                                             instanceMetrics.resource()))
         .compose(v -> uploadPathBuilder.build(host, request))
         .compose(uploadDirectory -> {
             DigestVerifier digestVerifier = digestVerifierFactory.verifier(httpRequest.headers());
@@ -153,7 +149,9 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
             logger.info("Successfully uploaded SSTable component for request={}, remoteAddress={}, " +
                         "instance={}, sizeInBytes={}, serviceTimeMillis={}",
                         request, remoteAddress, host, fileProps.size(), serviceTimeMillis);
-            stats.onBytesUploaded(fileProps.size());
+            componentMetrics.bytesUploadedRate.metric.mark(fileProps.size());
+            instanceMetrics.uploadSSTable().totalBytesUploadedRate.metric.mark(fileProps.size());
+
             context.json(new SSTableUploadResponse(request.uploadId(), fileProps.size(), serviceTimeMillis));
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
@@ -192,7 +190,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
     private Future<SSTableUploadRequest> validateKeyspaceAndTable(String host,
                                                                   SSTableUploadRequest request)
     {
-        ExecutorPools.TaskExecutorPool pool = executorPools.service();
+        TaskExecutorPool pool = executorPools.service();
         return pool.<Metadata>executeBlocking(promise -> {
                        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
                        Metadata metadata = delegate.metadata();
@@ -233,7 +231,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
      * @return a succeeded future if there is sufficient space available, or failed future otherwise
      */
     private Future<String> ensureSufficientSpaceAvailable(String uploadDirectory,
-                                                          UploadSSTableMetrics.UploadSSTableComponentMetrics metrics)
+                                                          InstanceResourceMetrics resourceMetrics)
     {
         float minimumPercentageRequired = configuration.minimumSpacePercentageRequired();
         if (minimumPercentageRequired == 0)
@@ -245,6 +243,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                      // calculate available disk space percentage
                      long totalSpace = fsProps.totalSpace();
                      long usableSpace = fsProps.usableSpace();
+                     resourceMetrics.usableStagingSpace.metric.setValue(usableSpace);
 
                      // using double for higher precision
                      double spacePercentAvailable = (usableSpace > 0L && totalSpace > 0L)
@@ -258,7 +257,6 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                          logger.warn("Insufficient space available for upload in stagingDir={}, available={}%, " +
                                      "required={}%", uploadDirectory,
                                      availableDiskSpacePercentage, minimumPercentageRequired);
-                         metrics.diskUsageHigh.metric.mark();
                          return Future.failedFuture(wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                                                       "Insufficient space available for upload"));
                      }

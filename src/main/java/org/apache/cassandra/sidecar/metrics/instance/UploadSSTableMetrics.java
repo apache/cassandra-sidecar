@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
@@ -33,13 +34,26 @@ import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INST
  */
 public class UploadSSTableMetrics
 {
-    public static final String DOMAIN = INSTANCE_PREFIX + ".upload_sstable";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".UploadSSTable";
     protected final MetricRegistry metricRegistry;
     protected final Map<String, UploadSSTableComponentMetrics> uploadComponentMetrics = new ConcurrentHashMap<>();
+    public final NamedMetric<Meter> totalBytesUploadedRate;
+    public final NamedMetric<DeltaGauge> throttled;
 
     public UploadSSTableMetrics(MetricRegistry metricRegistry)
     {
-        this.metricRegistry = metricRegistry;
+        this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
+
+        totalBytesUploadedRate
+        = NamedMetric.builder(metricRegistry::meter)
+                     .withDomain(DOMAIN)
+                     .withName("TotalBytesUploadedRate")
+                     .build();
+        throttled
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
+                     .withDomain(DOMAIN)
+                     .withName("Throttled")
+                     .build();
     }
 
     public UploadSSTableComponentMetrics forComponent(String component)
@@ -55,8 +69,7 @@ public class UploadSSTableMetrics
     {
         protected final MetricRegistry metricRegistry;
         public final String sstableComponent;
-        public final NamedMetric<Meter> rateLimitedCalls;
-        public final NamedMetric<Meter> diskUsageHigh;
+        public final NamedMetric<Meter> bytesUploadedRate;
 
         public UploadSSTableComponentMetrics(MetricRegistry metricRegistry, String sstableComponent)
         {
@@ -69,17 +82,10 @@ public class UploadSSTableMetrics
             }
 
             NamedMetric.Tag componentTag = NamedMetric.Tag.of("component", sstableComponent);
-
-            rateLimitedCalls
+            bytesUploadedRate
             = NamedMetric.builder(metricRegistry::meter)
                          .withDomain(DOMAIN)
-                         .withName("throttled_429")
-                         .addTag(componentTag)
-                         .build();
-            diskUsageHigh
-            = NamedMetric.builder(metricRegistry::meter)
-                         .withDomain(DOMAIN)
-                         .withName("disk_usage_high")
+                         .withName("BytesUploadedRate")
                          .addTag(componentTag)
                          .build();
         }

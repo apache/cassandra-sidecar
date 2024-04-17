@@ -36,13 +36,14 @@ import com.google.inject.Singleton;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
-import org.apache.cassandra.sidecar.stats.RestoreJobStats;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 
@@ -54,7 +55,7 @@ public class RestoreProcessor implements PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreProcessor.class);
 
-    private final ExecutorPools.TaskExecutorPool pool;
+    private final TaskExecutorPool pool;
     private final StorageClientPool s3ClientPool;
     private final SidecarSchema sidecarSchema;
     private final SSTableImporter importer;
@@ -62,10 +63,10 @@ public class RestoreProcessor implements PeriodicTask
     private final SliceQueue sliceQueue = new SliceQueue();
     private final double requiredUsableSpacePercentage; // value range: [0.0, 1.0)
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
-    private final RestoreJobStats stats;
     private final RestoreJobUtil restoreJobUtil;
     private final Set<RestoreSliceHandler> activeTasks = ConcurrentHashMap.newKeySet();
     private final long longRunningHandlerThresholdInSeconds;
+    private final SidecarMetrics metrics;
 
     private volatile boolean isClosed = false; // OK to run close twice, so relax the control to volatile
 
@@ -76,8 +77,8 @@ public class RestoreProcessor implements PeriodicTask
                             StorageClientPool s3ClientPool,
                             SSTableImporter importer,
                             RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                            RestoreJobStats stats,
-                            RestoreJobUtil restoreJobUtil)
+                            RestoreJobUtil restoreJobUtil,
+                            SidecarMetrics metrics)
     {
         this.pool = executorPools.internal();
         this.s3ClientPool = s3ClientPool;
@@ -90,8 +91,8 @@ public class RestoreProcessor implements PeriodicTask
                                                           .restoreJobLongRunningHandlerThresholdSeconds();
         this.importer = importer;
         this.sliceDatabaseAccessor = sliceDatabaseAccessor;
-        this.stats = stats;
         this.restoreJobUtil = restoreJobUtil;
+        this.metrics = metrics;
     }
 
     /**
@@ -141,21 +142,25 @@ public class RestoreProcessor implements PeriodicTask
             sliceQueue.captureImportQueueLength();
             RestoreSliceHandler task = slice.toAsyncTask(s3ClientPool, pool, importer,
                                                          requiredUsableSpacePercentage,
-                                                         sliceDatabaseAccessor, stats,
-                                                         restoreJobUtil);
+                                                         sliceDatabaseAccessor,
+                                                         restoreJobUtil,
+                                                         metrics);
             activeTasks.add(task);
             pool.executeBlocking(task, false) // unordered; run in parallel
             .onSuccess(restoreSlice -> {
-                int instanceId = slice.owner().id();
                 if (slice.hasImported())
                 {
-                    stats.captureSliceCompletionTime(instanceId, System.nanoTime() - slice.creationTimeNanos());
+                    slice.owner()
+                         .metrics()
+                         .restore().sliceCompletionTime.metric.update(System.nanoTime() - slice.creationTimeNanos(), TimeUnit.NANOSECONDS);
                     LOGGER.info("Slice completes successfully. sliceKey={}", slice.key());
                     slice.complete();
                 }
                 else if (slice.hasStaged())
                 {
-                    stats.captureSliceStageTime(instanceId, task.elapsedInNanos());
+                    slice.owner()
+                         .metrics()
+                         .restore().sliceStageTime.metric.update(task.elapsedInNanos(), TimeUnit.NANOSECONDS);
                     LOGGER.info("Slice has been staged successfully. sliceKey={}", slice.key());
                     // the slice is not fully complete yet. Re-enqueue the slice.
                     sliceQueue.offer(slice);
@@ -221,7 +226,10 @@ public class RestoreProcessor implements PeriodicTask
                             task.slice().key(),
                             task.slice().jobId(),
                             task.slice().job().status);
-                stats.captureLongRunningRestoreHandler(task.slice().owner().id(), elapsedInNanos);
+                task.slice()
+                    .owner()
+                    .metrics()
+                    .restore().slowRestoreTaskTime.metric.update(elapsedInNanos, TimeUnit.NANOSECONDS);
             }
         }
     }
@@ -261,12 +269,12 @@ public class RestoreProcessor implements PeriodicTask
     private class SliceQueue
     {
         // use concurrent collection for non-blocking read operations
-        private Queue<RestoreSlice> sliceQueue = new ConcurrentLinkedQueue<>();
+        private final Queue<RestoreSlice> sliceQueue = new ConcurrentLinkedQueue<>();
         // use non-concurrent map since all the update operations are (required to)
         // synchronized for sliceQueue and sliceCounterPerInstance
-        private Map<Integer, AtomicInteger> sliceCounterPerInstance = new HashMap<>();
+        private final Map<Integer, AtomicInteger> sliceCounterPerInstance = new HashMap<>();
         // use concurrent map to read latest map content, e.g. capture stats, count size, etc.
-        private Map<Integer, AtomicInteger> activeSliceCounterPerInstance = new ConcurrentHashMap<>();
+        private final Map<Integer, AtomicInteger> activeSliceCounterPerInstance = new ConcurrentHashMap<>();
 
         synchronized boolean offer(RestoreSlice slice)
         {
@@ -312,13 +320,17 @@ public class RestoreProcessor implements PeriodicTask
         void captureImportQueueLength()
         {
             activeSliceCounterPerInstance.forEach((instanceId, counter) ->
-                                                  stats.captureSliceImportQueueLength(instanceId, counter.get()));
+                                                  metrics
+                                                  .instance(instanceId).restore()
+                                                  .sliceImportQueueLength.metric.setValue(counter.get()));
         }
 
         void capturePendingSliceCount()
         {
             sliceCounterPerInstance.forEach((instanceId, counter) ->
-                                            stats.capturePendingSliceCount(instanceId, counter.get()));
+                                            metrics
+                                            .instance(instanceId).restore()
+                                            .pendingSliceCount.metric.setValue(counter.get()));
         }
 
         private void increment(Map<Integer, AtomicInteger> map, RestoreSlice slice)
@@ -336,18 +348,15 @@ public class RestoreProcessor implements PeriodicTask
         private void decrementIfPresent(Map<Integer, AtomicInteger> map, RestoreSlice slice)
         {
             map.computeIfPresent(slice.owner().id(), (key, counter) -> {
-                if (counter != null)
+                if (counter.get() < 0) // The condition is not expected. Log it if it happens
                 {
-                    if (counter.get() < 0) // The condition is not expected. Log it if it happens
-                    {
-                        // create an IllegalStateException to capture stacktrace
-                        LOGGER.warn("Slice counter dropped below 0. sliceKey={}",
-                                    slice.key(), new IllegalStateException("Unexpected slice counter state"));
-                        counter.set(0); // repair anomaly
-                        return counter;
-                    }
-                    counter.decrementAndGet();
+                    // create an IllegalStateException to capture stacktrace
+                    LOGGER.warn("Slice counter dropped below 0. sliceKey={}",
+                                slice.key(), new IllegalStateException("Unexpected slice counter state"));
+                    counter.set(0); // repair anomaly
+                    return counter;
                 }
+                counter.decrementAndGet();
                 return counter;
             });
         }

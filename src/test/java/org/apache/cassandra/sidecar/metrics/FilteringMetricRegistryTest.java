@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.NoopMetricRegistry;
+import com.codahale.metrics.SharedMetricRegistries;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.vertx.core.Vertx;
@@ -50,11 +52,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Test for filtering of metrics
  */
 @ExtendWith(VertxExtension.class)
-public class FilteringMetricRegistryTest
+class FilteringMetricRegistryTest
 {
     private static final MetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry();
     @TempDir
     private Path confPath;
+
+    @AfterEach
+    void cleanup()
+    {
+        SharedMetricRegistries.clear();
+    }
 
     @Test
     void testNoopInstanceRetrieved()
@@ -206,6 +214,31 @@ public class FilteringMetricRegistryTest
                   assertThat(globalRegistry.getIncludedMetrics().size()).isGreaterThanOrEqualTo(1);
                   assertThat(globalRegistry.getIncludedMetrics().keySet().stream())
                   .noneMatch(key -> excludedPattern.matcher(key).matches());
+                  waitUntilCheck.flag();
+                  context.completeNow();
+              });
+    }
+
+    @Test
+    void testNoFiltering(VertxTestContext context)
+    {
+        ClassLoader classLoader = FilteringMetricRegistryTest.class.getClassLoader();
+        Path yamlPath = writeResourceToPath(classLoader, confPath, "config/sidecar_metrics_empty_filters.yaml");
+        Injector injector = Guice.createInjector(new MainModule(yamlPath));
+        Server server = injector.getInstance(Server.class);
+        Vertx vertx = injector.getInstance(Vertx.class);
+
+        Checkpoint serverStarted = context.checkpoint();
+        Checkpoint waitUntilCheck = context.checkpoint();
+
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+
+        server.start()
+              .onFailure(context::failNow)
+              .onSuccess(v -> {
+                  MetricRegistryFactory registryFactory = injector.getInstance(MetricRegistryFactory.class);
+                  FilteringMetricRegistry globalRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
+                  assertThat(globalRegistry.getIncludedMetrics().size()).isGreaterThanOrEqualTo(1);
                   waitUntilCheck.flag();
                   context.completeNow();
               });

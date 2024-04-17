@@ -31,8 +31,10 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.metrics.ServerMetrics;
+import org.apache.cassandra.sidecar.metrics.HealthMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_START;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -46,20 +48,20 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     private final EventBus eventBus;
     private final SidecarConfiguration configuration;
     private final InstancesConfig instancesConfig;
-    private final ExecutorPools.TaskExecutorPool internalPool;
-    private final ServerMetrics serverMetrics;
+    private final TaskExecutorPool internalPool;
+    private final HealthMetrics metrics;
 
     public HealthCheckPeriodicTask(Vertx vertx,
                                    SidecarConfiguration configuration,
                                    InstancesConfig instancesConfig,
                                    ExecutorPools executorPools,
-                                   ServerMetrics serverMetrics)
+                                   SidecarMetrics metrics)
     {
         eventBus = vertx.eventBus();
         this.configuration = configuration;
         this.instancesConfig = instancesConfig;
         internalPool = executorPools.internal();
-        this.serverMetrics = serverMetrics;
+        this.metrics = metrics.server().health();
     }
 
     @Override
@@ -109,9 +111,10 @@ public class HealthCheckPeriodicTask implements PeriodicTask
         // join always waits until all its futures are completed and will not fail as soon as one of the future fails
         Future.join(futures)
               .onComplete(v -> {
-                  int instancesUp = instancesConfig.instances().size() - instanceDown.get();
-                  serverMetrics.cassandraInstancesUp.metric.setValue(instancesUp);
-                  serverMetrics.cassandraInstancesDown.metric.setValue(instanceDown.get());
+                  int instanceDownCount = instanceDown.get();
+                  int instanceUpCount = instancesConfig.instances().size() - instanceDownCount;
+                  metrics.cassandraInstancesUp.metric.setValue(instanceUpCount);
+                  metrics.cassandraInstancesDown.metric.setValue(instanceDownCount);
               })
               .onSuccess(v -> promise.complete())
               .onFailure(promise::fail);

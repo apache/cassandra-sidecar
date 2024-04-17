@@ -18,32 +18,31 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import static org.apache.cassandra.sidecar.metrics.SidecarMetrics.APP_PREFIX;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * {@link ServerMetrics} tracks metrics related to Sidecar server.
+ * Tests for the new metric type added {@link DeltaGauge}
  */
-public interface ServerMetrics
+class DeltaGaugeTest
 {
-    String SERVER_PREFIX = APP_PREFIX + ".Server";
+    @Test
+    void testCumulativeCountUpdated()
+    {
+        DeltaGauge deltaGauge = new DeltaGauge();
 
-    /**
-     * @return health metrics tracked for Sidecar server.
-     */
-    HealthMetrics health();
-
-    /**
-     * @return metrics tracked for resources maintained by Sidecar server.
-     */
-    ResourceMetrics resource();
-
-    /**
-     * @return metrics tracked by server for restore functionality.
-     */
-    RestoreMetrics restore();
-
-    /**
-     * @return metrics related to {@link org.apache.cassandra.sidecar.db.schema.SidecarSchema} that are tracked.
-     */
-    SchemaMetrics schema();
+        deltaGauge.update(3);
+        deltaGauge.update(7);
+        assertThat(deltaGauge.getValue()).isEqualTo(10);
+        assertThat(deltaGauge.getValue()).isEqualTo(0);
+        deltaGauge.update(2);
+        assertThat(deltaGauge.getValue()).isEqualTo(2);
+        assertThat(deltaGauge.getValue()).isEqualTo(0);
+        deltaGauge.update(3);
+        deltaGauge.update(1);
+        deltaGauge.update(0);
+        assertThat(deltaGauge.getValue()).isEqualTo(4);
+        assertThat(deltaGauge.getValue()).isEqualTo(0);
+    }
 }

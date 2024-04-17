@@ -40,13 +40,11 @@ import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
 import org.apache.cassandra.sidecar.models.HttpResponse;
-import org.apache.cassandra.sidecar.stats.SSTableStats;
-import org.apache.cassandra.sidecar.stats.SidecarStats;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
 import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
-import static org.apache.cassandra.sidecar.utils.MetricUtils.sstableExtension;
+import static org.apache.cassandra.sidecar.utils.MetricUtils.parseSSTableComponent;
 
 /**
  * General handler for serving files
@@ -59,20 +57,17 @@ public class FileStreamer
     private final ExecutorPools executorPools;
     private final ThrottleConfiguration config;
     private final SidecarRateLimiter rateLimiter;
-    private final SSTableStats stats;
     private final InstanceMetadataFetcher instanceMetadataFetcher;
 
     @Inject
     public FileStreamer(ExecutorPools executorPools,
                         ServiceConfiguration config,
                         @Named("StreamRequestRateLimiter") SidecarRateLimiter rateLimiter,
-                        SidecarStats stats,
                         InstanceMetadataFetcher instanceMetadataFetcher)
     {
         this.executorPools = executorPools;
         this.config = config.throttleConfiguration();
         this.rateLimiter = rateLimiter;
-        this.stats = stats.ssTableStats();
         this.instanceMetadataFetcher = instanceMetadataFetcher;
     }
 
@@ -133,23 +128,20 @@ public class FileStreamer
                                 Promise<Void> promise)
     {
         InstanceMetrics instanceMetrics = instanceMetadataFetcher.instance(instanceId).metrics();
-        String component = sstableExtension(filename);
-        StreamSSTableMetrics.StreamSSTableComponentMetrics componentMetrics
-        = instanceMetrics.streamSSTable().forComponent(component);
-        if (acquire(response, instanceId, filename, fileLength, range, startTime, componentMetrics, promise))
+        StreamSSTableMetrics streamSSTableMetrics = instanceMetrics.streamSSTable();
+        if (acquire(response, instanceId, filename, fileLength, range, startTime, streamSSTableMetrics, promise))
         {
             // Stream data if rate limiting is disabled or if we acquire
             LOGGER.debug("Streaming range {} for file {} to client {}. Instance: {}", range, filename,
                          response.remoteAddress(), response.host());
-            long startTimeSendFile = System.nanoTime();
             response.sendFile(filename, fileLength, range)
                     .onSuccess(v ->
                                {
-                                   long d = System.nanoTime() - startTimeSendFile;
-                                   componentMetrics.sendFileLatency.metric.update(d, TimeUnit.NANOSECONDS);
+                                   String component = parseSSTableComponent(filename);
                                    LOGGER.debug("Streamed file {} successfully to client {}. Instance: {}", filename,
                                                 response.remoteAddress(), response.host());
-                                   stats.onBytesStreamed(fileLength);
+                                   streamSSTableMetrics.forComponent(component).bytesStreamedRate.metric.mark(range.length());
+                                   instanceMetrics.streamSSTable().totalBytesStreamedRate.metric.mark(range.length());
                                    promise.complete();
                                })
                     .onFailure(promise::fail);
@@ -161,18 +153,18 @@ public class FileStreamer
      * delay. Otherwise, it will retry acquiring the permit later in the future until it exhausts the
      * retry timeout, in which case it will ask the client to retry later in the future.
      *
-     * @param response          the response to use
-     * @param instanceId        Cassandra instance from which file is streamed
-     * @param filename          the path to the file to serve
-     * @param fileLength        the size of the file to serve
-     * @param range             the range to stream
-     * @param startTime         the start time of this request
-     * @param componentMetrics  metrics captured during streaming of specific SSTable component
-     * @param promise       a promise for the stream
+     * @param response              the response to use
+     * @param instanceId            Cassandra instance from which file is streamed
+     * @param filename              the path to the file to serve
+     * @param fileLength            the size of the file to serve
+     * @param range                 the range to stream
+     * @param startTime             the start time of this request
+     * @param streamSSTableMetrics  metrics captured during streaming of SSTables
+     * @param promise               a promise for the stream
      * @return {@code true} if the permit was acquired, {@code false} otherwise
      */
     private boolean acquire(HttpResponse response, int instanceId, String filename, long fileLength, HttpRange range,
-                            Instant startTime, StreamSSTableMetrics.StreamSSTableComponentMetrics componentMetrics, Promise<Void> promise)
+                            Instant startTime, StreamSSTableMetrics streamSSTableMetrics, Promise<Void> promise)
     {
         if (rateLimiter.tryAcquire())
             return true;
@@ -201,7 +193,7 @@ public class FileStreamer
             LOGGER.debug("Asking client {} to retry after {} micros. Instance: {}", response.remoteAddress(),
                          microsToWait, response.host());
             response.setRetryAfterHeader(microsToWait);
-            componentMetrics.rateLimitedCalls.metric.mark();
+            streamSSTableMetrics.throttled.metric.update(1);
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Ask client to retry later"));
         }
         return false;

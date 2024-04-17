@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.utils;
 
 import java.util.Collections;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,12 +32,17 @@ import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SSTableImportConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 
+import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -71,6 +77,18 @@ class SSTableImporterTest
         mockTableOperations1 = mock(TableOperations.class);
         TableOperations mockTableOperations2 = mock(TableOperations.class);
 
+        InstanceMetadata mockInstanceMetadata1 = mock(InstanceMetadata.class);
+        InstanceMetadata mockInstanceMetadata2 = mock(InstanceMetadata.class);
+        InstanceMetadata mockInstanceMetadata3 = mock(InstanceMetadata.class);
+        when(mockInstanceMetadata1.metrics()).thenReturn(instanceMetrics(1));
+        when(mockInstanceMetadata1.delegate()).thenReturn(mockCassandraAdapterDelegate1);
+        when(mockInstanceMetadata2.metrics()).thenReturn(instanceMetrics(2));
+        when(mockInstanceMetadata2.delegate()).thenReturn(mockCassandraAdapterDelegate2);
+        when(mockInstanceMetadata3.metrics()).thenReturn(instanceMetrics(3));
+        when(mockInstanceMetadata3.delegate()).thenReturn(mockCassandraAdapterDelegate3);
+        when(mockMetadataFetcher.instance("localhost")).thenReturn(mockInstanceMetadata1);
+        when(mockMetadataFetcher.instance("127.0.0.2")).thenReturn(mockInstanceMetadata2);
+        when(mockMetadataFetcher.instance("127.0.0.3")).thenReturn(mockInstanceMetadata3);
         when(mockMetadataFetcher.delegate("localhost")).thenReturn(mockCassandraAdapterDelegate1);
         when(mockMetadataFetcher.delegate("127.0.0.2")).thenReturn(mockCassandraAdapterDelegate2);
         when(mockMetadataFetcher.delegate("127.0.0.3")).thenReturn(mockCassandraAdapterDelegate3);
@@ -99,6 +117,15 @@ class SSTableImporterTest
                                        mockUploadPathBuilder);
     }
 
+    @AfterEach
+    void clear()
+    {
+        registry().removeMatching((name, metric) -> true);
+        registry(1).removeMatching((name, metric) -> true);
+        registry(2).removeMatching((name, metric) -> true);
+        registry(3).removeMatching((name, metric) -> true);
+    }
+
     @Test
     void testImportSucceeds(VertxTestContext context)
     {
@@ -118,7 +145,11 @@ class SSTableImporterTest
             }
             verify(mockTableOperations1, times(1))
             .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
-            context.completeNow();
+            vertx.setTimer(100, handle -> {
+                assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(1).sstableImport().successfulImports.metric.getValue()).isOne();
+                context.completeNow();
+            });
         }));
     }
 
@@ -144,7 +175,10 @@ class SSTableImporterTest
             {
                 assertThat(queue).isEmpty();
             }
-            context.completeNow();
+            loopAssert(1, () -> {
+                assertThat(instanceMetrics(3).sstableImport().pendingImports.metric.getValue()).isOne();
+                context.completeNow();
+            });
         }));
     }
 
@@ -171,7 +205,11 @@ class SSTableImporterTest
             {
                 assertThat(queue).isEmpty();
             }
-            context.completeNow();
+            vertx.setTimer(100, v -> {
+                assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(1).sstableImport().failedImports.metric.getValue()).isOne();
+                context.completeNow();
+            });
         }));
     }
 
@@ -197,7 +235,11 @@ class SSTableImporterTest
             {
                 assertThat(queue).isEmpty();
             }
-            context.completeNow();
+            vertx.setTimer(100, v -> {
+                assertThat(instanceMetrics(2).sstableImport().pendingImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(2).sstableImport().failedImports.metric.getValue()).isOne();
+                context.completeNow();
+            });
         }));
     }
 
@@ -238,5 +280,10 @@ class SSTableImporterTest
             assertThat(importer.cancelImport(options)).isFalse();
             context.completeNow();
         }));
+    }
+
+    public InstanceMetrics instanceMetrics(int id)
+    {
+        return new InstanceMetricsImpl(registry(id));
     }
 }

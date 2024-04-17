@@ -18,25 +18,60 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.Objects;
+
 /**
  * Utilities for Metrics related operations
  */
 public class MetricUtils
 {
+    private static final String DATA = "Data.db";
+    private static final String COMPRESSION = "CompressionInfo.db";
+    private static final String DIGEST = "Digest.crc32";
+    private static final String FILTER = "Filter.db";
+    private static final String INDEX = "Index.db";
+    private static final String STATISTICS = "Statistics.db";
+    private static final String SUMMARY = "Summary.db";
+
     /**
-     * Returns extension of SSTable components. For e.g. for nb-1-big-Data.db component returns db. This extension
-     * is used for marking metrics that are captured specific to SSTable components.
+     * Returns extracted SSTable component. For e.g. for nb-1-big-Data.db component returns Data.db. This is used for
+     * marking metrics that are captured specific to SSTable components.
      *
      * @param filename name of SSTable component
-     * @return String extension of SSTable component, if none found "default" is returned
+     * @return SSTable component, if none found "default" is returned
      */
-    public static String sstableExtension(String filename)
+    public static String parseSSTableComponent(String filename)
     {
-        int index = filename.lastIndexOf('.');
-        if (index != -1)
+        Objects.requireNonNull(filename, "Filename can not be null for SSTable component parsing");
+        String trimmedFilename = filename.trim();
+        if (trimmedFilename.endsWith(DATA))
         {
-            return filename.substring(index + 1);
+            return DATA;
         }
-        return "default";
+        if (trimmedFilename.endsWith(COMPRESSION))
+        {
+            return COMPRESSION;
+        }
+        if (trimmedFilename.endsWith(DIGEST))
+        {
+            return DIGEST;
+        }
+        if (trimmedFilename.endsWith(FILTER))
+        {
+            return FILTER;
+        }
+        if (trimmedFilename.endsWith(INDEX))
+        {
+            return INDEX;
+        }
+        if (trimmedFilename.endsWith(STATISTICS))
+        {
+            return STATISTICS;
+        }
+        if (trimmedFilename.endsWith(SUMMARY))
+        {
+            return SUMMARY;
+        }
+        return "unknown";
     }
 }

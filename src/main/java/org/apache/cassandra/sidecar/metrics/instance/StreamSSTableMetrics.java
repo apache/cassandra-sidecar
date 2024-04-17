@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
+import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
@@ -34,13 +34,26 @@ import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INST
  */
 public class StreamSSTableMetrics
 {
-    public static final String DOMAIN = INSTANCE_PREFIX + ".stream_sstable";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".StreamSSTable";
     protected final MetricRegistry metricRegistry;
     protected final Map<String, StreamSSTableComponentMetrics> streamComponentMetrics = new ConcurrentHashMap<>();
+    public final NamedMetric<Meter> totalBytesStreamedRate;
+    public final NamedMetric<DeltaGauge> throttled;
 
     public StreamSSTableMetrics(MetricRegistry metricRegistry)
     {
-        this.metricRegistry = metricRegistry;
+        this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
+
+        totalBytesStreamedRate
+        = NamedMetric.builder(metricRegistry::meter)
+                     .withDomain(DOMAIN)
+                     .withName("TotalBytesStreamedRate")
+                     .build();
+        throttled
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
+                     .withDomain(DOMAIN)
+                     .withName("Throttled")
+                     .build();
     }
 
     public StreamSSTableComponentMetrics forComponent(String component)
@@ -56,8 +69,7 @@ public class StreamSSTableMetrics
     {
         protected final MetricRegistry metricRegistry;
         public final String sstableComponent;
-        public final NamedMetric<Meter> rateLimitedCalls;
-        public final NamedMetric<Timer> sendFileLatency;
+        public final NamedMetric<Meter> bytesStreamedRate;
 
         public StreamSSTableComponentMetrics(MetricRegistry metricRegistry, String sstableComponent)
         {
@@ -71,16 +83,10 @@ public class StreamSSTableMetrics
 
             NamedMetric.Tag componentTag = NamedMetric.Tag.of("component", sstableComponent);
 
-            rateLimitedCalls
+            bytesStreamedRate
             = NamedMetric.builder(metricRegistry::meter)
                          .withDomain(DOMAIN)
-                         .withName("throttled_429")
-                         .addTag(componentTag)
-                         .build();
-            sendFileLatency
-            = NamedMetric.builder(metricRegistry::timer)
-                         .withDomain(DOMAIN)
-                         .withName("sendfile_latency")
+                         .withName("BytesStreamedRate")
                          .addTag(componentTag)
                          .build();
         }

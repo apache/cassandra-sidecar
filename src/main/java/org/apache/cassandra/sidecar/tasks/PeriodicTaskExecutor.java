@@ -31,6 +31,7 @@ import io.vertx.core.Closeable;
 import io.vertx.core.Promise;
 import io.vertx.core.impl.ConcurrentHashSet;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 
 /**
  * This class manages the scheduling and execution of {@link PeriodicTask}s.
@@ -42,7 +43,7 @@ public class PeriodicTaskExecutor implements Closeable
 
     private final Map<PeriodicTaskKey, Long> timerIds = new ConcurrentHashMap<>();
     private final Set<PeriodicTaskKey> activeTasks = new ConcurrentHashSet<>();
-    private final ExecutorPools.TaskExecutorPool internalPool;
+    private final TaskExecutorPool internalPool;
 
     @Inject
     public PeriodicTaskExecutor(ExecutorPools executorPools)

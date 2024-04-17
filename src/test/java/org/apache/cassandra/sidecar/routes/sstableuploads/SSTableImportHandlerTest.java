@@ -40,10 +40,13 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 
 import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_COPY_DATA;
 import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_INVALIDATE_CACHES;
 import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_VERIFY_TOKENS;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -339,5 +342,10 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                                handler.handle(Future.succeededFuture(r));
                            }
                        })));
+    }
+
+    private InstanceMetrics instanceMetrics(int id)
+    {
+        return new InstanceMetricsImpl(registry(id));
     }
 }

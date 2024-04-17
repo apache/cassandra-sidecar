@@ -53,6 +53,7 @@ import org.apache.cassandra.sidecar.common.NodeSettings;
 import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.common.utils.DriverUtils;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.jetbrains.annotations.NotNull;
@@ -95,6 +96,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private final AtomicBoolean registered = new AtomicBoolean(false);
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
     private final InetSocketAddress localNativeTransportAddress;
+    private final InstanceHealthMetrics healthMetrics;
     private volatile Host host;
     private volatile boolean closed = false;
 
@@ -119,7 +121,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                                     DriverUtils driverUtils,
                                     String sidecarVersion,
                                     String host,
-                                    int port)
+                                    int port,
+                                    InstanceHealthMetrics healthMetrics)
     {
         this.vertx = Objects.requireNonNull(vertx);
         this.cassandraInstanceId = cassandraInstanceId;
@@ -129,6 +132,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         this.versionProvider = versionProvider;
         this.cqlSessionProvider = session;
         this.jmxClient = jmxClient;
+        this.healthMetrics = healthMetrics;
         notificationListener = initializeJmxListener();
     }
 
@@ -222,7 +226,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
         catch (RuntimeException e)
         {
-            LOGGER.error("Unable to connect JMX to Cassandra instance {}", cassandraInstanceId, e);
+            LOGGER.debug("Unable to connect JMX to Cassandra instance {}", cassandraInstanceId, e);
             // The cassandra node JMX connectivity is unavailable.
             markJmxDownAndMaybeNotifyDisconnection();
         }
@@ -281,7 +285,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
         catch (IllegalArgumentException | NoHostAvailableException e)
         {
-            LOGGER.error("Unexpected error querying Cassandra instance {}", cassandraInstanceId, e);
+            LOGGER.debug("Unexpected error querying Cassandra instance {}", cassandraInstanceId, e);
             // The cassandra native protocol connection to the node is down.
             markNativeDownAndMaybeNotifyDisconnection();
             // Unregister the host listener.
@@ -488,6 +492,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     protected void notifyJmxConnection()
     {
+        healthMetrics.jmxDown.metric.setValue(0);
         JsonObject connectMessage = new JsonObject()
                                     .put("cassandraInstanceId", cassandraInstanceId);
         vertx.eventBus().publish(ON_CASSANDRA_JMX_READY.address(), connectMessage);
@@ -496,6 +501,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     protected void notifyNativeConnection()
     {
+        healthMetrics.nativeDown.metric.setValue(0);
         JsonObject connectMessage = new JsonObject()
                                     .put("cassandraInstanceId", cassandraInstanceId);
         vertx.eventBus().publish(ON_CASSANDRA_CQL_READY.address(), connectMessage);
@@ -504,6 +510,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     protected void markNativeDownAndMaybeNotifyDisconnection()
     {
+        healthMetrics.nativeDown.metric.setValue(1);
         boolean wasCqlConnected = isNativeUp;
         isNativeUp = false;
         if (wasCqlConnected)
@@ -517,6 +524,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     protected void markJmxDownAndMaybeNotifyDisconnection()
     {
+        healthMetrics.jmxDown.metric.setValue(1);
         NodeSettings currentNodeSettings = nodeSettingsFromJmx;
         nodeSettingsFromJmx = null;
         currentVersion = null;

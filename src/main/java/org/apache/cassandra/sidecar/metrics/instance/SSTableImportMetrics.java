@@ -28,29 +28,34 @@ import org.apache.cassandra.sidecar.metrics.NamedMetric;
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
 
 /**
- * {@link InstanceResourceMetrics} contains metrics to track resource usage of a Cassandra instance maintained
- * by Sidecar.
+ * Tracks metrics during SSTable import operation done in Cassandra instance
  */
-public class InstanceResourceMetrics
+public class SSTableImportMetrics
 {
-    public static final String DOMAIN = INSTANCE_PREFIX + ".Resource";
+    public static final String DOMAIN = INSTANCE_PREFIX + ".SSTableImport";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<DeltaGauge> insufficientStagingSpace;
-    public final NamedMetric<DefaultSettableGauge<Long>> usableStagingSpace;
+    public final NamedMetric<DefaultSettableGauge<Integer>> pendingImports;
+    public final NamedMetric<DeltaGauge> successfulImports;
+    public final NamedMetric<DeltaGauge> failedImports;
 
-    public InstanceResourceMetrics(MetricRegistry metricRegistry)
+    public SSTableImportMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        insufficientStagingSpace
+        pendingImports
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                     .withDomain(DOMAIN)
+                     .withName("PendingImports")
+                     .build();
+        successfulImports
         = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
-                     .withName("InsufficientStagingSpace")
+                     .withName("SuccessfulImports")
                      .build();
-        usableStagingSpace
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+        failedImports
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
-                     .withName("UsableStagingSpace")
+                     .withName("FailedImports")
                      .build();
     }
 }

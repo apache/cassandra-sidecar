@@ -38,9 +38,11 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -199,6 +201,8 @@ public class SSTableImporter
     private void drainImportQueue(ImportQueue queue)
     {
         int successCount = 0, failureCount = 0;
+        boolean recorded = false;
+        InstanceMetrics instanceMetrics = null;
         while (!queue.isEmpty())
         {
             LOGGER.info("Starting SSTable import session");
@@ -206,17 +210,31 @@ public class SSTableImporter
             Promise<Void> promise = pair.getKey();
             ImportOptions options = pair.getValue();
 
-            CassandraAdapterDelegate cassandra = metadataFetcher.delegate(options.host);
-            if (cassandra == null)
+            InstanceMetadata instance = metadataFetcher.instance(options.host);
+            CassandraAdapterDelegate delegate = instance.delegate();
+            if (instanceMetrics == null)
             {
+                instanceMetrics = instance.metrics();
+            }
+
+            if (delegate == null)
+            {
+                failureCount++;
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
                 continue;
             }
 
-            TableOperations tableOperations = cassandra.tableOperations();
+            if (!recorded)
+            {
+                // +1 offset added to consider already polled entry
+                instance.metrics().sstableImport().pendingImports.metric.setValue(queue.size() + 1);
+                recorded = true;
+            }
 
+            TableOperations tableOperations = delegate.tableOperations();
             if (tableOperations == null)
             {
+                failureCount++;
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
             }
             else
@@ -267,6 +285,8 @@ public class SSTableImporter
         {
             LOGGER.info("Finished SSTable import session with successCount={}, failureCount={}",
                         successCount, failureCount);
+            instanceMetrics.sstableImport().successfulImports.metric.update(successCount);
+            instanceMetrics.sstableImport().failedImports.metric.update(failureCount);
         }
     }
 

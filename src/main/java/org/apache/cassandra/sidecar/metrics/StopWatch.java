@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.stats;
+package org.apache.cassandra.sidecar.metrics;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.LongConsumer;
@@ -24,12 +24,12 @@ import java.util.function.LongConsumer;
 import io.vertx.core.Future;
 
 /**
- * Provides functionality to measure time taken for operations to completed, time measured is generally used for
- * stats publishing.
+ * Provides functionality to measure time taken for operations to completed, i.e. a stopwatch. The time measured is generally used for
+ * metrics collection.
  */
-public class Timer
+public class StopWatch
 {
-    private Timer()
+    private StopWatch()
     {
         throw new UnsupportedOperationException();
     }

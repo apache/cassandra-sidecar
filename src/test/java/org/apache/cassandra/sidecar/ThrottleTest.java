@@ -96,12 +96,11 @@ public class ThrottleTest
             unblockingClientRequest(testRoute);
         }
 
-        StreamSSTableMetrics.StreamSSTableComponentMetrics dbComponentMetrics
-        = new InstanceMetricsImpl(registry(1)).streamSSTable().forComponent("db");
+        StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
 
         HttpResponse response = blockingClientRequest(testRoute);
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TOO_MANY_REQUESTS.code());
-        assertThat(dbComponentMetrics.rateLimitedCalls.metric.getCount()).isGreaterThanOrEqualTo(1);
+        assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(1);
 
         long secsToWait = Long.parseLong(response.getHeader("Retry-After"));
         Thread.sleep(SECONDS.toMillis(secsToWait));

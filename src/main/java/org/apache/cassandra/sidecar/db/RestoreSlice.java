@@ -34,16 +34,16 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.RestoreSliceStatus;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.restore.RestoreJobUtil;
 import org.apache.cassandra.sidecar.restore.RestoreSliceHandler;
 import org.apache.cassandra.sidecar.restore.RestoreSliceTask;
 import org.apache.cassandra.sidecar.restore.RestoreSliceTracker;
 import org.apache.cassandra.sidecar.restore.StorageClient;
 import org.apache.cassandra.sidecar.restore.StorageClientPool;
-import org.apache.cassandra.sidecar.stats.RestoreJobStats;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 import org.jetbrains.annotations.NotNull;
 
@@ -229,12 +229,12 @@ public class RestoreSlice
      * @return {@link RestoreSliceTask} of the restore slice. See {@link RestoreSliceTask} for the steps.
      */
     public RestoreSliceHandler toAsyncTask(StorageClientPool s3ClientPool,
-                                           ExecutorPools.TaskExecutorPool executorPool,
+                                           TaskExecutorPool executorPool,
                                            SSTableImporter importer,
                                            double requiredUsableSpacePercentage,
                                            RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                                           RestoreJobStats stats,
-                                           RestoreJobUtil restoreJobUtil)
+                                           RestoreJobUtil restoreJobUtil,
+                                           SidecarMetrics metrics)
     {
         if (isCancelled)
             return RestoreSliceTask.failed(RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
@@ -247,8 +247,8 @@ public class RestoreSlice
                                         executorPool, importer,
                                         requiredUsableSpacePercentage,
                                         sliceDatabaseAccessor,
-                                        stats,
-                                        restoreJobUtil);
+                                        restoreJobUtil,
+                                        metrics);
         }
         catch (IllegalStateException illegalState)
         {

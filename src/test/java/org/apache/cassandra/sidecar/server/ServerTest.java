@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.server;
 
 import java.nio.file.Path;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -67,6 +69,12 @@ class ServerTest
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
         client = WebClient.create(vertx);
+    }
+
+    @AfterEach
+    void clear()
+    {
+        registry().removeMatching((name, metric) -> true);
     }
 
     @Test
@@ -177,6 +185,28 @@ class ServerTest
                   .withMessage("Invalid null value passed for traffic shaping options update");
                   waitUntilUpdate.flag();
                   context.completeNow();
+              });
+    }
+
+    @Test
+    @DisplayName("Health endpoint specific metrics for server should be published")
+    void healthEndpointMetricsPublished(VertxTestContext context)
+    {
+        Checkpoint serverStarted = context.checkpoint();
+        Checkpoint waitUntilCheck = context.checkpoint();
+
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+
+        server.start()
+              .compose(this::validateHealthEndpoint)
+              .onFailure(context::failNow)
+              .onSuccess(v -> {
+                  vertx.setTimer(100, handle -> {
+                      assertThat(registry().getMetrics().keySet().stream())
+                      .anyMatch(name -> name.contains("/api/v1/__health"));
+                      waitUntilCheck.flag();
+                      context.completeNow();
+                  });
               });
     }
 

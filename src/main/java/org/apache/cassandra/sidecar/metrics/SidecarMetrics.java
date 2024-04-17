@@ -18,32 +18,33 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import static org.apache.cassandra.sidecar.metrics.SidecarMetrics.APP_PREFIX;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 
 /**
- * {@link ServerMetrics} tracks metrics related to Sidecar server.
+ * Tracks both server metrics and Cassandra instance specific metrics that Sidecar maintains.
  */
-public interface ServerMetrics
+public interface SidecarMetrics
 {
-    String SERVER_PREFIX = APP_PREFIX + ".Server";
+    String APP_PREFIX = "Sidecar";
 
     /**
-     * @return health metrics tracked for Sidecar server.
+     * @return server metrics tracked for Sidecar server.
      */
-    HealthMetrics health();
+    ServerMetrics server();
 
     /**
-     * @return metrics tracked for resources maintained by Sidecar server.
+     * Provides Cassandra instance specific metrics given the instance id.
+     *
+     * @param instanceId Cassandra instance id
+     * @return {@link InstanceMetrics} maintained for provided Cassandra instance
      */
-    ResourceMetrics resource();
+    InstanceMetrics instance(int instanceId);
 
     /**
-     * @return metrics tracked by server for restore functionality.
+     * Provides Cassandra instance specific metrics given the instance host name.
+     *
+     * @param host Cassandra instance host name
+     * @return {@link InstanceMetrics} maintained for provided Cassandra instance
      */
-    RestoreMetrics restore();
-
-    /**
-     * @return metrics related to {@link org.apache.cassandra.sidecar.db.schema.SidecarSchema} that are tracked.
-     */
-    SchemaMetrics schema();
+    InstanceMetrics instance(String host);
 }

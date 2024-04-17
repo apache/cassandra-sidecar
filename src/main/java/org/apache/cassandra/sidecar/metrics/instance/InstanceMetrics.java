@@ -18,12 +18,19 @@
 
 package org.apache.cassandra.sidecar.metrics.instance;
 
+import static org.apache.cassandra.sidecar.metrics.SidecarMetrics.APP_PREFIX;
+
 /**
  * {@link InstanceMetrics} tracks metrics related to a Cassandra instance that Sidecar maintains.
  */
 public interface InstanceMetrics
 {
-    String INSTANCE_PREFIX = "sidecar.cas_instance";
+    String INSTANCE_PREFIX = APP_PREFIX + ".CassInstance";
+
+    /**
+     * @return health metrics tracked for cassandra instance
+     */
+    InstanceHealthMetrics health();
 
     /**
      * @return resource metrics tracked for cassandra instance
@@ -39,4 +46,14 @@ public interface InstanceMetrics
      * @return metrics that are tracked during upload of SSTable components to a cassandra instance
      */
     UploadSSTableMetrics uploadSSTable();
+
+    /**
+     * @return metrics that are tracked during restore of SSTables
+     */
+    InstanceRestoreMetrics restore();
+
+    /**
+     * @return metrics that are tracked during import of SSTables
+     */
+    SSTableImportMetrics sstableImport();
 }

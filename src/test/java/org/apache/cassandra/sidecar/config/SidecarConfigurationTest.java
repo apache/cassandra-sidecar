@@ -31,13 +31,8 @@ import org.junit.jupiter.api.io.TempDir;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.VertxMetricsConfigurationImpl;
 import org.assertj.core.api.Condition;
 
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.COMPONENTS_ROUTE;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TIME_SKEW_ROUTE;
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.EQUALS_TYPE;
 import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.REGEX_TYPE;
@@ -260,18 +255,6 @@ class SidecarConfigurationTest
     }
 
     @Test
-    void testRoutesAllowedWithDefaultMonitoredRegex()
-    {
-        List<String> defaultMonitoredRegexes = VertxMetricsConfigurationImpl.DEFAULT_MONITORED_SERVER_ROUTE_REGEXES;
-        assertThat(defaultMonitoredRegexes.size()).isOne();
-        Pattern pattern = Pattern.compile(defaultMonitoredRegexes.get(0));
-        assertThat(pattern.matcher(COMPONENTS_ROUTE)).matches();
-        assertThat(pattern.matcher(KEYSPACE_SCHEMA_ROUTE)).matches();
-        assertThat(pattern.matcher(TIME_SKEW_ROUTE)).matches();
-        assertThat(pattern.matcher(RESTORE_JOB_SLICES_ROUTE)).matches();
-    }
-
-    @Test
     void testMetricsAllowedWithDefaultRegexFilter()
     {
         Pattern pattern = Pattern.compile(MetricsFilteringConfigurationImpl.DEFAULT_VALUE);
@@ -471,7 +454,6 @@ class SidecarConfigurationTest
     {
         assertThat(config.registryName()).isNotEmpty();
         assertThat(config.vertxConfiguration()).isNotNull();
-        assertThat(config.vertxConfiguration().monitoredServerRouteRegexes()).isNotNull();
         assertThat(config.includeConfigurations()).isNotNull();
         assertThat(config.excludeConfigurations()).isNotNull();
     }

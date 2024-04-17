@@ -40,6 +40,8 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -49,6 +51,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -84,6 +87,9 @@ public class StreamSSTableComponentHandlerTest
     {
         final CountDownLatch closeLatch = new CountDownLatch(1);
         server.close().onSuccess(res -> closeLatch.countDown());
+        registry().removeMatching((name, metric) -> true);
+        registry(1).removeMatching((name, metric) -> true);
+        registry(2).removeMatching((name, metric) -> true);
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else
@@ -99,9 +105,14 @@ public class StreamSSTableComponentHandlerTest
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.bodyAsString()).isEqualTo("data");
-                  context.completeNow();
+                  vertx.setTimer(100, v -> {
+                      assertThat(response.statusCode()).isEqualTo(OK.code());
+                      assertThat(response.bodyAsString()).isEqualTo("data");
+                      assertThat(instanceMetrics(1).streamSSTable()
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -274,9 +285,14 @@ public class StreamSSTableComponentHandlerTest
               .putHeader("Range", "bytes=0-")
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.bodyAsString()).isEqualTo("data");
-                  context.completeNow();
+                  vertx.setTimer(100, v -> {
+                      assertThat(response.statusCode()).isEqualTo(OK.code());
+                      assertThat(response.bodyAsString()).isEqualTo("data");
+                      assertThat(instanceMetrics(1).streamSSTable()
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -332,9 +348,14 @@ public class StreamSSTableComponentHandlerTest
               .putHeader("Range", "bytes=0-999999")
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.bodyAsString()).isEqualTo("data");
-                  context.completeNow();
+                  vertx.setTimer(100, v -> {
+                      assertThat(response.statusCode()).isEqualTo(OK.code());
+                      assertThat(response.bodyAsString()).isEqualTo("data");
+                      assertThat(instanceMetrics(1).streamSSTable()
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -348,9 +369,14 @@ public class StreamSSTableComponentHandlerTest
               .putHeader("Range", "bytes=0-2") // 3 bytes streamed
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
-                  assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
-                  assertThat(response.bodyAsString()).isEqualTo("dat");
-                  context.completeNow();
+                  vertx.setTimer(100, v -> {
+                      assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
+                      assertThat(response.bodyAsString()).isEqualTo("dat");
+                      assertThat(instanceMetrics(1).streamSSTable()
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(3);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(3);
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -364,9 +390,14 @@ public class StreamSSTableComponentHandlerTest
               .putHeader("Range", "bytes=-2") // last 2 bytes streamed
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
-                  assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
-                  assertThat(response.bodyAsString()).isEqualTo("ta");
-                  context.completeNow();
+                  vertx.setTimer(100, v -> {
+                      assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
+                      assertThat(response.bodyAsString()).isEqualTo("ta");
+                      assertThat(instanceMetrics(1).streamSSTable()
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(2);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(2);
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -379,11 +410,16 @@ public class StreamSSTableComponentHandlerTest
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .putHeader("Range", "bytes=-5")
               .send(context.succeeding(response -> context.verify(() -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
-                  .describedAs("Server should shrink the range to the file length")
-                  .isEqualTo("4");
-                  context.completeNow();
+                  vertx.setTimer(100, v -> {
+                      assertThat(response.statusCode()).isEqualTo(OK.code());
+                      assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
+                      .describedAs("Server should shrink the range to the file length")
+                      .isEqualTo("4");
+                      assertThat(instanceMetrics(1).streamSSTable()
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      context.completeNow();
+                  });
               })));
     }
 
@@ -410,9 +446,19 @@ public class StreamSSTableComponentHandlerTest
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute + "?instanceId=2")
               .as(BodyCodec.buffer())
               .send(context.succeeding(response -> context.verify(() -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.bodyAsString()).isEqualTo("data");
-                  context.completeNow();
+                  vertx.setTimer(100, v -> {
+                      assertThat(response.statusCode()).isEqualTo(OK.code());
+                      assertThat(response.bodyAsString()).isEqualTo("data");
+                      assertThat(instanceMetrics(2).streamSSTable()
+                                                   .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      assertThat(instanceMetrics(2).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
+                      context.completeNow();
+                  });
               })));
+    }
+
+    private InstanceMetrics instanceMetrics(int id)
+    {
+        return new InstanceMetricsImpl(registry(id));
     }
 }

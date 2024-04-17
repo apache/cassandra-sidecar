@@ -76,6 +76,10 @@ import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
@@ -99,15 +103,14 @@ import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableCleanupHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
 import org.apache.cassandra.sidecar.routes.validations.ValidateTableExistenceHandler;
-import org.apache.cassandra.sidecar.stats.RestoreJobStats;
-import org.apache.cassandra.sidecar.stats.SidecarSchemaStats;
-import org.apache.cassandra.sidecar.stats.SidecarStats;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.JdkMd5DigestProvider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.apache.cassandra.sidecar.utils.XXHash32Provider;
 
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.API_V1_ALL_ROUTES;
 import static org.apache.cassandra.sidecar.common.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
@@ -145,15 +148,15 @@ public class MainModule extends AbstractModule
     public Vertx vertx(SidecarConfiguration sidecarConfiguration, MetricRegistryFactory metricRegistryFactory)
     {
         VertxMetricsConfiguration metricsConfig = sidecarConfiguration.metricsConfiguration().vertxConfiguration();
+        Match serverRouteMatch = new Match().setValue(API_V1_ALL_ROUTES).setType(MatchType.REGEX);
         DropwizardMetricsOptions dropwizardMetricsOptions
         = new DropwizardMetricsOptions().setEnabled(metricsConfig.enabled())
                                         .setJmxEnabled(metricsConfig.exposeViaJMX())
                                         .setJmxDomain(metricsConfig.jmxDomainName())
-                                        .setMetricRegistry(metricRegistryFactory.getOrCreate());
-        for (String regex : metricsConfig.monitoredServerRouteRegexes())
-        {
-            dropwizardMetricsOptions.addMonitoredHttpServerRoute(new Match().setType(MatchType.REGEX).setValue(regex));
-        }
+                                        .setMetricRegistry(metricRegistryFactory.getOrCreate())
+                                        // Monitor all V1 endpoints.
+                                        // Additional filtering is done by configuring yaml fields 'metrics.include|exclude'
+                                        .addMonitoredHttpServerRoute(serverRouteMatch);
         return Vertx.vertx(new VertxOptions().setMetricsOptions(dropwizardMetricsOptions));
     }
 
@@ -463,31 +466,6 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarStats sidecarStats()
-    {
-        return SidecarStats.INSTANCE;
-    }
-
-    @Provides
-    @Singleton
-    public RestoreJobStats restoreJobStats()
-    {
-        return new RestoreJobStats()
-        {
-        };
-    }
-
-    @Provides
-    @Singleton
-    public SidecarSchemaStats sidecarSchemaStats()
-    {
-        return new SidecarSchemaStats()
-        {
-        };
-    }
-
-    @Provides
-    @Singleton
     public RestoreJobsSchema restoreJobsSchema(SidecarConfiguration configuration)
     {
         return new RestoreJobsSchema(configuration.serviceConfiguration()
@@ -511,24 +489,25 @@ public class MainModule extends AbstractModule
     public SidecarSchema sidecarSchema(Vertx vertx,
                                        ExecutorPools executorPools,
                                        SidecarConfiguration configuration,
-                                       SidecarSchemaStats stats,
                                        CQLSessionProvider cqlSessionProvider,
                                        RestoreJobsSchema restoreJobsSchema,
-                                       RestoreSlicesSchema restoreSlicesSchema)
+                                       RestoreSlicesSchema restoreSlicesSchema,
+                                       SidecarMetrics metrics)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
         sidecarInternalKeyspace.registerTableSchema(restoreJobsSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
+        SchemaMetrics schemaMetrics = metrics.server().schema();
         return new SidecarSchema(vertx, executorPools, configuration,
-                                 stats, sidecarInternalKeyspace, cqlSessionProvider);
+                                 sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
     }
 
     @Provides
     @Singleton
-    public MetricRegistry globalMetricRegistry(MetricRegistryFactory registryProvider)
+    public SidecarMetrics metrics(MetricRegistryFactory registryFactory, InstanceMetadataFetcher metadataFetcher)
     {
-        return registryProvider.getOrCreate();
+        return new SidecarMetricsImpl(registryFactory, metadataFetcher);
     }
 
     /**
@@ -584,6 +563,7 @@ public class MainModule extends AbstractModule
                                        .connectionMaxRetries(jmxConfiguration.maxRetries())
                                        .connectionRetryDelayMillis(jmxConfiguration.retryDelayMillis())
                                        .build();
+        MetricRegistry instanceSpecificRegistry = registryFactory.getOrCreate(cassandraInstance.id());
         CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
                                                                          cassandraInstance.id(),
                                                                          versionProvider,
@@ -592,8 +572,8 @@ public class MainModule extends AbstractModule
                                                                          driverUtils,
                                                                          sidecarVersion,
                                                                          host,
-                                                                         port);
-
+                                                                         port,
+                                                                         new InstanceHealthMetrics(instanceSpecificRegistry));
         return InstanceMetadataImpl.builder()
                                    .id(cassandraInstance.id())
                                    .host(host)
@@ -601,7 +581,7 @@ public class MainModule extends AbstractModule
                                    .dataDirs(cassandraInstance.dataDirs())
                                    .stagingDir(cassandraInstance.stagingDir())
                                    .delegate(delegate)
-                                   .metricRegistry(registryFactory.getOrCreate(cassandraInstance.id()))
+                                   .metricRegistry(instanceSpecificRegistry)
                                    .build();
     }
 }

@@ -30,9 +30,16 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test {@link ExecutorPools}
@@ -40,18 +47,24 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class ExecutorPoolsTest
 {
     private ExecutorPools pools;
+    private SidecarMetrics metrics;
     private Vertx vertx;
 
     @BeforeEach
     public void before()
     {
         vertx = Vertx.vertx();
-        pools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+        MetricRegistryFactory mockRegistryFactory = mock(MetricRegistryFactory.class);
+        when(mockRegistryFactory.getOrCreate()).thenReturn(registry());
+        InstanceMetadataFetcher mockInstanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
+        metrics = new SidecarMetricsImpl(mockRegistryFactory, mockInstanceMetadataFetcher);
+        pools = new ExecutorPools(vertx, new ServiceConfigurationImpl(), metrics);
     }
 
     @AfterEach
     public void after()
     {
+        registry().removeMatching((name, metric) -> true);
         vertx.close().onComplete(v -> pools.close()).result();
     }
 
@@ -81,7 +94,7 @@ public class ExecutorPoolsTest
             }
         }
 
-        ExecutorPools.TaskExecutorPool pool = pools.internal();
+        TaskExecutorPool pool = pools.internal();
         IntWrapper v = new IntWrapper();
         int total = 100;
         CountDownLatch stop = new CountDownLatch(total);
@@ -94,9 +107,11 @@ public class ExecutorPoolsTest
                     v.increment();
                     threadNames.add(Thread.currentThread().getName());
                     stop.countDown();
+                    assertThat(metrics.server().resource().internalTaskTime.metric.getCount()).isEqualTo(200);
                 }, true);
             }, false);
         }
+
         assertThat(Uninterruptibles.awaitUninterruptibly(stop, 10, TimeUnit.SECONDS))
         .describedAs("Test should finish in 10 seconds")
         .isTrue();
