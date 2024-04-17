@@ -35,8 +35,8 @@ public class RestoreMetrics
     protected final MetricRegistry metricRegistry;
     public final NamedMetric<Timer> sliceReplicationTime;
     public final NamedMetric<Timer> jobCompletionTime;
-    public final NamedMetric<DefaultSettableGauge<Integer>> successfulJobs;
-    public final NamedMetric<DefaultSettableGauge<Integer>> failedJobs;
+    public final NamedMetric<DeltaGauge> successfulJobs;
+    public final NamedMetric<DeltaGauge> failedJobs;
     public final NamedMetric<DefaultSettableGauge<Integer>> activeJobs;
     public final NamedMetric<DeltaGauge> tokenRefreshed;
     public final NamedMetric<DeltaGauge> tokenUnauthorized;
@@ -51,12 +51,12 @@ public class RestoreMetrics
         jobCompletionTime
         = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("JobCompletionTime").build();
         successfulJobs
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("SuccessfulJobs")
                      .build();
         failedJobs
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("FailedJobs")
                      .build();
