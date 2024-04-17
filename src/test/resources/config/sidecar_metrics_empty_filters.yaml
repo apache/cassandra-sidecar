@@ -64,14 +64,6 @@ metrics:
     enabled: true
     expose_via_jmx: false
     jmx_domain_name: sidecar.vertx.jmx_domain
-  include:
-    - type: "regex"
-      value: ".*"
-  exclude:
-    - type: "regex"
-      value: "vertx.eventbus.*"
-    - type: "equals"
-      value: "instances_up"
 
 healthcheck:
   initial_delay_millis: 100
