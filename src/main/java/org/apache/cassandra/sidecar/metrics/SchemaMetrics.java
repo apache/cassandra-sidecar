@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
 
 import static org.apache.cassandra.sidecar.metrics.ServerMetrics.SERVER_PREFIX;
@@ -31,20 +30,20 @@ public class SchemaMetrics
 {
     public static final String DOMAIN = SERVER_PREFIX + ".Schema";
     protected final MetricRegistry metricRegistry;
-    public final NamedMetric<DefaultSettableGauge<Integer>> failedInitializations;
-    public final NamedMetric<DefaultSettableGauge<Integer>> failedModifications;
+    public final NamedMetric<DeltaGauge> failedInitializations;
+    public final NamedMetric<DeltaGauge> failedModifications;
 
     public SchemaMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = metricRegistry;
 
         failedInitializations
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("FailedInitializations")
                      .build();
         failedModifications
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                      .withDomain(DOMAIN)
                      .withName("FailedModifications")
                      .build();

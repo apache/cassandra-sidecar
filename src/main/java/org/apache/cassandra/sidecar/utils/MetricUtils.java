@@ -72,6 +72,6 @@ public class MetricUtils
         {
             return SUMMARY;
         }
-        return "default";
+        return "unknown";
     }
 }

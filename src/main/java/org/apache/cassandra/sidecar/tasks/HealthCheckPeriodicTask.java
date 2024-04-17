@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.metrics.HealthMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_START;
@@ -48,7 +49,7 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     private final SidecarConfiguration configuration;
     private final InstancesConfig instancesConfig;
     private final TaskExecutorPool internalPool;
-    private final SidecarMetrics metrics;
+    private final HealthMetrics metrics;
 
     public HealthCheckPeriodicTask(Vertx vertx,
                                    SidecarConfiguration configuration,
@@ -60,7 +61,7 @@ public class HealthCheckPeriodicTask implements PeriodicTask
         this.configuration = configuration;
         this.instancesConfig = instancesConfig;
         internalPool = executorPools.internal();
-        this.metrics = metrics;
+        this.metrics = metrics.server().health();
     }
 
     @Override
@@ -112,8 +113,8 @@ public class HealthCheckPeriodicTask implements PeriodicTask
               .onComplete(v -> {
                   int instanceDownCount = instanceDown.get();
                   int instanceUpCount = instancesConfig.instances().size() - instanceDownCount;
-                  metrics.server().health().cassandraInstancesUp.metric.setValue(instanceUpCount);
-                  metrics.server().health().cassandraInstancesDown.metric.setValue(instanceDownCount);
+                  metrics.cassandraInstancesUp.metric.setValue(instanceUpCount);
+                  metrics.cassandraInstancesDown.metric.setValue(instanceDownCount);
               })
               .onSuccess(v -> promise.complete())
               .onFailure(promise::fail);

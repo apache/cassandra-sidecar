@@ -41,6 +41,7 @@ import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
+import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.StopWatch;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
@@ -71,7 +72,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
     private final double requiredUsableSpacePercentage;
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobUtil restoreJobUtil;
-    private final SidecarMetrics metrics;
+    private final RestoreMetrics metrics;
     private final InstanceMetrics instanceMetrics;
     private long taskStartTimeNanos = -1;
 
@@ -94,7 +95,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
         this.requiredUsableSpacePercentage = requiredUsableSpacePercentage;
         this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.restoreJobUtil = restoreJobUtil;
-        this.metrics = metrics;
+        this.metrics = metrics.server().restore();
         this.instanceMetrics = metrics.instance(slice.owner().id());
     }
 
@@ -194,7 +195,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
         fromCompletionStage(s3Client.objectExists(slice))
         .onSuccess(exists -> {
             long durationNanos = currentTimeInNanos() - slice.creationTimeNanos();
-            metrics.server().restore().sliceReplicationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
+            metrics.sliceReplicationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
             slice.setExistsOnS3();
             LOGGER.debug("Slice is now available on S3. jobId={} sliceKey={} replicationTimeNanos={}",
                          slice.jobId(), slice.key(), durationNanos);
@@ -225,14 +226,14 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 // There might be permission issue on accessing the object.
                 event.tryFail(RestoreJobExceptions.ofFatalSlice("Object access is forbidden",
                                                                 slice, s3Exception));
-                metrics.server().restore().tokenUnauthorized.metric.update(1);
+                metrics.tokenUnauthorized.metric.update(1);
             }
             else if (s3Exception.statusCode() == 400 &&
                      s3Exception.getMessage().contains("token has expired"))
             {
                 // Fail the job if 400, token has expired.
                 // https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList
-                metrics.server().restore().tokenExpired.metric.update(1);
+                metrics.tokenExpired.metric.update(1);
             }
             else
             {

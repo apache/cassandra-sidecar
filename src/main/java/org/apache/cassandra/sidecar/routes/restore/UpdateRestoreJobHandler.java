@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.common.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
+import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
@@ -53,7 +54,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
 {
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
     private final RestoreJobManagerGroup restoreJobManagerGroup;
-    private final SidecarMetrics metrics;
+    private final RestoreMetrics metrics;
 
     @Inject
     public UpdateRestoreJobHandler(ExecutorPools executorPools,
@@ -66,7 +67,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
         this.restoreJobManagerGroup = restoreJobManagerGroup;
-        this.metrics = metrics;
+        this.metrics = metrics.server().restore();
     }
 
     @Override
@@ -97,16 +98,16 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                         job, requestPayload, remoteAddress, host);
             if (job.status == RestoreJobStatus.SUCCEEDED)
             {
-                metrics.server().restore().successfulJobs.metric.update(1);
+                metrics.successfulJobs.metric.update(1);
                 long startMillis = UUIDs.unixTimestamp(job.jobId);
                 long durationMillis = System.currentTimeMillis() - startMillis;
                 // toNanos does not overflow. Nanos in `long` can at most represent 106,751 days.
-                metrics.server().restore().jobCompletionTime.metric.update(durationMillis, TimeUnit.MILLISECONDS);
+                metrics.jobCompletionTime.metric.update(durationMillis, TimeUnit.MILLISECONDS);
             }
 
             if (job.secrets != null)
             {
-                metrics.server().restore().tokenRefreshed.metric.update(1);
+                metrics.tokenRefreshed.metric.update(1);
             }
 
             restoreJobManagerGroup.signalRefreshRestoreJob();

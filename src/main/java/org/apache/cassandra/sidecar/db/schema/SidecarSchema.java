@@ -160,9 +160,9 @@ public class SidecarSchema
             if (ex instanceof SidecarSchemaModificationException)
             {
                 LOGGER.warn("Failed to modify schema", ex);
-                metrics.failedModifications.metric.setValue(1);
+                metrics.failedModifications.metric.update(1);
             }
-            metrics.failedInitializations.metric.setValue(1);
+            metrics.failedInitializations.metric.update(1);
         }
     }
 
@@ -179,8 +179,6 @@ public class SidecarSchema
 
     protected void reportSidecarSchemaInitialized()
     {
-        metrics.failedModifications.metric.setValue(0);
-        metrics.failedInitializations.metric.setValue(0);
         vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), "SidecarSchema initialized");
     }
 }

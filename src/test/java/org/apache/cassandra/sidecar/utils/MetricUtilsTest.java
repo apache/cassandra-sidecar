@@ -31,8 +31,8 @@ class MetricUtilsTest
     @ParameterizedTest
     @CsvSource({"nb-1-big-Data.db,Data.db", "nb-1-big-CompressionInfo.db   ,CompressionInfo.db",
                 "nb-1-big-Digest.crc32,Digest.crc32", "     nb-1-big-Filter.db,Filter.db", "nb-1-big-Index.db,Index.db",
-                "nb-1-big-Statistics.db,Statistics.db", "nb-1-big-Summary.db,Summary.db", "nb-1-big-UnexpectedFormat.db,default",
-                "nb-1-big-TOC.txt,default"})
+                "nb-1-big-Statistics.db,Statistics.db", "nb-1-big-Summary.db,Summary.db", "nb-1-big-UnexpectedFormat.db,unknown",
+                "nb-1-big-TOC.txt,unknown"})
     void parseDataComponent(String filename, String expectedComponent)
     {
         assertThat(MetricUtils.parseSSTableComponent(filename)).isEqualTo(expectedComponent);
