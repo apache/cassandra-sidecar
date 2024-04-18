@@ -86,6 +86,11 @@
     </Match>
 
     <Match>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+        <Class name="org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandlerTest"/>
+    </Match>
+
+    <Match>
         <Bug pattern="UWF_UNWRITTEN_FIELD" />
         <Class name="org.apache.cassandra.sidecar.config.yaml.DriverConfigurationImpl" />
     </Match>

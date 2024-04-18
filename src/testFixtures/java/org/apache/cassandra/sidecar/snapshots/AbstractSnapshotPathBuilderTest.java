@@ -63,14 +63,13 @@ public abstract class AbstractSnapshotPathBuilderTest
 
     protected SnapshotPathBuilder instance;
     protected Vertx vertx = Vertx.vertx();
-    protected CassandraInputValidator validator;
     protected ExecutorPools executorPools;
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @BeforeEach
     protected void setup() throws IOException
     {
-        validator = new CassandraInputValidator();
+        CassandraInputValidator validator = new CassandraInputValidator();
 
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         InstanceMetadata mockInstanceMeta = mock(InstanceMetadata.class);
@@ -166,7 +165,7 @@ public abstract class AbstractSnapshotPathBuilderTest
         ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl();
         executorPools = new ExecutorPools(vertx, serviceConfiguration);
 
-        instance = initialize(vertx, serviceConfiguration, mockInstancesConfig, executorPools);
+        instance = initialize(vertx, serviceConfiguration, mockInstancesConfig, validator, executorPools);
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -180,6 +179,7 @@ public abstract class AbstractSnapshotPathBuilderTest
     protected abstract SnapshotPathBuilder initialize(Vertx vertx,
                                                       ServiceConfiguration serviceConfiguration,
                                                       InstancesConfig instancesConfig,
+                                                      CassandraInputValidator validator,
                                                       ExecutorPools executorPools);
 
     @Test

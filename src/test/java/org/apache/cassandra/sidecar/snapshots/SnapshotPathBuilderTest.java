@@ -25,13 +25,15 @@ import io.vertx.junit5.VertxExtension;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 
 @ExtendWith(VertxExtension.class)
 class SnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
 {
     @Override
     public SnapshotPathBuilder initialize(Vertx vertx, ServiceConfiguration serviceConfiguration,
-                                          InstancesConfig instancesConfig, ExecutorPools executorPools)
+                                          InstancesConfig instancesConfig,
+                                          CassandraInputValidator validator, ExecutorPools executorPools)
     {
         return new SnapshotPathBuilder(vertx, instancesConfig, validator, executorPools);
     }
