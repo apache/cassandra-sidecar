@@ -35,7 +35,6 @@ import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
 import org.apache.cassandra.sidecar.models.HttpResponse;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-import org.apache.cassandra.sidecar.utils.RequestUtils;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
@@ -108,12 +107,6 @@ public class FileStreamHandler extends AbstractHandler<String>
 
     protected Future<Long> fileSize(RoutingContext context, String path)
     {
-        Long fileSize = RequestUtils.parseLongQueryParam(context.request(), "size", null);
-        if (fileSize != null)
-        {
-            return Future.succeededFuture(fileSize);
-        }
-
         return context.vertx().fileSystem().props(path)
                       .compose(fileProps -> {
                           if (fileProps == null || !fileProps.isRegularFile())

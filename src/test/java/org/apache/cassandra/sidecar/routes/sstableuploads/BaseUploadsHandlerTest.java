@@ -48,22 +48,20 @@ import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.TestCassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.adapters.base.CassandraTableOperations;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
-import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
-import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_CHECK_INTERVAL;
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT;
@@ -231,56 +229,6 @@ class BaseUploadsHandlerTest
         public SidecarConfiguration configuration()
         {
             return sidecarConfiguration;
-        }
-    }
-
-    static class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
-    {
-        Metadata metadata;
-        TableOperations tableOperations;
-
-        public TestCassandraAdapterDelegate()
-        {
-            super(Vertx.vertx(), 1, null, null, null, null, null, "localhost", 9042, new InstanceHealthMetrics(registry(1)));
-        }
-
-        @Override
-        protected JmxNotificationListener initializeJmxListener()
-        {
-            return null;
-        }
-
-        @Override
-        public void healthCheck()
-        {
-            // do nothing
-        }
-
-        @Override
-        public @Nullable Metadata metadata()
-        {
-            return metadata;
-        }
-
-        public void setMetadata(Metadata metadata)
-        {
-            this.metadata = metadata;
-        }
-
-        @Override
-        public @Nullable TableOperations tableOperations()
-        {
-            return tableOperations;
-        }
-
-        public void setTableOperations(TableOperations tableOperations)
-        {
-            this.tableOperations = tableOperations;
-        }
-
-        @Override
-        public void close()
-        {
         }
     }
 }

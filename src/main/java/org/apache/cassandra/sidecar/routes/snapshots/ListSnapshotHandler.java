@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.routes.snapshots;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -190,29 +189,20 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
 
     protected Future<List<String>> dataPaths(String host, String keyspace, String table)
     {
-        return executorPools.service().executeBlocking(promise -> {
+        return executorPools.service().executeBlocking(() -> {
             CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
             if (delegate == null)
             {
-                promise.fail(cassandraServiceUnavailable());
-                return;
+                throw cassandraServiceUnavailable();
             }
 
             TableOperations tableOperations = delegate.tableOperations();
             if (tableOperations == null)
             {
-                promise.fail(cassandraServiceUnavailable());
-                return;
+                throw cassandraServiceUnavailable();
             }
 
-            try
-            {
-                promise.complete(tableOperations.getDataPaths(keyspace, table));
-            }
-            catch (IOException e)
-            {
-                promise.fail(e);
-            }
+            return tableOperations.getDataPaths(keyspace, table);
         });
     }
 
@@ -231,7 +221,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                                                             request.snapshotName(),
                                                                             request.keyspace(),
                                                                             request.tableName(),
-                                                                            file.tableUuid,
+                                                                            file.tableId,
                                                                             file.name));
         });
         return Future.succeededFuture(response);

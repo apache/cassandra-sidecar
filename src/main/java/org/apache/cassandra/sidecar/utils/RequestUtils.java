@@ -61,22 +61,4 @@ public class RequestUtils
         }
         return defaultValue;
     }
-
-    /**
-     * Parses an optional integer parameter from the {@code request}, for the given {@code paramName}.
-     *
-     * @param request      the request
-     * @param paramName    the name of the query parameter
-     * @param defaultValue the default value when the parameter does not exist
-     * @return the parsed value for the {@code paramName} from the {@code request}
-     */
-    public static Long parseLongQueryParam(HttpServerRequest request, String paramName, Long defaultValue)
-    {
-        String value = request.getParam(paramName);
-        if (value != null)
-        {
-            return Long.parseLong(value);
-        }
-        return defaultValue;
-    }
 }

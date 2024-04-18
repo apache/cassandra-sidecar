@@ -26,6 +26,7 @@ import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.common.data.Name;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl;
 import org.jetbrains.annotations.NotNull;
@@ -183,6 +184,33 @@ public class CassandraInputValidator
         if (!unquotedInput.matches(pattern))
             throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
                                     "Invalid characters in " + name + ": " + quotedInput);
+    }
+
+    /**
+     * Validates that the unique table identifier is a valid hexadecimal
+     *
+     * @param tableId the table identifier to validate
+     */
+    public void validateTableId(String tableId)
+    {
+        Objects.requireNonNull(tableId, "tableId must not be null");
+        Preconditions.checkArgument(tableId.length() <= 32, "tableId cannot be longer than 32 characters");
+        for (int i = 0; i < tableId.length(); i++)
+        {
+            char c = tableId.charAt(i);
+            if (!isHex(c))
+                throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
+                                        "Invalid characters in table id: " + tableId);
+        }
+    }
+
+    /**
+     * @param c the character to test
+     * @return {@code true} if the input {@code c} is valid hexadecimal, {@code false} otherwise
+     */
+    protected boolean isHex(char c)
+    {
+        return (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F');
     }
 
     /**

@@ -33,7 +33,7 @@ import org.jetbrains.annotations.VisibleForTesting;
  */
 public class StreamSSTableComponentRequest extends SSTableComponent
 {
-    private final String tableUuid;
+    private final String tableId;
     private final String snapshotName;
     @Nullable
     private final Integer dataDirectoryIndex;
@@ -76,19 +76,19 @@ public class StreamSSTableComponentRequest extends SSTableComponent
      * @param snapshotName       the name of the snapshot
      * @param secondaryIndexName the name of the secondary index for the SSTable component
      * @param componentName      the name of the SSTable component
-     * @param tableUuid          the UUID for the Cassandra table
+     * @param tableId            the UUID for the Cassandra table
      * @param dataDirectoryIndex the index of the Cassandra data directory where the component resides
      */
     public StreamSSTableComponentRequest(QualifiedTableName qualifiedTableName,
                                          String snapshotName,
                                          @Nullable String secondaryIndexName,
                                          String componentName,
-                                         @Nullable String tableUuid,
+                                         @Nullable String tableId,
                                          @Nullable Integer dataDirectoryIndex)
     {
         super(qualifiedTableName, secondaryIndexName, componentName);
         this.snapshotName = Objects.requireNonNull(snapshotName, "snapshotName must not be null");
-        this.tableUuid = tableUuid;
+        this.tableId = tableId;
         this.dataDirectoryIndex = dataDirectoryIndex;
     }
 
@@ -101,11 +101,11 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     }
 
     /**
-     * @return the Cassandra table UUID
+     * @return the Cassandra table ID
      */
-    public String tableUuid()
+    public String tableId()
     {
-        return tableUuid;
+        return tableId;
     }
 
     /**
@@ -136,21 +136,24 @@ public class StreamSSTableComponentRequest extends SSTableComponent
         String snapshotName = context.pathParam("snapshot");
         String secondaryIndexName = context.pathParam("index");
         String componentName = context.pathParam("component");
-        String tableUuid = maybeGetTableUuid(context.pathParam("table"));
-        Integer dataDirectoryIndex = RequestUtils.parseIntegerQueryParam(context.request(), "dataDirectory", null);
+        String tableId = maybeGetTableId(context.pathParam("table"));
+        Integer dataDirectoryIndex = RequestUtils.parseIntegerQueryParam(context.request(), "dataDirectoryIndex", null);
 
         return new StreamSSTableComponentRequest(qualifiedTableName,
                                                  snapshotName,
                                                  secondaryIndexName,
                                                  componentName,
-                                                 tableUuid,
+                                                 tableId,
                                                  dataDirectoryIndex);
     }
 
-    static String maybeGetTableUuid(String table)
+    static String maybeGetTableId(String table)
     {
         if (table != null)
         {
+            // Cassandra disallows having '-' as part of the table name, even if the table name is quoted.
+            // If the string contains '-', it is followed by the tableId.
+            // See https://github.com/apache/cassandra/blob/c33c8ebab444209a9675f273448110afd0787faa/src/java/org/apache/cassandra/schema/TableId.java#L88
             int index = table.indexOf("-");
             if (index > 0 && index + 1 < table.length())
             {

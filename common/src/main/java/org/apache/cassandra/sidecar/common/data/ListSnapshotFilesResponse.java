@@ -64,7 +64,7 @@ public class ListSnapshotFilesResponse
         public final String snapshotName;
         public final String keySpaceName;
         public final String tableName;
-        public final String tableUid;
+        public final String tableId;
         public final String fileName;
 
         public FileInfo(@JsonProperty("size") long size,
@@ -74,7 +74,7 @@ public class ListSnapshotFilesResponse
                         @JsonProperty("snapshotName") String snapshotName,
                         @JsonProperty("keySpaceName") String keySpaceName,
                         @JsonProperty("tableName") String tableName,
-                        @JsonProperty("tableUid") String tableUid,
+                        @JsonProperty("tableId") String tableId,
                         @JsonProperty("fileName") String fileName)
         {
             this.size = size;
@@ -84,14 +84,14 @@ public class ListSnapshotFilesResponse
             this.snapshotName = snapshotName;
             this.keySpaceName = keySpaceName;
             this.tableName = tableName;
-            this.tableUid = tableUid;
+            this.tableId = tableId;
             this.fileName = fileName;
         }
 
         public String componentDownloadUrl()
         {
-            String tableName = this.tableUid != null
-                               ? this.tableName + "-" + this.tableUid
+            String tableName = this.tableId != null
+                               ? this.tableName + "-" + this.tableId
                                : this.tableName;
 
             return ApiEndpointsV1.COMPONENTS_ROUTE
@@ -99,8 +99,7 @@ public class ListSnapshotFilesResponse
                    .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)
                    .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshotName)
                    .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, fileName)
-                   + "?dataDirectory=" + dataDirIndex
-                   + "&size=" + size;
+                   + "?dataDirectoryIndex=" + dataDirIndex;
         }
 
         @Override

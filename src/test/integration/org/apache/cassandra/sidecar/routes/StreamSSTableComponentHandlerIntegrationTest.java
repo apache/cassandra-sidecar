@@ -39,7 +39,6 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
@@ -49,28 +48,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
 {
-    @CassandraIntegrationTest
+    @CassandraIntegrationTest(numDataDirsPerInstance = 4)
     void testStreamIncludingIndexFiles(VertxTestContext context) throws InterruptedException
     {
-        runTestScenario(context);
-    }
-
-    private void runTestScenario(VertxTestContext context) throws InterruptedException
-    {
         createTestKeyspace();
-        QualifiedTableName table = createTestTableAndPopulate(sidecarTestContext);
+        QualifiedTableName table = createTestTableAndPopulate();
 
-        List<String> expectedFileList = Arrays.asList(".ryear/[a-z]{2}-1-big-Data.db",
-                                                      ".ryear/[a-z]{2}-1-big-TOC.txt",
-                                                      "[a-z]{2}-1-big-Data.db",
-                                                      "[a-z]{2}-1-big-TOC.txt");
+        List<String> expectedFileList = Arrays.asList(".ryear/[a-z]{2}-[0-9]-big-Data.db",
+                                                      ".ryear/[a-z]{2}-[0-9]-big-TOC.txt",
+                                                      "[a-z]{2}-[0-9]-big-Data.db",
+                                                      "[a-z]{2}-[0-9]-big-TOC.txt");
 
         WebClient client = WebClient.create(vertx);
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          table.keyspace(), table.tableName());
 
         createSnapshot(client, testRoute)
-        .compose(route -> listSnapshot(client, route))
+        .compose(route -> listSnapshot(client, route, true))
         .onComplete(context.succeeding(response -> {
 
             List<ListSnapshotFilesResponse.FileInfo> filesToStream =
@@ -117,35 +111,27 @@ class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
         return promise.future();
     }
 
-    Future<ListSnapshotFilesResponse> listSnapshot(WebClient client, String route)
+    Future<ListSnapshotFilesResponse> listSnapshot(WebClient client, String route, boolean includeSecondaryIndexFiles)
     {
-        Promise<ListSnapshotFilesResponse> promise = Promise.promise();
-        client.get(server.actualPort(), "127.0.0.1", route + "?includeSecondaryIndexFiles=true")
-              .expect(ResponsePredicate.SC_OK)
-              .send()
-              .onSuccess(response -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  promise.complete(response.bodyAsJson(ListSnapshotFilesResponse.class));
-              })
-              .onFailure(promise::fail);
-        return promise.future();
+        return client.get(server.actualPort(), "127.0.0.1", route + "?includeSecondaryIndexFiles=" + includeSecondaryIndexFiles)
+                     .expect(ResponsePredicate.SC_OK)
+                     .send()
+                     .compose(response -> {
+                         assertThat(response.statusCode()).isEqualTo(OK.code());
+                         return Future.succeededFuture(response.bodyAsJson(ListSnapshotFilesResponse.class));
+                     });
     }
 
     Future<HttpResponse<Buffer>> streamSSTableComponent(WebClient client,
                                                         ListSnapshotFilesResponse.FileInfo fileInfo)
     {
-        String route = "/keyspaces/" + fileInfo.keySpaceName +
-                       "/tables/" + fileInfo.tableName +
-                       "/snapshots/" + fileInfo.snapshotName +
-                       "/components/" + fileInfo.fileName;
-
-        return client.get(server.actualPort(), "localhost", "/api/v1" + route)
+        return client.get(server.actualPort(), "localhost", fileInfo.componentDownloadUrl())
                      .expect(ResponsePredicate.SC_OK)
                      .as(BodyCodec.buffer())
                      .send();
     }
 
-    QualifiedTableName createTestTableAndPopulate(CassandraSidecarTestContext cassandraTestContext)
+    QualifiedTableName createTestTableAndPopulate()
     {
         QualifiedTableName tableName = createTestTable(
         "CREATE TABLE %s ( \n" +

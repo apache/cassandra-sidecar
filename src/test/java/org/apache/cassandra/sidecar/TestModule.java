@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.NodeSettings;
+import org.apache.cassandra.sidecar.common.StorageOperations;
 import org.apache.cassandra.sidecar.common.dns.DnsResolver;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
@@ -70,11 +71,23 @@ public class TestModule extends AbstractModule
 {
     public static final int RESTORE_MAX_CONCURRENCY = 10;
 
+    public TestCassandraAdapterDelegate delegate;
+
+    public TestModule()
+    {
+        this(new TestCassandraAdapterDelegate());
+    }
+
+    public TestModule(TestCassandraAdapterDelegate delegate)
+    {
+        this.delegate = delegate;
+    }
+
     @Singleton
     @Provides
     public CassandraAdapterDelegate delegate()
     {
-        return mock(CassandraAdapterDelegate.class);
+        return delegate;
     }
 
     @Provides
@@ -169,29 +182,32 @@ public class TestModule extends AbstractModule
         when(instanceMeta.host()).thenReturn(host);
         when(instanceMeta.port()).thenReturn(6475);
         when(instanceMeta.stagingDir()).thenReturn(stagingDir);
-        when(instanceMeta.dataDirs()).thenReturn(Collections.singletonList(dataDir));
+        List<String> dataDirectories = Collections.singletonList(dataDir);
+        when(instanceMeta.dataDirs()).thenReturn(dataDirectories);
         when(instanceMeta.metrics()).thenReturn(new InstanceMetricsImpl(registry(id)));
 
-        CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
+        StorageOperations mockStorageOperations = mock(StorageOperations.class);
+        when(mockStorageOperations.dataFileLocations()).thenReturn(dataDirectories);
         Metadata metadata = mock(Metadata.class);
         KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
         when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
         TableMetadata tableMetadata = mock(TableMetadata.class);
         when(keyspaceMetadata.getTable(any())).thenReturn(tableMetadata);
-        when(delegate.metadata()).thenReturn(metadata);
+        delegate.setMetadata(metadata);
+        delegate.setStorageOperations(mockStorageOperations);
         if (isUp)
         {
-            when(delegate.nodeSettings()).thenReturn(NodeSettings.builder()
-                                                                 .releaseVersion("testVersion")
-                                                                 .partitioner("testPartitioner")
-                                                                 .sidecarVersion("testSidecar")
-                                                                 .datacenter("testDC")
-                                                                 .rpcAddress(InetAddress.getLoopbackAddress())
-                                                                 .rpcPort(6475)
-                                                                 .tokens(Collections.singleton("testToken"))
-                                                                 .build());
+            delegate.setNodeSettings(NodeSettings.builder()
+                                                 .releaseVersion("testVersion")
+                                                 .partitioner("testPartitioner")
+                                                 .sidecarVersion("testSidecar")
+                                                 .datacenter("testDC")
+                                                 .rpcAddress(InetAddress.getLoopbackAddress())
+                                                 .rpcPort(6475)
+                                                 .tokens(Collections.singleton("testToken"))
+                                                 .build());
         }
-        when(delegate.isNativeUp()).thenReturn(isUp);
+        delegate.setIsNativeUp(isUp);
         when(instanceMeta.delegate()).thenReturn(delegate);
         return instanceMeta;
     }

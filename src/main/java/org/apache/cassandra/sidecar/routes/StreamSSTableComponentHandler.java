@@ -21,9 +21,9 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.nio.file.NoSuchFileException;
 import java.util.List;
+import javax.management.InstanceNotFoundException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.ObjectUtils;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -34,10 +34,12 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.StorageOperations;
+import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.common.data.Name;
 import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
+import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -52,7 +54,6 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTableComponentRequest>
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(StreamSSTableComponentHandler.class);
     private final SnapshotPathBuilder snapshotPathBuilder;
 
     @Inject
@@ -72,19 +73,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
                                SocketAddress remoteAddress,
                                StreamSSTableComponentRequest request)
     {
-        Future<String> componentPathFuture;
-        if (shouldUseLegacyStreamSStableComponent(request))
-        {
-            LOGGER.warn("Streaming SSTable component without a data directory index. " +
-                        "request={}, remoteAddress={}, instance={}", request, remoteAddress, host);
-            componentPathFuture = snapshotPathBuilder.build(host, request);
-        }
-        else
-        {
-            componentPathFuture = resolveComponentPathFromRequest(host, request);
-        }
-
-        componentPathFuture.onSuccess(path -> {
+        resolveComponentPathFromRequest(host, request).onSuccess(path -> {
             logger.debug("{} resolved. path={}, request={}, remoteAddress={}, instance={}",
                          this.getClass().getSimpleName(), path, request, remoteAddress, host);
             context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path).next();
@@ -93,33 +82,51 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
 
     private Future<String> resolveComponentPathFromRequest(String host, StreamSSTableComponentRequest request)
     {
-        return executorPools.internal().executeBlocking(promise -> {
+        return executorPools.internal().executeBlocking(() -> {
             CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
             if (delegate == null)
             {
-                promise.fail(cassandraServiceUnavailable());
-                return;
+                throw cassandraServiceUnavailable();
             }
 
-            StorageOperations storageOperations = delegate.storageOperations();
-            if (storageOperations == null)
+            int dataDirIndex = ObjectUtils.defaultIfNull(request.dataDirectoryIndex(), 0);
+            if (request.tableId() != null)
             {
-                promise.fail(cassandraServiceUnavailable());
-                return;
-            }
+                StorageOperations storageOperations = delegate.storageOperations();
+                if (storageOperations == null)
+                {
+                    throw cassandraServiceUnavailable();
+                }
 
-            List<String> dataDirList = storageOperations.dataFileLocations();
-            int dataDirIndex = request.dataDirectoryIndex();
-            if (dataDirIndex < 0 || dataDirIndex >= dataDirList.size())
+                List<String> dataDirList = storageOperations.dataFileLocations();
+                if (dataDirIndex < 0 || dataDirIndex >= dataDirList.size())
+                {
+                    throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid data directory index: " + dataDirIndex);
+                }
+                return snapshotPathBuilder.resolveComponentPathFromDataDirectory(dataDirList.get(dataDirIndex), request);
+            }
+            else
             {
-                promise.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                               "Invalid data directory index=" + dataDirIndex));
-                return;
+                logger.debug("Streaming SSTable component without a table Id. request={}, instance={}", request, host);
+                TableOperations tableOperations = delegate.tableOperations();
+                if (tableOperations == null)
+                {
+                    throw cassandraServiceUnavailable();
+                }
+
+                // asking jmx to give us the path for keyspace/table - tableId
+                // as opposed to storageOperations.dataFileLocations, the table directory can change
+                // when someone drops a table and recreates it with the same name, the table id will change
+                // we do not keep a cache of the table directory data paths, so these requests always go
+                // through JMX
+                List<String> tableDirList = tableOperations.getDataPaths(request.keyspace(), request.tableName());
+                if (dataDirIndex < 0 || dataDirIndex >= tableDirList.size())
+                {
+                    throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid data directory index: " + dataDirIndex);
+                }
+
+                return snapshotPathBuilder.resolveComponentPathFromTableDirectory(tableDirList.get(dataDirIndex), request);
             }
-
-            String path = snapshotPathBuilder.resolveComponentPath(dataDirList.get(dataDirIndex), request);
-
-            promise.complete(path);
         });
     }
 
@@ -138,7 +145,15 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
         }
         else
         {
-            super.processFailure(cause, context, host, remoteAddress, request);
+            InstanceNotFoundException instanceNotFoundException = ThrowableUtils.getCause(cause, InstanceNotFoundException.class);
+            if (instanceNotFoundException != null)
+            {
+                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, "keyspace/table combination not found"));
+            }
+            else
+            {
+                super.processFailure(cause, context, host, remoteAddress, request);
+            }
         }
     }
 
@@ -150,15 +165,5 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
 
         QualifiedTableName qualifiedTableName = new QualifiedTableName(keyspace(context, true), tableName);
         return StreamSSTableComponentRequest.from(qualifiedTableName, context);
-    }
-
-    /**
-     * @param request the request object
-     * @return {@code true} if the table name does not contain the UUID, or if the index of the data directory is
-     * not provided
-     */
-    protected boolean shouldUseLegacyStreamSStableComponent(StreamSSTableComponentRequest request)
-    {
-        return request.tableUuid() == null || request.dataDirectoryIndex() == null;
     }
 }

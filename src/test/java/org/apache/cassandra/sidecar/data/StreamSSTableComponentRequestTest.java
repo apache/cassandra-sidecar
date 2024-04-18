@@ -114,7 +114,7 @@ class StreamSSTableComponentRequestTest
     }
 
     @Test
-    void testValidRequestWithTableUuid()
+    void testValidRequestWithTableId()
     {
         StreamSSTableComponentRequest req =
         new StreamSSTableComponentRequest(new QualifiedTableName("ks", "table"), "snapshot", ".index", "data.db",
@@ -125,7 +125,7 @@ class StreamSSTableComponentRequestTest
         assertThat(req.snapshotName()).isEqualTo("snapshot");
         assertThat(req.secondaryIndexName()).isEqualTo(".index");
         assertThat(req.componentName()).isEqualTo("data.db");
-        assertThat(req.tableUuid()).isEqualTo("1245");
+        assertThat(req.tableId()).isEqualTo("1245");
         assertThat(req.dataDirectoryIndex()).isEqualTo(42);
         assertThat(req.toString()).isEqualTo("StreamSSTableComponentRequest{keyspace='ks', tableName='table', " +
                                              "snapshot='snapshot', secondaryIndexName='.index', " +

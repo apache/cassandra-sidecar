@@ -98,33 +98,4 @@ class RequestUtilsTest
         .isThrownBy(() -> RequestUtils.parseIntegerQueryParam(mockRequest, "string", null))
         .withMessage("For input string: \"not-an-integer\"");
     }
-
-    @Test
-    void testParseLongQueryParam()
-    {
-        assertThat(RequestUtils.parseLongQueryParam(mockRequest, "non-existent", null)).isNull();
-        assertThat(RequestUtils.parseLongQueryParam(mockRequest, "non-existent", 42L)).isEqualTo(42L);
-
-        when(mockRequest.getParam("positive-long")).thenReturn("5000");
-        assertThat(RequestUtils.parseLongQueryParam(mockRequest, "positive-long", null)).isEqualTo(5000L);
-
-        when(mockRequest.getParam("negative-long")).thenReturn("-5000");
-        assertThat(RequestUtils.parseLongQueryParam(mockRequest, "negative-long", null)).isEqualTo(-5000L);
-
-        when(mockRequest.getParam("max-integer-as-long")).thenReturn("2147483647");
-        assertThat(RequestUtils.parseLongQueryParam(mockRequest, "max-integer-as-long", null)).isEqualTo(2147483647L);
-
-        when(mockRequest.getParam("max-long")).thenReturn("9223372036854775807");
-        assertThat(RequestUtils.parseLongQueryParam(mockRequest, "max-long", null)).isEqualTo(9223372036854775807L);
-
-        when(mockRequest.getParam("overflow-long")).thenReturn("9223372036854775808");
-        assertThatExceptionOfType(NumberFormatException.class)
-        .isThrownBy(() -> RequestUtils.parseLongQueryParam(mockRequest, "overflow-long", null))
-        .withMessage("For input string: \"9223372036854775808\"");
-
-        when(mockRequest.getParam("stringl")).thenReturn("not-a-long");
-        assertThatExceptionOfType(NumberFormatException.class)
-        .isThrownBy(() -> RequestUtils.parseLongQueryParam(mockRequest, "stringl", null))
-        .withMessage("For input string: \"not-a-long\"");
-    }
 }
