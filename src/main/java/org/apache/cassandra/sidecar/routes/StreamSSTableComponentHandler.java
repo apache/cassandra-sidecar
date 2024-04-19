@@ -89,7 +89,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
                 throw cassandraServiceUnavailable();
             }
 
-            int dataDirIndex = ObjectUtils.defaultIfNull(request.dataDirectoryIndex(), 0);
+            int dataDirIndex = request.dataDirectoryIndex();
             if (request.tableId() != null)
             {
                 StorageOperations storageOperations = delegate.storageOperations();

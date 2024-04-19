@@ -35,8 +35,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
 {
     private final String tableId;
     private final String snapshotName;
-    @Nullable
-    private final Integer dataDirectoryIndex;
+    private final int dataDirectoryIndex;
 
     /**
      * Constructor for the holder class
@@ -49,24 +48,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     @VisibleForTesting
     public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName, String componentName)
     {
-        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, null, componentName, null, null);
-    }
-
-    /**
-     * Constructor for the holder class
-     *
-     * @param keyspace           the keyspace in Cassandra
-     * @param tableName          the table name in Cassandra
-     * @param snapshotName       the name of the snapshot
-     * @param secondaryIndexName the name of the secondary index for the SSTable component
-     * @param componentName      the name of the SSTable component
-     */
-    @VisibleForTesting
-    public StreamSSTableComponentRequest(String keyspace, String tableName, String snapshotName,
-                                         String secondaryIndexName, String componentName)
-    {
-        this(new QualifiedTableName(keyspace, tableName, true), snapshotName,
-             secondaryIndexName, componentName, null, null);
+        this(new QualifiedTableName(keyspace, tableName, true), snapshotName, null, componentName, null, 0);
     }
 
     /**
@@ -84,7 +66,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
                                          @Nullable String secondaryIndexName,
                                          String componentName,
                                          @Nullable String tableId,
-                                         @Nullable Integer dataDirectoryIndex)
+                                         int dataDirectoryIndex)
     {
         super(qualifiedTableName, secondaryIndexName, componentName);
         this.snapshotName = Objects.requireNonNull(snapshotName, "snapshotName must not be null");
@@ -111,7 +93,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
     /**
      * @return the index of the Cassandra data directory where the component resides
      */
-    public @Nullable Integer dataDirectoryIndex()
+    public int dataDirectoryIndex()
     {
         return dataDirectoryIndex;
     }
@@ -137,7 +119,7 @@ public class StreamSSTableComponentRequest extends SSTableComponent
         String secondaryIndexName = context.pathParam("index");
         String componentName = context.pathParam("component");
         String tableId = maybeGetTableId(context.pathParam("table"));
-        Integer dataDirectoryIndex = RequestUtils.parseIntegerQueryParam(context.request(), "dataDirectoryIndex", null);
+        int dataDirectoryIndex = RequestUtils.parseIntegerQueryParam(context.request(), "dataDirectoryIndex", 0);
 
         return new StreamSSTableComponentRequest(qualifiedTableName,
                                                  snapshotName,

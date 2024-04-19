@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import com.codahale.metrics.MetricRegistry;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.inject.Inject;
@@ -40,6 +41,8 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.data.SnapshotRequest;
+import org.apache.cassandra.sidecar.metrics.CacheMetrics;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -68,6 +71,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
 {
     private static final String INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM = "includeSecondaryIndexFiles";
+    public static final String SNAPSHOT_CACHE_NAME = "snapshot_cache";
     private final SnapshotPathBuilder builder;
     private final ServiceConfiguration configuration;
     private final CacheConfiguration cacheConfiguration;
@@ -78,13 +82,14 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                ServiceConfiguration configuration,
                                InstanceMetadataFetcher metadataFetcher,
                                CassandraInputValidator validator,
-                               ExecutorPools executorPools)
+                               ExecutorPools executorPools,
+                               MetricRegistryFactory registryFactory)
     {
         super(metadataFetcher, executorPools, validator);
         this.builder = builder;
         this.configuration = configuration;
         this.cacheConfiguration = configuration.sstableSnapshotConfiguration().snapshotListCacheConfiguration();
-        this.cache = initializeCache(cacheConfiguration);
+        this.cache = initializeCache(cacheConfiguration, registryFactory);
     }
 
     /**
@@ -227,19 +232,21 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
         return Future.succeededFuture(response);
     }
 
-    protected Cache<String, Future<ListSnapshotFilesResponse>> initializeCache(CacheConfiguration cacheConfiguration)
+    protected Cache<String, Future<ListSnapshotFilesResponse>> initializeCache(CacheConfiguration cacheConfiguration,
+                                                                               MetricRegistryFactory registryFactory)
     {
         if (cacheConfiguration == null)
         {
             return null;
         }
+        MetricRegistry globalMetricRegistry = registryFactory.getOrCreate();
         return Caffeine.newBuilder()
                        .maximumSize(cacheConfiguration.maximumSize())
                        .expireAfterAccess(cacheConfiguration.expireAfterAccessMillis(), TimeUnit.MILLISECONDS)
-                       .recordStats()
+                       .recordStats(() -> new CacheMetrics(globalMetricRegistry, SNAPSHOT_CACHE_NAME))
                        .removalListener((key, value, cause) ->
-                                        logger.debug("Removed from cache=snapshot_cache, entry={}, key={}, cause={}",
-                                                     value, key, cause))
+                                        logger.debug("Removed from cache={}, entry={}, key={}, cause={}",
+                                                     SNAPSHOT_CACHE_NAME, value, key, cause))
                        .build();
     }
 }

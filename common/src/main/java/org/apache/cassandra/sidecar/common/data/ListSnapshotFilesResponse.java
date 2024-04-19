@@ -66,6 +66,7 @@ public class ListSnapshotFilesResponse
         public final String tableName;
         public final String tableId;
         public final String fileName;
+        private String componentDownloadUrl;
 
         public FileInfo(@JsonProperty("size") long size,
                         @JsonProperty("host") String host,
@@ -90,16 +91,20 @@ public class ListSnapshotFilesResponse
 
         public String componentDownloadUrl()
         {
-            String tableName = this.tableId != null
-                               ? this.tableName + "-" + this.tableId
-                               : this.tableName;
+            if (componentDownloadUrl == null)
+            {
+                String tableName = this.tableId != null
+                                   ? this.tableName + "-" + this.tableId
+                                   : this.tableName;
 
-            return ApiEndpointsV1.COMPONENTS_ROUTE
-                   .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keySpaceName)
-                   .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)
-                   .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshotName)
-                   .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, fileName)
-                   + "?dataDirectoryIndex=" + dataDirIndex;
+                componentDownloadUrl = ApiEndpointsV1.COMPONENTS_ROUTE
+                                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keySpaceName)
+                                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)
+                                       .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshotName)
+                                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, fileName)
+                                       + "?dataDirectoryIndex=" + dataDirIndex;
+            }
+            return componentDownloadUrl;
         }
 
         @Override
