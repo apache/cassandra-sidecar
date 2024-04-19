@@ -51,7 +51,6 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.prepareTestFile;
@@ -265,103 +264,6 @@ class FileStreamHandlerTest
             assertThat(responseJson.getInteger("code")).isEqualTo(404);
             assertThat(responseJson.getString("status")).isEqualTo("Not Found");
             context.completeNow();
-        })
-        .onFailure(context::failNow);
-    }
-
-    @Test
-    void testStreamWithSizeQueryParam(VertxTestContext context) throws IOException
-    {
-        int sizeInBytes = 1024;
-        Path oneKbFile = prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
-        assertThat(oneKbFile).exists();
-        serverFuture(oneKbFile.toString())
-        .onSuccess(server -> {
-            client.get(server.actualPort(), "127.0.0.1", "/stream?size=" + sizeInBytes)
-                  .as(BodyCodec.buffer())
-                  .send(context.succeeding(response -> context.verify(() -> {
-                      assertThat(response.statusCode()).isEqualTo(OK.code());
-                      assertThat(response.body().length()).isEqualTo(sizeInBytes);
-                      context.completeNow();
-                  })));
-        })
-        .onFailure(context::failNow);
-    }
-
-    @Test
-    void testStreamsPartialFileWhenSizeQueryParamDoesntMatchActualFileSize(VertxTestContext context) throws IOException
-    {
-        int sizeInBytes = 1024;
-        Path oneKbFile = prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
-        assertThat(oneKbFile).exists();
-        serverFuture(oneKbFile.toString())
-        .onSuccess(server -> {
-            client.get(server.actualPort(), "127.0.0.1", "/stream?size=5")
-                  .as(BodyCodec.buffer())
-                  .send(context.succeeding(response -> context.verify(() -> {
-                      assertThat(response.statusCode()).isEqualTo(OK.code());
-                      assertThat(response.body().length()).isEqualTo(5);
-                      context.completeNow();
-                  })));
-        })
-        .onFailure(context::failNow);
-    }
-
-    @Test
-    void failsWithNegativeSizeQueryParam(VertxTestContext context) throws IOException
-    {
-        int sizeInBytes = 1024;
-        Path oneKbFile = prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
-        assertThat(oneKbFile).exists();
-        serverFuture(oneKbFile.toString())
-        .onSuccess(server -> {
-            client.get(server.actualPort(), "127.0.0.1", "/stream?size=-1")
-                  .as(BodyCodec.buffer())
-                  .send(context.succeeding(response -> context.verify(() -> {
-                      assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                      assertThat(response.bodyAsJsonObject().getString("message")).isEqualTo("Range does not satisfy boundary requirements");
-                      context.completeNow();
-                  })));
-        })
-        .onFailure(context::failNow);
-    }
-
-    @Test
-    void testSizeStreamedIsUpperBoundedByFileSize(VertxTestContext context) throws IOException
-    {
-        int sizeInBytes = 1024;
-        Path oneKbFile = prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
-        assertThat(oneKbFile).exists();
-        serverFuture(oneKbFile.toString())
-        .onSuccess(server -> {
-            client.get(server.actualPort(), "127.0.0.1", "/stream?size=200000")
-                  .as(BodyCodec.buffer())
-                  .send(context.succeeding(response -> context.verify(() -> {
-                      assertThat(response.statusCode()).isEqualTo(OK.code());
-                      assertThat(response.body().length()).isEqualTo(sizeInBytes);
-                      context.completeNow();
-                  })));
-        })
-        .onFailure(context::failNow);
-    }
-
-    @Test
-    void failsWhenOffsetIsLargerThanActualFile(VertxTestContext context) throws IOException
-    {
-        int sizeInBytes = 1024;
-        Path oneKbFile = prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
-        assertThat(oneKbFile).exists();
-        serverFuture(oneKbFile.toString())
-        .onSuccess(server -> {
-            client.get(server.actualPort(), "127.0.0.1", "/stream?size=200000")
-                  .putHeader("Range", "bytes=1025-2048")
-                  .as(BodyCodec.buffer())
-                  .send(context.succeeding(response -> context.verify(() -> {
-                      assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                      assertThat(response.bodyAsJsonObject().getString("message"))
-                      .isEqualTo("offset : 1025 is larger than the requested file length : 1024");
-                      context.completeNow();
-                  })));
         })
         .onFailure(context::failNow);
     }

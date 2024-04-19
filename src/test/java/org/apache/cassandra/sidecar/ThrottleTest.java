@@ -88,8 +88,8 @@ public class ThrottleTest
     @Test
     void testStreamRequestsThrottled() throws Exception
     {
-        String testRoute = "/keyspaces/TestKeyspace/tables/TestTable/snapshots/TestSnapshot" +
-                           "/components/nb-1-big-Data.db";
+        String testRoute = "/keyspaces/TestKeyspace/tables/TestTable-54ea95cebba24e0aa9bee428e5d7160b/snapshots" +
+                           "/TestSnapshot/components/nb-1-big-Data.db?dataDirectoryIndex=0";
 
         for (int i = 0; i < 20; i++)
         {
