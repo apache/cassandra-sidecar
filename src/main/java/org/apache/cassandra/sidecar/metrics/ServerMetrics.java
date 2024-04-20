@@ -46,4 +46,9 @@ public interface ServerMetrics
      * @return metrics related to {@link org.apache.cassandra.sidecar.db.schema.SidecarSchema} that are tracked.
      */
     SchemaMetrics schema();
+
+    /**
+     * @return metrics related to internal caches that are tracked.
+     */
+    CacheMetrics cacheMetrics();
 }
