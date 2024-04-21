@@ -241,10 +241,10 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         SimpleModule module = new SimpleModule();
         ClassPath path = ClassPath.from(ClassLoader.getSystemClassLoader());
         Set<Class> declared = path.getTopLevelClasses(outerPackageName)
-            .stream()
-            .filter(c -> c.getName().endsWith("Configuration"))
-            .map(ClassPath.ClassInfo::load)
-            .collect(Collectors.toSet());
+                                  .stream()
+                                  .filter(c -> c.getName().endsWith("Configuration"))
+                                  .map(ClassPath.ClassInfo::load)
+                                  .collect(Collectors.toSet());
         Set<Class> implemented = new HashSet<>();
         ClassPath.from(ClassLoader.getSystemClassLoader()).getTopLevelClasses(packageName)
                  .stream()
@@ -267,8 +267,8 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
                              configurationInterface = c;
                              if (!implemented.add(configurationInterface))
                              {
-                                throw new IllegalStateException("Multiple implementations found for " +
-                                                                "configuration interface: " + configurationInterface);
+                                 throw new IllegalStateException("Multiple implementations found for " +
+                                                                 "configuration interface: " + configurationInterface);
                              }
                              break;
                          }

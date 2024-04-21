@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.client.selection.InstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.SingleInstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.common.data.Digest;
+import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.jetbrains.annotations.Nullable;
 
@@ -347,6 +348,19 @@ public class RequestContext
                                                HttpRange range)
         {
             return request(new SSTableComponentRequest(keyspace, tableName, snapshotName, componentName, range));
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link SSTableComponentRequest} for the requested {@code fileInfo}
+         * requesting the specified {@code range} and  returns a reference to this Builder enabling method chaining.
+         *
+         * @param fileInfo contains information about the file to stream
+         * @param range    the HTTP range for the request
+         * @return a reference to this Builder
+         */
+        public Builder ssTableComponentRequest(ListSnapshotFilesResponse.FileInfo fileInfo, HttpRange range)
+        {
+            return request(new SSTableComponentRequest(fileInfo, range));
         }
 
         /**

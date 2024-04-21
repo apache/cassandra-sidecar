@@ -133,6 +133,12 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
         return delegate.isGossipRunning();
     }
 
+    @Override
+    public String[] getAllDataFileLocations()
+    {
+        return delegate.getAllDataFileLocations();
+    }
+
     /**
      * Ensures that gossip is running on the Cassandra instance
      *

@@ -25,6 +25,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.impl.Http1xServerRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -70,5 +71,31 @@ class RequestUtilsTest
 
         when(mockRequest.getParam("default-value-false")).thenReturn("not-a-valid-false");
         assertThat(RequestUtils.parseBooleanQueryParam(mockRequest, "default-value-false", true)).isTrue();
+    }
+
+    @Test
+    void testParseIntegerQueryParam()
+    {
+        assertThat(RequestUtils.parseIntegerQueryParam(mockRequest, "non-existent", null)).isNull();
+        assertThat(RequestUtils.parseIntegerQueryParam(mockRequest, "non-existent", 42)).isEqualTo(42);
+
+        when(mockRequest.getParam("positive-integer")).thenReturn("5000");
+        assertThat(RequestUtils.parseIntegerQueryParam(mockRequest, "positive-integer", null)).isEqualTo(5000);
+
+        when(mockRequest.getParam("negative-integer")).thenReturn("-5000");
+        assertThat(RequestUtils.parseIntegerQueryParam(mockRequest, "negative-integer", null)).isEqualTo(-5000);
+
+        when(mockRequest.getParam("max-integer")).thenReturn("2147483647");
+        assertThat(RequestUtils.parseIntegerQueryParam(mockRequest, "max-integer", null)).isEqualTo(2147483647);
+
+        when(mockRequest.getParam("overflow-integer")).thenReturn("2147483648");
+        assertThatExceptionOfType(NumberFormatException.class)
+        .isThrownBy(() -> RequestUtils.parseIntegerQueryParam(mockRequest, "overflow-integer", null))
+        .withMessage("For input string: \"2147483648\"");
+
+        when(mockRequest.getParam("string")).thenReturn("not-an-integer");
+        assertThatExceptionOfType(NumberFormatException.class)
+        .isThrownBy(() -> RequestUtils.parseIntegerQueryParam(mockRequest, "string", null))
+        .withMessage("For input string: \"not-an-integer\"");
     }
 }

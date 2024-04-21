@@ -19,9 +19,9 @@
 package org.apache.cassandra.sidecar.cluster;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -43,16 +43,16 @@ public interface InstancesConfig
      *
      * @param id instance's id
      * @return instance meta information
-     * @throws NoSuchElementException when the instance with {@code id} does not exist
+     * @throws NoSuchSidecarInstanceException when the instance with {@code id} does not exist
      */
-    InstanceMetadata instanceFromId(int id) throws NoSuchElementException;
+    InstanceMetadata instanceFromId(int id) throws NoSuchSidecarInstanceException;
 
     /**
      * Lookup instance metadata by host name.
      *
      * @param host host address of instance
      * @return instance meta information
-     * @throws NoSuchElementException when the instance for {@code host} does not exist
+     * @throws NoSuchSidecarInstanceException when the instance for {@code host} does not exist
      */
-    InstanceMetadata instanceFromHost(String host) throws NoSuchElementException;
+    InstanceMetadata instanceFromHost(String host) throws NoSuchSidecarInstanceException;
 }

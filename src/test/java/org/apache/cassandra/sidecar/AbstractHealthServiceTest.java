@@ -30,7 +30,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
@@ -59,10 +58,11 @@ public abstract class AbstractHealthServiceTest
     private Path certPath;
     private Vertx vertx;
     private Server server;
+    TestModule testModule;
 
     public abstract boolean isSslEnabled();
 
-    public AbstractModule testModule()
+    TestModule testModule()
     {
         if (isSslEnabled())
             return new TestSslModule(certPath);
@@ -73,7 +73,8 @@ public abstract class AbstractHealthServiceTest
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(testModule()));
+        testModule = testModule();
+        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(testModule));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
@@ -150,6 +151,7 @@ public abstract class AbstractHealthServiceTest
     @Test
     void testHealthCheckReturns503FailureWithQueryParam(VertxTestContext testContext)
     {
+        testModule.delegate.setIsNativeUp(false);
         WebClient client = client();
 
         client.get(server.actualPort(), "localhost", "/api/v1/cassandra/__health?instanceId=2")
@@ -177,7 +179,7 @@ public abstract class AbstractHealthServiceTest
               {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
                   assertThat(response.body())
-                  .isEqualTo("{\"status\":\"Not Found\",\"code\":404,\"message\":\"Instance id 400 not found\"}");
+                  .isEqualTo("{\"status\":\"Not Found\",\"code\":404,\"message\":\"Instance id '400' not found\"}");
                   testContext.completeNow();
               })));
     }

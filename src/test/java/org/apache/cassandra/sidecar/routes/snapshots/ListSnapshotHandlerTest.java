@@ -16,11 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.routes;
+package org.apache.cassandra.sidecar.routes.snapshots;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -46,7 +47,11 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.common.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.TableOperations;
 import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
@@ -57,15 +62,17 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 
 /**
- * Tests for the {@link SnapshotsHandler}
+ * Tests for the {@link ListSnapshotHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class SnapshotsHandlerTest
+class ListSnapshotHandlerTest
 {
-    private static final Logger logger = LoggerFactory.getLogger(SnapshotsHandlerTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(ListSnapshotHandlerTest.class);
     private Vertx vertx;
     private Server server;
     @TempDir
@@ -103,7 +110,7 @@ public class SnapshotsHandlerTest
     }
 
     @Test
-    public void testRouteSucceedsWithKeyspaceAndTableName(VertxTestContext context)
+    void testRouteSucceedsWithKeyspaceAndTableName(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1/snapshots/snapshot1";
@@ -115,6 +122,7 @@ public class SnapshotsHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "1.db");
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
         new ListSnapshotFilesResponse.FileInfo(11,
@@ -124,6 +132,7 @@ public class SnapshotsHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "2.db");
 
         client.get(server.actualPort(), "localhost", testRoute)
@@ -138,7 +147,7 @@ public class SnapshotsHandlerTest
     }
 
     @Test
-    public void testRouteSucceedsIncludeSecondaryIndexes(VertxTestContext context)
+    void testRouteSucceedsIncludeSecondaryIndexes(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1" +
@@ -151,6 +160,7 @@ public class SnapshotsHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "1.db"),
         new ListSnapshotFilesResponse.FileInfo(0,
                                                "localhost",
@@ -159,6 +169,7 @@ public class SnapshotsHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                ".index/secondary.db")
         );
         ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
@@ -169,6 +180,7 @@ public class SnapshotsHandlerTest
                                                "snapshot1",
                                                "keyspace1",
                                                "table1",
+                                               "1234",
                                                "2.db");
 
         client.get(server.actualPort(), "localhost", testRoute)
@@ -182,7 +194,7 @@ public class SnapshotsHandlerTest
     }
 
     @Test
-    public void testRouteInvalidSnapshot(VertxTestContext context)
+    void testRouteInvalidSnapshot(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1/snapshots/snapshotInvalid";
@@ -190,6 +202,8 @@ public class SnapshotsHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
                   assertThat(response.statusMessage()).isEqualTo(NOT_FOUND.reasonPhrase());
+                  assertThat(response.bodyAsJsonObject().getString("message"))
+                  .isEqualTo("Snapshot 'snapshotInvalid' not found");
                   context.completeNow();
               })));
     }
@@ -203,6 +217,8 @@ public class SnapshotsHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
+                  assertThat(response.bodyAsJsonObject().getString("message"))
+                  .contains("Invalid characters in keyspace: ");
                   context.completeNow();
               })));
     }
@@ -210,7 +226,7 @@ public class SnapshotsHandlerTest
     @ParameterizedTest
     @ValueSource(strings = { "system_schema", "system_traces", "system_distributed", "system", "system_auth",
                              "system_views", "system_virtual_schema" })
-    void failsWhenKeyspaceIsForbidden(String forbiddenKeyspace)
+    void failsWhenKeyspaceIsForbidden(String forbiddenKeyspace) throws InterruptedException
     {
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
@@ -219,8 +235,11 @@ public class SnapshotsHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
+                  assertThat(response.bodyAsJsonObject().getString("message"))
+                  .isEqualTo("Forbidden keyspace: " + forbiddenKeyspace);
                   context.completeNow();
               })));
+        context.awaitCompletion(30, TimeUnit.SECONDS);
     }
 
     @Test
@@ -232,6 +251,8 @@ public class SnapshotsHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
+                  assertThat(response.bodyAsJsonObject().getString("message"))
+                  .contains("Invalid characters in table name: ");
                   context.completeNow();
               })));
     }
@@ -240,9 +261,15 @@ public class SnapshotsHandlerTest
     {
         @Provides
         @Singleton
-        public InstancesConfig instancesConfig(Vertx vertx)
+        public InstancesConfig instancesConfig(Vertx vertx) throws IOException
         {
-            return mockInstancesConfig(vertx, canonicalTemporaryPath);
+            CQLSessionProvider mockSession1 = mock(CQLSessionProviderImpl.class);
+            TableOperations mockTableOperations = mock(TableOperations.class);
+            when(mockTableOperations.getDataPaths("keyspace1", "table1"))
+            .thenReturn(Collections.singletonList(canonicalTemporaryPath + "/d1/data/keyspace1/table1-1234"));
+            CassandraAdapterDelegate mockDelegate = mock(CassandraAdapterDelegate.class);
+            when(mockDelegate.tableOperations()).thenReturn(mockTableOperations);
+            return mockInstancesConfig(vertx, canonicalTemporaryPath, mockDelegate, mockSession1);
         }
     }
 }

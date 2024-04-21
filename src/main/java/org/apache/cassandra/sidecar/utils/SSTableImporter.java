@@ -91,7 +91,7 @@ public class SSTableImporter
         this.uploadPathBuilder = uploadPathBuilder;
         this.importQueuePerHost = new ConcurrentHashMap<>();
         executorPools.internal()
-                     .setPeriodic(configuration.ssTableImportConfiguration().importIntervalMillis(),
+                     .setPeriodic(configuration.sstableImportConfiguration().importIntervalMillis(),
                                   this::processPendingImports);
     }
 

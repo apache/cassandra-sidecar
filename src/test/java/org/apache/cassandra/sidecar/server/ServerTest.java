@@ -63,12 +63,7 @@ class ServerTest
     @BeforeEach
     void setup()
     {
-        ClassLoader classLoader = ServerTest.class.getClassLoader();
-        Path yamlPath = writeResourceToPath(classLoader, confPath, "config/sidecar_single_instance.yaml");
-        Injector injector = Guice.createInjector(new MainModule(yamlPath));
-        server = injector.getInstance(Server.class);
-        vertx = injector.getInstance(Vertx.class);
-        client = WebClient.create(vertx);
+        configureServer("config/sidecar_single_instance.yaml");
     }
 
     @AfterEach
@@ -81,6 +76,25 @@ class ServerTest
     @DisplayName("Server should start and stop Sidecar successfully")
     void startStopServer(VertxTestContext context)
     {
+        Checkpoint serverStarted = context.checkpoint();
+        Checkpoint serverStopped = context.checkpoint();
+
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
+
+        server.start()
+              .compose(this::validateHealthEndpoint)
+              .compose(deploymentId -> server.stop(deploymentId))
+              .onFailure(context::failNow);
+    }
+
+    @Test
+    @DisplayName("Server should start and stop Sidecar successfully when there are no local instances configured")
+    void startStopServerWithoutLocalInstances(VertxTestContext context)
+    {
+        // reconfigured the server with a yaml that has no local instances
+        configureServer("config/sidecar_no_local_instances.yaml");
+
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint serverStopped = context.checkpoint();
 
@@ -220,5 +234,15 @@ class ServerTest
                          assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
                          return Future.succeededFuture(deploymentId);
                      });
+    }
+
+    void configureServer(String sidecarYaml)
+    {
+        ClassLoader classLoader = ServerTest.class.getClassLoader();
+        Path yamlPath = writeResourceToPath(classLoader, confPath, sidecarYaml);
+        Injector injector = Guice.createInjector(new MainModule(yamlPath));
+        server = injector.getInstance(Server.class);
+        vertx = injector.getInstance(Vertx.class);
+        client = WebClient.create(vertx);
     }
 }

@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.testing;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 import com.google.inject.AbstractModule;
@@ -39,6 +38,7 @@ import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
+import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -114,10 +114,10 @@ public class IntegrationTestModule extends AbstractModule
          *
          * @param id instance's id
          * @return instance meta information
-         * @throws NoSuchElementException when the instance with {@code id} does not exist
+         * @throws NoSuchSidecarInstanceException when the instance with {@code id} does not exist
          */
         @Override
-        public InstanceMetadata instanceFromId(int id) throws NoSuchElementException
+        public InstanceMetadata instanceFromId(int id) throws NoSuchSidecarInstanceException
         {
             return cassandraTestContext.instancesConfig().instanceFromId(id);
         }
@@ -127,10 +127,10 @@ public class IntegrationTestModule extends AbstractModule
          *
          * @param host host address of instance
          * @return instance meta information
-         * @throws NoSuchElementException when the instance for {@code host} does not exist
+         * @throws NoSuchSidecarInstanceException when the instance for {@code host} does not exist
          */
         @Override
-        public InstanceMetadata instanceFromHost(String host) throws NoSuchElementException
+        public InstanceMetadata instanceFromHost(String host) throws NoSuchSidecarInstanceException
         {
             return cassandraTestContext.instancesConfig().instanceFromHost(host);
         }

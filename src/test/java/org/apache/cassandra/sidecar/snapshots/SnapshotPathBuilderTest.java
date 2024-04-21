@@ -18,56 +18,23 @@
 
 package org.apache.cassandra.sidecar.snapshots;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 
 @ExtendWith(VertxExtension.class)
 class SnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
 {
     @Override
-    public SnapshotPathBuilder initialize(Vertx vertx, InstancesConfig instancesConfig, ExecutorPools executorPools)
+    public SnapshotPathBuilder initialize(Vertx vertx, ServiceConfiguration serviceConfiguration,
+                                          InstancesConfig instancesConfig,
+                                          CassandraInputValidator validator, ExecutorPools executorPools)
     {
         return new SnapshotPathBuilder(vertx, instancesConfig, validator, executorPools);
-    }
-
-    @Test
-    void testFindSnapshotDirectories()
-    {
-        Future<List<String>> future = instance.findSnapshotDirectories("localhost", "a_snapshot");
-
-        VertxTestContext testContext = new VertxTestContext();
-        future.onComplete(testContext.succeedingThenComplete());
-        // awaitCompletion has the semantics of a java.util.concurrent.CountDownLatch
-        try
-        {
-            assertThat(testContext.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        }
-        catch (InterruptedException e)
-        {
-            throw new RuntimeException(e);
-        }
-        assertThat(testContext.failed()).isFalse();
-        List<String> snapshotDirectories = future.result();
-        Collections.sort(snapshotDirectories);
-        assertThat(snapshotDirectories).isNotNull();
-        assertThat(snapshotDirectories.size()).isEqualTo(2);
-        // we use ends with here, because MacOS prepends the /private path for temporary directories
-        assertThat(snapshotDirectories.get(0))
-        .endsWith(dataDir0 + "/ks1/a_table-a72c8740a57611ec935db766a70c44a1/snapshots/a_snapshot");
-        assertThat(snapshotDirectories.get(1))
-        .endsWith(dataDir0 + "/ks1/a_table/snapshots/a_snapshot");
     }
 }

@@ -92,6 +92,10 @@ sidecar:
     cache:
       expire_after_access_millis: 7200000 # 2 hours
       maximum_size: 10000
+  sstable_snapshot:
+    snapshot_list_cache:
+      expire_after_access_millis: 7200000 # 2 hours
+      maximum_size: 10000
   worker_pools:
     service:
       name: "sidecar-worker-pool"

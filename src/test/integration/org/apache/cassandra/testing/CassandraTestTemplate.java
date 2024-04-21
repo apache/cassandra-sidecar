@@ -72,10 +72,10 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         CassandraIntegrationTest annotation = getCassandraIntegrationTestAnnotation(context, true);
         if (annotation.versionDependent())
         {
-            return new TestVersionSupplier().testVersions()
-                                            .map(v -> invocationContext(v, context));
+            return TestVersionSupplier.testVersions()
+                                      .map(v -> invocationContext(v, context));
         }
-        return Stream.of(invocationContext(new TestVersionSupplier().testVersions().findFirst().get(), context));
+        return Stream.of(invocationContext(TestVersionSupplier.testVersions().findFirst().get(), context));
     }
 
     /**

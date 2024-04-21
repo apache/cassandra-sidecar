@@ -169,4 +169,36 @@ public class CassandraInputValidatorTest
         assertThat(httpEx.getStatusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
         assertThat(httpEx.getPayload()).isEqualTo("Invalid characters in snapshot name: " + testSnapName);
     }
+
+    @Test
+    void testValidateTableIdIsNull()
+    {
+        NullPointerException npe = Assertions.assertThrows(NullPointerException.class, () -> instance.validateTableId(null));
+        assertThat(npe.getMessage()).isEqualTo("tableId must not be null");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "a", "abc", "abc124", "fff1234567890", "53464aa75e6b3d8a84c4e87abbdcbbef" })
+    void testValidateTableId(String tableId)
+    {
+        instance.validateTableId(tableId);
+    }
+
+    @Test
+    void testTableIdExceedsLengthLimit()
+    {
+        IllegalArgumentException iae = Assertions.assertThrows(IllegalArgumentException.class,
+                                                               () -> instance.validateTableId("53464aa75e6b3d8a84c4e87abbdcbbefa"));
+        assertThat(iae.getMessage()).isEqualTo("tableId cannot be longer than 32 characters");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "g", "--", "abc-124", "z", "x", "xax" })
+    void testInvalidTableId(String tableId)
+    {
+        HttpException httpEx = Assertions.assertThrows(HttpException.class,
+                                                       () -> instance.validateTableId(tableId));
+        assertThat(httpEx.getStatusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
+        assertThat(httpEx.getPayload()).isEqualTo("Invalid characters in table id: " + tableId);
+    }
 }

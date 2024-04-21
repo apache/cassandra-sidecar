@@ -33,4 +33,12 @@ public interface CacheConfiguration
      * @return the maximum number of entries the cache may contain
      */
     long maximumSize();
+
+    /**
+     * @return {@code true} if the cache is enabled, {@code false} otherwise
+     */
+    default boolean enabled()
+    {
+        return true;
+    }
 }

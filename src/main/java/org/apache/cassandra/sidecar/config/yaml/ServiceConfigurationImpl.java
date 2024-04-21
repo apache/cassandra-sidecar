@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
+import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -58,6 +59,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final String THROTTLE_PROPERTY = "throttle";
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
+    public static final String SSTABLE_SNAPSHOT_PROPERTY = "sstable_snapshot";
     public static final String WORKER_POOLS_PROPERTY = "worker_pools";
     private static final String JMX_PROPERTY = "jmx";
     private static final String TRAFFIC_SHAPING_PROPERTY = "traffic_shaping";
@@ -101,10 +103,13 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     protected final ThrottleConfiguration throttleConfiguration;
 
     @JsonProperty(value = SSTABLE_UPLOAD_PROPERTY)
-    protected final SSTableUploadConfiguration ssTableUploadConfiguration;
+    protected final SSTableUploadConfiguration sstableUploadConfiguration;
 
     @JsonProperty(value = SSTABLE_IMPORT_PROPERTY)
-    protected final SSTableImportConfiguration ssTableImportConfiguration;
+    protected final SSTableImportConfiguration sstableImportConfiguration;
+
+    @JsonProperty(value = SSTABLE_SNAPSHOT_PROPERTY)
+    protected final SSTableSnapshotConfiguration sstableSnapshotConfiguration;
 
     @JsonProperty(value = WORKER_POOLS_PROPERTY)
     protected final Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration;
@@ -142,8 +147,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         allowableSkewInMinutes = builder.allowableSkewInMinutes;
         serverVerticleInstances = builder.serverVerticleInstances;
         throttleConfiguration = builder.throttleConfiguration;
-        ssTableUploadConfiguration = builder.ssTableUploadConfiguration;
-        ssTableImportConfiguration = builder.ssTableImportConfiguration;
+        sstableUploadConfiguration = builder.sstableUploadConfiguration;
+        sstableImportConfiguration = builder.sstableImportConfiguration;
+        sstableSnapshotConfiguration = builder.sstableSnapshotConfiguration;
         workerPoolsConfiguration = builder.workerPoolsConfiguration;
         jmxConfiguration = builder.jmxConfiguration;
         trafficShapingConfiguration = builder.trafficShapingConfiguration;
@@ -245,9 +251,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      */
     @Override
     @JsonProperty(value = SSTABLE_UPLOAD_PROPERTY)
-    public SSTableUploadConfiguration ssTableUploadConfiguration()
+    public SSTableUploadConfiguration sstableUploadConfiguration()
     {
-        return ssTableUploadConfiguration;
+        return sstableUploadConfiguration;
     }
 
     /**
@@ -255,9 +261,19 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      */
     @Override
     @JsonProperty(value = SSTABLE_IMPORT_PROPERTY)
-    public SSTableImportConfiguration ssTableImportConfiguration()
+    public SSTableImportConfiguration sstableImportConfiguration()
     {
-        return ssTableImportConfiguration;
+        return sstableImportConfiguration;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = SSTABLE_SNAPSHOT_PROPERTY)
+    public SSTableSnapshotConfiguration sstableSnapshotConfiguration()
+    {
+        return sstableSnapshotConfiguration;
     }
 
     /**
@@ -319,8 +335,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected int allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
         protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
         protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
-        protected SSTableUploadConfiguration ssTableUploadConfiguration = new SSTableUploadConfigurationImpl();
-        protected SSTableImportConfiguration ssTableImportConfiguration = new SSTableImportConfigurationImpl();
+        protected SSTableUploadConfiguration sstableUploadConfiguration = new SSTableUploadConfigurationImpl();
+        protected SSTableImportConfiguration sstableImportConfiguration = new SSTableImportConfigurationImpl();
+        protected SSTableSnapshotConfiguration sstableSnapshotConfiguration = new SSTableSnapshotConfigurationImpl();
         protected Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration =
         DEFAULT_WORKER_POOLS_CONFIGURATION;
         protected JmxConfiguration jmxConfiguration = new JmxConfigurationImpl();
@@ -437,25 +454,37 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         }
 
         /**
-         * Sets the {@code ssTableUploadConfiguration} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code sstableUploadConfiguration} and returns a reference to this Builder enabling method chaining.
          *
-         * @param ssTableUploadConfiguration the {@code ssTableUploadConfiguration} to set
+         * @param sstableUploadConfiguration the {@code sstableUploadConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder ssTableUploadConfiguration(SSTableUploadConfiguration ssTableUploadConfiguration)
+        public Builder sstableUploadConfiguration(SSTableUploadConfiguration sstableUploadConfiguration)
         {
-            return update(b -> b.ssTableUploadConfiguration = ssTableUploadConfiguration);
+            return update(b -> b.sstableUploadConfiguration = sstableUploadConfiguration);
         }
 
         /**
-         * Sets the {@code ssTableImportConfiguration} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code sstableImportConfiguration} and returns a reference to this Builder enabling method chaining.
          *
-         * @param ssTableImportConfiguration the {@code ssTableImportConfiguration} to set
+         * @param sstableImportConfiguration the {@code sstableImportConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder ssTableImportConfiguration(SSTableImportConfiguration ssTableImportConfiguration)
+        public Builder sstableImportConfiguration(SSTableImportConfiguration sstableImportConfiguration)
         {
-            return update(b -> b.ssTableImportConfiguration = ssTableImportConfiguration);
+            return update(b -> b.sstableImportConfiguration = sstableImportConfiguration);
+        }
+
+        /**
+         * Sets the {@code sstableSnapshotConfiguration} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param sstableSnapshotConfiguration the {@code sstableSnapshotConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder sstableSnapshotConfiguration(SSTableSnapshotConfiguration sstableSnapshotConfiguration)
+        {
+            return update(b -> b.sstableSnapshotConfiguration = sstableSnapshotConfiguration);
         }
 
         /**
