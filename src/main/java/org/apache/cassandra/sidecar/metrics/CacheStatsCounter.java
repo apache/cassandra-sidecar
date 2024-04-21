@@ -26,7 +26,6 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import org.checkerframework.checker.index.qual.NonNegative;
@@ -116,12 +115,6 @@ public class CacheStatsCounter implements StatsCounter
     public void recordEviction(int weight)
     {
         evictions.metric.update(weight);
-    }
-
-    @Override
-    public void recordEviction(@NonNegative int weight, RemovalCause cause)
-    {
-        StatsCounter.super.recordEviction(weight, cause);
     }
 
     @Override
