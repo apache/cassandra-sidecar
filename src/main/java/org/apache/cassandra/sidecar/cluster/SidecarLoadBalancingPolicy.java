@@ -233,6 +233,6 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
 
     private boolean isLocalHost(Host host)
     {
-        return localHostAddresses.contains(host.getEndPoint().resolve());
+        return localHostAddresses.contains(driverUtils.getSocketAddress(host));
     }
 }

@@ -54,4 +54,15 @@ public class DriverUtils
     {
         return com.datastax.driver.core.DriverUtils.getHost(metadata, localNativeTransportAddress);
     }
+
+    /**
+     * Returns the address that the driver will use to connect to the node.
+     *
+     * @param host the host to which reconnect attempts will be made
+     * @return the address.
+     */
+    public InetSocketAddress getSocketAddress(Host host)
+    {
+        return host.getEndPoint().resolve();
+    }
 }
