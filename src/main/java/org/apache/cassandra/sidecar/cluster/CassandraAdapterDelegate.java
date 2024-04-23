@@ -547,7 +547,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     private void runIfThisHost(Host host, Runnable runnable)
     {
-        if (this.localNativeTransportAddress.equals(host.getEndPoint().resolve()))
+        if (this.localNativeTransportAddress.equals(driverUtils.getSocketAddress(host)))
         {
             runnable.run();
         }
