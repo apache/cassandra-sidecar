@@ -18,8 +18,10 @@
 
 package com.google.common.util.concurrent;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.google.common.base.Stopwatch;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
@@ -32,12 +34,16 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 public class SidecarRateLimiter
 {
     private final AtomicReference<RateLimiter> ref = new AtomicReference<>(null);
+    // Clock synced with RateLimiter's creation. Used to measure elapsed time as close as possible to measurements by
+    // SleepingStopwatch maintained by SmoothRateLimiter.
+    private Stopwatch clock;
 
     private SidecarRateLimiter(final double permitsPerSecond)
     {
         if (permitsPerSecond > 0)
         {
             RateLimiter rateLimiter = RateLimiter.create(permitsPerSecond);
+            clock = Stopwatch.createStarted();
             ref.set(rateLimiter);
         }
     }
@@ -56,6 +62,20 @@ public class SidecarRateLimiter
     }
 
     // Attention: Hack to expose the package private method queryEarliestAvailable
+
+    /**
+     * Returns calculated wait time in micros for next available permit. Permit is not reserved during calculation,
+     * this wait time is an approximation.
+     *
+     * @return approx wait time in micros for next available permit
+     */
+    public long queryWaitTimeInMicros()
+    {
+        long earliestAvailable = queryEarliestAvailable(0);
+        long now = clock != null ? clock.elapsed(TimeUnit.MICROSECONDS) : 0;
+        return Math.max(earliestAvailable - now, 0);
+    }
+
 
     /**
      * Returns the earliest time permits will become available. Returns 0 if disabled.
@@ -100,6 +120,13 @@ public class SidecarRateLimiter
             if (rateLimiter == null)
             {
                 ref.compareAndSet(null, RateLimiter.create(permitsPerSecond));
+                if (clock != null)
+                {
+                    clock.reset();
+                    clock.start();
+                    return;
+                }
+                clock = Stopwatch.createStarted();
             }
             else
             {

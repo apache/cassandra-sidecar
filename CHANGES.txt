@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Fix wait time acquired in SidecarRateLimiter (CASSANDRASC-124)
  * Make RestoreJobDiscoverer less verbose (CASSANDRASC-126)
  * Import Queue pendingImports metrics is reporting an incorrect value (CASSANDRASC-125)
  * Add missing method to retrieve the InetSocketAddress to DriverUtils (CASSANDRASC-123)

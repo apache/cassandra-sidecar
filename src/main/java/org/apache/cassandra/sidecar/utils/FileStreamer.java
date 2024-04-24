@@ -176,7 +176,7 @@ public class FileStreamer
                          response.host());
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Retry exhausted"));
         }
-        else if ((microsToWait = rateLimiter.queryEarliestAvailable(0L))
+        else if ((microsToWait = rateLimiter.queryWaitTimeInMicros())
                  < TimeUnit.SECONDS.toMicros(config.delayInSeconds()))
         {
             microsToWait = Math.max(0, microsToWait);

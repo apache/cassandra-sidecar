@@ -18,6 +18,8 @@
 
 package com.google.common.util.concurrent;
 
+import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -82,5 +84,33 @@ class SidecarRateLimiterTest
         assertThat(rateLimiter.acquire(0)).isEqualTo(0);
         assertThat(rateLimiter.acquire(5)).isEqualTo(0);
         assertThat(rateLimiter.acquire(500)).isNotEqualTo(0);
+    }
+
+    @Test
+    void testWaitTimeReturned()
+    {
+        SidecarRateLimiter rateLimiter = SidecarRateLimiter.create(10);
+
+        rateLimiter.acquire(10);
+        assertThat(rateLimiter.queryWaitTimeInMicros()).isGreaterThanOrEqualTo(500000);
+
+        Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
+
+        rateLimiter.acquire(100);
+        assertThat(rateLimiter.queryWaitTimeInMicros()).isGreaterThanOrEqualTo(8000000);
+    }
+
+    @Test
+    void testClockResetWithRateUpdate()
+    {
+        SidecarRateLimiter rateLimiter = SidecarRateLimiter.create(-1);
+        rateLimiter.acquire(2000);
+        assertThat(rateLimiter.queryWaitTimeInMicros()).isEqualTo(0);
+
+        Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
+
+        rateLimiter.rate(1);
+        rateLimiter.acquire(4);
+        assertThat(rateLimiter.queryWaitTimeInMicros()).isGreaterThanOrEqualTo(3000000);
     }
 }
