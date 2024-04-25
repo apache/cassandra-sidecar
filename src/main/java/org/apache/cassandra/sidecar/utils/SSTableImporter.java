@@ -68,7 +68,7 @@ public class SSTableImporter
     private final InstanceMetadataFetcher metadataFetcher;
     private final SSTableUploadsPathBuilder uploadPathBuilder;
     @VisibleForTesting
-    final Map<ImportKey, ImportQueue> importQueuePerHost;
+    final Map<ImportId, ImportQueue> importQueuePerHost;
 
     /**
      * Constructs a new instance of the SSTableImporter class
@@ -132,25 +132,23 @@ public class SSTableImporter
     }
 
     /**
-     * Returns a key for the queues for the given {@code options}. Classes extending from {@link SSTableImporter}
-     * can override the {@link #key(ImportOptions)} method and provide a different key for the queue.
+     * Returns a key for the queues for the given {@code options}.
      *
      * @param options the import options
      * @return a key for the queues for the given {@code options}
      */
-    protected ImportKey key(ImportOptions options)
+    private ImportId key(ImportOptions options)
     {
-        return new ImportKey(options.host, options.keyspace, options.tableName);
+        return new ImportId(options.host, options.keyspace, options.tableName);
     }
 
     /**
-     * Returns a new queue for the given {@code key}. Classes extending from {@link SSTableImporter} can override
-     * this method and provide a different implementation for the queue.
+     * Returns a new queue for the given {@code key}.
      *
      * @param key the key for the map
      * @return a new queue for the given {@code key}
      */
-    protected ImportQueue initializeQueue(ImportKey key)
+    private ImportQueue initializeQueue(ImportId key)
     {
         return new ImportQueue();
     }
@@ -162,7 +160,7 @@ public class SSTableImporter
      */
     private void processPendingImports(Long timerId)
     {
-        reportPendingImportAggregates();
+        reportPendingImportPerHost();
         for (ImportQueue queue : importQueuePerHost.values())
         {
             if (!queue.isEmpty())
@@ -182,6 +180,7 @@ public class SSTableImporter
      *
      * @param queue a queue of import tasks
      */
+    @VisibleForTesting
     void maybeDrainImportQueue(ImportQueue queue)
     {
         if (queue.tryLock())
@@ -310,10 +309,10 @@ public class SSTableImporter
     /**
      * Aggregates pending imports per host from multiple keyspaces and tables
      */
-    private void reportPendingImportAggregates()
+    private void reportPendingImportPerHost()
     {
         Map<String, Integer> aggregates = new HashMap<>();
-        for (Map.Entry<ImportKey, ImportQueue> entry : importQueuePerHost.entrySet())
+        for (Map.Entry<ImportId, ImportQueue> entry : importQueuePerHost.entrySet())
         {
             aggregates.compute(entry.getKey().host, (k, v) -> entry.getValue().size() + (v == null ? 0 : v));
         }
@@ -649,17 +648,16 @@ public class SSTableImporter
     /**
      * Key used for the map of queues
      */
-    protected static class ImportKey
+    @VisibleForTesting
+    static class ImportId
     {
         private final String host;
-        private final String keyspace;
-        private final String table;
+        private final int hashCode;
 
-        public ImportKey(String host, String keyspace, String table)
+        public ImportId(String host, String keyspace, String table)
         {
             this.host = host;
-            this.keyspace = keyspace;
-            this.table = table;
+            this.hashCode = Objects.hash(host, keyspace, table);
         }
 
         @Override
@@ -667,16 +665,15 @@ public class SSTableImporter
         {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-            ImportKey importKey = (ImportKey) o;
-            return Objects.equals(host, importKey.host)
-                   && Objects.equals(keyspace, importKey.keyspace)
-                   && Objects.equals(table, importKey.table);
+            ImportId importId = (ImportId) o;
+            return hashCode == importId.hashCode
+                   && Objects.equals(host, importId.host);
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash(host, keyspace, table);
+            return hashCode;
         }
     }
 }

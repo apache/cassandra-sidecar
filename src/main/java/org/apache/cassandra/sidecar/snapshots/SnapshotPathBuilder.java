@@ -259,6 +259,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
         public final long size;
         public final int dataDirectoryIndex;
         public final String tableId;
+        private final int hashCode;
 
         @VisibleForTesting
         SnapshotFile(Path path, long size, int dataDirectoryIndex, String tableId)
@@ -273,6 +274,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
             this.size = size;
             this.dataDirectoryIndex = dataDirectoryIndex;
             this.tableId = tableId;
+            this.hashCode = Objects.hash(name, size, dataDirectoryIndex, tableId);
         }
 
         @Override
@@ -301,7 +303,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
         @Override
         public int hashCode()
         {
-            return Objects.hash(name, size, dataDirectoryIndex, tableId);
+            return hashCode;
         }
     }
 

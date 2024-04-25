@@ -146,7 +146,7 @@ class SSTableImporterTest
 
         importFuture.onComplete(context.succeeding(v -> {
             assertThat(importer.importQueuePerHost).isNotEmpty();
-            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportKey("localhost", "ks", "tbl"));
+            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("localhost", "ks", "tbl"));
             for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
             {
                 assertThat(queue).isEmpty();
@@ -186,7 +186,7 @@ class SSTableImporterTest
             assertThat(exception.getPayload()).isEqualTo("Cassandra service is unavailable");
 
             assertThat(importer.importQueuePerHost).isNotEmpty();
-            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportKey("127.0.0.3", "ks", "tbl"));
+            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("127.0.0.3", "ks", "tbl"));
             for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
             {
                 assertThat(queue).isEmpty();
@@ -223,7 +223,7 @@ class SSTableImporterTest
             assertThat(exception.getPayload()).isEqualTo("Failed to import from directories: [/failed-dir]");
 
             assertThat(importer.importQueuePerHost).isNotEmpty();
-            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportKey("localhost", "ks", "tbl"));
+            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("localhost", "ks", "tbl"));
             for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
             {
                 assertThat(queue).isEmpty();
@@ -259,7 +259,7 @@ class SSTableImporterTest
             assertThat(exception.getMessage()).isEqualTo("Exception during import");
 
             assertThat(importer.importQueuePerHost).isNotEmpty();
-            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportKey("127.0.0.2", "ks", "tbl"));
+            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("127.0.0.2", "ks", "tbl"));
             for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
             {
                 assertThat(queue).isEmpty();
@@ -346,8 +346,8 @@ class SSTableImporterTest
         Future.all(futures)
               .onComplete(context.succeeding(v -> {
                   assertThat(importer.importQueuePerHost).isNotEmpty();
-                  assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportKey("localhost", "ks", "tbl"));
-                  assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportKey("localhost", "ks2", "tbl"));
+                  assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("localhost", "ks", "tbl"));
+                  assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("localhost", "ks2", "tbl"));
                   for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
                   {
                       assertThat(queue).isEmpty();
