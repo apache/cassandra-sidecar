@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.util.AbstractMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -67,7 +68,7 @@ public class SSTableImporter
     private final InstanceMetadataFetcher metadataFetcher;
     private final SSTableUploadsPathBuilder uploadPathBuilder;
     @VisibleForTesting
-    final Map<String, ImportQueue> importQueuePerHost;
+    final Map<ImportId, ImportQueue> importQueuePerHost;
 
     /**
      * Constructs a new instance of the SSTableImporter class
@@ -131,25 +132,23 @@ public class SSTableImporter
     }
 
     /**
-     * Returns a key for the queues for the given {@code options}. Classes extending from {@link SSTableImporter}
-     * can override the {@link #key(ImportOptions)} method and provide a different key for the queue.
+     * Returns a key for the queues for the given {@code options}.
      *
      * @param options the import options
      * @return a key for the queues for the given {@code options}
      */
-    protected String key(ImportOptions options)
+    private ImportId key(ImportOptions options)
     {
-        return options.host + "$" + options.keyspace + "$" + options.tableName;
+        return new ImportId(options.host, options.keyspace, options.tableName);
     }
 
     /**
-     * Returns a new queue for the given {@code key}. Classes extending from {@link SSTableImporter} can override
-     * this method and provide a different implementation for the queue.
+     * Returns a new queue for the given {@code key}.
      *
      * @param key the key for the map
      * @return a new queue for the given {@code key}
      */
-    protected ImportQueue initializeQueue(String key)
+    private ImportQueue initializeQueue(ImportId key)
     {
         return new ImportQueue();
     }
@@ -161,12 +160,16 @@ public class SSTableImporter
      */
     private void processPendingImports(Long timerId)
     {
+        reportPendingImportPerHost();
         for (ImportQueue queue : importQueuePerHost.values())
         {
             if (!queue.isEmpty())
             {
                 executorPools.internal()
-                             .executeBlocking(p -> maybeDrainImportQueue(queue));
+                             .executeBlocking(() -> {
+                                 maybeDrainImportQueue(queue);
+                                 return null;
+                             });
             }
         }
     }
@@ -177,7 +180,8 @@ public class SSTableImporter
      *
      * @param queue a queue of import tasks
      */
-    private void maybeDrainImportQueue(ImportQueue queue)
+    @VisibleForTesting
+    void maybeDrainImportQueue(ImportQueue queue)
     {
         if (queue.tryLock())
         {
@@ -201,12 +205,11 @@ public class SSTableImporter
     private void drainImportQueue(ImportQueue queue)
     {
         int successCount = 0, failureCount = 0;
-        boolean recorded = false;
         InstanceMetrics instanceMetrics = null;
-        while (!queue.isEmpty())
+        AbstractMap.SimpleEntry<Promise<Void>, ImportOptions> pair;
+        while ((pair = queue.poll()) != null)
         {
             LOGGER.info("Starting SSTable import session");
-            AbstractMap.SimpleEntry<Promise<Void>, ImportOptions> pair = queue.poll();
             Promise<Void> promise = pair.getKey();
             ImportOptions options = pair.getValue();
 
@@ -222,13 +225,6 @@ public class SSTableImporter
                 failureCount++;
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
                 continue;
-            }
-
-            if (!recorded)
-            {
-                // +1 offset added to consider already polled entry
-                instance.metrics().sstableImport().pendingImports.metric.setValue(queue.size() + 1);
-                recorded = true;
             }
 
             TableOperations tableOperations = delegate.tableOperations();
@@ -308,6 +304,31 @@ public class SSTableImporter
                                     LOGGER.error("Failed to remove staging directory for uploadId={}, " +
                                                  "instance={}, options={}", options.uploadId, options.host, options,
                                                  cause));
+    }
+
+    /**
+     * Aggregates pending imports per host from multiple keyspaces and tables
+     */
+    private void reportPendingImportPerHost()
+    {
+        Map<String, Integer> aggregates = new HashMap<>();
+        for (Map.Entry<ImportId, ImportQueue> entry : importQueuePerHost.entrySet())
+        {
+            aggregates.compute(entry.getKey().host, (k, v) -> entry.getValue().size() + (v == null ? 0 : v));
+        }
+
+        aggregates.forEach((host, count) -> {
+            try
+            {
+                // Report aggregate metrics for the queues
+                InstanceMetadata instance = metadataFetcher.instance(host);
+                instance.metrics().sstableImport().pendingImports.metric.setValue(count);
+            }
+            catch (Exception e)
+            {
+                LOGGER.warn("Unable to report metrics for host={} pendingImports={}", host, count, e);
+            }
+        });
     }
 
     /**
@@ -621,6 +642,38 @@ public class SSTableImporter
             {
                 return new ImportOptions(this);
             }
+        }
+    }
+
+    /**
+     * Key used for the map of queues
+     */
+    @VisibleForTesting
+    static class ImportId
+    {
+        private final String host;
+        private final int hashCode;
+
+        public ImportId(String host, String keyspace, String table)
+        {
+            this.host = host;
+            this.hashCode = Objects.hash(host, keyspace, table);
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ImportId importId = (ImportId) o;
+            return hashCode == importId.hashCode
+                   && Objects.equals(host, importId.host);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return hashCode;
         }
     }
 }

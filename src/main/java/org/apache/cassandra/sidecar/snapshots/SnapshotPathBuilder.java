@@ -128,7 +128,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
                                 }
 
                                 String snapshotFileName = snapshotFile.subpath(snapshotDirNameCount, snapshotFile.getNameCount()).toString();
-                                return new SnapshotFile(snapshotFileName, snapshotFile, attrs.size(), dataDirectoryIndex, tableId);
+                                return new SnapshotFile(snapshotFileName, attrs.size(), dataDirectoryIndex, tableId);
                             }
                             catch (IOException e)
                             {
@@ -256,25 +256,25 @@ public class SnapshotPathBuilder extends BaseFileSystem
     public static class SnapshotFile
     {
         public final String name;
-        public final Path path;
         public final long size;
         public final int dataDirectoryIndex;
         public final String tableId;
+        private final int hashCode;
 
         @VisibleForTesting
         SnapshotFile(Path path, long size, int dataDirectoryIndex, String tableId)
         {
             this(Objects.requireNonNull(path.getFileName(), "path.getFileName() cannot be null").toString(),
-                 path, size, dataDirectoryIndex, tableId);
+                 size, dataDirectoryIndex, tableId);
         }
 
-        SnapshotFile(String name, Path path, long size, int dataDirectoryIndex, String tableId)
+        public SnapshotFile(String name, long size, int dataDirectoryIndex, String tableId)
         {
             this.name = name;
-            this.path = path;
             this.size = size;
             this.dataDirectoryIndex = dataDirectoryIndex;
             this.tableId = tableId;
+            this.hashCode = Objects.hash(name, size, dataDirectoryIndex, tableId);
         }
 
         @Override
@@ -282,7 +282,6 @@ public class SnapshotPathBuilder extends BaseFileSystem
         {
             return "SnapshotFile{" +
                    "name='" + name + '\'' +
-                   ", path=" + path +
                    ", size=" + size +
                    ", dataDirectoryIndex=" + dataDirectoryIndex +
                    ", tableId='" + tableId + '\'' +
@@ -298,14 +297,13 @@ public class SnapshotPathBuilder extends BaseFileSystem
             return size == that.size
                    && dataDirectoryIndex == that.dataDirectoryIndex
                    && Objects.equals(name, that.name)
-                   && Objects.equals(path, that.path)
                    && Objects.equals(tableId, that.tableId);
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash(name, path, size, dataDirectoryIndex, tableId);
+            return hashCode;
         }
     }
 

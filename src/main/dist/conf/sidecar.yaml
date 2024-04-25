@@ -154,7 +154,7 @@ metrics:
     jmx_domain_name: sidecar.vertx.jmx_domain
   include:                                    # empty include list means include all
     - type: "regex"                           # possible filter types are "regex" and "equals"
-      value: "sidecar.*"
+      value: "Sidecar.*"
     - type: "regex"
       value: "vertx.*"
   exclude:                                    # empty exclude list means exclude nothing
