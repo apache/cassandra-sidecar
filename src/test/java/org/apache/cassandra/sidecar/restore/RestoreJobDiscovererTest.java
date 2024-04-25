@@ -32,6 +32,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.utils.UUIDs;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.vertx.core.Promise;
@@ -253,6 +254,43 @@ class RestoreJobDiscovererTest
 
         List<UUID> expectedAbortedJobs = mockResult.stream().map(s -> s.jobId).collect(Collectors.toList());
         assertThat(abortedJobs.getAllValues()).isEqualTo(expectedAbortedJobs);
+    }
+
+    @Test
+    void testWhenJobShouldBeLogged()
+    {
+        RestoreJobDiscoverer.JobIdsByDay jobIdsByDay = new RestoreJobDiscoverer.JobIdsByDay();
+        RestoreJob job = createNewTestingJob(UUIDs.timeBased());
+        assertThat(jobIdsByDay.shouldLogJob(job))
+        .describedAs("should return true for the new job")
+        .isTrue();
+        assertThat(jobIdsByDay.shouldLogJob(job))
+        .describedAs("should return true for the same job in CREATED status")
+        .isTrue();
+        RestoreJob statusUpdated = job.unbuild().jobStatus(RestoreJobStatus.SUCCEEDED).build();
+        assertThat(jobIdsByDay.shouldLogJob(statusUpdated))
+        .describedAs("should return true for the status-updated job")
+        .isTrue();
+        assertThat(jobIdsByDay.shouldLogJob(statusUpdated))
+        .describedAs("should return false for the same SUCCEEDED job")
+        .isFalse();
+    }
+
+    @Test
+    void testCleanupJobIdsByDay()
+    {
+        RestoreJobDiscoverer.JobIdsByDay jobIdsByDay = new RestoreJobDiscoverer.JobIdsByDay();
+        RestoreJob job = createNewTestingJob(UUIDs.timeBased());
+        jobIdsByDay.shouldLogJob(job); // insert the job
+        jobIdsByDay.cleanupMaybe(); // issue a cleanup. but it should not remove anything
+        assertThat(jobIdsByDay.jobsByDay()).hasSize(1)
+                                           .containsKey(job.createdAt.getDaysSinceEpoch());
+        RestoreJob jobOfNextDay = job.unbuild().createdAt(LocalDate.fromDaysSinceEpoch(job.createdAt.getDaysSinceEpoch() + 1)).build();
+        jobIdsByDay.shouldLogJob(jobOfNextDay);
+        jobIdsByDay.cleanupMaybe(); // issue a new cleanup. it should remove the job that is not reported in the new round
+        assertThat(jobIdsByDay.jobsByDay()).hasSize(1)
+                                           .containsKey(jobOfNextDay.createdAt.getDaysSinceEpoch())
+                                           .doesNotContainKey(job.createdAt.getDaysSinceEpoch());
     }
 
     private RestoreJobConfiguration testConfig()

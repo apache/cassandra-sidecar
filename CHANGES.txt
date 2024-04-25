@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Make RestoreJobDiscoverer less verbose (CASSANDRASC-126)
  * Import Queue pendingImports metrics is reporting an incorrect value (CASSANDRASC-125)
  * Add missing method to retrieve the InetSocketAddress to DriverUtils (CASSANDRASC-123)
  * Reduce filesystem calls while streaming SSTables (CASSANDRASC-94)

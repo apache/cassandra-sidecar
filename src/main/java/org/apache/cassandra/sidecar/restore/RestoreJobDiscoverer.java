@@ -18,7 +18,12 @@
 
 package org.apache.cassandra.sidecar.restore;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -31,6 +36,7 @@ import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -63,6 +69,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
     private final LocalTokenRangesProvider localTokenRangesProvider;
     private final InstanceMetadataFetcher instanceMetadataFetcher;
     private final RestoreMetrics metrics;
+    private final JobIdsByDay jobIdsByDay;
     private volatile boolean refreshSignaled = true;
     private int inflightJobsCount = 0;
     private int jobDiscoveryRecencyDays;
@@ -107,6 +114,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
         this.localTokenRangesProvider = cachedLocalTokenRanges;
         this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.metrics = metrics.server().restore();
+        this.jobIdsByDay = new JobIdsByDay();
     }
 
     @Override
@@ -158,7 +166,11 @@ public class RestoreJobDiscoverer implements PeriodicTask
         int expiredJobs = 0;
         for (RestoreJob job : restoreJobs)
         {
-            LOGGER.info("Found job. jobId={} job={}", job.jobId, job);
+            if (jobIdsByDay.shouldLogJob(job))
+            {
+                LOGGER.info("Found job. jobId={} job={}", job.jobId, job);
+            }
+
             try
             {
                 switch (job.status)
@@ -197,6 +209,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                 LOGGER.warn("Exception on processing job. jobId: {}", job.jobId, exception);
             }
         }
+        jobIdsByDay.cleanupMaybe();
         // shrink recency to lookup less data next time
         jobDiscoveryRecencyDays = Math.min(days, jobDiscoveryRecencyDays);
         // reset the external refresh signal if any
@@ -289,6 +302,42 @@ public class RestoreJobDiscoverer implements PeriodicTask
     private int delta(LocalDate date1, LocalDate date2)
     {
         return Math.abs(date1.getDaysSinceEpoch() - date2.getDaysSinceEpoch());
+    }
+
+    static class JobIdsByDay
+    {
+        private final Map<Integer, Map<UUID, RestoreJobStatus>> jobsByDay = new HashMap<>();
+        private final Set<Integer> discoveredDays = new HashSet<>(); // contains the days of the jobs seen from the current round of discovery
+
+        /**
+         * Log the jobs when any of the condition is met:
+         * - newly discovered
+         * - in CREATED status
+         * - status changed
+         *
+         * @return true to log the job
+         */
+        boolean shouldLogJob(RestoreJob job)
+        {
+            int day = job.createdAt.getDaysSinceEpoch();
+            discoveredDays.add(day);
+            Map<UUID, RestoreJobStatus> jobs = jobsByDay.computeIfAbsent(day, key -> new HashMap<>());
+            RestoreJobStatus oldStatus = jobs.put(job.jobId, job.status);
+            return oldStatus == null || job.status == RestoreJobStatus.CREATED || oldStatus != job.status;
+        }
+
+        void cleanupMaybe()
+        {
+            // remove all the jobIds of the days that are not discovered
+            jobsByDay.keySet().removeIf(day -> !discoveredDays.contains(day));
+            discoveredDays.clear();
+        }
+
+        @VisibleForTesting
+        Map<Integer, Map<UUID, RestoreJobStatus>> jobsByDay()
+        {
+            return jobsByDay;
+        }
     }
 
     @VisibleForTesting
