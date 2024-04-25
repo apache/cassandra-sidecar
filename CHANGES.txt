@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Make RestoreJobDiscoverer less verbose (CASSANDRASC-126)
  * Add missing method to retrieve the InetSocketAddress to DriverUtils (CASSANDRASC-123)
  * Reduce filesystem calls while streaming SSTables (CASSANDRASC-94)
  * Record existing and additional metrics with dropwizard (CASSANDRASC-117)
