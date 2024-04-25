@@ -18,13 +18,17 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import com.codahale.metrics.SharedMetricRegistries;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -58,7 +62,7 @@ class SSTableImporterTest
     private TableOperations mockTableOperations1;
     private ExecutorPools executorPools;
     private SSTableUploadsPathBuilder mockUploadPathBuilder;
-    private SSTableImporter importer;
+    private TestSSTableImporter importer;
     private ServiceConfiguration serviceConfiguration;
 
     @BeforeEach
@@ -113,17 +117,14 @@ class SSTableImporterTest
         when(mockUploadPathBuilder.resolveUploadIdDirectory(anyString(), anyString()))
         .thenReturn(Future.failedFuture("fake-path"));
         when(mockUploadPathBuilder.isValidDirectory("fake-path")).thenReturn(Future.failedFuture("skip cleanup"));
-        importer = new SSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools,
-                                       mockUploadPathBuilder);
+        importer = new TestSSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools,
+                                           mockUploadPathBuilder);
     }
 
     @AfterEach
     void clear()
     {
-        registry().removeMatching((name, metric) -> true);
-        registry(1).removeMatching((name, metric) -> true);
-        registry(2).removeMatching((name, metric) -> true);
-        registry(3).removeMatching((name, metric) -> true);
+        SharedMetricRegistries.clear();
     }
 
     @Test
@@ -136,9 +137,16 @@ class SSTableImporterTest
                                                             .directory("/dir")
                                                             .uploadId("0000-0000")
                                                             .build());
+
+        loopAssert(1, () -> {
+            // ensure that one element is reported in the import queue
+            assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
+            importer.latch.countDown();
+        });
+
         importFuture.onComplete(context.succeeding(v -> {
             assertThat(importer.importQueuePerHost).isNotEmpty();
-            assertThat(importer.importQueuePerHost).containsKey("localhost$ks$tbl");
+            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("localhost", "ks", "tbl"));
             for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
             {
                 assertThat(queue).isEmpty();
@@ -146,7 +154,8 @@ class SSTableImporterTest
             verify(mockTableOperations1, times(1))
             .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
             vertx.setTimer(100, handle -> {
-                assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
+                // after successful import, the queue must be drained
+                assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isZero();
                 assertThat(instanceMetrics(1).sstableImport().successfulImports.metric.getValue()).isOne();
                 context.completeNow();
             });
@@ -163,6 +172,13 @@ class SSTableImporterTest
                                                             .directory("/dir3")
                                                             .uploadId("0000-0000")
                                                             .build());
+
+        loopAssert(1, () -> {
+            // ensure that one element is reported in the import queue
+            assertThat(instanceMetrics(3).sstableImport().pendingImports.metric.getValue()).isOne();
+            importer.latch.countDown();
+        });
+
         importFuture.onComplete(context.failing(p -> {
             assertThat(p).isInstanceOf(HttpException.class);
             HttpException exception = (HttpException) p;
@@ -170,13 +186,14 @@ class SSTableImporterTest
             assertThat(exception.getPayload()).isEqualTo("Cassandra service is unavailable");
 
             assertThat(importer.importQueuePerHost).isNotEmpty();
-            assertThat(importer.importQueuePerHost).containsKey("127.0.0.3$ks$tbl");
+            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("127.0.0.3", "ks", "tbl"));
             for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
             {
                 assertThat(queue).isEmpty();
             }
             loopAssert(1, () -> {
-                assertThat(instanceMetrics(3).sstableImport().pendingImports.metric.getValue()).isOne();
+                // import queue must be drained even in the case of failure, and pendingImports metric should reflect that
+                assertThat(instanceMetrics(3).sstableImport().pendingImports.metric.getValue()).isZero();
                 context.completeNow();
             });
         }));
@@ -193,6 +210,12 @@ class SSTableImporterTest
                                                             .uploadId("0000-0000")
                                                             .build());
 
+        loopAssert(1, () -> {
+            // ensure that one element is reported in the import queue
+            assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
+            importer.latch.countDown();
+        });
+
         importFuture.onComplete(context.failing(p -> {
             assertThat(p).isInstanceOf(HttpException.class);
             HttpException exception = (HttpException) p;
@@ -200,13 +223,13 @@ class SSTableImporterTest
             assertThat(exception.getPayload()).isEqualTo("Failed to import from directories: [/failed-dir]");
 
             assertThat(importer.importQueuePerHost).isNotEmpty();
-            assertThat(importer.importQueuePerHost).containsKey("localhost$ks$tbl");
+            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("localhost", "ks", "tbl"));
             for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
             {
                 assertThat(queue).isEmpty();
             }
             vertx.setTimer(100, v -> {
-                assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isZero();
                 assertThat(instanceMetrics(1).sstableImport().failedImports.metric.getValue()).isOne();
                 context.completeNow();
             });
@@ -224,19 +247,25 @@ class SSTableImporterTest
                                                             .uploadId("0000-0000")
                                                             .build());
 
+        loopAssert(1, () -> {
+            // ensure that one element is reported in the import queue
+            assertThat(instanceMetrics(2).sstableImport().pendingImports.metric.getValue()).isOne();
+            importer.latch.countDown();
+        });
+
         importFuture.onComplete(context.failing(p -> {
             assertThat(p).isInstanceOf(RuntimeException.class);
             RuntimeException exception = (RuntimeException) p;
             assertThat(exception.getMessage()).isEqualTo("Exception during import");
 
             assertThat(importer.importQueuePerHost).isNotEmpty();
-            assertThat(importer.importQueuePerHost).containsKey("127.0.0.2$ks$tbl");
+            assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("127.0.0.2", "ks", "tbl"));
             for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
             {
                 assertThat(queue).isEmpty();
             }
             vertx.setTimer(100, v -> {
-                assertThat(instanceMetrics(2).sstableImport().pendingImports.metric.getValue()).isOne();
+                assertThat(instanceMetrics(2).sstableImport().pendingImports.metric.getValue()).isZero();
                 assertThat(instanceMetrics(2).sstableImport().failedImports.metric.getValue()).isOne();
                 context.completeNow();
             });
@@ -276,14 +305,99 @@ class SSTableImporterTest
                                                 .uploadId("0000-0000")
                                                 .build();
         Future<Void> importFuture = importer.scheduleImport(options);
+
+        loopAssert(1, () -> {
+            // ensure that one element is reported in the import queue
+            assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isOne();
+            importer.latch.countDown();
+        });
+
         importFuture.onComplete(context.succeeding(v -> {
             assertThat(importer.cancelImport(options)).isFalse();
             context.completeNow();
         }));
     }
 
-    public InstanceMetrics instanceMetrics(int id)
+    @Test
+    void testAggregatesMetricsForTheSameHost(VertxTestContext context)
+    {
+        List<Future<Void>> futures = new ArrayList<>();
+        futures.add(importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
+                                            .host("localhost")
+                                            .keyspace("ks")
+                                            .tableName("tbl")
+                                            .directory("/dir")
+                                            .uploadId("0000-0000")
+                                            .build()));
+        futures.add(importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
+                                            .host("localhost")
+                                            .keyspace("ks2")
+                                            .tableName("tbl")
+                                            .directory("/dir")
+                                            .uploadId("0000-0001")
+                                            .build()));
+
+        loopAssert(1, () -> {
+            // ensure that one element is reported in the import queue
+            assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isEqualTo(2);
+            importer.latch.countDown();
+        });
+
+        Future.all(futures)
+              .onComplete(context.succeeding(v -> {
+                  assertThat(importer.importQueuePerHost).isNotEmpty();
+                  assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("localhost", "ks", "tbl"));
+                  assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("localhost", "ks2", "tbl"));
+                  for (SSTableImporter.ImportQueue queue : importer.importQueuePerHost.values())
+                  {
+                      assertThat(queue).isEmpty();
+                  }
+                  verify(mockTableOperations1, times(1))
+                  .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
+                  verify(mockTableOperations1, times(1))
+                  .importNewSSTables("ks2", "tbl", "/dir", true, true, true, true, true, true, false);
+                  vertx.setTimer(100, handle -> {
+                      // after successful import, the queue must be drained
+                      assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isZero();
+                      assertThat(instanceMetrics(1).sstableImport().successfulImports.metric.getValue()).isEqualTo(2);
+                      context.completeNow();
+                  });
+              }));
+    }
+
+    InstanceMetrics instanceMetrics(int id)
     {
         return new InstanceMetricsImpl(registry(id));
+    }
+
+    /**
+     * Injects into the maybeDrainImportQueue method to better test the class behavior
+     */
+    static class TestSSTableImporter extends SSTableImporter
+    {
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        TestSSTableImporter(Vertx vertx,
+                            InstanceMetadataFetcher metadataFetcher,
+                            ServiceConfiguration configuration,
+                            ExecutorPools executorPools,
+                            SSTableUploadsPathBuilder uploadPathBuilder)
+        {
+            super(vertx, metadataFetcher, configuration, executorPools, uploadPathBuilder);
+        }
+
+        @Override
+        void maybeDrainImportQueue(ImportQueue queue)
+        {
+            try
+            {
+                latch.await();
+            }
+            catch (InterruptedException e)
+            {
+                throw new RuntimeException(e);
+            }
+            super.maybeDrainImportQueue(queue);
+        }
     }
 }
