@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
@@ -46,7 +45,6 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
-import org.checkerframework.checker.units.qual.C;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
