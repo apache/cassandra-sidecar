@@ -178,7 +178,6 @@ public class SidecarRateLimiter
         {
             long earliestAvailableMicros = rateLimiter.queryEarliestAvailable(0);
             long nowMicros = stopwatch.readMicros();
-            long waitTime = Math.max(earliestAvailableMicros - nowMicros, 0);
             return Math.max(earliestAvailableMicros - nowMicros, 0);
         }
     }
