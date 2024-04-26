@@ -174,6 +174,7 @@ public class FileStreamer
         {
             LOGGER.error("Retries for acquiring permit exhausted for client {}. Instance: {}", response.remoteAddress(),
                          response.host());
+            streamSSTableMetrics.throttled.metric.update(1);
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Retry exhausted"));
         }
         else if ((microsToWait = rateLimiter.queryWaitTimeInMicros())

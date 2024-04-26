@@ -39,13 +39,13 @@ class SidecarRateLimiterTest
         assertThat(enabledRateLimiter.tryAcquire()).isTrue();
         enabledRateLimiter.rate(150);
         assertThat(enabledRateLimiter.rate()).isEqualTo(150);
-        assertThat(enabledRateLimiter.queryEarliestAvailable(0)).isGreaterThan(0);
+        assertThat(enabledRateLimiter.queryWaitTimeInMicros()).isGreaterThan(0);
 
         // Creates a SidecarRateLimiter that is disabled
         SidecarRateLimiter disabledRateLimiter = SidecarRateLimiter.create(-1);
         assertThat(disabledRateLimiter).isNotNull();
         assertThat(disabledRateLimiter.rate()).isEqualTo(0);
-        assertThat(disabledRateLimiter.queryEarliestAvailable(1000L)).isEqualTo(0);
+        assertThat(disabledRateLimiter.queryWaitTimeInMicros()).isEqualTo(0);
     }
 
     @Test
