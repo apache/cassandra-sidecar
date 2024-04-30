@@ -39,7 +39,7 @@ class SidecarRateLimiterTest
         assertThat(enabledRateLimiter.tryAcquire()).isTrue();
         enabledRateLimiter.rate(150);
         assertThat(enabledRateLimiter.rate()).isEqualTo(150);
-        enabledRateLimiter.acquire(20);
+        enabledRateLimiter.acquire(200);
         assertThat(enabledRateLimiter.queryWaitTimeInMicros()).isGreaterThan(0);
 
         // Creates a SidecarRateLimiter that is disabled
