@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.client.exception;
 
 import org.apache.cassandra.sidecar.client.HttpResponse;
-import org.apache.cassandra.sidecar.client.request.Request;
+import org.apache.cassandra.sidecar.common.request.Request;
 
 /**
  * Represents an exception raised when the number of retries for a given request are exhausted

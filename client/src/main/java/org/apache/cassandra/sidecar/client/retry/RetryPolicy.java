@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.UnexpectedStatusCodeException;
-import org.apache.cassandra.sidecar.client.request.Request;
+import org.apache.cassandra.sidecar.common.request.Request;
 
 /**
  * An abstract class representing a retry policy

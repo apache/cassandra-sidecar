@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
-import org.apache.cassandra.sidecar.client.request.Request;
+import org.apache.cassandra.sidecar.common.request.Request;
 
 /**
  * A policy to handle specific status codes for the response. Delegates all other response codes to the

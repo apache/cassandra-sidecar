@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.cassandra.sidecar.client.HttpResponse;
-import org.apache.cassandra.sidecar.client.request.Request;
+import org.apache.cassandra.sidecar.common.request.Request;
 
 /**
  * A delegate retry policy that executes the Runnable every configured number of requests retries on the

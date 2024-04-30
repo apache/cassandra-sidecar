@@ -39,7 +39,7 @@ import org.apache.cassandra.sidecar.utils.SslUtils;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.cassandra.sidecar.common.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
+import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
 
 /**
  * A provider that takes the {@link SidecarConfiguration} and builds {@link HttpServerOptions} from the configured

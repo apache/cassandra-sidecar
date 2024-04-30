@@ -34,8 +34,8 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
-import org.apache.cassandra.sidecar.common.data.RestoreJobSummaryResponsePayload;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
+import org.apache.cassandra.sidecar.common.request.data.RestoreJobSummaryResponsePayload;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 
 import static org.assertj.core.api.Assertions.assertThat;

@@ -22,7 +22,8 @@ package org.apache.cassandra.sidecar.client.request;
 import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.http.HttpMethod;
-import org.apache.cassandra.sidecar.common.NodeSettings;
+import org.apache.cassandra.sidecar.common.request.JsonRequest;
+import org.apache.cassandra.sidecar.common.response.NodeSettings;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 

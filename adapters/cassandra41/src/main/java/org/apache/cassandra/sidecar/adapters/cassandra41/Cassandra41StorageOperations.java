@@ -23,9 +23,9 @@ import java.util.Map;
 import org.apache.cassandra.sidecar.adapters.base.CassandraStorageOperations;
 import org.apache.cassandra.sidecar.adapters.base.RingProvider;
 import org.apache.cassandra.sidecar.adapters.base.TokenRangeReplicaProvider;
-import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.StorageOperations;
-import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

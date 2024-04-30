@@ -26,7 +26,7 @@ import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
-import org.apache.cassandra.sidecar.common.data.RestoreSliceStatus;
+import org.apache.cassandra.sidecar.common.server.data.RestoreSliceStatus;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 
 import static org.assertj.core.api.Assertions.assertThat;

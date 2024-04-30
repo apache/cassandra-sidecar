@@ -180,6 +180,27 @@ public abstract class TaskExecutorPool implements WorkerExecutor
     }
 
     /**
+     * Run the runnable async
+     */
+    public Future<Void> runBlocking(ThrowableRunnable runnable)
+    {
+        return runBlocking(runnable, false);
+    }
+
+    /**
+     * A helper that converts the {@code Runnable} to a {@code Callable}
+     * and calls {@link #executeBlocking(Callable, boolean)}
+     */
+    public Future<Void> runBlocking(ThrowableRunnable runnable, boolean ordered)
+    {
+        Callable<Void> callable = () -> {
+            runnable.run();
+            return null;
+        };
+        return executeBlocking(callable, ordered);
+    }
+
+    /**
      * Records time taken for tasks executed by {@link TaskExecutorPool}
      * @param durationNanos time taken by a task
      */
@@ -202,6 +223,15 @@ public abstract class TaskExecutorPool implements WorkerExecutor
         return workerExecutor == null
                ? Future.succeededFuture()
                : workerExecutor.close();
+    }
+
+    /**
+     * ThrowableRunnable is similar to {@link Runnable}, but it can throw {@link Exception}
+     */
+    @FunctionalInterface
+    public interface ThrowableRunnable
+    {
+        void run() throws Exception;
     }
 
     /**

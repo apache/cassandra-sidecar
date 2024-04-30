@@ -20,13 +20,13 @@ package org.apache.cassandra.sidecar.adapters.cassandra41;
 
 import java.net.InetSocketAddress;
 
-import org.apache.cassandra.sidecar.common.CQLSessionProvider;
-import org.apache.cassandra.sidecar.common.ICassandraAdapter;
-import org.apache.cassandra.sidecar.common.ICassandraFactory;
-import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.MinimumVersion;
-import org.apache.cassandra.sidecar.common.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.utils.DriverUtils;
+import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
+import org.apache.cassandra.sidecar.common.server.ICassandraFactory;
+import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.MinimumVersion;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 
 /**
  * Factory to produce the 4.1 adapter

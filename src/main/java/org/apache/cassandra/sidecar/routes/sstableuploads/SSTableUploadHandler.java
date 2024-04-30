@@ -32,17 +32,17 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.data.SSTableUploadResponse;
+import org.apache.cassandra.sidecar.common.response.SSTableUploadResponse;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.data.SSTableUploadRequest;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceResourceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.UploadSSTableMetrics;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.data.SSTableUploadRequestParam;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.DigestVerifier;
 import org.apache.cassandra.sidecar.utils.DigestVerifierFactory;
@@ -59,7 +59,7 @@ import static org.apache.cassandra.sidecar.utils.MetricUtils.parseSSTableCompone
  * Handler for managing uploaded SSTable components
  */
 @Singleton
-public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
+public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestParam>
 {
     private final FileSystem fs;
     private final SSTableUploadConfiguration configuration;
@@ -107,7 +107,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
                                HttpServerRequest httpRequest,
                                String host,
                                SocketAddress remoteAddress,
-                               SSTableUploadRequest request)
+                               SSTableUploadRequestParam request)
     {
         // We pause request here, otherwise data streaming will happen before we have our temporary
         // file ready for streaming, and we will see request has already been read error. Hence, we
@@ -159,7 +159,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
 
     @Override
     protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress,
-                                  SSTableUploadRequest request)
+                                  SSTableUploadRequestParam request)
     {
         if (cause instanceof IllegalArgumentException)
         {
@@ -175,9 +175,9 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
      * {@inheritDoc}
      */
     @Override
-    protected SSTableUploadRequest extractParamsOrThrow(RoutingContext context)
+    protected SSTableUploadRequestParam extractParamsOrThrow(RoutingContext context)
     {
-        return SSTableUploadRequest.from(qualifiedTableName(context, true), context);
+        return SSTableUploadRequestParam.from(qualifiedTableName(context, true), context);
     }
 
     /**
@@ -185,10 +185,10 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequest>
      *
      * @param host    the Cassandra instance host
      * @param request the upload request
-     * @return {@link Future} containing a valid {@link SSTableUploadRequest request}
+     * @return {@link Future} containing a valid {@link SSTableUploadRequestParam request}
      */
-    private Future<SSTableUploadRequest> validateKeyspaceAndTable(String host,
-                                                                  SSTableUploadRequest request)
+    private Future<SSTableUploadRequestParam> validateKeyspaceAndTable(String host,
+                                                                       SSTableUploadRequestParam request)
     {
         TaskExecutorPool pool = executorPools.service();
         return pool.<Metadata>executeBlocking(promise -> {

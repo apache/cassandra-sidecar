@@ -32,7 +32,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
-import org.apache.cassandra.sidecar.client.request.Request;
+import org.apache.cassandra.sidecar.common.request.Request;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.CONFLICT;
 import static org.assertj.core.api.Assertions.assertThat;

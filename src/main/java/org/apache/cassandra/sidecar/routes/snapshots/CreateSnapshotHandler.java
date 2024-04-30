@@ -31,13 +31,13 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.StorageOperations;
-import org.apache.cassandra.sidecar.common.exceptions.NodeBootstrappingException;
-import org.apache.cassandra.sidecar.common.exceptions.SnapshotAlreadyExistsException;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.exceptions.NodeBootstrappingException;
+import org.apache.cassandra.sidecar.common.server.exceptions.SnapshotAlreadyExistsException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
-import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.data.SnapshotRequestParam;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -48,7 +48,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * The <b>PUT</b> verb creates a new snapshot for the given keyspace and table
  */
 @Singleton
-public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequest>
+public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
 {
     private static final String TTL_QUERY_PARAM = "ttl";
 
@@ -74,7 +74,7 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                HttpServerRequest httpRequest,
                                String host,
                                SocketAddress remoteAddress,
-                               SnapshotRequest requestParams)
+                               SnapshotRequestParam requestParams)
     {
         TaskExecutorPool pool = executorPools.service();
         pool.executeBlocking(promise -> {
@@ -104,7 +104,7 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                   RoutingContext context,
                                   String host,
                                   SocketAddress remoteAddress,
-                                  SnapshotRequest requestParams)
+                                  SnapshotRequestParam requestParams)
     {
         logger.error("SnapshotsHandler failed for request={}, remoteAddress={}, instance={}, method={}",
                      requestParams, remoteAddress, host, context.request().method(), cause);
@@ -142,20 +142,20 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequest>
      * {@inheritDoc}
      */
     @Override
-    protected SnapshotRequest extractParamsOrThrow(RoutingContext context)
+    protected SnapshotRequestParam extractParamsOrThrow(RoutingContext context)
     {
         String ttl = context.request().getParam(TTL_QUERY_PARAM);
 
-        SnapshotRequest snapshotRequest = SnapshotRequest.builder()
-                                                         .qualifiedTableName(qualifiedTableName(context))
-                                                         .snapshotName(context.pathParam("snapshot"))
-                                                         .ttl(ttl)
-                                                         .build();
-        validate(snapshotRequest);
-        return snapshotRequest;
+        SnapshotRequestParam snapshotRequestParam = SnapshotRequestParam.builder()
+                                                                        .qualifiedTableName(qualifiedTableName(context))
+                                                                        .snapshotName(context.pathParam("snapshot"))
+                                                                        .ttl(ttl)
+                                                                        .build();
+        validate(snapshotRequestParam);
+        return snapshotRequestParam;
     }
 
-    private void validate(SnapshotRequest request)
+    private void validate(SnapshotRequestParam request)
     {
         validator.validateSnapshotName(request.snapshotName());
     }

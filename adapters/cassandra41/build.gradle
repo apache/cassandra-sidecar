@@ -49,8 +49,9 @@ test {
 }
 
 dependencies {
-    api(project(":common"))
+    api(project(":server-common"))
     api(project(":adapters:base"))
+
     compileOnly('org.jetbrains:annotations:23.0.0')
     compileOnly('com.datastax.cassandra:cassandra-driver-core:3.11.3')
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")

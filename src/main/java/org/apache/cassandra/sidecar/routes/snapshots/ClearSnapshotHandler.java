@@ -28,10 +28,10 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.data.SnapshotRequestParam;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -42,7 +42,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * The <b>DELETE</b> verb deletes an existing snapshot for the given keyspace and table.
  */
 @Singleton
-public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequest>
+public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
 {
     @Inject
     public ClearSnapshotHandler(InstanceMetadataFetcher metadataFetcher,
@@ -67,7 +67,7 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                HttpServerRequest httpRequest,
                                String host,
                                SocketAddress remoteAddress,
-                               SnapshotRequest requestParams)
+                               SnapshotRequestParam requestParams)
     {
         executorPools.service().executeBlocking(promise -> {
             CassandraAdapterDelegate delegate = metadataFetcher.delegate(host(context));
@@ -97,7 +97,7 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                   RoutingContext context,
                                   String host,
                                   SocketAddress remoteAddress,
-                                  SnapshotRequest requestParams)
+                                  SnapshotRequestParam requestParams)
     {
         logger.error("ClearSnapshotHandler failed for request={}, remoteAddress={}, instance={}, method={}",
                      requestParams, remoteAddress, host, context.request().method(), cause);
@@ -115,17 +115,17 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequest>
      * {@inheritDoc}
      */
     @Override
-    protected SnapshotRequest extractParamsOrThrow(RoutingContext context)
+    protected SnapshotRequestParam extractParamsOrThrow(RoutingContext context)
     {
-        SnapshotRequest snapshotRequest = SnapshotRequest.builder()
-                                                         .qualifiedTableName(qualifiedTableName(context))
-                                                         .snapshotName(context.pathParam("snapshot"))
-                                                         .build();
-        validate(snapshotRequest);
-        return snapshotRequest;
+        SnapshotRequestParam snapshotRequestParam = SnapshotRequestParam.builder()
+                                                                        .qualifiedTableName(qualifiedTableName(context))
+                                                                        .snapshotName(context.pathParam("snapshot"))
+                                                                        .build();
+        validate(snapshotRequestParam);
+        return snapshotRequestParam;
     }
 
-    private void validate(SnapshotRequest request)
+    private void validate(SnapshotRequestParam request)
     {
         validator.validateSnapshotName(request.snapshotName());
     }

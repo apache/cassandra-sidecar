@@ -35,7 +35,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
-import org.apache.cassandra.sidecar.common.data.MD5Digest;
+import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

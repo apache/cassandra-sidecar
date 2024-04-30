@@ -21,7 +21,7 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.TableMetadata;
-import org.apache.cassandra.sidecar.common.data.Name;
+import org.apache.cassandra.sidecar.common.server.data.Name;
 
 /**
  * Utilities for {@link Metadata} operations

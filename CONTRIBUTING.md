@@ -31,7 +31,6 @@ We warmly welcome and appreciate contributions from the community.
   * [Asynchronous Programming](#async-programming)
   * [Thread Pool Model](#thread-pools)
   * [One-shot Timers and Periodic Timers](#timers)
-  * [RestEasy Integration](#resteasy)
   * [Dependency Injection](#guice)
   * [Handler Chaining](#chaining-handlers)
   * [Asynchronous Handlers](#async-handlers)
@@ -138,29 +137,6 @@ threads that are managed internal by vertx. For example
 ```java
 logger.debug("Retrying streaming after {} millis", millis);
 executorPools.service().setTimer(millis, t -> acquireAndSend(context, filename, fileLength, range, startTime));
-```
-
-### <a href="resteasy"></a>RestEasy Integration
-
-The Apache Cassandra Sidecar project uses vertx-resteasy, and is the preferred method to provision endpoints. The
-exception to the rule is when you require access to low-level APIs that are not available through RestEasy. Here's
-an example of a simple RestEasy handler.
-
-```java
-@Path("/api/v1/time-skew")
-public class TimeSkewHandler {
-  private final TimeSkewInfo info;
-
-  @Inject
-  public TimeSkewHandler(TimeSkewInfo info) {
-    info = info;
-  }
-
-  @GET
-  public TimeSkewResponse getTimeSkewResponse() {
-    return new TimeSkewResponse(System.currentTimeMillis(), info.allowableSkewInMinutes());;
-  }
-}
 ```
 
 ### <a href="guice"></a>Dependency Injection
@@ -270,8 +246,7 @@ public class FileStreamHandler implements Handler<RoutingContext>  {
 
 ### <a name="async-handlers"></a>Asynchronous Handlers
 
-When [RestEasy](#resteasy) is not a suitable approach, use asynchronous handlers. Vertx has support for both
-asynchronous and blocking handlers. When using a blocking handler, you will take up a worker thread for the entire
+Vertx has support for both asynchronous and blocking handlers. When using a blocking handler, you will take up a worker thread for the entire
 execution of the handler. This is similar to what the [traditional application servers](#traditional-app-server)
 do with their threading model, which doesn't take full advantage of the asynchronous and reactive benefits that vertx
 offers.
@@ -350,7 +325,7 @@ public class SidecarFailureHandler implements Handler<RoutingContext> {
 }
 ```
 
-### <a name="cassandra-adapters></a>Cassandra Adapters
+### <a name="cassandra-adapters"></a>Cassandra Adapters
 The Cassandra Sidecar is designed to support multiple Cassandra versions, including multiple, different instances on the same host.
 The `adapters` subproject contains an implementation of the Cassandra adapter for different versions of Cassandra.
 The `base` adapter supports Cassandra 4.0 and greater, including `trunk`.

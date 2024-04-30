@@ -54,8 +54,8 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.predicate.ResponsePredicateResult;
 import io.vertx.ext.web.codec.BodyCodec;
-import org.apache.cassandra.sidecar.client.request.Request;
-import org.apache.cassandra.sidecar.client.request.UploadableRequest;
+import org.apache.cassandra.sidecar.common.request.Request;
+import org.apache.cassandra.sidecar.common.request.UploadableRequest;
 
 /**
  * An {@link HttpClient} implementation that uses vertx's WebClient internally

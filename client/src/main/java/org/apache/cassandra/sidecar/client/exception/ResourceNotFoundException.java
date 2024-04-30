@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.client.exception;
 
-import org.apache.cassandra.sidecar.client.request.Request;
+import org.apache.cassandra.sidecar.common.request.Request;
 
 /**
  * An exception raised when the HTTP resource is Not Found (A 404 Status Code response).

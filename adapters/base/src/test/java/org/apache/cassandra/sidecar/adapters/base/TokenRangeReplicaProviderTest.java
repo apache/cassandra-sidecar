@@ -31,10 +31,10 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.data.Name;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
-import org.apache.cassandra.sidecar.common.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.assertj.core.api.InstanceOfAssertFactories;
 
 import static org.assertj.core.api.Assertions.as;

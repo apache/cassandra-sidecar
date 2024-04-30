@@ -28,11 +28,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.junit5.VertxExtension;
-import org.apache.cassandra.sidecar.common.data.CreateRestoreJobRequestPayload;
-import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
-import org.apache.cassandra.sidecar.common.data.UpdateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;

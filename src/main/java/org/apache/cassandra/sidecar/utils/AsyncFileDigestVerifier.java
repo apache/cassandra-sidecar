@@ -32,7 +32,7 @@ import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.common.data.Digest;
+import org.apache.cassandra.sidecar.common.request.data.Digest;
 
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus.CHECKSUM_MISMATCH;
 

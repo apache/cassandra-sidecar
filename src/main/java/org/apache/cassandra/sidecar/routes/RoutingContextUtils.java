@@ -25,7 +25,7 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.TableMetadata;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 
 /**

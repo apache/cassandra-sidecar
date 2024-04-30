@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.utils;
 
 import io.vertx.core.MultiMap;
 import io.vertx.core.file.FileSystem;
-import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
+import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;

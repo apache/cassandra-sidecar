@@ -28,14 +28,15 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.StorageOperations;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasRequest;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.HttpExceptions;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * Handler which provides token range to read and write replica mapping
@@ -47,7 +48,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraService
  * {@code org.apache.cassandra.sidecar.adapters.base.TokenRangeReplicaProvider.StateWithReplacement}
  */
 @Singleton
-public class TokenRangeReplicaMapHandler extends AbstractHandler<TokenRangeReplicasRequest>
+public class TokenRangeReplicaMapHandler extends AbstractHandler<Name>
 {
 
     @Inject
@@ -66,7 +67,7 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<TokenRangeRepli
                                HttpServerRequest httpRequest,
                                String host,
                                SocketAddress remoteAddress,
-                               TokenRangeReplicasRequest request)
+                               Name keyspace)
     {
         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
         if (delegate == null)
@@ -84,20 +85,28 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<TokenRangeRepli
         }
 
         executorPools.service()
-                     .executeBlocking(promise -> context.json(operations.tokenRangeReplicas(request.keyspace(),
-                                                                                            metadata.getPartitioner()))
-                     ).onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+                     .executeBlocking(() -> operations.tokenRangeReplicas(keyspace, metadata.getPartitioner()))
+                     .onSuccess(context::json)
+                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
     }
 
     @Override
-    protected TokenRangeReplicasRequest extractParamsOrThrow(RoutingContext context)
+    protected Name extractParamsOrThrow(RoutingContext context)
     {
-        return new TokenRangeReplicasRequest(keyspace(context, true));
+        Name keyspace = keyspace(context, true);
+        if (keyspace == null)
+        {
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "'keyspace' is required but not supplied");
+        }
+        return keyspace;
     }
 
     @Override
-    protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress,
-                                  TokenRangeReplicasRequest request)
+    protected void processFailure(Throwable cause,
+                                  RoutingContext context,
+                                  String host,
+                                  SocketAddress remoteAddress,
+                                  Name keyspace)
     {
         if (cause instanceof AssertionError &&
             StringUtils.contains(cause.getMessage(), "Unknown keyspace"))
@@ -106,6 +115,6 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<TokenRangeRepli
             return;
         }
 
-        super.processFailure(cause, context, host, remoteAddress, request);
+        super.processFailure(cause, context, host, remoteAddress, keyspace);
     }
 }

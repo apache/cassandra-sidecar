@@ -22,11 +22,11 @@ package org.apache.cassandra.sidecar.client;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.cassandra.sidecar.common.data.CreateRestoreJobRequestPayload;
-import org.apache.cassandra.sidecar.common.data.CreateRestoreJobResponsePayload;
-import org.apache.cassandra.sidecar.common.data.CreateSliceRequestPayload;
-import org.apache.cassandra.sidecar.common.data.RestoreJobSummaryResponsePayload;
-import org.apache.cassandra.sidecar.common.data.UpdateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobResponsePayload;
+import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.RestoreJobSummaryResponsePayload;
+import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 
 /**
  * An extension to sidecar client interface.

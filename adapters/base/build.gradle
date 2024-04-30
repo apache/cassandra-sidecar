@@ -49,7 +49,8 @@ test {
 }
 
 dependencies {
-    api(project(":common"))
+    api(project(":server-common"))
+
     api("com.google.guava:guava:${project.rootProject.guavaVersion}")
     compileOnly('org.jetbrains:annotations:23.0.0')
     compileOnly('com.datastax.cassandra:cassandra-driver-core:3.11.3')

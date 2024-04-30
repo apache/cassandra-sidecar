@@ -31,13 +31,13 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.StorageOperations;
-import org.apache.cassandra.sidecar.common.TableOperations;
-import org.apache.cassandra.sidecar.common.data.Name;
-import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.TableOperations;
+import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
 import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
+import org.apache.cassandra.sidecar.routes.data.StreamSSTableComponentRequestParam;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -50,7 +50,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * for the {@link FileStreamHandler} to stream the component back to the client
  */
 @Singleton
-public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTableComponentRequest>
+public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTableComponentRequestParam>
 {
     private final SnapshotPathBuilder snapshotPathBuilder;
 
@@ -69,7 +69,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
                                HttpServerRequest httpRequest,
                                String host,
                                SocketAddress remoteAddress,
-                               StreamSSTableComponentRequest request)
+                               StreamSSTableComponentRequestParam request)
     {
         resolveComponentPathFromRequest(host, request).onSuccess(path -> {
             logger.debug("{} resolved. path={}, request={}, remoteAddress={}, instance={}",
@@ -78,7 +78,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
         }).onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 
-    private Future<String> resolveComponentPathFromRequest(String host, StreamSSTableComponentRequest request)
+    private Future<String> resolveComponentPathFromRequest(String host, StreamSSTableComponentRequestParam request)
     {
         return executorPools.internal().executeBlocking(() -> {
             CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
@@ -133,7 +133,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
                                   RoutingContext context,
                                   String host,
                                   SocketAddress remoteAddress,
-                                  StreamSSTableComponentRequest request)
+                                  StreamSSTableComponentRequestParam request)
     {
         String errMsg = "StreamSSTableComponentHandler failed. request={}, remoteAddress={}, instance={}";
         logger.error(errMsg, request, remoteAddress, host, cause);
@@ -156,12 +156,12 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     }
 
     @Override
-    protected StreamSSTableComponentRequest extractParamsOrThrow(RoutingContext context)
+    protected StreamSSTableComponentRequestParam extractParamsOrThrow(RoutingContext context)
     {
         String tableNameParam = context.pathParam(TABLE_PATH_PARAM);
         Name tableName = validator.validateTableName(snapshotPathBuilder.maybeRemoveTableId(tableNameParam));
 
         QualifiedTableName qualifiedTableName = new QualifiedTableName(keyspace(context, true), tableName);
-        return StreamSSTableComponentRequest.from(qualifiedTableName, context);
+        return StreamSSTableComponentRequestParam.from(qualifiedTableName, context);
     }
 }

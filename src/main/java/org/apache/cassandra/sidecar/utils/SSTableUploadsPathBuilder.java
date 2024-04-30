@@ -30,9 +30,9 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.data.SSTableUploads;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.data.SSTableUploadRequest;
+import org.apache.cassandra.sidecar.routes.data.SSTableUploadRequestParam;
+import org.apache.cassandra.sidecar.routes.data.SSTableUploads;
 
 /**
  * This class builds the path to the SSTable uploads staging directory
@@ -157,9 +157,9 @@ public class SSTableUploadsPathBuilder extends BaseFileSystem
                        validator.validateKeyspaceName(request.keyspace().name());
                        validator.validateTableName(request.table().name());
 
-                       if (request instanceof SSTableUploadRequest)
+                       if (request instanceof SSTableUploadRequestParam)
                        {
-                           validator.validateComponentName(((SSTableUploadRequest) request).component());
+                           validator.validateComponentName(((SSTableUploadRequestParam) request).component());
                        }
                    }
                    catch (NullPointerException | HttpException exception)

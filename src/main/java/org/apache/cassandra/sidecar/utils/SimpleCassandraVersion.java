@@ -22,8 +22,8 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.cassandra.sidecar.common.ICassandraFactory;
-import org.apache.cassandra.sidecar.common.MinimumVersion;
+import org.apache.cassandra.sidecar.common.server.ICassandraFactory;
+import org.apache.cassandra.sidecar.common.server.MinimumVersion;
 
 /**
  * Implements versioning used in Cassandra and CQL.

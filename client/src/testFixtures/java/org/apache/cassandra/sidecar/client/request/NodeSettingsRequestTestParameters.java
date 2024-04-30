@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.client.request;
 
 import org.apache.cassandra.sidecar.client.RequestContext;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-import org.apache.cassandra.sidecar.common.NodeSettings;
+import org.apache.cassandra.sidecar.common.response.NodeSettings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
