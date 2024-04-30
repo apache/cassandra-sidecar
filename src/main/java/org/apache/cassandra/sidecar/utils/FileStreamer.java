@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.utils;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.TimeUnit;
+import java.time.temporal.ChronoUnit;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
@@ -169,19 +169,18 @@ public class FileStreamer
         if (rateLimiter.tryAcquire())
             return true;
 
-        long microsToWait;
-        if (checkRetriesExhausted(startTime))
+        long microsToWait = rateLimiter.queryWaitTimeInMicros();
+        if (checkTimeoutExceeded(startTime, microsToWait))
         {
-            LOGGER.error("Retries for acquiring permit exhausted for client {}. Instance: {}", response.remoteAddress(),
-                         response.host());
+            LOGGER.error("Retries for acquiring permit exhausted for client {}. Instance: {}. " +
+                         "Asking client to retry after {} micros.", response.remoteAddress(), response.host(),
+                         microsToWait);
+            response.setRetryAfterHeader(microsToWait);
             streamSSTableMetrics.throttled.metric.update(1);
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Retry exhausted"));
         }
-        else if ((microsToWait = rateLimiter.queryWaitTimeInMicros())
-                 < TimeUnit.SECONDS.toMicros(config.delayInSeconds()))
+        else
         {
-            microsToWait = Math.max(0, microsToWait);
-
             LOGGER.debug("Retrying streaming after {} micros for client {}. Instance: {}", microsToWait,
                          response.remoteAddress(), response.host());
             executorPools.service()
@@ -189,25 +188,20 @@ public class FileStreamer
                                    t -> acquireAndSend(response, instanceId, filename, fileLength, range,
                                                        startTime, promise));
         }
-        else
-        {
-            LOGGER.debug("Asking client {} to retry after {} micros. Instance: {}", response.remoteAddress(),
-                         microsToWait, response.host());
-            response.setRetryAfterHeader(microsToWait);
-            streamSSTableMetrics.throttled.metric.update(1);
-            promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Ask client to retry later"));
-        }
         return false;
     }
 
     /**
      * @param startTime the request start time
-     * @return true if we exhausted the retries, false otherwise
+     * @return true if we exceeded timeout, false otherwise
+     * Note: for this check we take wait time for the request into consideration
      */
-    private boolean checkRetriesExhausted(Instant startTime)
+    private boolean checkTimeoutExceeded(Instant startTime, long microsToWait)
     {
-        return startTime.plus(Duration.ofSeconds(config.timeoutInSeconds()))
-                        .isBefore(Instant.now());
+        return startTime
+               .plus(Duration.of(microsToWait, ChronoUnit.MICROS))
+               .plus(Duration.ofSeconds(config.timeoutInSeconds()))
+               .isBefore(Instant.now());
     }
 
     /**

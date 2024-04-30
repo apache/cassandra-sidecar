@@ -18,7 +18,6 @@ sidecar:
   request_timeout_millis: 1200000
   throttle:
     stream_requests_per_sec: 80
-    delay_sec: 7
     timeout_sec: 21
   allowable_time_skew_in_minutes: 89
   sstable_import:

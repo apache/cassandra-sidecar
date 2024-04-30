@@ -28,41 +28,36 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
 {
     public static final long DEFAULT_STREAM_REQUESTS_PER_SEC = 5000;
     public static final long DEFAULT_TIMEOUT_SEC = 10;
-    public static final long DEFAULT_DELAY_SEC = 5;
     public static final String STREAM_REQUESTS_PER_SEC_PROPERTY = "stream_requests_per_sec";
     public static final String TIMEOUT_SEC_PROPERTY = "timeout_sec";
-    public static final String DELAY_SEC_PROPERTY = "delay_sec";
 
     @JsonProperty(value = STREAM_REQUESTS_PER_SEC_PROPERTY)
     protected final long rateLimitStreamRequestsPerSecond;
     @JsonProperty(value = TIMEOUT_SEC_PROPERTY)
     protected final long timeoutInSeconds;
-    @JsonProperty(value = DELAY_SEC_PROPERTY)
-    protected final long delayInSeconds;
 
     public ThrottleConfigurationImpl()
     {
         this(DEFAULT_STREAM_REQUESTS_PER_SEC,
-             DEFAULT_TIMEOUT_SEC,
-             DEFAULT_DELAY_SEC);
+             DEFAULT_TIMEOUT_SEC);
     }
 
     public ThrottleConfigurationImpl(long rateLimitStreamRequestsPerSecond)
     {
         this(rateLimitStreamRequestsPerSecond,
-             DEFAULT_TIMEOUT_SEC,
-             DEFAULT_DELAY_SEC);
+             DEFAULT_TIMEOUT_SEC);
     }
 
     public ThrottleConfigurationImpl(long rateLimitStreamRequestsPerSecond,
-                                     long timeoutInSeconds,
-                                     long delayInSeconds)
+                                     long timeoutInSeconds)
     {
         this.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond;
         this.timeoutInSeconds = timeoutInSeconds;
-        this.delayInSeconds = delayInSeconds;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @JsonProperty(value = STREAM_REQUESTS_PER_SEC_PROPERTY)
     public long rateLimitStreamRequestsPerSecond()
@@ -70,17 +65,13 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
         return rateLimitStreamRequestsPerSecond;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @JsonProperty(value = TIMEOUT_SEC_PROPERTY)
     public long timeoutInSeconds()
     {
         return timeoutInSeconds;
-    }
-
-    @Override
-    @JsonProperty(value = DELAY_SEC_PROPERTY)
-    public long delayInSeconds()
-    {
-        return delayInSeconds;
     }
 }

@@ -103,33 +103,38 @@ public class ThrottleTest
         }
 
         Future.all(responseFutures)
-              .onComplete(combinedResp -> {
+              .onComplete(context.succeeding(combinedResp -> {
                   if (combinedResp.cause() != null)
                   {
                       context.failNow(combinedResp.cause());
                       return;
                   }
 
-                  long timeTakenInSeconds = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime);
-                  int okResponse = 0;
-                  for (Future<HttpResponse<Buffer>> resp : responseFutures)
+                  try
                   {
-                      if (resp.cause() != null)
+                      long timeTakenInSeconds = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime);
+                      int okResponse = 0;
+                      for (Future<HttpResponse<Buffer>> resp : responseFutures)
                       {
-                          continue;
+                          if (resp.result() != null && resp.result().statusCode() == HttpResponseStatus.OK.code())
+                          {
+                              okResponse++;
+                          }
                       }
-                      if (resp.result().statusCode() == HttpResponseStatus.OK.code())
-                      {
-                          okResponse++;
-                      }
+                      // remove burst permits from calculation. In this scenario of 5qps and 1 sec burst second.
+                      // Stored permits are 5 (5 * 1).
+                      double rate = (okResponse - 5) / (double) timeTakenInSeconds;
+                      assertThat(rate).isGreaterThanOrEqualTo(3);
+                      assertThat(rate).isLessThanOrEqualTo(7);
+                      StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
+                      assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(5);
+                      context.completeNow();
                   }
-                  double rate = okResponse / (double) timeTakenInSeconds;
-                  assertThat(rate).isGreaterThanOrEqualTo(3);
-                  assertThat(rate).isLessThanOrEqualTo(7);
-                  StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
-                  assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(5);
-                  context.completeNow();
-              });
+                  catch (Exception e)
+                  {
+                      context.failNow(e);
+                  }
+              }));
         context.awaitCompletion(1, MINUTES);
     }
 

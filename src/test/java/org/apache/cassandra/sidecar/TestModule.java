@@ -104,7 +104,7 @@ public class TestModule extends AbstractModule
 
     protected SidecarConfigurationImpl abstractConfig(SslConfiguration sslConfiguration)
     {
-        ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(5, 5, 1);
+        ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(5, 5);
         SSTableUploadConfiguration uploadConfiguration = new SSTableUploadConfigurationImpl(0F);
         SchemaKeyspaceConfiguration schemaKeyspaceConfiguration =
         SchemaKeyspaceConfigurationImpl.builder()
