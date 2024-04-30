@@ -106,9 +106,7 @@ public class ThrottleTest
                   long okResponse = responseFutures.stream()
                                                    .filter(resp -> resp.result() != null && resp.result().statusCode() == HttpResponseStatus.OK.code())
                                                    .count();
-                  // remove burst permits from calculation. In this scenario of 5qps and 1 sec burst second.
-                  // Stored permits are 5 (5 * 1).
-                  double rate = (okResponse - 5) * SECONDS.toNanos(1) / (double) elapsedNanos;
+                  double rate = okResponse * SECONDS.toNanos(1) / (double) elapsedNanos;
                   assertThat(rate).as("Rate is expected to be 5 requests per second. rate=" + rate + " RPS")
                                   .isEqualTo(5D, Offset.offset(2D));
                   StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
