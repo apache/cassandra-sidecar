@@ -18,10 +18,10 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,7 +49,6 @@ import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.assertj.core.data.Offset;
 
-import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -97,33 +96,26 @@ public class ThrottleTest
                            "/TestSnapshot/components/nb-1-big-Data.db?dataDirectoryIndex=0";
 
         long startTime = System.nanoTime();
-        List<Future<HttpResponse<Buffer>>> responseFutures = new ArrayList<>();
-        for (int i = 0; i < 50; i++)
-        {
-            responseFutures.add(sendRequest(testRoute));
-        }
+        List<Future<HttpResponse<Buffer>>> responseFutures = IntStream.range(0, 50)
+                                                                      .mapToObj(i -> sendRequest(testRoute))
+                                                                      .collect(Collectors.toList());
 
-        Future.all(responseFutures)
+        Future.join(responseFutures)
               .onComplete(context.succeeding(combinedResp -> {
-                  long timeTakenInSeconds = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime);
-                  int okResponse = 0;
-                  for (Future<HttpResponse<Buffer>> resp : responseFutures)
-                  {
-                      if (resp.result() != null && resp.result().statusCode() == HttpResponseStatus.OK.code())
-                      {
-                          okResponse++;
-                      }
-                  }
+                  long elapsedNanos = System.nanoTime() - startTime;
+                  long okResponse = responseFutures.stream()
+                                                   .filter(resp -> resp.result() != null && resp.result().statusCode() == HttpResponseStatus.OK.code())
+                                                   .count();
                   // remove burst permits from calculation. In this scenario of 5qps and 1 sec burst second.
                   // Stored permits are 5 (5 * 1).
-                  double rate = (okResponse - 5) / (double) timeTakenInSeconds;
+                  double rate = (okResponse - 5) * SECONDS.toNanos(1) / (double) elapsedNanos;
                   assertThat(rate).as("Rate is expected to be 5 requests per second. rate=" + rate + " RPS")
                                   .isEqualTo(5D, Offset.offset(2D));
                   StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
                   assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(5);
                   context.completeNow();
               }));
-        context.awaitCompletion(1, MINUTES);
+        context.awaitCompletion(30, SECONDS);
     }
 
     private Future<HttpResponse<Buffer>> sendRequest(String route)

@@ -170,7 +170,7 @@ public class FileStreamer
             return true;
 
         long microsToWait = rateLimiter.queryWaitTimeInMicros();
-        if (checkTimeoutExceeded(startTime, microsToWait))
+        if (isTimeoutExceeded(startTime, microsToWait))
         {
             LOGGER.error("Retries for acquiring permit exhausted for client {}. Instance: {}. " +
                          "Asking client to retry after {} micros.", response.remoteAddress(), response.host(),
@@ -183,10 +183,18 @@ public class FileStreamer
         {
             LOGGER.debug("Retrying streaming after {} micros for client {}. Instance: {}", microsToWait,
                          response.remoteAddress(), response.host());
-            executorPools.service()
-                         .setTimer(MICROSECONDS.toMillis(microsToWait),
-                                   t -> acquireAndSend(response, instanceId, filename, fileLength, range,
-                                                       startTime, promise));
+            try
+            {
+                executorPools.service()
+                             // Ensure that everyone waits at least 1 millisecond before retrying
+                             .setTimer(Math.max(1, MICROSECONDS.toMillis(microsToWait)),
+                                       t -> acquireAndSend(response, instanceId, filename, fileLength, range,
+                                                           startTime, promise));
+            }
+            catch (Throwable t)
+            {
+                promise.fail(t);
+            }
         }
         return false;
     }
@@ -196,7 +204,7 @@ public class FileStreamer
      * @return true if we exceeded timeout, false otherwise
      * Note: for this check we take wait time for the request into consideration
      */
-    private boolean checkTimeoutExceeded(Instant startTime, long microsToWait)
+    private boolean isTimeoutExceeded(Instant startTime, long microsToWait)
     {
         return startTime
                .plus(Duration.of(microsToWait, ChronoUnit.MICROS))
