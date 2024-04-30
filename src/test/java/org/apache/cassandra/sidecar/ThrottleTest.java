@@ -47,6 +47,7 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
+import org.assertj.core.data.Offset;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -104,36 +105,23 @@ public class ThrottleTest
 
         Future.all(responseFutures)
               .onComplete(context.succeeding(combinedResp -> {
-                  if (combinedResp.cause() != null)
+                  long timeTakenInSeconds = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime);
+                  int okResponse = 0;
+                  for (Future<HttpResponse<Buffer>> resp : responseFutures)
                   {
-                      context.failNow(combinedResp.cause());
-                      return;
-                  }
-
-                  try
-                  {
-                      long timeTakenInSeconds = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime);
-                      int okResponse = 0;
-                      for (Future<HttpResponse<Buffer>> resp : responseFutures)
+                      if (resp.result() != null && resp.result().statusCode() == HttpResponseStatus.OK.code())
                       {
-                          if (resp.result() != null && resp.result().statusCode() == HttpResponseStatus.OK.code())
-                          {
-                              okResponse++;
-                          }
+                          okResponse++;
                       }
-                      // remove burst permits from calculation. In this scenario of 5qps and 1 sec burst second.
-                      // Stored permits are 5 (5 * 1).
-                      double rate = (okResponse - 5) / (double) timeTakenInSeconds;
-                      assertThat(rate).isGreaterThanOrEqualTo(3);
-                      assertThat(rate).isLessThanOrEqualTo(7);
-                      StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
-                      assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(5);
-                      context.completeNow();
                   }
-                  catch (Exception e)
-                  {
-                      context.failNow(e);
-                  }
+                  // remove burst permits from calculation. In this scenario of 5qps and 1 sec burst second.
+                  // Stored permits are 5 (5 * 1).
+                  double rate = (okResponse - 5) / (double) timeTakenInSeconds;
+                  assertThat(rate).as("Rate is expected to be 5 requests per second. rate=" + rate + " RPS")
+                                  .isEqualTo(5D, Offset.offset(2D));
+                  StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
+                  assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(5);
+                  context.completeNow();
               }));
         context.awaitCompletion(1, MINUTES);
     }
