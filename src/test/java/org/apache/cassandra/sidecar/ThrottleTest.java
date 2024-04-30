@@ -18,11 +18,11 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,9 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
@@ -46,6 +48,7 @@ import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,49 +90,54 @@ public class ThrottleTest
     }
 
     @Test
-    void testStreamRequestsThrottled() throws Exception
+    void testStreamRequestsThrottled(VertxTestContext context) throws Exception
     {
         String testRoute = "/keyspaces/TestKeyspace/tables/TestTable-54ea95cebba24e0aa9bee428e5d7160b/snapshots" +
                            "/TestSnapshot/components/nb-1-big-Data.db?dataDirectoryIndex=0";
 
-        for (int i = 0; i < 20; i++)
+        long startTime = System.nanoTime();
+        List<Future<HttpResponse<Buffer>>> responseFutures = new ArrayList<>();
+        for (int i = 0; i < 50; i++)
         {
-            unblockingClientRequest(testRoute);
+            responseFutures.add(sendRequest(testRoute));
         }
-        Uninterruptibles.sleepUninterruptibly(5, SECONDS);
 
-        StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
+        Future.all(responseFutures)
+              .onComplete(combinedResp -> {
+                  if (combinedResp.cause() != null)
+                  {
+                      context.failNow(combinedResp.cause());
+                      return;
+                  }
 
-        HttpResponse response = blockingClientRequest(testRoute);
-        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TOO_MANY_REQUESTS.code());
-        assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(1);
-
-        long secsToWait = Long.parseLong(response.getHeader("Retry-After"));
-        Thread.sleep(SECONDS.toMillis(secsToWait));
-
-        HttpResponse finalResp = blockingClientRequest(testRoute);
-        assertThat(finalResp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-        assertThat(finalResp.bodyAsString()).isEqualTo("data");
+                  long timeTakenInSeconds = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime);
+                  int okResponse = 0;
+                  for (Future<HttpResponse<Buffer>> resp : responseFutures)
+                  {
+                      if (resp.cause() != null)
+                      {
+                          continue;
+                      }
+                      if (resp.result().statusCode() == HttpResponseStatus.OK.code())
+                      {
+                          okResponse++;
+                      }
+                  }
+                  double rate = okResponse / (double) timeTakenInSeconds;
+                  assertThat(rate).isGreaterThanOrEqualTo(3);
+                  assertThat(rate).isLessThanOrEqualTo(7);
+                  StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
+                  assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(5);
+                  context.completeNow();
+              });
+        context.awaitCompletion(1, MINUTES);
     }
 
-    private void unblockingClientRequest(String route)
+    private Future<HttpResponse<Buffer>> sendRequest(String route)
     {
         WebClient client = WebClient.create(vertx);
-        client.get(server.actualPort(), "localhost", "/api/v1" + route)
-              .as(BodyCodec.buffer())
-              .send(resp ->
-                    {
-                        // do nothing
-                    });
-    }
-
-    private HttpResponse blockingClientRequest(String route) throws ExecutionException, InterruptedException
-    {
-        WebClient client = WebClient.create(vertx);
-        CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        client.get(server.actualPort(), "localhost", "/api/v1" + route)
-              .as(BodyCodec.buffer())
-              .send(resp -> future.complete(resp.result()));
-        return future.get();
+        return client.get(server.actualPort(), "localhost", "/api/v1" + route)
+                     .as(BodyCodec.buffer())
+                     .send();
     }
 }

@@ -39,6 +39,7 @@ class SidecarRateLimiterTest
         assertThat(enabledRateLimiter.tryAcquire()).isTrue();
         enabledRateLimiter.rate(150);
         assertThat(enabledRateLimiter.rate()).isEqualTo(150);
+        enabledRateLimiter.acquire(20);
         assertThat(enabledRateLimiter.queryWaitTimeInMicros()).isGreaterThan(0);
 
         // Creates a SidecarRateLimiter that is disabled
@@ -112,5 +113,14 @@ class SidecarRateLimiterTest
         rateLimiter.rate(1);
         rateLimiter.acquire(4);
         assertThat(rateLimiter.queryWaitTimeInMicros()).isGreaterThanOrEqualTo(3000000);
+    }
+
+    @Test
+    void testExhaustingPermits()
+    {
+        SidecarRateLimiter rateLimiter = SidecarRateLimiter.create(1);
+        rateLimiter.acquire(20);
+
+        assertThat(rateLimiter.queryWaitTimeInMicros()).isGreaterThanOrEqualTo(TimeUnit.SECONDS.toMicros(10));
     }
 }
