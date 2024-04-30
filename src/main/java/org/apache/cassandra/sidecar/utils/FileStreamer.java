@@ -18,9 +18,7 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
@@ -103,7 +101,14 @@ public class FileStreamer
     public Future<Void> stream(HttpResponse response, int instanceId, String filename, long fileLength, HttpRange range)
     {
         Promise<Void> promise = Promise.promise();
-        acquireAndSend(response, instanceId, filename, fileLength, range, Instant.now(), promise);
+        try
+        {
+            acquireAndSend(response, instanceId, filename, fileLength, range, System.nanoTime(), promise);
+        }
+        catch (Throwable t)
+        {
+            promise.tryFail(t);
+        }
         return promise.future();
     }
 
@@ -111,25 +116,25 @@ public class FileStreamer
      * Send the file if rate-limiting is disabled or when it successfully acquires a permit from the
      * {@link SidecarRateLimiter}.
      *
-     * @param response   the response to use
-     * @param instanceId  Cassandra instance from which file is streamed
-     * @param filename   the path to the file to serve
-     * @param fileLength the size of the file to serve
-     * @param range      the range to stream
-     * @param startTime  the start time of this request
-     * @param promise    a promise for the stream
+     * @param response          the response to use
+     * @param instanceId        Cassandra instance from which file is streamed
+     * @param filename          the path to the file to serve
+     * @param fileLength        the size of the file to serve
+     * @param range             the range to stream
+     * @param startTimeNanos    the start time of this request
+     * @param promise a promise for the stream
      */
     private void acquireAndSend(HttpResponse response,
                                 int instanceId,
                                 String filename,
                                 long fileLength,
                                 HttpRange range,
-                                Instant startTime,
+                                long startTimeNanos,
                                 Promise<Void> promise)
     {
         InstanceMetrics instanceMetrics = instanceMetadataFetcher.instance(instanceId).metrics();
         StreamSSTableMetrics streamSSTableMetrics = instanceMetrics.streamSSTable();
-        if (acquire(response, instanceId, filename, fileLength, range, startTime, streamSSTableMetrics, promise))
+        if (acquire(response, instanceId, filename, fileLength, range, startTimeNanos, streamSSTableMetrics, promise))
         {
             // Stream data if rate limiting is disabled or if we acquire
             LOGGER.debug("Streaming range {} for file {} to client {}. Instance: {}", range, filename,
@@ -158,58 +163,53 @@ public class FileStreamer
      * @param filename              the path to the file to serve
      * @param fileLength            the size of the file to serve
      * @param range                 the range to stream
-     * @param startTime             the start time of this request
+     * @param startTimeNanos        the start time of this request
      * @param streamSSTableMetrics  metrics captured during streaming of SSTables
      * @param promise               a promise for the stream
      * @return {@code true} if the permit was acquired, {@code false} otherwise
      */
     private boolean acquire(HttpResponse response, int instanceId, String filename, long fileLength, HttpRange range,
-                            Instant startTime, StreamSSTableMetrics streamSSTableMetrics, Promise<Void> promise)
+                            long startTimeNanos, StreamSSTableMetrics streamSSTableMetrics, Promise<Void> promise)
     {
         if (rateLimiter.tryAcquire())
             return true;
 
-        long microsToWait = rateLimiter.queryWaitTimeInMicros();
-        if (isTimeoutExceeded(startTime, microsToWait))
+        long waitTimeNanos = MICROSECONDS.toNanos(rateLimiter.queryWaitTimeInMicros());
+        if (isTimeoutExceeded(startTimeNanos, waitTimeNanos))
         {
-            LOGGER.error("Retries for acquiring permit exhausted for client {}. Instance: {}. " +
-                         "Asking client to retry after {} micros.", response.remoteAddress(), response.host(),
-                         microsToWait);
-            response.setRetryAfterHeader(microsToWait);
+            LOGGER.warn("Retries for acquiring permit exhausted for client {}. Instance: {}. " +
+                        "Asking client to retry after {} nanoseconds.", response.remoteAddress(), response.host(),
+                        waitTimeNanos);
+            response.setRetryAfterHeader(waitTimeNanos);
             streamSSTableMetrics.throttled.metric.update(1);
             promise.fail(new HttpException(TOO_MANY_REQUESTS.code(), "Retry exhausted"));
         }
         else
         {
-            LOGGER.debug("Retrying streaming after {} micros for client {}. Instance: {}", microsToWait,
+            LOGGER.debug("Retrying streaming after {} nanos for client {}. Instance: {}", waitTimeNanos,
                          response.remoteAddress(), response.host());
-            try
-            {
-                executorPools.service()
-                             // Ensure that everyone waits at least 1 millisecond before retrying
-                             .setTimer(Math.max(1, MICROSECONDS.toMillis(microsToWait)),
-                                       t -> acquireAndSend(response, instanceId, filename, fileLength, range,
-                                                           startTime, promise));
-            }
-            catch (Throwable t)
-            {
-                promise.fail(t);
-            }
+            executorPools.service()
+                         // Note: adding an extra millisecond is required for 2 reasons
+                         // 1. setTimer does not like scheduling with 0 delay; it throws
+                         // 2. the retry should be scheduled later than the waitTimeNanos, in order to ensure it can acquire
+                         .setTimer(TimeUnit.NANOSECONDS.toMillis(waitTimeNanos) + 1,
+                                   t -> acquireAndSend(response, instanceId, filename, fileLength, range,
+                                                       startTimeNanos, promise));
         }
         return false;
     }
 
     /**
-     * @param startTime the request start time
+     * @param startTimeNanos the request start time in nanoseconds
+     * @param waitTimeNanos the estimated time to wait for the next available permit in nanoseconds
+     *
      * @return true if we exceeded timeout, false otherwise
      * Note: for this check we take wait time for the request into consideration
      */
-    private boolean isTimeoutExceeded(Instant startTime, long microsToWait)
+    private boolean isTimeoutExceeded(long startTimeNanos, long waitTimeNanos)
     {
-        return startTime
-               .plus(Duration.of(microsToWait, ChronoUnit.MICROS))
-               .plus(Duration.ofSeconds(config.timeoutInSeconds()))
-               .isBefore(Instant.now());
+        long nowNanos = System.nanoTime();
+        return startTimeNanos + waitTimeNanos + TimeUnit.SECONDS.toNanos(config.timeoutInSeconds()) < nowNanos;
     }
 
     /**
