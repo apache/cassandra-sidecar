@@ -18,9 +18,10 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,11 +30,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.SharedMetricRegistries;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
@@ -43,6 +47,7 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
+import org.assertj.core.data.Offset;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -76,8 +81,7 @@ public class ThrottleTest
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        registry().removeMatching((name, metric) -> true);
-        registry(1).removeMatching((name, metric) -> true);
+        SharedMetricRegistries.clear();
         server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, SECONDS))
             logger.info("Close event received before timeout.");
@@ -86,48 +90,37 @@ public class ThrottleTest
     }
 
     @Test
-    void testStreamRequestsThrottled() throws Exception
+    void testStreamRequestsThrottled(VertxTestContext context) throws Exception
     {
         String testRoute = "/keyspaces/TestKeyspace/tables/TestTable-54ea95cebba24e0aa9bee428e5d7160b/snapshots" +
                            "/TestSnapshot/components/nb-1-big-Data.db?dataDirectoryIndex=0";
 
-        for (int i = 0; i < 20; i++)
-        {
-            unblockingClientRequest(testRoute);
-        }
+        long startTime = System.nanoTime();
+        List<Future<HttpResponse<Buffer>>> responseFutures = IntStream.range(0, 50)
+                                                                      .mapToObj(i -> sendRequest(testRoute))
+                                                                      .collect(Collectors.toList());
 
-        StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
-
-        HttpResponse response = blockingClientRequest(testRoute);
-        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TOO_MANY_REQUESTS.code());
-        assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(1);
-
-        long secsToWait = Long.parseLong(response.getHeader("Retry-After"));
-        Thread.sleep(SECONDS.toMillis(secsToWait));
-
-        HttpResponse finalResp = blockingClientRequest(testRoute);
-        assertThat(finalResp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-        assertThat(finalResp.bodyAsString()).isEqualTo("data");
+        Future.join(responseFutures)
+              .onComplete(context.succeeding(combinedResp -> {
+                  long elapsedNanos = System.nanoTime() - startTime;
+                  long okResponse = responseFutures.stream()
+                                                   .filter(resp -> resp.result() != null && resp.result().statusCode() == HttpResponseStatus.OK.code())
+                                                   .count();
+                  double rate = okResponse * SECONDS.toNanos(1) / (double) elapsedNanos;
+                  assertThat(rate).as("Rate is expected to be 5 requests per second. rate=" + rate + " RPS")
+                                  .isEqualTo(5D, Offset.offset(2D));
+                  StreamSSTableMetrics streamSSTableMetrics = new InstanceMetricsImpl(registry(1)).streamSSTable();
+                  assertThat(streamSSTableMetrics.throttled.metric.getValue()).isGreaterThanOrEqualTo(5);
+                  context.completeNow();
+              }));
+        context.awaitCompletion(30, SECONDS);
     }
 
-    private void unblockingClientRequest(String route)
+    private Future<HttpResponse<Buffer>> sendRequest(String route)
     {
         WebClient client = WebClient.create(vertx);
-        client.get(server.actualPort(), "localhost", "/api/v1" + route)
-              .as(BodyCodec.buffer())
-              .send(resp ->
-                    {
-                        // do nothing
-                    });
-    }
-
-    private HttpResponse blockingClientRequest(String route) throws ExecutionException, InterruptedException
-    {
-        WebClient client = WebClient.create(vertx);
-        CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        client.get(server.actualPort(), "localhost", "/api/v1" + route)
-              .as(BodyCodec.buffer())
-              .send(resp -> future.complete(resp.result()));
-        return future.get();
+        return client.get(server.actualPort(), "localhost", "/api/v1" + route)
+                     .as(BodyCodec.buffer())
+                     .send();
     }
 }

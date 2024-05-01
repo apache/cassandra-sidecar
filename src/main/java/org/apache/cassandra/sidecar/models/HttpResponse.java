@@ -28,7 +28,7 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.SocketAddress;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
  * Wrapper around HttpServerResponse
@@ -46,10 +46,11 @@ public class HttpResponse
         this.host = request.host();
     }
 
-    public void setRetryAfterHeader(long microsToWait)
+    public void setRetryAfterHeader(long waitTimeNanos)
     {
         response.setStatusCode(HttpResponseStatus.TOO_MANY_REQUESTS.code());
-        response.putHeader(HttpHeaderNames.RETRY_AFTER, Long.toString(MICROSECONDS.toSeconds(microsToWait))).end();
+        // round up when converting to second value
+        response.putHeader(HttpHeaderNames.RETRY_AFTER, Long.toString(NANOSECONDS.toSeconds(waitTimeNanos) + 1)).end();
     }
 
     public void setTooManyRequestsStatus()

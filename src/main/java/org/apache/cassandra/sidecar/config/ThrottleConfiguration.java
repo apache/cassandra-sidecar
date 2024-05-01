@@ -23,9 +23,14 @@ package org.apache.cassandra.sidecar.config;
  */
 public interface ThrottleConfiguration
 {
+    /**
+     * @return rate at which stream requests will be accepted.
+     */
     long rateLimitStreamRequestsPerSecond();
 
+    /**
+     * @return timeout in seconds used to determine when to stop retrying stream requests when stream requests
+     * are throttled.
+     */
     long timeoutInSeconds();
-
-    long delayInSeconds();
 }

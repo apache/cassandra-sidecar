@@ -394,7 +394,6 @@ class SidecarConfigurationTest
 
         assertThat(throttle).isNotNull();
         assertThat(throttle.rateLimitStreamRequestsPerSecond()).isEqualTo(5000);
-        assertThat(throttle.delayInSeconds()).isEqualTo(5);
         assertThat(throttle.timeoutInSeconds()).isEqualTo(10);
 
         // validate traffic shaping options

@@ -26,7 +26,6 @@ sidecar:
   server_verticle_instances: 2
   throttle:
     stream_requests_per_sec: 5000
-    delay_sec: 5
     timeout_sec: 10
   traffic_shaping:
     inbound_global_bandwidth_bps: 500

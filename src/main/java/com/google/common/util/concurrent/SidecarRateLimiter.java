@@ -28,17 +28,16 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * <p>
  * In addition to Guava's Rate Limiter functionality, it adds support for disabling rate-limiting.
  */
-@SuppressWarnings("UnstableApiUsage")
 public class SidecarRateLimiter
 {
-    private final AtomicReference<RateLimiter> ref = new AtomicReference<>(null);
+    private final AtomicReference<RateLimiterWrapper> ref = new AtomicReference<>(null);
 
     private SidecarRateLimiter(final double permitsPerSecond)
     {
         if (permitsPerSecond > 0)
         {
-            RateLimiter rateLimiter = RateLimiter.create(permitsPerSecond);
-            ref.set(rateLimiter);
+            RateLimiterWrapper rateLimiterWrapper = RateLimiterWrapper.create(permitsPerSecond);
+            ref.set(rateLimiterWrapper);
         }
     }
 
@@ -55,21 +54,16 @@ public class SidecarRateLimiter
         return new SidecarRateLimiter(permitsPerSecond);
     }
 
-    // Attention: Hack to expose the package private method queryEarliestAvailable
-
     /**
-     * Returns the earliest time permits will become available. Returns 0 if disabled.
+     * Returns calculated wait time in micros for next available permit. Permit is not reserved during calculation,
+     * this wait time is an approximation.
      *
-     * <br><b>Note:</b> this is a hack to expose the package private method
-     * {@link RateLimiter#queryEarliestAvailable(long)}
-     *
-     * @param nowMicros current time in micros
-     * @return earliest time permits will become available
+     * @return approx wait time in micros for next available permit
      */
-    public long queryEarliestAvailable(final long nowMicros)
+    public long queryWaitTimeInMicros()
     {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter != null ? rateLimiter.queryEarliestAvailable(nowMicros) : 0;
+        RateLimiterWrapper rateLimiterWrapper = ref.get();
+        return rateLimiterWrapper != null ? rateLimiterWrapper.queryWaitTimeInMicros() : 0;
     }
 
     /**
@@ -79,8 +73,8 @@ public class SidecarRateLimiter
      */
     public boolean tryAcquire()
     {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter == null || rateLimiter.tryAcquire();
+        RateLimiterWrapper rateLimiterWrapper = ref.get();
+        return rateLimiterWrapper == null || rateLimiterWrapper.rateLimiter.tryAcquire();
     }
 
     /**
@@ -93,17 +87,17 @@ public class SidecarRateLimiter
      */
     public void rate(double permitsPerSecond)
     {
-        RateLimiter rateLimiter = ref.get();
+        RateLimiterWrapper rateLimiterWrapper = ref.get();
 
         if (permitsPerSecond > 0.0)
         {
-            if (rateLimiter == null)
+            if (rateLimiterWrapper == null)
             {
-                ref.compareAndSet(null, RateLimiter.create(permitsPerSecond));
+                ref.compareAndSet(null, RateLimiterWrapper.create(permitsPerSecond));
             }
             else
             {
-                rateLimiter.setRate(permitsPerSecond);
+                rateLimiterWrapper.rateLimiter.setRate(permitsPerSecond);
             }
         }
         else
@@ -123,8 +117,8 @@ public class SidecarRateLimiter
      */
     public double rate()
     {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter != null ? rateLimiter.getRate() : 0;
+        RateLimiterWrapper rateLimiterWrapper = ref.get();
+        return rateLimiterWrapper != null ? rateLimiterWrapper.rateLimiter.getRate() : 0;
     }
 
     /**
@@ -139,8 +133,8 @@ public class SidecarRateLimiter
     @CanIgnoreReturnValue
     public double acquire()
     {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter != null ? rateLimiter.acquire() : 0;
+        RateLimiterWrapper rateLimiterWrapper = ref.get();
+        return rateLimiterWrapper != null ? rateLimiterWrapper.rateLimiter.acquire() : 0;
     }
 
     /**
@@ -156,7 +150,35 @@ public class SidecarRateLimiter
     @CanIgnoreReturnValue
     public double acquire(int permits)
     {
-        RateLimiter rateLimiter = ref.get();
-        return rateLimiter != null && permits > 0 ? rateLimiter.acquire(permits) : 0;
+        RateLimiterWrapper rateLimiterWrapper = ref.get();
+        return rateLimiterWrapper != null && permits > 0 ? rateLimiterWrapper.rateLimiter.acquire(permits) : 0;
+    }
+
+    // Attention: Hack to expose the package private method queryEarliestAvailable and RateLimiter.SleepingStopwatch
+    @SuppressWarnings("UnstableApiUsage")
+    private static class RateLimiterWrapper
+    {
+        private final RateLimiter rateLimiter;
+        private final RateLimiter.SleepingStopwatch stopwatch;
+
+        private RateLimiterWrapper(RateLimiter rateLimiter, RateLimiter.SleepingStopwatch stopwatch)
+        {
+            this.rateLimiter = rateLimiter;
+            this.stopwatch = stopwatch;
+        }
+
+        static RateLimiterWrapper create(double permitsPerSecond)
+        {
+            RateLimiter.SleepingStopwatch stopwatch = RateLimiter.SleepingStopwatch.createFromSystemTimer();
+            RateLimiter rateLimiter = RateLimiter.create(permitsPerSecond, stopwatch);
+            return new RateLimiterWrapper(rateLimiter, stopwatch);
+        }
+
+        public long queryWaitTimeInMicros()
+        {
+            long earliestAvailableMicros = rateLimiter.queryEarliestAvailable(0);
+            long nowMicros = stopwatch.readMicros();
+            return Math.max(earliestAvailableMicros - nowMicros, 0);
+        }
     }
 }
