@@ -349,6 +349,8 @@ tasks.register("integrationTest", Test) {
     // Disable direct memory allocator as it doesn't release properly
     systemProperty "cassandra.netty_use_heap_allocator", "true"
     systemProperty "vertxweb.environment", "dev"
+    // config logback for in-jvm clusters
+    systemProperty "logback.configurationFile", "src/test/resources/logback-in-jvm-dtest.xml"
     // Because tests are forked, we need to explicitly pass the system property from the
     // Gradle JVM down to the children
 

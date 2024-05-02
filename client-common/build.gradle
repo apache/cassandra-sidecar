@@ -52,12 +52,11 @@ test {
 }
 
 dependencies {
-    implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
-
-    compileOnly('org.jetbrains:annotations:23.0.0')
-    compileOnly('com.google.code.findbugs:jsr305:3.0.2') // required for the @NotThreadSafe annotation
-    compileOnly(group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.11.3')
+    compileOnly(group: 'org.slf4j', name: 'slf4j-api', version: "${project.slf4jVersion}")
+    compileOnly(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
+    compileOnly(group: 'org.jetbrains', name: 'annotations', version: '23.0.0')
     compileOnly(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
+    compileOnly(group: 'com.google.guava', name: 'guava', version: "${project.guavaVersion}")
 
     testImplementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
     testImplementation("com.google.guava:guava:${project.guavaVersion}")
