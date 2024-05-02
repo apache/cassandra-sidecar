@@ -40,7 +40,6 @@ import io.vertx.core.file.OpenOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
@@ -387,7 +386,6 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                             Consumer<HttpResponse<Buffer>> responseValidator,
                                             String fileToBeUploaded)
     {
-        WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + keyspace
                            + "/tables/" + tableName + "/components/" + targetFileName;
         HttpRequest<Buffer> req = client.put(server.actualPort(), "localhost", testRoute);
