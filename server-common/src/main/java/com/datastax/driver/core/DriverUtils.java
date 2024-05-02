@@ -31,7 +31,7 @@ public class DriverUtils
      * Check if a host has active connections.
      *
      * <p><b>Note:</b> This method should not be used directly, but should be proxied by
-     * an implementation of {@link org.apache.cassandra.sidecar.common.utils.DriverUtils}.
+     * an implementation of {@link org.apache.cassandra.sidecar.common.server.utils.DriverUtils}.
      *
      * @param host the host to check
      * @return true if the host has active connections, false otherwise
@@ -47,7 +47,7 @@ public class DriverUtils
      * and the SidecarLoadBalancingPolicy marks non-selected nodes as IGNORED until they need to rotate in.
      *
      * <p><b>Note:</b> This method should not be used directly, but should be proxied by
-     * an implementation of {@link org.apache.cassandra.sidecar.common.utils.DriverUtils}.
+     * an implementation of {@link org.apache.cassandra.sidecar.common.server.utils.DriverUtils}.
      *
      * @param cluster The cluster object
      * @param host    the host to which reconnect attempts will be made
@@ -61,7 +61,7 @@ public class DriverUtils
      * Gets a Host instance from metadata based on the native transport address
      *
      * <p><b>Note:</b> This method should not be used directly, but should be proxied by
-     * an implementation of {@link org.apache.cassandra.sidecar.common.utils.DriverUtils}.
+     * an implementation of {@link org.apache.cassandra.sidecar.common.server.utils.DriverUtils}.
      *
      * @param metadata                    the {@link Metadata} instance to search for the host
      * @param localNativeTransportAddress the native transport ip address and port for the host to find
