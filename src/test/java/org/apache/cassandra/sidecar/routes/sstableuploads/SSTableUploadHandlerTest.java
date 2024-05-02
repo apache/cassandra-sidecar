@@ -427,7 +427,15 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
 
             if (responseValidator != null)
             {
-                responseValidator.accept(httpResponse);
+                try
+                {
+                    responseValidator.accept(httpResponse);
+                }
+                catch (Throwable t)
+                {
+                    context.failNow(t);
+                    return;
+                }
             }
 
             if (expectedRetCode == HttpResponseStatus.OK.code())
