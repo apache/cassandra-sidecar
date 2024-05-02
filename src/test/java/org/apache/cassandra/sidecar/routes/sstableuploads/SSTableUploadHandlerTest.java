@@ -405,7 +405,6 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             {
                 assertThat(response.failed()).isTrue();
                 context.completeNow();
-                client.close();
                 return;
             }
 
