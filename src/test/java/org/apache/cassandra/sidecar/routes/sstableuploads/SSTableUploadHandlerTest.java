@@ -457,7 +457,6 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                     {
                         context.failNow(e);
                     }
-                    client.close();
                     return;
                 }
             }
@@ -470,7 +469,6 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             {
                 context.completeNow();
             }
-            client.close();
         });
     }
 }
