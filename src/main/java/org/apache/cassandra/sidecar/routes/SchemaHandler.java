@@ -121,10 +121,10 @@ public class SchemaHandler extends AbstractHandler<Name>
      */
     private Future<Metadata> metadata(String host)
     {
-        return executorPools.service().executeBlocking(promise -> {
+        return executorPools.service().executeBlocking(() -> {
             CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
             // metadata can block so we need to run in a blocking thread
-            promise.complete(delegate.metadata());
+            return delegate.metadata();
         });
     }
 

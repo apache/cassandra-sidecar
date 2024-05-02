@@ -116,25 +116,23 @@ public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobReq
             return Future.succeededFuture(createRestoreJobRequestPayload);
         }
 
-        return executorPools.service().executeBlocking(promise -> {
+        return executorPools.service().executeBlocking(() -> {
             if (restoreJobDatabaseAccessor.exists(jobId))
             {
                 logger.info("Restore job already exist. jobId={}", jobId);
-                promise.fail(wrapHttpException(HttpResponseStatus.CONFLICT,
-                                               String.format("Job id %s already exists", jobId)));
+                throw wrapHttpException(HttpResponseStatus.CONFLICT,
+                                        String.format("Job id %s already exists", jobId));
             }
-            else
-            {
-                promise.complete(createRestoreJobRequestPayload);
-            }
+
+            return createRestoreJobRequestPayload;
         });
     }
 
     private Future<RestoreJob> createRestoreJob(RoutingContext context, CreateRestoreJobRequestPayload payload)
     {
         return RoutingContextUtils.getAsFuture(context, SC_QUALIFIED_TABLE_NAME)
-                                  .compose(tableName -> executorPools.service().executeBlocking(promise -> {
-                                      promise.complete(restoreJobDatabaseAccessor.create(payload, tableName));
+                                  .compose(tableName -> executorPools.service().executeBlocking(() -> {
+                                      return restoreJobDatabaseAccessor.create(payload, tableName);
                                   }));
     }
 }

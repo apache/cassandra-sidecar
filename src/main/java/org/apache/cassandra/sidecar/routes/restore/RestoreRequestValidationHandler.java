@@ -164,17 +164,15 @@ public class RestoreRequestValidationHandler implements Handler<RoutingContext>
 
     private Future<RestoreJob> findJob(UUID jobId)
     {
-        return executorPools.service().executeBlocking(promise -> {
+        return executorPools.service().executeBlocking(() -> {
             RestoreJob restoreJob = restoreJobs.find(jobId);
             if (restoreJob == null)
             {
-                promise.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND,
-                                               "Restore job with id: " + jobId + " does not exist"));
+                throw wrapHttpException(HttpResponseStatus.NOT_FOUND,
+                                        "Restore job with id: " + jobId + " does not exist");
             }
-            else
-            {
-                promise.complete(restoreJob);
-            }
+
+            return restoreJob;
         });
     }
 }

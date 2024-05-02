@@ -60,15 +60,15 @@ public class GossipInfoHandler extends AbstractHandler<Void>
                                Void request)
     {
         executorPools.service()
-                     .executeBlocking(promise -> {
+                     .executeBlocking(() -> {
                          CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
                          ClusterMembershipOperations operations = delegate.clusterMembershipOperations();
                          Preconditions.checkState(operations != null,
                                                   "Unable to connect to Cassandra");
                          String rawGossipInfo = operations.gossipInfo();
-                         GossipInfoResponse response = GossipInfoParser.parse(rawGossipInfo);
-                         context.json(response);
+                         return GossipInfoParser.parse(rawGossipInfo);
                      })
+                     .onSuccess(context::json)
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 

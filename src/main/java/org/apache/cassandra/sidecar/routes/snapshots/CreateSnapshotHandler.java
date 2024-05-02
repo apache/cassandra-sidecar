@@ -77,13 +77,14 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
                                SnapshotRequestParam requestParams)
     {
         TaskExecutorPool pool = executorPools.service();
-        pool.executeBlocking(promise -> {
+        pool.runBlocking(() -> {
                 CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-                if (delegate == null)
-                    throw cassandraServiceUnavailable();
-                StorageOperations storageOperations = delegate.storageOperations();
+                StorageOperations storageOperations = delegate == null ? null : delegate.storageOperations();
                 if (storageOperations == null)
+                {
                     throw cassandraServiceUnavailable();
+                }
+
                 logger.debug("Creating snapshot request={}, remoteAddress={}, instance={}",
                              requestParams, remoteAddress, host);
                 Map<String, String> options = requestParams.ttl() != null

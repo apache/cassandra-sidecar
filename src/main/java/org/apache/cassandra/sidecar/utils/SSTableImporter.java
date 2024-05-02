@@ -165,11 +165,9 @@ public class SSTableImporter
         {
             if (!queue.isEmpty())
             {
+                // schedule task to drain the queue of the cooresponding host
                 executorPools.internal()
-                             .executeBlocking(() -> {
-                                 maybeDrainImportQueue(queue);
-                                 return null;
-                             });
+                             .runBlocking(() -> maybeDrainImportQueue(queue));
             }
         }
     }

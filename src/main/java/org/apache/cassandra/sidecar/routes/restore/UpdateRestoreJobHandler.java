@@ -88,10 +88,8 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                                                              "Job is already in final state: " + job.status));
             }
 
-            return executorPools.service().<RestoreJob>executeBlocking(promise -> {
-                promise.complete(restoreJobDatabaseAccessor.update(requestPayload,
-                                                                   job.jobId));
-            });
+            return executorPools.service()
+                                .executeBlocking(() -> restoreJobDatabaseAccessor.update(requestPayload, job.jobId));
         })
         .onSuccess(job -> {
             logger.info("Successfully updated restore job. job={}, request={}, remoteAddress={}, instance={}",

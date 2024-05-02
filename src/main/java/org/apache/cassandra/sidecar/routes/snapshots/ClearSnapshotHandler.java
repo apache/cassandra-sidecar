@@ -69,19 +69,12 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
                                SocketAddress remoteAddress,
                                SnapshotRequestParam requestParams)
     {
-        executorPools.service().executeBlocking(promise -> {
+        executorPools.service().runBlocking(() -> {
             CassandraAdapterDelegate delegate = metadataFetcher.delegate(host(context));
-            if (delegate == null)
-            {
-                promise.fail(cassandraServiceUnavailable());
-                return;
-            }
-
-            StorageOperations storageOperations = delegate.storageOperations();
+            StorageOperations storageOperations = delegate == null ? null : delegate.storageOperations();
             if (storageOperations == null)
             {
-                promise.fail(cassandraServiceUnavailable());
-                return;
+                throw cassandraServiceUnavailable();
             }
 
             logger.debug("Clearing snapshot request={}, remoteAddress={}, instance={}",

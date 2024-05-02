@@ -114,17 +114,14 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
 
     private Future<KeyspaceMetadata> getKeyspaceMetadata(String host, String keyspace)
     {
-        return executorPools.service().executeBlocking(promise -> {
+        return executorPools.service().executeBlocking(() -> {
             CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-            Metadata metadata = delegate.metadata();
+            Metadata metadata = delegate == null ? null : delegate.metadata();
             if (metadata == null)
             {
-                promise.fail(cassandraServiceUnavailable());
+                throw cassandraServiceUnavailable();
             }
-            else
-            {
-                promise.complete(metadata.getKeyspace(keyspace));
-            }
+            return metadata.getKeyspace(keyspace);
         });
     }
 }

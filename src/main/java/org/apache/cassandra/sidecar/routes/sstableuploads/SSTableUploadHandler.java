@@ -191,17 +191,15 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
                                                                        SSTableUploadRequestParam request)
     {
         TaskExecutorPool pool = executorPools.service();
-        return pool.<Metadata>executeBlocking(promise -> {
+        return pool.executeBlocking(() -> {
                        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-                       Metadata metadata = delegate.metadata();
+                       Metadata metadata = delegate == null ? null : delegate.metadata();
                        if (metadata == null)
                        {
-                           promise.fail(cassandraServiceUnavailable());
+                           throw cassandraServiceUnavailable();
                        }
-                       else
-                       {
-                           promise.complete(metadata);
-                       }
+
+                       return metadata;
                    })
                    .compose(metadata -> {
                        KeyspaceMetadata keyspaceMetadata = MetadataUtils.keyspace(metadata, request.keyspace());
