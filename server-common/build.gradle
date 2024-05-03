@@ -60,7 +60,6 @@ dependencies {
     testImplementation "com.datastax.cassandra:cassandra-driver-core:3.11.3"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
 
-    testFixturesApi(testFixtures(project(":client-common")))
     testFixturesImplementation("org.assertj:assertj-core:3.24.2")
 }
 
