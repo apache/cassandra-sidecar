@@ -32,7 +32,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
+import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.restore.RestoreJobUtil;
 import org.assertj.core.api.InstanceOfAssertFactories;
 

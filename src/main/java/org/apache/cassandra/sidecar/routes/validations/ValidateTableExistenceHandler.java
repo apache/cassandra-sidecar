@@ -29,7 +29,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
@@ -114,17 +114,14 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
 
     private Future<KeyspaceMetadata> getKeyspaceMetadata(String host, String keyspace)
     {
-        return executorPools.service().executeBlocking(promise -> {
+        return executorPools.service().executeBlocking(() -> {
             CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-            Metadata metadata = delegate.metadata();
+            Metadata metadata = delegate == null ? null : delegate.metadata();
             if (metadata == null)
             {
-                promise.fail(cassandraServiceUnavailable());
+                throw cassandraServiceUnavailable();
             }
-            else
-            {
-                promise.complete(metadata.getKeyspace(keyspace));
-            }
+            return metadata.getKeyspace(keyspace);
         });
     }
 }

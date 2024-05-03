@@ -225,13 +225,13 @@ dependencies {
     testImplementation('org.mockito:mockito-core:4.10.0')
     testImplementation('org.mockito:mockito-inline:4.10.0')
     testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
-    testImplementation(testFixtures(project(":common")))
+    testImplementation(testFixtures(project(":server-common")))
 
-    implementation(project(":common"))
+    implementation(project(":server-common"))
     implementation(project(":adapters:base"))
     implementation(project(":adapters:cassandra41"))
 
-    testFixturesApi(testFixtures(project(":common")))
+    testFixturesApi(testFixtures(project(":server-common")))
     testFixturesImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
     testFixturesImplementation('com.google.inject:guice:4.2.2')
     testFixturesImplementation('org.mockito:mockito-core:4.10.0')
@@ -255,8 +255,8 @@ jar {
     doFirst {
         // Store current Cassandra Sidecar build version in an embedded resource file;
         // the file is either created or overwritten, and ignored by Git source control
-        Files.createDirectories(Paths.get("$projectDir/common/src/main/resources"))
-        new File("$projectDir/common/src/main/resources/sidecar.version").text = version
+        Files.createDirectories(Paths.get("$projectDir/server-common/src/main/resources"))
+        new File("$projectDir/server-common/src/main/resources/sidecar.version").text = version
     }
 }
 
@@ -349,15 +349,14 @@ tasks.register("integrationTest", Test) {
     // Disable direct memory allocator as it doesn't release properly
     systemProperty "cassandra.netty_use_heap_allocator", "true"
     systemProperty "vertxweb.environment", "dev"
+    // config logback for in-jvm clusters
+    systemProperty "logback.configurationFile", "src/test/resources/logback-in-jvm-dtest.xml"
     // Because tests are forked, we need to explicitly pass the system property from the
     // Gradle JVM down to the children
 
     def versionsToTest = System.getProperty("cassandra.sidecar.versions_to_test", null)
     if (versionsToTest != "" && versionsToTest != null) {
         systemProperty "cassandra.sidecar.versions_to_test", versionsToTest
-    }
-    jacoco {
-        enabled = false
     }
     useJUnitPlatform() {
         includeTags "integrationTest"
@@ -386,9 +385,6 @@ tasks.register("containerTest", Test) {
         println("JVM arguments for $project.name are $allJvmArgs")
     }
 
-    jacoco {
-        enabled = false
-    }
     useJUnitPlatform()
     reports {
         junitXml.enabled = true
@@ -453,6 +449,11 @@ tasks.register('buildIgnoreRatList', Exec) {
     }
     // allows task to fail when git/cut commands are unavailable or fail
     ignoreExitValue = true
+}
+
+jacocoTestReport {
+    // include all jacoco execution data from different Test tasks, i.e. test, integration test, container test
+    executionData fileTree(project.buildDir).include("jacoco/*.exec")
 }
 
 rat {

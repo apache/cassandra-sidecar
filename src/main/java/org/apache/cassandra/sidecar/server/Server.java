@@ -164,10 +164,7 @@ public class Server
         instancesConfig.instances()
                        .forEach(instance ->
                                 closingFutures.add(executorPools.internal()
-                                                                .executeBlocking(promise -> {
-                                                                    instance.delegate().close();
-                                                                    promise.complete(null);
-                                                                })));
+                                                                .runBlocking(() -> instance.delegate().close())));
         return Future.all(closingFutures)
                      .compose(v1 -> executorPools.close())
                      .onComplete(v -> vertx.close())

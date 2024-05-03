@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.utils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.common.ICassandraFactory;
+import org.apache.cassandra.sidecar.common.server.ICassandraFactory;
 import org.apache.cassandra.sidecar.mocks.V30;
 import org.apache.cassandra.sidecar.mocks.V40;
 import org.apache.cassandra.sidecar.mocks.V41;

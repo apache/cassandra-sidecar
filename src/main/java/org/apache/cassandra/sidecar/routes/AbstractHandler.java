@@ -32,9 +32,9 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.data.Name;
-import org.apache.cassandra.sidecar.common.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.exceptions.JmxAuthenticationException;
+import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -47,7 +47,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * An abstract {@link Handler Handler&lt;RoutingContext&gt;} that provides common functionality for handler
  * implementations.
  *
- * @param <T> The type of the request object
+ * @param <T> The type of the request data object
  */
 public abstract class AbstractHandler<T> implements Handler<RoutingContext>
 {

@@ -51,7 +51,7 @@ public class AsyncFileSystemUtils
      */
     public static Future<FileStoreProps> fileStoreProps(String path, TaskExecutorPool executorPool)
     {
-        return executorPool.executeBlocking(promise -> {
+        return executorPool.executeBlocking(() -> {
            try
            {
                // Navigate to the parent paths until finding an existing one
@@ -63,14 +63,14 @@ public class AsyncFileSystemUtils
                    currentPath = currentPath.getParent();
                }
                FileStore fs = Files.getFileStore(currentPath);
-               promise.tryComplete(new FileStoreProps(fs.name(),
-                                                      fs.getTotalSpace(),
-                                                      fs.getUsableSpace(),
-                                                      fs.getUnallocatedSpace()));
+               return new FileStoreProps(fs.name(),
+                                         fs.getTotalSpace(),
+                                         fs.getUsableSpace(),
+                                         fs.getUnallocatedSpace());
            }
            catch (IOException e)
            {
-               promise.tryFail(new RuntimeException("Failed to read the belonging file store of path: " + path, e));
+               throw new RuntimeException("Failed to read the belonging file store of path: " + path, e);
            }
         });
     }

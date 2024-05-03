@@ -66,7 +66,7 @@ configurations {
 }
 
 dependencies {
-    api(project(':common'))
+    api(project(':client-common'))
     implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
 
@@ -80,7 +80,7 @@ dependencies {
     testImplementation('com.squareup.okhttp3:mockwebserver:4.10.0')
     testImplementation(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
 
-    testFixturesApi(testFixtures(project(":common")))
+    testFixturesImplementation(testFixtures(project(":client-common")))
     testFixturesImplementation(platform('org.junit:junit-bom:5.9.2'))
     testFixturesImplementation('org.junit.jupiter:junit-jupiter')
     testFixturesImplementation("org.assertj:assertj-core:3.24.2")

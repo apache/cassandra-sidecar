@@ -22,7 +22,6 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
-import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -46,7 +45,7 @@ public class CacheStatsCounter implements StatsCounter
     protected final NamedMetric<DeltaGauge> misses;
     protected final NamedMetric<Timer> loadSuccess;
     protected final NamedMetric<Timer> loadFailure;
-    protected final NamedMetric<Histogram> evictions;
+    protected final NamedMetric<DeltaGauge> evictions;
     protected final LongAdder totalLoadTimeNanos = new LongAdder();
 
     public CacheStatsCounter(MetricRegistry metricRegistry, String cacheName)
@@ -70,7 +69,7 @@ public class CacheStatsCounter implements StatsCounter
                                  .withDomain(domain)
                                  .withName("LoadFailure")
                                  .build();
-        evictions = NamedMetric.builder(metricRegistry::histogram)
+        evictions = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
                                .withDomain(domain)
                                .withName("Evictions")
                                .build();
@@ -122,7 +121,7 @@ public class CacheStatsCounter implements StatsCounter
     {
         return CacheStats.of(hits.metric.getValue(), misses.metric.getValue(),
                              loadSuccess.metric.getCount(), loadFailure.metric.getCount(),
-                             totalLoadTimeNanos.sum(), evictions.metric.getCount(), 0);
+                             totalLoadTimeNanos.sum(), evictions.metric.getValue(), 0);
     }
 
     @Override

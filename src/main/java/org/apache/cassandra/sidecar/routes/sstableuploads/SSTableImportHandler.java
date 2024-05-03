@@ -29,11 +29,11 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.TableOperations;
-import org.apache.cassandra.sidecar.common.data.SSTableImportResponse;
+import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
+import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.data.SSTableImportRequest;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.data.SSTableImportRequestParam;
 import org.apache.cassandra.sidecar.utils.CacheFactory;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -46,7 +46,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Imports SSTables, that have been previously uploaded, into Cassandra
  */
-public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
+public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestParam>
 {
     private final SSTableImporter importer;
     private final SSTableUploadsPathBuilder uploadPathBuilder;
@@ -87,7 +87,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
                                HttpServerRequest httpRequest,
                                String host,
                                SocketAddress remoteAddress,
-                               SSTableImportRequest request)
+                               SSTableImportRequestParam request)
     {
         uploadPathBuilder.build(host, request)
                          .onSuccess(uploadDirectory -> {
@@ -129,7 +129,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
                                   RoutingContext context,
                                   String host,
                                   SocketAddress remoteAddress,
-                                  SSTableImportRequest request)
+                                  SSTableImportRequestParam request)
     {
         if (cause instanceof NoSuchFileException)
         {
@@ -151,9 +151,9 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
     }
 
     @Override
-    protected SSTableImportRequest extractParamsOrThrow(RoutingContext context)
+    protected SSTableImportRequestParam extractParamsOrThrow(RoutingContext context)
     {
-        return SSTableImportRequest.from(qualifiedTableName(context, true), context);
+        return SSTableImportRequestParam.from(qualifiedTableName(context, true), context);
     }
 
     /**
@@ -183,7 +183,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequest>
         }
     }
 
-    private static SSTableImporter.ImportOptions importOptions(String host, SSTableImportRequest request,
+    private static SSTableImporter.ImportOptions importOptions(String host, SSTableImportRequestParam request,
                                                                String uploadDirectory)
     {
         return new SSTableImporter.ImportOptions.Builder()

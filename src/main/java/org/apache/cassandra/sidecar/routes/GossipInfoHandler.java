@@ -25,9 +25,8 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.ClusterMembershipOperations;
-import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
-import org.apache.cassandra.sidecar.common.utils.GossipInfoParser;
+import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
+import org.apache.cassandra.sidecar.common.server.utils.GossipInfoParser;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -60,15 +59,15 @@ public class GossipInfoHandler extends AbstractHandler<Void>
                                Void request)
     {
         executorPools.service()
-                     .executeBlocking(promise -> {
+                     .executeBlocking(() -> {
                          CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
                          ClusterMembershipOperations operations = delegate.clusterMembershipOperations();
                          Preconditions.checkState(operations != null,
                                                   "Unable to connect to Cassandra");
                          String rawGossipInfo = operations.gossipInfo();
-                         GossipInfoResponse response = GossipInfoParser.parse(rawGossipInfo);
-                         context.json(response);
+                         return GossipInfoParser.parse(rawGossipInfo);
                      })
+                     .onSuccess(context::json)
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 

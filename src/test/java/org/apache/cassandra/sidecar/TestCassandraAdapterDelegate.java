@@ -21,9 +21,9 @@ package org.apache.cassandra.sidecar;
 import com.datastax.driver.core.Metadata;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.NodeSettings;
-import org.apache.cassandra.sidecar.common.StorageOperations;
-import org.apache.cassandra.sidecar.common.TableOperations;
+import org.apache.cassandra.sidecar.common.response.NodeSettings;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.jetbrains.annotations.Nullable;
 

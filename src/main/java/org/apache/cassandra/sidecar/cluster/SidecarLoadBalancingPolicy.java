@@ -40,7 +40,7 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.RoundRobinPolicy;
-import org.apache.cassandra.sidecar.common.utils.DriverUtils;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 
 /**
  * The SidecarLoadBalancingPolicy is designed to ensure that the Cassandra Metadata objects associated with the

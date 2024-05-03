@@ -28,14 +28,14 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.StorageOperations;
-import org.apache.cassandra.sidecar.common.data.Name;
-import org.apache.cassandra.sidecar.common.data.RingResponse;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
-import org.apache.cassandra.sidecar.common.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.exceptions.NodeBootstrappingException;
-import org.apache.cassandra.sidecar.common.exceptions.SnapshotAlreadyExistsException;
+import org.apache.cassandra.sidecar.common.response.RingResponse;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.exceptions.NodeBootstrappingException;
+import org.apache.cassandra.sidecar.common.server.exceptions.SnapshotAlreadyExistsException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

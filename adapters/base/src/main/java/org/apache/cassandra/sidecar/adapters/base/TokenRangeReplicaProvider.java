@@ -36,14 +36,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeState;
-import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.data.GossipInfoResponse;
-import org.apache.cassandra.sidecar.common.data.Name;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse.ReplicaInfo;
-import org.apache.cassandra.sidecar.common.data.TokenRangeReplicasResponse.ReplicaMetadata;
-import org.apache.cassandra.sidecar.common.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.utils.GossipInfoParser;
+import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaInfo;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaMetadata;
+import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.GossipInfoParser;
 import org.jetbrains.annotations.NotNull;
 
 import static java.util.stream.Collectors.toList;

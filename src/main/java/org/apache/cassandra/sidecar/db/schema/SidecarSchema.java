@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.Session;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
-import org.apache.cassandra.sidecar.common.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;

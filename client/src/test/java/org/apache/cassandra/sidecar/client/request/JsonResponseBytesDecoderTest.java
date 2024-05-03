@@ -23,7 +23,9 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.common.NodeSettings;
+import org.apache.cassandra.sidecar.common.request.JsonRequest;
+import org.apache.cassandra.sidecar.common.request.JsonResponseBytesDecoder;
+import org.apache.cassandra.sidecar.common.response.NodeSettings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -311,10 +311,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
                        return Future.succeededFuture();
                    }
 
-                   return executorPool.<Void>executeBlocking(promise -> {
-                       onSuccessCommit.run();
-                       promise.tryComplete();
-                   });
+                   return executorPool.runBlocking(onSuccessCommit::run);
                })
                .onSuccess(x -> {
                    slice.completeImportPhase();

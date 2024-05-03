@@ -40,17 +40,15 @@ import io.vertx.core.file.OpenOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.common.data.Digest;
-import org.apache.cassandra.sidecar.common.data.MD5Digest;
-import org.apache.cassandra.sidecar.common.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
+import org.apache.cassandra.sidecar.common.request.data.Digest;
+import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
+import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.UploadSSTableMetrics;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
-import org.assertj.core.data.Percentage;
 
 import static java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE;
 import static java.nio.file.attribute.PosixFilePermission.GROUP_READ;
@@ -295,9 +293,9 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     @Test
     void testRateLimitedByIngressFileRateLimiterUpload(VertxTestContext context) throws IOException
     {
-        // upper-bound configured to 512 KBps in BaseUploadsHandlerTest#setup
-        ingressFileRateLimiter.rate(256 * 1024L); // 256 KBps
+        // upper-bound configured to unlimited/disabled(0) in BaseUploadsHandlerTest#setup
         Path largeFilePath = prepareTestFile(temporaryPath, "1MB-File-Data.db", 1024 * 1024); // 1MB
+        ingressFileRateLimiter.rate(256 * 1024L); // 256 KBps
 
         long startTime = System.nanoTime();
         String uploadId = UUID.randomUUID().toString();
@@ -308,15 +306,15 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             // SSTable upload should take around 4 seconds (256 KB/s for a 1MB file)
             long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
             assertThat(response).isNotNull();
-            assertThat(elapsedMillis).isCloseTo(TimeUnit.SECONDS.toMillis(4),
-                                                Percentage.withPercentage(5));
+            assertThat(elapsedMillis).isGreaterThanOrEqualTo(TimeUnit.SECONDS.toMillis(4) - 500) // take any stored permits into account
+                                     .isLessThanOrEqualTo(TimeUnit.SECONDS.toMillis(5));
         }, largeFilePath.toString());
     }
 
     @Test
     void testRateLimitedByGlobalLimiterUpload(VertxTestContext context) throws IOException
     {
-        // upper-bound configured to 512 KBps in BaseUploadsHandlerTest#setup
+        // upper-bound configured to unlimited/disabled(0) in BaseUploadsHandlerTest#setup
         // 1024 KBps Should not take effect, upper-bounded by global rate limiting
         ingressFileRateLimiter.rate(1024 * 1024L);
         Path largeFilePath = prepareTestFile(temporaryPath, "1MB-File-Data.db", 1024 * 1024); // 1MB
@@ -330,8 +328,8 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             // SSTable upload should take around 2 seconds (512 KB/s for a 1MB file)
             long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
             assertThat(response).isNotNull();
-            assertThat(elapsedMillis).isCloseTo(TimeUnit.SECONDS.toMillis(2),
-                                                Percentage.withPercentage(10));
+            assertThat(elapsedMillis).isGreaterThanOrEqualTo(TimeUnit.SECONDS.toMillis(2) - 500) // take any stored permits into account
+                                     .isLessThanOrEqualTo(TimeUnit.SECONDS.toMillis(3));
         }, largeFilePath.toString());
     }
 
@@ -387,7 +385,6 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                                             Consumer<HttpResponse<Buffer>> responseValidator,
                                             String fileToBeUploaded)
     {
-        WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + keyspace
                            + "/tables/" + tableName + "/components/" + targetFileName;
         HttpRequest<Buffer> req = client.put(server.actualPort(), "localhost", testRoute);
@@ -407,7 +404,6 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             {
                 assertThat(response.failed()).isTrue();
                 context.completeNow();
-                client.close();
                 return;
             }
 
@@ -427,7 +423,15 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
 
             if (responseValidator != null)
             {
-                responseValidator.accept(httpResponse);
+                try
+                {
+                    responseValidator.accept(httpResponse);
+                }
+                catch (Throwable t)
+                {
+                    context.failNow(t);
+                    return;
+                }
             }
 
             if (expectedRetCode == HttpResponseStatus.OK.code())
@@ -451,7 +455,6 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
                     {
                         context.failNow(e);
                     }
-                    client.close();
                     return;
                 }
             }
@@ -464,7 +467,6 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             {
                 context.completeNow();
             }
-            client.close();
         });
     }
 }

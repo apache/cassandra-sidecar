@@ -27,8 +27,8 @@ import io.netty.handler.codec.http.HttpStatusClass;
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.ResourceNotFoundException;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
-import org.apache.cassandra.sidecar.client.request.Request;
 import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
+import org.apache.cassandra.sidecar.common.request.Request;
 
 /**
  * A basic {@link RetryPolicy} supporting standard status codes

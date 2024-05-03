@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 
-import org.apache.cassandra.sidecar.common.ICassandraFactory;
+import org.apache.cassandra.sidecar.common.server.ICassandraFactory;
 import org.jetbrains.annotations.VisibleForTesting;
 
 

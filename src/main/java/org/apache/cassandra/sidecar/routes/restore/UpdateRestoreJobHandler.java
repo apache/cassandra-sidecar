@@ -31,7 +31,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
-import org.apache.cassandra.sidecar.common.data.UpdateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
@@ -88,10 +88,8 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                                                              "Job is already in final state: " + job.status));
             }
 
-            return executorPools.service().<RestoreJob>executeBlocking(promise -> {
-                promise.complete(restoreJobDatabaseAccessor.update(requestPayload,
-                                                                   job.jobId));
-            });
+            return executorPools.service()
+                                .executeBlocking(() -> restoreJobDatabaseAccessor.update(requestPayload, job.jobId));
         })
         .onSuccess(job -> {
             logger.info("Successfully updated restore job. job={}, request={}, remoteAddress={}, instance={}",

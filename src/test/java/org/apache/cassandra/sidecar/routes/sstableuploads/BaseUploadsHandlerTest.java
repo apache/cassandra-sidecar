@@ -159,6 +159,7 @@ class BaseUploadsHandlerTest
         final CountDownLatch closeLatch = new CountDownLatch(1);
         registry().removeMatching((name, metric) -> true);
         registry(1).removeMatching((name, metric) -> true);
+        client.close();
         server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.debug("Close event received before timeout.");

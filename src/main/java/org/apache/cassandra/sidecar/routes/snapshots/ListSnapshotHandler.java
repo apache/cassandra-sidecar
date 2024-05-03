@@ -34,15 +34,15 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.TableOperations;
-import org.apache.cassandra.sidecar.common.data.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.data.SnapshotRequest;
 import org.apache.cassandra.sidecar.metrics.CacheStatsCounter;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.data.SnapshotRequestParam;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -67,7 +67,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * <i>"testSnapshot"</i> snapshot for the <i>"ks"</i> keyspace and the <i>"tbl"</i> table
  */
 @Singleton
-public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
+public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
 {
     private static final String INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM = "includeSecondaryIndexFiles";
     public static final String SNAPSHOT_CACHE_NAME = "snapshot_cache";
@@ -116,7 +116,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                HttpServerRequest httpRequest,
                                String host,
                                SocketAddress remoteAddress,
-                               SnapshotRequest request)
+                               SnapshotRequestParam request)
     {
         cachedResponseOrProcess(host, request)
         .onSuccess(response -> {
@@ -140,7 +140,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
                                   RoutingContext context,
                                   String host,
                                   SocketAddress remoteAddress,
-                                  SnapshotRequest request)
+                                  SnapshotRequestParam request)
     {
         logger.error("SnapshotsHandler failed for request={}, remoteAddress={}, instance={}, method={}",
                      request, remoteAddress, host, context.request().method(), cause);
@@ -158,19 +158,19 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
      * {@inheritDoc}
      */
     @Override
-    protected SnapshotRequest extractParamsOrThrow(RoutingContext context)
+    protected SnapshotRequestParam extractParamsOrThrow(RoutingContext context)
     {
         boolean includeSecondaryIndexFiles =
         RequestUtils.parseBooleanQueryParam(context.request(), INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM, false);
 
-        return SnapshotRequest.builder()
-                              .qualifiedTableName(qualifiedTableName(context))
-                              .snapshotName(context.pathParam("snapshot"))
-                              .includeSecondaryIndexFiles(includeSecondaryIndexFiles)
-                              .build();
+        return SnapshotRequestParam.builder()
+                                   .qualifiedTableName(qualifiedTableName(context))
+                                   .snapshotName(context.pathParam("snapshot"))
+                                   .includeSecondaryIndexFiles(includeSecondaryIndexFiles)
+                                   .build();
     }
 
-    protected Future<ListSnapshotFilesResponse> cachedResponseOrProcess(String host, SnapshotRequest request)
+    protected Future<ListSnapshotFilesResponse> cachedResponseOrProcess(String host, SnapshotRequestParam request)
     {
         if (cache != null && cacheConfiguration.enabled())
         {
@@ -180,7 +180,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
         return processResponse(host, request);
     }
 
-    protected Future<ListSnapshotFilesResponse> processResponse(String host, SnapshotRequest request)
+    protected Future<ListSnapshotFilesResponse> processResponse(String host, SnapshotRequestParam request)
     {
         return dataPaths(host, request.keyspace(), request.tableName())
                .compose(dataDirectoryList ->
@@ -212,7 +212,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequest>
 
     protected Future<ListSnapshotFilesResponse>
     buildResponse(String host,
-                  SnapshotRequest request,
+                  SnapshotRequestParam request,
                   Stream<SnapshotPathBuilder.SnapshotFile> snapshotFileStream)
     {
         int sidecarPort = configuration.port();

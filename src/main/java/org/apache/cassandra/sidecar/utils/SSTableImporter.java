@@ -40,7 +40,7 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.TableOperations;
+import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
@@ -165,11 +165,9 @@ public class SSTableImporter
         {
             if (!queue.isEmpty())
             {
+                // schedule task to drain the queue of the cooresponding host
                 executorPools.internal()
-                             .executeBlocking(() -> {
-                                 maybeDrainImportQueue(queue);
-                                 return null;
-                             });
+                             .runBlocking(() -> maybeDrainImportQueue(queue));
             }
         }
     }

@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.utils;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.vertx.core.MultiMap;
 import io.vertx.core.file.FileSystem;
-import org.apache.cassandra.sidecar.common.data.MD5Digest;
+import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 import org.jetbrains.annotations.NotNull;
 
 /**

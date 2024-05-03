@@ -39,7 +39,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.data.StreamSSTableComponentRequest;
+import org.apache.cassandra.sidecar.routes.data.StreamSSTableComponentRequestParam;
 import org.apache.cassandra.sidecar.utils.BaseFileSystem;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.jetbrains.annotations.NotNull;
@@ -149,7 +149,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
      *
      * @param request the request to stream the SSTable component
      */
-    protected void validate(StreamSSTableComponentRequest request)
+    protected void validate(StreamSSTableComponentRequestParam request)
     {
         validator.validateKeyspaceName(request.keyspace());
         validator.validateTableName(request.tableName());
@@ -172,11 +172,11 @@ public class SnapshotPathBuilder extends BaseFileSystem
 
     /**
      * @param dataDirectory the path to the data directory where the component lives
-     * @param request       the {@link StreamSSTableComponentRequest}
+     * @param request       the {@link StreamSSTableComponentRequestParam}
      * @return the path to the component found in the {@code dataDirectory}
      */
     public String resolveComponentPathFromDataDirectory(String dataDirectory,
-                                                        StreamSSTableComponentRequest request)
+                                                        StreamSSTableComponentRequestParam request)
     {
         validate(request);
         StringBuilder sb = new StringBuilder(StringUtils.removeEnd(dataDirectory, File.separator))
@@ -191,11 +191,11 @@ public class SnapshotPathBuilder extends BaseFileSystem
 
     /**
      * @param tableDirectory the path to the table directory where the component lives
-     * @param request        the {@link StreamSSTableComponentRequest}
+     * @param request        the {@link StreamSSTableComponentRequestParam}
      * @return the path to the component found in the {@code tableDirectory}
      */
     public String resolveComponentPathFromTableDirectory(String tableDirectory,
-                                                         StreamSSTableComponentRequest request)
+                                                         StreamSSTableComponentRequestParam request)
     {
         validate(request);
         StringBuilder sb = new StringBuilder(StringUtils.removeEnd(tableDirectory, File.separator));
@@ -239,7 +239,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
         return null;
     }
 
-    protected String appendSnapshot(StringBuilder sb, StreamSSTableComponentRequest request)
+    protected String appendSnapshot(StringBuilder sb, StreamSSTableComponentRequestParam request)
     {
         sb.append(File.separator).append(SNAPSHOTS_DIR_NAME)
           .append(File.separator).append(request.snapshotName());

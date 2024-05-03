@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.net.UnknownHostException;
-
 import org.apache.commons.lang3.StringUtils;
 
 import com.google.inject.Inject;
@@ -29,9 +27,9 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.data.RingRequest;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -42,7 +40,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * A handler that provides ring information for the Cassandra cluster
  */
 @Singleton
-public class RingHandler extends AbstractHandler<RingRequest>
+public class RingHandler extends AbstractHandler<Name>
 {
     @Inject
     public RingHandler(InstanceMetadataFetcher metadataFetcher,
@@ -60,7 +58,7 @@ public class RingHandler extends AbstractHandler<RingRequest>
                                HttpServerRequest httpRequest,
                                String host,
                                SocketAddress remoteAddress,
-                               RingRequest request)
+                               Name keyspace)
     {
         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
         if (delegate == null)
@@ -77,16 +75,10 @@ public class RingHandler extends AbstractHandler<RingRequest>
             return;
         }
 
-        executorPools.service().executeBlocking(promise -> {
-            try
-            {
-                context.json(storageOperations.ring(request.keyspace()));
-            }
-            catch (UnknownHostException e)
-            {
-                processFailure(e, context, host, remoteAddress, request);
-            }
-        }).onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+        executorPools.service()
+                     .executeBlocking(() -> storageOperations.ring(keyspace))
+                     .onSuccess(context::json)
+                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
     }
 
     @Override
@@ -94,7 +86,7 @@ public class RingHandler extends AbstractHandler<RingRequest>
                                   RoutingContext context,
                                   String host,
                                   SocketAddress remoteAddress,
-                                  RingRequest request)
+                                  Name keyspace)
     {
         if (cause instanceof IllegalArgumentException &&
             StringUtils.contains(cause.getMessage(), ", does not exist"))
@@ -103,15 +95,15 @@ public class RingHandler extends AbstractHandler<RingRequest>
             return;
         }
 
-        super.processFailure(cause, context, host, remoteAddress, request);
+        super.processFailure(cause, context, host, remoteAddress, keyspace);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected RingRequest extractParamsOrThrow(RoutingContext context)
+    protected Name extractParamsOrThrow(RoutingContext context)
     {
-        return new RingRequest(keyspace(context, false));
+        return keyspace(context, false);
     }
 }

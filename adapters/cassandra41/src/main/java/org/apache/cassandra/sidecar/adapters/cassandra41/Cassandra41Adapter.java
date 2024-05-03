@@ -21,12 +21,12 @@ package org.apache.cassandra.sidecar.adapters.cassandra41;
 import java.net.InetSocketAddress;
 
 import org.apache.cassandra.sidecar.adapters.base.CassandraAdapter;
-import org.apache.cassandra.sidecar.common.CQLSessionProvider;
-import org.apache.cassandra.sidecar.common.ICassandraAdapter;
-import org.apache.cassandra.sidecar.common.JmxClient;
-import org.apache.cassandra.sidecar.common.StorageOperations;
-import org.apache.cassandra.sidecar.common.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.utils.DriverUtils;
+import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
+import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 
 /**
  * A {@link ICassandraAdapter} implementation for Cassandra 4.1 and later

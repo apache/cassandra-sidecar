@@ -225,7 +225,8 @@ public abstract class AbstractSnapshotPathBuilderTest
                                                             "this_is_a_valid_snapshot_name_i_❤_u", false), snapshotFiles -> {
             assertThat(snapshotFiles).isNotEmpty();
             List<SnapshotPathBuilder.SnapshotFile> expectedSnapshotFiles = new ArrayList<>();
-            Path basePath = Paths.get(dataDir1.getAbsolutePath() + "/data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1/snapshots/this_is_a_valid_snapshot_name_i_❤_u");
+            Path basePath = Paths.get(dataDir1.getAbsolutePath() +
+                                      "/data/ks4/table4abc-a72c8740a57611ec935db766a70c44a1/snapshots/this_is_a_valid_snapshot_name_i_❤_u");
             expectedSnapshotFiles.add(new SnapshotPathBuilder.SnapshotFile(basePath.resolve("data.db"), 0, 0, "a72c8740a57611ec935db766a70c44a1"));
             expectedSnapshotFiles.add(new SnapshotPathBuilder.SnapshotFile(basePath.resolve("index.db"), 0, 0, "a72c8740a57611ec935db766a70c44a1"));
             expectedSnapshotFiles.add(new SnapshotPathBuilder.SnapshotFile(basePath.resolve("nb-203-big-TOC.txt"), 0, 0, "a72c8740a57611ec935db766a70c44a1"));

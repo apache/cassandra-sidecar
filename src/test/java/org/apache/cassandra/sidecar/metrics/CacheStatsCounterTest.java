@@ -22,6 +22,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 
 import com.google.common.testing.FakeTicker;
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +34,7 @@ import com.codahale.metrics.SharedMetricRegistries;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import org.apache.cassandra.sidecar.AssertionUtils;
 import org.assertj.core.data.Offset;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,7 +77,7 @@ class CacheStatsCounterTest
         assertThat(instance.misses.metric.getValue()).isZero();
         assertThat(instance.loadSuccess.metric.getCount()).isZero();
         assertThat(instance.loadFailure.metric.getCount()).isZero();
-        assertThat(instance.evictions.metric.getCount()).isZero();
+        assertThat(instance.evictions.metric.getValue()).isZero();
         assertThat(instance.totalLoadTimeNanos.longValue()).isZero();
 
         // let's start populating the cache
@@ -84,7 +86,7 @@ class CacheStatsCounterTest
         assertThat(instance.misses.metric.getValue()).isOne();
         assertThat(instance.loadSuccess.metric.getCount()).isOne();
         assertThat(instance.loadFailure.metric.getCount()).isZero();
-        assertThat(instance.evictions.metric.getCount()).isZero();
+        assertThat(instance.evictions.metric.getValue()).isZero();
         assertThat(instance.totalLoadTimeNanos.longValue()).isGreaterThan(0);
 
         // let's get some hits in a loop
@@ -116,12 +118,12 @@ class CacheStatsCounterTest
         // ensure the cache is now empty
         assertThat(cache.estimatedSize()).isZero();
         // and make sure the evictions are tracked
-        assertThat(instance.evictions.metric.getCount()).isOne();
+        assertThat(instance.evictions.metric.getValue()).isOne();
 
         // Now let's get a snapshot of the stats
         CacheStats snapshot = instance.snapshot();
         assertThat(snapshot.averageLoadPenalty()).isGreaterThan(0);
-        assertThat(snapshot.evictionCount()).isOne();
+        assertThat(snapshot.evictionCount()).isZero(); // consumed by pulling the metric directly
         assertThat(snapshot.evictionWeight()).isZero();
         assertThat(snapshot.hitCount()).isZero();
         assertThat(snapshot.hitRate()).isOne();
@@ -153,8 +155,13 @@ class CacheStatsCounterTest
         assertThat(instance.loadFailure.metric.getCount()).isZero();
         // make sure the cache performs all necessary cleanups
         cache.cleanUp();
+        LongAdder evictions = new LongAdder();
         // we only have capacity for 5, so 95 should be evicted
-        assertThat(instance.evictions.metric.getCount()).isEqualTo(95);
+        // It might take some time for the cache maintainence tasks to finish. Use loop assert to check that it eventally evicts 95
+        AssertionUtils.loopAssert(1, () -> {
+            evictions.add(instance.evictions.metric.getValue());
+            assertThat(evictions.sum()).isEqualTo(95);
+        });
         assertThat(instance.totalLoadTimeNanos.longValue()).isGreaterThan(0);
     }
 
@@ -193,7 +200,7 @@ class CacheStatsCounterTest
         assertThat(instance.misses.metric.getValue()).isOne();
         assertThat(instance.loadSuccess.metric.getCount()).isOne();
         assertThat(instance.loadFailure.metric.getCount()).isZero();
-        assertThat(instance.evictions.metric.getCount()).isZero();
+        assertThat(instance.evictions.metric.getValue()).isZero();
         assertThat(instance.totalLoadTimeNanos.longValue()).isGreaterThan(0);
     }
 }

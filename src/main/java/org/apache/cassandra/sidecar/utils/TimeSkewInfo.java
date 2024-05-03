@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.utils;
 
 import javax.inject.Inject;
 
-import org.apache.cassandra.sidecar.common.data.TimeSkewResponse;
+import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 
 /**

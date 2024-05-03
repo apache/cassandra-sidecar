@@ -184,7 +184,7 @@ public class RestoreJobManager
             return Future.succeededFuture();
 
         String prefixedJobId = RestoreJobUtil.prefixedJobId(jobId);
-        return executorPools.internal().executeBlocking(promise -> {
+        return executorPools.internal().runBlocking(() -> {
             try (Stream<Path> rootDirs = Files.walk(stagingDir, 1))
             {
                 rootDirs
@@ -195,17 +195,13 @@ public class RestoreJobManager
             {
                 LOGGER.warn("Error on listing staged restore job directories. Path={}", stagingDir, ioe);
             }
-            finally
-            {
-                promise.complete(); // always completes the promise regardless of the deletion result
-            }
         });
     }
 
     // Deletes quietly w/o returning failed futures
     private Future<Void> deleteDataAsync(Path root)
     {
-        return executorPools.internal().executeBlocking(promise -> {
+        return executorPools.internal().runBlocking(() -> {
             try (Stream<Path> pathStream = Files.walk(root))
             {
                 pathStream
@@ -216,10 +212,6 @@ public class RestoreJobManager
             catch (IOException ioe) // thrown from Files.walk.
             {
                 LOGGER.warn("Error on deleting data. Path={}", root, ioe);
-            }
-            finally
-            {
-                promise.complete(); // always completes the promise regardless of the deletion result
             }
         });
     }
