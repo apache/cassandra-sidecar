@@ -17,14 +17,6 @@
  * under the License.
  */
 
-rootProject.name = "cassandra-sidecar"
-
-include "adapters:base"
-include "adapters:cassandra41"
-include "client-common"
-include "server-common"
-include "client"
-include "vertx-client"
-include "vertx-client-shaded"
-include "docs"
-include "code-coverage-report"
+plugins {
+  id('groovy-gradle-plugin')
+}

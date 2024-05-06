@@ -40,16 +40,19 @@ plugins {
     id 'maven-publish'
 
     // since we're using a specific version here, we delay applying the plugin till the all projects
-    id "com.github.spotbugs" version "3.0.0" apply false
+    id 'com.github.spotbugs' version '3.0.0' apply false
 
     // https://github.com/nebula-plugins/gradle-ospackage-plugin/wiki
-    id "nebula.ospackage" version "8.3.0"
-    id 'nebula.ospackage-application' version "8.3.0"
+    id 'nebula.ospackage' version '8.3.0'
+    id 'nebula.ospackage-application' version '8.3.0'
     id 'com.google.cloud.tools.jib' version '2.2.0'
     id 'org.asciidoctor.jvm.convert' version '3.1.0'
 
     // Release Audit Tool (RAT) plugin for checking project licenses
-    id("org.nosphere.apache.rat") version "0.8.0"
+    id 'org.nosphere.apache.rat' version "0.8.0"
+
+    id 'cassandra-sidecar.java-conventions'
+    id 'org.sonarqube' version '3.5.0.2730'
 }
 
 println("Using DTest jar: ${dtestVersion}")
@@ -503,4 +506,19 @@ run.dependsOn build
 
 tasks.named('rat').configure {
     dependsOn(buildIgnoreRatList)
+}
+
+sonar {
+  properties {
+    property('sonar.projectName', 'cassandra-sidecar')
+    property('sonar.projectKey', 'cassandra-sidecar')
+    property('sonar.pullrequest.key', System.getenv('GIT_PR_ID') ?: '')
+    property('sonar.pullrequest.branch', System.getenv('GIT_PR_SOURCE_BRANCH') ?: '')
+    property('sonar.pullrequest.base', System.getenv('GIT_PR_TARGET_BRANCH') ?: '')
+    property('sonar.projectBaseDir', rootDir)
+    property('sonar.inclusions', 'adapters/base/src/main/**/*.java,client-common/src/main/**/*.java,server-common/src/main/**/*.java,client/src/main/**/*.java,vertx-client/src/main/**/*.java,src/main/**/*.java')
+    property('sonar.test.inclusions', 'adapters/base/src/test/**/*.java,client-common/src/test/**/*.java,server-common/src/test/**/*.java,client/src/test/**/*.java,vertx-client/src/test/**/*.java,src/test/**/*.java')
+    property('sonar.sourceEncoding', 'UTF-8')
+    property('sonar.coverage.jacoco.xmlReportPaths', "${rootDir}/code-coverage-report/build/reports/jacoco/codeCoverageReport/codeCoverageReport.xml")
+  }
 }

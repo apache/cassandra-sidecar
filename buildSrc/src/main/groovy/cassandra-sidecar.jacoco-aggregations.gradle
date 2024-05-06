@@ -1,0 +1,83 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+plugins {
+  id('java')
+  id('jacoco')
+}
+
+// A resolvable configuration to collect source code
+def sourcesPath = configurations.create('sourcesPath') {
+  visible = false
+  canBeResolved = true
+  canBeConsumed = false
+  extendsFrom(configurations.implementation)
+  attributes {
+    attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+    attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.DOCUMENTATION))
+    attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType, 'source-folders'))
+  }
+}
+
+// A resolvable configuration to collect classpath
+def classPath = configurations.create('classPath') {
+  visible = false
+  canBeResolved = true
+  canBeConsumed = false
+  extendsFrom(configurations.implementation)
+  attributes {
+    attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+    attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
+    attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements, LibraryElements.CLASSES))
+    attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
+  }
+}
+
+// A resolvable configuration to collect JaCoCo coverage data
+def coverageDataPath = configurations.create('coverageDataPath') {
+  visible = false
+  canBeResolved = true
+  canBeConsumed = false
+  extendsFrom(configurations.implementation)
+  attributes {
+    attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+    attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.DOCUMENTATION))
+    attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType, 'jacoco-coverage-data'))
+  }
+}
+
+// Task to gather code coverage from multiple subprojects
+def codeCoverageReport = tasks.register('codeCoverageReport', JacocoReport) {
+  additionalClassDirs(classPath.filter { it.isDirectory() })
+  additionalSourceDirs(sourcesPath.incoming.artifactView { lenient(true) }.files)
+  executionData(coverageDataPath.incoming.artifactView { lenient(true) }.files.filter { it.exists() })
+
+  reports {
+    // XML is used to integrate code coverage with SonarQube
+    xml.required = true
+
+    // HTML is used to see code coverage without external tools
+    html.required = true
+  }
+}
+
+// Make JaCoCo report generation part of the 'check' lifecycle phase
+tasks.named('check') {
+  dependsOn(codeCoverageReport)
+}

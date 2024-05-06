@@ -17,14 +17,17 @@
  * under the License.
  */
 
-rootProject.name = "cassandra-sidecar"
+plugins {
+  id('cassandra-sidecar.jacoco-aggregations')
+}
 
-include "adapters:base"
-include "adapters:cassandra41"
-include "client-common"
-include "server-common"
-include "client"
-include "vertx-client"
-include "vertx-client-shaded"
-include "docs"
-include "code-coverage-report"
+dependencies {
+  implementation(project(':adapters:base'))
+  implementation(project(':client-common'))
+  implementation(project(':server-common'))
+  implementation(project(':client'))
+  implementation(project(':vertx-client'))
+  implementation(rootProject)
+}
+
+tasks.withType(PublishToMavenRepository).configureEach { it.enabled = false }

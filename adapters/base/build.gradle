@@ -20,10 +20,11 @@
 import java.nio.file.Paths
 
 plugins {
-    id 'java-library'
     id 'idea'
+    id 'java-library'
     id 'maven-publish'
-    id "com.github.spotbugs"
+    id 'com.github.spotbugs'
+    id 'cassandra-sidecar.java-conventions'
 }
 
 group 'org.apache.cassandra.sidecar'
