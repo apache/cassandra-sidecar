@@ -22,12 +22,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
+import org.apache.cassandra.sidecar.utils.FileUtils;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -49,8 +51,10 @@ public class InstanceMetadataImpl implements InstanceMetadata
         id = builder.id;
         host = builder.host;
         port = builder.port;
-        dataDirs = Collections.unmodifiableList(builder.dataDirs);
-        stagingDir = builder.stagingDir;
+        dataDirs = builder.dataDirs.stream()
+                                   .map(FileUtils::maybeResolveHomeDirectory)
+                                   .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
+        stagingDir = FileUtils.maybeResolveHomeDirectory(builder.stagingDir);
         delegate = builder.delegate;
         metrics = builder.metrics;
     }

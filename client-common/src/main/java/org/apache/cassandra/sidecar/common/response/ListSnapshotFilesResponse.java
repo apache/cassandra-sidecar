@@ -64,7 +64,6 @@ public class ListSnapshotFilesResponse
         public final String snapshotName;
         public final String keySpaceName;
         public final String tableName;
-        public final String tableId;
         public final String fileName;
         private String componentDownloadUrl;
 
@@ -75,7 +74,6 @@ public class ListSnapshotFilesResponse
                         @JsonProperty("snapshotName") String snapshotName,
                         @JsonProperty("keySpaceName") String keySpaceName,
                         @JsonProperty("tableName") String tableName,
-                        @JsonProperty("tableId") String tableId,
                         @JsonProperty("fileName") String fileName)
         {
             this.size = size;
@@ -85,7 +83,6 @@ public class ListSnapshotFilesResponse
             this.snapshotName = snapshotName;
             this.keySpaceName = keySpaceName;
             this.tableName = tableName;
-            this.tableId = tableId;
             this.fileName = fileName;
         }
 
@@ -93,10 +90,6 @@ public class ListSnapshotFilesResponse
         {
             if (componentDownloadUrl == null)
             {
-                String tableName = this.tableId != null
-                                   ? this.tableName + "-" + this.tableId
-                                   : this.tableName;
-
                 componentDownloadUrl = ApiEndpointsV1.COMPONENTS_ROUTE
                                        .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keySpaceName)
                                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)

@@ -218,14 +218,16 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
         int sidecarPort = configuration.port();
         ListSnapshotFilesResponse response = new ListSnapshotFilesResponse();
         snapshotFileStream.forEach(file -> {
+            String tableNameAndId = file.tableId != null
+                                    ? request.tableName() + "-" + file.tableId
+                                    : request.tableName();
             response.addSnapshotFile(new ListSnapshotFilesResponse.FileInfo(file.size,
                                                                             host,
                                                                             sidecarPort,
                                                                             file.dataDirectoryIndex,
                                                                             request.snapshotName(),
                                                                             request.keyspace(),
-                                                                            request.tableName(),
-                                                                            file.tableId,
+                                                                            tableNameAndId,
                                                                             file.name));
         });
         return Future.succeededFuture(response);
