@@ -498,6 +498,50 @@ abstract class SidecarClientTest
                                                 + "?includeSecondaryIndexFiles=true");
     }
 
+    /**
+     * CASSANDRASC-94 introduced a new field ({@code tableId}) to the payload when listing snapshots. We
+     * need to make sure the client is able to handle the payload with the additional field (and ignore it).
+     *
+     * @throws Exception when the test fails
+     */
+    @Test
+    public void testListSnapshotFilesPayloadWithTableId() throws Exception
+    {
+        String responseAsString = "{\"snapshotFilesInfo\":[{\"size\":15,\"host\":\"localhost1\",\"port\":2020," +
+                                  "\"dataDirIndex\":1,\"snapshotName\":\"2023.04.11\",\"keySpaceName\":\"cycling\"," +
+                                  "\"tableName\":\"cyclist_name\",\"tableId\":\"1234\",\"fileName\":" +
+                                  "\"nb-203-big-TOC.txt\"}]}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(responseAsString);
+        SidecarInstanceImpl sidecarInstance = instances.get(2);
+        MockWebServer mockWebServer = servers.get(2);
+        mockWebServer.enqueue(response);
+
+        ListSnapshotFilesResponse result = client.listSnapshotFiles(sidecarInstance,
+                                                                    "cycling",
+                                                                    "cyclist_name",
+                                                                    "2023.04.11")
+                                                 .get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.snapshotFilesInfo()).hasSize(1);
+        ListSnapshotFilesResponse.FileInfo fileInfo = result.snapshotFilesInfo().get(0);
+        assertThat(fileInfo.size).isEqualTo(15);
+        assertThat(fileInfo.host).isEqualTo("localhost1");
+        assertThat(fileInfo.port).isEqualTo(2020);
+        assertThat(fileInfo.dataDirIndex).isEqualTo(1);
+        assertThat(fileInfo.snapshotName).isEqualTo("2023.04.11");
+        assertThat(fileInfo.keySpaceName).isEqualTo("cycling");
+        assertThat(fileInfo.tableName).isEqualTo("cyclist_name");
+        assertThat(fileInfo.fileName).isEqualTo("nb-203-big-TOC.txt");
+
+        assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
+        RecordedRequest request = mockWebServer.takeRequest();
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
+                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11")
+                                                + "?includeSecondaryIndexFiles=true");
+    }
+
     @Test
     public void testListSnapshotFilesWithoutSecondaryIndexFiles() throws Exception
     {
@@ -914,8 +958,7 @@ abstract class SidecarClientTest
                                                                                                      server.getPort(), 0,
                                                                                                      "2023.04.12",
                                                                                                      "cycling",
-                                                                                                     "cyclist_name",
-                                                                                                     "1234",
+                                                                                                     "cyclist_name-1234",
                                                                                                      "nb-1-big-TOC.txt");
                 client.streamSSTableComponent(sidecarInstance, fileInfo, null, mockStreamConsumer);
                 expectedPath = fileInfo.componentDownloadUrl();
@@ -1011,8 +1054,7 @@ abstract class SidecarClientTest
                                                                                                      server.getPort(), 0,
                                                                                                      "2023.04.12",
                                                                                                      "cycling",
-                                                                                                     "cyclist_name",
-                                                                                                     "1234",
+                                                                                                     "cyclist_name-1234",
                                                                                                      "nb-1-big-TOC.txt");
 
                 client.streamSSTableComponent(sidecarInstance, fileInfo, HttpRange.of(10, 20), mockStreamConsumer);
@@ -1114,8 +1156,7 @@ abstract class SidecarClientTest
                                                                                                      server.getPort(), 0,
                                                                                                      "2023.04.12",
                                                                                                      "cycling",
-                                                                                                     "cyclist_name",
-                                                                                                     "1234",
+                                                                                                     "cyclist_name-1234",
                                                                                                      "nb-1-big-TOC.txt");
                 client.streamSSTableComponent(sidecarInstance, fileInfo, null, mockStreamConsumer);
                 expectedPath = fileInfo.componentDownloadUrl();
@@ -1199,8 +1240,7 @@ abstract class SidecarClientTest
                                                                                                      server.getPort(), 0,
                                                                                                      "2023.04.12",
                                                                                                      "cycling",
-                                                                                                     "cyclist_name",
-                                                                                                     "1234",
+                                                                                                     "cyclist_name-1234",
                                                                                                      "nb-1-big-TOC.txt");
                 client.streamSSTableComponent(sidecarInstance, fileInfo, HttpRange.of(10, 20), mockStreamConsumer);
                 expectedPath = fileInfo.componentDownloadUrl();
