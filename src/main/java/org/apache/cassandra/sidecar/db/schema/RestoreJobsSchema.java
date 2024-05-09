@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
  * to {@link org.apache.cassandra.sidecar.db.RestoreJob} like inserting a restore job, updating a restore job,
  * finding restore jobs and more
  */
-public class RestoreJobsSchema extends AbstractSchema.TableSchema
+public class RestoreJobsSchema extends TableSchema
 {
     private static final String RESTORE_JOB_TABLE_NAME = "restore_job_v2";
 

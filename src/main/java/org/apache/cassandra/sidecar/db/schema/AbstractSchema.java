@@ -28,7 +28,7 @@ import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class AbstractSchema
+abstract class AbstractSchema
 {
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     private boolean initialized = false;
@@ -73,12 +73,4 @@ public abstract class AbstractSchema
     protected abstract boolean exists(@NotNull Metadata metadata);
 
     protected abstract String createSchemaStatement();
-
-    /**
-     * Abstract base schema class for table schema
-     */
-    public abstract static class TableSchema extends AbstractSchema
-    {
-
-    }
 }
