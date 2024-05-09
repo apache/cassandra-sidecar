@@ -26,9 +26,9 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Range;
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
@@ -44,7 +44,6 @@ import net.bytebuddy.pool.TypePool;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
-import org.apache.cassandra.utils.Shared;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
@@ -61,6 +60,7 @@ class MovingMultiDCTest extends MovingBaseTest
     {
         BBHelperMovingNodeMultiDC.reset();
         UpgradeableCluster cluster = getMultiDCCluster(BBHelperMovingNodeMultiDC::install, cassandraTestContext);
+        sidecarTestContext.refreshInstancesConfig(); // refresh to allow sidecar connecting to the up nodes
 
         long moveTarget = getMoveTargetToken(cluster);
         runMovingTestScenario(context,
@@ -173,7 +173,6 @@ class MovingMultiDCTest extends MovingBaseTest
     /**
      * ByteBuddy Helper for a multiDC moving node
      */
-    @Shared
     public static class BBHelperMovingNodeMultiDC
     {
         static CountDownLatch transientStateStart = new CountDownLatch(1);
@@ -201,7 +200,7 @@ class MovingMultiDCTest extends MovingBaseTest
         {
             Future<?> res = orig.call();
             transientStateStart.countDown();
-            Uninterruptibles.awaitUninterruptibly(transientStateEnd);
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
             return res;
         }
 

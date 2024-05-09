@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.Uninterruptibles;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.junit5.VertxTestContext;
@@ -88,7 +87,7 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
                                        .success()).start();
 
             // Wait until nodes have reached expected state
-            Uninterruptibles.awaitUninterruptibly(transientStateStart, 2, TimeUnit.MINUTES);
+            awaitLatchOrTimeout(transientStateStart, 2, TimeUnit.MINUTES);
             ClusterUtils.awaitRingState(seed, movingNode, "Moving");
 
             retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {

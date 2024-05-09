@@ -23,7 +23,6 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.utils.UUIDs;
@@ -51,7 +50,7 @@ class RestoreJobsDatabaseAccessorIntTest extends IntegrationTestBase
         vertx.eventBus()
              .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> latch.countDown());
 
-        Uninterruptibles.awaitUninterruptibly(latch, 10, TimeUnit.SECONDS);
+        awaitLatchOrTimeout(latch, 10, TimeUnit.SECONDS);
         assertThat(accessor.findAllRecent(3)).isEmpty();
 
         QualifiedTableName qualifiedTableName = new QualifiedTableName("ks", "tbl");

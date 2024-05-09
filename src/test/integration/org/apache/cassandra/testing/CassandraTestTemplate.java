@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
@@ -40,6 +41,7 @@ import com.vdurmont.semver4j.Semver;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.TokenSupplier;
+import org.apache.cassandra.distributed.impl.AbstractCluster;
 import org.apache.cassandra.distributed.shared.Versions;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 
@@ -142,6 +144,9 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
         private BeforeEachCallback beforeEach()
         {
+            Predicate<String> extra = c -> {
+                return c.contains("BBHelper") || c.contains("BootstrapState");
+            };
             return beforeEachCtx -> {
                 CassandraIntegrationTest annotation = getCassandraIntegrationTestAnnotation(context, true);
                 // spin up a C* cluster using the in-jvm dtest
@@ -162,6 +167,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                                   .withDynamicPortAllocation(true) // to allow parallel test runs
                                   .withVersion(requestedVersion)
                                   .withDCs(dcCount)
+                                  .withSharedClasses(extra.or(AbstractCluster.SHARED_PREDICATE))
                                   .withDataDirCount(annotation.numDataDirsPerInstance())
                                   .withConfig(config -> annotationToFeatureList(annotation).forEach(config::with));
                 TokenSupplier tokenSupplier = TokenSupplier.evenlyDistributedTokens(finalNodeCount,

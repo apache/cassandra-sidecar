@@ -25,10 +25,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 import com.google.common.collect.Range;
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
@@ -260,7 +260,6 @@ class LeavingTest extends LeavingBaseTest
     /**
      * ByteBuddy Helper for a single leaving node
      */
-    @Shared
     public static class BBHelperSingleLeavingNode
     {
         static CountDownLatch transientStateStart = new CountDownLatch(1);
@@ -288,7 +287,7 @@ class LeavingTest extends LeavingBaseTest
         public static void unbootstrap(@SuperCall Callable<?> orig) throws Exception
         {
             transientStateStart.countDown();
-            Uninterruptibles.awaitUninterruptibly(transientStateEnd);
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
             orig.call();
         }
 
@@ -330,7 +329,7 @@ class LeavingTest extends LeavingBaseTest
         public static void unbootstrap(@SuperCall Callable<?> orig) throws Exception
         {
             transientStateStart.countDown();
-            Uninterruptibles.awaitUninterruptibly(transientStateEnd);
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
             orig.call();
         }
 
@@ -372,7 +371,7 @@ class LeavingTest extends LeavingBaseTest
         public static void unbootstrap(@SuperCall Callable<?> orig) throws Exception
         {
             transientStateStart.countDown();
-            Uninterruptibles.awaitUninterruptibly(transientStateEnd);
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
             orig.call();
         }
 

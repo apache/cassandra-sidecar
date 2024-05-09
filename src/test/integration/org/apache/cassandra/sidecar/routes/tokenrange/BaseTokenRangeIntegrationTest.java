@@ -138,8 +138,7 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
                                                                                    1);
 
         int totalNodeCount = (annotation.nodesPerDc() + annotation.newNodesPerDc()) * annotation.numDcs();
-        return cassandraTestContext.configureAndStartCluster(
-        builder -> {
+        return cassandraTestContext.configureAndStartCluster(builder -> {
             builder.withInstanceInitializer(initializer);
             builder.withTokenSupplier(mdcTokenSupplier);
             builder.withNodeIdTopology(networkTopology(totalNodeCount,

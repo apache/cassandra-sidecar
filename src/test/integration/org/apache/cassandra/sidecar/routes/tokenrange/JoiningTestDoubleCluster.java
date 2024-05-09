@@ -20,33 +20,23 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 
 import java.math.BigInteger;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Range;
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.dynamic.ClassFileLocator;
-import net.bytebuddy.dynamic.TypeResolutionStrategy;
-import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
-import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import net.bytebuddy.pool.TypePool;
+import org.apache.cassandra.db.SystemKeyspace;
+import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
-import org.apache.cassandra.utils.Shared;
-
-import static net.bytebuddy.matcher.ElementMatchers.named;
-import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
 /**
  * Cluster expansion scenarios integration tests for token range replica mapping endpoint with the in-jvm
@@ -173,7 +163,6 @@ public class JoiningTestDoubleCluster extends JoiningBaseTest
     /**
      * ByteBuddy helper for doubling cluster size
      */
-    @Shared
     public static class BBHelperDoubleClusterSize
     {
         static CountDownLatch transientStateStart = new CountDownLatch(5);
@@ -185,27 +174,19 @@ public class JoiningTestDoubleCluster extends JoiningBaseTest
             // We intercept the bootstrap of the new nodes (6-10) to validate token ranges
             if (nodeNumber > 5)
             {
-                TypePool typePool = TypePool.Default.of(cl);
-                TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")
-                                                      .resolve();
-                new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                               .method(named("bootstrap").and(takesArguments(2)))
-                               .intercept(MethodDelegation.to(BBHelperDoubleClusterSize.class))
-                               // Defer class loading until all dependencies are loaded
-                               .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
-                               .load(cl, ClassLoadingStrategy.Default.INJECTION);
+                BootstrapBBUtils.installSetBoostrapStateIntercepter(cl, BBHelperDoubleClusterSize.class);
             }
         }
 
-        public static boolean bootstrap(Collection<?> tokens,
-                                        long bootstrapTimeoutMillis,
-                                        @SuperCall Callable<Boolean> orig) throws Exception
+        public static void setBootstrapState(SystemKeyspace.BootstrapState state, @SuperCall Callable<Void> orig) throws Exception
         {
-            boolean result = orig.call();
-            // trigger bootstrap start and wait until bootstrap is ready from test
-            transientStateStart.countDown();
-            Uninterruptibles.awaitUninterruptibly(transientStateEnd);
-            return result;
+            if (state == SystemKeyspace.BootstrapState.COMPLETED)
+            {
+                // trigger bootstrap start and wait until bootstrap is ready from test
+                transientStateStart.countDown();
+                awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
+            }
+            orig.call();
         }
 
         public static void reset()

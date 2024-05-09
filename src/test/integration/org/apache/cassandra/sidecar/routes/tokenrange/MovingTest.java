@@ -26,9 +26,9 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Range;
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
@@ -45,7 +45,6 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
-import org.apache.cassandra.utils.Shared;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
@@ -133,7 +132,6 @@ class MovingTest extends MovingBaseTest
     /**
      * ByteBuddy Helper for a single moving node
      */
-    @Shared
     public static class BBHelperMovingNode
     {
         static CountDownLatch transientStateStart = new CountDownLatch(1);
@@ -161,7 +159,7 @@ class MovingTest extends MovingBaseTest
         {
             Future<?> res = orig.call();
             transientStateStart.countDown();
-            Uninterruptibles.awaitUninterruptibly(transientStateEnd);
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
             return res;
         }
 

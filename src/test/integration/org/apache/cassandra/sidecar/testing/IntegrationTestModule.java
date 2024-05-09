@@ -18,16 +18,14 @@
 
 package org.apache.cassandra.sidecar.testing;
 
-import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
+import com.datastax.driver.core.Session;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -40,6 +38,7 @@ import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
@@ -84,13 +83,26 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public CQLSessionProvider cqlSessionProvider(Vertx vertx, InstancesConfig instancesConfig)
     {
-        // cql session provider uses local instances as contacts
-        List<InetSocketAddress> addresses = instancesConfig.instances()
-                                                           .stream()
-                                                           .map(i -> new InetSocketAddress(i.host(), i.port()))
-                                                           .collect(Collectors.toList());
-        CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
-                                                                               0, SharedExecutorNettyOptions.INSTANCE);
+        CQLSessionProvider cqlSessionProvider = new CQLSessionProvider()
+        {
+            @Override
+            public @Nullable Session get()
+            {
+                return cassandraTestContext.session();
+            }
+
+            @Override
+            public void close()
+            {
+                cassandraTestContext.closeSessionProvider();
+            }
+
+            @Override
+            public @Nullable Session getIfConnected()
+            {
+                return get();
+            }
+        };
         vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
         return cqlSessionProvider;
     }

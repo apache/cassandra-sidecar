@@ -186,6 +186,9 @@ class DelegateIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(nodesPerDc = 2, newNodesPerDc = 1, startCluster = false)
     public void testChangingClusterSize(VertxTestContext context) throws InterruptedException
     {
+        // assume the sidecar has 3 managed instances, even though the cluster only starts with 2 instances initially
+        sidecarTestContext.setNumInstancesToManage(3);
+
         EventBus eventBus = vertx.eventBus();
 
         Checkpoint jmxConnected = context.checkpoint(3);
