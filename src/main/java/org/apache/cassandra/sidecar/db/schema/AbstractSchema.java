@@ -28,7 +28,7 @@ import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.jetbrains.annotations.NotNull;
 
-abstract class AbstractSchema
+public abstract class AbstractSchema
 {
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     private boolean initialized = false;
