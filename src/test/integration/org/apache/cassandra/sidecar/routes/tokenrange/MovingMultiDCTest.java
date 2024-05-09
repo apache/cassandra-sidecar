@@ -60,7 +60,6 @@ class MovingMultiDCTest extends MovingBaseTest
     {
         BBHelperMovingNodeMultiDC.reset();
         UpgradeableCluster cluster = getMultiDCCluster(BBHelperMovingNodeMultiDC::install, cassandraTestContext);
-        sidecarTestContext.refreshInstancesConfig(); // refresh to allow sidecar connecting to the up nodes
 
         long moveTarget = getMoveTargetToken(cluster);
         runMovingTestScenario(context,

@@ -64,8 +64,6 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
     throws Exception
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
-        // refresh instances config in order to allow sidecar connect to up nodes
-        sidecarTestContext.refreshInstancesConfig();
         try
         {
             Set<String> dcReplication;

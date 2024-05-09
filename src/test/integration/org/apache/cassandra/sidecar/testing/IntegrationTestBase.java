@@ -199,6 +199,8 @@ public abstract class IntegrationTestBase
         {
             try
             {
+                sidecarTestContext.refreshInstancesConfig();
+
                 Session session = maybeGetSession();
 
                 session.execute("CREATE KEYSPACE IF NOT EXISTS " + TEST_KEYSPACE +
