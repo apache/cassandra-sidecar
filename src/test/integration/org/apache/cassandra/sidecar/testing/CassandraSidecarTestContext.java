@@ -297,7 +297,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
     @NotNull
     private List<InstanceConfig> buildInstanceConfigs(UpgradeableCluster cluster)
     {
-        int nodes = numInstancesToManage == -1 ? cluster.size(): numInstancesToManage;
+        int nodes = numInstancesToManage == -1 ? cluster.size() : numInstancesToManage;
         return IntStream.range(1, nodes + 1)
                         .mapToObj(nodeNum -> {
                             // check whether the instances are managed by the test framework first. Because the nodeNum might be greater than the cluster size
