@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -70,8 +71,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
     private final DnsResolver dnsResolver;
     private final AbstractCassandraTestContext abstractCassandraTestContext;
     private final Vertx vertx;
-    private final int numInstancesToManage;
     private final List<InstanceConfigListener> instanceConfigListeners;
+    private int numInstancesToManage;
     public InstancesConfig instancesConfig;
     private List<JmxClient> jmxClients;
     private CQLSessionProvider sessionProvider;
@@ -156,22 +157,42 @@ public class CassandraSidecarTestContext implements AutoCloseable
         return cluster;
     }
 
+    public void setNumInstancesToManage(int numInstancesToManage)
+    {
+        this.numInstancesToManage = numInstancesToManage;
+        refreshInstancesConfig();
+    }
+
     public InstancesConfig instancesConfig()
     {
-        // rebuild instances config if cluster changed
-        if (instancesConfig == null
-            || instancesConfig.instances().size() != numInstancesToManage)
+        if (instancesConfig == null)
         {
-            // clean-up any open sessions or client resources
-            close();
-            setInstancesConfig();
+            refreshInstancesConfig();
         }
+        return this.instancesConfig;
+    }
+
+    public InstancesConfig refreshInstancesConfig()
+    {
+        // clean-up any open sessions or client resources
+        close();
+        setInstancesConfig();
         return this.instancesConfig;
     }
 
     public Session session()
     {
-        return sessionProvider.get();
+        return sessionProvider == null ? null : sessionProvider.get();
+    }
+
+    public void closeSessionProvider()
+    {
+        if (sessionProvider == null)
+        {
+            return;
+        }
+
+        sessionProvider.close();
     }
 
     @Override
@@ -190,20 +211,6 @@ public class CassandraSidecarTestContext implements AutoCloseable
         {
             instancesConfig.instances().forEach(instance -> instance.delegate().close());
         }
-    }
-
-    public JmxClient jmxClient()
-    {
-        return jmxClient(0);
-    }
-
-    private JmxClient jmxClient(int instance)
-    {
-        if (jmxClients == null)
-        {
-            setInstancesConfig();
-        }
-        return jmxClients.get(instance);
     }
 
     private void setInstancesConfig()
@@ -227,6 +234,10 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                                      0, SharedExecutorNettyOptions.INSTANCE);
         for (int i = 0; i < configs.size(); i++)
         {
+            if (configs.get(i) == null)
+            {
+                continue;
+            }
             IInstanceConfig config = configs.get(i);
             String hostName = JMXUtil.getJmxHost(config);
             int nativeTransportPort = tryGetIntConfig(config, "native_transport_port", 9042);
@@ -277,6 +288,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
         // Always return the complete list of addresses even if the cluster isn't yet that large
         // this way, we populate the entire local instance list
         return configs.stream()
+                      .filter(Objects::nonNull)
                       .map(config -> new InetSocketAddress(config.broadcastAddress().getAddress(),
                                                            tryGetIntConfig(config, "native_transport_port", 9042)))
                       .collect(Collectors.toList());
@@ -285,10 +297,25 @@ public class CassandraSidecarTestContext implements AutoCloseable
     @NotNull
     private List<InstanceConfig> buildInstanceConfigs(UpgradeableCluster cluster)
     {
-        return IntStream.range(1, numInstancesToManage + 1)
-                        .mapToObj(nodeNum ->
-                                  AbstractClusterUtils.createInstanceConfig(cluster, nodeNum))
+        int nodes = numInstancesToManage == -1 ? cluster.size() : numInstancesToManage;
+        return IntStream.range(1, nodes + 1)
+                        .mapToObj(nodeNum -> {
+                            // check whether the instances are managed by the test framework first. Because the nodeNum might be greater than the cluster size
+                            if (manageInstanceByTestFramework() && cluster.get(nodeNum).isShutdown())
+                            {
+                                return null;
+                            }
+                            else
+                            {
+                                return AbstractClusterUtils.createInstanceConfig(cluster, nodeNum);
+                            }
+                        })
                         .collect(Collectors.toList());
+    }
+
+    private boolean manageInstanceByTestFramework()
+    {
+        return numInstancesToManage == -1;
     }
 
     /**

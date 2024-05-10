@@ -378,6 +378,17 @@ tasks.register("integrationTest", Test) {
     forkEvery = 1 // DTest framework tends to have issues without forkEvery test class
     maxHeapSize = integrationMaxHeapSize
     maxParallelForks = integrationMaxParallelForks
+
+    afterTest { descriptor, result ->
+        def totalTime = (result.endTime - result.startTime) / 1000.0
+        logger.lifecycle("--")
+        if (totalTime >= 60) { // log the tests that take 1 minute and more
+            logger.warn("$descriptor.displayName took $totalTime s")
+        }
+        else {
+            logger.info("$descriptor.displayName took $totalTime s")
+        }
+    }
 }
 
 tasks.register("containerTest", Test) {

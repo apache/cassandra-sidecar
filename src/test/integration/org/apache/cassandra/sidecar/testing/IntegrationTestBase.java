@@ -133,11 +133,11 @@ public abstract class IntegrationTestBase
      * Defaults to the entire cluster.
      *
      * @param clusterSize the size of the cluster as defined by the integration test
-     * @return the number of instances to manage
+     * @return the number of instances to manage; or -1 to let test framework to determine the cluster size at the runtime
      */
     protected int getNumInstancesToManage(int clusterSize)
     {
-        return clusterSize;
+        return -1;
     }
 
     @AfterEach
@@ -199,6 +199,8 @@ public abstract class IntegrationTestBase
         {
             try
             {
+                sidecarTestContext.refreshInstancesConfig();
+
                 Session session = maybeGetSession();
 
                 session.execute("CREATE KEYSPACE IF NOT EXISTS " + TEST_KEYSPACE +
@@ -236,6 +238,13 @@ public abstract class IntegrationTestBase
         QualifiedTableName tableName = uniqueTestTableFullName(tablePrefix);
         session.execute(String.format(createTableStatement, tableName));
         return tableName;
+    }
+
+    protected static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit)
+    {
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit))
+        .describedAs("Latch times out after " + duration + ' ' + timeUnit.name())
+        .isTrue();
     }
 
     protected Session maybeGetSession()

@@ -73,12 +73,4 @@ abstract class AbstractSchema
     protected abstract boolean exists(@NotNull Metadata metadata);
 
     protected abstract String createSchemaStatement();
-
-    /**
-     * Abstract base schema class for table schema
-     */
-    public abstract static class TableSchema extends AbstractSchema
-    {
-
-    }
 }

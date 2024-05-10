@@ -27,12 +27,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.Uninterruptibles;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.junit5.VertxTestContext;
@@ -84,7 +84,7 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
             }
 
             // Wait until nodes have reached expected state
-            Uninterruptibles.awaitUninterruptibly(transientStateStart);
+            awaitLatchOrTimeout(transientStateStart, 2, TimeUnit.MINUTES);
 
             for (IUpgradeableInstance node : leavingNodes)
             {

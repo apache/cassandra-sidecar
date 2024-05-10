@@ -49,6 +49,12 @@ public class CQLSessionProviderTest extends IntegrationTestBase
     public static final String OK_KEYSPACE_RESPONSE_START = "{\"schema\":\"CREATE KEYSPACE ";
     public static final String KEYSPACE_FAILED_RESPONSE_START = "{\"status\":\"Service Unavailable\",";
 
+    @Override
+    protected int getNumInstancesToManage(int clusterSize)
+    {
+        return 2;
+    }
+
     @CassandraIntegrationTest(nodesPerDc = 2, startCluster = false)
     void testCqlSessionProviderWorksAsExpected(VertxTestContext context, CassandraTestContext cassandraTestContext)
     throws Exception

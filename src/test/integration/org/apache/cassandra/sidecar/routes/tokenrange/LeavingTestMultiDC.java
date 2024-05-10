@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Range;
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
@@ -43,7 +43,6 @@ import net.bytebuddy.pool.TypePool;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
-import org.apache.cassandra.utils.Shared;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
@@ -156,7 +155,6 @@ class LeavingTestMultiDC extends LeavingBaseTest
     /**
      * ByteBuddy helper for multiple leaving nodes multi-DC
      */
-    @Shared
     public static class BBHelperLeavingNodesMultiDC
     {
         static CountDownLatch transientStateStart = new CountDownLatch(2);
@@ -184,7 +182,7 @@ class LeavingTestMultiDC extends LeavingBaseTest
         public static void unbootstrap(@SuperCall Callable<?> orig) throws Exception
         {
             transientStateStart.countDown();
-            Uninterruptibles.awaitUninterruptibly(transientStateEnd);
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
             orig.call();
         }
 

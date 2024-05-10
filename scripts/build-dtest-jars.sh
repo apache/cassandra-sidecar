@@ -22,6 +22,7 @@ CANDIDATE_BRANCHES=(
   "cassandra-4.0:1f79c8492528f01bcc5f88951a1cc9e0d7265c54"
   "cassandra-4.1:725655dda2776fef35567496a6e331102eb7610d"
   "cassandra-5.0:f19dd0bb1309c35535876e8f0f996ad2b76adda5"
+  # note the trunk hash cannot be advanced beyond ae0842372ff6dd1437d026f82968a3749f555ff4 (TCM), which breaks integration test
   "trunk:2a5e1b77c9f8a205dbec1afdea3f4ed1eaf6a4eb"
 )
 BRANCHES=( ${BRANCHES:-cassandra-4.0 cassandra-4.1 cassandra-5.0 trunk} )
@@ -99,3 +100,7 @@ for index in "${!CANDIDATE_BRANCHES[@]}"; do
       exit ${RETURN}
   fi
 done
+
+# Remove the build directory enclosing all Cassandra branches just cloned,
+# in order to not confuse IDE's indexing
+rm -rf ${BUILD_DIR}

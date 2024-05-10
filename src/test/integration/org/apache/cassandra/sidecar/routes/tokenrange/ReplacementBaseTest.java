@@ -25,25 +25,29 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.Uninterruptibles;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.config.CassandraRelevantProperties;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.impl.AbstractCluster;
 import org.apache.cassandra.distributed.shared.ClusterUtils;
+import org.apache.cassandra.distributed.shared.NetworkTopology;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
@@ -95,9 +99,9 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
 
             stopNodes(seed, nodesToRemove);
             List<IUpgradeableInstance> newNodes = startReplacementNodes(nodeStart, cluster, nodesToRemove);
-
+            sidecarTestContext.refreshInstancesConfig();
             // Wait until replacement nodes are in JOINING state
-            Uninterruptibles.awaitUninterruptibly(transientStateStart, 2, TimeUnit.MINUTES);
+            awaitLatchOrTimeout(transientStateStart, 2, TimeUnit.MINUTES);
 
             // Verify state of replacement nodes
             for (IUpgradeableInstance newInstance : newNodes)
@@ -158,16 +162,17 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
             String remAddress = removedConfig.broadcastAddress().getAddress().getHostAddress();
             int remPort = removedConfig.getInt("storage_port");
             IUpgradeableInstance replacement =
-            ClusterUtils.addInstance(cluster, removedConfig,
-                                     c -> {
-                                         c.set("auto_bootstrap", true);
-                                         // explicitly DOES NOT set instances that failed startup as "shutdown"
-                                         // so subsequent attempts to shut down the instance are honored
-                                         c.set("dtest.api.startup.failure_as_shutdown", false);
-                                         c.with(Feature.GOSSIP,
-                                                Feature.JMX,
-                                                Feature.NATIVE_PROTOCOL);
-                                     });
+            addInstanceLocal(cluster, removedConfig.localDatacenter(), removedConfig.localRack(),
+                             c -> {
+                                 c.set("auto_bootstrap", true);
+                                 // explicitly DOES NOT set instances that failed startup as "shutdown"
+                                 // so subsequent attempts to shut down the instance are honored
+                                 c.set("dtest.api.startup.failure_as_shutdown", false);
+                                 c.with(Feature.GOSSIP,
+                                        Feature.JMX,
+                                        Feature.NATIVE_PROTOCOL);
+                                 c.set("storage_port", remPort);
+                             });
 
             new Thread(() -> ClusterUtils.start(replacement, (properties) -> {
                 properties.set(CassandraRelevantProperties.BOOTSTRAP_SKIP_SCHEMA_CHECK, true);
@@ -182,10 +187,23 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
                 properties.with("cassandra.replace_address_first_boot", remAddress + ":" + remPort);
             })).start();
 
-            Uninterruptibles.awaitUninterruptibly(nodeStart, 2, TimeUnit.MINUTES);
+            awaitLatchOrTimeout(nodeStart, 2, TimeUnit.MINUTES);
             newNodes.add(replacement);
         }
         return newNodes;
+    }
+
+    public static <I extends IInstance> I addInstanceLocal(AbstractCluster<I> cluster,
+                                                           String dc,
+                                                           String rack,
+                                                           Consumer<IInstanceConfig> fn)
+    {
+        Objects.requireNonNull(dc, "dc");
+        Objects.requireNonNull(rack, "rack");
+        IInstanceConfig config = cluster.newInstanceConfig();
+        fn.accept(config);
+        config.networkTopology().put(config.broadcastAddress(), NetworkTopology.dcAndRack(dc, rack));
+        return cluster.bootstrap(config);
     }
 
     private void stopNodes(IUpgradeableInstance seed, List<IUpgradeableInstance> removedNodes)
@@ -195,6 +213,7 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
             ClusterUtils.stopUnchecked(nodeToRemove);
             ClusterUtils.awaitRingStatus(seed, nodeToRemove, "Down");
         }
+        sidecarTestContext.refreshInstancesConfig();
     }
 
     private void validateReplicaMapping(TokenRangeReplicasResponse mappingResponse,
