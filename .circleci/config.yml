@@ -38,7 +38,6 @@ aliases:
       TERM: dumb
       TZ: "America/Los_Angeles"
 
-# we might modify this in the future to accept a parameter for the java package to install
 commands:
   install_common:
     steps:
@@ -237,6 +236,7 @@ jobs:
     steps:
       - install_common
       - checkout
+      - run: sudo apt --fix-broken install
       - run: ./gradlew --info clean buildDeb
       - run: DEBIAN_FRONTEND=noninteractive sudo apt install -y ./build/distributions/cassandra-sidecar*.deb
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
