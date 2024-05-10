@@ -99,7 +99,7 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
 
             stopNodes(seed, nodesToRemove);
             List<IUpgradeableInstance> newNodes = startReplacementNodes(nodeStart, cluster, nodesToRemove);
-
+            sidecarTestContext.refreshInstancesConfig();
             // Wait until replacement nodes are in JOINING state
             awaitLatchOrTimeout(transientStateStart, 2, TimeUnit.MINUTES);
 
@@ -213,6 +213,7 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
             ClusterUtils.stopUnchecked(nodeToRemove);
             ClusterUtils.awaitRingStatus(seed, nodeToRemove, "Down");
         }
+        sidecarTestContext.refreshInstancesConfig();
     }
 
     private void validateReplicaMapping(TokenRangeReplicasResponse mappingResponse,
