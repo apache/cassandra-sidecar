@@ -71,6 +71,7 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
         {
             try
             {
+                cluster = null; // make sure cluster is null
                 cluster = configureCluster(configurator);
                 cluster.startup();
                 return cluster;

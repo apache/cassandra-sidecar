@@ -40,92 +40,103 @@ aliases:
 
 # we might modify this in the future to accept a parameter for the java package to install
 commands:
-  install_java:
-    description: "Installs Java using AdoptOpenJDK"
-    parameters:
-      version:
-        type: string
-    steps:
-      - run: wget -qO - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
-      - run: sudo add-apt-repository --yes https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y << parameters.version>>
-
   install_common:
-    description: "Installs common software and certificates"
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+        # Somehow, the certs already installed in the java 11 image are installed strangely
+        # in that there's a directory called `cacerts` with a symlink in it named `cacerts`
+        # (/etc/ssl/certs/java/cacerts/cacerts) rather than just a symlink to
+        # `cacerts` in the /etc/ssl/certs/java directory - if this is the case, fix it by
+        # moving it down a directory and then ant should install cleanly
+      - run: |
+          if [ -f /etc/ssl/certs/java/cacerts/cacerts ]; then
+              sudo mv /etc/ssl/certs/java/cacerts/ /etc/ssl/certs/java/cacerts-old
+              sudo mv /etc/ssl/certs/java/cacerts-old/cacerts /etc/ssl/certs/java/
+              sudo rmdir /etc/ssl/certs/java/cacerts-old
+          fi
+        # The image already has java installed, but `apt-get install ant` reinstalls it.
+        # Therefore, we download just the deb package for ant and install it with dpkg.
+      - run: |
+          apt-get download ant ant-optional
+          sudo dpkg --force-all -i ant*.deb
+          rm ant*.deb
+      # We need aliases for localhost2,localhost3, ..., localhost20 in hosts
+      - run: |
+          sudo bash -c 'for i in {2..20}; do echo 127.0.0.${i} localhost${i} >> /etc/hosts; done'
+          cat /etc/hosts
 
 jobs:
   # Runs java 8 tests on a docker image
   unit_java8:
     docker:
-     - image: cimg/openjdk:8.0
+      - image: cimg/openjdk:8.0
     environment:
       skipIntegrationTest: true
     steps:
-     - setup_remote_docker
-     - checkout
-     - run: ./gradlew --info check -x integrationTest --stacktrace
+      - install_common
+      - setup_remote_docker
+      - checkout
+      - run: ./gradlew check -x integrationTest --stacktrace
 
-     - store_artifacts:
-         path: build/reports
-         destination: test-reports
+      - store_artifacts:
+          path: build/reports
+          destination: test-reports
 
-     - store_artifacts:
-         path: build/test-results/
-         destination: test-results
+      - store_artifacts:
+          path: build/test-results/
+          destination: test-results
 
-     - store_test_results:
-         path: build/test-results/
+      - store_test_results:
+          path: build/test-results/
 
   integration_cassandra_40_java8:
     docker:
-     - image: circleci/openjdk:8-jdk-stretch
+      - image: cimg/openjdk:8.0
     environment:
       INTEGRATION_MAX_PARALLEL_FORKS: 2
       INTEGRATION_MAX_HEAP_SIZE: "3500M"
     resource_class: large
     steps:
-     - checkout
-     # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
-     - run: BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
-     - run: ./gradlew --no-daemon -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - install_common
+      - checkout
+      # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
+      - run: BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
+      - run: ./gradlew --no-daemon -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
-     - store_artifacts:
-         path: build/reports
-         destination: test-reports
+      - store_artifacts:
+          path: build/reports
+          destination: test-reports
 
-     - store_artifacts:
-         path: build/test-results/
-         destination: test-results
+      - store_artifacts:
+          path: build/test-results/
+          destination: test-results
 
-     - store_test_results:
-         path: build/test-results/
+      - store_test_results:
+          path: build/test-results/
 
   integration_cassandra_41_java8:
     docker:
-     - image: circleci/openjdk:8-jdk-stretch
+      - image: cimg/openjdk:8.0
     environment:
       INTEGRATION_MAX_PARALLEL_FORKS: 2
       INTEGRATION_MAX_HEAP_SIZE: "3500M"
     resource_class: large
     steps:
-     - checkout
-     - run: BRANCHES="cassandra-4.1" scripts/build-dtest-jars.sh
-     - run: ./gradlew --no-daemon -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.1" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - install_common
+      - checkout
+      - run: BRANCHES="cassandra-4.1" scripts/build-dtest-jars.sh
+      - run: ./gradlew --no-daemon -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.1" checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
-     - store_artifacts:
-         path: build/reports
-         destination: test-reports
+      - store_artifacts:
+          path: build/reports
+          destination: test-reports
 
-     - store_artifacts:
-         path: build/test-results/
-         destination: test-results
+      - store_artifacts:
+          path: build/test-results/
+          destination: test-results
 
-     - store_test_results:
-         path: build/test-results/
+      - store_test_results:
+          path: build/test-results/
 
   # Runs java 11 tests on a docker image
   unit_java11:
@@ -135,8 +146,9 @@ jobs:
       skipIntegrationTest: true
     steps:
       - setup_remote_docker
+      - install_common
       - checkout
-      - run: ./gradlew --info check -x integrationTest --stacktrace
+      - run: ./gradlew check -x integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -147,16 +159,17 @@ jobs:
 
   integration_cassandra_40_java11:
     docker:
-      - image: circleci/openjdk:11-jdk-stretch
+      - image: cimg/openjdk:11.0
     environment:
       INTEGRATION_MAX_PARALLEL_FORKS: 2
       INTEGRATION_MAX_HEAP_SIZE: "3500M"
     resource_class: large
     steps:
+      - install_common
       - checkout
       # Cassandra 4.0 jar seems to be missing some dependencies, so we use 4.1 here (this is what we currently do)
       - run: BRANCHES="cassandra-4.0 cassandra-4.1" CASSANDRA_USE_JDK11=true scripts/build-dtest-jars.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - run: ./gradlew --no-daemon -PdtestVersion=4.1.4 -Dcassandra.sidecar.versions_to_test="4.0" checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -171,15 +184,16 @@ jobs:
 
   integration_cassandra_50_java11:
     docker:
-      - image: circleci/openjdk:11-jdk-stretch
+      - image: cimg/openjdk:11.0
     environment:
       INTEGRATION_MAX_PARALLEL_FORKS: 2
       INTEGRATION_MAX_HEAP_SIZE: "3500M"
     resource_class: large
     steps:
+      - install_common
       - checkout
       - run: BRANCHES="cassandra-5.0" scripts/build-dtest-jars.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=5.0-alpha2 -Dcassandra.sidecar.versions_to_test="5.0" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - run: ./gradlew --no-daemon -PdtestVersion=5.0-alpha2 -Dcassandra.sidecar.versions_to_test="5.0" checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -194,15 +208,16 @@ jobs:
 
   integration_cassandra_trunk_java11:
     docker:
-      - image: circleci/openjdk:11-jdk-stretch
+      - image: cimg/openjdk:11.0
     environment:
       INTEGRATION_MAX_PARALLEL_FORKS: 2
       INTEGRATION_MAX_HEAP_SIZE: "3500M"
     resource_class: large
     steps:
+      - install_common
       - checkout
       - run: BRANCHES="trunk" scripts/build-dtest-jars.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" --info checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
+      - run: ./gradlew --no-daemon -PdtestVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" checkstyleIntegrationTest spotbugsIntegrationTest integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -218,10 +233,11 @@ jobs:
   # ensures we can build and install deb packages
   deb_build_install:
     docker:
-      - image: circleci/openjdk:11-jdk-stretch
+      - image: cimg/openjdk:11.0
     steps:
+      - install_common
       - checkout
-      - run: ./gradlew -i clean buildDeb
+      - run: ./gradlew --info clean buildDeb
       - run: DEBIAN_FRONTEND=noninteractive sudo apt install -y ./build/distributions/cassandra-sidecar*.deb
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
 
@@ -242,12 +258,13 @@ jobs:
     <<: *base_job
     steps:
       - checkout
-      - run: ./gradlew -i clean jibDockerBuild
+      - run: ./gradlew --info clean jibDockerBuild
 
   docs_build:
     docker:
-      - image: circleci/openjdk:11-jdk-stretch
+      - image: cimg/openjdk:11.0
     steps:
+      - install_common
       - checkout
       - run: ./gradlew docs:asciidoctor
       - run: test -f docs/build/user.html
