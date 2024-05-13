@@ -123,7 +123,7 @@ public class JoiningTestSingleNode extends JoiningBaseTest
             {
                 // trigger bootstrap start and wait until bootstrap is ready from test
                 transientStateStart.countDown();
-                awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
+                awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
             }
             orig.call();
         }

@@ -402,12 +402,24 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
         {
             if (expectTimeout)
             {
-                assertThat(response.failed()).isTrue();
-                context.completeNow();
+                if (response.failed())
+                {
+                    context.completeNow();
+                }
+                else
+                {
+                    context.failNow("Expect timeout, but passed");
+                }
                 return;
             }
 
             HttpResponse<Buffer> httpResponse = response.result();
+            if (httpResponse == null)
+            {
+                context.failNow(new RuntimeException("Failed to get response. Expect status code: " + expectedRetCode, response.cause()));
+                return;
+            }
+
             if (httpResponse.statusCode() != expectedRetCode)
             {
                 context.failNow("Status code mismatched. Expected: " + expectedRetCode +
@@ -418,7 +430,7 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics = uploadMetrics.forComponent("Data.db");
             if (expectedRetCode == HttpResponseStatus.TOO_MANY_REQUESTS.code())
             {
-                assertThat(uploadMetrics.throttled.metric.getValue()).isOne();
+                context.verify(() -> assertThat(uploadMetrics.throttled.metric.getValue()).isOne());
             }
 
             if (responseValidator != null)
@@ -438,9 +450,9 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
             {
                 Path targetFilePath = Paths.get(SnapshotUtils.makeStagingDir(canonicalTemporaryPath),
                                                 uploadId, keyspace, tableName, targetFileName);
-                assertThat(Files.exists(targetFilePath)).isTrue();
                 try
                 {
+                    assertThat(Files.exists(targetFilePath)).isTrue();
                     long expectedSize = Files.size(targetFilePath);
                     assertThat(componentMetrics.bytesUploadedRate.metric.getCount()).isEqualTo(expectedSize);
                     assertThat(uploadMetrics.totalBytesUploadedRate.metric.getCount()).isEqualTo(Files.size(targetFilePath));

@@ -29,6 +29,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Range;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
@@ -51,6 +52,7 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
  * Multi-DC Node movement scenarios integration tests for token range replica mapping endpoint with the in-jvm
  * dtest framework.
  */
+@Tag("heavy")
 @ExtendWith(VertxExtension.class)
 class MovingMultiDCTest extends MovingBaseTest
 {
@@ -199,7 +201,7 @@ class MovingMultiDCTest extends MovingBaseTest
         {
             Future<?> res = orig.call();
             transientStateStart.countDown();
-            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
             return res;
         }
 

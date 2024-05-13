@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.testing;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import org.slf4j.Logger;
@@ -34,6 +36,7 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractCassandraTestContext.class);
 
     public final SimpleCassandraVersion version;
+    private final Map<String, String> initialProperties;
     protected UpgradeableCluster cluster;
 
     public CassandraIntegrationTest annotation;
@@ -45,13 +48,13 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
         this.version = version;
         this.cluster = cluster;
         this.annotation = annotation;
+        this.initialProperties = systemStringProperties();
     }
 
     public AbstractCassandraTestContext(SimpleCassandraVersion version,
                                         CassandraIntegrationTest annotation)
     {
-        this.version = version;
-        this.annotation = annotation;
+        this(version, null, annotation);
     }
 
     public UpgradeableCluster cluster()
@@ -82,11 +85,49 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
                     throw t;
                 }
             }
+            finally
+            {
+                LOGGER.info("Restoring system properties");
+                restoreSystemProperties();
+            }
         }
+    }
+
+    private void restoreSystemProperties()
+    {
+        Map<String, String> currentProps = systemStringProperties();
+        currentProps.forEach((k, v) -> {
+            String initialValue = initialProperties.get(k);
+            if (initialValue == null)
+            {
+                System.clearProperty(k); // remove the added property during test
+            }
+            else if (!v.equals(initialValue))
+            {
+                System.setProperty(k, initialValue); // restore to the initial value
+            }
+            else
+            {
+                // property is not changed, do nothing
+            }
+        });
     }
 
     public int clusterSize()
     {
         return annotation.numDcs() * (annotation.nodesPerDc() + annotation.newNodesPerDc());
+    }
+
+    // return a copy of the current system string properties
+    private Map<String, String> systemStringProperties()
+    {
+        Map<String, String> props = new HashMap<>();
+        System.getProperties().forEach((k, v) -> {
+            if (k instanceof String && v instanceof String)
+            {
+                props.put((String) k, (String) v);
+            }
+        });
+        return props;
     }
 }

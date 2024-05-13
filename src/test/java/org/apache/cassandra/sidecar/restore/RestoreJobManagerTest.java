@@ -24,9 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +48,7 @@ import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.server.MainModule;
 
+import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -85,7 +84,8 @@ class RestoreJobManagerTest
         manager = new RestoreJobManager(restoreJobConfiguration,
                                         instanceMetadata,
                                         executorPools,
-                                        processor);
+                                        processor,
+                                        false /* do not trigger the first deletion */);
     }
 
     @AfterEach
@@ -213,31 +213,31 @@ class RestoreJobManagerTest
     }
 
     @Test
-    void testDeleteObsoleteData() throws ExecutionException, InterruptedException, TimeoutException, IOException
+    void testDeleteObsoleteData() throws IOException
     {
-        Path oldJobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(System.currentTimeMillis()
+        long nowMillis = System.currentTimeMillis();
+        Path oldJobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis
                                                                            - TimeUnit.DAYS.toMillis(jobRecencyDays)
                                                                            - 1)));
         createFileInDirectory(oldJobDir, 5);
 
         Path olderJobDir
-        = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(System.currentTimeMillis()
+        = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis
                                                             - TimeUnit.DAYS.toMillis(jobRecencyDays + 1))));
         createFileInDirectory(olderJobDir, 5);
 
-        Path newJobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(System.currentTimeMillis())));
+        Path newJobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis)));
         createFileInDirectory(newJobDir, 5);
 
-        manager.deleteObsoleteDataAsync()
-               .toCompletionStage()
-               .toCompletableFuture()
-               .get(5, TimeUnit.SECONDS);
-        assertThat(Files.exists(oldJobDir)).describedAs("Should be deleted").isFalse();
-        assertThat(Files.exists(olderJobDir)).describedAs("Should be deleted").isFalse();
-        assertThat(Files.exists(newJobDir)).describedAs("Should survive").isTrue();
-        assertThat(newJobDir.toFile().list())
-        .describedAs("Should have 5 files intact")
-        .hasSize(5);
+        manager.deleteObsoleteDataAsync();
+        loopAssert(3, 10, () -> {
+            assertThat(Files.exists(oldJobDir)).describedAs("Should be deleted").isFalse();
+            assertThat(Files.exists(olderJobDir)).describedAs("Should be deleted").isFalse();
+            assertThat(Files.exists(newJobDir)).describedAs("Should survive").isTrue();
+            assertThat(newJobDir.toFile().list())
+            .describedAs("Should have 5 files intact")
+            .hasSize(5);
+        });
     }
 
     private RestoreSlice getTestSlice()
@@ -276,8 +276,11 @@ class RestoreJobManagerTest
     {
         for (int i = 0; i < nFiles; i++)
         {
-            Files.createFile(Paths.get(path.toString(), UUID.randomUUID().toString()));
+            Files.createFile(Paths.get(path.toString(), "file" + i));
         }
-        assertThat(path.toFile().list()).hasSize(nFiles);
+        loopAssert(1, 10,
+                   () -> assertThat(path.toFile().list())
+                         .describedAs("listing files in " + path.toAbsolutePath())
+                         .hasSize(nFiles));
     }
 }

@@ -43,6 +43,8 @@ import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
+import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Manages the restore job per instance
@@ -64,12 +66,25 @@ public class RestoreJobManager
                              ExecutorPools executorPools,
                              RestoreProcessor restoreProcessor)
     {
+        this(restoreJobConfig, instanceMetadata, executorPools, restoreProcessor, true);
+    }
+
+    @VisibleForTesting
+    public RestoreJobManager(RestoreJobConfiguration restoreJobConfig,
+                             InstanceMetadata instanceMetadata,
+                             ExecutorPools executorPools,
+                             RestoreProcessor restoreProcessor,
+                             boolean deleteOnStart)
+    {
         this.restoreJobConfig = restoreJobConfig;
         this.instanceMetadata = instanceMetadata;
         this.executorPools = executorPools;
         this.processor = restoreProcessor;
         // delete obsolete on start up. Once instance is started, the jobDiscoverer will find the jobs to cleanup
-        deleteObsoleteDataAsync();
+        if (deleteOnStart)
+        {
+            deleteObsoleteDataAsync();
+        }
     }
 
     /**
@@ -206,10 +221,9 @@ public class RestoreJobManager
             {
                 pathStream
                 .sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(File::delete);
+                .forEach(path -> ThrowableUtils.propogate(() -> Files.delete(path)));
             }
-            catch (IOException ioe) // thrown from Files.walk.
+            catch (Exception ioe)
             {
                 LOGGER.warn("Error on deleting data. Path={}", root, ioe);
             }

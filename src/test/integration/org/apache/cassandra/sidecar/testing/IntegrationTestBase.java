@@ -82,10 +82,12 @@ public abstract class IntegrationTestBase
     protected WebClient client;
     protected CassandraSidecarTestContext sidecarTestContext;
     protected Injector injector;
+    private final List<Throwable> testExceptions = new ArrayList<>();
 
     @BeforeEach
     void setup(AbstractCassandraTestContext cassandraTestContext, TestInfo testInfo) throws InterruptedException
     {
+        testExceptions.clear();
         IntegrationTestModule integrationTestModule = new IntegrationTestModule();
         System.setProperty("cassandra.testtag", testInfo.getTestClass().get().getCanonicalName());
         System.setProperty("suitename", testInfo.getDisplayName() + ": " + cassandraTestContext.version);
@@ -240,11 +242,31 @@ public abstract class IntegrationTestBase
         return tableName;
     }
 
+    // similar to awaitLatchOrTimeout, it throws either test exceptions (due to startAsync failures) or timeout exception
+    protected void awaitLatchOrThrow(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
+    {
+        String hint = latchName == null ? "" : '(' + latchName + ')';
+        boolean completed = Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit);
+        if (completed)
+        {
+            return;
+        }
+
+        throwIfHasTestExceptions();
+        throw new AssertionError("Latch " + hint + " times out after " + duration + ' ' + timeUnit.name());
+    }
+
+    protected static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
+    {
+        String hint = latchName == null ? "" : '(' + latchName + ')';
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit))
+        .describedAs("Latch " + hint + " times out after " + duration + ' ' + timeUnit.name())
+        .isTrue();
+    }
+
     protected static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit)
     {
-        assertThat(Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit))
-        .describedAs("Latch times out after " + duration + ' ' + timeUnit.name())
-        .isTrue();
+        awaitLatchOrTimeout(latch, duration, timeUnit, null);
     }
 
     protected Session maybeGetSession()
@@ -254,6 +276,40 @@ public abstract class IntegrationTestBase
         return session;
     }
 
+    protected void startAsync(String hints, Runnable runnable)
+    {
+        new Thread(() -> {
+            try
+            {
+                runnable.run();
+            }
+            catch (Throwable t)
+            {
+                testExceptions.add(new RuntimeException(hints, t));
+            }
+        }).start();
+    }
+
+    protected void throwIfHasTestExceptions()
+    {
+        if (testExceptions.isEmpty())
+            return;
+
+        RuntimeException ex = new RuntimeException("Exceptions from async execution, i.e. IntegrationTestBase#startAsync. See the suppressed exceptions");
+        for (Throwable t : testExceptions)
+        {
+            ex.addSuppressed(t);
+        }
+        throw ex;
+    }
+
+    protected void completeContextOrThrow(VertxTestContext context)
+    {
+        throwIfHasTestExceptions();
+        context.completeNow();
+    }
+
+
     private static QualifiedTableName uniqueTestTableFullName(String tablePrefix)
     {
         String unquotedTableName = tablePrefix + TEST_TABLE_ID.getAndIncrement();
@@ -261,6 +317,9 @@ public abstract class IntegrationTestBase
                                       new Name(unquotedTableName, Metadata.quoteIfNecessary(unquotedTableName)));
     }
 
+    /**
+     * Note: must disable compaction, otherwise the file tree can be mutated while walking
+     */
     public List<Path> findChildFile(CassandraSidecarTestContext context, String hostname, String target)
     {
         InstanceMetadata instanceConfig = context.instancesConfig().instanceFromHost(hostname);
@@ -270,6 +329,10 @@ public abstract class IntegrationTestBase
                                 .collect(Collectors.toList());
     }
 
+    /**
+     * Note: must disable compaction, otherwise the file tree can be mutated while walking
+     * Set `cassandra.autocompaction_on_startup_enabled=false`
+     */
     private List<Path> findChildFile(Path path, String target)
     {
         try (Stream<Path> walkStream = Files.walk(path))

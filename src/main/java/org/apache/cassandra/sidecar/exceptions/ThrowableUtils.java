@@ -18,21 +18,47 @@
 
 package org.apache.cassandra.sidecar.exceptions;
 
+import java.util.concurrent.Callable;
 import java.util.function.Predicate;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 
 /**
  * Collection of utility methods for understanding {@link Throwable} thrown better
  */
 public class ThrowableUtils
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ThrowableUtils.class);
-
     private ThrowableUtils()
     {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Run the {@code actionMayThrow} and wrap any {@link Exception} thrown in {@link RuntimeException}
+     * @param actionMayThrow action that may throw exceptions
+     * @param <R> return value type of the action
+     */
+    public static <R> R propogate(Callable<R> actionMayThrow)
+    {
+        try
+        {
+            return actionMayThrow.call();
+        }
+        catch (Exception cause)
+        {
+            throw new RuntimeException(cause);
+        }
+    }
+
+    /**
+     * Similar to {@link #propogate(Callable)}, but takes runnable-ish
+     */
+    public static void propogate(ThrowingRunnable actionMayThrow)
+    {
+        propogate(() -> {
+            actionMayThrow.run();
+            return null;
+        });
     }
 
     /**
@@ -80,7 +106,6 @@ public class ThrowableUtils
             {
                 // Mark the position to stop, and continue tracing the cause up until hitting stop the next time.
                 // This way we are sure that all exceptions/causes are visited at least once.
-//                LOGGER.warn("Circular exception reference detected!", throwable);
                 stop = cause;
             }
             cause = getCause(cause, 1);

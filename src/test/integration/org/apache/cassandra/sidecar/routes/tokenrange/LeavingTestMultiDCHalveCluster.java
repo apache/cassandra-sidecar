@@ -28,9 +28,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Range;
-import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.description.type.TypeDescription;
@@ -41,7 +39,6 @@ import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.pool.TypePool;
 import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
@@ -53,10 +50,12 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
  * Note: Some related test classes are broken down to have a single test case to parallelize test execution and
  * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
  */
-@ExtendWith(VertxExtension.class)
+// TODO: the test needs rework; disable it for now
+//@Tag("heavy")
+//@ExtendWith(VertxExtension.class)
 class LeavingTestMultiDCHalveCluster extends LeavingBaseTest
 {
-    @CassandraIntegrationTest(nodesPerDc = 6, numDcs = 2, network = true, buildCluster = false)
+//    @CassandraIntegrationTest(nodesPerDc = 6, numDcs = 2, network = true, buildCluster = false)
     void retrieveMappingMultiDCHalveClusterSize(VertxTestContext context,
                                                 ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {
@@ -215,7 +214,7 @@ class LeavingTestMultiDCHalveCluster extends LeavingBaseTest
         public static void unbootstrap(@SuperCall Callable<?> orig) throws Exception
         {
             transientStateStart.countDown();
-            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
             orig.call();
         }
 

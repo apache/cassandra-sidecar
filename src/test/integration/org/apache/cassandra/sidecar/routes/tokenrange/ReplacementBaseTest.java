@@ -101,7 +101,7 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
             List<IUpgradeableInstance> newNodes = startReplacementNodes(nodeStart, cluster, nodesToRemove);
             sidecarTestContext.refreshInstancesConfig();
             // Wait until replacement nodes are in JOINING state
-            awaitLatchOrTimeout(transientStateStart, 2, TimeUnit.MINUTES);
+            awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
 
             // Verify state of replacement nodes
             for (IUpgradeableInstance newInstance : newNodes)
@@ -135,9 +135,9 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
 
                 int nodeCount = annotation.nodesPerDc() * annotation.numDcs();
                 validateTokenRanges(mappingResponse, generateExpectedRanges(nodeCount));
-
                 validateReplicaMapping(mappingResponse, newNodes, expectedRangeMappings);
-                context.completeNow();
+
+                completeContextOrThrow(context);
             });
         }
         finally
@@ -174,20 +174,21 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
                                  c.set("storage_port", remPort);
                              });
 
-            new Thread(() -> ClusterUtils.start(replacement, (properties) -> {
-                properties.set(CassandraRelevantProperties.BOOTSTRAP_SKIP_SCHEMA_CHECK, true);
-                properties.set(CassandraRelevantProperties.BOOTSTRAP_SCHEMA_DELAY_MS,
-                               TimeUnit.SECONDS.toMillis(10L));
-                properties.with("cassandra.broadcast_interval_ms",
-                                Long.toString(TimeUnit.SECONDS.toMillis(30L)));
-                properties.with("cassandra.ring_delay_ms",
-                                Long.toString(TimeUnit.SECONDS.toMillis(10L)));
-                // This property tells cassandra that this new instance is replacing the node with
-                // address remAddress and port remPort
-                properties.with("cassandra.replace_address_first_boot", remAddress + ":" + remPort);
-            })).start();
+            startAsync("Start replacement node node" + replacement.config().num(),
+                       () -> ClusterUtils.start(replacement, (properties) -> {
+                           properties.set(CassandraRelevantProperties.BOOTSTRAP_SKIP_SCHEMA_CHECK, true);
+                           properties.set(CassandraRelevantProperties.BOOTSTRAP_SCHEMA_DELAY_MS,
+                                          TimeUnit.SECONDS.toMillis(10L));
+                           properties.with("cassandra.broadcast_interval_ms",
+                                           Long.toString(TimeUnit.SECONDS.toMillis(30L)));
+                           properties.with("cassandra.ring_delay_ms",
+                                           Long.toString(TimeUnit.SECONDS.toMillis(10L)));
+                           // This property tells cassandra that this new instance is replacing the node with
+                           // address remAddress and port remPort
+                           properties.with("cassandra.replace_address_first_boot", remAddress + ":" + remPort);
+                       }));
 
-            awaitLatchOrTimeout(nodeStart, 2, TimeUnit.MINUTES);
+            awaitLatchOrThrow(nodeStart, 2, TimeUnit.MINUTES, "nodeStart");
             newNodes.add(replacement);
         }
         return newNodes;
