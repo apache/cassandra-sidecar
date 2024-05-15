@@ -345,7 +345,9 @@ def JDK11_OPTIONS = ['-Djdk.attach.allowAttachSelf=true',
                      '--add-opens', 'java.base/jdk.internal.util.jar=ALL-UNNAMED',
                      '--add-opens', 'jdk.management/com.sun.management.internal=ALL-UNNAMED']
 
-['integrationTest', 'integrationTestHeavyWeight'].each { name ->
+def integrationTest = task("integrationTest")
+
+['integrationTestLightWeight', 'integrationTestHeavyWeight'].each { name ->
     tasks.register(name, Test) {
         if (JavaVersion.current().isJava11Compatible()) {
             jvmArgs(JDK11_OPTIONS)
@@ -521,7 +523,8 @@ spotbugsContainerTest.onlyIf { "true" != System.getenv("skipContainerTest") }
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia
-check.dependsOn codeCheckTasks, containerTest, integrationTest, integrationTestHeavyWeight, jacocoTestReport
+integrationTest.dependsOn integrationTestLightWeight, integrationTestHeavyWeight
+check.dependsOn codeCheckTasks, containerTest, integrationTest, jacocoTestReport
 build.dependsOn copyDist, copyJolokia, copyDocs
 run.dependsOn build
 
