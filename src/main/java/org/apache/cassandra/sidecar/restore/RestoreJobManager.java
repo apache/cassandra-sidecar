@@ -221,11 +221,11 @@ public class RestoreJobManager
             {
                 pathStream
                 .sorted(Comparator.reverseOrder())
-                .forEach(path -> ThrowableUtils.propogate(() -> Files.delete(path)));
+                .forEach(path -> ThrowableUtils.propagate(() -> Files.delete(path)));
             }
-            catch (Exception ioe)
+            catch (Exception exception)
             {
-                LOGGER.warn("Error on deleting data. Path={}", root, ioe);
+                LOGGER.warn("Error on deleting data. Path={}", root, exception);
             }
         });
     }

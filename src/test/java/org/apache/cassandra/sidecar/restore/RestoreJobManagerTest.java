@@ -278,9 +278,8 @@ class RestoreJobManagerTest
         {
             Files.createFile(Paths.get(path.toString(), "file" + i));
         }
-        loopAssert(1, 10,
-                   () -> assertThat(path.toFile().list())
-                         .describedAs("listing files in " + path.toAbsolutePath())
-                         .hasSize(nFiles));
+        assertThat(path.toFile().list())
+        .describedAs("listing files in " + path.toAbsolutePath())
+        .hasSize(nFiles);
     }
 }

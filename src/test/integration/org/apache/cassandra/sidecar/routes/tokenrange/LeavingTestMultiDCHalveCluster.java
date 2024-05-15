@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Range;
 
+import org.junit.jupiter.api.Disabled;
+
 import io.vertx.junit5.VertxTestContext;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.description.type.TypeDescription;
@@ -53,6 +55,8 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
 // TODO: the test needs rework; disable it for now
 //@Tag("heavy")
 //@ExtendWith(VertxExtension.class)
+@Disabled("This test currently shinks the cluster without any replica-safe awareness " +
+          "causing problems when nodes are streaming data to other nodes that have already started leaving")
 class LeavingTestMultiDCHalveCluster extends LeavingBaseTest
 {
 //    @CassandraIntegrationTest(nodesPerDc = 6, numDcs = 2, network = true, buildCluster = false)

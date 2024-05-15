@@ -38,7 +38,7 @@ public class ThrowableUtils
      * @param actionMayThrow action that may throw exceptions
      * @param <R> return value type of the action
      */
-    public static <R> R propogate(Callable<R> actionMayThrow)
+    public static <R> R propagate(Callable<R> actionMayThrow)
     {
         try
         {
@@ -51,11 +51,11 @@ public class ThrowableUtils
     }
 
     /**
-     * Similar to {@link #propogate(Callable)}, but takes runnable-ish
+     * Similar to {@link #propagate(Callable)}, but takes runnable-ish
      */
-    public static void propogate(ThrowingRunnable actionMayThrow)
+    public static void propagate(ThrowingRunnable actionMayThrow)
     {
-        propogate(() -> {
+        propagate(() -> {
             actionMayThrow.run();
             return null;
         });
