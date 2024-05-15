@@ -19,11 +19,9 @@
 package org.apache.cassandra.testing;
 
 import java.io.IOException;
-import java.net.BindException;
 import java.util.function.Consumer;
 
 import org.apache.commons.lang3.StringUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,9 +62,7 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
     }
 
     public UpgradeableCluster configureAndStartCluster(Consumer<UpgradeableCluster.Builder> configurator)
-    throws IOException
     {
-        RuntimeException exception = null;
         for (int i = 0; i < 3; i++)
         {
             try
@@ -76,22 +72,21 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
                 cluster.startup();
                 return cluster;
             }
-            catch (RuntimeException ret)
+            catch (Throwable cause)
             {
-                exception = ret;
-                boolean addressAlreadyInUse = Throwables.anyCauseMatches(exception, this::portNotAvailableToBind);
+                boolean addressAlreadyInUse = Throwables.anyCauseMatches(cause, this::portNotAvailableToBind);
                 if (addressAlreadyInUse)
                 {
-                    LOGGER.warn("Failed to provision cluster after {} retries", i, exception);
+                    LOGGER.warn("Failed to provision cluster due to port collision after {} retries", i, cause);
                 }
                 else
                 {
-                    throw exception;
+                    throw new RuntimeException(cause);
                 }
-
             }
         }
-        throw exception;
+        // it should never reach here, as the method either exits from the try block to the catch block
+        return cluster;
     }
 
     @Override
@@ -105,7 +100,7 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
 
     private boolean portNotAvailableToBind(Throwable ex)
     {
-        return ex instanceof BindException &&
-               StringUtils.contains(ex.getMessage(), "Address already in use");
+        return StringUtils.contains(ex.getMessage(), "Address already in use")
+               || StringUtils.contains(ex.getMessage(), "is in use by another process");
     }
 }
