@@ -74,6 +74,9 @@ public abstract class IntegrationTestBase
 {
     protected static final String TEST_KEYSPACE = "testkeyspace";
     protected static final int DEFAULT_RF = 3;
+    protected static final String WITH_COMPACTION_DISABLED = " WITH COMPACTION = {\n" +
+                                                             "   'class': 'SizeTieredCompactionStrategy', \n" +
+                                                             "   'enabled': 'false' }";
     private static final String TEST_TABLE_PREFIX = "testtable";
     private static final AtomicInteger TEST_TABLE_ID = new AtomicInteger(0);
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -318,21 +321,19 @@ public abstract class IntegrationTestBase
     }
 
     /**
-     * Note: must disable compaction, otherwise the file tree can be mutated while walking
+     * Note: must disable compaction, otherwise the file tree can be mutated while walking and test becomes flaky
+     * Append WITH_COMPACTION_DISABLED to the table create statement
      */
-    public List<Path> findChildFile(CassandraSidecarTestContext context, String hostname, String target)
+    public List<Path> findChildFile(CassandraSidecarTestContext context, String hostname, String keyspaceName, String target)
     {
         InstanceMetadata instanceConfig = context.instancesConfig().instanceFromHost(hostname);
         List<String> parentDirectories = instanceConfig.dataDirs();
 
-        return parentDirectories.stream().flatMap(s -> findChildFile(Paths.get(s), target).stream())
+        return parentDirectories.stream()
+                                .flatMap(s -> findChildFile(Paths.get(s, keyspaceName), target).stream())
                                 .collect(Collectors.toList());
     }
 
-    /**
-     * Note: must disable compaction, otherwise the file tree can be mutated while walking
-     * Set `cassandra.autocompaction_on_startup_enabled=false`
-     */
     private List<Path> findChildFile(Path path, String target)
     {
         try (Stream<Path> walkStream = Files.walk(path))

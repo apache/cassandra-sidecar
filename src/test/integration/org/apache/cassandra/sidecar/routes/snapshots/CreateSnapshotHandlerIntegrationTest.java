@@ -184,7 +184,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
                   // validate that the snapshot is created
                   List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1",
-                                                   "my-snapshot");
+                                                   tableName.keyspace(), "my-snapshot");
                   assertThat(found).isNotEmpty()
                                    .anyMatch(p -> p.toString().endsWith("manifest.json"))
                                    .anyMatch(p -> p.toString().endsWith("schema.cql"))
@@ -219,7 +219,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
                   // validate that the snapshot is created
                   List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1",
-                                                   "ttl-snapshot");
+                                                   tableName.keyspace(), "ttl-snapshot");
                   assertThat(found).isNotEmpty()
                                    .anyMatch(p -> p.toString().endsWith("manifest.json"))
                                    .anyMatch(p -> p.toString().endsWith("schema.cql"))
@@ -285,7 +285,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
                   // validate that the snapshot is created
                   List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1",
-                                                   "my-snapshot");
+                                                   tableName.keyspace(), "my-snapshot");
                   assertThat(found).isNotEmpty()
                                    .anyMatch(p -> p.toString().endsWith("manifest.json"))
                                    .anyMatch(p -> p.toString().endsWith("schema.cql"))
@@ -300,7 +300,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     private QualifiedTableName createTestTableAndPopulate(String tableNamePrefix)
     {
         QualifiedTableName tableName = createTestTable(tableNamePrefix,
-                                                       "CREATE TABLE %s (id text PRIMARY KEY, name text);");
+                                                       "CREATE TABLE %s (id text PRIMARY KEY, name text)" + WITH_COMPACTION_DISABLED + ";");
         Session session = maybeGetSession();
 
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('1', 'Francisco');");
@@ -312,7 +312,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     private QualifiedTableName createTestTableAndPopulate()
     {
         QualifiedTableName tableName = createTestTable(
-        "CREATE TABLE %s (id text PRIMARY KEY, name text);");
+        "CREATE TABLE %s (id text PRIMARY KEY, name text)" + WITH_COMPACTION_DISABLED + ";");
         Session session = maybeGetSession();
 
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('1', 'Francisco');");

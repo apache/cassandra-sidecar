@@ -89,8 +89,8 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
                                                                     "--", tableName.keyspace()).getStdout();
         assertThat(snapshotStdout).contains("Snapshot directory: " + tableName.tableName() + "-snapshot");
         // find the directory in the filesystem
-        final List<Path> snapshotFiles = findChildFile(sidecarTestContext,
-                                                       "127.0.0.1", tableName.tableName() + "-snapshot");
+        final List<Path> snapshotFiles = findChildFile(sidecarTestContext, "127.0.0.1",
+                                                       tableName.keyspace(), tableName.tableName() + "-snapshot");
 
         assertThat(snapshotFiles).isNotEmpty();
 
@@ -188,7 +188,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
                                                           List<String> values)
     {
         QualifiedTableName tableName = createTestTable(
-        "CREATE TABLE IF NOT EXISTS %s (id text, PRIMARY KEY(id));");
+        "CREATE TABLE IF NOT EXISTS %s (id text, PRIMARY KEY(id))" + WITH_COMPACTION_DISABLED + ";");
         Session session = maybeGetSession();
         populateTable(session, tableName, values);
         return tableName;

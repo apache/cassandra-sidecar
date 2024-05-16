@@ -360,7 +360,5 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         System.setProperty("cassandra.gossip_settle_min_wait_ms", "500"); // Default 5000
         System.setProperty("cassandra.gossip_settle_interval_ms", "250"); // Default 1000
         System.setProperty("cassandra.gossip_settle_poll_success_required", "6"); // Default 3
-        // disable auto compaction for clusters as it is unnecessary for the test cases, and by not compacting, we save I/O overhead
-        System.setProperty("cassandra.autocompaction_on_startup_enabled", "false"); // Default true
     }
 }
