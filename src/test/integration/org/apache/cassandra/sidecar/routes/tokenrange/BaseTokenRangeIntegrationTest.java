@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes.tokenrange;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -121,7 +120,6 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
 
     protected UpgradeableCluster getMultiDCCluster(BiConsumer<ClassLoader, Integer> initializer,
                                                    ConfigurableCassandraTestContext cassandraTestContext)
-    throws IOException
     {
         return getMultiDCCluster(initializer, cassandraTestContext, null);
     }
@@ -129,7 +127,6 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
     protected UpgradeableCluster getMultiDCCluster(BiConsumer<ClassLoader, Integer> initializer,
                                                    ConfigurableCassandraTestContext cassandraTestContext,
                                                    Consumer<UpgradeableCluster.Builder> additionalConfigurator)
-    throws IOException
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         TokenSupplier mdcTokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),

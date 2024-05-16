@@ -54,7 +54,7 @@ class ListSnapshotHandlerIntegrationTest extends IntegrationTestBase
                         "  cyclist_name text, \n" +
                         "  rank int, \n" +
                         "  PRIMARY KEY ((race_year, race_name), rank) \n" +
-                        ");");
+                        ")" + WITH_COMPACTION_DISABLED + ";");
 
         // Insert a single record (only one data directory will be created from the configured 4 data dirs per instance)
         session.execute("INSERT INTO " + TEST_KEYSPACE + ".rank_by_year_and_name (race_year, race_name, cyclist_name, rank) " +
@@ -69,7 +69,7 @@ class ListSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
             // validate that the snapshot is created
             List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1",
-                                             "rank_snapshot");
+                                             TEST_KEYSPACE, "rank_snapshot");
             assertThat(found).isNotEmpty()
                              .anyMatch(p -> p.toString().endsWith("manifest.json"))
                              .anyMatch(p -> p.toString().endsWith("schema.cql"))

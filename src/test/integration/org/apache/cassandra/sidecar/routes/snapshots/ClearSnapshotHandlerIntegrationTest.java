@@ -80,7 +80,7 @@ class ClearSnapshotHandlerIntegrationTest extends IntegrationTestBase
               context.verify(() -> {
                   assertThat(createResponse.statusCode()).isEqualTo(OK.code());
                   final List<Path> found =
-                  findChildFile(sidecarTestContext, "127.0.0.1", snapshotName);
+                  findChildFile(sidecarTestContext, "127.0.0.1", tableName.keyspace(), snapshotName);
                   assertThat(found).isNotEmpty();
 
                   // snapshot directory exists inside data directory
@@ -96,7 +96,9 @@ class ClearSnapshotHandlerIntegrationTest extends IntegrationTestBase
                                            assertThat(deleteResponse.statusCode()).isEqualTo(OK.code());
                                            final List<Path> found2 =
                                            findChildFile(sidecarTestContext,
-                                                         "127.0.0.1", snapshotName);
+                                                         "127.0.0.1",
+                                                         tableName.keyspace(),
+                                                         snapshotName);
                                            assertThat(found2).isEmpty();
                                            context.completeNow();
                                        })));
@@ -108,7 +110,7 @@ class ClearSnapshotHandlerIntegrationTest extends IntegrationTestBase
     private QualifiedTableName createTestTableAndPopulate()
     {
         QualifiedTableName tableName = createTestTable(
-        "CREATE TABLE %s (id text PRIMARY KEY, name text);");
+        "CREATE TABLE %s (id text PRIMARY KEY, name text)" + WITH_COMPACTION_DISABLED + ";");
         Session session = maybeGetSession();
 
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('1', 'Francisco');");

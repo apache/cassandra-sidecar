@@ -27,6 +27,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
+import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.StopWatch;
@@ -223,15 +224,6 @@ public abstract class TaskExecutorPool implements WorkerExecutor
         return workerExecutor == null
                ? Future.succeededFuture()
                : workerExecutor.close();
-    }
-
-    /**
-     * Similar to {@link Runnable}, but it can throw {@link Exception}
-     */
-    @FunctionalInterface
-    public interface ThrowingRunnable
-    {
-        void run() throws Exception;
     }
 
     /**

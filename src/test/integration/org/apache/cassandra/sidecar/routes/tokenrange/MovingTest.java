@@ -159,7 +159,7 @@ class MovingTest extends MovingBaseTest
         {
             Future<?> res = orig.call();
             transientStateStart.countDown();
-            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES);
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
             return res;
         }
 

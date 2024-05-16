@@ -244,6 +244,7 @@ dependencies {
     }
     integrationTestImplementation(group: 'org.apache.cassandra', name: "${dtestDependencyName}", version: "${dtestVersion}")
     integrationTestImplementation(group: 'org.apache.cassandra', name: 'dtest-api', version: "${dtestApiVersion}")
+    integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     // Needed by the Cassandra dtest framework
     integrationTestImplementation("org.junit.vintage:junit-vintage-engine:${junitVersion}")
     // Needed for snapshot manifest validation
@@ -310,6 +311,8 @@ clean.doLast {
 
 test {
     systemProperty "vertxweb.environment", "dev"
+    systemProperty "logback.configurationFile", "logback-sidecar.xml"
+    systemProperty "vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.SLF4JLogDelegateFactory"
     // ordinarily we don't need integration tests
     // see the integrationTest task
     useJUnitPlatform()
@@ -342,51 +345,63 @@ def JDK11_OPTIONS = ['-Djdk.attach.allowAttachSelf=true',
                      '--add-opens', 'java.base/jdk.internal.util.jar=ALL-UNNAMED',
                      '--add-opens', 'jdk.management/com.sun.management.internal=ALL-UNNAMED']
 
-tasks.register("integrationTest", Test) {
-    if (JavaVersion.current().isJava11Compatible()) {
-        jvmArgs(JDK11_OPTIONS)
-        println("JVM arguments for $project.name are $allJvmArgs")
-    }
-    // Disable direct memory allocator as it doesn't release properly
-    systemProperty "cassandra.netty_use_heap_allocator", "true"
-    systemProperty "vertxweb.environment", "dev"
-    // config logback for in-jvm clusters
-    systemProperty "logback.configurationFile", "src/test/resources/logback-in-jvm-dtest.xml"
-    // Because tests are forked, we need to explicitly pass the system property from the
-    // Gradle JVM down to the children
+def integrationTest = task("integrationTest")
 
-    def versionsToTest = System.getProperty("cassandra.sidecar.versions_to_test", null)
-    if (versionsToTest != "" && versionsToTest != null) {
-        systemProperty "cassandra.sidecar.versions_to_test", versionsToTest
-    }
-    useJUnitPlatform() {
-        includeTags "integrationTest"
-    }
-    reports {
-        junitXml.enabled = true
-        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "integration").toFile()
-        println("Destination directory for integration tests: ${destDir}")
-        junitXml.destination = destDir
-        html.enabled = true
-    }
-    testLogging {
-        events "passed", "skipped", "failed"
-    }
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
-    shouldRunAfter test
-    forkEvery = 1 // DTest framework tends to have issues without forkEvery test class
-    maxHeapSize = integrationMaxHeapSize
-    maxParallelForks = integrationMaxParallelForks
-
-    afterTest { descriptor, result ->
-        def totalTime = (result.endTime - result.startTime) / 1000.0
-        logger.lifecycle("--")
-        if (totalTime >= 60) { // log the tests that take 1 minute and more
-            logger.warn("$descriptor.displayName took $totalTime s")
+['integrationTestLightWeight', 'integrationTestHeavyWeight'].each { name ->
+    tasks.register(name, Test) {
+        if (JavaVersion.current().isJava11Compatible()) {
+            jvmArgs(JDK11_OPTIONS)
+            println("JVM arguments for $project.name are $allJvmArgs")
         }
-        else {
-            logger.info("$descriptor.displayName took $totalTime s")
+        // Disable direct memory allocator as it doesn't release properly
+        systemProperty "cassandra.netty_use_heap_allocator", "true"
+        systemProperty "vertxweb.environment", "dev"
+        // config logback for in-jvm clusters
+        systemProperty "logback.configurationFile", "src/test/resources/logback-in-jvm-dtest.xml"
+        // Because tests are forked, we need to explicitly pass the system property from the
+        // Gradle JVM down to the children
+
+        def versionsToTest = System.getProperty("cassandra.sidecar.versions_to_test", null)
+        if (versionsToTest != "" && versionsToTest != null) {
+            systemProperty "cassandra.sidecar.versions_to_test", versionsToTest
+        }
+        useJUnitPlatform() {
+            if (name.contains("HeavyWeight"))
+            {
+                includeTags "heavy"
+            }
+            else
+            {
+                excludeTags "heavy"
+            }
+        }
+
+        reports {
+            junitXml.enabled = true
+            def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "integration").toFile()
+            println("Destination directory for integration tests: ${destDir}")
+            junitXml.destination = destDir
+            html.enabled = true
+        }
+        testLogging {
+            events "passed", "skipped", "failed"
+        }
+        testClassesDirs = sourceSets.integrationTest.output.classesDirs
+        classpath = sourceSets.integrationTest.runtimeClasspath
+        shouldRunAfter test
+        forkEvery = 1 // DTest framework tends to have issues without forkEvery test class
+        maxHeapSize = integrationMaxHeapSize
+        maxParallelForks = integrationMaxParallelForks
+
+        afterTest { descriptor, result ->
+            def totalTime = (result.endTime - result.startTime) / 1000.0
+            logger.lifecycle("--")
+            if (totalTime >= 60) { // log the tests that take 1 minute and more
+                logger.warn("$descriptor.displayName took $totalTime s")
+            }
+            else {
+                logger.info("$descriptor.displayName took $totalTime s")
+            }
         }
     }
 }
@@ -508,6 +523,7 @@ spotbugsContainerTest.onlyIf { "true" != System.getenv("skipContainerTest") }
 
 // copyDist gets called on every build
 copyDist.dependsOn installDist, copyJolokia
+integrationTest.dependsOn integrationTestLightWeight, integrationTestHeavyWeight
 check.dependsOn codeCheckTasks, containerTest, integrationTest, jacocoTestReport
 build.dependsOn copyDist, copyJolokia, copyDocs
 run.dependsOn build

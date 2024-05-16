@@ -97,12 +97,13 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                                                                                               Feature.JMX,
                                                                                               Feature.NATIVE_PROTOCOL);
                                                                                 });
-                    new Thread(() -> newInstance.startup(cluster)).start();
+                    startAsync("Start new node node" + newInstance.config().num(),
+                               () -> newInstance.startup(cluster));
                     newInstances.add(newInstance);
                 }
             }
 
-            awaitLatchOrTimeout(transientStateStart, 2, TimeUnit.MINUTES);
+            awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
 
             for (IUpgradeableInstance newInstance : newInstances)
             {
@@ -139,7 +140,7 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                                        splitRanges,
                                        expectedRangeMappings);
 
-                context.completeNow();
+                completeContextOrThrow(context);
             });
         }
         finally

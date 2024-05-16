@@ -127,7 +127,7 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
     public synchronized void onDown(Host host)
     {
         // Don't remove local addresses from the selected host list
-        if (localHostAddresses.contains(host.getBroadcastRpcAddress()))
+        if (localHostAddresses.contains(driverUtils.getSocketAddress(host)))
         {
             LOGGER.debug("Local Node {} has been marked down.", host);
             return;
@@ -190,7 +190,8 @@ class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
         {
             if (localHosts.size() < numLocalHostsConfigured)
             {
-                LOGGER.warn("Could not find all configured local hosts in host list.");
+                LOGGER.warn("Could not find all configured local hosts in host list. ConfiguredHosts={} AvailableHosts={}",
+                            numLocalHostsConfigured, localHosts.size());
             }
             selectedHosts.addAll(localHosts);
         }

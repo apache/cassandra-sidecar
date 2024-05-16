@@ -82,12 +82,13 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
             int movingNodeIndex = (annotation.numDcs() > 1) ? MULTIDC_MOVING_NODE_IDX : MOVING_NODE_IDX;
 
             IUpgradeableInstance movingNode = cluster.get(movingNodeIndex);
-            new Thread(() -> movingNode.nodetoolResult("move", "--", Long.toString(moveTargetToken))
+            startAsync("move token of node" + movingNode.config().num() + " to " + moveTargetToken,
+                       () -> movingNode.nodetoolResult("move", "--", Long.toString(moveTargetToken))
                                        .asserts()
-                                       .success()).start();
+                                       .success());
 
             // Wait until nodes have reached expected state
-            awaitLatchOrTimeout(transientStateStart, 2, TimeUnit.MINUTES);
+            awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
             ClusterUtils.awaitRingState(seed, movingNode, "Moving");
 
             retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
@@ -106,7 +107,7 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
                 validateTokenRanges(mappingResponse, expectedRanges);
                 validateReplicaMapping(mappingResponse, movingNode, moveTargetToken, expectedRangeMappings);
 
-                context.completeNow();
+                completeContextOrThrow(context);
             });
         }
         finally

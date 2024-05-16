@@ -74,6 +74,9 @@ public abstract class IntegrationTestBase
 {
     protected static final String TEST_KEYSPACE = "testkeyspace";
     protected static final int DEFAULT_RF = 3;
+    protected static final String WITH_COMPACTION_DISABLED = " WITH COMPACTION = {\n" +
+                                                             "   'class': 'SizeTieredCompactionStrategy', \n" +
+                                                             "   'enabled': 'false' }";
     private static final String TEST_TABLE_PREFIX = "testtable";
     private static final AtomicInteger TEST_TABLE_ID = new AtomicInteger(0);
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -82,10 +85,12 @@ public abstract class IntegrationTestBase
     protected WebClient client;
     protected CassandraSidecarTestContext sidecarTestContext;
     protected Injector injector;
+    private final List<Throwable> testExceptions = new ArrayList<>();
 
     @BeforeEach
     void setup(AbstractCassandraTestContext cassandraTestContext, TestInfo testInfo) throws InterruptedException
     {
+        testExceptions.clear();
         IntegrationTestModule integrationTestModule = new IntegrationTestModule();
         System.setProperty("cassandra.testtag", testInfo.getTestClass().get().getCanonicalName());
         System.setProperty("suitename", testInfo.getDisplayName() + ": " + cassandraTestContext.version);
@@ -240,11 +245,31 @@ public abstract class IntegrationTestBase
         return tableName;
     }
 
+    // similar to awaitLatchOrTimeout, it throws either test exceptions (due to startAsync failures) or timeout exception
+    protected void awaitLatchOrThrow(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
+    {
+        String hint = latchName == null ? "" : '(' + latchName + ')';
+        boolean completed = Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit);
+        if (completed)
+        {
+            return;
+        }
+
+        throwIfHasTestExceptions();
+        throw new AssertionError("Latch " + hint + " times out after " + duration + ' ' + timeUnit.name());
+    }
+
+    protected static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
+    {
+        String hint = latchName == null ? "" : '(' + latchName + ')';
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit))
+        .describedAs("Latch " + hint + " times out after " + duration + ' ' + timeUnit.name())
+        .isTrue();
+    }
+
     protected static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit)
     {
-        assertThat(Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit))
-        .describedAs("Latch times out after " + duration + ' ' + timeUnit.name())
-        .isTrue();
+        awaitLatchOrTimeout(latch, duration, timeUnit, null);
     }
 
     protected Session maybeGetSession()
@@ -254,6 +279,40 @@ public abstract class IntegrationTestBase
         return session;
     }
 
+    protected void startAsync(String hints, Runnable runnable)
+    {
+        new Thread(() -> {
+            try
+            {
+                runnable.run();
+            }
+            catch (Throwable t)
+            {
+                testExceptions.add(new RuntimeException(hints, t));
+            }
+        }).start();
+    }
+
+    protected void throwIfHasTestExceptions()
+    {
+        if (testExceptions.isEmpty())
+            return;
+
+        RuntimeException ex = new RuntimeException("Exceptions from async execution, i.e. IntegrationTestBase#startAsync. See the suppressed exceptions");
+        for (Throwable t : testExceptions)
+        {
+            ex.addSuppressed(t);
+        }
+        throw ex;
+    }
+
+    protected void completeContextOrThrow(VertxTestContext context)
+    {
+        throwIfHasTestExceptions();
+        context.completeNow();
+    }
+
+
     private static QualifiedTableName uniqueTestTableFullName(String tablePrefix)
     {
         String unquotedTableName = tablePrefix + TEST_TABLE_ID.getAndIncrement();
@@ -261,12 +320,17 @@ public abstract class IntegrationTestBase
                                       new Name(unquotedTableName, Metadata.quoteIfNecessary(unquotedTableName)));
     }
 
-    public List<Path> findChildFile(CassandraSidecarTestContext context, String hostname, String target)
+    /**
+     * Note: must disable compaction, otherwise the file tree can be mutated while walking and test becomes flaky
+     * Append WITH_COMPACTION_DISABLED to the table create statement
+     */
+    public List<Path> findChildFile(CassandraSidecarTestContext context, String hostname, String keyspaceName, String target)
     {
         InstanceMetadata instanceConfig = context.instancesConfig().instanceFromHost(hostname);
         List<String> parentDirectories = instanceConfig.dataDirs();
 
-        return parentDirectories.stream().flatMap(s -> findChildFile(Paths.get(s), target).stream())
+        return parentDirectories.stream()
+                                .flatMap(s -> findChildFile(Paths.get(s, keyspaceName), target).stream())
                                 .collect(Collectors.toList());
     }
 

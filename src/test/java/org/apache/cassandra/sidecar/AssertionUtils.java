@@ -42,6 +42,17 @@ public class AssertionUtils
      */
     public static void loopAssert(int timeoutSeconds, Runnable assertions)
     {
+        loopAssert(timeoutSeconds, 100, assertions);
+    }
+
+    /**
+     * Run the assertions in a loop until the first success within the timeout.
+     * Otherwise, it fails with the last assertion failure.
+     * @param timeoutSeconds timeout
+     * @param assertions assertions
+     */
+    public static void loopAssert(int timeoutSeconds, int delayMillis, Runnable assertions)
+    {
         long start = System.nanoTime();
         long timeout = TimeUnit.SECONDS.toNanos(timeoutSeconds);
         AssertionError failure = null;
@@ -56,7 +67,7 @@ public class AssertionUtils
             {
                 failure = error;
             }
-            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+            Uninterruptibles.sleepUninterruptibly(delayMillis, TimeUnit.MILLISECONDS);
         }
         // times out
         if (failure != null)

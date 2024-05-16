@@ -79,12 +79,13 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
             for (int i = 0; i < leavingNodesPerDC * annotation.numDcs(); i++)
             {
                 IUpgradeableInstance node = cluster.get(cluster.size() - i);
-                new Thread(() -> node.nodetoolResult("decommission").asserts().success()).start();
+                startAsync("Decommission node" + node.config().num(),
+                           () -> node.nodetoolResult("decommission").asserts().success());
                 leavingNodes.add(node);
             }
 
             // Wait until nodes have reached expected state
-            awaitLatchOrTimeout(transientStateStart, 2, TimeUnit.MINUTES);
+            awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
 
             for (IUpgradeableInstance node : leavingNodes)
             {
@@ -108,7 +109,7 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
                 validateTokenRanges(mappingResponse, generateExpectedRanges());
                 validateReplicaMapping(mappingResponse, leavingNodes, expectedRangeMappings);
 
-                context.completeNow();
+                completeContextOrThrow(context);
             });
         }
         finally

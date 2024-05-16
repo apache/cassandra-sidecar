@@ -19,6 +19,7 @@
 package org.apache.cassandra.testing;
 
 import java.lang.reflect.AnnotatedElement;
+import java.net.BindException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.Extension;
@@ -44,6 +46,7 @@ import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.distributed.impl.AbstractCluster;
 import org.apache.cassandra.distributed.shared.Versions;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.utils.Throwables;
 
 
 /**
@@ -176,10 +179,13 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                 if (annotation.buildCluster())
                 {
                     UpgradeableCluster cluster;
-                    cluster = clusterBuilder.createWithoutStarting();
                     if (annotation.startCluster())
                     {
-                        cluster.startup();
+                        cluster = retriableStartCluster(clusterBuilder, 3);
+                    }
+                    else
+                    {
+                        cluster = clusterBuilder.createWithoutStarting();
                     }
                     cassandraTestContext = new CassandraTestContext(versionParsed, cluster, annotation);
                 }
@@ -303,6 +309,39 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                 }
             };
         }
+    }
+
+    public static UpgradeableCluster retriableStartCluster(UpgradeableCluster.Builder builder, int maxAttempts)
+    {
+        Throwable lastCuase = null;
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            try
+            {
+                return builder.start();
+            }
+            catch (Throwable cause)
+            {
+                boolean addressAlreadyInUse = Throwables.anyCauseMatches(cause, CassandraTestTemplate::portNotAvailableToBind);
+                if (addressAlreadyInUse)
+                {
+                    LOGGER.warn("Failed to provision cluster due to port collision after {} retries", i, cause);
+                    lastCuase = cause;
+                }
+                else
+                {
+                    throw new RuntimeException("Failed to provision cluster", cause);
+                }
+            }
+        }
+
+        throw new RuntimeException("Failed to providiosn cluster after exhausting all attempts", lastCuase);
+    }
+
+    private static boolean portNotAvailableToBind(Throwable cause)
+    {
+        return (cause instanceof BindException && StringUtils.contains(cause.getMessage(), "Address already in use"))
+               || StringUtils.contains(cause.getMessage(), "is in use by another process");
     }
 
     static
