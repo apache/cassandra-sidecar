@@ -321,8 +321,8 @@ public class MainModule extends AbstractModule
               .handler(validateRestoreJobRequest)
               .handler(updateRestoreJobHandler);
 
-        // we don't expect users to send body for abort requests, hence we don't use BodyHandler
         router.post(ApiEndpointsV1.ABORT_RESTORE_JOB_ROUTE)
+              .handler(BodyHandler.create())
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(abortRestoreJobHandler);

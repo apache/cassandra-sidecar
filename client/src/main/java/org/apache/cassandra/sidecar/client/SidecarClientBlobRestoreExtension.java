@@ -22,6 +22,7 @@ package org.apache.cassandra.sidecar.client;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
@@ -63,9 +64,20 @@ public interface SidecarClientBlobRestoreExtension
      * @param keyspace name of the keyspace in the cluster
      * @param table    name of the table in the cluster
      * @param jobId    job ID of the restore job to be updated
+     * @param payload  request payload
      * @return a completable future
      */
-    CompletableFuture<Void> abortRestoreJob(String keyspace, String table, UUID jobId);
+    CompletableFuture<Void> abortRestoreJob(String keyspace, String table, UUID jobId,
+                                            AbortRestoreJobRequestPayload payload);
+
+    /**
+     * Abort an existing restore job with no reason
+     * See {@link #abortRestoreJob(String, String, UUID, AbortRestoreJobRequestPayload)}
+     */
+    default CompletableFuture<Void> abortRestoreJob(String keyspace, String table, UUID jobId)
+    {
+        return abortRestoreJob(keyspace, table, jobId, null);
+    }
 
     /**
      * Get the summary of an existing restore job

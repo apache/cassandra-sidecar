@@ -21,11 +21,12 @@ package org.apache.cassandra.sidecar.routes.restore;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
@@ -35,6 +36,7 @@ import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -44,8 +46,10 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * {@link org.apache.cassandra.sidecar.db.RestoreJob}
  */
 @Singleton
-public class AbortRestoreJobHandler extends AbstractHandler<String>
+public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobRequestPayload>
 {
+    private static final AbortRestoreJobRequestPayload EMPTY_PAYLOAD = new AbortRestoreJobRequestPayload(null);
+
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
     private final RestoreJobManagerGroup restoreJobManagerGroup;
     private final RestoreMetrics metrics;
@@ -69,33 +73,47 @@ public class AbortRestoreJobHandler extends AbstractHandler<String>
                                   HttpServerRequest httpRequest,
                                   String host,
                                   SocketAddress remoteAddress,
-                                  String jobId)
+                                  AbortRestoreJobRequestPayload payload)
     {
         RoutingContextUtils
         .getAsFuture(context, SC_RESTORE_JOB)
-        .compose(job -> {
+        .map(job -> {
             if (RestoreJobStatus.isFinalState(job.status))
             {
-                return Future.failedFuture(wrapHttpException(HttpResponseStatus.CONFLICT,
-                                                             "Job is already in final state: " + job.status));
+                throw wrapHttpException(HttpResponseStatus.CONFLICT,
+                                        "Job is already in final state: " + job.status);
             }
 
-            restoreJobDatabaseAccessor.abort(job.jobId);
+            restoreJobDatabaseAccessor.abort(job.jobId, payload.reason());
+            logger.info("Successfully aborted restore job. job={} remoteAddress={} instance={} reason='{}'",
+                        job, remoteAddress, host, payload.reason());
             restoreJobManagerGroup.signalRefreshRestoreJob();
-            return Future.succeededFuture(job);
+            return job;
         })
         .onSuccess(job -> {
-            logger.info("Successfully aborted restore job. job={}, remoteAddress={}, instance={}",
-                        job, remoteAddress, host);
             metrics.failedJobs.metric.update(1);
             context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
         })
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, jobId));
+        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, payload));
     }
 
+    @NotNull
     @Override
-    protected String extractParamsOrThrow(RoutingContext context)
+    protected AbortRestoreJobRequestPayload extractParamsOrThrow(RoutingContext context)
     {
-        return context.pathParam("jobId");
+        String bodyString = context.body().asString(); // nullable
+
+        try
+        {
+            return Json.decodeValue(bodyString, AbortRestoreJobRequestPayload.class);
+        }
+        catch (Exception cause)
+        {
+            if (bodyString != null)
+            {
+                logger.warn("Failed to deserialize json string into AbortRestoreJobRequestPayload", cause);
+            }
+            return EMPTY_PAYLOAD;
+        }
     }
 }

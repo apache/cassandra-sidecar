@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * RestoreJobs is the data accessor to Cassandra.
@@ -92,7 +93,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
                                                           job.keyspaceName,
                                                           job.tableName,
                                                           job.jobAgent,
-                                                          job.status.toString(),
+                                                          job.status.name(),
                                                           secrets,
                                                           importOptions,
                                                           job.consistencyLevel,
@@ -162,13 +163,18 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
         return updateBuilder.build();
     }
 
-    public void abort(UUID jobId)
+    public void abort(UUID jobId, @Nullable String reason)
     {
         sidecarSchema.ensureInitialized();
 
         LocalDate createdAt = RestoreJob.toLocalDate(jobId);
+        String status = RestoreJobStatus.ABORTED.name();
+        if (reason != null)
+        {
+            status = status + ": " + reason;
+        }
         BoundStatement statement = restoreJobsSchema.updateStatus()
-                                                    .bind(createdAt, jobId, RestoreJobStatus.ABORTED.name());
+                                                    .bind(createdAt, jobId, status);
         execute(statement);
     }
 

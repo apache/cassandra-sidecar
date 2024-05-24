@@ -190,7 +190,7 @@ public abstract class BaseRestoreJobTests
             }
 
             @Override
-            public void abort(UUID jobId)
+            public void abort(UUID jobId, String reason)
             {
                 // do nothing
             }

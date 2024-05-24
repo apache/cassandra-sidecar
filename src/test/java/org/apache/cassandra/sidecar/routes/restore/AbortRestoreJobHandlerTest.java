@@ -24,12 +24,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -77,22 +83,49 @@ class AbortRestoreJobHandlerTest extends BaseRestoreJobTests
                                             context, HttpResponseStatus.CONFLICT.code());
     }
 
+    @Test
+    void testAbortJobWithReason(VertxTestContext context) throws Throwable
+    {
+        mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
+        sendAbortRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
+                                            context, HttpResponseStatus.OK.code(),
+                                            new AbortRestoreJobRequestPayload("Analytics job has failed"));
+    }
+
     private void sendAbortRestoreJobRequestAndVerify(String keyspace,
                                                      String table,
                                                      String jobId,
                                                      VertxTestContext context,
                                                      int expectedStatusCode) throws Throwable
     {
+        sendAbortRestoreJobRequestAndVerify(keyspace, table, jobId, context, expectedStatusCode, null);
+    }
+
+    private void sendAbortRestoreJobRequestAndVerify(String keyspace,
+                                                     String table,
+                                                     String jobId,
+                                                     VertxTestContext context,
+                                                     int expectedStatusCode,
+                                                     AbortRestoreJobRequestPayload requestPayload) throws Throwable
+    {
         WebClient client = WebClient.create(vertx, new WebClientOptions());
-        client.post(server.actualPort(), "localhost", String.format(RESTORE_JOB_ABORT_ENDPOINT, keyspace, table, jobId))
-              .as(BodyCodec.buffer())
-              .send(resp -> {
-                  context.verify(() -> {
-                      assertThat(resp.result().statusCode()).isEqualTo(expectedStatusCode);
-                  })
-                  .completeNow();
-                  client.close();
-              });
+        HttpRequest<Buffer> request = client.post(server.actualPort(),
+                                                  "localhost",
+                                                  String.format(RESTORE_JOB_ABORT_ENDPOINT, keyspace, table, jobId))
+                                            .as(BodyCodec.buffer());
+        Handler<AsyncResult<HttpResponse<Buffer>>> responseVerifier = resp -> {
+            context.verify(() -> assertThat(resp.result().statusCode()).isEqualTo(expectedStatusCode))
+                   .completeNow();
+            client.close();
+        };
+        if (requestPayload != null)
+        {
+            request.sendJson(requestPayload, responseVerifier);
+        }
+        else
+        {
+            request.send(responseVerifier);
+        }
         context.awaitCompletion(10, TimeUnit.SECONDS);
     }
 }

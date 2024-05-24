@@ -82,7 +82,7 @@ public class RestoreJobSummaryHandler extends AbstractHandler<String>
             RestoreJobSummaryResponsePayload response
             = new RestoreJobSummaryResponsePayload(restoreJob.createdAt.toString(), restoreJob.jobId,
                                                    restoreJob.jobAgent, restoreJob.keyspaceName, restoreJob.tableName,
-                                                   restoreJob.secrets, restoreJob.status.toString());
+                                                   restoreJob.secrets, restoreJob.statusWithOptionalDescription());
             return Future.succeededFuture(response);
         });
     }

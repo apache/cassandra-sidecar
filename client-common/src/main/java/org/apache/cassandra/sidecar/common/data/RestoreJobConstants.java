@@ -33,6 +33,7 @@ public class RestoreJobConstants
     public static final String JOB_KEYSPACE = "keyspace";
     public static final String JOB_TABLE = "table";
     public static final String JOB_CONSISTENCY_LEVEL = "consistencyLevel";
+    public static final String JOB_OPERATION_REASON = "reason";
     public static final String SLICE_ID = "sliceId";
     public static final String BUCKET_ID = "bucketId";
     public static final String SLICE_START_TOKEN = "startToken";

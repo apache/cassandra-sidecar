@@ -22,12 +22,15 @@ import java.util.UUID;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 
 /**
  * Represents a request to abort a restore job
  */
 public class AbortRestoreJobRequest extends Request
 {
+    private final AbortRestoreJobRequestPayload requestPayload;
+
     /**
      * Constructs a Sidecar request with the given {@code requestURI}. Defaults to {@code ssl} enabled.
      *
@@ -35,15 +38,22 @@ public class AbortRestoreJobRequest extends Request
      * @param table    the table name in Cassandra
      * @param jobId    a unique identifier for the job
      */
-    public AbortRestoreJobRequest(String keyspace, String table, UUID jobId)
+    public AbortRestoreJobRequest(String keyspace, String table, UUID jobId, AbortRestoreJobRequestPayload payload)
     {
         super(requestURI(keyspace, table, jobId));
+        this.requestPayload = payload;
     }
 
     @Override
     public HttpMethod method()
     {
         return HttpMethod.POST;
+    }
+
+    @Override
+    public Object requestBody()
+    {
+        return requestPayload;
     }
 
     static String requestURI(String keyspace, String table, UUID jobId)
