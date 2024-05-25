@@ -41,6 +41,7 @@ import org.apache.cassandra.sidecar.common.request.CreateRestoreJobSliceRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobSummaryRequest;
 import org.apache.cassandra.sidecar.common.request.UpdateRestoreJobRequest;
+import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
@@ -517,10 +518,11 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      * {@inheritDoc}
      */
     @Override
-    public CompletableFuture<Void> abortRestoreJob(String keyspace, String table, UUID jobId)
+    public CompletableFuture<Void> abortRestoreJob(String keyspace, String table, UUID jobId,
+                                                   AbortRestoreJobRequestPayload payload)
     {
         return executor.executeRequestAsync(requestBuilder()
-                                            .request(new AbortRestoreJobRequest(keyspace, table, jobId))
+                                            .request(new AbortRestoreJobRequest(keyspace, table, jobId, payload))
                                             .build());
     }
 

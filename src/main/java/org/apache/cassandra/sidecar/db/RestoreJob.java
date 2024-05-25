@@ -54,6 +54,8 @@ public class RestoreJob
     public final String consistencyLevel;
     public final Manager restoreJobManager;
 
+    private final String statusText;
+
     public static Builder builder()
     {
         return new Builder();
@@ -71,7 +73,7 @@ public class RestoreJob
         builder.createdAt(row.getDate("created_at"))
                .jobId(row.getUUID("job_id")).jobAgent(row.getString("job_agent"))
                .keyspace(row.getString("keyspace_name")).table(row.getString("table_name"))
-               .jobStatus(decodeJobStatus(row.getString("status")))
+               .jobStatusText(row.getString("status"))
                .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
                .expireAt(row.getTimestamp("expire_at"))
                .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
@@ -85,7 +87,13 @@ public class RestoreJob
 
     private static RestoreJobStatus decodeJobStatus(String status)
     {
-        return status == null ? null : RestoreJobStatus.valueOf(status.toUpperCase());
+        if (status == null)
+        {
+            return null;
+        }
+
+        String enumLiteral = status.split(":")[0];
+        return RestoreJobStatus.valueOf(enumLiteral.toUpperCase());
     }
 
     private static RestoreJobSecrets decodeJobSecrets(ByteBuffer secretsBytes)
@@ -114,6 +122,7 @@ public class RestoreJob
         this.tableName = builder.tableName;
         this.jobAgent = builder.jobAgent;
         this.status = builder.status;
+        this.statusText = builder.statusText;
         this.secrets = builder.secrets;
         this.importOptions = builder.importOptions == null
                              ? SSTableImportOptions.defaults()
@@ -134,6 +143,11 @@ public class RestoreJob
         return restoreJobManager == Manager.SIDECAR;
     }
 
+    public String statusWithOptionalDescription()
+    {
+        return statusText;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -145,7 +159,7 @@ public class RestoreJob
                              "expireAt='%s', bucketCount='%s', consistencyLevel='%s'}",
                              createdAt.toString(), jobId.toString(),
                              keyspaceName, tableName,
-                             status, secrets, importOptions,
+                             statusText, secrets, importOptions,
                              expireAt, bucketCount, consistencyLevel);
     }
 
@@ -177,6 +191,7 @@ public class RestoreJob
         private String tableName;
         private String jobAgent;
         private RestoreJobStatus status;
+        private String statusText;
         private RestoreJobSecrets secrets;
         private SSTableImportOptions importOptions;
         private Date expireAt;
@@ -197,6 +212,7 @@ public class RestoreJob
             this.tableName = restoreJob.tableName;
             this.jobAgent = restoreJob.jobAgent;
             this.status = restoreJob.status;
+            this.statusText = restoreJob.statusText;
             this.secrets = restoreJob.secrets;
             this.importOptions = restoreJob.importOptions;
             this.expireAt = restoreJob.expireAt;
@@ -229,9 +245,25 @@ public class RestoreJob
             return update(b -> b.jobAgent = jobAgent);
         }
 
-        public Builder jobStatus(RestoreJobStatus jobStatus)
+        public Builder jobStatus(@NotNull RestoreJobStatus jobStatus)
         {
-            return update(b -> b.status = jobStatus);
+            return update(b -> {
+                b.status = jobStatus;
+                b.statusText = jobStatus.name();
+            });
+        }
+
+        /**
+         * Assign the job status; primarily used when loading the restore job from database
+         * Note that the status text might contain additional description than the status enum
+         * @param statusText status text read from database
+         */
+        public Builder jobStatusText(String statusText)
+        {
+            return update(b -> {
+                b.status = decodeJobStatus(statusText);
+                b.statusText = statusText;
+            });
         }
 
         public Builder jobSecrets(RestoreJobSecrets jobSecrets)

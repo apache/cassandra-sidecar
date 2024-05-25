@@ -56,6 +56,7 @@ import static org.apache.cassandra.sidecar.db.RestoreJobTest.createUpdatedJob;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -247,7 +248,7 @@ class RestoreJobDiscovererTest
                                                                           new Date(System.currentTimeMillis() - 1000L)))
                                                .collect(Collectors.toList());
         ArgumentCaptor<UUID> abortedJobs = ArgumentCaptor.forClass(UUID.class);
-        doNothing().when(mockJobAccessor).abort(abortedJobs.capture());
+        doNothing().when(mockJobAccessor).abort(abortedJobs.capture(), eq("Expired"));
         when(mockJobAccessor.findAllRecent(anyInt())).thenReturn(mockResult);
         loop.registerPeriodicTaskExecutor(executor);
         executeBlocking();

@@ -156,7 +156,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 else
                 {
                     String msg = "Unexpected restore job status. Expected only CREATED or STAGED when " +
-                                 "processing active slices. Found status: " + job.status;
+                                 "processing active slices. Found status: " + job.statusWithOptionalDescription();
                     Exception unexpectedState = new IllegalStateException(msg);
                     return Future.failedFuture(RestoreJobExceptions.ofFatalSlice("Unexpected restore job status",
                                                                                  slice, unexpectedState));

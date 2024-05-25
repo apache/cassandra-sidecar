@@ -288,7 +288,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
         LOGGER.info("Abort expired job. jobId={} job={}", job.jobId, job);
         try
         {
-            restoreJobDatabaseAccessor.abort(job.jobId);
+            restoreJobDatabaseAccessor.abort(job.jobId, "Expired");
             return true;
         }
         catch (Exception exception) // do not fail on the job. Continue to drain the entire list

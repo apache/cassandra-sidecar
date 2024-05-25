@@ -42,6 +42,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 class RestoreJobsDatabaseAccessorIntTest extends IntegrationTestBase
 {
+    QualifiedTableName qualifiedTableName = new QualifiedTableName("ks", "tbl");
+    RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+    long expiresAtMillis = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1);
+
     @CassandraIntegrationTest
     void testCrudOperations()
     {
@@ -53,16 +57,8 @@ class RestoreJobsDatabaseAccessorIntTest extends IntegrationTestBase
         awaitLatchOrTimeout(latch, 10, TimeUnit.SECONDS);
         assertThat(accessor.findAllRecent(3)).isEmpty();
 
-        QualifiedTableName qualifiedTableName = new QualifiedTableName("ks", "tbl");
-        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
-        long expiresAtMillis = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1);
-        UUID jobId = UUIDs.timeBased();
-        CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload.builder(secrets, expiresAtMillis)
-                                                                               .jobId(jobId)
-                                                                               .jobAgent("agent")
-                                                                               .build();
-        accessor.create(payload, qualifiedTableName);
-
+        // update this job
+        UUID jobId = createJob(accessor);
         List<RestoreJob> foundJobs = accessor.findAllRecent(3);
         assertThat(foundJobs).hasSize(1);
         assertJob(foundJobs.get(0), jobId, RestoreJobStatus.CREATED, expiresAtMillis, secrets);
@@ -71,16 +67,53 @@ class RestoreJobsDatabaseAccessorIntTest extends IntegrationTestBase
         = new UpdateRestoreJobRequestPayload(null, null, RestoreJobStatus.SUCCEEDED, null);
         accessor.update(markSucceeded, jobId);
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.SUCCEEDED, expiresAtMillis, secrets);
+
+        // abort this job with reason
+        jobId = createJob(accessor);
+        foundJobs = accessor.findAllRecent(3);
+        assertThat(foundJobs).hasSize(2);
+        accessor.abort(jobId, "Reason");
+        assertJob(accessor.find(jobId), jobId, RestoreJobStatus.ABORTED, expiresAtMillis, secrets, "Reason");
+
+        // abort this job w/o reason
+        jobId = createJob(accessor);
+        foundJobs = accessor.findAllRecent(3);
+        assertThat(foundJobs).hasSize(3);
+        accessor.abort(jobId, null);
+        assertJob(accessor.find(jobId), jobId, RestoreJobStatus.ABORTED, expiresAtMillis, secrets, null);
+    }
+
+    private UUID createJob(RestoreJobDatabaseAccessor accessor)
+    {
+        UUID jobId = UUIDs.timeBased();
+        CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload.builder(secrets, expiresAtMillis)
+                                                                               .jobId(jobId)
+                                                                               .jobAgent("agent")
+                                                                               .build();
+        accessor.create(payload, qualifiedTableName);
+
+        return jobId;
     }
 
     private void assertJob(RestoreJob job, UUID jobId, RestoreJobStatus status, long expiresAtMillis,
                            RestoreJobSecrets secrets)
+    {
+        assertJob(job, jobId, status, expiresAtMillis, secrets, null);
+    }
+
+    private void assertJob(RestoreJob job, UUID jobId, RestoreJobStatus status, long expiresAtMillis,
+                           RestoreJobSecrets secrets, String abortReason)
     {
         assertThat(job).isNotNull();
         assertThat(job.jobId).isEqualTo(jobId);
         assertThat(job.jobAgent).isEqualTo("agent");
         assertThat(job.keyspaceName).isEqualTo("ks");
         assertThat(job.tableName).isEqualTo("tbl");
+        assertThat(job.status).isEqualTo(status);
+        if (abortReason != null)
+        {
+            assertThat(job.statusWithOptionalDescription()).isEqualTo(String.format("%s: %s", status, abortReason));
+        }
         assertThat(job.status).isEqualTo(status);
         assertThat(job.expireAt.getTime()).isEqualTo(expiresAtMillis);
         assertThat(job.secrets).isEqualTo(secrets);
