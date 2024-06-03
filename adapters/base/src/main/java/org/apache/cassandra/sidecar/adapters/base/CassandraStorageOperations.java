@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -200,5 +201,13 @@ public class CassandraStorageOperations implements StorageOperations
             dataFileLocations = Collections.unmodifiableList(Arrays.asList(allDataFileLocations));
         }
         return dataFileLocations;
+    }
+
+    @Override
+    public void outOfRangeDataCleanup(@NotNull String keyspace, @NotNull String table, int concurrency)
+    throws IOException, ExecutionException, InterruptedException
+    {
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .forceKeyspaceCleanup(concurrency, keyspace, table);
     }
 }

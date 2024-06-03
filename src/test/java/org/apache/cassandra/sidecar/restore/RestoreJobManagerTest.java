@@ -148,7 +148,8 @@ class RestoreJobManagerTest
 
         manager.removeJobInternal(slice.jobId()); // it cancels the non-completed slices
 
-        assertThat(slice.isCancelled()).isTrue();
+        // removeJobInternal runs async. Wait for at most 2 seconds for the slice to be cancelled
+        loopAssert(2, () -> assertThat(slice.isCancelled()).isTrue());
     }
 
     @Test
@@ -252,6 +253,7 @@ class RestoreJobManagerTest
         RestoreSlice slice = RestoreSlice
                              .builder()
                              .jobId(job.jobId)
+                             .sliceId("testSliceId")
                              .bucketId((short) 0)
                              .stageDirectory(testDir, "uploadId")
                              .storageKey("storageKey")
@@ -260,7 +262,7 @@ class RestoreJobManagerTest
                              .replicaStatus(Collections.emptyMap())
                              .replicas(Collections.emptySet())
                              .build();
-        RestoreSliceTracker tracker = new RestoreSliceTracker(job, mock(RestoreProcessor.class));
+        RestoreSliceTracker tracker = new RestoreSliceTracker(job, mock(RestoreProcessor.class), owner);
         slice.registerTracker(tracker);
         return slice;
     }

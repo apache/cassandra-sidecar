@@ -43,6 +43,8 @@ import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
+import org.apache.cassandra.sidecar.locator.CachedLocalTokenRanges;
+import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
@@ -66,6 +68,7 @@ public class RestoreProcessor implements PeriodicTask
     private final RestoreJobUtil restoreJobUtil;
     private final Set<RestoreSliceHandler> activeTasks = ConcurrentHashMap.newKeySet();
     private final long longRunningHandlerThresholdInSeconds;
+    private final LocalTokenRangesProvider localTokenRangesProvider;
     private final SidecarMetrics metrics;
 
     private volatile boolean isClosed = false; // OK to run close twice, so relax the control to volatile
@@ -78,6 +81,7 @@ public class RestoreProcessor implements PeriodicTask
                             SSTableImporter importer,
                             RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
                             RestoreJobUtil restoreJobUtil,
+                            CachedLocalTokenRanges localTokenRangesProvider,
                             SidecarMetrics metrics)
     {
         this.pool = executorPools.internal();
@@ -92,6 +96,7 @@ public class RestoreProcessor implements PeriodicTask
         this.importer = importer;
         this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.restoreJobUtil = restoreJobUtil;
+        this.localTokenRangesProvider = localTokenRangesProvider;
         this.metrics = metrics;
     }
 
@@ -144,6 +149,7 @@ public class RestoreProcessor implements PeriodicTask
                                                          requiredUsableSpacePercentage,
                                                          sliceDatabaseAccessor,
                                                          restoreJobUtil,
+                                                         localTokenRangesProvider,
                                                          metrics);
             activeTasks.add(task);
             pool.executeBlocking(task, false) // unordered; run in parallel

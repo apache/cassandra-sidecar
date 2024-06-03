@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,6 +138,12 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     public String[] getAllDataFileLocations()
     {
         return delegate.getAllDataFileLocations();
+    }
+
+    @Override
+    public int forceKeyspaceCleanup(int jobs, String keyspaceName, String... tables) throws IOException, ExecutionException, InterruptedException
+    {
+        return delegate.forceKeyspaceCleanup(jobs, keyspaceName, tables);
     }
 
     /**

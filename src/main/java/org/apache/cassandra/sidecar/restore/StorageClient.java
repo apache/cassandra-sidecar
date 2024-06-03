@@ -148,13 +148,6 @@ public class StorageClient
             return failedFuture;
         }
 
-        // https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
-        GetObjectRequest request =
-        GetObjectRequest.builder()
-                        .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
-                        .bucket(slice.bucket())
-                        .key(slice.key())
-                        .build();
         Path objectPath = slice.stagedObjectPath();
         File object = objectPath.toFile();
         if (object.exists())
@@ -169,12 +162,22 @@ public class StorageClient
             // For now, we just skip download, assuming the scenario is rare and no maliciousness
             return CompletableFuture.completedFuture(object);
         }
+
         if (!object.getParentFile().mkdirs())
         {
-            LOGGER.warn("Error occurred while creating directory. jobId={} s3_object={}",
+            LOGGER.warn("Error occurred while creating directory. jobId={} s3Object={}",
                         slice.jobId(), slice.stagedObjectPath());
+
         }
-        LOGGER.info("Downloading object. jobId={} s3_object={}", slice.jobId(), slice.stagedObjectPath());
+
+        LOGGER.info("Downloading object. jobId={} s3Object={}", slice.jobId(), slice.stagedObjectPath());
+        // https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
+        GetObjectRequest request =
+        GetObjectRequest.builder()
+                        .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
+                        .bucket(slice.bucket())
+                        .key(slice.key())
+                        .build();
         return rateLimitedGetObject(slice, client, request, objectPath)
                .whenComplete(logCredentialOnRequestFailure(slice, credentials))
                .thenApply(res -> object);

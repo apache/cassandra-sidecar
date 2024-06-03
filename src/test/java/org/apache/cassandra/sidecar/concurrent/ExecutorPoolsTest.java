@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.concurrent;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -44,7 +42,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test {@link ExecutorPools}
  */
-public class ExecutorPoolsTest
+class ExecutorPoolsTest
 {
     private ExecutorPools pools;
     private SidecarMetrics metrics;
@@ -69,7 +67,7 @@ public class ExecutorPoolsTest
     }
 
     @Test
-    public void testClosingExecutorPoolShouldThrow()
+    void testClosingExecutorPoolShouldThrow()
     {
         assertThatThrownBy(() -> pools.service().close())
         .hasMessage("Closing TaskExecutorPool is not supported!")
@@ -81,9 +79,35 @@ public class ExecutorPoolsTest
     }
 
     @Test
-    public void testOrdered()
+    void testExecutionOrder()
     {
-        // not thread-safe
+        testExecutionOrder(true, true);
+        testExecutionOrder(false, true);
+        testExecutionOrder(true, false);
+        testExecutionOrder(false, false);
+    }
+
+    @Test
+    void testMetricCapture()
+    {
+        TaskExecutorPool pool = pools.internal();
+        int total = 100;
+        CountDownLatch stop = new CountDownLatch(total);
+        for (int i = 0; i < total; i++)
+        {
+            pool.runBlocking(() -> stop.countDown());
+        }
+
+        assertThat(Uninterruptibles.awaitUninterruptibly(stop, 10, TimeUnit.SECONDS))
+        .describedAs("Test should finish in 10 seconds")
+        .isTrue();
+
+        assertThat(metrics.server().resource().internalTaskTime.metric.getCount()).isEqualTo(total);
+    }
+
+    private void testExecutionOrder(boolean orderedSubmission, boolean orderedExecution)
+    {
+        // not thread-safe deliberated
         class IntWrapper
         {
             int i = 0;
@@ -97,25 +121,33 @@ public class ExecutorPoolsTest
         TaskExecutorPool pool = pools.internal();
         IntWrapper v = new IntWrapper();
         int total = 100;
+        CountDownLatch ready = new CountDownLatch(1);
         CountDownLatch stop = new CountDownLatch(total);
-        Set<String> threadNames = new HashSet<>();
         for (int i = 0; i < total; i++)
         {
-            // Start 100 parallel executions that each submits the ordered execution
-            pool.executeBlocking(promise -> {
-                pool.executeBlocking(p -> {
+            // Start 100 executions that each submits the ordered execution
+            pool.runBlocking(() -> {
+                Uninterruptibles.awaitUninterruptibly(ready);
+                pool.runBlocking(() -> {
                     v.increment();
-                    threadNames.add(Thread.currentThread().getName());
                     stop.countDown();
-                    assertThat(metrics.server().resource().internalTaskTime.metric.getCount()).isEqualTo(200);
-                }, true);
-            }, false);
+                }, orderedExecution);
+            }, orderedSubmission);
         }
+        ready.countDown();
 
         assertThat(Uninterruptibles.awaitUninterruptibly(stop, 10, TimeUnit.SECONDS))
         .describedAs("Test should finish in 10 seconds")
         .isTrue();
+
         // Although IntWrapper is not thread safe, the serial execution (ordered) prevents any race condition.
-        assertThat(v.i).isEqualTo(total);
+        if (orderedExecution)
+        {
+            assertThat(v.i).isEqualTo(total);
+        }
+        else // if execution is unordered, the output is likely less than total due to race
+        {
+            assertThat(v.i).isLessThanOrEqualTo(total);
+        }
     }
 }

@@ -18,9 +18,11 @@
 
 package org.apache.cassandra.sidecar.common.server;
 
+import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
@@ -76,4 +78,27 @@ public interface StorageOperations
      * @return the list of all data file locations for the Cassandra instance
      */
     List<String> dataFileLocations();
+
+    /**
+     * Clean up the data of the specified and remove the keys no longer belongs to the Cassandra node.
+     *
+     * @param keyspace keyspace of the table to clean
+     * @param table table to clean
+     * @param concurrency concurrency of the cleanup (compaction) job.
+     *                    Note that it cannot exceed the configured `concurrent_compactors` in Cassandra
+     * @throws IOException i/o exception during cleanup
+     * @throws ExecutionException it does not really throw but declared in MBean
+     * @throws InterruptedException it does not really throw but declared in MBean
+     */
+    void outOfRangeDataCleanup(@NotNull String keyspace, @NotNull String table, int concurrency)
+    throws IOException, ExecutionException, InterruptedException;
+
+    /**
+     * Similar to {@link #outOfRangeDataCleanup(String, String, int)}, but use 1 for concurrency
+     */
+    default void outOfRangeDataCleanup(@NotNull String keyspace, @NotNull String table)
+    throws IOException, ExecutionException, InterruptedException
+    {
+        outOfRangeDataCleanup(keyspace, table, 1);
+    }
 }

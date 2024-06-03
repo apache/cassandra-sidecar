@@ -46,7 +46,7 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.locator.CachedLocalTokenRanges;
 import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
-import org.apache.cassandra.sidecar.locator.TokenRange;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
@@ -264,7 +264,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
     {
         short bucketId = 0; // TODO: update the implementation to pick proper bucketId
         restoreSliceDatabaseAccessor
-        .selectByJobByBucketByTokenRange(restoreJob.jobId, bucketId, range.start, range.end)
+        .selectByJobByBucketByTokenRange(restoreJob.jobId, bucketId, range.start().toBigInteger(), range.end().toBigInteger())
         .forEach(slice -> {
             // set the owner instance, which is not read from database
             slice = slice.unbuild().ownerInstance(instance).build();
