@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.restore;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -413,8 +414,9 @@ class RestoreSliceTaskTest
         RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
         RestoreSliceTask task = createTask(mockSlice, job);
 
+        byte[] bytes = "Hello".getBytes(StandardCharsets.UTF_8);
         File[] testFiles = IntStream.range(0, 10).mapToObj(i -> new File(tempDir.toFile(), "f" + i))
-                                    .map(f -> ThrowableUtils.propagate(() -> Files.write(f.toPath(), "Hello".getBytes())).toFile())
+                                    .map(f -> ThrowableUtils.propagate(() -> Files.write(f.toPath(), bytes)).toFile())
                                     .toArray(File[]::new);
         Map<String, String> expectedChecksums = new HashMap<>(10);
         for (File f : testFiles)
