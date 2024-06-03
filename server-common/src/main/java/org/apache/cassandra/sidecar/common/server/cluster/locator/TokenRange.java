@@ -32,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 public class TokenRange
 {
     private final Range<Token> range;
+    private volatile Token firstToken = null;
 
     /**
      * Unwrap the java driver's token range if necessary and convert the unwrapped ranges list.
@@ -48,16 +49,30 @@ public class TokenRange
         {
             return dsTokenRange.unwrap()
                                .stream()
-                               .map(range -> new TokenRange((BigInteger) range.getStart().getValue(),
-                                                            (BigInteger) range.getEnd().getValue()))
+                               .map(range -> {
+                                   BigInteger start = (BigInteger) range.getStart().getValue();
+                                   BigInteger end = (BigInteger) range.getEnd().getValue();
+                                   if (end.compareTo(Partitioner.Random.minToken) == 0)
+                                   {
+                                       end = Partitioner.Random.maxToken;
+                                   }
+                                   return new TokenRange(start, end);
+                               })
                                .collect(Collectors.toList());
         }
         else if (tokenDataType == DataType.bigint()) // Long - Murmur3Partitioner
         {
             return dsTokenRange.unwrap()
                                .stream()
-                               .map(range -> new TokenRange((Long) range.getStart().getValue(),
-                                                            (Long) range.getEnd().getValue()))
+                               .map(range -> {
+                                   BigInteger start = BigInteger.valueOf((Long) range.getStart().getValue());
+                                   BigInteger end = BigInteger.valueOf((Long) range.getEnd().getValue());
+                                   if (end.compareTo(Partitioner.Murmur3.minToken) == 0)
+                                   {
+                                       end = Partitioner.Murmur3.maxToken;
+                                   }
+                                   return new TokenRange(start, end);
+                               })
                                .collect(Collectors.toList());
         }
         else
@@ -109,7 +124,13 @@ public class TokenRange
         {
             return null;
         }
-        return range.lowerEndpoint().increment();
+
+        // it is ok to race
+        if (firstToken == null)
+        {
+            firstToken = range.lowerEndpoint().increment();
+        }
+        return firstToken;
     }
 
     /**

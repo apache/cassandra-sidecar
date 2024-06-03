@@ -30,7 +30,8 @@ class TokenTest
         Token t1 = Token.from(1);
         Token t2 = Token.from(BigInteger.ONE);
         Token t3 = Token.from("1");
-        assertThat(t1).isEqualTo(t2).isEqualTo(t3);
+        Token t4 = Token.from(1L);
+        assertThat(t1).isEqualTo(t2).isEqualTo(t3).isEqualTo(t4);
     }
 
     @Test

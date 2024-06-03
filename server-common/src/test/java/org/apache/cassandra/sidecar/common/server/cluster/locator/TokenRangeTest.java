@@ -25,6 +25,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,9 +47,19 @@ class TokenRangeTest
     {
         TokenRange range = new TokenRange(1, 100);
         assertThat(range.firstToken()).isEqualTo(Token.from(2));
+        // test the first token refer is the same
+        assertThat(range.firstToken()).isSameAs(range.firstToken());
 
         TokenRange emptyRange = new TokenRange(1, 1);
         assertThat(emptyRange.firstToken()).isNull();
+    }
+
+    @Test
+    void testCreateRangeWithInvalidParams()
+    {
+        assertThatThrownBy(() -> new TokenRange(1, -1))
+        .isExactlyInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid range: (Token(1)‥Token(-1)]");
     }
 
     @Test
@@ -73,6 +84,17 @@ class TokenRangeTest
         assertThat(ranges).hasSize(2)
                           .isEqualTo(Arrays.asList(new TokenRange(10, Long.MAX_VALUE),
                                                    new TokenRange(Long.MIN_VALUE, -10L)));
+    }
+
+    @Test
+    void testCreateFromWraparoundJavaDriverTokenRangeEndingInMinToken()
+    {
+        com.datastax.driver.core.TokenRange range = mockRange(10L, Long.MIN_VALUE);
+        // Java driver's token range considers the range is no a wraparound, if the end is the minimum token
+        when(range.unwrap()).thenReturn(Collections.singletonList(range));
+        List<TokenRange> ranges = TokenRange.from(range);
+        assertThat(ranges).hasSize(1)
+                          .isEqualTo(Collections.singletonList(new TokenRange(10L, Long.MAX_VALUE)));
     }
 
     @Test

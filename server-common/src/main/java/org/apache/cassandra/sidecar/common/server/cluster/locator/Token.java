@@ -32,8 +32,12 @@ public final class Token implements Comparable<Token>
     private static final Comparator<Token> TOKEN_COMPARATOR = Comparator.comparing(Token::toBigInteger);
 
     private final BigInteger value;
-    private final int hashCode;
 
+    /**
+     * Create token from {@code BigInteger} value
+     * @param value token value
+     * @return token
+     */
     public static Token from(BigInteger value)
     {
         return new Token(value);
@@ -51,6 +55,11 @@ public final class Token implements Comparable<Token>
         return new Token(new BigInteger(valueStr));
     }
 
+    /**
+     * Create token from long value
+     * @param value token value
+     * @return token
+     */
     public static Token from(long value)
     {
         return new Token(BigInteger.valueOf(value));
@@ -59,14 +68,19 @@ public final class Token implements Comparable<Token>
     private Token(BigInteger value)
     {
         this.value = value;
-        this.hashCode = value.hashCode();
     }
 
+    /**
+     * @return the {@code BigInteger} value
+     */
     public BigInteger toBigInteger()
     {
         return value;
     }
 
+    /**
+     * @return a new instance of token whose value is {@code (this + 1)}
+     */
     public Token increment()
     {
         return new Token(value.add(BigInteger.ONE));
@@ -91,7 +105,7 @@ public final class Token implements Comparable<Token>
     @Override
     public int hashCode()
     {
-        return hashCode;
+        return value.hashCode();
     }
 
     @Override

@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
+import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -102,7 +103,9 @@ class ExecutorPoolsTest
         .describedAs("Test should finish in 10 seconds")
         .isTrue();
 
-        assertThat(metrics.server().resource().internalTaskTime.metric.getCount()).isEqualTo(total);
+        // there could be some delay to read the metric that reflects the last task. If so, retry the assertion for at most 2 seconds
+        loopAssert(2,
+                   () -> assertThat(metrics.server().resource().internalTaskTime.metric.getCount()).isEqualTo(total));
     }
 
     private void testExecutionOrder(boolean orderedSubmission, boolean orderedExecution)

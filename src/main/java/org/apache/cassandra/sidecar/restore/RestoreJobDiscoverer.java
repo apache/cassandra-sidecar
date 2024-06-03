@@ -264,7 +264,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
     {
         short bucketId = 0; // TODO: update the implementation to pick proper bucketId
         restoreSliceDatabaseAccessor
-        .selectByJobByBucketByTokenRange(restoreJob.jobId, bucketId, range.start().toBigInteger(), range.end().toBigInteger())
+        .selectByJobByBucketByTokenRange(restoreJob.jobId, bucketId, range)
         .forEach(slice -> {
             // set the owner instance, which is not read from database
             slice = slice.unbuild().ownerInstance(instance).build();
