@@ -20,14 +20,22 @@ package org.apache.cassandra.sidecar.restore;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +48,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
@@ -49,14 +58,18 @@ import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
+import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
+import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceRestoreMetrics;
+import org.apache.cassandra.sidecar.restore.RestoreSliceManifest.ManifestEntry;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
+import org.apache.cassandra.sidecar.utils.XXHash32Provider;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
@@ -64,7 +77,9 @@ import static org.apache.cassandra.sidecar.AssertionUtils.getBlocking;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -77,6 +92,7 @@ class RestoreSliceTaskTest
     private TaskExecutorPool executorPool;
     private SidecarMetrics metrics;
     private TestRestoreSliceAccessor sliceDatabaseAccessor;
+    private LocalTokenRangesProvider localTokenRangesProvider;
     private RestoreJobUtil util;
 
     @BeforeEach
@@ -99,7 +115,8 @@ class RestoreSliceTaskTest
         when(mockRegistryFactory.getOrCreate()).thenReturn(registry());
         when(mockRegistryFactory.getOrCreate(1)).thenReturn(registry(1));
         metrics = new SidecarMetricsImpl(mockRegistryFactory, mockInstanceMetadataFetcher);
-        util = mock(RestoreJobUtil.class);
+        localTokenRangesProvider = mock(LocalTokenRangesProvider.class);
+        util = new RestoreJobUtil(new XXHash32Provider());
         sliceDatabaseAccessor = new TestRestoreSliceAccessor();
     }
 
@@ -340,6 +357,95 @@ class RestoreSliceTaskTest
         assertThat(task.elapsedInNanos()).isEqualTo(123L);
     }
 
+    @Test
+    void testRemoveOutOfRangeSSTables(@TempDir Path tempDir) throws RestoreJobException, IOException
+    {
+        // TODO: update test to use replica ranges implementation
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, "QUORUM");
+        RestoreSliceTask task = createTask(mockSlice, job);
+
+        // the mocked localTokenRangesProvider returns null, so retry later
+        RestoreSliceManifest manifest = new RestoreSliceManifest();
+        assertThatThrownBy(() -> task.removeOutOfRangeSSTablesUnsafe(tempDir.toFile(), manifest))
+        .isExactlyInstanceOf(RestoreJobException.class)
+        .hasMessageContaining("Unable to fetch local range, retry later");
+
+        // enclosed in the node's owning range: [1, 10] is fully enclosed in (0, 100]
+        // it should not remove the manifest entry, and no cleanup is needed
+        Map<Integer, Set<TokenRange>> localRanges = new HashMap<>(1);
+        Set<TokenRange> nodeRanges = new HashSet<>();
+        nodeRanges.add(new TokenRange(0, 100)); // not using vnode, so a single range
+        localRanges.put(1, nodeRanges); // instance id is 1. See setup()
+        when(localTokenRangesProvider.localTokenRanges(any())).thenReturn(localRanges);
+        ManifestEntry rangeEnclosed = new ManifestEntry(Collections.emptyMap(),
+                                                        BigInteger.valueOf(1), // start
+                                                        BigInteger.valueOf(10)); // end
+        manifest.put("foo-", rangeEnclosed);
+        task.removeOutOfRangeSSTablesUnsafe(tempDir.toFile(), manifest);
+        assertThat(manifest).hasSize(1);
+        verify(mockSlice, times(0)).requestOutOfRangeDataCleanup();
+
+        // fully out of range: [-10, 0] is fully out of range of (0, 100]
+        // it should remove the manifest entry entirely; no clean up required
+        manifest.clear();
+        ManifestEntry outOfRange = new ManifestEntry(Collections.emptyMap(),
+                                                     BigInteger.valueOf(-10), // start
+                                                     BigInteger.valueOf(0)); // end
+        manifest.put("foo-", outOfRange);
+        task.removeOutOfRangeSSTablesUnsafe(tempDir.toFile(), manifest);
+        assertThat(manifest).isEmpty();
+        verify(mockSlice, times(0)).requestOutOfRangeDataCleanup();
+
+        // partially out of range: [-10, 10] is partially out of range of (0, 100]
+        // it should not remove the manifest entry, but it should signal to request out of range data cleanup
+        manifest.clear();
+        ManifestEntry partiallyOutOfRange = new ManifestEntry(Collections.emptyMap(),
+                                                              BigInteger.valueOf(-10), // start
+                                                              BigInteger.valueOf(10)); // end
+        manifest.put("foo-", partiallyOutOfRange);
+        task.removeOutOfRangeSSTablesUnsafe(tempDir.toFile(), manifest);
+        assertThat(manifest).hasSize(1);
+        verify(mockSlice, times(1)).requestOutOfRangeDataCleanup();
+    }
+
+    @Test
+    void testCompareChecksum(@TempDir Path tempDir) throws RestoreJobFatalException, IOException
+    {
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
+        RestoreSliceTask task = createTask(mockSlice, job);
+
+        byte[] bytes = "Hello".getBytes(StandardCharsets.UTF_8);
+        File[] testFiles = IntStream.range(0, 10).mapToObj(i -> new File(tempDir.toFile(), "f" + i))
+                                    .map(f -> ThrowableUtils.propagate(() -> Files.write(f.toPath(), bytes)).toFile())
+                                    .toArray(File[]::new);
+        Map<String, String> expectedChecksums = new HashMap<>(10);
+        for (File f : testFiles)
+        {
+            expectedChecksums.put(f.getName(), util.checksum(f));
+        }
+
+        assertThat(expectedChecksums)
+        .hasSize(10)
+        .containsEntry("f0", "f206d28f"); // hash value for "Hello"
+
+        // it should not throw
+        task.compareChecksumsUnsafe(expectedChecksums, testFiles);
+
+        // test check with file that does not exist
+        Map<String, String> nonexistFileChecksums = new HashMap<>(10);
+        nonexistFileChecksums.put("non-exist-file", "hash");
+        assertThatThrownBy(() -> task.compareChecksumsUnsafe(nonexistFileChecksums, testFiles))
+        .isInstanceOf(RestoreJobFatalException.class)
+        .hasMessageContaining("File not found in manifest");
+
+        // test check with invalid checksum value
+        Map<String, String> invalidChecksums = new HashMap<>(expectedChecksums);
+        invalidChecksums.put("f0", "invalid_hash"); // modify the hash of the file
+        assertThatThrownBy(() -> task.compareChecksumsUnsafe(invalidChecksums, testFiles))
+        .isInstanceOf(RestoreJobFatalException.class)
+        .hasMessageContaining("Checksum does not match. Expected: invalid_hash; actual: f206d28f");
+    }
+
     private RestoreSliceTask createTask(RestoreSlice slice, RestoreJob job)
     {
         return createTask(slice, job, System::nanoTime);
@@ -351,10 +457,10 @@ class RestoreSliceTaskTest
         assertThat(slice.job()).isSameAs(job);
         assertThat(slice.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
         assertThat(slice.job().status).isEqualTo(job.status);
-        RestoreJobUtil util = mock(RestoreJobUtil.class);
-        when(util.currentTimeNanos()).thenAnswer(invok -> currentNanoTimeSupplier.get());
+        RestoreJobUtil spiedUtil = spy(util);
+        when(spiedUtil.currentTimeNanos()).thenAnswer(invok -> currentNanoTimeSupplier.get());
         return new TestRestoreSliceTask(slice, mockStorageClient, executorPool, mockSSTableImporter,
-                                        0, sliceDatabaseAccessor, util, metrics);
+                                        0, sliceDatabaseAccessor, spiedUtil, localTokenRangesProvider, metrics);
     }
 
     private RestoreSliceTask createTaskWithExceptions(RestoreSlice slice, RestoreJob job)
@@ -365,7 +471,7 @@ class RestoreSliceTaskTest
         assertThat(slice.job().status).isEqualTo(job.status);
         return new TestUnexpectedExceptionInRestoreSliceTask(slice, mockStorageClient, executorPool,
                                                              mockSSTableImporter, 0, sliceDatabaseAccessor,
-                                                             util, metrics);
+                                                             util, localTokenRangesProvider, metrics);
     }
 
     static class TestRestoreSliceAccessor extends RestoreSliceDatabaseAccessor
@@ -393,10 +499,11 @@ class RestoreSliceTaskTest
         public TestRestoreSliceTask(RestoreSlice slice, StorageClient s3Client, TaskExecutorPool executorPool,
                                     SSTableImporter importer, double requiredUsableSpacePercentage,
                                     RestoreSliceDatabaseAccessor sliceDatabaseAccessor, RestoreJobUtil restoreJobUtil,
+                                    LocalTokenRangesProvider localTokenRangesProvider,
                                     SidecarMetrics metrics)
         {
             super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage,
-                  sliceDatabaseAccessor, restoreJobUtil, metrics);
+                  sliceDatabaseAccessor, restoreJobUtil, localTokenRangesProvider, metrics);
             this.slice = slice;
             this.instanceMetrics = metrics.instance(slice.owner().id());
         }
@@ -429,10 +536,12 @@ class RestoreSliceTaskTest
                                                          TaskExecutorPool executorPool, SSTableImporter importer,
                                                          double requiredUsableSpacePercentage,
                                                          RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                                                         RestoreJobUtil util, SidecarMetrics metrics)
+                                                         RestoreJobUtil util,
+                                                         LocalTokenRangesProvider localTokenRangesProvider,
+                                                         SidecarMetrics metrics)
         {
             super(slice, s3Client, executorPool, importer, requiredUsableSpacePercentage,
-                  sliceDatabaseAccessor, util, metrics);
+                  sliceDatabaseAccessor, util, localTokenRangesProvider, metrics);
         }
 
         @Override

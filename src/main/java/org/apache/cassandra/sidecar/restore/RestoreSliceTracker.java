@@ -26,6 +26,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
@@ -39,14 +42,17 @@ public class RestoreSliceTracker
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreSliceTracker.class);
 
     private volatile RestoreJob restoreJob;
+    private volatile boolean cleanupOutOfRangeRequested = false;
+    private final InstanceMetadata instanceMetadata;
     private final Map<RestoreSlice, Status> slices = new ConcurrentHashMap<>();
     private final RestoreProcessor processor;
     private final AtomicReference<RestoreJobFatalException> failureRef = new AtomicReference<>();
 
-    public RestoreSliceTracker(RestoreJob restoreJob, RestoreProcessor restoreProcessor)
+    public RestoreSliceTracker(RestoreJob restoreJob, RestoreProcessor restoreProcessor, InstanceMetadata instanceMetadata)
     {
         this.restoreJob = restoreJob;
         this.processor = restoreProcessor;
+        this.instanceMetadata = instanceMetadata;
     }
 
     /**
@@ -102,6 +108,11 @@ public class RestoreSliceTracker
         cleanupInternal();
     }
 
+    public void requestOutOfRangeDataCleanup()
+    {
+        cleanupOutOfRangeRequested = true;
+    }
+
     /**
      * Internal method to clean up the {@link RestoreSlice}.
      * It validates the slices and log warnings if they are not in a final state,
@@ -109,8 +120,9 @@ public class RestoreSliceTracker
      */
     void cleanupInternal()
     {
+        boolean succeeded = failureRef.get() == null;
         slices.forEach((slice, status) -> {
-            if (failureRef.get() == null && status != Status.COMPLETED)
+            if (succeeded && status != Status.COMPLETED)
             {
                 LOGGER.warn("Clean up pending restore slice when the job has not failed. jobId={}, sliceId={}",
                             restoreJob.jobId, slice.sliceId());
@@ -118,6 +130,34 @@ public class RestoreSliceTracker
             slice.cancel();
         });
         slices.clear();
+
+        runOnCompletion();
+    }
+
+    /**
+     * Run operations on restore job completion, including success and failure cases
+     */
+    private void runOnCompletion()
+    {
+        if (cleanupOutOfRangeRequested)
+        {
+            CassandraAdapterDelegate delegate = instanceMetadata.delegate();
+            StorageOperations operations = delegate == null ? null : delegate.storageOperations();
+            if (operations == null)
+            {
+                LOGGER.warn("Out of range data cleanup for the restore job is requested. It failed to start the operation. jobId={}", restoreJob.jobId);
+                return;
+            }
+
+            try
+            {
+                operations.outOfRangeDataCleanup(restoreJob.keyspaceName, restoreJob.tableName);
+            }
+            catch (Throwable cause)
+            {
+                LOGGER.warn("Clean up out of range data has failed", cause);
+            }
+        }
     }
 
     /**

@@ -24,18 +24,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -54,8 +53,10 @@ import org.jetbrains.annotations.VisibleForTesting;
 public class RestoreJobManager
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJobManager.class);
+    private static final Object PRESENT = new Object();
 
     private final Map<UUID, RestoreSliceTracker> jobs = new ConcurrentHashMap<>();
+    private final Cache<UUID, Object> deletedJobs;
     private final RestoreProcessor processor;
     private final ExecutorPools executorPools;
     private final InstanceMetadata instanceMetadata;
@@ -80,7 +81,8 @@ public class RestoreJobManager
         this.instanceMetadata = instanceMetadata;
         this.executorPools = executorPools;
         this.processor = restoreProcessor;
-        // delete obsolete on start up. Once instance is started, the jobDiscoverer will find the jobs to cleanup
+        this.deletedJobs = Caffeine.newBuilder().expireAfterAccess(1, TimeUnit.DAYS).build();
+        // delete obsolete on start up. Once instance is started, the jobDiscoverer will find the jobs to clean up
         if (deleteOnStart)
         {
             deleteObsoleteDataAsync();
@@ -99,7 +101,7 @@ public class RestoreJobManager
     throws RestoreJobFatalException
     {
         RestoreSliceTracker tracker = jobs.computeIfAbsent(slice.jobId(),
-                                                           id -> new RestoreSliceTracker(restoreJob, processor));
+                                                           id -> new RestoreSliceTracker(restoreJob, processor, instanceMetadata));
         return tracker.trySubmit(slice);
     }
 
@@ -107,17 +109,17 @@ public class RestoreJobManager
      * Update the restore job reference in tracker, in order for pending restore slices to read the latest
      * restore job, especially the credentials to download from cloud storage.
      *
-     * @param job restore job to update
+     * @param restoreJob restore job to update
      */
-    void updateRestoreJob(RestoreJob job)
+    void updateRestoreJob(RestoreJob restoreJob)
     {
-        RestoreSliceTracker tracker = jobs.computeIfAbsent(job.jobId,
-                                                           id -> new RestoreSliceTracker(job, processor));
-        tracker.updateRestoreJob(job);
+        RestoreSliceTracker tracker = jobs.computeIfAbsent(restoreJob.jobId,
+                                                           id -> new RestoreSliceTracker(restoreJob, processor, instanceMetadata));
+        tracker.updateRestoreJob(restoreJob);
     }
 
     /**
-     * Remove the tracker of the job when it is completed and delete its data on disk. The method internal.
+     * Remove the tracker of the job when it is completed and delete its data on disk. The method runs async and it for internal use only.
      * It should only be called by the background task, when it discovers the job is
      * in the final {@link org.apache.cassandra.sidecar.common.data.RestoreJobStatus}, i.e. SUCCEEDED or FAILED.
      *
@@ -125,46 +127,52 @@ public class RestoreJobManager
      */
     void removeJobInternal(UUID jobId)
     {
-        RestoreSliceTracker tracker = jobs.remove(jobId);
-        if (tracker != null)
+        if (deletedJobs.getIfPresent(jobId) == PRESENT)
         {
-            tracker.cleanupInternal();
+            LOGGER.debug("The job is already removed. Skipping. jobId={}", jobId);
+            return;
         }
-        // There might be no tracker, but the job has data on disk.
-        deleteDataOfJobAsync(jobId);
+
+        executorPools
+        .internal()
+        .runBlocking(() -> {
+            RestoreSliceTracker tracker = jobs.remove(jobId);
+            if (tracker != null)
+            {
+                tracker.cleanupInternal();
+            }
+        })
+        .recover(cause -> {
+            // There might be no tracker, but the job has data on disk.
+            LOGGER.warn("Failed to clean up restore job. Recover and proceed to delete the on-disk files. jobId={}", jobId, cause);
+            return Future.succeededFuture();
+        })
+        .compose(v -> deleteDataOfJobAsync(jobId))
+        .onSuccess(v -> deletedJobs.put(jobId, PRESENT));
     }
 
     /**
      * Find obsolete job data on disk and delete them
      * The obsoleteness is determined by {@link RestoreJobConfiguration#jobDiscoveryRecencyDays}
      */
-    Future<Void> deleteObsoleteDataAsync()
+    void deleteObsoleteDataAsync()
     {
-        return findObsoleteJobDataDirs()
-               .compose(pathStream -> {
-                   try (Stream<Path> stream = pathStream)
-                   {
-                       // use 'join' to complete the other deletes, when there is an error
-                       List<Future> deletes = stream.map(this::deleteDataAsync)
-                                                    .collect(Collectors.toList());
-                       return CompositeFuture.join(deletes)
-                              .compose(compositeFuture -> {
-                                  // None of them should fail. Having the branch here for logic completeness
-                                  if (compositeFuture.failed())
-                                  {
-                                      LOGGER.warn("Unexpected error while deleting files.",
-                                                  compositeFuture.cause());
-                                  }
-                                  return Future.<Void>succeededFuture();
-                              });
-                   }
-               })
-               .recover(any -> Future.succeededFuture());
+        findObsoleteJobDataDirs()
+        .compose(pathStream -> executorPools
+                               .internal()
+                               .runBlocking(() -> {
+                                   try (Stream<Path> stream = pathStream)
+                                   {
+                                       stream.forEach(this::deleteRecursively);
+                                   }
+                               }))
+        .onFailure(cause -> LOGGER.warn("Unexpected error while deleting files.", cause));
     }
 
     /**
      * Find the restore job directories that are older than {@link RestoreJobConfiguration#jobDiscoveryRecencyDays}
-     * @return a future of stream of path that should be closed on success. When failed to list, no stream is created.
+     * Note that the returned Stream should be closed by the caller.
+     * @return a future of stream of path. When failed to list, return a failed failure.
      */
     Future<Stream<Path>> findObsoleteJobDataDirs()
     {
@@ -172,23 +180,9 @@ public class RestoreJobManager
         if (!Files.exists(rootDir))
             return Future.succeededFuture(Stream.empty());
 
-        return executorPools.internal().executeBlocking(promise -> {
-            try
-            {
-                Stream<Path> obsoleteDirs = Files.walk(rootDir, 1)
-                                                 .filter(this::isObsoleteRestoreJobDir);
-                promise.complete(obsoleteDirs);
-            }
-            catch (IOException ioe)
-            {
-                LOGGER.warn("Error on listing restore job data directories.", ioe);
-            }
-            finally
-            {
-                // Ensure the promise is complete. It is a no-op, if the promise is already completed.
-                promise.tryComplete(Stream.empty());
-            }
-        });
+        return executorPools.internal()
+                            .executeBlocking(() -> Files.walk(rootDir, 1)
+                                                        .filter(this::isObsoleteRestoreJobDir));
     }
 
     // Deletes quietly w/o returning failed futures
@@ -204,7 +198,7 @@ public class RestoreJobManager
             {
                 rootDirs
                 .filter(path -> Files.isDirectory(path) && path.startsWith(prefixedJobId))
-                .forEach(this::deleteDataAsync);
+                .forEach(this::deleteRecursively);
             }
             catch (IOException ioe) // thrown from Files.walk.
             {
@@ -213,21 +207,19 @@ public class RestoreJobManager
         });
     }
 
-    // Deletes quietly w/o returning failed futures
-    private Future<Void> deleteDataAsync(Path root)
+    // Delete files from the root recursively and quietly w/o throwing any exception
+    private void deleteRecursively(Path root)
     {
-        return executorPools.internal().runBlocking(() -> {
-            try (Stream<Path> pathStream = Files.walk(root))
-            {
-                pathStream
-                .sorted(Comparator.reverseOrder())
-                .forEach(path -> ThrowableUtils.propagate(() -> Files.delete(path)));
-            }
-            catch (Exception exception)
-            {
-                LOGGER.warn("Error on deleting data. Path={}", root, exception);
-            }
-        });
+        try (Stream<Path> pathStream = Files.walk(root))
+        {
+            pathStream
+            .sorted(Comparator.reverseOrder())
+            .forEach(path -> ThrowableUtils.propagate(() -> Files.delete(path)));
+        }
+        catch (Exception exception)
+        {
+            LOGGER.warn("Error on deleting data. Path={}", root, exception);
+        }
     }
 
     // returns true only when all conditions are met

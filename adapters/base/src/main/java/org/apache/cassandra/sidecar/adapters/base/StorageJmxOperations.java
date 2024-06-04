@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.adapters.base;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /**
  * An interface that pulls methods from the Cassandra Storage Service Proxy
@@ -146,4 +147,16 @@ public interface StorageJmxOperations
      * @return String array of all locations
      */
     String[] getAllDataFileLocations();
+
+    /**
+     * Force cleanup the data of the tables in the keyspace. All partitions that out of the range are removed
+     * @param jobs job concurrency
+     * @param keyspaceName keyspace of the table to clean
+     * @param tables tables to clean
+     * @return status code. 0: success; 1: aborted; 2: unable to cancel
+     * @throws IOException i/o exception during cleanup
+     * @throws ExecutionException it does not really throw but declared in MBean
+     * @throws InterruptedException it does not really throw but declared in MBean
+     */
+    int forceKeyspaceCleanup(int jobs, String keyspaceName, String... tables) throws IOException, ExecutionException, InterruptedException;
 }

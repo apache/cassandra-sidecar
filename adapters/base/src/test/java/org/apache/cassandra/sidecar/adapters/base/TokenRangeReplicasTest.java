@@ -30,6 +30,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioner;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**

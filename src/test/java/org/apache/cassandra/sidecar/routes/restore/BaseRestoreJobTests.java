@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.routes.restore;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.google.common.collect.Range;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +43,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -153,7 +152,7 @@ public abstract class BaseRestoreJobTests
         testRestoreSlices.updateStatusFunc = func;
     }
 
-    protected void mockLookupRestoreSlices(BiFunction<UUID, Range<BigInteger>, List<RestoreSlice>> func)
+    protected void mockLookupRestoreSlices(BiFunction<UUID, TokenRange, List<RestoreSlice>> func)
     {
         testRestoreSlices.selectByJobByRangeFunc = func;
     }
@@ -206,7 +205,7 @@ public abstract class BaseRestoreJobTests
         {
             Function<RestoreSlice, RestoreSlice> createFunc;
             Function<RestoreSlice, RestoreSlice> updateStatusFunc;
-            BiFunction<UUID, Range<BigInteger>, List<RestoreSlice>> selectByJobByRangeFunc;
+            BiFunction<UUID, TokenRange, List<RestoreSlice>> selectByJobByRangeFunc;
 
             TestRestoreSliceDatabaseAccessor(SidecarSchema sidecarSchema)
             {
@@ -226,10 +225,9 @@ public abstract class BaseRestoreJobTests
             }
 
             @Override
-            public List<RestoreSlice> selectByJobByBucketByTokenRange(UUID jobId, short bucketId,
-                                                                      BigInteger startToken, BigInteger endToken)
+            public List<RestoreSlice> selectByJobByBucketByTokenRange(UUID jobId, short bucketId, TokenRange range)
             {
-                return selectByJobByRangeFunc.apply(jobId, Range.closed(startToken, endToken));
+                return selectByJobByRangeFunc.apply(jobId, range);
             }
         }
 

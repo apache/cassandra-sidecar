@@ -47,6 +47,7 @@ import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.jetbrains.annotations.NotNull;
 
@@ -82,7 +83,6 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
     }
 
     @Override
-    @Nullable
     public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace)
     {
         List<InstanceMetadata> localInstances = instancesConfig.instances();
@@ -153,7 +153,6 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
     /**
      * Reload the locally cached token ranges when needed
      */
-    @Nullable
     private synchronized Map<Integer, Set<TokenRange>> getCacheOrReload(Metadata metadata,
                                                                         String keyspace,
                                                                         Set<Integer> localInstanceIds,
@@ -167,7 +166,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             && localTokenRangesCache.containsKey(keyspace)
             && isClusterTheSame)
         {
-            return localTokenRangesCache.get(keyspace);
+            return localTokenRangesCache.getOrDefault(keyspace, Collections.emptyMap());
         }
 
         // otherwise, reload the token ranges
@@ -226,7 +225,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
         {
             LOGGER.warn("Unable to determine local instances from client meta-data!");
         }
-        return localTokenRangesCache.get(keyspace);
+        return localTokenRangesCache.getOrDefault(keyspace, Collections.emptyMap());
     }
 
     private static class IpAddressAndPort

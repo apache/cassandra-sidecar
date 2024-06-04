@@ -19,8 +19,13 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.io.File;
+import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -32,6 +37,7 @@ import io.vertx.core.Promise;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -41,6 +47,7 @@ import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
+import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.StopWatch;
@@ -72,6 +79,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
     private final double requiredUsableSpacePercentage;
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobUtil restoreJobUtil;
+    private final LocalTokenRangesProvider localTokenRangesProvider;
     private final RestoreMetrics metrics;
     private final InstanceMetrics instanceMetrics;
     private long taskStartTimeNanos = -1;
@@ -83,6 +91,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
                             double requiredUsableSpacePercentage,
                             RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
                             RestoreJobUtil restoreJobUtil,
+                            LocalTokenRangesProvider localTokenRangesProvider,
                             SidecarMetrics metrics)
     {
         Preconditions.checkArgument(!slice.job().isManagedBySidecar()
@@ -95,6 +104,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
         this.requiredUsableSpacePercentage = requiredUsableSpacePercentage;
         this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.restoreJobUtil = restoreJobUtil;
+        this.localTokenRangesProvider = localTokenRangesProvider;
         this.metrics = metrics.server().restore();
         this.instanceMetrics = metrics.instance(slice.owner().id());
     }
@@ -102,6 +112,19 @@ public class RestoreSliceTask implements RestoreSliceHandler
     public static RestoreSliceHandler failed(RestoreJobException cause, RestoreSlice slice)
     {
         return new Failed(cause, slice);
+    }
+
+    @Override
+    public long elapsedInNanos()
+    {
+        return taskStartTimeNanos == -1 ? -1 :
+               currentTimeInNanos() - taskStartTimeNanos;
+    }
+
+    @Override
+    public RestoreSlice slice()
+    {
+        return slice;
     }
 
     @Override
@@ -137,10 +160,10 @@ public class RestoreSliceTask implements RestoreSliceHandler
                     // 1. check object existence and validate eTag / checksum
                     return checkObjectExistence(event)
                            .compose(headObject -> downloadSlice(event))
-                           .<Void>compose(file -> {
+                           .compose(file -> {
                                slice.completeStagePhase();
                                sliceDatabaseAccessor.updateStatus(slice);
-                               return Future.succeededFuture();
+                               return Future.<Void>succeededFuture();
                            })
                            // completed staging. A new task is produced when it comes to import
                            .onSuccess(_v -> event.tryComplete(slice))
@@ -326,10 +349,11 @@ public class RestoreSliceTask implements RestoreSliceHandler
 
     private Future<File> unzip(File zipFile)
     {
-        Future<File> future = executorPool.executeBlocking(promise -> {
-            if (failOnCancelled(promise))
-                return;
+        if (slice.isCancelled())
+            return Future.failedFuture(RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
+                                                                         slice, null));
 
+        Future<File> future = executorPool.executeBlocking(() -> {
             // targetPathInStaging points to the directory named after uploadId
             // SSTableImporter expects the file system structure to be uploadId/keyspace/table/sstables
             File targetDir = slice.stageDirectory()
@@ -345,14 +369,13 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 {
                     LOGGER.debug("The files in slice are already extracted. Maybe it is a retried task? " +
                                  "jobId={} sliceKey={}", slice.jobId(), slice.key());
-                    promise.complete(targetDir);
+                    // return early
+                    return targetDir;
                 }
                 else
                 {
-                    promise.tryFail(new RestoreJobException("Object not found from disk. File: " + zipFile));
+                    throw new RestoreJobException("Object not found from disk. File: " + zipFile);
                 }
-                // return early
-                return;
             }
 
             try
@@ -362,50 +385,48 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 // The validation step later expects only the files registered in the manifest.
                 RestoreJobUtil.cleanDirectory(targetDir.toPath());
                 RestoreJobUtil.unzip(zipFile, targetDir);
-                // Notify the next step that unzip is complete
-                promise.complete(targetDir);
                 // Then, delete the downloaded zip file
                 if (!zipFile.delete())
                 {
                     LOGGER.warn("File deletion attempt failed. jobId={} sliceKey={} file={}",
                                 slice.jobId(), slice.key(), zipFile.getAbsolutePath());
                 }
+                // Notify the next step that unzip is complete
+                return targetDir;
             }
             catch (Exception cause)
             {
-                promise.tryFail(RestoreJobExceptions.propagate("Failed to unzip. File: " + zipFile, cause));
+                throw RestoreJobExceptions.propagate("Failed to unzip. File: " + zipFile, cause);
             }
         }, false); // unordered
 
         return StopWatch.measureTimeTaken(future, d -> instanceMetrics.restore().sliceUnzipTime.metric.update(d, TimeUnit.NANOSECONDS));
     }
 
-    // Validate integrity of the files from the zip. The failures from any step is fatal and not retryable.
+    // Validate integrity of the files from the zip. If the SSTables that are fully out of the owning range of the node is removed
     private Future<File> validateFiles(File directory)
     {
-        Future<File> future = executorPool.executeBlocking(promise -> {
-            if (failOnCancelled(promise))
-                return;
+        if (slice.isCancelled())
+            return Future.failedFuture(RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
+                                                                         slice, null));
 
-            Map<String, String> checksums;
-            try
+        Future<File> future = executorPool.executeBlocking(() -> {
+            File manifestFile = new File(directory, RestoreSliceManifest.MANIFEST_FILE_NAME);
+            RestoreSliceManifest manifest = RestoreSliceManifest.read(manifestFile);
+
+            if (manifest.isEmpty())
             {
-                File manifestFile = new File(directory, RestoreSliceManifest.MANIFEST_FILE_NAME);
-                RestoreSliceManifest manifest = RestoreSliceManifest.read(manifestFile);
-                checksums = manifest.mergeAllChecksums();
-            }
-            catch (RestoreJobFatalException e)
-            {
-                promise.tryFail(e);
-                return;
+                throw new RestoreJobFatalException("The downloaded slice has no data. " +
+                                                   "Directory: " + directory);
             }
 
-            if (checksums.isEmpty())
+            // validate the SSTable ranges with the owning range of the node and remove the out-of-range sstables
+            if (slice.job().isManagedBySidecar())
             {
-                promise.tryFail(new RestoreJobFatalException("The downloaded slice has no data. " +
-                                                             "Directory: " + directory));
-                return;
+                removeOutOfRangeSSTables(directory, manifest);
             }
+
+            Map<String, String> checksums = manifest.mergeAllChecksums();
 
             // exclude the manifest file
             File[] files = directory.listFiles((dir, name) -> !name.equals(RestoreSliceManifest.MANIFEST_FILE_NAME));
@@ -414,11 +435,10 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 String msg = "Number of files does not match. Expected: " + checksums.size() +
                              "; Actual: " + (files == null ? 0 : files.length) +
                              "; Directory: " + directory;
-                promise.tryFail(new RestoreJobFatalException(msg));
-                return;
+                throw new RestoreJobFatalException(msg);
             }
 
-            compareChecksums(checksums, files, promise);
+            compareChecksums(checksums, files);
 
             // capture the data component size of sstables
             for (File file : files)
@@ -430,13 +450,71 @@ public class RestoreSliceTask implements RestoreSliceHandler
             }
 
             // all files match with the provided checksums
-            promise.tryComplete(directory);
+            return directory;
         }, false); // unordered
 
         return StopWatch.measureTimeTaken(future, d -> instanceMetrics.restore().sliceValidationTime.metric.update(d, TimeUnit.NANOSECONDS));
     }
 
-    private void compareChecksums(Map<String, String> expectedChecksums, File[] files, Promise<?> promise)
+    // Remove all the SSTables that does not belong this node
+    // The method modifies the input manifest and delete files under directory, if out of range sstables are found
+    private void removeOutOfRangeSSTables(File directory, RestoreSliceManifest manifest) throws RestoreJobException, IOException
+    {
+        Set<TokenRange> ranges = localTokenRangesProvider.localTokenRanges(slice.keyspace()).get(slice.owner().id());
+        if (ranges == null || ranges.isEmpty())
+        {
+            // Note: retry is allowed for the failure
+            throw new RestoreJobException("Unable to fetch local range, retry later");
+        }
+
+        // 1. remove the sstables that are fully out of range
+        // 2. detect if there is any range that partially overlaps. In that case, signal that this node is required to run nodetool cleanup on job completion
+        Iterator<Map.Entry<String, RestoreSliceManifest.ManifestEntry>> it = manifest.entrySet().iterator();
+        while (it.hasNext())
+        {
+            RestoreSliceManifest.ManifestEntry entry = it.next().getValue();
+            // TokenRange is open-closed, hence subtracting one from the rangeStart read from manifest
+            TokenRange sstableRange = new TokenRange(entry.startToken().subtract(BigInteger.ONE),
+                                                     entry.endToken());
+
+            boolean hasOverlap = false;
+            boolean fullyEnclosed = false;
+            for (TokenRange owningRange : ranges)
+            {
+                if (hasOverlap)
+                {
+                    break;
+                }
+
+                hasOverlap = owningRange.overlaps(sstableRange);
+
+                if (hasOverlap)
+                {
+                    fullyEnclosed = owningRange.encloses(sstableRange);
+                }
+            }
+
+            // fully out of range
+            if (!hasOverlap)
+            {
+                // remove the entry from manifest
+                it.remove();
+                // delete the files
+                for (String fileName : entry.componentsChecksum().keySet())
+                {
+                    Path path = directory.toPath().resolve(fileName);
+                    Files.deleteIfExists(path);
+                }
+            }
+            // overlaps, but is not fully enclosed; we need to run cleanup on this node
+            else if (!fullyEnclosed)
+            {
+                slice.requestOutOfRangeDataCleanup();
+            }
+        }
+    }
+
+    private void compareChecksums(Map<String, String> expectedChecksums, File[] files) throws RestoreJobFatalException
     {
         for (File file : files)
         {
@@ -444,8 +522,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
             String expectedChecksum = expectedChecksums.get(name);
             if (expectedChecksum == null)
             {
-                promise.tryFail(new RestoreJobFatalException("File not found in manifest. File: " + name));
-                return;
+                throw new RestoreJobFatalException("File not found in manifest. File: " + name);
             }
 
             try
@@ -455,14 +532,12 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 {
                     String msg = "Checksum does not match. Expected: " + expectedChecksum +
                                  "; actual: " + actualChecksum + "; file: " + file;
-                    promise.tryFail(new RestoreJobFatalException(msg));
-                    return;
+                    throw new RestoreJobFatalException(msg);
                 }
             }
-            catch (Exception cause)
+            catch (IOException cause)
             {
-                promise.tryFail(new RestoreJobFatalException("Failed to calculate checksum. File: " + file));
-                return;
+                throw new RestoreJobFatalException("Failed to calculate checksum. File: " + file, cause);
             }
         }
     }
@@ -520,17 +595,18 @@ public class RestoreSliceTask implements RestoreSliceHandler
                     httpException.getPayload(), httpException);
     }
 
-    @Override
-    public long elapsedInNanos()
+    // For testing only. Unsafe to call in production code.
+    @VisibleForTesting
+    void removeOutOfRangeSSTablesUnsafe(File directory, RestoreSliceManifest manifest) throws RestoreJobException, IOException
     {
-        return taskStartTimeNanos == -1 ? -1 :
-               currentTimeInNanos() - taskStartTimeNanos;
+        removeOutOfRangeSSTables(directory, manifest);
     }
 
-    @Override
-    public RestoreSlice slice()
+    // For testing only. Unsafe to call in production code.
+    @VisibleForTesting
+    void compareChecksumsUnsafe(Map<String, String> expectedChecksums, File[] files) throws RestoreJobFatalException
     {
-        return slice;
+        compareChecksums(expectedChecksums, files);
     }
 
     /**

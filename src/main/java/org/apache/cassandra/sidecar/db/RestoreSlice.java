@@ -37,6 +37,7 @@ import org.apache.cassandra.sidecar.common.server.data.RestoreSliceStatus;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
+import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.restore.RestoreJobUtil;
 import org.apache.cassandra.sidecar.restore.RestoreSliceHandler;
@@ -207,6 +208,14 @@ public class RestoreSlice
         failAtInstance(owner().id());
     }
 
+    /**
+     * Request to clean up out of range data. It is requested when detecting the slice contains out of range data
+     */
+    public void requestOutOfRangeDataCleanup()
+    {
+        tracker.requestOutOfRangeDataCleanup();
+    }
+
     public void setExistsOnS3()
     {
         this.existsOnS3 = true;
@@ -234,6 +243,7 @@ public class RestoreSlice
                                            double requiredUsableSpacePercentage,
                                            RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
                                            RestoreJobUtil restoreJobUtil,
+                                           LocalTokenRangesProvider localTokenRangesProvider,
                                            SidecarMetrics metrics)
     {
         if (isCancelled)
@@ -248,6 +258,7 @@ public class RestoreSlice
                                         requiredUsableSpacePercentage,
                                         sliceDatabaseAccessor,
                                         restoreJobUtil,
+                                        localTokenRangesProvider,
                                         metrics);
         }
         catch (IllegalStateException illegalState)

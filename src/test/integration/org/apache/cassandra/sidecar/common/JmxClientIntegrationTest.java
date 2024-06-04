@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.common;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
@@ -29,6 +30,8 @@ import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.fail;
 
 /**
  * Test to ensure connectivity with the JMX client
@@ -37,46 +40,77 @@ public class JmxClientIntegrationTest
 {
     private static final String SS_OBJ_NAME = "org.apache.cassandra.db:type=StorageService";
 
+    /**
+     * Test jmx connectivity with various operations
+     */
     @CassandraIntegrationTest
     void testJmxConnectivity(CassandraTestContext context) throws IOException
     {
         try (JmxClient jmxClient = createJmxClient(context))
         {
-            String opMode = jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
-                                     .getOperationMode();
-            assertThat(opMode).isNotNull();
-            assertThat(opMode).isIn("LEAVING", "JOINING", "NORMAL", "DECOMMISSIONED", "CLIENT");
+            testGetOperationMode(jmxClient, context.cluster());
 
-            IUpgradeableInstance instance = context.cluster().getFirstRunningInstance();
-            IInstanceConfig config = instance.config();
-            assertThat(jmxClient.host()).isEqualTo(config.broadcastAddress().getAddress().getHostAddress());
-            assertThat(jmxClient.port()).isEqualTo(config.jmxPort());
+            testGossipInfo(jmxClient);
+
+            testCorrectVersion(jmxClient, String.valueOf(context.version.major));
+
+            testTableCleanup(jmxClient, context.cluster());
         }
     }
 
-    @CassandraIntegrationTest
-    void testGossipInfo(CassandraTestContext context) throws IOException
+    private void testGetOperationMode(JmxClient jmxClient, UpgradeableCluster cluster)
     {
-        try (JmxClient jmxClient = createJmxClient(context))
-        {
-            FailureDetector proxy = jmxClient.proxy(FailureDetector.class,
-                                                    "org.apache.cassandra.net:type=FailureDetector");
-            String rawGossipInfo = proxy.getAllEndpointStates();
-            assertThat(rawGossipInfo).isNotEmpty();
-            Map<String, ?> gossipInfoMap = GossipInfoParser.parse(rawGossipInfo);
-            assertThat(gossipInfoMap).isNotEmpty();
-            gossipInfoMap.forEach((key, value) -> GossipInfoParser.isGossipInfoHostHeader(key));
-        }
+        String opMode = jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
+                                 .getOperationMode();
+        assertThat(opMode).isNotNull();
+        assertThat(opMode).isIn("LEAVING", "JOINING", "NORMAL", "DECOMMISSIONED", "CLIENT");
+
+        IUpgradeableInstance instance = cluster.getFirstRunningInstance();
+        IInstanceConfig config = instance.config();
+        assertThat(jmxClient.host()).isEqualTo(config.broadcastAddress().getAddress().getHostAddress());
+        assertThat(jmxClient.port()).isEqualTo(config.jmxPort());
     }
 
-    @CassandraIntegrationTest
-    void testCorrectVersion(CassandraTestContext context) throws IOException
+    private void testGossipInfo(JmxClient jmxClient)
     {
-        try (JmxClient jmxClient = createJmxClient(context))
+        FailureDetector proxy = jmxClient.proxy(FailureDetector.class,
+                                                "org.apache.cassandra.net:type=FailureDetector");
+        String rawGossipInfo = proxy.getAllEndpointStates();
+        assertThat(rawGossipInfo).isNotEmpty();
+        Map<String, ?> gossipInfoMap = GossipInfoParser.parse(rawGossipInfo);
+        assertThat(gossipInfoMap).isNotEmpty();
+        gossipInfoMap.forEach((key, value) -> GossipInfoParser.isGossipInfoHostHeader(key));
+    }
+
+    private void testCorrectVersion(JmxClient jmxClient, String majorVersion)
+    {
+        String releaseVersion = jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
+                                         .getReleaseVersion();
+        assertThat(releaseVersion).startsWith(majorVersion);
+    }
+
+    // a test to ensure the jmx client can invoke the MBean method
+    private void testTableCleanup(JmxClient jmxClient, UpgradeableCluster cluster)
+    {
+        cluster.schemaChange("CREATE KEYSPACE jmx_client_test WITH REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor' : 1}");
+        cluster.schemaChange("CREATE TABLE jmx_client_test.table_cleanup ( a int PRIMARY KEY, b int)");
+        cluster.get(1).executeInternal("INSERT INTO jmx_client_test.table_cleanup (a, b) VALUES (1, 1)");
+        cluster.get(1).flush("jmx_client_test");
+        int status = -1;
+        try
         {
-            jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
-                     .refreshSizeEstimates();
+            status = jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
+                              .forceKeyspaceCleanup(1, "jmx_client_test", "table_cleanup");
         }
+        catch (Exception e)
+        {
+            fail("Unexpected exception ", e);
+        }
+        assertThat(status).isZero();
+
+        assertThatThrownBy(() -> jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
+                                          .forceKeyspaceCleanup(1, "jmx_client_test", "table_not_exist"))
+        .hasMessageContaining("Unknown keyspace/cf pair");
     }
 
     /**
@@ -89,6 +123,8 @@ public class JmxClientIntegrationTest
         void refreshSizeEstimates();
 
         String getReleaseVersion();
+
+        int forceKeyspaceCleanup(int jobs, String keyspaceName, String... tables);
     }
 
     /**
@@ -98,7 +134,6 @@ public class JmxClientIntegrationTest
     {
         String getAllEndpointStates();
     }
-
 
     private static JmxClient createJmxClient(CassandraTestContext context)
     {

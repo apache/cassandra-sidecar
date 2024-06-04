@@ -215,7 +215,7 @@ class RestoreProcessorTest
                                    .jobStatus(RestoreJobStatus.CREATED)
                                    .build();
         when(slice.job()).thenReturn(job);
-        when(slice.toAsyncTask(any(), any(), any(), anyDouble(), any(), any(), any())).thenReturn(
+        when(slice.toAsyncTask(any(), any(), any(), anyDouble(), any(), any(), any(), any())).thenReturn(
         new RestoreSliceHandler()
         {
             private Long startTime = timeInNanosSupplier.get();

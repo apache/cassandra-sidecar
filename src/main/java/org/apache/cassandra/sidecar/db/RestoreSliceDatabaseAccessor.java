@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.db;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +28,7 @@ import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
@@ -88,16 +88,15 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor
         return slice;
     }
 
-    public List<RestoreSlice> selectByJobByBucketByTokenRange(UUID jobId, short bucketId,
-                                                              BigInteger startToken, BigInteger endToken)
+    public List<RestoreSlice> selectByJobByBucketByTokenRange(UUID jobId, short bucketId, TokenRange range)
     {
         sidecarSchema.ensureInitialized();
 
         BoundStatement statement = restoreSlicesSchema.findAllByTokenRange()
                                                       .bind(jobId,
                                                             bucketId,
-                                                            startToken,
-                                                            endToken);
+                                                            range.start().toBigInteger(),
+                                                            range.end().toBigInteger());
         ResultSet result = execute(statement);
         List<RestoreSlice> slices = new ArrayList<>();
         for (Row row : result)

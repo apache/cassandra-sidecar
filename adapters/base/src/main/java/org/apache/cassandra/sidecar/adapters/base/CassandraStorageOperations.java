@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,7 @@ import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioner;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.exceptions.NodeBootstrappingException;
@@ -200,5 +202,15 @@ public class CassandraStorageOperations implements StorageOperations
             dataFileLocations = Collections.unmodifiableList(Arrays.asList(allDataFileLocations));
         }
         return dataFileLocations;
+    }
+
+    @Override
+    public void outOfRangeDataCleanup(@NotNull String keyspace, @NotNull String table, int concurrency)
+    throws IOException, ExecutionException, InterruptedException
+    {
+        requireNonNull(keyspace, "keyspace must be non-null");
+        requireNonNull(table, "table must be non-null");
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .forceKeyspaceCleanup(concurrency, keyspace, table);
     }
 }
