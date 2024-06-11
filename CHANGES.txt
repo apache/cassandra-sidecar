@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Added additional JVM options to increase max open FD limit for MacOS (CASSANDRASC-135)
  * Detect out of range data and cleanup using nodetool (CASSANDRASC-134)
  * Allow optional reason to abort restore jobs (CASSANDRASC-133)
  * Fix SidecarLoadBalancingPolicy unexpectedly removing local node and improve CI stability (CASSANDRASC-131)
