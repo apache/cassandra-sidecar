@@ -83,7 +83,7 @@ shadowJar {
     }
 }
 
-task.named('test') {
+tasks.named('test') {
     dependsOn 'shadowJar'
 }
 
