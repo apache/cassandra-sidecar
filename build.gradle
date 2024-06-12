@@ -318,7 +318,7 @@ test {
     // see the integrationTest task
     useJUnitPlatform()
     if (Os.isFamily(Os.FAMILY_MAC)) {
-        jvmArgs "-XX:+MaxFDLimit"
+        jvmArgs "-XX:-MaxFDLimit"
     }
     reports {
         junitXml.enabled = true

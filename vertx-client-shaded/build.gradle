@@ -83,7 +83,9 @@ shadowJar {
     }
 }
 
-test.dependsOn shadowJar
+task.named('test') {
+    dependsOn 'shadowJar'
+}
 
 publishing {
     publications {
