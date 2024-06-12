@@ -20,23 +20,31 @@ package org.apache.cassandra.sidecar;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Test to ensure that the max file descriptors is large enough to build Cassandra Sidecar
+ */
 public class UlimitTest
 {
+
+    /**
+     * Runs a test to ensure that the Max Files isn't too low
+     * @throws Exception when maxFD isn't large enough
+     */
     @Test
     void ensureUlimitMaxFilesIsNotTooLow() throws Exception
     {
         Process p = new ProcessBuilder("ulimit", "-n").start();
         p.waitFor();
-        InputStreamReader inputStreamReader = new InputStreamReader(p.getInputStream());
+        InputStreamReader inputStreamReader = new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8);
         BufferedReader reader = new BufferedReader(inputStreamReader);
         String line = reader.readLine();
         long maxFD = Long.parseLong(line);
-        System.out.println(maxFD);
         assertThat(maxFD).isGreaterThan(10240);
         inputStreamReader.close();
         reader.close();
