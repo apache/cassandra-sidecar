@@ -24,13 +24,15 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test to ensure that the max file descriptors is large enough to build Cassandra Sidecar
  */
-@Disabled("ulimit does not exist at the CI runtime")
+@EnabledOnOs({OS.MAC})
 public class UlimitTest
 {
 
