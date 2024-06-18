@@ -105,8 +105,11 @@ if [ "$cygwin" = "false" -a "$darwin" = "false" -a "$nonstop" = "false" ] ; then
 fi
 
 # For Darwin, add options to specify how the application appears in the dock
+# In addition, we want to increase the file descriptor limit to the MaxFDLimit in MacOS, which,
+# by default, is set to a lower limit than the actual system maximum. This line is modified manually, if
+# producing a new gradle wrapper, remember to add the change back.
 if $darwin; then
-    GRADLE_OPTS="$GRADLE_OPTS \"-Xdock:name=$APP_NAME\" \"-Xdock:icon=$APP_HOME/media/gradle.icns\""
+    GRADLE_OPTS="$GRADLE_OPTS \"-XX:-MaxFDLimit\" \"-Xdock:name=$APP_NAME\" \"-Xdock:icon=$APP_HOME/media/gradle.icns\" \"-Dorg.gradle.jvmargs=-XX:-MaxFDLimit\""
 fi
 
 # For Cygwin, switch paths to Windows format before running java

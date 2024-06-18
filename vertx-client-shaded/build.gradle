@@ -83,6 +83,10 @@ shadowJar {
     }
 }
 
+tasks.named('test') {
+    dependsOn 'shadowJar'
+}
+
 publishing {
     publications {
         shadow(MavenPublication) { publication ->

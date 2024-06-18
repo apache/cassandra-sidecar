@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
 import java.nio.file.Paths
 
 plugins {
@@ -39,6 +42,9 @@ repositories {
 
 test {
     useJUnitPlatform()
+    if (Os.isFamily(Os.FAMILY_MAC)) {
+        jvmArgs "-XX:-MaxFDLimit"
+    }
     testLogging {
         events "passed", "skipped", "failed"
     }
