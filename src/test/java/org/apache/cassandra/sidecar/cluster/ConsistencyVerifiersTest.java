@@ -73,8 +73,8 @@ class ConsistencyVerifiersTest
                                    allReplicasByDc))
         .isEqualTo(Result.FAILED);
 
-        assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
-                                   replicas(2, 6), // the rest fail
+        assertThat(verifier.verify(replicas(1, 2), // 2 instances pass
+                                   replicas(3, 6), // the rest fail
                                    allReplicasByDc))
         .isEqualTo(Result.SATISFIED);
     }
