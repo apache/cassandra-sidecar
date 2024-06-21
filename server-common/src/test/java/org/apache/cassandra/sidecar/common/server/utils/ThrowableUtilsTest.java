@@ -19,10 +19,14 @@
 package org.apache.cassandra.sidecar.common.server.utils;
 
 import java.io.IOException;
+import java.util.concurrent.Callable;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ThrowableUtilsTest
 {
@@ -73,8 +77,20 @@ class ThrowableUtilsTest
     }
 
     @Test
-    void testPropogate()
+    void testPropagate()
     {
+        Callable<String> callable = () -> {
+            throw new IOException("fail to perform I/O");
+        };
+        assertThatThrownBy(() -> ThrowableUtils.propagate(callable))
+        .isExactlyInstanceOf(RuntimeException.class)
+        .hasCauseExactlyInstanceOf(IOException.class);
 
+        ThrowingRunnable runnable = () -> {
+            throw new IOException("fail to perform I/O");
+        };
+        assertThatThrownBy(() -> ThrowableUtils.propagate(runnable))
+        .isExactlyInstanceOf(RuntimeException.class)
+        .hasCauseExactlyInstanceOf(IOException.class);
     }
 }

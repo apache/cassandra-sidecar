@@ -161,9 +161,12 @@ public class TokenRange
                && other.range.lowerEndpoint().compareTo(this.range.upperEndpoint()) < 0;
     }
 
-    public TokenRange intersection(TokenRange overlapping)
+    /**
+     * @return the range that is enclosed by both this and the other ranges.
+     */
+    public TokenRange intersection(TokenRange other)
     {
-        Range<Token> overlap = this.range.intersection(overlapping.range);
+        Range<Token> overlap = this.range.intersection(other.range);
         return new TokenRange(overlap.lowerEndpoint(), overlap.upperEndpoint());
     }
 

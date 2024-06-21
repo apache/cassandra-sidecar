@@ -30,11 +30,11 @@ import org.apache.cassandra.sidecar.common.request.RestoreJobProgressRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_STATUS_ABORTED_RANGE;
-import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_STATUS_FAILED_RANGE;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_STATUS_ABORTED_RANGES;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_STATUS_FAILED_RANGES;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_STATUS_MESSAGE;
-import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_STATUS_PENDING_RANGE;
-import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_STATUS_SUCCEEDED_RANGE;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_STATUS_PENDING_RANGES;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_STATUS_SUCCEEDED_RANGES;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_STATUS_SUMMARY;
 
 /**
@@ -70,10 +70,10 @@ public class RestoreJobProgressResponsePayload
     @JsonCreator
     public RestoreJobProgressResponsePayload(@NotNull @JsonProperty(JOB_STATUS_MESSAGE) String message,
                                              @NotNull @JsonProperty(JOB_STATUS_SUMMARY) RestoreJobSummaryResponsePayload summary,
-                                             @Nullable @JsonProperty(JOB_STATUS_FAILED_RANGE) List<RestoreJobRange> failedRanges,
-                                             @Nullable @JsonProperty(JOB_STATUS_ABORTED_RANGE) List<RestoreJobRange> abortedRanges,
-                                             @Nullable @JsonProperty(JOB_STATUS_PENDING_RANGE) List<RestoreJobRange> pendingRanges,
-                                             @Nullable @JsonProperty(JOB_STATUS_SUCCEEDED_RANGE) List<RestoreJobRange> succeededRanges)
+                                             @Nullable @JsonProperty(JOB_STATUS_FAILED_RANGES) List<RestoreJobRange> failedRanges,
+                                             @Nullable @JsonProperty(JOB_STATUS_ABORTED_RANGES) List<RestoreJobRange> abortedRanges,
+                                             @Nullable @JsonProperty(JOB_STATUS_PENDING_RANGES) List<RestoreJobRange> pendingRanges,
+                                             @Nullable @JsonProperty(JOB_STATUS_SUCCEEDED_RANGES) List<RestoreJobRange> succeededRanges)
     {
         this.message = message;
         this.summary = summary;
@@ -108,28 +108,28 @@ public class RestoreJobProgressResponsePayload
     }
 
     @Nullable
-    @JsonProperty(JOB_STATUS_FAILED_RANGE)
+    @JsonProperty(JOB_STATUS_FAILED_RANGES)
     public List<RestoreJobRange> failedRanges()
     {
         return this.failedRanges;
     }
 
     @Nullable
-    @JsonProperty(JOB_STATUS_ABORTED_RANGE)
+    @JsonProperty(JOB_STATUS_ABORTED_RANGES)
     public List<RestoreJobRange> abortedRanges()
     {
         return this.abortedRanges;
     }
 
     @Nullable
-    @JsonProperty(JOB_STATUS_PENDING_RANGE)
+    @JsonProperty(JOB_STATUS_PENDING_RANGES)
     public List<RestoreJobRange> pendingRanges()
     {
         return this.pendingRanges;
     }
 
     @Nullable
-    @JsonProperty(JOB_STATUS_SUCCEEDED_RANGE)
+    @JsonProperty(JOB_STATUS_SUCCEEDED_RANGES)
     public List<RestoreJobRange> succeededRanges()
     {
         return this.succeededRanges;

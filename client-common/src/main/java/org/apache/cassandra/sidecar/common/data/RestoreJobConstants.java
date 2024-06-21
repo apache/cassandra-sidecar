@@ -54,8 +54,8 @@ public class RestoreJobConstants
     // -- restore job status fields
     public static final String JOB_STATUS_MESSAGE = "message";
     public static final String JOB_STATUS_SUMMARY = "summary";
-    public static final String JOB_STATUS_FAILED_RANGE = "failedRanges";
-    public static final String JOB_STATUS_ABORTED_RANGE = "abortedRanges";
-    public static final String JOB_STATUS_PENDING_RANGE = "pendingRanges";
-    public static final String JOB_STATUS_SUCCEEDED_RANGE = "succeededRanges";
+    public static final String JOB_STATUS_FAILED_RANGES = "failedRanges";
+    public static final String JOB_STATUS_ABORTED_RANGES = "abortedRanges";
+    public static final String JOB_STATUS_PENDING_RANGES = "pendingRanges";
+    public static final String JOB_STATUS_SUCCEEDED_RANGES = "succeededRanges";
 }

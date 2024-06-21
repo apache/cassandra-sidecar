@@ -260,8 +260,10 @@ public class CreateRestoreJobRequestPayload
 
         public CreateRestoreJobRequestPayload build()
         {
-            Preconditions.checkArgument(consistencyLevel == null || !consistencyLevel.isLocalDcOnly || (localDc != null && !localDc.isEmpty()),
-                                        "Must specify a non-empty localDc for consistency level: " + consistencyLevel);
+            Preconditions.checkArgument(consistencyLevel == null
+                                        || !consistencyLevel.isLocalDcOnly
+                                        || (localDc != null && !localDc.isEmpty()),
+                                        "Must specify a non-empty " + JOB_LOCAL_DATA_CENTER + " for consistency level: " + consistencyLevel);
             return new CreateRestoreJobRequestPayload(this);
         }
     }
