@@ -18,46 +18,28 @@
 
 package org.apache.cassandra.sidecar.cluster.locator;
 
-import java.util.Collections;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.BiConsumer;
 
-import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Test;
 
-/**
- * A better descriptive alias for the dc to instance set mapping
- */
-public class InstanceSetByDc
+import static org.assertj.core.api.Assertions.assertThat;
+
+class InstanceSetByDcTest
 {
-    @NotNull
-    public Map<String, Set<String>> mapping;
-
-    public InstanceSetByDc(@NotNull Map<String, Set<String>> mapping)
+    @Test
+    void testGetInstanceSetOfDc()
     {
-        this.mapping = mapping;
-    }
+        InstanceSetByDc empty = new InstanceSetByDc(new HashMap<>());
+        assertThat(empty.get("dc1")).isNotNull().isEmpty();
 
-    public int size()
-    {
-        return mapping.size();
-    }
-
-    public Set<String> keySet()
-    {
-        return mapping.keySet();
-    }
-
-    /**
-     * @return the set of instances in the given datacenter; returns an empty set of data
-     */
-    public Set<String> get(String dcName)
-    {
-        return mapping.getOrDefault(dcName, Collections.emptySet());
-    }
-
-    public void forEach(BiConsumer<String, Set<String>> consumer)
-    {
-        mapping.forEach(consumer);
+        Map<String, Set<String>> mapping = new HashMap<>();
+        mapping.put("dc1", new HashSet<>(Arrays.asList("i-1", "i-2")));
+        InstanceSetByDc nonEmpty = new InstanceSetByDc(mapping);
+        assertThat(nonEmpty.get("dc1")).hasSize(2);
+        assertThat(nonEmpty.get("dc2")).isNotNull().isEmpty();
     }
 }

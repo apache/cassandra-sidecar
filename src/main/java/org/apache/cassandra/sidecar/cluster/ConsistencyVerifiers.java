@@ -273,13 +273,13 @@ public class ConsistencyVerifiers
             for (String dcName : all.keySet())
             {
                 // if any of the datacenter cannot satisfy quorum locally
-                if (!geQuorum(passedByDc.sizeOfDc(dcName), all.get(dcName).size()))
+                if (!geQuorum(passedByDc.get(dcName).size(), all.get(dcName).size()))
                 {
                     allSatisfied = false;
                 }
 
                 // if any of the datacenter has failed quorum locally
-                if (geQuorum(failedByDc.sizeOfDc(dcName), all.get(dcName).size()))
+                if (geQuorum(failedByDc.get(dcName).size(), all.get(dcName).size()))
                 {
                     anyFailed = true;
                 }

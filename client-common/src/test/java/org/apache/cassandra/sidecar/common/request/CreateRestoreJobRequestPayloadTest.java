@@ -205,11 +205,11 @@ class CreateRestoreJobRequestPayloadTest
         assertThatThrownBy(() -> CreateRestoreJobRequestPayload.builder(secrets, System.currentTimeMillis())
                                                                .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
                                                                .build())
-        .hasMessage("Must specify a non-empty localDc for consistency level: LOCAL_QUORUM");
+        .hasMessage("Must specify a non-empty localDatacenter for consistency level: LOCAL_QUORUM");
 
         assertThatThrownBy(() -> CreateRestoreJobRequestPayload.builder(secrets, System.currentTimeMillis())
                                                                .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "")
                                                                .build())
-        .hasMessage("Must specify a non-empty localDc for consistency level: LOCAL_QUORUM");
+        .hasMessage("Must specify a non-empty localDatacenter for consistency level: LOCAL_QUORUM");
     }
 }
