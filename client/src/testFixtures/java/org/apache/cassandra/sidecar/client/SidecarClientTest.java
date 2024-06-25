@@ -1354,7 +1354,7 @@ abstract class SidecarClientTest
         validateResponseServed(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE
                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
                                .replaceAll(TABLE_PATH_PARAM, "rank_by_year_and_name")
-                               .replaceAll(JOB_ID_PATH_PARAM.canonicalName, jobIdStr),
+                               .replaceAll(JOB_ID_PATH_PARAM, jobIdStr),
                                recordedRequest -> {
                                    String reqBodyString = recordedRequest.getBody()
                                                                          .readString(Charset.defaultCharset());
@@ -1390,7 +1390,7 @@ abstract class SidecarClientTest
         validateResponseServed(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE
                                .replaceAll(KEYSPACE_PATH_PARAM, "badkeyspace")
                                .replaceAll(TABLE_PATH_PARAM, "bad_table")
-                               .replaceAll(JOB_ID_PATH_PARAM.canonicalName, jobIdStr),
+                               .replaceAll(JOB_ID_PATH_PARAM, jobIdStr),
                                recordedRequest -> {
                                    String reqBodyString = recordedRequest.getBody()
                                                                          .readString(Charset.defaultCharset());

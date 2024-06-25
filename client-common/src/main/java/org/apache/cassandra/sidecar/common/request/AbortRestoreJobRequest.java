@@ -61,6 +61,6 @@ public class AbortRestoreJobRequest extends Request
         return ApiEndpointsV1.ABORT_RESTORE_JOB_ROUTE
                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
-               .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM.canonicalName, jobId.toString());
+               .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, jobId.toString());
     }
 }

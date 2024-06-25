@@ -25,7 +25,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
-import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelChecker;
@@ -67,7 +66,15 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     protected RestoreJobProgressFetchPolicy extractParamsOrThrow(RoutingContext context)
     {
         List<String> fetchPolicyValues = context.queryParam(ApiEndpointsV1.FETCH_POLICY);
-        Preconditions.checkArgument(fetchPolicyValues.size() == 1, "Must define exactly one RestoreJobProgressFetchPolicy");
+        if (fetchPolicyValues.isEmpty())
+        {
+            logger.info("No RestoreJobProgressFetchPolicy is specified, FIRST_FAILED policy is assumed");
+            return RestoreJobProgressFetchPolicy.FIRST_FAILED;
+        }
+        else if (fetchPolicyValues.size() > 1)
+        {
+            logger.warn("Multiple RestoreJobProgressFetchPolicy are specified. Pick the first one.");
+        }
         return RestoreJobProgressFetchPolicy.fromString(fetchPolicyValues.get(0));
     }
 

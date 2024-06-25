@@ -37,6 +37,7 @@ public final class ApiEndpointsV1
     public static final String COMPONENT_PATH_PARAM = ":component";
     public static final String INDEX_PATH_PARAM = ":index";
     public static final String UPLOAD_ID_PATH_PARAM = ":uploadId";
+    public static final String JOB_ID_PATH_PARAM = ":jobId";
 
     public static final String PER_KEYSPACE = "/keyspaces/" + KEYSPACE_PATH_PARAM;
     public static final String PER_TABLE = "/tables/" + TABLE_PATH_PARAM;
@@ -96,8 +97,6 @@ public final class ApiEndpointsV1
     public static final String KEYSPACE_TOKEN_MAPPING_ROUTE = API_V1 + PER_KEYSPACE + "/token-range-replicas";
 
     // Blob Transport Extension
-    // todo: refactor other path param use cases; and replaceAll in requestURI building
-    public static final PathParam JOB_ID_PATH_PARAM = PathParam.of("jobId");
     public static final String RESTORE_JOBS = "/restore-jobs";
     public static final String SLICES = "/slices";
     public static final String ABORT = "/abort";
