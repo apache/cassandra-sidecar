@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add delay between reporting of the same slow task (CASSANDRASC-136)
  * Added additional JVM options to increase max open FD limit for MacOS (CASSANDRASC-135)
  * Detect out of range data and cleanup using nodetool (CASSANDRASC-134)
  * Allow optional reason to abort restore jobs (CASSANDRASC-133)

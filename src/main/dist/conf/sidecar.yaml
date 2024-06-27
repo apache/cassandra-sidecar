@@ -172,11 +172,13 @@ cassandra_input_validation:
   allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(.db|TOC.txt)"
 
 blob_restore:
-  job_discovery_active_loop_delay_millis: 5
-  job_discovery_idle_loop_delay_millis: 10
+  job_discovery_active_loop_delay_millis: 300000
+  job_discovery_idle_loop_delay_millis: 600000
   job_discovery_recency_days: 5
   slice_process_max_concurrency: 20
   restore_job_tables_ttl_seconds: 7776000
+  slow_task_threshold_seconds: 600
+  slow_task_report_delay_seconds: 60
 
 s3_client:
   concurrency: 4

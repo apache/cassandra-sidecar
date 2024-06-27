@@ -97,7 +97,9 @@ public class StorageClient
                 return newCredentials;
             }
             else
+            {
                 return credentials;
+            }
         });
         return this;
     }
@@ -274,7 +276,7 @@ public class StorageClient
         }
         catch (FileAlreadyExistsException fileAlreadyExistsException)
         {
-            LOGGER.debug("Skipping download, file already exists. jobId={} s3_object={}",
+            LOGGER.info("Skipping download. File already exists. jobId={} s3_object={}",
                          slice.jobId(), slice.stagedObjectPath());
             return CompletableFuture.completedFuture(publisher.response());
         }

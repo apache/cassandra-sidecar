@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.exceptions;
 
+import java.io.IOException;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +41,7 @@ class ThrowableUtilsTest
     @Test
     void testGetCauseWithCircularRef()
     {
-        Exception root = new RuntimeException();
+        Exception root = new IOException();
         Exception testEx = new IllegalStateException(root);
         Exception ex = new RuntimeException(testEx);
         root.initCause(ex); // create a circular chain

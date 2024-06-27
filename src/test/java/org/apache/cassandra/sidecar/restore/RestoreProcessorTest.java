@@ -163,7 +163,7 @@ class RestoreProcessorTest
     }
 
     @Test
-    public void testLongRunningHandlerDetection()
+    void testLongRunningHandlerDetection()
     {
         when(sidecarSchema.isInitialized()).thenReturn(true);
         periodicTaskExecutor.schedule(processor);
@@ -171,17 +171,21 @@ class RestoreProcessorTest
         CountDownLatch latch = new CountDownLatch(1);
         AtomicLong currentTime = new AtomicLong(0);
         RestoreSlice slice = mockSlowSlice(latch, currentTime::get); // Sets the start time
-        long fiveMinutesInNanos = TimeUnit.NANOSECONDS.convert(5, TimeUnit.MINUTES);
-        currentTime.set(fiveMinutesInNanos);
+        long oneMinutesInNanos = TimeUnit.NANOSECONDS.convert(1, TimeUnit.MINUTES);
+        currentTime.set(oneMinutesInNanos);
         processor.submit(slice);
         loopAssert(3, () -> {
             long[] slowRestoreTaskTimes = instanceMetrics()
                                           .restore()
                                           .slowRestoreTaskTime.metric.getSnapshot().getValues();
-            assertThat(slowRestoreTaskTimes.length).isGreaterThanOrEqualTo(1);
+            assertThat(slowRestoreTaskTimes)
+            .describedAs("The task takes 1 minute. " +
+                         "The slow task threshodl is 10 seconds and report delay is 2 minutes (see TestModule). " +
+                         "It should only report once")
+            .hasSize(1);
             Long handlerTimeInNanos = slowRestoreTaskTimes[0];
             assertThat(handlerTimeInNanos).isNotNull();
-            assertThat(handlerTimeInNanos).isEqualTo(fiveMinutesInNanos);
+            assertThat(handlerTimeInNanos).isEqualTo(oneMinutesInNanos);
             assertThat(processor.activeTasks()).isOne();
         });
 

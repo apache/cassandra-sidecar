@@ -50,7 +50,12 @@ public interface RestoreJobConfiguration
     long restoreJobTablesTtlSeconds();
 
     /**
-     * @return the number of seconds above which a restore handler is considered "long-running"
+     * @return the number of seconds above which a restore task is considered slow
      */
-    long restoreJobLongRunningHandlerThresholdSeconds();
+    long slowTaskThresholdSeconds();
+
+    /**
+     * @return the delay in seconds between each report of the same slow task
+     */
+    long slowTaskReportDelaySeconds();
 }

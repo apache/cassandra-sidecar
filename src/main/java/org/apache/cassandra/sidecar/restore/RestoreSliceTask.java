@@ -292,10 +292,11 @@ public class RestoreSliceTask implements RestoreSliceHandler
         Future<File> future =
         fromCompletionStage(s3Client.downloadObjectIfAbsent(slice))
         .onFailure(cause -> {
+            LOGGER.warn("Failed to download restore slice. sliceKey={}", slice.key(), cause);
+
             slice.incrementDownloadAttempt();
             if (ThrowableUtils.getCause(cause, ApiCallTimeoutException.class) != null)
             {
-                LOGGER.warn("Downloading restore slice times out. sliceKey={}", slice.key());
                 instanceMetrics.restore().sliceDownloadTimeouts.metric.update(1);
             }
             event.tryFail(RestoreJobExceptions.ofFatalSlice("Unrecoverable error when downloading object",
