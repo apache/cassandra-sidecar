@@ -395,7 +395,7 @@ def integrationTest = task("integrationTest")
             html.enabled = true
         }
         testLogging {
-            events "passed", "skipped", "failed"
+            events "started", "passed", "skipped", "failed"
         }
         testClassesDirs = sourceSets.integrationTest.output.classesDirs
         classpath = sourceSets.integrationTest.runtimeClasspath
