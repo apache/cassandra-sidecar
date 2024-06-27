@@ -111,7 +111,10 @@ public class ThrowableUtils
                     // This way we are sure that all exceptions/causes are visited at least once.
                     stop = cause;
                 }
-                fastTracer = getCause(fastTracer, 2);
+                else
+                {
+                    fastTracer = getCause(fastTracer, 2);
+                }
             }
             cause = getCause(cause, 1);
         }

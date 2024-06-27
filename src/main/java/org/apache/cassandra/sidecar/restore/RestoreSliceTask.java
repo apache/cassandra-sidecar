@@ -149,8 +149,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 {
                     if (Files.exists(slice.stagedObjectPath()))
                     {
-                        LOGGER.debug("The slice has been staged already. sliceKey={} stagedFilePath={}",
-                                     slice.key(), slice.stagedObjectPath());
+                        LOGGER.info("The slice has been staged already. sliceKey={}", slice.key());
                         slice.completeStagePhase(); // update the flag if missed
                         sliceDatabaseAccessor.updateStatus(slice);
                         event.tryComplete(slice);

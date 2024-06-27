@@ -37,9 +37,9 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     private static final int DEFAULT_PROCESS_MAX_CONCURRENCY = 20; // process at most 20 slices concurrently
     private static final long DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(90);
     // A restore task is considered slow if it has been in the "active" list for 10 minutes.
-    private static final long DEFAULT_RESTORE_JOB_SLOW_TASK_THRESHOLD_SECONDS = 600;
+    private static final long DEFAULT_RESTORE_JOB_SLOW_TASK_THRESHOLD_SECONDS = TimeUnit.MINUTES.toSeconds(10);
     // report once a minute
-    private static final long DEFAULT_RESTORE_JOB_SLOW_TASK_REPORT_DELAY_SECONDS = 60;
+    private static final long DEFAULT_RESTORE_JOB_SLOW_TASK_REPORT_DELAY_SECONDS = TimeUnit.MINUTES.toSeconds(1);
 
     @JsonProperty(value = "job_discovery_active_loop_delay_millis")
     protected final long jobDiscoveryActiveLoopDelayMillis;

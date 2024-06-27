@@ -66,7 +66,8 @@ public class RestoreProcessor implements PeriodicTask
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobUtil restoreJobUtil;
     // mapping of task to the time when it should be reported as 'slow' if it is still active
-    private final Map<RestoreSliceHandler, Long> activeTasks = new HashMap<>();
+    // using concurrent data strucutre because the map is accessed from multiple threads
+    private final Map<RestoreSliceHandler, Long> activeTasks = new ConcurrentHashMap<>();
     private final long slowTaskThresholdInSeconds;
     private final long slowTaskReportDelayInSeconds;
     private final LocalTokenRangesProvider localTokenRangesProvider;
@@ -227,16 +228,13 @@ public class RestoreProcessor implements PeriodicTask
     {
         for (RestoreSliceHandler t : activeTasks.keySet())
         {
-            activeTasks.compute(t, (task, timeToReport) -> {
+            // Read the current map and update the existing entries if needed.
+            // We do not want to put new entry to the map in this method.
+            activeTasks.computeIfPresent(t, (task, timeToReport) -> {
                 long elapsedInNanos = task.elapsedInNanos();
                 if (elapsedInNanos == -1) // not started
                 {
                     return timeToReport;
-                }
-
-                if (timeToReport == null) // not initialized? unlikely, but let's handle it
-                {
-                    return slowTaskThresholdInSeconds;
                 }
 
                 long elapsedInSeconds = TimeUnit.NANOSECONDS.toSeconds(elapsedInNanos);

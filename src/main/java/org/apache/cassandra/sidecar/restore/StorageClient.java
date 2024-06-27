@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.common.data.StorageCredentials;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
+import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
@@ -144,7 +145,7 @@ public class StorageClient
         Credentials credentials = credentialsProviders.get(slice.jobId());
         if (credentials == null)
         {
-            LOGGER.debug("Credentials to download object not found. jobId={}", slice.jobId());
+            LOGGER.warn("Credentials to download object not found. jobId={}", slice.jobId());
             CompletableFuture<File> failedFuture = new CompletableFuture<>();
             failedFuture.completeExceptionally(credentialsNotFound(slice));
             return failedFuture;
@@ -154,8 +155,8 @@ public class StorageClient
         File object = objectPath.toFile();
         if (object.exists())
         {
-            LOGGER.debug("Skipping download, file already exists. jobId={} s3_object={}",
-                         slice.jobId(), slice.stagedObjectPath());
+            LOGGER.info("Skipping download, file already exists. jobId={} sliceKey={}",
+                         slice.jobId(), slice.key());
             // Skip downloading if the file already exists on disk. It should be a rare scenario.
             // Note that the on-disk file could be different from the remote object, although the name matches.
             // TODO 1: verify etag does not change after s3 replication and batch copy
@@ -167,12 +168,12 @@ public class StorageClient
 
         if (!object.getParentFile().mkdirs())
         {
-            LOGGER.warn("Error occurred while creating directory. jobId={} s3Object={}",
-                        slice.jobId(), slice.stagedObjectPath());
+            LOGGER.warn("Error occurred while creating directory. jobId={} sliceKey={}",
+                        slice.jobId(), slice.key());
 
         }
 
-        LOGGER.info("Downloading object. jobId={} s3Object={}", slice.jobId(), slice.stagedObjectPath());
+        LOGGER.info("Downloading object. jobId={} sliceKey={}", slice.jobId(), slice.key());
         // https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
         GetObjectRequest request =
         GetObjectRequest.builder()
@@ -276,31 +277,33 @@ public class StorageClient
         }
         catch (FileAlreadyExistsException fileAlreadyExistsException)
         {
-            LOGGER.info("Skipping download. File already exists. jobId={} s3_object={}",
-                         slice.jobId(), slice.stagedObjectPath());
+            LOGGER.info("Skipping download. File already exists. jobId={} sliceKey={}",
+                         slice.jobId(), slice.key());
             return CompletableFuture.completedFuture(publisher.response());
         }
         catch (IOException e)
         {
-            LOGGER.error("Error occurred while creating channel. destinationPath={} jobId={} s3_object={}",
-                         destinationPath, slice.jobId(), slice.stagedObjectPath(), e);
+            LOGGER.error("Error occurred while creating channel. destinationPath={} jobId={} sliceKey={}",
+                         destinationPath, slice.jobId(), slice.key(), e);
             throw new RuntimeException(e);
         }
         // CompletableFuture that will be notified when all events have been consumed or if an error occurs.
-        CompletableFuture<Void> subscribeFuture = publisher.subscribe(buffer -> {
-            downloadRateLimiter.acquire(buffer.remaining()); // apply backpressure on the received bytes
-            try
-            {
-                channel.write(buffer);
-            }
-            catch (IOException e)
-            {
-                LOGGER.error("Error occurred while downloading. jobId={} s3_object={}",
-                             slice.jobId(), slice.stagedObjectPath(), e);
-                throw new RuntimeException(e);
-            }
-        }).whenComplete((v, subscribeThrowable) -> closeChannel(channel));
-        return subscribeFuture.thenApply(v -> publisher.response());
+        return publisher
+               .subscribe(buffer -> {
+                   downloadRateLimiter.acquire(buffer.remaining()); // apply backpressure on the received bytes
+                   ThrowableUtils.propagate(() -> channel.write(buffer));
+               })
+               .whenComplete((v, subscribeThrowable) -> {
+                   // finally close the channel and log error if failed
+                   closeChannel(channel);
+
+                   if (subscribeThrowable != null)
+                   {
+                       LOGGER.error("Error occurred while downloading. jobId={} sliceKey={}",
+                                    slice.jobId(), slice.key(), subscribeThrowable);
+                   }
+               })
+               .thenApply(v -> publisher.response());
     }
 
     /**
