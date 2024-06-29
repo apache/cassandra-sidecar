@@ -334,7 +334,7 @@ jobs:
       - attach_workspace:
           at: dtest-jars
       - run: ./scripts/install-shaded-dtest-jar-local.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=5.0-alpha2 -Dcassandra.sidecar.versions_to_test="5.0" integrationTestHeavyWeight --stacktrace --debug
+      - run: ./gradlew --no-daemon -PdtestVersion=5.0-alpha2 -Dcassandra.sidecar.versions_to_test="5.0" integrationTestHeavyWeight --stacktrace
 
       - store_artifacts:
           path: build/reports
