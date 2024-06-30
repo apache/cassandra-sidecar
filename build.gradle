@@ -189,9 +189,7 @@ dependencies {
     implementation("io.vertx:vertx-dropwizard-metrics:${project.vertxVersion}")
     implementation("io.vertx:vertx-web-client:${project.vertxVersion}")
 
-    implementation('com.datastax.cassandra:cassandra-driver-core:3.11.3') {
-        exclude group: 'io.netty', module: 'netty-handler' // CVE-2023-44487
-    }
+    implementation('com.datastax.cassandra:cassandra-driver-core:3.11.3')
     implementation('com.google.inject:guice:4.2.2')
     implementation("com.github.ben-manes.caffeine:caffeine:2.9.3")
 
@@ -211,7 +209,9 @@ dependencies {
     // aws sdk BOM + s3
     implementation platform(group: 'software.amazon.awssdk', name:'bom', version:"${project.aswSdkVersion}")
     implementation('software.amazon.awssdk:s3')
-    implementation('software.amazon.awssdk:netty-nio-client')
+    implementation('software.amazon.awssdk:netty-nio-client') {
+        exclude group: 'io.netty'
+    }
 
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 
