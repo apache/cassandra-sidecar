@@ -207,9 +207,16 @@ dependencies {
     implementation(group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: "${project.jacksonVersion}")
 
     // aws sdk BOM + s3
-    implementation platform(group: 'software.amazon.awssdk', name:'bom', version:"${project.aswSdkVersion}")
+    implementation platform(group: 'software.amazon.awssdk', name:'bom', version:"${project.awsSdkVersion}")
     implementation('software.amazon.awssdk:s3')
     implementation('software.amazon.awssdk:netty-nio-client')
+    implementation('io.netty:netty-transport-classes-epoll') {
+        version {
+            // Some integration tests are failing with version 4.1.100.final due to netty bootstrapping issue in cassandra java driver.
+            // Force the version to the old version unblocks the integration test.
+            strictly '4.1.86.Final'
+        }
+    }
 
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 
@@ -222,7 +229,7 @@ dependencies {
         exclude group: 'junit', module: 'junit'
     }
 
-    testImplementation('com.datastax.cassandra:cassandra-driver-core:3.9.0:tests')
+    testImplementation('com.datastax.cassandra:cassandra-driver-core:3.11.3:tests')
     testImplementation('org.mockito:mockito-core:4.10.0')
     testImplementation('org.mockito:mockito-inline:4.10.0')
     testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
@@ -395,7 +402,7 @@ def integrationTest = task("integrationTest")
             html.enabled = true
         }
         testLogging {
-            events "passed", "skipped", "failed"
+            events "started", "passed", "skipped", "failed"
         }
         testClassesDirs = sourceSets.integrationTest.output.classesDirs
         classpath = sourceSets.integrationTest.runtimeClasspath

@@ -81,6 +81,8 @@ shadowJar {
     dependencies {
         exclude(dependency('org.slf4j:.*:.*'))
     }
+
+    dependsOn assemble
 }
 
 tasks.named('test') {
