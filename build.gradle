@@ -210,6 +210,11 @@ dependencies {
     implementation platform(group: 'software.amazon.awssdk', name:'bom', version:"${project.aswSdkVersion}")
     implementation('software.amazon.awssdk:s3')
     implementation('software.amazon.awssdk:netty-nio-client')
+    implementation('io.netty:netty-transport-classes-epoll') {
+        version {
+            strictly '4.1.94.Final'
+        }
+    }
 
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 
