@@ -149,8 +149,7 @@ public class RestoreSliceTask implements RestoreSliceHandler
                 {
                     if (Files.exists(slice.stagedObjectPath()))
                     {
-                        LOGGER.debug("The slice has been staged already. sliceKey={} stagedFilePath={}",
-                                     slice.key(), slice.stagedObjectPath());
+                        LOGGER.info("The slice has been staged already. sliceKey={}", slice.key());
                         slice.completeStagePhase(); // update the flag if missed
                         sliceDatabaseAccessor.updateStatus(slice);
                         event.tryComplete(slice);
@@ -292,10 +291,11 @@ public class RestoreSliceTask implements RestoreSliceHandler
         Future<File> future =
         fromCompletionStage(s3Client.downloadObjectIfAbsent(slice))
         .onFailure(cause -> {
+            LOGGER.warn("Failed to download restore slice. sliceKey={}", slice.key(), cause);
+
             slice.incrementDownloadAttempt();
             if (ThrowableUtils.getCause(cause, ApiCallTimeoutException.class) != null)
             {
-                LOGGER.warn("Downloading restore slice times out. sliceKey={}", slice.key());
                 instanceMetrics.restore().sliceDownloadTimeouts.metric.update(1);
             }
             event.tryFail(RestoreJobExceptions.ofFatalSlice("Unrecoverable error when downloading object",
