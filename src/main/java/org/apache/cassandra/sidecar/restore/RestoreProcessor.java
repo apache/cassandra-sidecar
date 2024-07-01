@@ -228,16 +228,17 @@ public class RestoreProcessor implements PeriodicTask
     {
         for (RestoreSliceHandler t : activeTasks.keySet())
         {
+            long elapsedInNanos = t.elapsedInNanos();
+            if (elapsedInNanos == -1) // not started
+            {
+                continue;
+            }
+
+            long elapsedInSeconds = TimeUnit.NANOSECONDS.toSeconds(elapsedInNanos);
+
             // Read the current map and update the existing entries if needed.
             // We do not want to put new entry to the map in this method.
             activeTasks.computeIfPresent(t, (task, timeToReport) -> {
-                long elapsedInNanos = task.elapsedInNanos();
-                if (elapsedInNanos == -1) // not started
-                {
-                    return timeToReport;
-                }
-
-                long elapsedInSeconds = TimeUnit.NANOSECONDS.toSeconds(elapsedInNanos);
                 if (elapsedInSeconds > timeToReport)
                 {
                     LOGGER.warn("Long-running restore slice task detected. " +
