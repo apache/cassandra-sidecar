@@ -209,9 +209,7 @@ dependencies {
     // aws sdk BOM + s3
     implementation platform(group: 'software.amazon.awssdk', name:'bom', version:"${project.aswSdkVersion}")
     implementation('software.amazon.awssdk:s3')
-    implementation('software.amazon.awssdk:netty-nio-client') {
-        exclude group: 'io.netty'
-    }
+    implementation('software.amazon.awssdk:netty-nio-client')
 
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 
