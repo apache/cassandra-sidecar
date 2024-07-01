@@ -36,6 +36,7 @@ public class ThrowableUtils
     /**
      * Run the {@code actionMayThrow} and wrap any {@link Exception} thrown in {@link RuntimeException}
      * @param actionMayThrow action that may throw exceptions
+     * @return value of type R
      * @param <R> return value type of the action
      */
     public static <R> R propagate(Callable<R> actionMayThrow)
@@ -101,12 +102,19 @@ public class ThrowableUtils
                 return cause;
             }
 
-            fastTracer = getCause(fastTracer, 2);
-            if (cause == fastTracer && stop == null)
+            if (stop == null)
             {
-                // Mark the position to stop, and continue tracing the cause up until hitting stop the next time.
-                // This way we are sure that all exceptions/causes are visited at least once.
-                stop = cause;
+                // once stop is set; updating fast tracer is no longer required
+                if (cause == fastTracer)
+                {
+                    // Mark the position to stop, and continue tracing the cause up until hitting stop the next time.
+                    // This way we are sure that all exceptions/causes are visited at least once.
+                    stop = cause;
+                }
+                else
+                {
+                    fastTracer = getCause(fastTracer, 2);
+                }
             }
             cause = getCause(cause, 1);
         }

@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.restore;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
@@ -66,8 +65,11 @@ public class RestoreProcessor implements PeriodicTask
     private final double requiredUsableSpacePercentage; // value range: [0.0, 1.0)
     private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
     private final RestoreJobUtil restoreJobUtil;
-    private final Set<RestoreSliceHandler> activeTasks = ConcurrentHashMap.newKeySet();
-    private final long longRunningHandlerThresholdInSeconds;
+    // mapping of task to the time when it should be reported as 'slow' if it is still active
+    // using concurrent data strucutre because the map is accessed from multiple threads
+    private final Map<RestoreSliceHandler, Long> activeTasks = new ConcurrentHashMap<>();
+    private final long slowTaskThresholdInSeconds;
+    private final long slowTaskReportDelayInSeconds;
     private final LocalTokenRangesProvider localTokenRangesProvider;
     private final SidecarMetrics metrics;
 
@@ -91,8 +93,8 @@ public class RestoreProcessor implements PeriodicTask
                                                                         .processMaxConcurrency());
         this.requiredUsableSpacePercentage
         = config.serviceConfiguration().sstableUploadConfiguration().minimumSpacePercentageRequired() / 100.0;
-        this.longRunningHandlerThresholdInSeconds = config.restoreJobConfiguration()
-                                                          .restoreJobLongRunningHandlerThresholdSeconds();
+        this.slowTaskThresholdInSeconds = config.restoreJobConfiguration().slowTaskThresholdSeconds();
+        this.slowTaskReportDelayInSeconds = config.restoreJobConfiguration().slowTaskReportDelaySeconds();
         this.importer = importer;
         this.sliceDatabaseAccessor = sliceDatabaseAccessor;
         this.restoreJobUtil = restoreJobUtil;
@@ -151,7 +153,8 @@ public class RestoreProcessor implements PeriodicTask
                                                          restoreJobUtil,
                                                          localTokenRangesProvider,
                                                          metrics);
-            activeTasks.add(task);
+
+            activeTasks.put(task, slowTaskThresholdInSeconds);
             pool.executeBlocking(task, false) // unordered; run in parallel
             .onSuccess(restoreSlice -> {
                 if (slice.hasImported())
@@ -208,36 +211,9 @@ public class RestoreProcessor implements PeriodicTask
                 activeTasks.remove(task);
             });
         }
-        promise.tryComplete();
         checkForLongRunningTasks();
         sliceQueue.capturePendingSliceCount();
-    }
-
-    private void checkForLongRunningTasks()
-    {
-        for (RestoreSliceHandler task : activeTasks)
-        {
-            long elapsedInNanos = task.elapsedInNanos();
-            if (elapsedInNanos == -1)
-            {
-                continue;
-            }
-            long elapsedInSeconds = TimeUnit.SECONDS.convert(elapsedInNanos, TimeUnit.NANOSECONDS);
-            if (elapsedInSeconds > longRunningHandlerThresholdInSeconds)
-            {
-                LOGGER.warn("Long-running restore slice task detected. " +
-                            "elapsedSeconds={} thresholdSeconds={} sliceKey={} jobId={} status={}",
-                            elapsedInSeconds,
-                            longRunningHandlerThresholdInSeconds,
-                            task.slice().key(),
-                            task.slice().jobId(),
-                            task.slice().job().status);
-                task.slice()
-                    .owner()
-                    .metrics()
-                    .restore().slowRestoreTaskTime.metric.update(elapsedInNanos, TimeUnit.NANOSECONDS);
-            }
-        }
+        promise.tryComplete();
     }
 
     @Override
@@ -246,6 +222,42 @@ public class RestoreProcessor implements PeriodicTask
         isClosed = true;
         s3ClientPool.close();
         sliceQueue.close();
+    }
+
+    private void checkForLongRunningTasks()
+    {
+        for (RestoreSliceHandler t : activeTasks.keySet())
+        {
+            long elapsedInNanos = t.elapsedInNanos();
+            if (elapsedInNanos == -1) // not started
+            {
+                continue;
+            }
+
+            long elapsedInSeconds = TimeUnit.NANOSECONDS.toSeconds(elapsedInNanos);
+
+            // Read the current map and update the existing entries if needed.
+            // We do not want to put new entry to the map in this method.
+            activeTasks.computeIfPresent(t, (task, timeToReport) -> {
+                if (elapsedInSeconds > timeToReport)
+                {
+                    LOGGER.warn("Long-running restore slice task detected. " +
+                                "elapsedSeconds={} thresholdSeconds={} sliceKey={} jobId={} status={}",
+                                elapsedInSeconds,
+                                slowTaskThresholdInSeconds,
+                                task.slice().key(),
+                                task.slice().jobId(),
+                                task.slice().job().status);
+                    task.slice()
+                        .owner()
+                        .metrics()
+                        .restore().slowRestoreTaskTime.metric.update(elapsedInNanos, TimeUnit.NANOSECONDS);
+                    return timeToReport + slowTaskReportDelayInSeconds; // increment by the delay
+                }
+
+                return timeToReport; // do not update
+            });
+        }
     }
 
     @VisibleForTesting

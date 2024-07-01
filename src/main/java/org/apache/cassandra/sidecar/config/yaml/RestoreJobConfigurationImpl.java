@@ -31,15 +31,15 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
 {
     private static final long MIN_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(14);
 
-    public static final long DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY_MILLIS = TimeUnit.MINUTES.toMillis(5);
-    public static final long DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY_MILLIS = TimeUnit.MINUTES.toMillis(10);
-    public static final int DEFAULT_JOB_DISCOVERY_RECENCY_DAYS = 5;
-    public static final int DEFAULT_PROCESS_MAX_CONCURRENCY = 20; // process at most 20 slices concurrently
-    public static final long DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(90);
-    public static final String RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS =
-    "restore_job_long_running_threshold_seconds";
-    // A restore job handler is considered long-running if it has been in the "active" list for 10 minutes.
-    private static final long DEFAULT_RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS = 600;
+    private static final long DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY_MILLIS = TimeUnit.MINUTES.toMillis(5);
+    private static final long DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY_MILLIS = TimeUnit.MINUTES.toMillis(10);
+    private static final int DEFAULT_JOB_DISCOVERY_RECENCY_DAYS = 5;
+    private static final int DEFAULT_PROCESS_MAX_CONCURRENCY = 20; // process at most 20 slices concurrently
+    private static final long DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(90);
+    // A restore task is considered slow if it has been in the "active" list for 10 minutes.
+    private static final long DEFAULT_RESTORE_JOB_SLOW_TASK_THRESHOLD_SECONDS = TimeUnit.MINUTES.toSeconds(10);
+    // report once a minute
+    private static final long DEFAULT_RESTORE_JOB_SLOW_TASK_REPORT_DELAY_SECONDS = TimeUnit.MINUTES.toSeconds(1);
 
     @JsonProperty(value = "job_discovery_active_loop_delay_millis")
     protected final long jobDiscoveryActiveLoopDelayMillis;
@@ -56,10 +56,11 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     @JsonProperty(value = "restore_job_tables_ttl_seconds")
     protected final long restoreJobTablesTtlSeconds;
 
+    @JsonProperty(value = "slow_task_threshold_seconds")
+    protected final long slowTaskThresholdSeconds;
 
-    @JsonProperty(value = RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS,
-    defaultValue = DEFAULT_RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS + "")
-    private final long restoreJobLongRunningThresholdSeconds;
+    @JsonProperty(value = "slow_task_report_delay_seconds")
+    protected final long slowTaskReportDelaySeconds;
 
     protected RestoreJobConfigurationImpl()
     {
@@ -73,7 +74,8 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.jobDiscoveryRecencyDays = builder.jobDiscoveryRecencyDays;
         this.processMaxConcurrency = builder.processMaxConcurrency;
         this.restoreJobTablesTtlSeconds = builder.restoreJobTablesTtlSeconds;
-        this.restoreJobLongRunningThresholdSeconds = builder.restoreJobLongRunningThresholdSeconds;
+        this.slowTaskThresholdSeconds = builder.slowTaskThresholdSeconds;
+        this.slowTaskReportDelaySeconds = builder.slowTaskReportDelaySeconds;
         validate();
     }
 
@@ -143,11 +145,17 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     }
 
     @Override
-    @JsonProperty(value = RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS,
-                  defaultValue = DEFAULT_RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS + "")
-    public long restoreJobLongRunningHandlerThresholdSeconds()
+    @JsonProperty(value = "slow_task_threshold_seconds")
+    public long slowTaskThresholdSeconds()
     {
-        return restoreJobLongRunningThresholdSeconds;
+        return slowTaskThresholdSeconds;
+    }
+
+    @Override
+    @JsonProperty(value = "slow_task_report_delay_seconds")
+    public long slowTaskReportDelaySeconds()
+    {
+        return slowTaskReportDelaySeconds;
     }
 
     public static Builder builder()
@@ -160,8 +168,8 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
      */
     public static class Builder implements DataObjectBuilder<Builder, RestoreJobConfigurationImpl>
     {
-        protected long restoreJobLongRunningThresholdSeconds =
-        DEFAULT_RESTORE_JOB_LONG_RUNNING_HANDLER_THRESHOLD_SECONDS;
+        private long slowTaskThresholdSeconds = DEFAULT_RESTORE_JOB_SLOW_TASK_THRESHOLD_SECONDS;
+        private long slowTaskReportDelaySeconds = DEFAULT_RESTORE_JOB_SLOW_TASK_REPORT_DELAY_SECONDS;
         private long jobDiscoveryActiveLoopDelayMillis = DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY_MILLIS;
         private long jobDiscoveryIdleLoopDelayMillis = DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY_MILLIS;
         private int jobDiscoveryRecencyDays = DEFAULT_JOB_DISCOVERY_RECENCY_DAYS;
@@ -239,15 +247,27 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         }
 
         /**
-         * Sets the {@code restoreJobLongRunningThresholdSeconds} and returns a reference to this Builder enabling
+         * Sets the {@code slowTaskThresholdSeconds} and returns a reference to this Builder enabling
          * method chaining.
          *
-         * @param restoreJobLongRunningThresholdSeconds the {@code restoreJobLongRunningThresholdSeconds} to set
+         * @param slowTaskThresholdSeconds the {@code slowTaskThresholdSeconds} to set
          * @return a reference to this Builder
          */
-        public Builder restoreJobLongRunningThresholdSeconds(long restoreJobLongRunningThresholdSeconds)
+        public Builder slowTaskThresholdSeconds(long slowTaskThresholdSeconds)
         {
-            return update(b -> b.restoreJobLongRunningThresholdSeconds = restoreJobLongRunningThresholdSeconds);
+            return update(b -> b.slowTaskThresholdSeconds = slowTaskThresholdSeconds);
+        }
+
+        /**
+         * Sets the {@code slowTaskReportDelaySeconds} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param slowTaskReportDelaySeconds the {@code slowTaskReportDelaySeconds} to set
+         * @return a reference to this Builder
+         */
+        public Builder slowTaskReportDelaySeconds(long slowTaskReportDelaySeconds)
+        {
+            return update(b -> b.slowTaskReportDelaySeconds = slowTaskReportDelaySeconds);
         }
 
         @Override
