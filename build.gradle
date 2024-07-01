@@ -212,7 +212,9 @@ dependencies {
     implementation('software.amazon.awssdk:netty-nio-client')
     implementation('io.netty:netty-transport-classes-epoll') {
         version {
-            strictly '4.1.94.Final'
+            // Some integration tests are failing with version 4.1.100.final due to netty bootstrapping issue in cassandra java driver.
+            // Force the version to the old version unblocks the integration test.
+            strictly '4.1.86.Final'
         }
     }
 
