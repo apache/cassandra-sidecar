@@ -207,7 +207,7 @@ dependencies {
     implementation(group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: "${project.jacksonVersion}")
 
     // aws sdk BOM + s3
-    implementation platform(group: 'software.amazon.awssdk', name:'bom', version:"${project.aswSdkVersion}")
+    implementation platform(group: 'software.amazon.awssdk', name:'bom', version:"${project.awsSdkVersion}")
     implementation('software.amazon.awssdk:s3')
     implementation('software.amazon.awssdk:netty-nio-client')
     implementation('io.netty:netty-transport-classes-epoll') {
