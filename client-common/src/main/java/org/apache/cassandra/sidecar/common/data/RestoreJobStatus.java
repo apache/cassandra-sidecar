@@ -36,9 +36,4 @@ public enum RestoreJobStatus
     {
         return this == FAILED || this == ABORTED || this == SUCCEEDED;
     }
-
-    public boolean isReady()
-    {
-        return this == STAGE_READY || this == IMPORT_READY;
-    }
 }

@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ConsistencyVerifiersTest
 {
     private final InstanceSetByDc allReplicasByDc = replicaSet(2, 3);
-    private final InstanceSetByDc dcLocalReplicas = replicaSet(1, 3);
+    private final InstanceSetByDc dc1LocalReplicas = replicaSet(1, 3);
 
     @Test
     void testClOne()
@@ -102,51 +102,53 @@ class ConsistencyVerifiersTest
     @Test
     void testClLocalOne()
     {
-        ConsistencyVerifier verifier = ConsistencyVerifiers.forConsistencyLevel(ConsistencyLevel.LOCAL_ONE);
+        ConsistencyVerifier verifier = ConsistencyVerifiers.forConsistencyLevel(ConsistencyLevel.LOCAL_ONE, "dc-1");
         assertThat(verifier.verify(Collections.emptySet(),
                                    replicas(2, 3), // 2 out of 3 local instances fail
-                                   dcLocalReplicas))
+                                   allReplicasByDc))
         .isEqualTo(Result.PENDING);
 
         assertThat(verifier.verify(Collections.emptySet(),
                                    replicas(1, 3), // 3 out of 3 local instances fail
-                                   dcLocalReplicas))
+                                   allReplicasByDc))
         .isEqualTo(Result.FAILED);
 
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passed
                                    replicas(2, 3), // the rest of local instances fail
-                                   dcLocalReplicas))
+                                   allReplicasByDc))
         .isEqualTo(Result.SATISFIED);
 
+        ConsistencyVerifier dc2LocalVerifier = ConsistencyVerifiers.forConsistencyLevel(ConsistencyLevel.LOCAL_ONE, "dc-2");
         Set<String> set = Collections.emptySet();
-        assertThatThrownBy(() -> verifier.verify(set, set, allReplicasByDc))
+        assertThatThrownBy(() -> dc2LocalVerifier.verify(set, set, dc1LocalReplicas))
         .isExactlyInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Parameter 'all' should contain the write replicas in local datacenter only");
+        .hasMessageContaining("Parameter 'all' should contain the local datacenter: dc-2");
     }
 
     @Test
     void testClLocalQuorum()
     {
-        ConsistencyVerifier verifier = ConsistencyVerifiers.forConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
+        ConsistencyVerifier verifier = ConsistencyVerifiers.forConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "dc-1");
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(2, 2), // 1 instance fails
-                                   dcLocalReplicas))
+                                   allReplicasByDc))
         .isEqualTo(Result.PENDING);
 
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(2, 3), // 2 out of 3 local instances fail
-                                   dcLocalReplicas))
+                                   allReplicasByDc))
         .isEqualTo(Result.FAILED);
 
         assertThat(verifier.verify(replicas(1, 2), // 2 instances pass
                                    replicas(3, 3), // the rest fail
-                                   dcLocalReplicas))
+                                   allReplicasByDc))
         .isEqualTo(Result.SATISFIED);
 
+        ConsistencyVerifier dc2LocalVerifier = ConsistencyVerifiers.forConsistencyLevel(ConsistencyLevel.LOCAL_ONE, "dc-2");
         Set<String> set = Collections.emptySet();
-        assertThatThrownBy(() -> verifier.verify(set, set, allReplicasByDc))
+        assertThatThrownBy(() -> dc2LocalVerifier.verify(set, set, dc1LocalReplicas))
         .isExactlyInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Parameter 'all' should contain the write replicas in local datacenter only");
+        .hasMessageContaining("Parameter 'all' should contain the local datacenter: dc-2");
     }
 
     @Test

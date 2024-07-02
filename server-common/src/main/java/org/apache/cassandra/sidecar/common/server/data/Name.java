@@ -36,13 +36,13 @@ public class Name
     /**
      * Constructs a {@link Name} object with the provided {@code name}.
      *
-     * @param name the name that maybe quoted
+     * @param maybeQuotedName the name that maybe quoted
      */
-    public Name(String name)
+    public Name(String maybeQuotedName)
     {
-        Objects.requireNonNull(name, "name must not be null");
-        this.unquotedName = removeQuotesIfNecessary(name);
-        this.maybeQuotedName = name;
+        Objects.requireNonNull(maybeQuotedName, "name must not be null");
+        this.unquotedName = removeQuotesIfNecessary(maybeQuotedName);
+        this.maybeQuotedName = maybeQuotedName;
         this.isSourceQuoted = !unquotedName.equals(maybeQuotedName);
     }
 

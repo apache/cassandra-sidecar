@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.cluster.locator;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -32,6 +33,12 @@ public class InstanceSetByDc
 {
     @NotNull
     public Map<String, Set<String>> mapping;
+
+    public InstanceSetByDc(String dcName, Set<String> localDcInstances)
+    {
+        this.mapping = new HashMap<>(1);
+        mapping.put(dcName, localDcInstances);
+    }
 
     public InstanceSetByDc(@NotNull Map<String, Set<String>> mapping)
     {
@@ -54,6 +61,11 @@ public class InstanceSetByDc
     public Set<String> get(String dcName)
     {
         return mapping.getOrDefault(dcName, Collections.emptySet());
+    }
+
+    public boolean containsDatacenter(String dcName)
+    {
+        return mapping.containsKey(dcName);
     }
 
     public void forEach(BiConsumer<String, Set<String>> consumer)

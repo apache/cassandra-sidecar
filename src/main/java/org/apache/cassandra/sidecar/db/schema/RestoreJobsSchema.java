@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class RestoreJobsSchema extends TableSchema
 {
-    private static final String RESTORE_JOB_TABLE_NAME = "restore_job_v2";
+    private static final String RESTORE_JOB_TABLE_NAME = "restore_job_v3";
 
     private final SchemaKeyspaceConfiguration keyspaceConfig;
     private final long tableTtlSeconds;
@@ -89,6 +89,7 @@ public class RestoreJobsSchema extends TableSchema
                              "  expire_at timestamp," +
                              "  bucket_count smallint," +
                              "  consistency_level text," +
+                             "  local_datacenter text," +
                              "  PRIMARY KEY (created_at, job_id)" +
                              ") WITH default_time_to_live = %s",
                              keyspaceConfig.keyspace(), RESTORE_JOB_TABLE_NAME, tableTtlSeconds);
@@ -143,8 +144,9 @@ public class RestoreJobsSchema extends TableSchema
                              "  blob_secrets," +
                              "  import_options," +
                              "  consistency_level," +
+                             "  local_datacenter," +
                              "  expire_at" +
-                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
+                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
         }
 
         static String updateBlobSecrets(SchemaKeyspaceConfiguration config)
@@ -195,6 +197,7 @@ public class RestoreJobsSchema extends TableSchema
                              "blob_secrets, " +
                              "import_options, " +
                              "consistency_level, " +
+                             "local_datacenter, " +
                              "expire_at " +
                              "FROM %s.%s " +
                              "WHERE created_at = ? AND job_id = ?", config);
@@ -211,6 +214,7 @@ public class RestoreJobsSchema extends TableSchema
                              "blob_secrets, " +
                              "import_options, " +
                              "consistency_level, " +
+                             "local_datacenter, " +
                              "expire_at " +
                              "FROM %s.%s " +
                              "WHERE created_at = ?", config);

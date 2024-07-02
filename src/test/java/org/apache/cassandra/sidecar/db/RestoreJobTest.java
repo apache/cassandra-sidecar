@@ -99,10 +99,10 @@ public class RestoreJobTest
         for (RestoreJobStatus status : RestoreJobStatus.values())
         {
             RestoreJob job = createTestingJob(jobId, status);
-            if (!status.isReady())
+            if (status == RestoreJobStatus.CREATED)
             {
                 assertThatThrownBy(job::expectedNextRangeStatus)
-                .hasMessage("The restore job is not in a ready status. jobId: " + jobId + " status: " + status);
+                .hasMessage("Cannot check progress for restore job in CREATED status. jobId: " + jobId);
             }
             else if (status == RestoreJobStatus.STAGE_READY)
             {
@@ -110,11 +110,16 @@ public class RestoreJobTest
                 .describedAs("Expecting the ranges in STAGE_READY job to enter STAGED")
                 .isEqualTo(RestoreRangeStatus.STAGED);
             }
+            else if (status == RestoreJobStatus.STAGED)
+            {
+                assertThat(job.expectedNextRangeStatus())
+                .describedAs("Expecting the ranges in STAGED job to remain STAGED")
+                .isEqualTo(RestoreRangeStatus.STAGED);
+            }
             else
             {
-                assertThat(job.status).isEqualTo(RestoreJobStatus.IMPORT_READY);
                 assertThat(job.expectedNextRangeStatus())
-                .describedAs("Expecting the ranges in IMPORT_READY job to enter SUCCEEDED")
+                .describedAs("Expecting the ranges in IMPORT_READY or SUCCEEDED or FAILED or ABORTED job to enter SUCCEEDED")
                 .isEqualTo(RestoreRangeStatus.SUCCEEDED);
             }
         }

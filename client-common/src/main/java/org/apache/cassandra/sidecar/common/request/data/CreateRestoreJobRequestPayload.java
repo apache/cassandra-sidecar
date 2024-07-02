@@ -56,7 +56,7 @@ public class CreateRestoreJobRequestPayload
     @Nullable
     private final ConsistencyLevel consistencyLevel; // optional field
     @Nullable
-    private final String localDc; // optional field; if consistencyLevel requires localDc, the field must present
+    private final String localDatacenter; // optional field; if consistencyLevel requires localDc, the field must present
 
     /**
      * Builder to build a CreateRestoreJobRequest
@@ -88,7 +88,7 @@ public class CreateRestoreJobRequestPayload
                                           @JsonProperty(JOB_IMPORT_OPTIONS) SSTableImportOptions importOptions,
                                           @JsonProperty(JOB_EXPIRE_AT) long expireAtInMillis,
                                           @JsonProperty(JOB_CONSISTENCY_LEVEL) String consistencyLevel,
-                                          @JsonProperty(JOB_LOCAL_DATA_CENTER) String localDc)
+                                          @JsonProperty(JOB_LOCAL_DATA_CENTER) String localDatacenter)
     {
         Preconditions.checkArgument(jobId == null || jobId.version() == 1,
                                     "Only time based UUIDs allowed for jobId");
@@ -103,7 +103,7 @@ public class CreateRestoreJobRequestPayload
                              : importOptions;
         this.expireAtInMillis = expireAtInMillis;
         this.consistencyLevel = ConsistencyLevel.fromString(consistencyLevel);
-        this.localDc = localDc;
+        this.localDatacenter = localDatacenter;
     }
 
     private CreateRestoreJobRequestPayload(Builder builder)
@@ -189,7 +189,7 @@ public class CreateRestoreJobRequestPayload
     @Nullable
     public String localDatacenter()
     {
-        return localDc;
+        return localDatacenter;
     }
 
     @Override
@@ -201,6 +201,7 @@ public class CreateRestoreJobRequestPayload
                JOB_SECRETS + "='" + secrets + "', " +
                JOB_EXPIRE_AT + "='" + expireAtInMillis + "', " +
                JOB_CONSISTENCY_LEVEL + "='" + consistencyLevel + "', " +
+               JOB_LOCAL_DATA_CENTER + "='" + localDatacenter + "', " +
                JOB_IMPORT_OPTIONS + "='" + importOptions + "'}";
     }
 

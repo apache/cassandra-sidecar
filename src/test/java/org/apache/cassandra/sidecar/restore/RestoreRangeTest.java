@@ -186,7 +186,7 @@ class RestoreRangeTest
                                          .startToken(BigInteger.valueOf(start)).endToken(BigInteger.valueOf(end))
                                          .build();
 
-        return RestoreRange.builderFromEntireSlice(slice)
+        return RestoreRange.builderFromSlice(slice)
                            .stageDirectory(rootDir, "uploadId")
                            .replicaStatus(Collections.singletonMap("replica1", RestoreRangeStatus.CREATED))
                            .restoreJobProgressTracker(tracker)

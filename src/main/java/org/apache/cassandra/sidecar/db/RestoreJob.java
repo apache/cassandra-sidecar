@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.db;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
+import java.util.Locale;
 import java.util.UUID;
 
 import com.datastax.driver.core.LocalDate;
@@ -36,6 +37,7 @@ import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * RestoreJob is the in-memory representation of a restore job
@@ -54,7 +56,8 @@ public class RestoreJob
     public final SSTableImportOptions importOptions;
     public final Date expireAt;
     public final short bucketCount;
-    public final ConsistencyLevel consistencyLevel;
+    public final @Nullable ConsistencyLevel consistencyLevel;
+    public final @Nullable String localDatacenter;
     public final Manager restoreJobManager;
 
     private final String statusText;
@@ -75,16 +78,15 @@ public class RestoreJob
         Builder builder = new Builder();
         builder.createdAt(row.getDate("created_at"))
                .jobId(row.getUUID("job_id")).jobAgent(row.getString("job_agent"))
+               .bucketCount((short) 0) // always use 0 for now; TODO - Add bucketCount field to CreateRestoreJobRequestPayload
                .keyspace(row.getString("keyspace_name")).table(row.getString("table_name"))
                .jobStatusText(row.getString("status"))
                .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
                .expireAt(row.getTimestamp("expire_at"))
                .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
-               .consistencyLevel(row.getString("consistency_level"));
+               .consistencyLevel(row.getString("consistency_level"))
+               .localDatacenter(row.getString("local_datacenter"));
 
-        // todo: Yifan, add them back when the cql statement is updated to reflect the new columns.
-        //  Add new fields to CreateRestoreJobRequestPayload too
-//               .bucketCount(row.getShort("bucket_count"))
         return builder.build();
     }
 
@@ -119,6 +121,10 @@ public class RestoreJob
 
     private RestoreJob(Builder builder)
     {
+        Preconditions.checkArgument(builder.consistencyLevel == null
+                                    || !builder.consistencyLevel.isLocalDcOnly
+                                    || (builder.localDatacenter != null && !builder.localDatacenter.isEmpty()),
+                                    "When local consistency level is used, localDatacenter must also present");
         this.createdAt = builder.createdAt;
         this.jobId = builder.jobId;
         this.keyspaceName = builder.keyspaceName;
@@ -133,6 +139,7 @@ public class RestoreJob
         this.expireAt = builder.expireAt;
         this.bucketCount = builder.bucketCount;
         this.consistencyLevel = builder.consistencyLevel;
+        this.localDatacenter = builder.localDatacenter;
         this.restoreJobManager = builder.manager;
     }
 
@@ -151,11 +158,15 @@ public class RestoreJob
         return statusText;
     }
 
+    /**
+     * @return the expected next range status in order to succeed
+     */
     public RestoreRangeStatus expectedNextRangeStatus()
     {
-        Preconditions.checkState(status.isReady(), "The restore job is not in a ready status. jobId: " + jobId + " status: " + status);
+        Preconditions.checkArgument(status != RestoreJobStatus.CREATED,
+                                    "Cannot check progress for restore job in CREATED status. jobId: " + jobId);
 
-        return status == RestoreJobStatus.STAGE_READY
+        return status == RestoreJobStatus.STAGE_READY || status == RestoreJobStatus.STAGED
                ? RestoreRangeStatus.STAGED
                : RestoreRangeStatus.SUCCEEDED;
     }
@@ -168,11 +179,12 @@ public class RestoreJob
         return String.format("RestoreJob{" +
                              "createdAt='%s', jobId='%s', keyspaceName='%s', " +
                              "tableName='%s', status='%s', secrets='%s', importOptions='%s', " +
-                             "expireAt='%s', bucketCount='%s', consistencyLevel='%s'}",
+                             "expireAt='%s', bucketCount='%s', consistencyLevel='%s', localDatacenter='%s'}",
                              createdAt.toString(), jobId.toString(),
                              keyspaceName, tableName,
                              statusText, secrets, importOptions,
-                             expireAt, bucketCount, consistencyLevel);
+                             expireAt, bucketCount,
+                             consistencyLevel, localDatacenter);
     }
 
     public static LocalDate toLocalDate(UUID jobId)
@@ -209,6 +221,7 @@ public class RestoreJob
         private Date expireAt;
         private short bucketCount;
         private ConsistencyLevel consistencyLevel;
+        private String localDatacenter;
         private Manager manager;
 
         private Builder()
@@ -230,6 +243,7 @@ public class RestoreJob
             this.expireAt = restoreJob.expireAt;
             this.bucketCount = restoreJob.bucketCount;
             this.consistencyLevel = restoreJob.consistencyLevel;
+            this.localDatacenter = restoreJob.localDatacenter;
         }
 
         public Builder createdAt(LocalDate createdAt)
@@ -298,12 +312,17 @@ public class RestoreJob
             return update(b -> b.bucketCount = bucketCount);
         }
 
-        public Builder consistencyLevel(String consistencyLevel)
+        public Builder consistencyLevel(@Nullable String consistencyLevel)
         {
             return update(b -> {
                 b.consistencyLevel = ConsistencyLevel.fromString(consistencyLevel);
                 b.manager = resolveJobManager();
             });
+        }
+
+        public Builder localDatacenter(@Nullable String localDatacenter)
+        {
+            return update(b -> b.localDatacenter = localDatacenter);
         }
 
         @Override

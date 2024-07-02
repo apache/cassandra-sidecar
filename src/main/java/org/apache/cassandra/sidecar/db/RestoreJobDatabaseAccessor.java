@@ -82,6 +82,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                                    .sstableImportOptions(payload.importOptions())
                                    .expireAt(payload.expireAtAsDate())
                                    .consistencyLevel(payload.consistencyLevel())
+                                   .localDatacenter(payload.localDatacenter())
                                    .build();
         ByteBuffer secrets = serializeValue(job.secrets, "secrets");
         ByteBuffer importOptions = serializeValue(job.importOptions, "sstable import options");

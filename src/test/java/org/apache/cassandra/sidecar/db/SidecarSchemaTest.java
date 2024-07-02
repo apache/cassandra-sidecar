@@ -136,7 +136,7 @@ public class SidecarSchemaTest
             assertTrue(interceptedExecStmts.get(0).contains("CREATE KEYSPACE IF NOT EXISTS sidecar_internal"),
                        "Create keyspace should be executed the first");
             assertTrue(hasElementContains(interceptedExecStmts,
-                                          "CREATE TABLE IF NOT EXISTS sidecar_internal.restore_job_v2"),
+                                          "CREATE TABLE IF NOT EXISTS sidecar_internal.restore_job_v3"),
                        "Create table should be executed for job table");
             assertTrue(hasElementContains(interceptedExecStmts,
                                           "CREATE TABLE IF NOT EXISTS sidecar_internal.restore_slice_v3"),
@@ -146,23 +146,23 @@ public class SidecarSchemaTest
                        "Create table should be executed for range table");
 
             List<String> expectedPrepStatements = Arrays.asList(
-            "INSERT INTO sidecar_internal.restore_job_v2 (  created_at,  job_id,  keyspace_name,  table_name,  " +
-            "job_agent,  status,  blob_secrets,  import_options,  consistency_level,  expire_at) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO sidecar_internal.restore_job_v3 (  created_at,  job_id,  keyspace_name,  table_name,  " +
+            "job_agent,  status,  blob_secrets,  import_options,  consistency_level,  local_datacenter,  expire_at) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v2 (  created_at,  job_id,  blob_secrets) VALUES (?, ? ,?)",
+            "INSERT INTO sidecar_internal.restore_job_v3 (  created_at,  job_id,  blob_secrets) VALUES (?, ? ,?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v2 (  created_at,  job_id,  status) VALUES (?, ?, ?)",
+            "INSERT INTO sidecar_internal.restore_job_v3 (  created_at,  job_id,  status) VALUES (?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v2 (  created_at,  job_id,  job_agent) VALUES (?, ?, ?)",
+            "INSERT INTO sidecar_internal.restore_job_v3 (  created_at,  job_id,  job_agent) VALUES (?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v2 (  created_at,  job_id,  expire_at) VALUES (?, ?, ?)",
-
-            "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, " +
-            "consistency_level, expire_at FROM sidecar_internal.restore_job_v2 WHERE created_at = ? AND job_id = ?",
+            "INSERT INTO sidecar_internal.restore_job_v3 (  created_at,  job_id,  expire_at) VALUES (?, ?, ?)",
 
             "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, " +
-            "consistency_level, expire_at FROM sidecar_internal.restore_job_v2 WHERE created_at = ?",
+            "consistency_level, local_datacenter, expire_at FROM sidecar_internal.restore_job_v3 WHERE created_at = ? AND job_id = ?",
+
+            "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, " +
+            "consistency_level, local_datacenter, expire_at FROM sidecar_internal.restore_job_v3 WHERE created_at = ?",
 
             "INSERT INTO sidecar_internal.restore_slice_v3 (  job_id,  bucket_id,  slice_id,  bucket,  key,  " +
             "checksum,  start_token,  end_token,  compressed_size,  uncompressed_size) " +
@@ -173,7 +173,7 @@ public class SidecarSchemaTest
             "WHERE job_id = ? AND bucket_id = ? AND start_token <= ? AND end_token >= ? ALLOW FILTERING",
 
             "INSERT INTO sidecar_internal.restore_range_v1 (  job_id,  bucket_id,  start_token,  end_token,  " +
-            "slice_id,  slice_start_token,  slice_end_token,  status_by_replica) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "slice_id,  status_by_replica) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
 
             "SELECT job_id, bucket_id, slice_id, start_token, end_token, status_by_replica " +
             "FROM sidecar_internal.restore_range_v1 WHERE job_id = ? AND bucket_id = ? ALLOW FILTERING",

@@ -152,7 +152,7 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
     {
         RestoreJobProgressTracker.Status status;
         String uploadId = RestoreJobUtil.generateUniqueUploadId(job.jobId, slice.sliceId());
-        RestoreRange range = RestoreRange.builderFromEntireSlice(slice)
+        RestoreRange range = RestoreRange.builderFromSlice(slice)
                                          .ownerInstance(instance)
                                          .stageDirectory(Paths.get(instance.stagingDir()), uploadId)
                                          .build();

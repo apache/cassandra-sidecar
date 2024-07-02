@@ -276,7 +276,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
             TokenRangeReplicasResponse topology = ringTopologyRefresher.cachedReplicaByTokenRange(restoreJob);
             List<RestoreRange> splits = slice.splitMaybe(topology)
                                              .stream()
-                                             .map(s -> RestoreRange.builderFromEntireSlice(s)
+                                             .map(s -> RestoreRange.builderFromSlice(s)
                                                                    .ownerInstance(instance)
                                                                    .build())
                                              .collect(Collectors.toList());

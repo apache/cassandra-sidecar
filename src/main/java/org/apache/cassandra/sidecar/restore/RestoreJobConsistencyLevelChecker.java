@@ -35,10 +35,12 @@ import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
 import org.apache.cassandra.sidecar.cluster.ConsistencyVerifiers;
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
+import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -75,9 +77,13 @@ public class RestoreJobConsistencyLevelChecker
 
     public Future<RestoreJobProgress> check(RestoreJob restoreJob, RestoreJobProgressFetchPolicy fetchPolicy)
     {
+        Preconditions.checkArgument(restoreJob.consistencyLevel != null, "Consistency level of the job must present");
+        Preconditions.checkArgument(!restoreJob.consistencyLevel.isLocalDcOnly
+                                    || (restoreJob.localDatacenter != null && !restoreJob.localDatacenter.isEmpty()),
+                                    "When using local consistency level, localDatacenter must present");
         RestoreJobProgressCollector collector = RestoreJobProgressCollectors.create(restoreJob, fetchPolicy);
         RestoreRangeStatus successCriteria = restoreJob.expectedNextRangeStatus();
-        ConsistencyVerifier verifier = ConsistencyVerifiers.forConsistencyLevel(restoreJob.consistencyLevel);
+        ConsistencyVerifier verifier = ConsistencyVerifiers.forConsistencyLevel(restoreJob.consistencyLevel, restoreJob.localDatacenter);
         return ringTopologyRefresher.replicaByTokenRangeAsync(restoreJob)
                                     .compose(topology -> findRangesAndConclude(restoreJob, successCriteria, topology, verifier, collector));
     }
@@ -98,7 +104,6 @@ public class RestoreJobConsistencyLevelChecker
                    return collector.toRestoreJobProgress();
                });
     }
-
 
     private static void concludeRanges(List<RestoreRange> ranges,
                                        TokenRangeReplicasResponse topology,

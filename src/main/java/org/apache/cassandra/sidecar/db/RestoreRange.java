@@ -79,8 +79,6 @@ public class RestoreRange
     private final BigInteger endToken;
     private final RestoreSlice source;
     private final String sourceSliceId;
-    private final BigInteger sourceSliceStartToken;
-    private final BigInteger sourceSliceEndToken;
 
     // The path to the directory that stores the s3 object of the slice and the sstables after unzipping.
     // Its value is "baseStageDirectory/uploadId"
@@ -105,7 +103,7 @@ public class RestoreRange
         return new Builder();
     }
 
-    public static Builder builderFromEntireSlice(RestoreSlice slice)
+    public static Builder builderFromSlice(RestoreSlice slice)
     {
         return builder()
                .jobId(slice.jobId())
@@ -122,8 +120,6 @@ public class RestoreRange
         this.endToken = builder.endToken;
         this.source = builder.sourceSlice;
         this.sourceSliceId = builder.sourceSliceId;
-        this.sourceSliceStartToken = builder.sourceSliceStartToken;
-        this.sourceSliceEndToken = builder.sourceSliceEndToken;
         this.stageDirectory = builder.stageDirectory;
         this.stagedObjectPath = builder.stagedObjectPath;
         this.uploadId = builder.uploadId;
@@ -379,8 +375,6 @@ public class RestoreRange
                .endToken(row.getVarint("end_token"))
                .replicaStatus(row.getMap("status_by_replica", String.class, RestoreRangeStatus.class))
                .sourceSliceId(row.getString("slice_id"))
-               .sourceSliceStartToken(row.getVarint("slice_start_token"))
-               .sourceSliceEndToken(row.getVarint("slice_end_token"))
                .build();
     }
 
@@ -401,8 +395,6 @@ public class RestoreRange
         private BigInteger endToken;
         private RestoreSlice sourceSlice;
         private String sourceSliceId;
-        private BigInteger sourceSliceStartToken;
-        private BigInteger sourceSliceEndToken;
         private InstanceMetadata owner;
         private Path stageDirectory;
         private Path stagedObjectPath;
@@ -420,8 +412,6 @@ public class RestoreRange
             this.bucketId = range.bucketId;
             this.sourceSlice = range.source;
             this.sourceSliceId = range.sourceSliceId;
-            this.sourceSliceStartToken = range.sourceSliceStartToken;
-            this.sourceSliceEndToken = range.sourceSliceEndToken;
             this.stageDirectory = range.stageDirectory;
             this.uploadId = range.uploadId;
             this.owner = range.owner;
@@ -445,8 +435,6 @@ public class RestoreRange
         {
             return update(b -> b.sourceSlice = source)
                    .sourceSliceId(source.sliceId())
-                   .sourceSliceStartToken(source.startToken())
-                   .sourceSliceEndToken(source.endToken())
                    .jobId(source.jobId())
                    .bucketId(source.bucketId());
         }
@@ -454,16 +442,6 @@ public class RestoreRange
         public Builder sourceSliceId(String sliceId)
         {
             return update(b -> b.sourceSliceId = sliceId);
-        }
-
-        public Builder sourceSliceStartToken(BigInteger startToken)
-        {
-            return update(b -> b.sourceSliceStartToken = startToken);
-        }
-
-        public Builder sourceSliceEndToken(BigInteger endToken)
-        {
-            return update(b -> b.sourceSliceEndToken = endToken);
         }
 
         public Builder stageDirectory(Path basePath, String uploadId)

@@ -260,7 +260,7 @@ class RestoreJobManagerTest
                              .storageBucket("storageBucket")
                              .build();
         RestoreJobProgressTracker tracker = manager.progressTrackerUnsafe(job);
-        return RestoreRange.builderFromEntireSlice(slice)
+        return RestoreRange.builderFromSlice(slice)
                            .restoreJobProgressTracker(tracker)
                            .ownerInstance(owner)
                            .stageDirectory(testDir, "uploadId")

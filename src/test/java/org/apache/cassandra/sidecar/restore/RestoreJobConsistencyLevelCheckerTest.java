@@ -27,9 +27,11 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
 import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier.Result;
 import org.apache.cassandra.sidecar.cluster.ConsistencyVerifiers;
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
+import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaInfo;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
@@ -136,31 +138,33 @@ class RestoreJobConsistencyLevelCheckerTest
         ReplicaInfo r1 = new ReplicaInfo("0", "15", replicaByDc(1, 3));
         when(topology.writeReplicas()).thenReturn(Collections.singletonList(r1));
 
+        ConsistencyVerifier localQuorumVerifier = ConsistencyVerifiers.forConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "dc-1");
+
         // range has no replica status
         Map<String, RestoreRangeStatus> replicaStatus = new HashMap<>();
         range = range.unbuild().replicaStatus(replicaStatus).build();
-        assertThat(concludeOneRangeUnsafe(topology, ConsistencyVerifiers.ForLocalQuorum.INSTANCE, RestoreRangeStatus.STAGED, range))
+        assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
         .isEqualTo(Result.PENDING);
 
         replicaStatus.put("i-1", RestoreRangeStatus.FAILED);
         replicaStatus.put("i-2", RestoreRangeStatus.STAGED);
         replicaStatus.put("i-3", RestoreRangeStatus.CREATED);
         range = range.unbuild().replicaStatus(replicaStatus).build();
-        assertThat(concludeOneRangeUnsafe(topology, ConsistencyVerifiers.ForLocalQuorum.INSTANCE, RestoreRangeStatus.STAGED, range))
+        assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
         .isEqualTo(Result.PENDING);
 
         replicaStatus.put("i-1", RestoreRangeStatus.STAGED);
         replicaStatus.put("i-2", RestoreRangeStatus.STAGED);
         replicaStatus.put("i-3", RestoreRangeStatus.FAILED);
         range = range.unbuild().replicaStatus(replicaStatus).build();
-        assertThat(concludeOneRangeUnsafe(topology, ConsistencyVerifiers.ForLocalQuorum.INSTANCE, RestoreRangeStatus.STAGED, range))
+        assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
         .isEqualTo(Result.SATISFIED);
 
         replicaStatus.put("i-1", RestoreRangeStatus.STAGED);
         replicaStatus.put("i-2", RestoreRangeStatus.FAILED);
         replicaStatus.put("i-3", RestoreRangeStatus.FAILED);
         range = range.unbuild().replicaStatus(replicaStatus).build();
-        assertThat(concludeOneRangeUnsafe(topology, ConsistencyVerifiers.ForLocalQuorum.INSTANCE, RestoreRangeStatus.STAGED, range))
+        assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
         .isEqualTo(Result.FAILED);
     }
 

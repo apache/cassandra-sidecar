@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.common.request;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
 
@@ -202,14 +203,19 @@ class CreateRestoreJobRequestPayloadTest
     void testCreateLocalQuorumJobWithoutLocalDCFails()
     {
         RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
-        assertThatThrownBy(() -> CreateRestoreJobRequestPayload.builder(secrets, System.currentTimeMillis())
-                                                               .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
-                                                               .build())
-        .hasMessage("Must specify a non-empty localDatacenter for consistency level: LOCAL_QUORUM");
 
-        assertThatThrownBy(() -> CreateRestoreJobRequestPayload.builder(secrets, System.currentTimeMillis())
-                                                               .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "")
-                                                               .build())
-        .hasMessage("Must specify a non-empty localDatacenter for consistency level: LOCAL_QUORUM");
+        for (ConsistencyLevel localCL : Arrays.asList(ConsistencyLevel.LOCAL_QUORUM, ConsistencyLevel.LOCAL_ONE))
+        {
+            assertThatThrownBy(() -> CreateRestoreJobRequestPayload.builder(secrets, System.currentTimeMillis())
+                                                                   .consistencyLevel(localCL)
+                                                                   .build())
+            .hasMessage("Must specify a non-empty localDatacenter for consistency level: " + localCL.name());
+
+            assertThatThrownBy(() -> CreateRestoreJobRequestPayload.builder(secrets, System.currentTimeMillis())
+                                                                   .consistencyLevel(localCL, "")
+                                                                   .build())
+            .hasMessage("Must specify a non-empty localDatacenter for consistency level: " + localCL.name());
+        }
+
     }
 }

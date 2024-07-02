@@ -80,8 +80,6 @@ public class RestoreRangesSchema extends TableSchema
                              "  start_token varint," +
                              "  end_token varint," +
                              "  slice_id text," + // together with slice start & end tokens to locate the slice row
-                             "  slice_start_token text," +
-                             "  slice_end_token text," +
                              "  status_by_replica map<text, text>," +
                              "  PRIMARY KEY ((job_id, bucket_id), start_token, end_token)" +
                              ") WITH default_time_to_live = %s",
@@ -113,8 +111,6 @@ public class RestoreRangesSchema extends TableSchema
                              "  start_token," +
                              "  end_token," +
                              "  slice_id," +
-                             "  slice_start_token," +
-                             "  slice_end_token," +
                              "  status_by_replica" +
                              ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)", config);
         }

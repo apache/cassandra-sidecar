@@ -30,18 +30,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RestoreJobStatusTest
 {
     @Test
-    void testIsReady()
-    {
-        assertThat(STAGE_READY.isReady()).isTrue();
-        assertThat(IMPORT_READY.isReady()).isTrue();
-        assertThat(STAGED.isReady()).isFalse();
-        assertThat(CREATED.isReady()).isFalse();
-        assertThat(FAILED.isReady()).isFalse();
-        assertThat(ABORTED.isReady()).isFalse();
-        assertThat(SUCCEEDED.isReady()).isFalse();
-    }
-
-    @Test
     void testIsFinal()
     {
         assertThat(STAGE_READY.isFinal()).isFalse();
