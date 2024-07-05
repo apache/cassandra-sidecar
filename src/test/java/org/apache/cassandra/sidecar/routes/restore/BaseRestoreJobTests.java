@@ -21,8 +21,9 @@ package org.apache.cassandra.sidecar.routes.restore;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +35,17 @@ import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
+import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
@@ -43,6 +54,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -50,6 +62,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreRange;
+import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
@@ -60,10 +73,17 @@ import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.restore.RestoreJobProgressTracker;
 import org.apache.cassandra.sidecar.restore.RestoreProcessor;
 import org.apache.cassandra.sidecar.restore.RingTopologyRefresher;
+import org.apache.cassandra.sidecar.routes.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreJobDatabaseAccessor;
+import org.apache.cassandra.sidecar.routes.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreJobManagerGroup;
+import org.apache.cassandra.sidecar.routes.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreRangeDatabaseAccessor;
+import org.apache.cassandra.sidecar.routes.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreSliceDatabaseAccessor;
+import org.apache.cassandra.sidecar.routes.restore.BaseRestoreJobTests.TestModuleOverride.TestRingTopologyRefresher;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -76,9 +96,12 @@ public abstract class BaseRestoreJobTests
     protected static final RestoreJobSecrets SECRETS = RestoreJobSecretsGen.genRestoreJobSecrets();
     protected Vertx vertx;
     protected Server server;
-    protected TestModuleOverride.TestRestoreJobDatabaseAccessor testRestoreJobs;
-    protected TestModuleOverride.TestRestoreSliceDatabaseAccessor testRestoreSlices;
-    protected TestModuleOverride.TestRestoreJobManagerGroup testRestoreJobManagerGroup;
+    protected WebClient client;
+    protected TestRestoreJobDatabaseAccessor testRestoreJobs;
+    protected TestRestoreSliceDatabaseAccessor testRestoreSlices;
+    protected TestRestoreRangeDatabaseAccessor testRestoreRanges;
+    protected TestRestoreJobManagerGroup testRestoreJobManagerGroup;
+    protected TestRingTopologyRefresher testRingTopologyRefresher;
 
     @BeforeEach
     public void setup(VertxTestContext context) throws Exception
@@ -90,13 +113,12 @@ public abstract class BaseRestoreJobTests
                                                                      .with(new TestModuleOverride())));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
-        testRestoreJobs
-        = (TestModuleOverride.TestRestoreJobDatabaseAccessor) injector.getInstance(RestoreJobDatabaseAccessor.class);
-        testRestoreSlices
-        = (TestModuleOverride.TestRestoreSliceDatabaseAccessor)
-          injector.getInstance(RestoreSliceDatabaseAccessor.class);
-        testRestoreJobManagerGroup
-        = (TestModuleOverride.TestRestoreJobManagerGroup) injector.getInstance(RestoreJobManagerGroup.class);
+        client = WebClient.create(vertx, new WebClientOptions());
+        testRestoreJobs = (TestRestoreJobDatabaseAccessor) injector.getInstance(RestoreJobDatabaseAccessor.class);
+        testRestoreSlices = (TestRestoreSliceDatabaseAccessor) injector.getInstance(RestoreSliceDatabaseAccessor.class);
+        testRestoreRanges = (TestRestoreRangeDatabaseAccessor) injector.getInstance(RestoreRangeDatabaseAccessor.class);
+        testRestoreJobManagerGroup = (TestRestoreJobManagerGroup) injector.getInstance(RestoreJobManagerGroup.class);
+        testRingTopologyRefresher = (TestRingTopologyRefresher) injector.getInstance(RingTopologyRefresher.class);
         server.start()
               .onSuccess(s -> context.completeNow())
               .onFailure(context::failNow);
@@ -108,9 +130,40 @@ public abstract class BaseRestoreJobTests
 
     }
 
+    protected void postAndVerify(String endpoint,
+                                 JsonObject requestPayload,
+                                 Handler<AsyncResult<HttpResponse<Buffer>>> responseVerifier)
+    {
+        sendRequestAndVerify(HttpMethod.POST, endpoint, requestPayload, responseVerifier);
+    }
+
+    protected void getAndVerify(String endpoint, Handler<AsyncResult<HttpResponse<Buffer>>> responseVerifier)
+    {
+        sendRequestAndVerify(HttpMethod.GET, endpoint, null, responseVerifier);
+    }
+
+    private void sendRequestAndVerify(HttpMethod httpMethod,
+                                      String endpoint,
+                                      JsonObject requestPayload,
+                                      Handler<AsyncResult<HttpResponse<Buffer>>> responseVerifier)
+    {
+        HttpRequest<Buffer> request = client.request(httpMethod, server.actualPort(), "localhost", endpoint);
+        assertThat(request).isNotNull();
+        request.as(BodyCodec.buffer());
+        if (requestPayload == null)
+        {
+            request.send(responseVerifier);
+        }
+        else
+        {
+            request.sendJsonObject(requestPayload, responseVerifier);
+        }
+    }
+
     @AfterEach
     public void tearDown(VertxTestContext context) throws Throwable
     {
+        client.close();
         vertx.close(result -> context.completeNow());
         assertThat(context.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
         assertThat(vertx.deploymentIDs()).isEmpty();
@@ -135,11 +188,9 @@ public abstract class BaseRestoreJobTests
         testRestoreJobs.lookupFunc = func;
     }
 
-    // The input of the func is the sliceId, and the func returns RestoreSliceTracker.Status
-    // The implementation is used in the phase 1 of SBW-on-s3
-    protected void mockSubmitRestoreSlice(ThrowableFunction<String,
-                                                           RestoreJobProgressTracker.Status,
-                                                           RestoreJobFatalException> func)
+    // The input of the func is the sliceId. The func returns RestoreSliceTracker.Status
+    // The func is only evaluated when the restore job is managed by Spark.
+    protected void mockSubmitRestoreSlice(ThrowableFunction<String, RestoreJobProgressTracker.Status, RestoreJobFatalException> func)
     {
         testRestoreJobManagerGroup.submitFunc = func;
     }
@@ -149,19 +200,35 @@ public abstract class BaseRestoreJobTests
         testRestoreSlices.createFunc = func;
     }
 
-    protected void mockLookupRestoreSlices(BiFunction<UUID, TokenRange, List<RestoreSlice>> func)
+    protected void mockCreateRestoreRange(UnaryOperator<RestoreRange> func)
     {
-        testRestoreSlices.selectByJobByRangeFunc = func;
+        testRestoreRanges.createFunc = func;
+    }
+
+    protected void mockUpdateRestoreRangeStatus(UnaryOperator<RestoreRange> func)
+    {
+        testRestoreRanges.updateStatusFunc = func;
+    }
+
+    protected void mockFindAllRestoreRanges(Function<UUID, List<RestoreRange>> func)
+    {
+        testRestoreRanges.findAllFunc = func;
+    }
+
+    protected void mockTopologyInRefresher(Supplier<TokenRangeReplicasResponse> topologySupplier)
+    {
+        testRingTopologyRefresher.topologySupplier = topologySupplier;
     }
 
     interface ThrowableFunction<A, B, E extends Exception>
     {
+
         B apply(A a) throws E;
     }
 
     static class TestModuleOverride extends AbstractModule
     {
-        static class TestRestoreJobDatabaseAccessor extends RestoreJobDatabaseAccessor
+        protected static class TestRestoreJobDatabaseAccessor extends RestoreJobDatabaseAccessor
         {
             Function<CreateRestoreJobRequestPayload, RestoreJob> createFunc;
             Function<UpdateRestoreJobRequestPayload, RestoreJob> updateFunc;
@@ -201,7 +268,6 @@ public abstract class BaseRestoreJobTests
         static class TestRestoreSliceDatabaseAccessor extends RestoreSliceDatabaseAccessor
         {
             Function<RestoreSlice, RestoreSlice> createFunc;
-            BiFunction<UUID, TokenRange, List<RestoreSlice>> selectByJobByRangeFunc;
 
             TestRestoreSliceDatabaseAccessor(SidecarSchema sidecarSchema)
             {
@@ -217,7 +283,37 @@ public abstract class BaseRestoreJobTests
             @Override
             public List<RestoreSlice> selectByJobByBucketByTokenRange(RestoreJob restoreJob, short bucketId, TokenRange range)
             {
-                return selectByJobByRangeFunc.apply(restoreJob.jobId, range);
+                throw new UnsupportedOperationException("Not being tested here");
+            }
+        }
+
+        protected static class TestRestoreRangeDatabaseAccessor extends RestoreRangeDatabaseAccessor
+        {
+            UnaryOperator<RestoreRange> createFunc;
+            UnaryOperator<RestoreRange> updateStatusFunc;
+            Function<UUID, List<RestoreRange>> findAllFunc;
+
+            TestRestoreRangeDatabaseAccessor(SidecarSchema sidecarSchema)
+            {
+                super(sidecarSchema, null, null);
+            }
+
+            @Override
+            public RestoreRange create(RestoreRange range)
+            {
+                return createFunc.apply(range);
+            }
+
+            @Override
+            public RestoreRange updateStatus(RestoreRange range)
+            {
+                return updateStatusFunc.apply(range);
+            }
+
+            @Override
+            public List<RestoreRange> findAll(UUID jobId, short bucketId)
+            {
+                return findAllFunc.apply(jobId);
             }
         }
 
@@ -245,6 +341,23 @@ public abstract class BaseRestoreJobTests
             }
         }
 
+        static class TestRingTopologyRefresher extends RingTopologyRefresher
+        {
+            Supplier<TokenRangeReplicasResponse> topologySupplier;
+
+            public TestRingTopologyRefresher(InstanceMetadataFetcher metadataFetcher, SidecarConfiguration config)
+            {
+                super(metadataFetcher, config);
+            }
+
+            @Override
+            @Nullable
+            public TokenRangeReplicasResponse cachedReplicaByTokenRange(RestoreJob restoreJob)
+            {
+                return topologySupplier.get();
+            }
+        }
+
         @Provides
         @Singleton
         public RestoreJobDatabaseAccessor restoreJobs(SidecarSchema sidecarSchema)
@@ -257,6 +370,13 @@ public abstract class BaseRestoreJobTests
         public RestoreSliceDatabaseAccessor restoreSlices(SidecarSchema sidecarSchema)
         {
             return new TestRestoreSliceDatabaseAccessor(sidecarSchema);
+        }
+
+        @Provides
+        @Singleton
+        public RestoreRangeDatabaseAccessor restoreRanges(SidecarSchema sidecarSchema)
+        {
+            return new TestRestoreRangeDatabaseAccessor(sidecarSchema);
         }
 
         @Provides
@@ -276,6 +396,13 @@ public abstract class BaseRestoreJobTests
                                                   restoreProcessor,
                                                   jobDiscoverer,
                                                   ringTopologyRefresher);
+        }
+
+        @Provides
+        @Singleton
+        public RingTopologyRefresher ringTopologyRefresher(InstanceMetadataFetcher metadataFetcher, SidecarConfiguration configuration)
+        {
+            return new TestRingTopologyRefresher(metadataFetcher, configuration);
         }
     }
 }

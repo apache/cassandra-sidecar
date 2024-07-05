@@ -35,11 +35,11 @@ import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
 import org.apache.cassandra.sidecar.cluster.ConsistencyVerifiers;
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
-import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
+import org.apache.cassandra.sidecar.common.server.utils.StringUtils;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
@@ -79,7 +79,7 @@ public class RestoreJobConsistencyLevelChecker
     {
         Preconditions.checkArgument(restoreJob.consistencyLevel != null, "Consistency level of the job must present");
         Preconditions.checkArgument(!restoreJob.consistencyLevel.isLocalDcOnly
-                                    || (restoreJob.localDatacenter != null && !restoreJob.localDatacenter.isEmpty()),
+                                    || StringUtils.notEmpty(restoreJob.localDatacenter),
                                     "When using local consistency level, localDatacenter must present");
         RestoreJobProgressCollector collector = RestoreJobProgressCollectors.create(restoreJob, fetchPolicy);
         RestoreRangeStatus successCriteria = restoreJob.expectedNextRangeStatus();
@@ -100,6 +100,11 @@ public class RestoreJobConsistencyLevelChecker
                    return rangeDatabaseAccessor.findAll(restoreJob.jobId, bucketId);
                })
                .map(ranges -> {
+                   if (ranges.isEmpty())
+                   {
+                       LOGGER.error("No restore ranges found. jobId={}", restoreJob.jobId);
+                       throw new IllegalStateException("No restore ranges found for job: " + restoreJob.jobId);
+                   }
                    concludeRanges(ranges, topology, verifier, successCriteria, collector);
                    return collector.toRestoreJobProgress();
                });

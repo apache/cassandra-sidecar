@@ -216,9 +216,9 @@ class StorageClientTest
     {
         RestoreRange mock = mock(RestoreRange.class, RETURNS_DEEP_STUBS);
         when(mock.jobId()).thenReturn(jobId);
-        when(mock.source().bucket()).thenReturn(bucket);
-        when(mock.source().key()).thenReturn(key);
-        when(mock.source().checksum()).thenReturn(checksum);
+        when(mock.sliceBucket()).thenReturn(bucket);
+        when(mock.sliceKey()).thenReturn(key);
+        when(mock.sliceChecksum()).thenReturn(checksum);
         when(mock.stageDirectory()).thenReturn(localPath);
         if (localPath != null)
         {
@@ -230,8 +230,8 @@ class StorageClientTest
     private void putObject(RestoreRange range, String stringData) throws Exception
     {
         PutObjectRequest request = PutObjectRequest.builder()
-                                                   .bucket(range.source().bucket())
-                                                   .key(range.source().key())
+                                                   .bucket(range.sliceBucket())
+                                                   .key(range.sliceKey())
                                                    .build();
 
         s3AsyncClient.putObject(request, AsyncRequestBody.fromString(stringData)).get();
@@ -240,8 +240,8 @@ class StorageClientTest
     private void putObject(RestoreRange range, Path path) throws Exception
     {
         PutObjectRequest request = PutObjectRequest.builder()
-                                                   .bucket(range.source().bucket())
-                                                   .key(range.source().key())
+                                                   .bucket(range.sliceBucket())
+                                                   .key(range.sliceKey())
                                                    .build();
 
         s3AsyncClient.putObject(request, AsyncRequestBody.fromFile(path)).get();

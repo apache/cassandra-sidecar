@@ -25,13 +25,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Function;
 
 import com.datastax.driver.core.Row;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
-import org.apache.cassandra.sidecar.common.response.data.RestoreJobRange;
+import org.apache.cassandra.sidecar.common.response.data.RestoreRangeJson;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
@@ -44,6 +46,7 @@ import org.apache.cassandra.sidecar.restore.StorageClient;
 import org.apache.cassandra.sidecar.restore.StorageClientPool;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -73,12 +76,26 @@ import org.jetbrains.annotations.VisibleForTesting;
  */
 public class RestoreRange
 {
+    // @NotNull fields are persisted
+    @NotNull
     private final UUID jobId;
+    @NotNull
     private final short bucketId;
+    @NotNull
+    private final String sliceId;
+    @NotNull
+    private final String sliceBucket;
+    @NotNull
+    private final String sliceKey;
+    @NotNull
     private final BigInteger startToken;
+    @NotNull
     private final BigInteger endToken;
+    @NotNull
+    private final Map<String, RestoreRangeStatus> statusByReplica;
+
+    @Nullable
     private final RestoreSlice source;
-    private final String sourceSliceId;
 
     // The path to the directory that stores the s3 object of the slice and the sstables after unzipping.
     // Its value is "baseStageDirectory/uploadId"
@@ -88,7 +105,6 @@ public class RestoreRange
     private final Path stagedObjectPath;
     private final String uploadId;
     private final InstanceMetadata owner;
-    private final Map<String, RestoreRangeStatus> statusByReplica;
     private final RestoreJobProgressTracker tracker;
 
     // mutable states
@@ -98,18 +114,23 @@ public class RestoreRange
     private int downloadAttempt = 0;
     private volatile boolean isCancelled = false;
 
-    public static Builder builder()
+    public static RestoreRange from(Row row)
     {
-        return new Builder();
+        return new Builder()
+               .jobId(row.getUUID("job_id"))
+               .bucketId(row.getShort("bucket_id"))
+               .startToken(row.getVarint("start_token"))
+               .endToken(row.getVarint("end_token"))
+               .replicaStatusText(row.getMap("status_by_replica", String.class, String.class))
+               .sliceId(row.getString("slice_id"))
+               .sliceBucket(row.getString("slice_bucket"))
+               .sliceKey(row.getString("slice_key"))
+               .build();
     }
 
     public static Builder builderFromSlice(RestoreSlice slice)
     {
-        return builder()
-               .jobId(slice.jobId())
-               .source(slice)
-               .startToken(slice.startToken())
-               .endToken(slice.endToken());
+        return new Builder().sourceSlice(slice);
     }
 
     private RestoreRange(Builder builder)
@@ -119,7 +140,9 @@ public class RestoreRange
         this.startToken = builder.startToken;
         this.endToken = builder.endToken;
         this.source = builder.sourceSlice;
-        this.sourceSliceId = builder.sourceSliceId;
+        this.sliceId = builder.sliceId;
+        this.sliceKey = builder.sliceKey;
+        this.sliceBucket = builder.sliceBucket;
         this.stageDirectory = builder.stageDirectory;
         this.stagedObjectPath = builder.stagedObjectPath;
         this.uploadId = builder.uploadId;
@@ -133,15 +156,15 @@ public class RestoreRange
         return new Builder(this);
     }
 
-    public RestoreJobRange toRestoreJobRange()
+    public RestoreRangeJson toJson()
     {
-        return new RestoreJobRange(sourceSliceId, bucketId, source.bucket(), source.key(), startToken, endToken);
+        return new RestoreRangeJson(sliceId, bucketId, sliceBucket, sliceKey, startToken, endToken);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(startToken, endToken, source);
+        return Objects.hash(startToken, endToken, jobId, bucketId, sliceId);
     }
 
     @Override
@@ -154,9 +177,13 @@ public class RestoreRange
             return false;
 
         RestoreRange that = (RestoreRange) obj;
+        // Note: destinationPathInStaging and owner are not included as they are 'transient'.
+        // Mutable states are not included, e.g. status_by_replicas.
         return Objects.equals(this.startToken, that.startToken)
                && Objects.equals(this.endToken, that.endToken)
-               && Objects.equals(this.source, that.source);
+               && Objects.equals(this.jobId, that.jobId)
+               && Objects.equals(this.bucketId, that.bucketId)
+               && Objects.equals(this.sliceId, that.sliceId);
     }
 
     // -- INTERNAL FLOW CONTROL METHODS --
@@ -237,10 +264,11 @@ public class RestoreRange
                                            LocalTokenRangesProvider localTokenRangesProvider,
                                            SidecarMetrics metrics)
     {
-        // All submitted range should be registered with a tracker. It is unexpected to encounter null. It cannot be retried
-        if (tracker == null)
+        // All submitted range should be registered with a tracker and a source slice.
+        // Otherwise, it is an unexpected state and cannot be retried
+        if (!canProduceTask())
         {
-            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore range is not registered with a tracker",
+            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore range is missing progress tracker or source slice",
                                                                         this, null), this);
         }
 
@@ -281,14 +309,54 @@ public class RestoreRange
         return jobId;
     }
 
+    public String sliceId()
+    {
+        return sliceId;
+    }
+
+    public String sliceKey()
+    {
+        return sliceKey;
+    }
+
+    public String sliceBucket()
+    {
+        return sliceBucket;
+    }
+
+    public String sliceChecksum()
+    {
+        return readSliceProperty(RestoreSlice::checksum);
+    }
+
+    public Long sliceCreationTimeNanos()
+    {
+        return readSliceProperty(RestoreSlice::creationTimeNanos);
+    }
+
+    public Long sliceCompressedSize()
+    {
+        return readSliceProperty(RestoreSlice::compressedSize);
+    }
+
+    public Long sliceUncompressedSize()
+    {
+        return readSliceProperty(RestoreSlice::uncompressedSize);
+    }
+
+    public String keyspace()
+    {
+        return readSliceProperty(RestoreSlice::keyspace);
+    }
+
+    public String table()
+    {
+        return readSliceProperty(RestoreSlice::table);
+    }
+
     public short bucketId()
     {
         return bucketId;
-    }
-
-    public RestoreSlice source()
-    {
-        return source;
     }
 
     public String uploadId()
@@ -309,6 +377,13 @@ public class RestoreRange
     public Map<String, RestoreRangeStatus> statusByReplica()
     {
         return statusByReplica;
+    }
+
+    public Map<String, String> statusTextByReplica()
+    {
+        Map<String, String> result = new HashMap<>(statusByReplica.size());
+        statusByReplica.forEach((k, v) -> result.put(k, v.name()));
+        return result;
     }
 
     /**
@@ -358,30 +433,49 @@ public class RestoreRange
         return isCancelled;
     }
 
+    /**
+     * A {@link RestoreRange} is eligible to produce {@link RestoreRangeTask} only if it is backed by both the source {@link RestoreSlice}
+     * and the {@link RestoreJobProgressTracker}
+     * Otherwise, the {@link RestoreRange} is loaded from persistence, and it is only good for restore job progress check.
+     *
+     * @return true if it can produce task; false otherwise
+     */
+    public boolean canProduceTask()
+    {
+        return tracker != null && source != null;
+    }
+
+    public long estimatedSpaceRequiredInBytes()
+    {
+        Preconditions.checkState(source != null, "Cannot estimate space requirement without source slice");
+        return source.compressedSize() + source.uncompressedSize();
+    }
+
     // -------------
 
     public String shortDescription()
     {
-        return "StartToken: " + startToken + ", EndToken: " + endToken + ", SliceId: " + sourceSliceId +
-               ", Key: " + source.key() + ", Bucket: " + source.bucket() + ", Checksum: " + source.checksum();
-    }
-
-    public static RestoreRange from(Row row)
-    {
-        return builder()
-               .jobId(row.getUUID("job_id"))
-               .bucketId(row.getShort("bucket_id"))
-               .startToken(row.getVarint("start_token"))
-               .endToken(row.getVarint("end_token"))
-               .replicaStatus(row.getMap("status_by_replica", String.class, RestoreRangeStatus.class))
-               .sourceSliceId(row.getString("slice_id"))
-               .build();
+        return "StartToken: " + startToken + ", EndToken: " + endToken +
+               ", SliceId: " + sliceId +
+               ", Key: " + sliceKey() +
+               ", Bucket: " + sliceBucket() +
+               ", Checksum: " + sliceChecksum();
     }
 
     @VisibleForTesting
     public RestoreJobProgressTracker trackerUnsafe()
     {
         return tracker;
+    }
+
+    @Nullable
+    private <T> T readSliceProperty(Function<RestoreSlice, T> func)
+    {
+        if (source == null)
+        {
+            return null;
+        }
+        return func.apply(source);
     }
 
     /**
@@ -394,7 +488,9 @@ public class RestoreRange
         private BigInteger startToken;
         private BigInteger endToken;
         private RestoreSlice sourceSlice;
-        private String sourceSliceId;
+        private String sliceId;
+        private String sliceKey;
+        private String sliceBucket;
         private InstanceMetadata owner;
         private Path stageDirectory;
         private Path stagedObjectPath;
@@ -411,7 +507,9 @@ public class RestoreRange
             this.jobId = range.jobId;
             this.bucketId = range.bucketId;
             this.sourceSlice = range.source;
-            this.sourceSliceId = range.sourceSliceId;
+            this.sliceId = range.sliceId;
+            this.sliceKey = range.sliceKey;
+            this.sliceBucket = range.sliceBucket;
             this.stageDirectory = range.stageDirectory;
             this.uploadId = range.uploadId;
             this.owner = range.owner;
@@ -431,17 +529,31 @@ public class RestoreRange
             return update(b -> b.bucketId = bucketId);
         }
 
-        public Builder source(RestoreSlice source)
+        public Builder sourceSlice(RestoreSlice sourceSlice)
         {
-            return update(b -> b.sourceSlice = source)
-                   .sourceSliceId(source.sliceId())
-                   .jobId(source.jobId())
-                   .bucketId(source.bucketId());
+            return update(b -> b.sourceSlice = sourceSlice)
+                   .jobId(sourceSlice.jobId())
+                   .sliceId(sourceSlice.sliceId())
+                   .sliceBucket(sourceSlice.bucket())
+                   .sliceKey(sourceSlice.key())
+                   .bucketId(sourceSlice.bucketId())
+                   .startToken(sourceSlice.startToken())
+                   .endToken(sourceSlice.endToken());
         }
 
-        public Builder sourceSliceId(String sliceId)
+        public Builder sliceId(String sliceId)
         {
-            return update(b -> b.sourceSliceId = sliceId);
+            return update(b -> b.sliceId = sliceId);
+        }
+
+        public Builder sliceBucket(String sliceBucket)
+        {
+            return update(b -> b.sliceBucket = sliceBucket);
+        }
+
+        public Builder sliceKey(String sliceKey)
+        {
+            return update(b -> b.sliceKey = sliceKey);
         }
 
         public Builder stageDirectory(Path basePath, String uploadId)
@@ -472,6 +584,13 @@ public class RestoreRange
             return update(b -> b.statusByReplica = new HashMap<>(statusByReplica));
         }
 
+        public Builder replicaStatusText(Map<String, String> statusTextByReplica)
+        {
+            Map<String, RestoreRangeStatus> map = new HashMap<>(statusTextByReplica.size());
+            statusTextByReplica.forEach((k, v) -> map.put(k, RestoreRangeStatus.valueOf(v)));
+            return replicaStatus(map);
+        }
+
         public Builder restoreJobProgressTracker(RestoreJobProgressTracker tracker)
         {
             return update(b -> b.tracker = tracker);
@@ -480,8 +599,11 @@ public class RestoreRange
         @Override
         public RestoreRange build()
         {
-            // precompute the path to the to-be-staged object on disk
-            stagedObjectPath = stageDirectory.resolve(sourceSlice.key());
+            if (sourceSlice != null)
+            {
+                // precompute the path to the to-be-staged object on disk
+                stagedObjectPath = stageDirectory.resolve(sourceSlice.key());
+            }
             return new RestoreRange(this);
         }
 
@@ -489,6 +611,12 @@ public class RestoreRange
         public Builder self()
         {
             return this;
+        }
+
+        @VisibleForTesting
+        public Builder unsetSourceSlice()
+        {
+            return update(b -> b.sourceSlice = null);
         }
     }
 }

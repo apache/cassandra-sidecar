@@ -131,9 +131,9 @@ public class StorageClient
         HeadObjectRequest request =
         HeadObjectRequest.builder()
                          .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
-                         .bucket(range.source().bucket())
-                         .key(range.source().key())
-                         .ifMatch(quoteIfNeeded(range.source().checksum()))
+                         .bucket(range.sliceBucket())
+                         .key(range.sliceKey())
+                         .ifMatch(quoteIfNeeded(range.sliceChecksum()))
                          .build();
 
         return client.headObject(request)
@@ -156,7 +156,7 @@ public class StorageClient
         if (object.exists())
         {
             LOGGER.info("Skipping download, file already exists. jobId={} sliceKey={}",
-                        range.jobId(), range.source().key());
+                        range.jobId(), range.sliceKey());
             // Skip downloading if the file already exists on disk. It should be a rare scenario.
             // Note that the on-disk file could be different from the remote object, although the name matches.
             // TODO 1: verify etag does not change after s3 replication and batch copy
@@ -169,17 +169,17 @@ public class StorageClient
         if (!object.getParentFile().mkdirs())
         {
             LOGGER.warn("Error occurred while creating directory. jobId={} sliceKey={}",
-                        range.jobId(), range.source().key());
+                        range.jobId(), range.sliceKey());
 
         }
 
-        LOGGER.info("Downloading object. jobId={} sliceKey={}", range.jobId(), range.source().key());
+        LOGGER.info("Downloading object. jobId={} sliceKey={}", range.jobId(), range.sliceKey());
         // https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
         GetObjectRequest request =
         GetObjectRequest.builder()
                         .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
-                        .bucket(range.source().bucket())
-                        .key(range.source().key())
+                        .bucket(range.sliceBucket())
+                        .key(range.sliceKey())
                         .build();
         return rateLimitedGetObject(range, client, request, objectPath)
                .whenComplete(logCredentialOnRequestFailure(range, credentials))
@@ -216,7 +216,7 @@ public class StorageClient
     private IllegalStateException credentialsNotFound(RestoreRange range)
     {
         return new IllegalStateException("No credential available. The job might already have failed." +
-                                         "jobId: " + range.source().jobId());
+                                         "jobId: " + range.jobId());
     }
 
     private BiConsumer<Object, ? super Throwable> logCredentialOnRequestFailure(RestoreRange range,
@@ -279,13 +279,13 @@ public class StorageClient
         catch (FileAlreadyExistsException fileAlreadyExistsException)
         {
             LOGGER.info("Skipping download. File already exists. jobId={} sliceKey={}",
-                        range.jobId(), range.source().key());
+                        range.jobId(), range.sliceKey());
             return CompletableFuture.completedFuture(publisher.response());
         }
         catch (IOException e)
         {
             LOGGER.error("Error occurred while creating channel. destinationPath={} jobId={} sliceKey={}",
-                         destinationPath, range.jobId(), range.source().key(), e);
+                         destinationPath, range.jobId(), range.sliceKey(), e);
             throw new RuntimeException(e);
         }
         // CompletableFuture that will be notified when all events have been consumed or if an error occurs.
@@ -301,7 +301,7 @@ public class StorageClient
                    if (subscribeThrowable != null)
                    {
                        LOGGER.error("Error occurred while downloading. jobId={} sliceKey={}",
-                                    range.jobId(), range.source().key(), subscribeThrowable);
+                                    range.jobId(), range.sliceKey(), subscribeThrowable);
                    }
                })
                .thenApply(v -> publisher.response());

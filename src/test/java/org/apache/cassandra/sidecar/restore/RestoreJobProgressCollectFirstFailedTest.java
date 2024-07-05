@@ -52,7 +52,7 @@ class RestoreJobProgressCollectFirstFailedTest extends BaseRestoreJobProgressCol
     @Test
     void testCollectMixed()
     {
-        // The collector with FIRST_FAILED policy skips SATISFIED ranges and stops after seeing the first FAILED
+        // The collector with FIRST_FAILED policy skips SATISFIED and PENDING ranges and stops after seeing the first FAILED
         createRangesAndCollect(3, ConsistencyVerifier.Result.SATISFIED);
         createRangesAndCollect(1, ConsistencyVerifier.Result.PENDING);
         createRangesAndCollect(1, ConsistencyVerifier.Result.FAILED);
@@ -63,7 +63,7 @@ class RestoreJobProgressCollectFirstFailedTest extends BaseRestoreJobProgressCol
         assertJobSummary(payload.summary());
         assertThat(payload.failedRanges()).hasSize(1);
         assertThat(payload.abortedRanges()).isNull();
-        assertThat(payload.pendingRanges()).hasSize(1);
+        assertThat(payload.pendingRanges()).isNull();
         assertThat(payload.succeededRanges()).isNull();
     }
 

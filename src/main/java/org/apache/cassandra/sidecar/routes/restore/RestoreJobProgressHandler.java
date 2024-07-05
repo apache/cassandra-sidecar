@@ -20,6 +20,7 @@ import java.util.List;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
@@ -35,6 +36,7 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_RESTORE_JOB;
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * Provides a REST API for querying the progress of a {@link RestoreJob}
@@ -87,9 +89,22 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     {
         RoutingContextUtils
         .getAsFuture(context, SC_RESTORE_JOB)
+        .map(this::ensureRestoreJobIsManagedBySidecar)
         .compose(restoreJob -> consistencyLevelChecker.check(restoreJob, fetchPolicy))
         .map(RestoreJobProgress::toResponsePayload)
         .onSuccess(context::json)
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, fetchPolicy));
+    }
+
+    private RestoreJob ensureRestoreJobIsManagedBySidecar(RestoreJob restoreJob)
+    {
+        if (!restoreJob.isManagedBySidecar())
+        {
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                    "Only Sidecar-managed restore jobs are allowed. " +
+                                    "jobId=" + restoreJob.jobId +
+                                    " jobManager=" + restoreJob.restoreJobManager.name());
+        }
+        return restoreJob;
     }
 }

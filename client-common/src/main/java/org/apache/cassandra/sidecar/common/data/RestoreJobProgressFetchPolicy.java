@@ -24,7 +24,7 @@ import java.util.Locale;
 public enum RestoreJobProgressFetchPolicy
 {
     /**
-     * Check the progress on all slices/ranges until encountering the first failed.
+     * Check the progress on all slices/ranges until encountering the first failed. Only the first failed range is collected.
      * <p>
      * A job is succeeded, if the query with this fetch policy returns empty response, meaning no failed and no unsatisfied slices/ranges.
      */
@@ -56,6 +56,13 @@ public enum RestoreJobProgressFetchPolicy
      */
     public static RestoreJobProgressFetchPolicy fromString(String name)
     {
-        return valueOf(name.toUpperCase(Locale.ROOT));
+        try
+        {
+            return valueOf(name.toUpperCase(Locale.ROOT));
+        }
+        catch (IllegalArgumentException unknownEnum)
+        {
+            throw new IllegalArgumentException("No RestoreJobProgressFetchPolicy found for " + name);
+        }
     }
 }

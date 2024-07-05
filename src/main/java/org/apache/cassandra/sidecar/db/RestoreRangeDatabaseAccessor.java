@@ -55,10 +55,10 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
                                                     range.bucketId(),
                                                     range.startToken(),
                                                     range.endToken(),
-                                                    range.source().sliceId(),
-                                                    range.source().startToken(),
-                                                    range.source().endToken(),
-                                                    range.statusByReplica());
+                                                    range.sliceId(),
+                                                    range.sliceBucket(),
+                                                    range.sliceKey(),
+                                                    range.statusTextByReplica());
         execute(statement);
         return range;
     }
@@ -68,17 +68,12 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
         sidecarSchema.ensureInitialized();
 
         BoundStatement statement = tableSchema.updateStatus()
-                                              .bind(range.statusByReplica(),
+                                              .bind(range.statusTextByReplica(),
                                                     range.jobId(),
                                                     range.bucketId(),
                                                     range.startToken(),
                                                     range.endToken());
-        Row row = execute(statement).one();
-        if (row == null)
-        {
-            throw new RuntimeException("Unexpected result while updating range information for jobId=" + range.jobId() +
-                                       " startToken=" + range.startToken() + " endToken" + range.endToken());
-        }
+        execute(statement);
         return range;
     }
 

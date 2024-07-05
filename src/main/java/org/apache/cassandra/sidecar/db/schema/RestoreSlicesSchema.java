@@ -120,7 +120,7 @@ public class RestoreSlicesSchema extends TableSchema
                              "start_token, end_token, compressed_size, uncompressed_size " +
                              "FROM %s.%s " +
                              "WHERE job_id = ? AND bucket_id = ? AND " +
-                             "start_token <= ? AND end_token >= ? ALLOW FILTERING", config);
+                             "end_token >= ? AND start_token <= ? ALLOW FILTERING", config);
         }
 
         private static String withTable(String format, SchemaKeyspaceConfiguration config)

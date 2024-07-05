@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.restore;
 
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -276,9 +277,13 @@ public class RestoreJobDiscoverer implements PeriodicTask
             TokenRangeReplicasResponse topology = ringTopologyRefresher.cachedReplicaByTokenRange(restoreJob);
             List<RestoreRange> splits = slice.splitMaybe(topology)
                                              .stream()
-                                             .map(s -> RestoreRange.builderFromSlice(s)
-                                                                   .ownerInstance(instance)
-                                                                   .build())
+                                             .map(s -> {
+                                                 String uploadId = RestoreJobUtil.generateUniqueUploadId(s.jobId(), s.sliceId());
+                                                 return RestoreRange.builderFromSlice(s)
+                                                                    .ownerInstance(instance)
+                                                                    .stageDirectory(Paths.get(instance.stagingDir()), uploadId)
+                                                                    .build();
+                                             })
                                              .collect(Collectors.toList());
             RestoreJobManagerGroup managerGroup = restoreJobManagerGroupSingleton.get();
             for (RestoreRange split : splits)

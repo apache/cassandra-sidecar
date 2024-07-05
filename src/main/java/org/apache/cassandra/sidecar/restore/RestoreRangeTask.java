@@ -138,7 +138,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
         // The protection below guards the range being process, if the usable disk space falls below the threshold
         // after considering the range
         .compose(v -> ensureSufficientStorage(range.stageDirectory().toString(),
-                                              range.source().compressedSize() + range.source().uncompressedSize(),
+                                              range.estimatedSpaceRequiredInBytes(),
                                               requiredUsableSpacePercentage,
                                               executorPool))
         .compose(v -> failOnCancelled(range, v))
@@ -151,7 +151,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
                     if (Files.exists(range.stagedObjectPath()))
                     {
                         LOGGER.debug("The slice has been staged already. sliceKey={} stagedFilePath={}",
-                                     range.source().key(), range.stagedObjectPath());
+                                     range.sliceKey(), range.stagedObjectPath());
                         range.completeStagePhase(); // update the flag if missed
                         rangeDatabaseAccessor.updateStatus(range);
                         return Future.succeededFuture();
@@ -211,7 +211,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
         // skip query s3 if the object existence is already confirmed
         if (range.existsOnS3())
         {
-            LOGGER.debug("The slice already exists on S3. jobId={} sliceKey={}", range.jobId(), range.source().key());
+            LOGGER.debug("The slice already exists on S3. jobId={} sliceKey={}", range.jobId(), range.sliceKey());
             return Future.succeededFuture();
         }
 
@@ -219,11 +219,11 @@ public class RestoreRangeTask implements RestoreRangeHandler
         return
         fromCompletionStage(s3Client.objectExists(range))
         .compose(exists -> { // on success
-            long durationNanos = currentTimeInNanos() - range.source().creationTimeNanos();
+            long durationNanos = currentTimeInNanos() - range.sliceCreationTimeNanos();
             metrics.sliceReplicationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
             range.setExistsOnS3();
             LOGGER.debug("Slice is now available on S3. jobId={} sliceKey={} replicationTimeNanos={}",
-                         range.jobId(), range.source().key(), durationNanos);
+                         range.jobId(), range.sliceKey(), durationNanos);
             return Future.succeededFuture();
         }, cause -> { // failure mapper: converts throwable to restore job specific exceptions
             S3Exception s3Exception = ThrowableUtils.getCause(cause, S3Exception.class);
@@ -279,30 +279,30 @@ public class RestoreRangeTask implements RestoreRangeHandler
     {
         if (range.downloadAttempt() > 0)
         {
-            LOGGER.debug("Retrying downloading slice. sliceKey={}", range.source().key());
+            LOGGER.debug("Retrying downloading slice. sliceKey={}", range.sliceKey());
             instanceMetrics.restore().sliceDownloadRetries.metric.update(1);
         }
 
-        LOGGER.info("Begin downloading restore slice. sliceKey={}", range.source().key());
+        LOGGER.info("Begin downloading restore slice. sliceKey={}", range.sliceKey());
         Future<File> future =
         fromCompletionStage(s3Client.downloadObjectIfAbsent(range))
         .recover(cause -> { // converts to restore job exception
-            LOGGER.warn("Failed to download restore slice. sliceKey={}", range.source().key(), cause);
+            LOGGER.warn("Failed to download restore slice. sliceKey={}", range.sliceKey(), cause);
 
             range.incrementDownloadAttempt();
             if (ThrowableUtils.getCause(cause, ApiCallTimeoutException.class) != null)
             {
-                LOGGER.warn("Downloading restore slice times out. sliceKey={}", range.source().key());
+                LOGGER.warn("Downloading restore slice times out. sliceKey={}", range.sliceKey());
                 instanceMetrics.restore().sliceDownloadTimeouts.metric.update(1);
             }
             return Future.failedFuture(RestoreJobExceptions.ofFatal("Unrecoverable error when downloading object", range, cause));
         });
 
         return StopWatch.measureTimeTaken(future, duration -> {
-            LOGGER.info("Finish downloading restore slice. sliceKey={}", range.source().key());
+            LOGGER.info("Finish downloading restore slice. sliceKey={}", range.sliceKey());
             instanceMetrics.restore().sliceDownloadTime.metric.update(duration, TimeUnit.NANOSECONDS);
-            instanceMetrics.restore().sliceCompressedSizeInBytes.metric.update(range.source().compressedSize());
-            instanceMetrics.restore().sliceUncompressedSizeInBytes.metric.update(range.source().uncompressedSize());
+            instanceMetrics.restore().sliceCompressedSizeInBytes.metric.update(range.sliceCompressedSize());
+            instanceMetrics.restore().sliceUncompressedSizeInBytes.metric.update(range.sliceUncompressedSize());
         });
     }
 
@@ -357,8 +357,8 @@ public class RestoreRangeTask implements RestoreRangeHandler
         // targetPathInStaging points to the directory named after uploadId
         // SSTableImporter expects the file system structure to be uploadId/keyspace/table/sstables
         File targetDir = range.stageDirectory()
-                              .resolve(range.source().keyspace())
-                              .resolve(range.source().table())
+                              .resolve(range.keyspace())
+                              .resolve(range.table())
                               .toFile();
 
         boolean targetDirExist = targetDir.isDirectory();
@@ -368,7 +368,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
             if (targetDirExist)
             {
                 LOGGER.debug("The files in slice are already extracted. Maybe it is a retried task? " +
-                             "jobId={} sliceKey={}", range.jobId(), range.source().key());
+                             "jobId={} sliceKey={}", range.jobId(), range.sliceKey());
                 // return early
                 return targetDir;
             }
@@ -389,7 +389,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
             if (!zipFile.delete())
             {
                 LOGGER.warn("File deletion attempt failed. jobId={} sliceKey={} file={}",
-                            range.jobId(), range.source().key(), zipFile.getAbsolutePath());
+                            range.jobId(), range.sliceKey(), zipFile.getAbsolutePath());
             }
             // Notify the next step that unzip is complete
             return targetDir;
@@ -455,7 +455,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
     // The method modifies the input manifest and delete files under directory, if out of range sstables are found
     private void removeOutOfRangeSSTables(File directory, RestoreSliceManifest manifest) throws RestoreJobException, IOException
     {
-        Set<TokenRange> ranges = localTokenRangesProvider.localTokenRanges(range.source().keyspace()).get(range.owner().id());
+        Set<TokenRange> ranges = localTokenRangesProvider.localTokenRanges(range.keyspace()).get(range.owner().id());
         if (ranges == null || ranges.isEmpty())
         {
             // Note: retry is allowed for the failure
@@ -539,13 +539,13 @@ public class RestoreRangeTask implements RestoreRangeHandler
 
     Future<Void> commit(File directory)
     {
-        LOGGER.info("Begin committing SSTables. jobId={} sliceKey={}", range.jobId(), range.source().key());
+        LOGGER.info("Begin committing SSTables. jobId={} sliceKey={}", range.jobId(), range.sliceKey());
 
         SSTableImportOptions options = range.job().importOptions;
         SSTableImporter.ImportOptions importOptions = new SSTableImporter.ImportOptions.Builder()
                                                       .host(range.owner().host())
-                                                      .keyspace(range.source().keyspace())
-                                                      .tableName(range.source().table())
+                                                      .keyspace(range.keyspace())
+                                                      .tableName(range.table())
                                                       .directory(directory.toString())
                                                       .resetLevel(options.resetLevel())
                                                       .clearRepaired(options.clearRepaired())
@@ -558,7 +558,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
                                                       .build();
         Future<Void> future = importer.scheduleImport(importOptions)
                                       .onSuccess(ignored -> LOGGER.info("Finish committing SSTables. jobId={} sliceKey={}",
-                                                                        range.jobId(), range.source().key()));
+                                                                        range.jobId(), range.sliceKey()));
         return StopWatch.measureTimeTaken(future, d -> instanceMetrics.restore().sliceImportTime.metric.update(d, TimeUnit.NANOSECONDS));
     }
 
@@ -586,7 +586,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
 
         LOGGER.warn("Committing range failed with HttpException. " +
                     "jobId={} startToken={} endToken={} sliceKey={} statusCode={} exceptionPayload={}",
-                    range.jobId(), range.startToken(), range.endToken(), range.source().key(),
+                    range.jobId(), range.startToken(), range.endToken(), range.sliceKey(),
                     httpException.getStatusCode(), httpException.getPayload(), httpException);
     }
 

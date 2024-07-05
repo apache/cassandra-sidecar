@@ -31,12 +31,12 @@ import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.SLICE
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.SLICE_STORAGE_KEY;
 
 /**
- * The minimum data presentation of a range of data in the restore job. The data structure is client-facing.
+ * The minimum data presentation (in json) of a range of data in the restore job. The data structure is client-facing.
  * A range is fully enclosed in a slice, i.e. range covers the smaller or same amount of data of the enclosing slice.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class RestoreJobRange
+public class RestoreRangeJson
 {
     private final String sliceId;
     private final int bucketId;
@@ -46,12 +46,12 @@ public class RestoreJobRange
     private final BigInteger endToken;
 
     @JsonCreator
-    public RestoreJobRange(@JsonProperty(SLICE_ID) String sliceId,
-                           @JsonProperty(BUCKET_ID) int bucketId,
-                           @JsonProperty(SLICE_STORAGE_BUCKET) String bucket,
-                           @JsonProperty(SLICE_STORAGE_KEY) String key,
-                           @JsonProperty(SLICE_START_TOKEN) BigInteger startToken,
-                           @JsonProperty(SLICE_END_TOKEN) BigInteger endToken)
+    public RestoreRangeJson(@JsonProperty(SLICE_ID) String sliceId,
+                            @JsonProperty(BUCKET_ID) int bucketId,
+                            @JsonProperty(SLICE_STORAGE_BUCKET) String bucket,
+                            @JsonProperty(SLICE_STORAGE_KEY) String key,
+                            @JsonProperty(SLICE_START_TOKEN) BigInteger startToken,
+                            @JsonProperty(SLICE_END_TOKEN) BigInteger endToken)
     {
         this.sliceId = sliceId;
         this.bucketId = bucketId;

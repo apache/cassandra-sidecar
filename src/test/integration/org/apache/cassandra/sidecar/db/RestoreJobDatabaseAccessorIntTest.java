@@ -20,27 +20,21 @@ package org.apache.cassandra.sidecar.db;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import com.datastax.driver.core.utils.UUIDs;
-import io.vertx.junit5.VertxExtension;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
-import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@ExtendWith(VertxExtension.class)
-class RestoreJobsDatabaseAccessorIntTest extends IntegrationTestBase
+class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
 {
     QualifiedTableName qualifiedTableName = new QualifiedTableName("ks", "tbl");
     RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
@@ -49,13 +43,9 @@ class RestoreJobsDatabaseAccessorIntTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void testCrudOperations()
     {
-        CountDownLatch latch = new CountDownLatch(1);
-        RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
-        vertx.eventBus()
-             .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> latch.countDown());
+        waitForSchemaReady(10, TimeUnit.SECONDS);
 
-        awaitLatchOrTimeout(latch, 10, TimeUnit.SECONDS);
-        assertThat(latch.getCount()).describedAs("Sidecar schema not initialized").isZero();
+        RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
         assertThat(accessor.findAllRecent(3)).isEmpty();
 
         // update this job

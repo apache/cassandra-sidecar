@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -32,15 +33,16 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
@@ -152,12 +154,14 @@ public class RestoreProcessor implements PeriodicTask
                && processMaxConcurrency.tryAcquire())
         {
             RestoreRange range = workQueue.poll();
-            if (range == null) // it should never happen, and is only to make ide happy
+            if (range == null) // It should never happen because it peeks before polling. It is only to make IDE happy
             {
                 processMaxConcurrency.releasePermit();
                 break; // break in order to complete promise
             }
-            RestoreSlice sourceSlice = range.source();
+
+            Preconditions.checkState(range.canProduceTask(),
+                                     "RestoreRangeTask cannot be produced by range " + range.shortDescription());
 
             // capture the new queue length after polling
             workQueue.captureImportQueueLength();
@@ -170,57 +174,17 @@ public class RestoreProcessor implements PeriodicTask
 
             activeTasks.put(task, slowTaskThresholdInSeconds);
             pool.executeBlocking(task, false) // unordered; run in parallel
-            .onSuccess(restoreRange -> {
-                InstanceRestoreMetrics restoreMetrics = range.owner().metrics().restore();
-                if (range.hasImported())
-                {
-                    restoreMetrics.sliceCompletionTime.metric.update(System.nanoTime() - sourceSlice.creationTimeNanos(), TimeUnit.NANOSECONDS);
-                    LOGGER.info("Restore range completes successfully. sliceKey={}", sourceSlice.key());
-                    range.complete();
-                }
-                else if (range.hasStaged())
-                {
-                    restoreMetrics.sliceStageTime.metric.update(task.elapsedInNanos(), TimeUnit.NANOSECONDS);
-                    LOGGER.info("Restore range has been staged successfully. sliceKey={}", sourceSlice.key());
-                    // the slice is not fully complete yet. Re-enqueue the slice.
-                    workQueue.offer(range);
-                }
-                else // log a warning and retry. It should not reach here.
-                {
-                    LOGGER.warn("Unexpected state of slice. It is neither staged nor imported. sliceKey={}",
-                                sourceSlice.key());
-                    workQueue.offer(range);
-                }
-            })
-            .onFailure(cause -> {
-                if (cause instanceof RestoreJobException && ((RestoreJobException) cause).retryable())
-                {
-                    LOGGER.warn("Slice failed with recoverable failure. sliceKey={}", sourceSlice.key(), cause);
-                    // re-enqueue the retryable failed slice
-                    workQueue.offer(range);
-                }
-                else
-                {
-                    LOGGER.error("Slice failed with unrecoverable failure. sliceKey={}", sourceSlice.key(), cause);
-                    // fail the slice and mark the slice has failed on its owning instance.
-                    // In the phase 1 implementation, all slices of the job get aborted
-                    range.fail(RestoreJobExceptions.toFatal(cause));
-                    if (range.job().isManagedBySidecar())
-                    {
-                        rangeDatabaseAccessor.updateStatus(range);
-                    }
-                    // revoke the s3 credentials of the job too
-                    s3ClientPool.revokeCredentials(sourceSlice.jobId());
-                }
-            })
-            // release counter
-            .onComplete(res -> {
-                processMaxConcurrency.releasePermit();
-                // decrement the active slices and capture the new queue length
-                workQueue.decrementActiveSliceCount(range);
-                workQueue.captureImportQueueLength();
-                activeTasks.remove(task);
-            });
+                // wrap success/failure handling in compose to catch any exception thrown
+                .compose(taskSuccessHandler(task),
+                         taskFailureHandler(range))
+                // release counter
+                .onComplete(ignored -> {
+                    processMaxConcurrency.releasePermit();
+                    // decrement the active slices and capture the new queue length
+                    workQueue.decrementActiveSliceCount(range);
+                    workQueue.captureImportQueueLength();
+                    activeTasks.remove(task);
+                });
         }
         checkForLongRunningTasks();
         workQueue.capturePendingSliceCount();
@@ -256,7 +220,7 @@ public class RestoreProcessor implements PeriodicTask
                                 "elapsedSeconds={} thresholdSeconds={} sliceKey={} jobId={} status={}",
                                 elapsedInSeconds,
                                 slowTaskThresholdInSeconds,
-                                task.range().source().key(),
+                                task.range().sliceKey(),
                                 task.range().jobId(),
                                 task.range().job().status);
                     task.range()
@@ -269,6 +233,59 @@ public class RestoreProcessor implements PeriodicTask
                 return timeToReport; // do not update
             });
         }
+    }
+
+    private Function<RestoreRange, Future<Void>> taskSuccessHandler(RestoreRangeHandler task)
+    {
+        return range -> {
+            InstanceRestoreMetrics restoreMetrics = range.owner().metrics().restore();
+            if (range.hasImported())
+            {
+                restoreMetrics.sliceCompletionTime.metric.update(System.nanoTime() - range.sliceCompressedSize(), TimeUnit.NANOSECONDS);
+                LOGGER.info("Restore range completes successfully. sliceKey={}", range.sliceKey());
+                range.complete();
+            }
+            else if (range.hasStaged())
+            {
+                restoreMetrics.sliceStageTime.metric.update(task.elapsedInNanos(), TimeUnit.NANOSECONDS);
+                LOGGER.info("Restore range has been staged successfully. sliceKey={}", range.sliceKey());
+                // the slice is not fully complete yet. Re-enqueue the slice.
+                workQueue.offer(range);
+            }
+            else // log a warning and retry. It should not reach here.
+            {
+                LOGGER.warn("Unexpected state of slice. It is neither staged nor imported. sliceKey={}",
+                            range.sliceKey());
+                workQueue.offer(range);
+            }
+            return Future.succeededFuture();
+        };
+    }
+
+    private Function<Throwable, Future<Void>> taskFailureHandler(RestoreRange range)
+    {
+        return cause -> {
+            if (cause instanceof RestoreJobException && ((RestoreJobException) cause).retryable())
+            {
+                LOGGER.warn("Slice failed with recoverable failure. sliceKey={}", range.sliceKey(), cause);
+                // re-enqueue the retryable failed slice
+                workQueue.offer(range);
+            }
+            else
+            {
+                LOGGER.error("Slice failed with unrecoverable failure. sliceKey={}", range.sliceKey(), cause);
+                // fail the slice and mark the slice has failed on its owning instance.
+                // In the phase 1 implementation, all slices of the job get aborted
+                range.fail(RestoreJobExceptions.toFatal(cause));
+                if (range.job().isManagedBySidecar())
+                {
+                    rangeDatabaseAccessor.updateStatus(range);
+                }
+                // revoke the s3 credentials of the job too
+                s3ClientPool.revokeCredentials(range.jobId());
+            }
+            return Future.succeededFuture();
+        };
     }
 
     @VisibleForTesting
@@ -335,9 +352,8 @@ public class RestoreProcessor implements PeriodicTask
             for (RestoreRange range : restoreRanges)
             {
                 range.cancel();
-                RestoreSlice slice = range.source();
                 LOGGER.debug("Cancelled restore ranges on closing. jobId={} sliceId={} startToken={} endToken={}",
-                             slice.jobId(), slice.sliceId(), range.startToken(), range.endToken());
+                             range.jobId(), range.sliceId(), range.startToken(), range.endToken());
             }
             restoreRanges.clear();
             pendingRangesPerInstance.clear();
@@ -385,7 +401,7 @@ public class RestoreProcessor implements PeriodicTask
                 {
                     // create an IllegalStateException to capture stacktrace
                     LOGGER.warn("Slice counter dropped below 0. sliceKey={}",
-                                range.source().key(), new IllegalStateException("Unexpected slice counter state"));
+                                range.sliceKey(), new IllegalStateException("Unexpected slice counter state"));
                     counter.set(0); // repair anomaly
                     return counter;
                 }

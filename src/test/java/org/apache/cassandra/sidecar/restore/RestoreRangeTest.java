@@ -29,8 +29,9 @@ import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
-import org.apache.cassandra.sidecar.common.response.data.RestoreJobRange;
+import org.apache.cassandra.sidecar.common.response.data.RestoreRangeJson;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
@@ -44,7 +45,10 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class RestoreRangeTest
+/**
+ * Test cases for RestoreRange
+ */
+public class RestoreRangeTest
 {
     @Test
     void testEquals()
@@ -83,14 +87,25 @@ class RestoreRangeTest
     }
 
     @Test
-    void testCreateTaskFailsWhenProgressTrackerNotRegistered() throws Exception
+    void testCreateTaskFailsWhenMissingTacker() throws Exception
     {
         RestoreRange range = createTestRange().unbuild()
                                               // nullify the tracker, i.e. not registered
                                               .restoreJobProgressTracker(null)
                                               .build();
         RestoreRangeHandler handler = createRestoreRangeHandler(range);
-        assertFailedHandler(range, handler, "Restore range is not registered with a tracker");
+        assertFailedHandler(range, handler, "Restore range is missing progress tracker or source slice");
+    }
+
+    @Test
+    void testCreateTaskFailsWhenMissingSourceSlice() throws Exception
+    {
+        RestoreRange range = createTestRange().unbuild()
+                                              // unset source slice, i.e. nullify slice
+                                              .unsetSourceSlice()
+                                              .build();
+        RestoreRangeHandler handler = createRestoreRangeHandler(range);
+        assertFailedHandler(range, handler, "Restore range is missing progress tracker or source slice");
     }
 
     @Test
@@ -107,16 +122,16 @@ class RestoreRangeTest
     }
 
     @Test
-    void testToRestoreJobRange()
+    void testToJson()
     {
         RestoreRange range = createTestRange();
-        RestoreJobRange restoreJobRange = range.toRestoreJobRange();
-        assertThat(restoreJobRange.sliceId()).isEqualTo(range.source().sliceId());
-        assertThat((short) restoreJobRange.bucketId()).isEqualTo(range.source().bucketId());
-        assertThat(restoreJobRange.key()).isEqualTo(range.source().key());
-        assertThat(restoreJobRange.bucket()).isEqualTo(range.source().bucket());
-        assertThat(restoreJobRange.startToken()).isEqualTo(range.startToken());
-        assertThat(restoreJobRange.endToken()).isEqualTo(range.endToken());
+        RestoreRangeJson restoreRangeJson = range.toJson();
+        assertThat(restoreRangeJson.sliceId()).isEqualTo(range.sliceId());
+        assertThat((short) restoreRangeJson.bucketId()).isEqualTo(range.bucketId());
+        assertThat(restoreRangeJson.key()).isEqualTo(range.sliceKey());
+        assertThat(restoreRangeJson.bucket()).isEqualTo(range.sliceBucket());
+        assertThat(restoreRangeJson.startToken()).isEqualTo(range.startToken());
+        assertThat(restoreRangeJson.endToken()).isEqualTo(range.endToken());
     }
 
     private void assertFailedHandler(RestoreRange range, RestoreRangeHandler handler, String containsErrorMessage)
@@ -173,7 +188,7 @@ class RestoreRangeTest
     {
         if (jobManagedBySidecar)
         {
-            job = job.unbuild().consistencyLevel("QUORUM").build();
+            job = job.unbuild().consistencyLevel(ConsistencyLevel.QUORUM).build();
         }
         RestoreProcessor mockProcessor = mock(RestoreProcessor.class);
         InstanceMetadata mockInstance = mock(InstanceMetadata.class);
@@ -181,7 +196,7 @@ class RestoreRangeTest
         RestoreJobProgressTracker tracker = new RestoreJobProgressTracker(job, mockProcessor, mockInstance);
         RestoreSlice slice = RestoreSlice.builder()
                                          .jobId(job.jobId).keyspace("keyspace").table("table")
-                                         .sliceId("sliceId-123").bucketId((short) 1)
+                                         .sliceId("sliceId-123").bucketId((short) 0)
                                          .storageBucket("myBucket").storageKey("myKey").checksum("checksum")
                                          .startToken(BigInteger.valueOf(start)).endToken(BigInteger.valueOf(end))
                                          .build();

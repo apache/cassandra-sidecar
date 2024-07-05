@@ -24,7 +24,7 @@ import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
-import org.apache.cassandra.sidecar.common.response.data.RestoreJobRange;
+import org.apache.cassandra.sidecar.common.response.data.RestoreRangeJson;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.jetbrains.annotations.Nullable;
@@ -52,9 +52,9 @@ public class RestoreJobProgress
     public RestoreJobProgressResponsePayload toResponsePayload()
     {
         return RestoreJobProgressResponsePayload.builder()
-                                                .withSucceededRanges(toRestoreJobRange(succeededRanges))
-                                                .withFailedRanges(toRestoreJobRange(failedRanges))
-                                                .withPendingRanges(toRestoreJobRange(pendingRanges))
+                                                .withSucceededRanges(toJson(succeededRanges))
+                                                .withFailedRanges(toJson(failedRanges))
+                                                .withPendingRanges(toJson(pendingRanges))
                                                 .withMessage(buildMessage(restoreJob.status))
                                                 .withJobSummary(restoreJob.createdAt.toString(),
                                                                 restoreJob.jobId,
@@ -66,7 +66,7 @@ public class RestoreJobProgress
     }
 
     @Nullable
-    private List<RestoreJobRange> toRestoreJobRange(List<RestoreRange> ranges)
+    private List<RestoreRangeJson> toJson(List<RestoreRange> ranges)
     {
         // return null to exclude the field from response payload
         if (ranges == null)
@@ -75,7 +75,7 @@ public class RestoreJobProgress
         }
 
         return ranges.stream()
-                     .map(RestoreRange::toRestoreJobRange)
+                     .map(RestoreRange::toJson)
                      .collect(Collectors.toList());
     }
 

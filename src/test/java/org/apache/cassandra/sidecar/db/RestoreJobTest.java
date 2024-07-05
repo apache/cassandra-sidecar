@@ -18,12 +18,14 @@
 
 package org.apache.cassandra.sidecar.db;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
+import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
@@ -49,15 +51,24 @@ public class RestoreJobTest
 
     public static RestoreJob createTestingJob(UUID jobId,
                                               RestoreJobStatus status,
-                                              String consistencyLevel) throws DataObjectMappingException
+                                              ConsistencyLevel consistencyLevel) throws DataObjectMappingException
     {
-        return createTestingJob(jobId, "ks", status, consistencyLevel);
+        return createTestingJob(jobId, "ks", status, consistencyLevel, null);
     }
 
     public static RestoreJob createTestingJob(UUID jobId,
                                               String keyspace,
                                               RestoreJobStatus status,
-                                              String consistencyLevel) throws DataObjectMappingException
+                                              ConsistencyLevel consistencyLevel) throws DataObjectMappingException
+    {
+        return createTestingJob(jobId, keyspace, status, consistencyLevel, null);
+    }
+
+    public static RestoreJob createTestingJob(UUID jobId,
+                                              String keyspace,
+                                              RestoreJobStatus status,
+                                              ConsistencyLevel consistencyLevel,
+                                              String dcName) throws DataObjectMappingException
     {
         RestoreJob.Builder builder = RestoreJob.builder();
         builder.createdAt(RestoreJob.toLocalDate(jobId))
@@ -66,6 +77,7 @@ public class RestoreJobTest
                .jobId(jobId)
                .jobStatus(status)
                .consistencyLevel(consistencyLevel)
+               .localDatacenter(dcName)
                .expireAt(new Date(System.currentTimeMillis() + 10000L));
         return builder.build();
     }
@@ -122,6 +134,30 @@ public class RestoreJobTest
                 .describedAs("Expecting the ranges in IMPORT_READY or SUCCEEDED or FAILED or ABORTED job to enter SUCCEEDED")
                 .isEqualTo(RestoreRangeStatus.SUCCEEDED);
             }
+        }
+    }
+
+    @Test
+    void testCreateLocalConsistencyLevelJobWithoutLocalDcFails()
+    {
+        UUID jobId = UUIDs.timeBased();
+        for (ConsistencyLevel localCL : Arrays.asList(ConsistencyLevel.LOCAL_QUORUM, ConsistencyLevel.LOCAL_ONE))
+        {
+            assertThatThrownBy(() -> createTestingJob(jobId, RestoreJobStatus.CREATED, localCL))
+            .isExactlyInstanceOf(IllegalArgumentException.class)
+            .hasMessage("When local consistency level is used, localDatacenter must also present");
+        }
+    }
+
+    @Test
+    void testCreateSidecarManagedJobs()
+    {
+        UUID jobId = UUIDs.timeBased();
+        String dcName = "dc1";
+        for (ConsistencyLevel cl : ConsistencyLevel.values())
+        {
+            RestoreJob job = createTestingJob(jobId, "ks", RestoreJobStatus.CREATED, cl, dcName);
+            assertThat(job.isManagedBySidecar()).isTrue();
         }
     }
 }

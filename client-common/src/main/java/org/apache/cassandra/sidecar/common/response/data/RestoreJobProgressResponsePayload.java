@@ -48,13 +48,13 @@ public class RestoreJobProgressResponsePayload
     private final RestoreJobSummaryResponsePayload summary;
     // the ranges can be null/absent, if they are not required to be included in the response payload, depending on the fetch policy
     @Nullable // failed due to unrecoverable exceptions
-    private final List<RestoreJobRange> failedRanges;
+    private final List<RestoreRangeJson> failedRanges;
     @Nullable // aborted due to the job has failed/aborted
-    private final List<RestoreJobRange> abortedRanges;
+    private final List<RestoreRangeJson> abortedRanges;
     @Nullable
-    private final List<RestoreJobRange> pendingRanges;
+    private final List<RestoreRangeJson> pendingRanges;
     @Nullable
-    private final List<RestoreJobRange> succeededRanges;
+    private final List<RestoreRangeJson> succeededRanges;
 
     /**
      * @return builder to build the {@link RestoreJobProgressResponsePayload}
@@ -70,10 +70,10 @@ public class RestoreJobProgressResponsePayload
     @JsonCreator
     public RestoreJobProgressResponsePayload(@NotNull @JsonProperty(JOB_STATUS_MESSAGE) String message,
                                              @NotNull @JsonProperty(JOB_STATUS_SUMMARY) RestoreJobSummaryResponsePayload summary,
-                                             @Nullable @JsonProperty(JOB_STATUS_FAILED_RANGES) List<RestoreJobRange> failedRanges,
-                                             @Nullable @JsonProperty(JOB_STATUS_ABORTED_RANGES) List<RestoreJobRange> abortedRanges,
-                                             @Nullable @JsonProperty(JOB_STATUS_PENDING_RANGES) List<RestoreJobRange> pendingRanges,
-                                             @Nullable @JsonProperty(JOB_STATUS_SUCCEEDED_RANGES) List<RestoreJobRange> succeededRanges)
+                                             @Nullable @JsonProperty(JOB_STATUS_FAILED_RANGES) List<RestoreRangeJson> failedRanges,
+                                             @Nullable @JsonProperty(JOB_STATUS_ABORTED_RANGES) List<RestoreRangeJson> abortedRanges,
+                                             @Nullable @JsonProperty(JOB_STATUS_PENDING_RANGES) List<RestoreRangeJson> pendingRanges,
+                                             @Nullable @JsonProperty(JOB_STATUS_SUCCEEDED_RANGES) List<RestoreRangeJson> succeededRanges)
     {
         this.message = message;
         this.summary = summary;
@@ -109,28 +109,28 @@ public class RestoreJobProgressResponsePayload
 
     @Nullable
     @JsonProperty(JOB_STATUS_FAILED_RANGES)
-    public List<RestoreJobRange> failedRanges()
+    public List<RestoreRangeJson> failedRanges()
     {
         return this.failedRanges;
     }
 
     @Nullable
     @JsonProperty(JOB_STATUS_ABORTED_RANGES)
-    public List<RestoreJobRange> abortedRanges()
+    public List<RestoreRangeJson> abortedRanges()
     {
         return this.abortedRanges;
     }
 
     @Nullable
     @JsonProperty(JOB_STATUS_PENDING_RANGES)
-    public List<RestoreJobRange> pendingRanges()
+    public List<RestoreRangeJson> pendingRanges()
     {
         return this.pendingRanges;
     }
 
     @Nullable
     @JsonProperty(JOB_STATUS_SUCCEEDED_RANGES)
-    public List<RestoreJobRange> succeededRanges()
+    public List<RestoreRangeJson> succeededRanges()
     {
         return this.succeededRanges;
     }
@@ -142,10 +142,10 @@ public class RestoreJobProgressResponsePayload
     {
         String message;
         RestoreJobSummaryResponsePayload summary;
-        List<RestoreJobRange> failedRanges = null;
-        List<RestoreJobRange> abortedRanges = null;
-        List<RestoreJobRange> pendingRanges = null;
-        List<RestoreJobRange> succeededRanges = null;
+        List<RestoreRangeJson> failedRanges = null;
+        List<RestoreRangeJson> abortedRanges = null;
+        List<RestoreRangeJson> pendingRanges = null;
+        List<RestoreRangeJson> succeededRanges = null;
 
         public Builder withMessage(String message)
         {
@@ -162,27 +162,27 @@ public class RestoreJobProgressResponsePayload
             return update(b -> b.summary = new RestoreJobSummaryResponsePayload(createdAt, jobId, jobAgent, keyspace, table, null, status));
         }
 
-        public Builder withFailedRanges(List<RestoreJobRange> failedRanges)
+        public Builder withFailedRanges(List<RestoreRangeJson> failedRanges)
         {
             return update(b -> b.failedRanges = copyNullableList(failedRanges));
         }
 
-        public Builder withAbortedRanges(List<RestoreJobRange> abortedRanges)
+        public Builder withAbortedRanges(List<RestoreRangeJson> abortedRanges)
         {
             return update(b -> b.abortedRanges = copyNullableList(abortedRanges));
         }
 
-        public Builder withPendingRanges(List<RestoreJobRange> pendingRanges)
+        public Builder withPendingRanges(List<RestoreRangeJson> pendingRanges)
         {
             return update(b -> b.pendingRanges = copyNullableList(pendingRanges));
         }
 
-        public Builder withSucceededRanges(List<RestoreJobRange> succeededRanges)
+        public Builder withSucceededRanges(List<RestoreRangeJson> succeededRanges)
         {
             return update(b -> b.succeededRanges = copyNullableList(succeededRanges));
         }
 
-        private static List<RestoreJobRange> copyNullableList(List<RestoreJobRange> list)
+        private static List<RestoreRangeJson> copyNullableList(List<RestoreRangeJson> list)
         {
             return list == null ? null : new ArrayList<>(list);
         }

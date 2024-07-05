@@ -182,11 +182,10 @@ class RestoreProcessorTest
                                           .slowRestoreTaskTime.metric.getSnapshot().getValues();
             assertThat(slowRestoreTaskTimes)
             .describedAs("The task takes 1 minute. " +
-                         "The slow task threshodl is 10 seconds and report delay is 2 minutes (see TestModule). " +
+                         "The slow task threshold is 10 seconds and report delay is 2 minutes (see TestModule). " +
                          "It should only report once")
             .hasSize(1);
-            Long handlerTimeInNanos = slowRestoreTaskTimes[0];
-            assertThat(handlerTimeInNanos).isNotNull();
+            long handlerTimeInNanos = slowRestoreTaskTimes[0];
             assertThat(handlerTimeInNanos).isEqualTo(oneMinutesInNanos);
             assertThat(processor.activeTasks()).isOne();
         });
@@ -265,9 +264,10 @@ class RestoreProcessorTest
     private RestoreRange mockRestoreRange()
     {
         RestoreRange range = mock(RestoreRange.class, Mockito.RETURNS_DEEP_STUBS);
-        when(range.source().jobId()).thenReturn(UUIDs.timeBased());
+        when(range.jobId()).thenReturn(UUIDs.timeBased());
+        when(range.canProduceTask()).thenReturn(true);
         when(range.owner().id()).thenReturn(1);
-        when(range.source().key()).thenReturn("SliceKey");
+        when(range.sliceKey()).thenReturn("SliceKey");
         when(range.owner().metrics()).thenReturn(instanceMetrics());
         RestoreJob job = RestoreJob.builder()
                                    .jobStatus(RestoreJobStatus.CREATED)

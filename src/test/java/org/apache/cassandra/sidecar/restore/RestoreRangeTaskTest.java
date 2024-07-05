@@ -48,6 +48,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.ResourceUtils;
+import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
@@ -102,10 +103,10 @@ class RestoreRangeTaskTest
     {
         mockRange = mock(RestoreRange.class, Mockito.RETURNS_DEEP_STUBS);
         when(mockRange.stageDirectory()).thenReturn(Paths.get("."));
-        when(mockRange.source().sliceId()).thenReturn("testing-slice");
-        when(mockRange.source().key()).thenReturn("storage-key");
-        when(mockRange.source().keyspace()).thenReturn("test_ks");
-        when(mockRange.source().table()).thenReturn("test_tbl");
+        when(mockRange.sliceId()).thenReturn("testing-slice");
+        when(mockRange.sliceKey()).thenReturn("storage-key");
+        when(mockRange.keyspace()).thenReturn("test_ks");
+        when(mockRange.table()).thenReturn("test_tbl");
         when(mockRange.uploadId()).thenReturn("upload-id");
         InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
         when(instanceMetadata.id()).thenReturn(1);
@@ -281,7 +282,7 @@ class RestoreRangeTaskTest
     {
         // import is successful
         when(mockSSTableImporter.scheduleImport(any())).thenReturn(Future.succeededFuture());
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, "QUORUM");
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, ConsistencyLevel.QUORUM);
         RestoreRangeTask task = createTask(mockRange, job);
         Future<?> success = task.commit(testFolder.toFile());
         assertThat(success.failed()).isFalse();
@@ -296,7 +297,7 @@ class RestoreRangeTaskTest
     @Test
     void testHandlingUnexpectedExceptionInObjectExistsCheck(@TempDir Path testFolder)
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, "QUORUM");
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, ConsistencyLevel.QUORUM);
         when(mockStorageClient.objectExists(mockRange)).thenThrow(new RuntimeException("Random exception"));
         Path stagedPath = testFolder.resolve("slice.zip");
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
@@ -314,7 +315,7 @@ class RestoreRangeTaskTest
     @Test
     void testHandlingUnexpectedExceptionDuringDownloadSliceCheck(@TempDir Path testFolder)
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, "QUORUM");
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, ConsistencyLevel.QUORUM);
         Path stagedPath = testFolder.resolve("slice.zip");
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
         when(mockRange.isCancelled()).thenReturn(false);
@@ -335,7 +336,7 @@ class RestoreRangeTaskTest
     void testHandlingUnexpectedExceptionDuringUnzip(@TempDir Path testFolder) throws IOException
     {
 
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, "QUORUM");
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, ConsistencyLevel.QUORUM);
         Path stagedPath = testFolder.resolve("slice.zip");
         Files.createFile(stagedPath);
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
@@ -371,7 +372,7 @@ class RestoreRangeTaskTest
     @Test
     void testSliceDuration()
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, "QUORUM");
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, ConsistencyLevel.QUORUM);
         AtomicLong currentNanos = new AtomicLong(0);
         RestoreRangeTask task = createTask(mockRange, job, currentNanos::get);
         Promise<RestoreRange> promise = Promise.promise();
@@ -384,7 +385,7 @@ class RestoreRangeTaskTest
     void testRemoveOutOfRangeSSTables(@TempDir Path tempDir) throws RestoreJobException, IOException
     {
         // TODO: update test to use replica ranges implementation
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, "QUORUM");
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, ConsistencyLevel.QUORUM);
         RestoreRangeTask task = createTask(mockRange, job);
 
         // the mocked localTokenRangesProvider returns null, so retry later
@@ -499,7 +500,7 @@ class RestoreRangeTaskTest
 
         // when the (unzipped) target directory already exists, but zip file does not exist.
         // We consider the zip file has been extracted and deleted
-        Path unzipped = range.stageDirectory().resolve(range.source().keyspace()).resolve(range.source().table());
+        Path unzipped = range.stageDirectory().resolve(range.keyspace()).resolve(range.table());
         Files.createDirectories(unzipped);
         assertThat(task.unzipAction(absentFile.toFile())).isEqualTo(unzipped.toFile());
         Files.deleteIfExists(unzipped);

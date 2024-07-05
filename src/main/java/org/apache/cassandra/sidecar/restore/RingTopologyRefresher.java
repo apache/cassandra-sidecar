@@ -252,6 +252,12 @@ public class RingTopologyRefresher implements PeriodicTask
             catch (Exception ex)
             {
                 LOGGER.warn("Failure during load topology for keyspace. keyspace={}", keyspace, ex);
+                promises.computeIfPresent(keyspace, (k, promise) -> {
+                    promise.tryFail(new IllegalStateException("Failed to load topology for keyspace: " + keyspace, ex));
+                    // return null to remove the promise
+                    return null;
+                });
+
             }
         }
 

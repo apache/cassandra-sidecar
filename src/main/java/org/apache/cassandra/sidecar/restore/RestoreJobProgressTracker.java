@@ -143,7 +143,7 @@ public class RestoreJobProgressTracker
             {
                 LOGGER.warn("Clean up pending restore slice when the job has not failed. " +
                             "jobId={}, sliceId={}, startToken={}, endToken={}",
-                            restoreJob.jobId, range.source().sliceId(), range.startToken(), range.endToken());
+                            restoreJob.jobId, range.sliceId(), range.startToken(), range.endToken());
             }
             range.cancel();
         });

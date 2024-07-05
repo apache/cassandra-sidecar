@@ -103,8 +103,6 @@ public class RestoreSlice
             return false;
 
         RestoreSlice that = (RestoreSlice) obj;
-        // Note: destinationPathInStaging and owner are not included as they are 'transient'.
-        // status_by_replicas and replicas are not added as instances can be added
         return Objects.equals(this.jobId, that.jobId)
                && Objects.equals(this.keyspace, that.keyspace)
                && Objects.equals(this.table, that.table)

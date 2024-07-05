@@ -21,8 +21,10 @@ package org.apache.cassandra.sidecar.db;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
-import java.util.Locale;
 import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.Row;
@@ -35,6 +37,7 @@ import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
+import org.apache.cassandra.sidecar.common.server.utils.StringUtils;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -44,6 +47,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class RestoreJob
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJob.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public final LocalDate createdAt;
@@ -84,7 +88,7 @@ public class RestoreJob
                .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
                .expireAt(row.getTimestamp("expire_at"))
                .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
-               .consistencyLevel(row.getString("consistency_level"))
+               .consistencyLevel(ConsistencyLevel.fromString(row.getString("consistency_level")))
                .localDatacenter(row.getString("local_datacenter"));
 
         return builder.build();
@@ -123,8 +127,15 @@ public class RestoreJob
     {
         Preconditions.checkArgument(builder.consistencyLevel == null
                                     || !builder.consistencyLevel.isLocalDcOnly
-                                    || (builder.localDatacenter != null && !builder.localDatacenter.isEmpty()),
+                                    || StringUtils.notEmpty(builder.localDatacenter),
                                     "When local consistency level is used, localDatacenter must also present");
+        // log a warning when consistency level is absent or no local, but localDatacenter is defined
+        if ((builder.consistencyLevel == null || !builder.consistencyLevel.isLocalDcOnly)
+            && StringUtils.notEmpty(builder.localDatacenter))
+        {
+            LOGGER.warn("'localDatacenter' is defined but ignored. consistencyLevel={} localDatacenter={}",
+                        builder.consistencyLevel, builder.localDatacenter);
+        }
         this.createdAt = builder.createdAt;
         this.jobId = builder.jobId;
         this.keyspaceName = builder.keyspaceName;
@@ -159,6 +170,7 @@ public class RestoreJob
     }
 
     /**
+     * Determine the expected range status based on the job status
      * @return the expected next range status in order to succeed
      */
     public RestoreRangeStatus expectedNextRangeStatus()
@@ -169,6 +181,12 @@ public class RestoreJob
         return status == RestoreJobStatus.STAGE_READY || status == RestoreJobStatus.STAGED
                ? RestoreRangeStatus.STAGED
                : RestoreRangeStatus.SUCCEEDED;
+    }
+
+    @Nullable
+    public String consistencyLevelText()
+    {
+        return consistencyLevel == null ? null : consistencyLevel.name();
     }
 
     /**
@@ -312,10 +330,10 @@ public class RestoreJob
             return update(b -> b.bucketCount = bucketCount);
         }
 
-        public Builder consistencyLevel(@Nullable String consistencyLevel)
+        public Builder consistencyLevel(@Nullable ConsistencyLevel consistencyLevel)
         {
             return update(b -> {
-                b.consistencyLevel = ConsistencyLevel.fromString(consistencyLevel);
+                b.consistencyLevel = consistencyLevel;
                 b.manager = resolveJobManager();
             });
         }

@@ -173,9 +173,9 @@ public class SidecarSchemaTest
             "WHERE job_id = ? AND bucket_id = ? AND start_token <= ? AND end_token >= ? ALLOW FILTERING",
 
             "INSERT INTO sidecar_internal.restore_range_v1 (  job_id,  bucket_id,  start_token,  end_token,  " +
-            "slice_id,  status_by_replica) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "slice_id,  slice_bucket,  slice_key,  status_by_replica) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
 
-            "SELECT job_id, bucket_id, slice_id, start_token, end_token, status_by_replica " +
+            "SELECT job_id, bucket_id, slice_id, slice_bucket, slice_key, start_token, end_token, status_by_replica " +
             "FROM sidecar_internal.restore_range_v1 WHERE job_id = ? AND bucket_id = ? ALLOW FILTERING",
 
             "UPDATE sidecar_internal.restore_range_v1 SET status_by_replica = status_by_replica + ? " +

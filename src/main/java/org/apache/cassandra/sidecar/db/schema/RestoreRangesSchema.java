@@ -79,7 +79,9 @@ public class RestoreRangesSchema extends TableSchema
                              "  bucket_id smallint," + // same bucket_id as in the slice row
                              "  start_token varint," +
                              "  end_token varint," +
-                             "  slice_id text," + // together with slice start & end tokens to locate the slice row
+                             "  slice_id text," +
+                             "  slice_bucket text," +
+                             "  slice_key text," +
                              "  status_by_replica map<text, text>," +
                              "  PRIMARY KEY ((job_id, bucket_id), start_token, end_token)" +
                              ") WITH default_time_to_live = %s",
@@ -111,6 +113,8 @@ public class RestoreRangesSchema extends TableSchema
                              "  start_token," +
                              "  end_token," +
                              "  slice_id," +
+                             "  slice_bucket," +
+                             "  slice_key," +
                              "  status_by_replica" +
                              ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)", config);
         }
@@ -118,7 +122,7 @@ public class RestoreRangesSchema extends TableSchema
         // ALLOW FILTERING within the same partition should have minimum impact on read performance.
         static String findAll(SchemaKeyspaceConfiguration config)
         {
-            return withTable("SELECT job_id, bucket_id, slice_id, " +
+            return withTable("SELECT job_id, bucket_id, slice_id, slice_bucket, slice_key, " +
                              "start_token, end_token, status_by_replica " +
                              "FROM %s.%s " +
                              "WHERE job_id = ? AND bucket_id = ? ALLOW FILTERING", config);
