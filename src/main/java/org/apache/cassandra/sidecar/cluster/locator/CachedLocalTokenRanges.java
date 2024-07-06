@@ -41,8 +41,6 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -54,7 +52,6 @@ import org.jetbrains.annotations.NotNull;
  * Get token ranges owned and replicated to the local Cassandra instance(s) by keyspace
  * The results are cached and gets invalidated when local instances or cluster topology changed
  */
-@Singleton
 public class CachedLocalTokenRanges implements LocalTokenRangesProvider
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CachedLocalTokenRanges.class);
@@ -70,7 +67,6 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
     @GuardedBy("this")
     private ImmutableMap<String, Map<Integer, Set<TokenRange>>> localTokenRangesCache;
 
-    @Inject
     public CachedLocalTokenRanges(InstancesConfig instancesConfig, DnsResolver dnsResolver)
     {
         this.instancesConfig = instancesConfig;

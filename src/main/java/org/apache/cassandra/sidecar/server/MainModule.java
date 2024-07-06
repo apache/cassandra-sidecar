@@ -149,12 +149,6 @@ public class MainModule extends AbstractModule
         this.confPath = confPath;
     }
 
-    @Override
-    protected void configure()
-    {
-        bind(LocalTokenRangesProvider.class).to(CachedLocalTokenRanges.class).in(Scopes.SINGLETON);
-    }
-
     @Provides
     @Singleton
     public Vertx vertx(SidecarConfiguration sidecarConfiguration, MetricRegistryFactory metricRegistryFactory)
@@ -565,6 +559,13 @@ public class MainModule extends AbstractModule
     public DigestAlgorithmProvider md5Provider()
     {
         return new JdkMd5DigestProvider();
+    }
+
+    @Provides
+    @Singleton
+    public LocalTokenRangesProvider localTokenRangesProvider(InstancesConfig instancesConfig, DnsResolver dnsResolver)
+    {
+        return new CachedLocalTokenRanges(instancesConfig, dnsResolver);
     }
 
     /**
