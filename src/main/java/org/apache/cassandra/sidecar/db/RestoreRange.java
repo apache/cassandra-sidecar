@@ -495,7 +495,7 @@ public class RestoreRange
         private Path stageDirectory;
         private Path stagedObjectPath;
         private String uploadId;
-        private Map<String, RestoreRangeStatus> statusByReplica;
+        private Map<String, RestoreRangeStatus> statusByReplica = Collections.emptyMap();
         private RestoreJobProgressTracker tracker = null;
 
         private Builder()
