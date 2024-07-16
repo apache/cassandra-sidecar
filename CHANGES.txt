@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Upgrade asciidoctor plugin to version 3.3.2 (CASSANDRASC-139)
  * Bump AWS SDK version to 2.26.12 (CASSANDRASC-137)
  * Add delay between reporting of the same slow task (CASSANDRASC-136)
  * Added additional JVM options to increase max open FD limit for MacOS (CASSANDRASC-135)
