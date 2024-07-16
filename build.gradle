@@ -47,7 +47,7 @@ plugins {
     id "nebula.ospackage" version "8.3.0"
     id 'nebula.ospackage-application' version "8.3.0"
     id 'com.google.cloud.tools.jib' version '2.2.0'
-    id 'org.asciidoctor.jvm.convert' version '3.1.0'
+    id 'org.asciidoctor.jvm.convert' version '3.3.2'
 
     // Release Audit Tool (RAT) plugin for checking project licenses
     id("org.nosphere.apache.rat") version "0.8.0"
