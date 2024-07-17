@@ -37,7 +37,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
@@ -82,8 +81,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                                    .jobSecrets(payload.secrets())
                                    .sstableImportOptions(payload.importOptions())
                                    .expireAt(payload.expireAtAsDate())
-                                   .consistencyLevel(ConsistencyLevel.fromString(payload.consistencyLevel()))
-                                   .localDatacenter(payload.localDatacenter())
+                                   .consistencyLevel(payload.consistencyConfig().consistencyLevel)
+                                   .localDatacenter(payload.consistencyConfig().localDatacenter)
                                    .build();
         ByteBuffer secrets = serializeValue(job.secrets, "secrets");
         ByteBuffer importOptions = serializeValue(job.importOptions, "sstable import options");

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.server.utils;
+package org.apache.cassandra.sidecar.common.utils;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -25,6 +25,10 @@ import org.jetbrains.annotations.Nullable;
  */
 public class StringUtils
 {
+    private StringUtils()
+    {
+    }
+
     /**
      * @param string string value to test
      * @return true when the string is null or its length is 0; false otherwise

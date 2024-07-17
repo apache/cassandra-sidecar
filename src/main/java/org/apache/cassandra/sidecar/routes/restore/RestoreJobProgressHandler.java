@@ -67,7 +67,7 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     @Override
     protected RestoreJobProgressFetchPolicy extractParamsOrThrow(RoutingContext context)
     {
-        List<String> fetchPolicyValues = context.queryParam(ApiEndpointsV1.FETCH_POLICY);
+        List<String> fetchPolicyValues = context.queryParam(ApiEndpointsV1.FETCH_POLICY_QUERY_PARAM);
         if (fetchPolicyValues.isEmpty())
         {
             logger.info("No RestoreJobProgressFetchPolicy is specified, FIRST_FAILED policy is assumed");

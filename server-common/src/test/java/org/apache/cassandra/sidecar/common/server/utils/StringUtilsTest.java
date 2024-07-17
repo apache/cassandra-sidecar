@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.common.server.utils;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.common.utils.StringUtils;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class StringUtilsTest

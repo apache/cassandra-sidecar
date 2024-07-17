@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.common.data.ConsistencyConfig;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
@@ -53,10 +54,7 @@ public class CreateRestoreJobRequestPayload
     private final RestoreJobSecrets secrets;
     private final SSTableImportOptions importOptions;
     private final long expireAtInMillis;
-    @Nullable
-    private final ConsistencyLevel consistencyLevel; // optional field
-    @Nullable
-    private final String localDatacenter; // optional field; if consistencyLevel requires localDc, the field must present
+    private final ConsistencyConfig consistencyConfig;
 
     /**
      * Builder to build a CreateRestoreJobRequest
@@ -102,8 +100,7 @@ public class CreateRestoreJobRequestPayload
                              ? SSTableImportOptions.defaults()
                              : importOptions;
         this.expireAtInMillis = expireAtInMillis;
-        this.consistencyLevel = ConsistencyLevel.fromString(consistencyLevel);
-        this.localDatacenter = localDatacenter;
+        this.consistencyConfig = ConsistencyConfig.parseString(consistencyLevel, localDatacenter);
     }
 
     private CreateRestoreJobRequestPayload(Builder builder)
@@ -179,7 +176,7 @@ public class CreateRestoreJobRequestPayload
     @Nullable
     public String consistencyLevel()
     {
-        return nameOrNull(consistencyLevel);
+        return nameOrNull(consistencyConfig.consistencyLevel);
     }
 
     /**
@@ -189,7 +186,12 @@ public class CreateRestoreJobRequestPayload
     @Nullable
     public String localDatacenter()
     {
-        return localDatacenter;
+        return consistencyConfig.localDatacenter;
+    }
+
+    public ConsistencyConfig consistencyConfig()
+    {
+        return consistencyConfig;
     }
 
     @Override
@@ -200,8 +202,8 @@ public class CreateRestoreJobRequestPayload
                JOB_AGENT + "='" + jobAgent + "', " +
                JOB_SECRETS + "='" + secrets + "', " +
                JOB_EXPIRE_AT + "='" + expireAtInMillis + "', " +
-               JOB_CONSISTENCY_LEVEL + "='" + consistencyLevel + "', " +
-               JOB_LOCAL_DATA_CENTER + "='" + localDatacenter + "', " +
+               JOB_CONSISTENCY_LEVEL + "='" + consistencyLevel() + "', " +
+               JOB_LOCAL_DATA_CENTER + "='" + localDatacenter() + "', " +
                JOB_IMPORT_OPTIONS + "='" + importOptions + "'}";
     }
 

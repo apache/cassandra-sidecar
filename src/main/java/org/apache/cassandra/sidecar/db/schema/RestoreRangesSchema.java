@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
@@ -57,12 +56,6 @@ public class RestoreRangesSchema extends TableSchema
         insert = prepare(insert, session, CqlLiterals.insert(keyspaceConfig));
         findAll = prepare(findAll, session, CqlLiterals.findAll(keyspaceConfig));
         update = prepare(update, session, CqlLiterals.update(keyspaceConfig));
-    }
-
-    @Override
-    protected boolean exists(@NotNull Metadata metadata)
-    {
-        return false;
     }
 
     @Override

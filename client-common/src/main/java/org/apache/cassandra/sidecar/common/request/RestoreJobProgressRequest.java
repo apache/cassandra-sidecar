@@ -46,6 +46,6 @@ public class RestoreJobProgressRequest extends JsonRequest<RestoreJobProgressRes
                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, requestParams.keyspace)
                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, requestParams.table)
                       .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, requestParams.jobId.toString());
-        return base + "?" + ApiEndpointsV1.FETCH_POLICY + "=" + requestParams.fetchPolicy.toString();
+        return base + "?" + ApiEndpointsV1.FETCH_POLICY_QUERY_PARAM + "=" + requestParams.fetchPolicy.toString();
     }
 }

@@ -113,7 +113,7 @@ public class RestoreJobManager
     void updateRestoreJob(RestoreJob restoreJob)
     {
         RestoreJobProgressTracker tracker = jobs.computeIfAbsent(restoreJob.jobId,
-                                                           id -> new RestoreJobProgressTracker(restoreJob, processor, instanceMetadata));
+                                                                 id -> new RestoreJobProgressTracker(restoreJob, processor, instanceMetadata));
         tracker.updateRestoreJob(restoreJob);
     }
 

@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -34,8 +34,6 @@ import org.jetbrains.annotations.Nullable;
 @Singleton
 public class InstanceMetadataFetcher
 {
-    private static final Random RANDOM = new Random();
-
     private final InstancesConfig instancesConfig;
 
     @Inject
@@ -120,7 +118,8 @@ public class InstanceMetadataFetcher
         {
             return instances.get(0);
         }
-        int randomPick = RANDOM.nextInt(instances.size());
+
+        int randomPick = ThreadLocalRandom.current().nextInt(instances.size());
         return instances.get(randomPick);
     }
 

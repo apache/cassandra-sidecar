@@ -101,7 +101,7 @@ public final class ApiEndpointsV1
     public static final String SLICES = "/slices";
     public static final String ABORT = "/abort";
     public static final String PROGRESS = "/progress";
-    public static final String FETCH_POLICY = "fetch-policy";
+    public static final String FETCH_POLICY_QUERY_PARAM = "fetch-policy";
     public static final String PER_RESTORE_JOB = RESTORE_JOBS + "/" + JOB_ID_PATH_PARAM;
     public static final String CREATE_RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + RESTORE_JOBS;
     public static final String RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB;

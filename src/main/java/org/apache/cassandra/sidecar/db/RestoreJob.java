@@ -32,13 +32,14 @@ import com.datastax.driver.core.utils.Bytes;
 import com.datastax.driver.core.utils.UUIDs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.common.data.ConsistencyConfig;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
-import org.apache.cassandra.sidecar.common.server.utils.StringUtils;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.sidecar.common.utils.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -80,6 +81,8 @@ public class RestoreJob
     public static RestoreJob from(@NotNull Row row) throws DataObjectMappingException
     {
         Builder builder = new Builder();
+        ConsistencyConfig consistencyConfig = ConsistencyConfig.parseString(row.getString("consistency_level"),
+                                                                            row.getString("local_datacenter"));
         builder.createdAt(row.getDate("created_at"))
                .jobId(row.getUUID("job_id")).jobAgent(row.getString("job_agent"))
                .bucketCount((short) 0) // always use 0 for now; TODO - Add bucketCount field to CreateRestoreJobRequestPayload
@@ -88,8 +91,8 @@ public class RestoreJob
                .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
                .expireAt(row.getTimestamp("expire_at"))
                .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
-               .consistencyLevel(ConsistencyLevel.fromString(row.getString("consistency_level")))
-               .localDatacenter(row.getString("local_datacenter"));
+               .consistencyLevel(consistencyConfig.consistencyLevel)
+               .localDatacenter(consistencyConfig.localDatacenter);
 
         return builder.build();
     }
