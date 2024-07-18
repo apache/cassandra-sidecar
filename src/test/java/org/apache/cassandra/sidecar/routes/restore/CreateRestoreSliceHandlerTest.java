@@ -46,7 +46,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     private static final String TEST_JOB_ID = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
 
     @Test
-    void testValidCreatedRequest(VertxTestContext context) throws Throwable
+    void testValidCreatedRequest(VertxTestContext context)
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
         mockSubmitRestoreSlice(x -> RestoreJobProgressTracker.Status.CREATED);
@@ -55,7 +55,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
-    void testValidAcceptedRequest(VertxTestContext context) throws Throwable
+    void testValidAcceptedRequest(VertxTestContext context)
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
         mockSubmitRestoreSlice(x -> RestoreJobProgressTracker.Status.PENDING);
@@ -67,7 +67,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
-    void testValidOkRequest(VertxTestContext context) throws Throwable
+    void testValidOkRequest(VertxTestContext context)
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
         mockSubmitRestoreSlice(x -> RestoreJobProgressTracker.Status.COMPLETED);
@@ -79,7 +79,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
-    void testCreateSliceWhenJobHasCompleted(VertxTestContext context) throws Throwable
+    void testCreateSliceWhenJobHasCompleted(VertxTestContext context)
     {
         // the restore job is completed / SUCCEEDED
         mockLookupRestoreJob(id -> RestoreJobTest.createTestingJob(id, RestoreJobStatus.SUCCEEDED));
@@ -91,7 +91,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
-    void testCreateSliceWhenSliceHasFailed(VertxTestContext context) throws Throwable
+    void testCreateSliceWhenSliceHasFailed(VertxTestContext context)
     {
         // the restore job is still active
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
@@ -107,7 +107,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
-    void testInvalidJobId(VertxTestContext context) throws Throwable
+    void testInvalidJobId(VertxTestContext context)
     {
         String invalidJobId = "12951f25-d393-4158-9e90-ec0cbe05af21";
         sendCreateRestoreSliceRequestAndVerify("ks", invalidJobId, dummy(), context,
@@ -115,14 +115,14 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
-    void testInvalidKeyspace(VertxTestContext context) throws Throwable
+    void testInvalidKeyspace(VertxTestContext context)
     {
         sendCreateRestoreSliceRequestAndVerify("sidecar_internal", TEST_JOB_ID, dummy(), context,
                                                HttpResponseStatus.FORBIDDEN);
     }
 
     @Test
-    void testRestoreJobNotFound(VertxTestContext context) throws Throwable
+    void testRestoreJobNotFound(VertxTestContext context)
     {
         mockLookupRestoreJob(x -> null);
         sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, dummy(), context,
@@ -130,7 +130,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
-    void testCreateSliceFailsToPersist(VertxTestContext context) throws Throwable
+    void testCreateSliceFailsToPersist(VertxTestContext context)
     {
         // the restore job is still active; it has CL defined, so the slice is to be persisted
         mockLookupRestoreJob(jobId -> RestoreJobTest.createTestingJob(jobId, "ks", RestoreJobStatus.CREATED, ConsistencyLevel.LOCAL_QUORUM, "dc1"));
@@ -142,7 +142,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
-    void testCreateSliceAndPersist(VertxTestContext context) throws Throwable
+    void testCreateSliceAndPersist(VertxTestContext context)
     {
         mockLookupRestoreJob(jobId -> RestoreJobTest.createTestingJob(jobId, RestoreJobStatus.CREATED, ConsistencyLevel.QUORUM));
         int repeatCount = 5;

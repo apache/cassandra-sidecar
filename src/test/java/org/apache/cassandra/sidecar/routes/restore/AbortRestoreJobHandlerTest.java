@@ -22,12 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
@@ -104,12 +99,8 @@ class AbortRestoreJobHandlerTest extends BaseRestoreJobTests
                                                      int expectedStatusCode,
                                                      AbortRestoreJobRequestPayload requestPayload)
     {
-        Checkpoint completion = context.checkpoint();
-        Handler<AsyncResult<HttpResponse<Buffer>>> responseVerifier = resp -> {
-            context.verify(() -> assertThat(resp.result().statusCode()).isEqualTo(expectedStatusCode));
-            completion.flag();
-        };
         JsonObject jsonPayload = requestPayload == null ? null : JsonObject.mapFrom(requestPayload);
-        postAndVerify(String.format(RESTORE_JOB_ABORT_ENDPOINT, keyspace, table, jobId), jsonPayload, responseVerifier);
+        postThenComplete(context, String.format(RESTORE_JOB_ABORT_ENDPOINT, keyspace, table, jobId), jsonPayload,
+                         resp -> assertThat(resp.result().statusCode()).isEqualTo(expectedStatusCode));
     }
 }

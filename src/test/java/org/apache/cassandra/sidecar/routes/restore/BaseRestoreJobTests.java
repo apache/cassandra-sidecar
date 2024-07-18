@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.routes.restore;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -137,9 +138,21 @@ public abstract class BaseRestoreJobTests
         sendRequestAndVerify(HttpMethod.POST, endpoint, requestPayload, responseVerifier);
     }
 
-    protected void getAndVerify(String endpoint, Handler<AsyncResult<HttpResponse<Buffer>>> responseVerifier)
+    protected void postThenComplete(VertxTestContext context, String endpoint,
+                                    JsonObject requestPayload, Consumer<AsyncResult<HttpResponse<Buffer>>> assertions)
     {
-        sendRequestAndVerify(HttpMethod.GET, endpoint, null, responseVerifier);
+        sendRequestAndVerify(HttpMethod.POST, endpoint, requestPayload, asyncResult -> {
+            context.verify(() -> assertions.accept(asyncResult));
+            context.completeNow();
+        });
+    }
+
+    protected void getThenComplete(VertxTestContext context, String endpoint, Consumer<AsyncResult<HttpResponse<Buffer>>> assertions)
+    {
+        sendRequestAndVerify(HttpMethod.GET, endpoint, null, asyncResult -> {
+            context.verify(() -> assertions.accept(asyncResult));
+            context.completeNow();
+        });
     }
 
     private void sendRequestAndVerify(HttpMethod httpMethod,

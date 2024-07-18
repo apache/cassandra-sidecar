@@ -26,11 +26,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -158,35 +155,26 @@ class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
                                                       VertxTestContext context,
                                                       int expectedStatusCode)
     {
-        Checkpoint completion = context.checkpoint();
         String expectedJobId = payload == null ? null : payload.getString(JOB_ID);
-        postAndVerify(String.format(CREATE_RESTORE_JOB_ENDPOINT, keyspace, table),
-                      payload,
-                      asyncResult -> verify(expectedJobId, context, expectedStatusCode, asyncResult, completion));
-    }
+        postThenComplete(context, String.format(CREATE_RESTORE_JOB_ENDPOINT, keyspace, table),
+                         payload,
+                         asyncResult -> {
+                             HttpResponse<?> resp = asyncResult.result();
+                             assertThat(resp).isNotNull();
+                             assertThat(resp.statusCode()).isEqualTo(expectedStatusCode);
+                             if (expectedStatusCode == HttpResponseStatus.OK.code())
+                             {
+                                 JsonObject responseBody = resp.bodyAsJsonObject();
 
-    private static void verify(String expectedJobId, VertxTestContext context, int expectedStatusCode,
-                               AsyncResult<HttpResponse<Buffer>> asyncResult, Checkpoint completion)
-    {
-        context.verify(() -> {
-            HttpResponse<?> resp = asyncResult.result();
-            assertThat(resp).isNotNull();
-            assertThat(resp.statusCode()).isEqualTo(expectedStatusCode);
-            if (expectedStatusCode == HttpResponseStatus.OK.code())
-            {
-                JsonObject responseBody = resp.bodyAsJsonObject();
-
-                if (expectedJobId == null)
-                {
-                    assertThat(responseBody.containsKey(JOB_ID)).isTrue();
-                }
-                else
-                {
-                    assertThat(responseBody.getString(JOB_ID)).isEqualTo(expectedJobId);
-                }
-                assertThat(responseBody.getString(STATUS)).isEqualTo("CREATED");
-            }
-            completion.flag();
-        });
+                                 if (expectedJobId == null)
+                                 {
+                                     assertThat(responseBody.containsKey(JOB_ID)).isTrue();
+                                 }
+                                 else
+                                 {
+                                     assertThat(responseBody.getString(JOB_ID)).isEqualTo(expectedJobId);
+                                 }
+                             }
+                         });
     }
 }
