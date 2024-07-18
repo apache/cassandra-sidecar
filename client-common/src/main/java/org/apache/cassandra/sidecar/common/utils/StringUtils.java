@@ -42,7 +42,7 @@ public class StringUtils
      * @param string string value to test
      * @return true only when the string is not null and its length is not 0; false otherwise
      */
-    public static boolean notEmpty(@Nullable String string)
+    public static boolean isNotEmpty(@Nullable String string)
     {
         return !isNullOrEmpty(string);
     }

@@ -47,7 +47,7 @@ public class ConsistencyConfig
 
     private ConsistencyConfig(@Nullable ConsistencyLevel consistencyLevel, @Nullable String localDatacenter)
     {
-        Preconditions.checkArgument(consistencyLevel == null || !consistencyLevel.isLocalDcOnly || StringUtils.notEmpty(localDatacenter),
+        Preconditions.checkArgument(consistencyLevel == null || !consistencyLevel.isLocalDcOnly || StringUtils.isNotEmpty(localDatacenter),
                                     "localDatacenter cannot be empty for consistency level: " + consistencyLevel);
 
         this.consistencyLevel = consistencyLevel;

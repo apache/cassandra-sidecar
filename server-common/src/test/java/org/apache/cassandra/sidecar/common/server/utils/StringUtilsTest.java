@@ -31,14 +31,14 @@ class StringUtilsTest
     {
         String testStr = null;
         assertThat(StringUtils.isNullOrEmpty(testStr)).isTrue();
-        assertThat(StringUtils.notEmpty(testStr)).isFalse();
+        assertThat(StringUtils.isNotEmpty(testStr)).isFalse();
 
         testStr = "";
         assertThat(StringUtils.isNullOrEmpty(testStr)).isTrue();
-        assertThat(StringUtils.notEmpty(testStr)).isFalse();
+        assertThat(StringUtils.isNotEmpty(testStr)).isFalse();
 
         testStr = "non-empty";
         assertThat(StringUtils.isNullOrEmpty(testStr)).isFalse();
-        assertThat(StringUtils.notEmpty(testStr)).isTrue();
+        assertThat(StringUtils.isNotEmpty(testStr)).isTrue();
     }
 }

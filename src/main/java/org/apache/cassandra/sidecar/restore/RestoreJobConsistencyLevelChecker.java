@@ -79,7 +79,7 @@ public class RestoreJobConsistencyLevelChecker
     {
         Preconditions.checkArgument(restoreJob.consistencyLevel != null, "Consistency level of the job must present");
         Preconditions.checkArgument(!restoreJob.consistencyLevel.isLocalDcOnly
-                                    || StringUtils.notEmpty(restoreJob.localDatacenter),
+                                    || StringUtils.isNotEmpty(restoreJob.localDatacenter),
                                     "When using local consistency level, localDatacenter must present");
         RestoreJobProgressCollector collector = RestoreJobProgressCollectors.create(restoreJob, fetchPolicy);
         RestoreRangeStatus successCriteria = restoreJob.expectedNextRangeStatus();

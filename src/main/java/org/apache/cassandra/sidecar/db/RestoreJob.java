@@ -130,11 +130,11 @@ public class RestoreJob
     {
         Preconditions.checkArgument(builder.consistencyLevel == null
                                     || !builder.consistencyLevel.isLocalDcOnly
-                                    || StringUtils.notEmpty(builder.localDatacenter),
+                                    || StringUtils.isNotEmpty(builder.localDatacenter),
                                     "When local consistency level is used, localDatacenter must also present");
         // log a warning when consistency level is absent or no local, but localDatacenter is defined
         if ((builder.consistencyLevel == null || !builder.consistencyLevel.isLocalDcOnly)
-            && StringUtils.notEmpty(builder.localDatacenter))
+            && StringUtils.isNotEmpty(builder.localDatacenter))
         {
             LOGGER.warn("'localDatacenter' is defined but ignored. consistencyLevel={} localDatacenter={}",
                         builder.consistencyLevel, builder.localDatacenter);
