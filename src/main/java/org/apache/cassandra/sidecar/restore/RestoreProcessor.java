@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -32,24 +33,26 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.db.RestoreSlice;
-import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.RestoreRange;
+import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
-import org.apache.cassandra.sidecar.locator.CachedLocalTokenRanges;
-import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceRestoreMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 
 /**
- * Handles processing of all {@link RestoreSlice} s related to {@link org.apache.cassandra.sidecar.db.RestoreJob}
+ * Handles processing of all {@link RestoreRange} s related to {@link org.apache.cassandra.sidecar.db.RestoreJob}
  */
 @Singleton
 public class RestoreProcessor implements PeriodicTask
@@ -61,13 +64,13 @@ public class RestoreProcessor implements PeriodicTask
     private final SidecarSchema sidecarSchema;
     private final SSTableImporter importer;
     private final ConcurrencyLimiter processMaxConcurrency;
-    private final SliceQueue sliceQueue = new SliceQueue();
+    private final WorkQueue workQueue = new WorkQueue();
     private final double requiredUsableSpacePercentage; // value range: [0.0, 1.0)
-    private final RestoreSliceDatabaseAccessor sliceDatabaseAccessor;
+    private final RestoreRangeDatabaseAccessor rangeDatabaseAccessor;
     private final RestoreJobUtil restoreJobUtil;
     // mapping of task to the time when it should be reported as 'slow' if it is still active
-    // using concurrent data strucutre because the map is accessed from multiple threads
-    private final Map<RestoreSliceHandler, Long> activeTasks = new ConcurrentHashMap<>();
+    // using concurrent data structure because the map is accessed from multiple threads
+    private final Map<RestoreRangeHandler, Long> activeTasks = new ConcurrentHashMap<>();
     private final long slowTaskThresholdInSeconds;
     private final long slowTaskReportDelayInSeconds;
     private final LocalTokenRangesProvider localTokenRangesProvider;
@@ -81,9 +84,9 @@ public class RestoreProcessor implements PeriodicTask
                             SidecarSchema sidecarSchema,
                             StorageClientPool s3ClientPool,
                             SSTableImporter importer,
-                            RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
+                            RestoreRangeDatabaseAccessor rangeDatabaseAccessor,
                             RestoreJobUtil restoreJobUtil,
-                            CachedLocalTokenRanges localTokenRangesProvider,
+                            LocalTokenRangesProvider localTokenRangesProvider,
                             SidecarMetrics metrics)
     {
         this.pool = executorPools.internal();
@@ -96,22 +99,34 @@ public class RestoreProcessor implements PeriodicTask
         this.slowTaskThresholdInSeconds = config.restoreJobConfiguration().slowTaskThresholdSeconds();
         this.slowTaskReportDelayInSeconds = config.restoreJobConfiguration().slowTaskReportDelaySeconds();
         this.importer = importer;
-        this.sliceDatabaseAccessor = sliceDatabaseAccessor;
+        this.rangeDatabaseAccessor = rangeDatabaseAccessor;
         this.restoreJobUtil = restoreJobUtil;
         this.localTokenRangesProvider = localTokenRangesProvider;
         this.metrics = metrics;
     }
 
     /**
-     * Enqueue a {@link RestoreSlice} to be processed in the future.
-     * If the processor has been closed, it won't accept more slices.
+     * Enqueue a {@link RestoreRange} to be processed in the future.
+     * If the processor has been closed, it won't accept more submissions.
      */
-    void submit(RestoreSlice slice)
+    void submit(RestoreRange range)
     {
         if (isClosed)
             return;
 
-        sliceQueue.offer(slice);
+        workQueue.offer(range);
+    }
+
+    /**
+     * Remove the restore range from work queue
+     * @param range restore range to be removed
+     */
+    void remove(RestoreRange range)
+    {
+        if (isClosed)
+            return;
+
+        workQueue.remove(range);
     }
 
     @Override
@@ -135,84 +150,44 @@ public class RestoreProcessor implements PeriodicTask
     @Override
     public void execute(Promise<Void> promise)
     {
-        while (sliceQueue.peek() != null // exit early when no pending slice and avoid acquire permits
+        while (workQueue.peek() != null // exit early when no pending slice and avoid acquire permits
                && processMaxConcurrency.tryAcquire())
         {
-            RestoreSlice slice = sliceQueue.poll();
-            if (slice == null) // it should never happen, and is only to make ide happy
+            RestoreRange range = workQueue.poll();
+            if (range == null) // It should never happen because it peeks before polling. It is only to make IDE happy
             {
                 processMaxConcurrency.releasePermit();
-                break;
+                break; // break in order to complete promise
             }
 
+            Preconditions.checkState(range.canProduceTask(),
+                                     "RestoreRangeTask cannot be produced by range " + range.shortDescription());
+
             // capture the new queue length after polling
-            sliceQueue.captureImportQueueLength();
-            RestoreSliceHandler task = slice.toAsyncTask(s3ClientPool, pool, importer,
+            workQueue.captureImportQueueLength();
+            RestoreRangeHandler task = range.toAsyncTask(s3ClientPool, pool, importer,
                                                          requiredUsableSpacePercentage,
-                                                         sliceDatabaseAccessor,
+                                                         rangeDatabaseAccessor,
                                                          restoreJobUtil,
                                                          localTokenRangesProvider,
                                                          metrics);
 
             activeTasks.put(task, slowTaskThresholdInSeconds);
             pool.executeBlocking(task, false) // unordered; run in parallel
-            .onSuccess(restoreSlice -> {
-                if (slice.hasImported())
-                {
-                    slice.owner()
-                         .metrics()
-                         .restore().sliceCompletionTime.metric.update(System.nanoTime() - slice.creationTimeNanos(), TimeUnit.NANOSECONDS);
-                    LOGGER.info("Slice completes successfully. sliceKey={}", slice.key());
-                    slice.complete();
-                }
-                else if (slice.hasStaged())
-                {
-                    slice.owner()
-                         .metrics()
-                         .restore().sliceStageTime.metric.update(task.elapsedInNanos(), TimeUnit.NANOSECONDS);
-                    LOGGER.info("Slice has been staged successfully. sliceKey={}", slice.key());
-                    // the slice is not fully complete yet. Re-enqueue the slice.
-                    sliceQueue.offer(slice);
-                }
-                else // log a warning and retry. It should not reach here.
-                {
-                    LOGGER.warn("Unexpected state of slice. It is neither staged nor imported. sliceKey={}",
-                                slice.key());
-                    sliceQueue.offer(slice);
-                }
-            })
-            .onFailure(cause -> {
-                if (cause instanceof RestoreJobException && ((RestoreJobException) cause).retryable())
-                {
-                    LOGGER.warn("Slice failed with recoverable failure. sliceKey={}", slice.key(), cause);
-                    // re-enqueue the retryable failed slice
-                    sliceQueue.offer(slice);
-                }
-                else
-                {
-                    LOGGER.error("Slice failed with unrecoverable failure. sliceKey={}", slice.key(), cause);
-                    // fail the slice and mark the slice has failed on its owning instance.
-                    // In the phase 1 implementation, all slices of the job get aborted
-                    slice.fail(RestoreJobExceptions.toFatal(cause));
-                    if (slice.job().isManagedBySidecar())
-                    {
-                        sliceDatabaseAccessor.updateStatus(slice);
-                    }
-                    // revoke the s3 credentials of the job too
-                    s3ClientPool.revokeCredentials(slice.jobId());
-                }
-            })
-            // release counter
-            .onComplete(res -> {
-                processMaxConcurrency.releasePermit();
-                // decrement the active slices and capture the new queue length
-                sliceQueue.decrementActiveSliceCount(slice);
-                sliceQueue.captureImportQueueLength();
-                activeTasks.remove(task);
-            });
+                // wrap success/failure handling in compose to catch any exception thrown
+                .compose(taskSuccessHandler(task),
+                         taskFailureHandler(range))
+                // release counter
+                .onComplete(ignored -> {
+                    processMaxConcurrency.releasePermit();
+                    // decrement the active slices and capture the new queue length
+                    workQueue.decrementActiveSliceCount(range);
+                    workQueue.captureImportQueueLength();
+                    activeTasks.remove(task);
+                });
         }
         checkForLongRunningTasks();
-        sliceQueue.capturePendingSliceCount();
+        workQueue.capturePendingSliceCount();
         promise.tryComplete();
     }
 
@@ -221,12 +196,12 @@ public class RestoreProcessor implements PeriodicTask
     {
         isClosed = true;
         s3ClientPool.close();
-        sliceQueue.close();
+        workQueue.close();
     }
 
     private void checkForLongRunningTasks()
     {
-        for (RestoreSliceHandler t : activeTasks.keySet())
+        for (RestoreRangeHandler t : activeTasks.keySet())
         {
             long elapsedInNanos = t.elapsedInNanos();
             if (elapsedInNanos == -1) // not started
@@ -245,10 +220,10 @@ public class RestoreProcessor implements PeriodicTask
                                 "elapsedSeconds={} thresholdSeconds={} sliceKey={} jobId={} status={}",
                                 elapsedInSeconds,
                                 slowTaskThresholdInSeconds,
-                                task.slice().key(),
-                                task.slice().jobId(),
-                                task.slice().job().status);
-                    task.slice()
+                                task.range().sliceKey(),
+                                task.range().jobId(),
+                                task.range().job().status);
+                    task.range()
                         .owner()
                         .metrics()
                         .restore().slowRestoreTaskTime.metric.update(elapsedInNanos, TimeUnit.NANOSECONDS);
@@ -260,10 +235,63 @@ public class RestoreProcessor implements PeriodicTask
         }
     }
 
+    private Function<RestoreRange, Future<Void>> taskSuccessHandler(RestoreRangeHandler task)
+    {
+        return range -> {
+            InstanceRestoreMetrics restoreMetrics = range.owner().metrics().restore();
+            if (range.hasImported())
+            {
+                restoreMetrics.sliceCompletionTime.metric.update(System.nanoTime() - range.sliceCompressedSize(), TimeUnit.NANOSECONDS);
+                LOGGER.info("Restore range completes successfully. sliceKey={}", range.sliceKey());
+                range.complete();
+            }
+            else if (range.hasStaged())
+            {
+                restoreMetrics.sliceStageTime.metric.update(task.elapsedInNanos(), TimeUnit.NANOSECONDS);
+                LOGGER.info("Restore range has been staged successfully. sliceKey={}", range.sliceKey());
+                // the slice is not fully complete yet. Re-enqueue the slice.
+                workQueue.offer(range);
+            }
+            else // log a warning and retry. It should not reach here.
+            {
+                LOGGER.warn("Unexpected state of slice. It is neither staged nor imported. sliceKey={}",
+                            range.sliceKey());
+                workQueue.offer(range);
+            }
+            return Future.succeededFuture();
+        };
+    }
+
+    private Function<Throwable, Future<Void>> taskFailureHandler(RestoreRange range)
+    {
+        return cause -> {
+            if (cause instanceof RestoreJobException && ((RestoreJobException) cause).retryable())
+            {
+                LOGGER.warn("Slice failed with recoverable failure. sliceKey={}", range.sliceKey(), cause);
+                // re-enqueue the retryable failed slice
+                workQueue.offer(range);
+            }
+            else
+            {
+                LOGGER.error("Slice failed with unrecoverable failure. sliceKey={}", range.sliceKey(), cause);
+                // fail the slice and mark the slice has failed on its owning instance.
+                // In the phase 1 implementation, all slices of the job get aborted
+                range.fail(RestoreJobExceptions.toFatal(cause));
+                if (range.job().isManagedBySidecar())
+                {
+                    rangeDatabaseAccessor.updateStatus(range);
+                }
+                // revoke the s3 credentials of the job too
+                s3ClientPool.revokeCredentials(range.jobId());
+            }
+            return Future.succeededFuture();
+        };
+    }
+
     @VisibleForTesting
     int activeSlices()
     {
-        return sliceQueue.activeSliceCount();
+        return workQueue.activeRangesCount();
     }
 
     @VisibleForTesting
@@ -275,7 +303,7 @@ public class RestoreProcessor implements PeriodicTask
     @VisibleForTesting
     int pendingStartSlices()
     {
-        return sliceQueue.size();
+        return workQueue.size();
     }
 
     @VisibleForTesting
@@ -284,76 +312,79 @@ public class RestoreProcessor implements PeriodicTask
         return sidecarSchema;
     }
 
-    private class SliceQueue
+    private class WorkQueue
     {
         // use concurrent collection for non-blocking read operations
-        private final Queue<RestoreSlice> sliceQueue = new ConcurrentLinkedQueue<>();
+        private final Queue<RestoreRange> restoreRanges = new ConcurrentLinkedQueue<>();
         // use non-concurrent map since all the update operations are (required to)
-        // synchronized for sliceQueue and sliceCounterPerInstance
-        private final Map<Integer, AtomicInteger> sliceCounterPerInstance = new HashMap<>();
+        // synchronized for restoreRanges and pendingRangesPerInstance
+        private final Map<Integer, AtomicInteger> pendingRangesPerInstance = new HashMap<>();
         // use concurrent map to read latest map content, e.g. capture stats, count size, etc.
-        private final Map<Integer, AtomicInteger> activeSliceCounterPerInstance = new ConcurrentHashMap<>();
+        private final Map<Integer, AtomicInteger> activeRangesPerInstance = new ConcurrentHashMap<>();
 
-        synchronized boolean offer(RestoreSlice slice)
+        synchronized boolean offer(RestoreRange range)
         {
-            increment(sliceCounterPerInstance, slice);
-            return sliceQueue.offer(slice);
+            increment(pendingRangesPerInstance, range);
+            return restoreRanges.offer(range);
         }
 
-        synchronized RestoreSlice poll()
+        synchronized void remove(RestoreRange range)
         {
-            RestoreSlice slice = sliceQueue.poll();
+            decrementIfPresent(pendingRangesPerInstance, range);
+            restoreRanges.remove(range);
+        }
+
+        synchronized RestoreRange poll()
+        {
+            RestoreRange slice = restoreRanges.poll();
             if (slice == null)
             {
                 return null;
             }
 
-            decrementIfPresent(sliceCounterPerInstance, slice);
-            increment(activeSliceCounterPerInstance, slice);
+            decrementIfPresent(pendingRangesPerInstance, slice);
+            increment(activeRangesPerInstance, slice);
             return slice;
         }
 
         synchronized void close()
         {
-            for (RestoreSlice slice : sliceQueue)
+            for (RestoreRange range : restoreRanges)
             {
-                slice.cancel();
-                LOGGER.debug("Cancelled slice on closing. jobId={}, sliceId={}", slice.jobId(), slice.sliceId());
+                range.cancel();
+                LOGGER.debug("Cancelled restore ranges on closing. jobId={} sliceId={} startToken={} endToken={}",
+                             range.jobId(), range.sliceId(), range.startToken(), range.endToken());
             }
-            sliceQueue.clear();
-            sliceCounterPerInstance.clear();
-            activeSliceCounterPerInstance.clear();
+            restoreRanges.clear();
+            pendingRangesPerInstance.clear();
+            activeRangesPerInstance.clear();
         }
 
-        RestoreSlice peek()
+        RestoreRange peek()
         {
-            return sliceQueue.peek();
+            return restoreRanges.peek();
         }
 
-        void decrementActiveSliceCount(RestoreSlice slice)
+        void decrementActiveSliceCount(RestoreRange range)
         {
-            decrementIfPresent(activeSliceCounterPerInstance, slice);
+            decrementIfPresent(activeRangesPerInstance, range);
         }
 
         void captureImportQueueLength()
         {
-            activeSliceCounterPerInstance.forEach((instanceId, counter) ->
-                                                  metrics
-                                                  .instance(instanceId).restore()
-                                                  .sliceImportQueueLength.metric.setValue(counter.get()));
+            activeRangesPerInstance.forEach((instanceId, counter) ->
+                                            instanceRestoreMetrics(instanceId).sliceImportQueueLength.metric.setValue(counter.get()));
         }
 
         void capturePendingSliceCount()
         {
-            sliceCounterPerInstance.forEach((instanceId, counter) ->
-                                            metrics
-                                            .instance(instanceId).restore()
-                                            .pendingSliceCount.metric.setValue(counter.get()));
+            pendingRangesPerInstance.forEach((instanceId, counter) ->
+                                             instanceRestoreMetrics(instanceId).pendingSliceCount.metric.setValue(counter.get()));
         }
 
-        private void increment(Map<Integer, AtomicInteger> map, RestoreSlice slice)
+        private void increment(Map<Integer, AtomicInteger> map, RestoreRange range)
         {
-            map.compute(slice.owner().id(), (key, counter) -> {
+            map.compute(range.owner().id(), (key, counter) -> {
                 if (counter == null)
                 {
                     counter = new AtomicInteger();
@@ -363,14 +394,14 @@ public class RestoreProcessor implements PeriodicTask
             });
         }
 
-        private void decrementIfPresent(Map<Integer, AtomicInteger> map, RestoreSlice slice)
+        private void decrementIfPresent(Map<Integer, AtomicInteger> map, RestoreRange range)
         {
-            map.computeIfPresent(slice.owner().id(), (key, counter) -> {
+            map.computeIfPresent(range.owner().id(), (key, counter) -> {
                 if (counter.get() < 0) // The condition is not expected. Log it if it happens
                 {
                     // create an IllegalStateException to capture stacktrace
                     LOGGER.warn("Slice counter dropped below 0. sliceKey={}",
-                                slice.key(), new IllegalStateException("Unexpected slice counter state"));
+                                range.sliceKey(), new IllegalStateException("Unexpected slice counter state"));
                     counter.set(0); // repair anomaly
                     return counter;
                 }
@@ -379,16 +410,21 @@ public class RestoreProcessor implements PeriodicTask
             });
         }
 
-        @VisibleForTesting
-        int size()
+        private InstanceRestoreMetrics instanceRestoreMetrics(int instanceId)
         {
-            return sliceQueue.size();
+            return metrics.instance(instanceId).restore();
         }
 
         @VisibleForTesting
-        int activeSliceCount()
+        int size()
         {
-            return activeSliceCounterPerInstance.values().stream().mapToInt(AtomicInteger::get).sum();
+            return restoreRanges.size();
+        }
+
+        @VisibleForTesting
+        int activeRangesCount()
+        {
+            return activeRangesPerInstance.values().stream().mapToInt(AtomicInteger::get).sum();
         }
     }
 }

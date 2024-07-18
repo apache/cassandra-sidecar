@@ -37,7 +37,6 @@ import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
-import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -53,20 +52,17 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobRequestPayload>
 {
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
-    private final RestoreJobManagerGroup restoreJobManagerGroup;
     private final RestoreMetrics metrics;
 
     @Inject
     public UpdateRestoreJobHandler(ExecutorPools executorPools,
                                    InstanceMetadataFetcher instanceMetadataFetcher,
                                    RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
-                                   RestoreJobManagerGroup restoreJobManagerGroup,
                                    CassandraInputValidator validator,
                                    SidecarMetrics metrics)
     {
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
-        this.restoreJobManagerGroup = restoreJobManagerGroup;
         this.metrics = metrics.server().restore();
     }
 
@@ -80,7 +76,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
         RoutingContextUtils
         .getAsFuture(context, SC_RESTORE_JOB)
         .compose(job -> {
-            if (RestoreJobStatus.isFinalState(job.status))
+            if (job.status.isFinal())
             {
                 // skip the update, since the job is in the final state already
                 logger.debug("The job has completed already. job={}", job);
@@ -108,7 +104,6 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                 metrics.tokenRefreshed.metric.update(1);
             }
 
-            restoreJobManagerGroup.signalRefreshRestoreJob();
             context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestPayload));

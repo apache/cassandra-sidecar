@@ -18,20 +18,11 @@
 
 package org.apache.cassandra.sidecar.routes.restore;
 
-import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
-import io.vertx.ext.web.codec.BodyCodec;
+import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
@@ -106,26 +97,10 @@ class AbortRestoreJobHandlerTest extends BaseRestoreJobTests
                                                      String jobId,
                                                      VertxTestContext context,
                                                      int expectedStatusCode,
-                                                     AbortRestoreJobRequestPayload requestPayload) throws Throwable
+                                                     AbortRestoreJobRequestPayload requestPayload)
     {
-        WebClient client = WebClient.create(vertx, new WebClientOptions());
-        HttpRequest<Buffer> request = client.post(server.actualPort(),
-                                                  "localhost",
-                                                  String.format(RESTORE_JOB_ABORT_ENDPOINT, keyspace, table, jobId))
-                                            .as(BodyCodec.buffer());
-        Handler<AsyncResult<HttpResponse<Buffer>>> responseVerifier = resp -> {
-            context.verify(() -> assertThat(resp.result().statusCode()).isEqualTo(expectedStatusCode))
-                   .completeNow();
-            client.close();
-        };
-        if (requestPayload != null)
-        {
-            request.sendJson(requestPayload, responseVerifier);
-        }
-        else
-        {
-            request.send(responseVerifier);
-        }
-        context.awaitCompletion(10, TimeUnit.SECONDS);
+        JsonObject jsonPayload = requestPayload == null ? null : JsonObject.mapFrom(requestPayload);
+        postThenComplete(context, String.format(RESTORE_JOB_ABORT_ENDPOINT, keyspace, table, jobId), jsonPayload,
+                         resp -> assertThat(resp.result().statusCode()).isEqualTo(expectedStatusCode));
     }
 }

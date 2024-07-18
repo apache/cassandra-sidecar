@@ -19,48 +19,69 @@
 package org.apache.cassandra.sidecar.common.request;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
+import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CONSISTENCY_LEVEL;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_LOCAL_DATA_CENTER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CreateRestoreJobRequestPayloadTest
 {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
     @Test
     void testSerDeser() throws JsonProcessingException
     {
         String id = "e870e5dc-d25e-11ed-afa1-0242ac120002";
         RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
-        long time = System.currentTimeMillis() + 10000;
-        Date date = Date.from(Instant.ofEpochMilli(time));
-        CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload.builder(secrets, time)
+        long expireAt = System.currentTimeMillis() + 10000;
+        Date date = Date.from(Instant.ofEpochMilli(expireAt));
+        CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload.builder(secrets, expireAt)
                                                                            .jobId(UUID.fromString(id))
-                                                                           .consistencyLevel("QUORUM")
+                                                                           .consistencyLevel(ConsistencyLevel.QUORUM)
                                                                            .jobAgent("agent")
                                                                            .build();
         String json = MAPPER.writeValueAsString(req);
+        assertThat(json).describedAs("Null value fields should be excluded").doesNotContain(JOB_LOCAL_DATA_CENTER)
+                        .describedAs("Non-null value fields should be included").contains(JOB_CONSISTENCY_LEVEL)
+                        .isEqualTo("{\"jobId\":\"e870e5dc-d25e-11ed-afa1-0242ac120002\"," +
+                                   "\"jobAgent\":\"agent\"," +
+                                   "\"secrets\":" + MAPPER.writeValueAsString(secrets) + "," +
+                                   "\"importOptions\":{" +
+                                   "\"verifyTokens\":\"true\"," +
+                                   "\"resetLevel\":\"true\"," +
+                                   "\"clearRepaired\":\"true\"," +
+                                   "\"extendedVerify\":\"true\"," +
+                                   "\"verifySSTables\":\"true\"," +
+                                   "\"invalidateCaches\":\"true\"," +
+                                   "\"copyData\":\"false\"}," +
+                                   "\"expireAt\":" + expireAt + "," +
+                                   "\"consistencyLevel\":\"QUORUM\"}");
         CreateRestoreJobRequestPayload test = MAPPER.readValue(json, CreateRestoreJobRequestPayload.class);
         assertThat(test.jobId()).hasToString(id);
         assertThat(test.jobAgent()).isEqualTo("agent");
         assertThat(test.secrets()).isEqualTo(secrets);
-        assertThat(test.expireAtInMillis()).isEqualTo(time);
+        assertThat(test.expireAtInMillis()).isEqualTo(expireAt);
         assertThat(test.expireAtAsDate()).isEqualTo(date);
         assertThat(test.importOptions()).isEqualTo(SSTableImportOptions.defaults());
         assertThat(test.consistencyLevel()).isEqualTo("QUORUM");
+        assertThat(test.localDatacenter()).isNull();
     }
 
     @Test
@@ -177,7 +198,7 @@ class CreateRestoreJobRequestPayloadTest
                                                  .resetLevel(false)
                                                  .clearRepaired(false);
                                              })
-                                             .consistencyLevel("QUORUM")
+                                             .consistencyLevel(ConsistencyLevel.QUORUM)
                                              .build();
         assertThat(req.secrets()).isEqualTo(secrets);
         assertThat(req.jobAgent()).isEqualTo("agent");
@@ -185,5 +206,25 @@ class CreateRestoreJobRequestPayloadTest
                                                                       .resetLevel(false)
                                                                       .clearRepaired(false));
         assertThat(req.consistencyLevel()).isEqualTo("QUORUM");
+    }
+
+    @Test
+    void testCreateLocalQuorumJobWithoutLocalDCFails()
+    {
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+
+        for (ConsistencyLevel localCL : Arrays.asList(ConsistencyLevel.LOCAL_QUORUM, ConsistencyLevel.LOCAL_ONE))
+        {
+            assertThatThrownBy(() -> CreateRestoreJobRequestPayload.builder(secrets, System.currentTimeMillis())
+                                                                   .consistencyLevel(localCL)
+                                                                   .build())
+            .hasMessage("Must specify a non-empty localDatacenter for consistency level: " + localCL.name());
+
+            assertThatThrownBy(() -> CreateRestoreJobRequestPayload.builder(secrets, System.currentTimeMillis())
+                                                                   .consistencyLevel(localCL, "")
+                                                                   .build())
+            .hasMessage("Must specify a non-empty localDatacenter for consistency level: " + localCL.name());
+        }
+
     }
 }

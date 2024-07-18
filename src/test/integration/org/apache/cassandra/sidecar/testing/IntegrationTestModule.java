@@ -81,7 +81,7 @@ public class IntegrationTestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public CQLSessionProvider cqlSessionProvider(Vertx vertx, InstancesConfig instancesConfig)
+    public CQLSessionProvider cqlSessionProvider(Vertx vertx)
     {
         CQLSessionProvider cqlSessionProvider = new CQLSessionProvider()
         {

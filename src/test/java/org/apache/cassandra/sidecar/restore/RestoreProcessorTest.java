@@ -36,8 +36,9 @@ import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.db.RestoreJob;
-import org.apache.cassandra.sidecar.db.RestoreSlice;
+import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceRestoreMetrics;
@@ -48,6 +49,7 @@ import org.mockito.Mockito;
 import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.mock;
@@ -95,7 +97,7 @@ class RestoreProcessorTest
         int total = concurrency * 3;
         for (int i = 0; i < total; i++)
         {
-            processor.submit(mockSlowSlice(latch));
+            processor.submit(mockSlowRestoreRange(latch));
         }
 
         InstanceRestoreMetrics instanceRestoreMetrics = instanceMetrics().restore();
@@ -149,7 +151,7 @@ class RestoreProcessorTest
         assertThat(processor.activeSlices()).isZero();
 
         CountDownLatch latch = new CountDownLatch(1);
-        processor.submit(mockSlowSlice(latch));
+        processor.submit(mockSlowRestoreRange(latch));
         assertThat(processor.activeSlices())
         .describedAs("No slice should be active because executions are skipped")
         .isZero();
@@ -170,32 +172,53 @@ class RestoreProcessorTest
 
         CountDownLatch latch = new CountDownLatch(1);
         AtomicLong currentTime = new AtomicLong(0);
-        RestoreSlice slice = mockSlowSlice(latch, currentTime::get); // Sets the start time
+        RestoreRange range = mockSlowRestoreRange(latch, currentTime::get); // Sets the start time
         long oneMinutesInNanos = TimeUnit.NANOSECONDS.convert(1, TimeUnit.MINUTES);
         currentTime.set(oneMinutesInNanos);
-        processor.submit(slice);
+        processor.submit(range);
         loopAssert(3, () -> {
             long[] slowRestoreTaskTimes = instanceMetrics()
                                           .restore()
                                           .slowRestoreTaskTime.metric.getSnapshot().getValues();
             assertThat(slowRestoreTaskTimes)
             .describedAs("The task takes 1 minute. " +
-                         "The slow task threshodl is 10 seconds and report delay is 2 minutes (see TestModule). " +
+                         "The slow task threshold is 10 seconds and report delay is 2 minutes (see TestModule). " +
                          "It should only report once")
             .hasSize(1);
-            Long handlerTimeInNanos = slowRestoreTaskTimes[0];
-            assertThat(handlerTimeInNanos).isNotNull();
+            long handlerTimeInNanos = slowRestoreTaskTimes[0];
             assertThat(handlerTimeInNanos).isEqualTo(oneMinutesInNanos);
             assertThat(processor.activeTasks()).isOne();
         });
 
-        // Make slice completable.
+        // Make range completable.
         latch.countDown();
 
-        // Make sure when the slice completes the active handler is removed
+        // Make sure when the range completes the active handler is removed
         loopAssert(3, () -> {
             assertThat(processor.activeTasks()).isZero();
         });
+    }
+
+    @Test
+    void testSubmitFailedTask()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        periodicTaskExecutor.schedule(processor);
+
+        RestoreRange range = RestoreRangeTest.createTestRange();
+        // the range is already cancelled, it should produce a failed task directly.
+        range.cancel();
+        processor.submit(range);
+
+        // the canceled range should fail the job
+        loopAssert(3,
+                   () -> assertThat(range.trackerUnsafe().isFailed()).isTrue());
+
+        // trying to submit the range again, it throws fatal exception that the range has been cancelled
+        assertThatThrownBy(() -> range.trackerUnsafe().trySubmit(range))
+        .isExactlyInstanceOf(RestoreJobFatalException.class)
+        .hasMessageContaining("Restore range is cancelled.");
+
     }
 
     private InstanceMetrics instanceMetrics()
@@ -203,32 +226,24 @@ class RestoreProcessorTest
         return new InstanceMetricsImpl(registry(1));
     }
 
-    private RestoreSlice mockSlowSlice(CountDownLatch latch)
+    private RestoreRange mockSlowRestoreRange(CountDownLatch latch)
     {
-        return mockSlowSlice(latch, System::nanoTime);
+        return mockSlowRestoreRange(latch, System::nanoTime);
     }
 
-    private RestoreSlice mockSlowSlice(CountDownLatch latch, Supplier<Long> timeInNanosSupplier)
+    private RestoreRange mockSlowRestoreRange(CountDownLatch latch, Supplier<Long> timeInNanosSupplier)
     {
-        RestoreSlice slice = mock(RestoreSlice.class, Mockito.RETURNS_DEEP_STUBS);
-        when(slice.jobId()).thenReturn(UUIDs.timeBased());
-        when(slice.owner().id()).thenReturn(1);
-        when(slice.key()).thenReturn("SliceKey");
-        when(slice.owner().metrics()).thenReturn(instanceMetrics());
-        RestoreJob job = RestoreJob.builder()
-                                   .jobStatus(RestoreJobStatus.CREATED)
-                                   .build();
-        when(slice.job()).thenReturn(job);
-        when(slice.toAsyncTask(any(), any(), any(), anyDouble(), any(), any(), any(), any())).thenReturn(
-        new RestoreSliceHandler()
+        RestoreRange range = mockRestoreRange();
+        when(range.toAsyncTask(any(), any(), any(), anyDouble(), any(), any(), any(), any())).thenReturn(
+        new RestoreRangeHandler()
         {
-            private Long startTime = timeInNanosSupplier.get();
+            private final Long startTime = timeInNanosSupplier.get();
 
             @Override
-            public void handle(Promise<RestoreSlice> promise)
+            public void handle(Promise<RestoreRange> promise)
             {
                 Uninterruptibles.awaitUninterruptibly(latch);
-                promise.complete(slice);
+                promise.complete(range);
             }
 
             @Override
@@ -238,12 +253,27 @@ class RestoreProcessorTest
             }
 
             @Override
-            public RestoreSlice slice()
+            public RestoreRange range()
             {
-                return slice;
+                return range;
             }
         });
-        when(slice.hasImported()).thenReturn(true);
-        return slice;
+        return range;
+    }
+
+    private RestoreRange mockRestoreRange()
+    {
+        RestoreRange range = mock(RestoreRange.class, Mockito.RETURNS_DEEP_STUBS);
+        when(range.jobId()).thenReturn(UUIDs.timeBased());
+        when(range.canProduceTask()).thenReturn(true);
+        when(range.owner().id()).thenReturn(1);
+        when(range.sliceKey()).thenReturn("SliceKey");
+        when(range.owner().metrics()).thenReturn(instanceMetrics());
+        RestoreJob job = RestoreJob.builder()
+                                   .jobStatus(RestoreJobStatus.CREATED)
+                                   .build();
+        when(range.job()).thenReturn(job);
+        when(range.hasImported()).thenReturn(true);
+        return range;
     }
 }

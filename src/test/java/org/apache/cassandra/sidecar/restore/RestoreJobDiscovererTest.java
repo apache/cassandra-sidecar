@@ -34,16 +34,16 @@ import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.utils.UUIDs;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
-import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
@@ -68,6 +68,7 @@ class RestoreJobDiscovererTest
     private static final int recencyDays = 10;
     private final RestoreJobDatabaseAccessor mockJobAccessor = mock(RestoreJobDatabaseAccessor.class);
     private final RestoreSliceDatabaseAccessor mockSliceAccessor = mock(RestoreSliceDatabaseAccessor.class);
+    private final RestoreRangeDatabaseAccessor mockRangeAccessor = mock(RestoreRangeDatabaseAccessor.class);
     private final RestoreJobManagerGroup mockManagers = mock(RestoreJobManagerGroup.class);
     private final LocalTokenRangesProvider rangesProvider = mock(LocalTokenRangesProvider.class);
     private final PeriodicTaskExecutor executor = mock(PeriodicTaskExecutor.class);
@@ -86,8 +87,10 @@ class RestoreJobDiscovererTest
                                         sidecarSchema,
                                         mockJobAccessor,
                                         mockSliceAccessor,
+                                        mockRangeAccessor,
                                         () -> mockManagers,
                                         rangesProvider,
+                                        null,
                                         null,
                                         metrics);
     }
@@ -141,7 +144,7 @@ class RestoreJobDiscovererTest
     // Signal refresh and in the fourth execution, it finds a new job
     // In the fifth execution, it finds the job failed and there is no more inflight jobs
     @Test
-    void testExecute() throws JsonProcessingException
+    void testExecute()
     {
         when(sidecarSchema.isInitialized()).thenReturn(true);
         // setup, cassandra should return 3 jobs, a new job, a failed and a succeeded
@@ -154,8 +157,8 @@ class RestoreJobDiscovererTest
                                         new Date(System.currentTimeMillis() + 10000L)));
         mockResult.add(createUpdatedJob(succeededJobId, "agent", RestoreJobStatus.SUCCEEDED, null,
                                         new Date(System.currentTimeMillis() + 10000L)));
-        ArgumentCaptor<UUID> jobIdCapture = ArgumentCaptor.forClass(UUID.class);
-        doNothing().when(mockManagers).removeJobInternal(jobIdCapture.capture());
+        ArgumentCaptor<RestoreJob> jobCapture = ArgumentCaptor.forClass(RestoreJob.class);
+        doNothing().when(mockManagers).removeJobInternal(jobCapture.capture());
         when(mockJobAccessor.findAllRecent(anyInt())).thenReturn(mockResult);
         loop.registerPeriodicTaskExecutor(executor);
 
@@ -171,7 +174,8 @@ class RestoreJobDiscovererTest
         executeBlocking();
 
         assertThat(metrics.server().restore().activeJobs.metric.getValue()).isOne();
-        assertThat(jobIdCapture.getAllValues()).containsExactlyInAnyOrder(failedJobId, succeededJobId);
+        assertThat(jobCapture.getAllValues().stream().map(job -> job.jobId))
+        .containsExactlyInAnyOrder(failedJobId, succeededJobId);
         assertThat(loop.hasInflightJobs())
         .describedAs("An inflight job should be found")
         .isTrue();
@@ -189,20 +193,15 @@ class RestoreJobDiscovererTest
         assertThat(loop.hasInflightJobs())
         .describedAs("There should be no more inflight jobs")
         .isFalse();
-        assertThat(loop.isRefreshSignaled())
-        .describedAs("There should be no refresh signal")
-        .isFalse();
 
         // Execution 3
         // shouldSkip always returns false
         assertThat(loop.shouldSkip()).isFalse();
 
         // Execution 4
-        loop.signalRefresh();
         UUID newJobId2 = UUIDs.timeBased();
         when(mockJobAccessor.findAllRecent(anyInt()))
         .thenReturn(Collections.singletonList(createNewTestingJob(newJobId2)));
-        assertThat(loop.isRefreshSignaled()).isTrue();
 
         executeBlocking();
 
@@ -210,9 +209,6 @@ class RestoreJobDiscovererTest
         assertThat(loop.hasInflightJobs())
         .describedAs("It should find a new inflight job")
         .isTrue();
-        assertThat(loop.isRefreshSignaled())
-        .describedAs("The signal should reset after execution")
-        .isFalse();
 
         // Execution 5
         when(mockJobAccessor.findAllRecent(anyInt()))
@@ -224,7 +220,7 @@ class RestoreJobDiscovererTest
         assertThat(loop.hasInflightJobs())
         .describedAs("Last job failed, no more inflight jobs")
         .isFalse();
-        assertThat(jobIdCapture.getValue())
+        assertThat(jobCapture.getValue().jobId)
         .describedAs("Failed job should be removed")
         .isEqualTo(newJobId2);
     }

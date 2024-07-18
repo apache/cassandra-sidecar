@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,9 +54,9 @@ public class TokenRange
                                .map(range -> {
                                    BigInteger start = (BigInteger) range.getStart().getValue();
                                    BigInteger end = (BigInteger) range.getEnd().getValue();
-                                   if (end.compareTo(Partitioner.Random.minToken) == 0)
+                                   if (end.compareTo(Partitioners.RANDOM.minimumToken().toBigInteger()) == 0)
                                    {
-                                       end = Partitioner.Random.maxToken;
+                                       end = Partitioners.RANDOM.maximumToken().toBigInteger();
                                    }
                                    return new TokenRange(start, end);
                                })
@@ -67,9 +69,9 @@ public class TokenRange
                                .map(range -> {
                                    BigInteger start = BigInteger.valueOf((Long) range.getStart().getValue());
                                    BigInteger end = BigInteger.valueOf((Long) range.getEnd().getValue());
-                                   if (end.compareTo(Partitioner.Murmur3.minToken) == 0)
+                                   if (end.compareTo(Partitioners.MURMUR3.minimumToken().toBigInteger()) == 0)
                                    {
-                                       end = Partitioner.Murmur3.maxToken;
+                                       end = Partitioners.MURMUR3.maximumToken().toBigInteger();
                                    }
                                    return new TokenRange(start, end);
                                })
@@ -115,7 +117,7 @@ public class TokenRange
     }
 
     /**
-     * @return the first token enclosed in the range
+     * @return the first token enclosed in the range. It returns null if the range is empty, e.g. (v, v]
      */
     @Nullable
     public Token firstToken()
@@ -159,9 +161,12 @@ public class TokenRange
                && other.range.lowerEndpoint().compareTo(this.range.upperEndpoint()) < 0;
     }
 
-    public TokenRange intersection(TokenRange overlapping)
+    /**
+     * @return the range that is enclosed by both this and the other ranges.
+     */
+    public TokenRange intersection(TokenRange other)
     {
-        Range<Token> overlap = this.range.intersection(overlapping.range);
+        Range<Token> overlap = this.range.intersection(other.range);
         return new TokenRange(overlap.lowerEndpoint(), overlap.upperEndpoint());
     }
 

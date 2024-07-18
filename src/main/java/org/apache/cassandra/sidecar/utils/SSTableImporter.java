@@ -254,6 +254,7 @@ public class SSTableImporter
                         LOGGER.error("Failed to import SSTables with options={}, serviceTimeMillis={}, " +
                                      "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos),
                                      failedDirectories);
+                        // TODO: HttpException should not be thrown by importer, as it is not at the transport layer
                         promise.fail(new HttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
                                                        "Failed to import from directories: " + failedDirectories));
                     }

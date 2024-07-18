@@ -35,10 +35,6 @@ version project.version
 
 sourceCompatibility = 1.8
 
-repositories {
-    mavenCentral()
-}
-
 test {
     useJUnitPlatform()
     if (Os.isFamily(Os.FAMILY_MAC)) {

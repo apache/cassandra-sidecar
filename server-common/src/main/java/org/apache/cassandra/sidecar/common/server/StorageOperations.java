@@ -32,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * An interface that defines interactions with the storage system in Cassandra.
+ * TODO: relocate to server-common
  */
 public interface StorageOperations
 {

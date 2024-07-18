@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.inject.Inject;
@@ -31,7 +30,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
-import org.apache.cassandra.sidecar.db.RestoreSlice;
+import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
@@ -45,7 +44,6 @@ public class RestoreJobManagerGroup
     // instance id --> RestoreJobManager
     private final Map<Integer, RestoreJobManager> managerGroup = new ConcurrentHashMap<>();
     private final RestoreProcessor restoreProcessor;
-    private final RestoreJobDiscoverer jobDiscoverer;
     private final ExecutorPools executorPools;
 
     @Inject
@@ -54,39 +52,32 @@ public class RestoreJobManagerGroup
                                   ExecutorPools executorPools,
                                   PeriodicTaskExecutor periodicTaskExecutor,
                                   RestoreProcessor restoreProcessor,
-                                  RestoreJobDiscoverer jobDiscoverer)
+                                  RestoreJobDiscoverer jobDiscoverer,
+                                  RingTopologyRefresher ringTopologyRefresher)
     {
         this.restoreJobConfig = configuration.restoreJobConfiguration();
         this.restoreProcessor = restoreProcessor;
-        this.jobDiscoverer = jobDiscoverer;
         this.executorPools = executorPools;
         initializeManagers(instancesConfig);
-        jobDiscoverer.signalRefresh();
         periodicTaskExecutor.schedule(jobDiscoverer);
         periodicTaskExecutor.schedule(restoreProcessor);
+        periodicTaskExecutor.schedule(ringTopologyRefresher);
     }
 
     /**
-     * Simply delegates to {@link RestoreJobManager#trySubmit(RestoreSlice, RestoreJob)}
+     * Simply delegates to {@link RestoreJobManager#trySubmit(RestoreRange, RestoreJob)}
      *
-     * @param instance   the cassandra instance to submit the slice to
-     * @param slice      restore slice
+     * @param instance   the cassandra instance to submit the restore range to
+     * @param range      restore range
      * @param restoreJob the restore job instance
-     * @return status of the submitted slice
+     * @return status of the submitted restore range
      * @throws RestoreJobFatalException the job has failed
      */
-    public RestoreSliceTracker.Status trySubmit(InstanceMetadata instance, RestoreSlice slice, RestoreJob restoreJob)
+    public RestoreJobProgressTracker.Status trySubmit(InstanceMetadata instance,
+                                                      RestoreRange range, RestoreJob restoreJob)
     throws RestoreJobFatalException
     {
-        return getManager(instance).trySubmit(slice, restoreJob);
-    }
-
-    /**
-     * Send a signal to the restore job discovery loop to refresh
-     */
-    public void signalRefreshRestoreJob()
-    {
-        jobDiscoverer.signalRefresh();
+        return getManager(instance).trySubmit(range, restoreJob);
     }
 
     /**
@@ -95,11 +86,15 @@ public class RestoreJobManagerGroup
      * in the final {@link RestoreJobStatus}, i.e. SUCCEEDED or FAILED.
      * If the restore job is not cached, it is a no-op.
      *
-     * @param jobId id of the restore job
+     * @param restoreJob restore job
      */
-    void removeJobInternal(UUID jobId)
+    void removeJobInternal(RestoreJob restoreJob)
     {
-        managerGroup.values().forEach(manager -> manager.removeJobInternal(jobId));
+        if (!restoreJob.status.isFinal())
+        {
+            throw new IllegalStateException("Cannot remove job that is not in final status");
+        }
+        managerGroup.values().forEach(manager -> manager.removeJobInternal(restoreJob.jobId));
     }
 
     /**
@@ -112,9 +107,9 @@ public class RestoreJobManagerGroup
      */
     void updateRestoreJob(RestoreJob restoreJob)
     {
-        if (restoreJob.status != RestoreJobStatus.CREATED)
+        if (restoreJob.status.isFinal())
         {
-            throw new IllegalStateException("Cannot update with a non-created restore job");
+            throw new IllegalStateException("Cannot update with a restore job in final status");
         }
         managerGroup.values().forEach(manager -> manager.updateRestoreJob(restoreJob));
     }

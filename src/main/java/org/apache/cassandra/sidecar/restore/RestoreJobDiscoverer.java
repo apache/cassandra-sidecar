@@ -18,12 +18,14 @@
 
 package org.apache.cassandra.sidecar.restore;
 
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -36,17 +38,19 @@ import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.RestoreRange;
+import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.locator.CachedLocalTokenRanges;
-import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
@@ -65,12 +69,13 @@ public class RestoreJobDiscoverer implements PeriodicTask
     private final SidecarSchema sidecarSchema;
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
     private final RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor;
+    private final RestoreRangeDatabaseAccessor restoreRangeDatabaseAccessor;
     private final Provider<RestoreJobManagerGroup> restoreJobManagerGroupSingleton;
     private final LocalTokenRangesProvider localTokenRangesProvider;
     private final InstanceMetadataFetcher instanceMetadataFetcher;
     private final RestoreMetrics metrics;
     private final JobIdsByDay jobIdsByDay;
-    private volatile boolean refreshSignaled = true;
+    private final RingTopologyRefresher ringTopologyRefresher;
     private int inflightJobsCount = 0;
     private int jobDiscoveryRecencyDays;
     private PeriodicTaskExecutor periodicTaskExecutor;
@@ -80,18 +85,22 @@ public class RestoreJobDiscoverer implements PeriodicTask
                                 SidecarSchema sidecarSchema,
                                 RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
                                 RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor,
+                                RestoreRangeDatabaseAccessor restoreRangeDatabaseAccessor,
                                 Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
-                                CachedLocalTokenRanges cachedLocalTokenRanges,
+                                LocalTokenRangesProvider cachedLocalTokenRanges,
                                 InstanceMetadataFetcher instanceMetadataFetcher,
+                                RingTopologyRefresher ringTopologyRefresher,
                                 SidecarMetrics metrics)
     {
         this(config.restoreJobConfiguration(),
              sidecarSchema,
              restoreJobDatabaseAccessor,
              restoreSliceDatabaseAccessor,
+             restoreRangeDatabaseAccessor,
              restoreJobManagerGroupProvider,
              cachedLocalTokenRanges,
              instanceMetadataFetcher,
+             ringTopologyRefresher,
              metrics);
     }
 
@@ -100,19 +109,23 @@ public class RestoreJobDiscoverer implements PeriodicTask
                          SidecarSchema sidecarSchema,
                          RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
                          RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor,
+                         RestoreRangeDatabaseAccessor restoreRangeDatabaseAccessor,
                          Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
                          LocalTokenRangesProvider cachedLocalTokenRanges,
                          InstanceMetadataFetcher instanceMetadataFetcher,
+                         RingTopologyRefresher ringTopologyRefresher,
                          SidecarMetrics metrics)
     {
         this.restoreJobConfig = restoreJobConfig;
         this.sidecarSchema = sidecarSchema;
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
         this.restoreSliceDatabaseAccessor = restoreSliceDatabaseAccessor;
+        this.restoreRangeDatabaseAccessor = restoreRangeDatabaseAccessor;
         this.jobDiscoveryRecencyDays = restoreJobConfig.jobDiscoveryRecencyDays();
         this.restoreJobManagerGroupSingleton = restoreJobManagerGroupProvider;
         this.localTokenRangesProvider = cachedLocalTokenRanges;
         this.instanceMetadataFetcher = instanceMetadataFetcher;
+        this.ringTopologyRefresher = ringTopologyRefresher;
         this.metrics = metrics.server().restore();
         this.jobIdsByDay = new JobIdsByDay();
     }
@@ -151,8 +164,8 @@ public class RestoreJobDiscoverer implements PeriodicTask
 
         // Log one message every few minutes should be acceptable
         LOGGER.info("Discovering restore jobs. " +
-                    "refreshSignaled={} inflightJobsCount={} delayMs={} jobDiscoveryRecencyDays={}",
-                    refreshSignaled, inflightJobsCount, delay(), jobDiscoveryRecencyDays);
+                    "inflightJobsCount={} delayMs={} jobDiscoveryRecencyDays={}",
+                    inflightJobsCount, delay(), jobDiscoveryRecencyDays);
 
         boolean hasInflightJobBefore = hasInflightJobs();
         // reset in-flight jobs
@@ -190,6 +203,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                         restoreJobManagers.updateRestoreJob(job);
                         if (job.isManagedBySidecar())
                         {
+                            ringTopologyRefresher.register(job);
                             // todo: potential exceedingly number of queries
                             findSlicesAndSubmit(job);
                         }
@@ -198,7 +212,11 @@ public class RestoreJobDiscoverer implements PeriodicTask
                     case FAILED:
                     case ABORTED:
                     case SUCCEEDED:
-                        restoreJobManagers.removeJobInternal(job.jobId);
+                        restoreJobManagers.removeJobInternal(job);
+                        if (job.isManagedBySidecar())
+                        {
+                            ringTopologyRefresher.unregister(job);
+                        }
                         break;
                     default:
                         LOGGER.warn("Encountered unknown job status. jobId={} status={}", job.jobId, job.status);
@@ -212,15 +230,12 @@ public class RestoreJobDiscoverer implements PeriodicTask
         jobIdsByDay.cleanupMaybe();
         // shrink recency to lookup less data next time
         jobDiscoveryRecencyDays = Math.min(days, jobDiscoveryRecencyDays);
-        // reset the external refresh signal if any
-        refreshSignaled = false;
         LOGGER.info("Exit job discovery. " +
-                    "refreshSignaled={} " +
                     "inflightJobsCount={} " +
                     "jobDiscoveryRecencyDays={} " +
                     "expiredJobs={} " +
                     "abortedJobs={}",
-                    refreshSignaled, inflightJobsCount, jobDiscoveryRecencyDays, expiredJobs, abortedJobs);
+                    inflightJobsCount, jobDiscoveryRecencyDays, expiredJobs, abortedJobs);
         metrics.activeJobs.metric.setValue(inflightJobsCount);
 
         boolean hasInflightJobsNow = hasInflightJobs();
@@ -235,14 +250,6 @@ public class RestoreJobDiscoverer implements PeriodicTask
     public void registerPeriodicTaskExecutor(PeriodicTaskExecutor executor)
     {
         this.periodicTaskExecutor = executor;
-    }
-
-    /**
-     * Signal the job discovery loop to refresh in the next execution
-     */
-    public void signalRefresh()
-    {
-        refreshSignaled = true;
     }
 
     // find all slices of the job that should be downloaded to the local instances,
@@ -264,23 +271,47 @@ public class RestoreJobDiscoverer implements PeriodicTask
     {
         short bucketId = 0; // TODO: update the implementation to pick proper bucketId
         restoreSliceDatabaseAccessor
-        .selectByJobByBucketByTokenRange(restoreJob.jobId, bucketId, range)
+        .selectByJobByBucketByTokenRange(restoreJob, bucketId, range)
         .forEach(slice -> {
             // set the owner instance, which is not read from database
-            slice = slice.unbuild().ownerInstance(instance).build();
-            try
+            TokenRangeReplicasResponse topology = ringTopologyRefresher.cachedReplicaByTokenRange(restoreJob);
+            List<RestoreRange> splits = slice.splitMaybe(topology)
+                                             .stream()
+                                             .map(s -> {
+                                                 String uploadId = RestoreJobUtil.generateUniqueUploadId(s.jobId(), s.sliceId());
+                                                 return RestoreRange.builderFromSlice(s)
+                                                                    .ownerInstance(instance)
+                                                                    .stageDirectory(Paths.get(instance.stagingDir()), uploadId)
+                                                                    .build();
+                                             })
+                                             .collect(Collectors.toList());
+            RestoreJobManagerGroup managerGroup = restoreJobManagerGroupSingleton.get();
+            for (RestoreRange split : splits)
             {
-                // todo: do not re-submit for download if the slice is staged (when job status is before staged)
-                //       or imported (when job status is staged) on the instance already
-                restoreJobManagerGroupSingleton.get().trySubmit(instance, slice, restoreJob);
-            }
-            catch (RestoreJobFatalException e)
-            {
-                slice.fail(e); // TODO: is it still needed? no, remove it later.
-                slice.failAtInstance(instance.id());
-                restoreSliceDatabaseAccessor.updateStatus(slice);
+                RestoreJobProgressTracker.Status status = submit(instance, managerGroup, restoreJob, split);
+                if (status == RestoreJobProgressTracker.Status.CREATED)
+                {
+                    restoreRangeDatabaseAccessor.create(split);
+                }
             }
         });
+    }
+
+    private RestoreJobProgressTracker.Status submit(InstanceMetadata instance, RestoreJobManagerGroup managerGroup,
+                                                    RestoreJob job, RestoreRange range)
+    {
+        try
+        {
+            return managerGroup.trySubmit(instance, range, job);
+        }
+        catch (RestoreJobFatalException e)
+        {
+            LOGGER.error("Restore range failed. startToken={} endToken={} instance={}",
+                         range.startToken(), range.endToken(), range.owner().host());
+            range.fail(e);
+            restoreRangeDatabaseAccessor.updateStatus(range);
+            return RestoreJobProgressTracker.Status.FAILED;
+        }
     }
 
     private boolean abortJob(RestoreJob job)
@@ -350,11 +381,5 @@ public class RestoreJobDiscoverer implements PeriodicTask
     int jobDiscoveryRecencyDays()
     {
         return jobDiscoveryRecencyDays;
-    }
-
-    @VisibleForTesting
-    boolean isRefreshSignaled()
-    {
-        return refreshSignaled;
     }
 }

@@ -43,7 +43,7 @@ import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.data.StorageCredentials;
 import org.apache.cassandra.sidecar.db.RestoreJob;
-import org.apache.cassandra.sidecar.db.RestoreSlice;
+import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.assertj.core.data.Percentage;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -61,6 +61,7 @@ import software.amazon.awssdk.utils.Md5Utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static software.amazon.awssdk.http.SdkHttpConfigurationOption.TRUST_ALL_CERTIFICATES;
@@ -80,8 +81,8 @@ class StorageClientTest
     private StorageClient client;
     private RestoreJob restoreJob;
 
-    private RestoreSlice testSlice;
-    private RestoreSlice largeTestSlice;
+    private RestoreRange testRange;
+    private RestoreRange largeTestRange;
 
     @TempDir
     Path testFolder;
@@ -123,13 +124,13 @@ class StorageClientTest
         client.authenticate(restoreJob);
         Path testPath = testFolder.resolve(testFileName);
         Files.deleteIfExists(testPath);
-        testSlice = getMockSlice(restoreJob.jobId, testBucket, "key", checksum, testPath);
-        putObject(testSlice, testData);
+        testRange = getMockRange(restoreJob.jobId, testBucket, "key", checksum, testPath);
+        putObject(testRange, testData);
 
         Path largeFilePath = prepareTestFile(testFolder, largeTestFileName, LARGE_FILE_IN_BYTES); // 1MB
-        largeTestSlice = getMockSlice(restoreJob.jobId, testBucket, "largeKey",
+        largeTestRange = getMockRange(restoreJob.jobId, testBucket, "largeKey",
                                       computeChecksum(largeFilePath), largeFilePath);
-        putObject(largeTestSlice, largeFilePath);
+        putObject(largeTestRange, largeFilePath);
         // delete file after putting it in S3
         Files.deleteIfExists(largeFilePath);
     }
@@ -145,8 +146,8 @@ class StorageClientTest
     void testUnauthenticated()
     {
         // slice from a new job that has not been authenticated
-        RestoreSlice unauthedSlice = getMockSlice(UUIDs.timeBased(), "newBucket", "newKey", null, null);
-        assertThatThrownBy(() -> client.objectExists(unauthedSlice).get())
+        RestoreRange unauthed = getMockRange(UUIDs.timeBased(), "newBucket", "newKey", null, null);
+        assertThatThrownBy(() -> client.objectExists(unauthed).get())
         .isInstanceOf(ExecutionException.class)
         .hasCauseInstanceOf(IllegalStateException.class)
         .hasMessageContaining("No credential available");
@@ -155,7 +156,7 @@ class StorageClientTest
     @Test
     void testCheckObjectExistence() throws Exception
     {
-        HeadObjectResponse response = client.objectExists(testSlice).get();
+        HeadObjectResponse response = client.objectExists(testRange).get();
         assertThat(response.sdkHttpResponse().statusCode()).isEqualTo(200);
         assertThat(response.eTag()).isEqualTo('"' + checksum + '"');
     }
@@ -163,8 +164,8 @@ class StorageClientTest
     @Test
     void testCheckObjectExistenceChecksumMismatch()
     {
-        RestoreSlice sliceWithWrongChecksum = getMockSlice(restoreJob.jobId, testBucket, "key", "wrong checksum", null);
-        assertThatThrownBy(() -> client.objectExists(sliceWithWrongChecksum).get())
+        RestoreRange withWrongChecksum = getMockRange(restoreJob.jobId, testBucket, "key", "wrong checksum", null);
+        assertThatThrownBy(() -> client.objectExists(withWrongChecksum).get())
         .isInstanceOf(ExecutionException.class)
         .hasCauseInstanceOf(S3Exception.class)
         .hasMessageContaining("Status Code: 412");
@@ -173,8 +174,8 @@ class StorageClientTest
     @Test
     void testCheckObjectExistenceNotFound()
     {
-        RestoreSlice sliceNotFound = getMockSlice(restoreJob.jobId, testBucket, "keyNotFound", checksum, null);
-        assertThatThrownBy(() -> client.objectExists(sliceNotFound).get())
+        RestoreRange notFound = getMockRange(restoreJob.jobId, testBucket, "keyNotFound", checksum, null);
+        assertThatThrownBy(() -> client.objectExists(notFound).get())
         .isInstanceOf(ExecutionException.class)
         .hasCauseInstanceOf(NoSuchKeyException.class);
     }
@@ -182,7 +183,7 @@ class StorageClientTest
     @Test
     void testGetObject() throws Exception
     {
-        File downloaded = client.downloadObjectIfAbsent(testSlice).get();
+        File downloaded = client.downloadObjectIfAbsent(testRange).get();
         assertThat(downloaded.exists()).isTrue();
         assertThat(new String(Files.readAllBytes(downloaded.toPath()))).isEqualTo(testData);
     }
@@ -191,7 +192,7 @@ class StorageClientTest
     void testGetObjectHasExistingFileOnDisk() throws Exception
     {
         Path existingPath = testFolder.resolve(UUID.randomUUID().toString());
-        RestoreSlice sliceHasFileOnDisk = getMockSlice(restoreJob.jobId, testBucket, "key", checksum, existingPath);
+        RestoreRange sliceHasFileOnDisk = getMockRange(restoreJob.jobId, testBucket, "key", checksum, existingPath);
         File downloaded = client.downloadObjectIfAbsent(sliceHasFileOnDisk).get();
         assertThat(downloaded.getAbsolutePath()).isEqualTo(existingPath.resolve("key").toString());
     }
@@ -204,20 +205,20 @@ class StorageClientTest
         client.authenticate(restoreJob);
         // Download should take around 4 seconds (256 KB/s for a 1MB file)
         long startNanos = System.nanoTime();
-        File downloaded = client.downloadObjectIfAbsent(largeTestSlice).get();
+        File downloaded = client.downloadObjectIfAbsent(largeTestRange).get();
         assertThat(downloaded.exists()).isTrue();
         long elapsedNanos = System.nanoTime() - startNanos;
         assertThat(TimeUnit.NANOSECONDS.toMillis(elapsedNanos)).isCloseTo(TimeUnit.SECONDS.toMillis(4),
                                                                           Percentage.withPercentage(95));
     }
 
-    private RestoreSlice getMockSlice(UUID jobId, String bucket, String key, String checksum, Path localPath)
+    private RestoreRange getMockRange(UUID jobId, String bucket, String key, String checksum, Path localPath)
     {
-        RestoreSlice mock = mock(RestoreSlice.class);
+        RestoreRange mock = mock(RestoreRange.class, RETURNS_DEEP_STUBS);
         when(mock.jobId()).thenReturn(jobId);
-        when(mock.bucket()).thenReturn(bucket);
-        when(mock.key()).thenReturn(key);
-        when(mock.checksum()).thenReturn(checksum);
+        when(mock.sliceBucket()).thenReturn(bucket);
+        when(mock.sliceKey()).thenReturn(key);
+        when(mock.sliceChecksum()).thenReturn(checksum);
         when(mock.stageDirectory()).thenReturn(localPath);
         if (localPath != null)
         {
@@ -226,21 +227,21 @@ class StorageClientTest
         return mock;
     }
 
-    private void putObject(RestoreSlice slice, String stringData) throws Exception
+    private void putObject(RestoreRange range, String stringData) throws Exception
     {
         PutObjectRequest request = PutObjectRequest.builder()
-                                                   .bucket(slice.bucket())
-                                                   .key(slice.key())
+                                                   .bucket(range.sliceBucket())
+                                                   .key(range.sliceKey())
                                                    .build();
 
         s3AsyncClient.putObject(request, AsyncRequestBody.fromString(stringData)).get();
     }
 
-    private void putObject(RestoreSlice slice, Path path) throws Exception
+    private void putObject(RestoreRange range, Path path) throws Exception
     {
         PutObjectRequest request = PutObjectRequest.builder()
-                                                   .bucket(slice.bucket())
-                                                   .key(slice.key())
+                                                   .bucket(range.sliceBucket())
+                                                   .key(range.sliceKey())
                                                    .build();
 
         s3AsyncClient.putObject(request, AsyncRequestBody.fromFile(path)).get();

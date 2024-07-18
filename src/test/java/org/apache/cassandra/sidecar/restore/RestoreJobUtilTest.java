@@ -47,7 +47,7 @@ class RestoreJobUtilTest
         RestoreJobUtil util = new RestoreJobUtil(new XXHash32Provider());
         String checksum = util.checksum(file);
         assertThat(checksum)
-        .describedAs("Hasher should return 32 bits checksum == 4 characters")
+        .describedAs("Hasher should return 32 bits checksum == 4 bytes == 8 characters")
         .hasSize(8)
         .isEqualTo("a0051d07"); // hash of "XXHash32 is employed as the hash algorithm"
     }

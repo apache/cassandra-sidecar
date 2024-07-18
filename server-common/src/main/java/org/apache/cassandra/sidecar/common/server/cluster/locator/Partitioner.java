@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,35 +18,30 @@
 
 package org.apache.cassandra.sidecar.common.server.cluster.locator;
 
-import java.math.BigInteger;
-
 /**
- * Represents types of Partitioners supported and the corresponding starting token values
+ * A simplified mirror of {@code IPartitioner} in Cassandra
  */
-public enum Partitioner
+public interface Partitioner
 {
-    Murmur3(BigInteger.valueOf(Long.MIN_VALUE), BigInteger.valueOf(Long.MAX_VALUE)),
-    Random(BigInteger.ONE.negate(), BigInteger.valueOf(2).pow(127));
+    /**
+     * @return the minimum token of the partitioner
+     *
+     * Note that the minimum token is not assigned to any data, i.e. excluded from the token ring
+     */
+    Token minimumToken();
 
-    public final BigInteger minToken;
-    public final BigInteger maxToken;
+    /**
+     * @return the maximum token of the partitioner
+     *
+     * Note that the maximum token is included in the token ring
+     */
+    Token maximumToken();
 
-    Partitioner(BigInteger minToken, BigInteger maxToken)
+    /**
+     * @return name of the Partitioner
+     */
+    default String name()
     {
-        this.minToken = minToken;
-        this.maxToken = maxToken;
-    }
-
-    public static Partitioner fromClassName(String className)
-    {
-        switch (className)
-        {
-            case "org.apache.cassandra.dht.Murmur3Partitioner":
-                return Murmur3;
-            case "org.apache.cassandra.dht.RandomPartitioner":
-                return Random;
-            default:
-                throw new UnsupportedOperationException("Unexpected partitioner: " + className);
-        }
+        return this.getClass().getSimpleName();
     }
 }

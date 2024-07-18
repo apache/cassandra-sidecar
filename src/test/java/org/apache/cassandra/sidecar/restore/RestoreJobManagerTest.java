@@ -43,6 +43,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
+import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
@@ -100,79 +101,79 @@ class RestoreJobManagerTest
     void testTrySubmit() throws RestoreJobException
     {
         // submit the first time
-        RestoreSlice slice = getTestSlice();
-        assertThat(manager.trySubmit(slice, slice.job()))
-        .isEqualTo(RestoreSliceTracker.Status.CREATED);
+        RestoreRange range = getTestRange();
+        assertThat(manager.trySubmit(range, range.job()))
+        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
 
         // submit twice
-        assertThat(manager.trySubmit(slice, slice.job()))
-        .isEqualTo(RestoreSliceTracker.Status.PENDING);
+        assertThat(manager.trySubmit(range, range.job()))
+        .isEqualTo(RestoreJobProgressTracker.Status.PENDING);
 
-        slice.complete();
-        assertThat(manager.trySubmit(slice, slice.job()))
-        .isEqualTo(RestoreSliceTracker.Status.COMPLETED);
+        range.complete();
+        assertThat(manager.trySubmit(range, range.job()))
+        .isEqualTo(RestoreJobProgressTracker.Status.COMPLETED);
     }
 
     @Test
     void testTrySubmitAfterJobFailure() throws RestoreJobException
     {
-        RestoreSlice slice = getTestSlice();
-        assertThat(manager.trySubmit(slice, slice.job()))
-        .isEqualTo(RestoreSliceTracker.Status.CREATED);
+        RestoreRange range = getTestRange();
+        assertThat(manager.trySubmit(range, range.job()))
+        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
 
         RestoreJobFatalException failure = new RestoreJobFatalException("fatal");
-        slice.fail(failure);
-        assertThatThrownBy(() -> manager.trySubmit(slice, slice.job()))
+        range.fail(failure);
+        assertThatThrownBy(() -> manager.trySubmit(range, range.job()))
         .isSameAs(failure);
 
-        // submitting other slices in the same job should fail too
-        RestoreSlice anotherSlice = getTestSlice(slice.job());
-        assertThatThrownBy(() -> manager.trySubmit(anotherSlice, anotherSlice.job()))
-        .describedAs("Once a slice failed, no more slice can be submitted")
+        // submitting other ranges in the same job should fail too
+        RestoreRange anotherRange = getTestRange(range.job());
+        assertThatThrownBy(() -> manager.trySubmit(anotherRange, anotherRange.job()))
+        .describedAs("Once a range failed, no more range can be submitted")
         .isSameAs(failure);
 
-        // however, slices from a different job are still permitted
-        RestoreSlice sliceOfDifferentJob = getTestSlice();
-        assertThat(manager.trySubmit(sliceOfDifferentJob, sliceOfDifferentJob.job()))
-        .isEqualTo(RestoreSliceTracker.Status.CREATED);
+        // however, ranges from a different job are still permitted
+        RestoreRange rangeOfDifferentJob = getTestRange();
+        assertThat(manager.trySubmit(rangeOfDifferentJob, rangeOfDifferentJob.job()))
+        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
     }
 
     @Test
     void testRemoveJobInternal() throws RestoreJobException
     {
-        RestoreSlice slice = getTestSlice();
-        assertThat(manager.trySubmit(slice, slice.job()))
-        .isEqualTo(RestoreSliceTracker.Status.CREATED);
+        RestoreRange range = getTestRange();
+        assertThat(manager.trySubmit(range, range.job()))
+        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
 
-        assertThat(slice.isCancelled()).isFalse();
+        assertThat(range.isCancelled()).isFalse();
 
-        manager.removeJobInternal(slice.jobId()); // it cancels the non-completed slices
+        manager.removeJobInternal(range.jobId()); // it cancels the non-completed ranges
 
         // removeJobInternal runs async. Wait for at most 2 seconds for the slice to be cancelled
-        loopAssert(2, () -> assertThat(slice.isCancelled()).isTrue());
+        loopAssert(2, () -> assertThat(range.isCancelled()).isTrue());
     }
 
     @Test
-    void testUpdateRestoreJobForSubmittedSlice() throws RestoreJobFatalException
+    void testUpdateRestoreJobForSubmittedRange() throws RestoreJobFatalException
     {
-        // test setup and submit slice
-        RestoreSlice slice = getTestSlice();
-        RestoreJob job = slice.job();
-        assertThat(manager.trySubmit(slice, job))
-        .isEqualTo(RestoreSliceTracker.Status.CREATED);
+        // test setup and submit range
+        RestoreRange range = getTestRange();
+        RestoreJob job = range.job();
+        assertThat(manager.trySubmit(range, job))
+        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
 
-        assertThat(slice.job()).isNotNull();
-        assertThat(slice.job()).isSameAs(job);
+        assertThat(range.job()).isNotNull();
+        assertThat(range.job()).isSameAs(job);
 
-        // update with the same job, it should read the same job reference back from the slice
+        // update with the same job, it should read the same job reference back from the range
         manager.updateRestoreJob(job);
-        assertThat(slice.job()).isSameAs(job);
+        assertThat(range.job()).isSameAs(job);
 
-        // update with the updated job, it should read the reference of the update job from the slice
-        RestoreJob updatedJob = RestoreJobTest.createNewTestingJob(slice.jobId());
+        // update with the updated job, it should read the reference of the update job from the range
+        RestoreJob updatedJob = RestoreJobTest.createNewTestingJob(range.jobId());
         manager.updateRestoreJob(updatedJob);
-        assertThat(slice.job()).isNotSameAs(job);
-        assertThat(slice.job()).isSameAs(updatedJob);
+        assertThat(range.job()).isNotSameAs(job);
+        assertThat(range.job()).isSameAs(updatedJob);
     }
 
     @Test
@@ -241,12 +242,12 @@ class RestoreJobManagerTest
         });
     }
 
-    private RestoreSlice getTestSlice()
+    private RestoreRange getTestRange()
     {
-        return getTestSlice(RestoreJobTest.createNewTestingJob(UUIDs.timeBased()));
+        return getTestRange(RestoreJobTest.createNewTestingJob(UUIDs.timeBased()));
     }
 
-    private RestoreSlice getTestSlice(RestoreJob job)
+    private RestoreRange getTestRange(RestoreJob job)
     {
         InstanceMetadata owner = mock(InstanceMetadata.class);
         when(owner.id()).thenReturn(1);
@@ -255,16 +256,16 @@ class RestoreJobManagerTest
                              .jobId(job.jobId)
                              .sliceId("testSliceId")
                              .bucketId((short) 0)
-                             .stageDirectory(testDir, "uploadId")
                              .storageKey("storageKey")
                              .storageBucket("storageBucket")
-                             .ownerInstance(owner)
-                             .replicaStatus(Collections.emptyMap())
-                             .replicas(Collections.emptySet())
                              .build();
-        RestoreSliceTracker tracker = new RestoreSliceTracker(job, mock(RestoreProcessor.class), owner);
-        slice.registerTracker(tracker);
-        return slice;
+        RestoreJobProgressTracker tracker = manager.progressTrackerUnsafe(job);
+        return RestoreRange.builderFromSlice(slice)
+                           .restoreJobProgressTracker(tracker)
+                           .ownerInstance(owner)
+                           .stageDirectory(testDir, "uploadId")
+                           .replicaStatus(Collections.emptyMap())
+                           .build();
     }
 
     private Path newDir(String name) throws IOException

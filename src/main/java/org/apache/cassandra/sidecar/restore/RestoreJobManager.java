@@ -37,17 +37,17 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
-import org.apache.cassandra.sidecar.db.RestoreSlice;
+import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.exceptions.ThrowableUtils;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Manages the restore job per instance
- * {@link #trySubmit(RestoreSlice, RestoreJob)} is the main entrypoint to submit new slices,
+ * {@link #trySubmit(RestoreRange, RestoreJob)} is the main entrypoint to submit new slices,
  * typically from the create slices endpoint.
  */
 public class RestoreJobManager
@@ -55,7 +55,7 @@ public class RestoreJobManager
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJobManager.class);
     private static final Object PRESENT = new Object();
 
-    private final Map<UUID, RestoreSliceTracker> jobs = new ConcurrentHashMap<>();
+    private final Map<UUID, RestoreJobProgressTracker> jobs = new ConcurrentHashMap<>();
     private final Cache<UUID, Object> deletedJobs;
     private final RestoreProcessor processor;
     private final ExecutorPools executorPools;
@@ -90,19 +90,18 @@ public class RestoreJobManager
     }
 
     /**
-     * Submit a slice to be processed in the background
+     * Submit a restore range to be processed in the background
      *
-     * @param slice slice of restore data to be processed
+     * @param range range of restore data to be processed
      * @param restoreJob restore job
      * @return status of the submitted slice
      * @throws RestoreJobFatalException the job has failed
      */
-    public RestoreSliceTracker.Status trySubmit(RestoreSlice slice, RestoreJob restoreJob)
+    public RestoreJobProgressTracker.Status trySubmit(RestoreRange range, RestoreJob restoreJob)
     throws RestoreJobFatalException
     {
-        RestoreSliceTracker tracker = jobs.computeIfAbsent(slice.jobId(),
-                                                           id -> new RestoreSliceTracker(restoreJob, processor, instanceMetadata));
-        return tracker.trySubmit(slice);
+        RestoreJobProgressTracker tracker = progressTracker(restoreJob);
+        return tracker.trySubmit(range);
     }
 
     /**
@@ -113,8 +112,8 @@ public class RestoreJobManager
      */
     void updateRestoreJob(RestoreJob restoreJob)
     {
-        RestoreSliceTracker tracker = jobs.computeIfAbsent(restoreJob.jobId,
-                                                           id -> new RestoreSliceTracker(restoreJob, processor, instanceMetadata));
+        RestoreJobProgressTracker tracker = jobs.computeIfAbsent(restoreJob.jobId,
+                                                                 id -> new RestoreJobProgressTracker(restoreJob, processor, instanceMetadata));
         tracker.updateRestoreJob(restoreJob);
     }
 
@@ -136,7 +135,7 @@ public class RestoreJobManager
         executorPools
         .internal()
         .runBlocking(() -> {
-            RestoreSliceTracker tracker = jobs.remove(jobId);
+            RestoreJobProgressTracker tracker = jobs.remove(jobId);
             if (tracker != null)
             {
                 tracker.cleanupInternal();
@@ -183,6 +182,12 @@ public class RestoreJobManager
         return executorPools.internal()
                             .executeBlocking(() -> Files.walk(rootDir, 1)
                                                         .filter(this::isObsoleteRestoreJobDir));
+    }
+
+    private RestoreJobProgressTracker progressTracker(RestoreJob restoreJob)
+    {
+        return jobs.computeIfAbsent(restoreJob.jobId,
+                                    id -> new RestoreJobProgressTracker(restoreJob, processor, instanceMetadata));
     }
 
     // Deletes quietly w/o returning failed futures
@@ -239,5 +244,11 @@ public class RestoreJobManager
         long delta = System.currentTimeMillis() - originTs;
         long gapInMillis = TimeUnit.DAYS.toMillis(restoreJobConfig.jobDiscoveryRecencyDays());
         return delta > gapInMillis;
+    }
+
+    @VisibleForTesting
+    RestoreJobProgressTracker progressTrackerUnsafe(RestoreJob restoreJob)
+    {
+        return progressTracker(restoreJob);
     }
 }

@@ -39,14 +39,14 @@ import org.apache.cassandra.sidecar.common.request.AbortRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobSliceRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
+import org.apache.cassandra.sidecar.common.request.RestoreJobProgressRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobSummaryRequest;
 import org.apache.cassandra.sidecar.common.request.UpdateRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
-import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
-import org.apache.cassandra.sidecar.common.request.data.RestoreJobSummaryResponsePayload;
+import org.apache.cassandra.sidecar.common.request.data.RestoreJobProgressRequestParams;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
@@ -57,6 +57,9 @@ import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
+import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
+import org.apache.cassandra.sidecar.common.response.data.RestoreJobSummaryResponsePayload;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.jetbrains.annotations.Nullable;
 
@@ -552,6 +555,28 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
         return executor.executeRequestAsync(requestBuilder()
                                             .singleInstanceSelectionPolicy(instance)
                                             .request(new CreateRestoreJobSliceRequest(keyspace, table, jobId, payload))
+                                            .build());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CompletableFuture<Void> createRestoreJobSlice(String keyspace, String table, UUID jobId, CreateSliceRequestPayload payload)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .request(new CreateRestoreJobSliceRequest(keyspace, table, jobId, payload))
+                                            .build());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CompletableFuture<RestoreJobProgressResponsePayload> restoreJobProgress(RestoreJobProgressRequestParams params)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .request(new RestoreJobProgressRequest(params))
                                             .build());
     }
 

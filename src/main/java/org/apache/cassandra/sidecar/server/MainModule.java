@@ -55,6 +55,8 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
+import org.apache.cassandra.sidecar.cluster.locator.CachedLocalTokenRanges;
+import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
@@ -70,6 +72,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
+import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
@@ -94,6 +97,7 @@ import org.apache.cassandra.sidecar.routes.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.routes.restore.AbortRestoreJobHandler;
 import org.apache.cassandra.sidecar.routes.restore.CreateRestoreJobHandler;
 import org.apache.cassandra.sidecar.routes.restore.CreateRestoreSliceHandler;
+import org.apache.cassandra.sidecar.routes.restore.RestoreJobProgressHandler;
 import org.apache.cassandra.sidecar.routes.restore.RestoreJobSummaryHandler;
 import org.apache.cassandra.sidecar.routes.restore.RestoreRequestValidationHandler;
 import org.apache.cassandra.sidecar.routes.restore.UpdateRestoreJobHandler;
@@ -189,6 +193,7 @@ public class MainModule extends AbstractModule
                               UpdateRestoreJobHandler updateRestoreJobHandler,
                               AbortRestoreJobHandler abortRestoreJobHandler,
                               CreateRestoreSliceHandler createRestoreSliceHandler,
+                              RestoreJobProgressHandler restoreJobProgressHandler,
                               ErrorHandler errorHandler)
     {
         Router router = Router.router(vertx);
@@ -326,6 +331,11 @@ public class MainModule extends AbstractModule
               .handler(validateTableExistence)
               .handler(validateRestoreJobRequest)
               .handler(abortRestoreJobHandler);
+
+        router.get(ApiEndpointsV1.RESTORE_JOB_PROGRESS_ROUTE)
+              .handler(validateTableExistence)
+              .handler(validateRestoreJobRequest)
+              .handler(restoreJobProgressHandler);
 
         return router;
     }
@@ -495,18 +505,30 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
+    public RestoreRangesSchema restoreJobProgressSchema(SidecarConfiguration configuration)
+    {
+        return new RestoreRangesSchema(configuration.serviceConfiguration()
+                                                    .schemaKeyspaceConfiguration(),
+                                       configuration.restoreJobConfiguration()
+                                                         .restoreJobTablesTtlSeconds());
+    }
+
+    @Provides
+    @Singleton
     public SidecarSchema sidecarSchema(Vertx vertx,
                                        ExecutorPools executorPools,
                                        SidecarConfiguration configuration,
                                        CQLSessionProvider cqlSessionProvider,
                                        RestoreJobsSchema restoreJobsSchema,
                                        RestoreSlicesSchema restoreSlicesSchema,
+                                       RestoreRangesSchema restoreRangesSchema,
                                        SidecarMetrics metrics)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
         sidecarInternalKeyspace.registerTableSchema(restoreJobsSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
+        sidecarInternalKeyspace.registerTableSchema(restoreRangesSchema);
         SchemaMetrics schemaMetrics = metrics.server().schema();
         return new SidecarSchema(vertx, executorPools, configuration,
                                  sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
@@ -536,6 +558,13 @@ public class MainModule extends AbstractModule
     public DigestAlgorithmProvider md5Provider()
     {
         return new JdkMd5DigestProvider();
+    }
+
+    @Provides
+    @Singleton
+    public LocalTokenRangesProvider localTokenRangesProvider(InstancesConfig instancesConfig, DnsResolver dnsResolver)
+    {
+        return new CachedLocalTokenRanges(instancesConfig, dnsResolver);
     }
 
     /**

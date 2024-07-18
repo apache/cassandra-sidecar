@@ -43,7 +43,7 @@ import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
-import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioner;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -157,8 +157,8 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
                                                                                 1);
 
         List<Range<BigInteger>> expectedRanges = new ArrayList<>();
-        BigInteger startToken = Partitioner.Murmur3.minToken;
-        BigInteger endToken = Partitioner.Murmur3.maxToken;
+        BigInteger startToken = Partitioners.MURMUR3.minimumToken().toBigInteger();
+        BigInteger endToken = Partitioners.MURMUR3.maximumToken().toBigInteger();
         int node = 1;
         BigInteger prevToken = new BigInteger(tokenSupplier.tokens(node++).stream().findFirst().get());
         Range<BigInteger> firstRange = Range.openClosed(startToken, prevToken);

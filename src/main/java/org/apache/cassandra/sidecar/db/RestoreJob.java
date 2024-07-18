@@ -23,22 +23,32 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.utils.Bytes;
 import com.datastax.driver.core.utils.UUIDs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.common.data.ConsistencyConfig;
+import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
+import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.sidecar.common.utils.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * RestoreJob is the in-memory representation of a restore job
  */
 public class RestoreJob
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJob.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public final LocalDate createdAt;
@@ -51,7 +61,8 @@ public class RestoreJob
     public final SSTableImportOptions importOptions;
     public final Date expireAt;
     public final short bucketCount;
-    public final String consistencyLevel;
+    public final @Nullable ConsistencyLevel consistencyLevel;
+    public final @Nullable String localDatacenter;
     public final Manager restoreJobManager;
 
     private final String statusText;
@@ -70,18 +81,19 @@ public class RestoreJob
     public static RestoreJob from(@NotNull Row row) throws DataObjectMappingException
     {
         Builder builder = new Builder();
+        ConsistencyConfig consistencyConfig = ConsistencyConfig.parseString(row.getString("consistency_level"),
+                                                                            row.getString("local_datacenter"));
         builder.createdAt(row.getDate("created_at"))
                .jobId(row.getUUID("job_id")).jobAgent(row.getString("job_agent"))
+               .bucketCount((short) 0) // always use 0 for now; TODO - Add bucketCount field to CreateRestoreJobRequestPayload
                .keyspace(row.getString("keyspace_name")).table(row.getString("table_name"))
                .jobStatusText(row.getString("status"))
                .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
                .expireAt(row.getTimestamp("expire_at"))
                .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
-               .consistencyLevel(row.getString("consistency_level"));
+               .consistencyLevel(consistencyConfig.consistencyLevel)
+               .localDatacenter(consistencyConfig.localDatacenter);
 
-        // todo: Yifan, add them back when the cql statement is updated to reflect the new columns.
-        //  Add new fields to CreateRestoreJobRequestPayload too
-//               .bucketCount(row.getShort("bucket_count"))
         return builder.build();
     }
 
@@ -116,6 +128,17 @@ public class RestoreJob
 
     private RestoreJob(Builder builder)
     {
+        Preconditions.checkArgument(builder.consistencyLevel == null
+                                    || !builder.consistencyLevel.isLocalDcOnly
+                                    || StringUtils.isNotEmpty(builder.localDatacenter),
+                                    "When local consistency level is used, localDatacenter must also present");
+        // log a warning when consistency level is absent or no local, but localDatacenter is defined
+        if ((builder.consistencyLevel == null || !builder.consistencyLevel.isLocalDcOnly)
+            && StringUtils.isNotEmpty(builder.localDatacenter))
+        {
+            LOGGER.warn("'localDatacenter' is defined but ignored. consistencyLevel={} localDatacenter={}",
+                        builder.consistencyLevel, builder.localDatacenter);
+        }
         this.createdAt = builder.createdAt;
         this.jobId = builder.jobId;
         this.keyspaceName = builder.keyspaceName;
@@ -130,6 +153,7 @@ public class RestoreJob
         this.expireAt = builder.expireAt;
         this.bucketCount = builder.bucketCount;
         this.consistencyLevel = builder.consistencyLevel;
+        this.localDatacenter = builder.localDatacenter;
         this.restoreJobManager = builder.manager;
     }
 
@@ -149,6 +173,26 @@ public class RestoreJob
     }
 
     /**
+     * Determine the expected range status based on the job status
+     * @return the expected next range status in order to succeed
+     */
+    public RestoreRangeStatus expectedNextRangeStatus()
+    {
+        Preconditions.checkArgument(status != RestoreJobStatus.CREATED,
+                                    "Cannot check progress for restore job in CREATED status. jobId: " + jobId);
+
+        return status == RestoreJobStatus.STAGE_READY || status == RestoreJobStatus.STAGED
+               ? RestoreRangeStatus.STAGED
+               : RestoreRangeStatus.SUCCEEDED;
+    }
+
+    @Nullable
+    public String consistencyLevelText()
+    {
+        return consistencyLevel == null ? null : consistencyLevel.name();
+    }
+
+    /**
      * {@inheritDoc}
      */
     public String toString()
@@ -156,11 +200,12 @@ public class RestoreJob
         return String.format("RestoreJob{" +
                              "createdAt='%s', jobId='%s', keyspaceName='%s', " +
                              "tableName='%s', status='%s', secrets='%s', importOptions='%s', " +
-                             "expireAt='%s', bucketCount='%s', consistencyLevel='%s'}",
+                             "expireAt='%s', bucketCount='%s', consistencyLevel='%s', localDatacenter='%s'}",
                              createdAt.toString(), jobId.toString(),
                              keyspaceName, tableName,
                              statusText, secrets, importOptions,
-                             expireAt, bucketCount, consistencyLevel);
+                             expireAt, bucketCount,
+                             consistencyLevel, localDatacenter);
     }
 
     public static LocalDate toLocalDate(UUID jobId)
@@ -196,7 +241,8 @@ public class RestoreJob
         private SSTableImportOptions importOptions;
         private Date expireAt;
         private short bucketCount;
-        private String consistencyLevel;
+        private ConsistencyLevel consistencyLevel;
+        private String localDatacenter;
         private Manager manager;
 
         private Builder()
@@ -218,6 +264,7 @@ public class RestoreJob
             this.expireAt = restoreJob.expireAt;
             this.bucketCount = restoreJob.bucketCount;
             this.consistencyLevel = restoreJob.consistencyLevel;
+            this.localDatacenter = restoreJob.localDatacenter;
         }
 
         public Builder createdAt(LocalDate createdAt)
@@ -286,12 +333,17 @@ public class RestoreJob
             return update(b -> b.bucketCount = bucketCount);
         }
 
-        public Builder consistencyLevel(String consistencyLevel)
+        public Builder consistencyLevel(@Nullable ConsistencyLevel consistencyLevel)
         {
             return update(b -> {
                 b.consistencyLevel = consistencyLevel;
-                b.manager = resolveManager(consistencyLevel);
+                b.manager = resolveJobManager();
             });
+        }
+
+        public Builder localDatacenter(@Nullable String localDatacenter)
+        {
+            return update(b -> b.localDatacenter = localDatacenter);
         }
 
         @Override
@@ -310,7 +362,7 @@ public class RestoreJob
          * Resolve the manager of the restore job based on the existence of consistencyLevel
          * @return the resolved Manager
          */
-        private Manager resolveManager(String consistencyLevel)
+        private Manager resolveJobManager()
         {
             // If spark is the manager, the restore job is created w/o specifying consistency level
             // If the manager of the restore job is sidecar, consistency level must present

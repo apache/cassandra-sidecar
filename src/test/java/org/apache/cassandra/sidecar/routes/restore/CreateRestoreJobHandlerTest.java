@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.routes.restore;
 
 import java.util.Collections;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,9 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
-import io.vertx.ext.web.codec.BodyCodec;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -45,6 +42,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(VertxExtension.class)
 class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
 {
+    private static final String JOB_ID = "jobId";
+    private static final String STATUS = "status";
     private static final String CREATE_RESTORE_JOB_ENDPOINT = "/api/v1/keyspaces/%s/tables/%s/restore-jobs";
 
     @Test
@@ -154,32 +153,28 @@ class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
                                                       String table,
                                                       JsonObject payload,
                                                       VertxTestContext context,
-                                                      int expectedStatusCode) throws Throwable
+                                                      int expectedStatusCode)
     {
-        WebClient client = WebClient.create(vertx, new WebClientOptions());
-        client.post(server.actualPort(), "localhost", String.format(CREATE_RESTORE_JOB_ENDPOINT, keyspace, table))
-              .as(BodyCodec.buffer())
-              .sendJsonObject(payload, resp -> {
-                  context.verify(() -> {
-                      assertThat(resp.result().statusCode()).isEqualTo(expectedStatusCode);
-                      if (expectedStatusCode == HttpResponseStatus.OK.code())
-                      {
-                          JsonObject responseBody = resp.result().bodyAsJsonObject();
-                          String jobIdKey = "jobId";
-                          if (payload.getString(jobIdKey) == null)
-                          {
-                              assertThat(responseBody.containsKey(jobIdKey)).isTrue();
-                          }
-                          else
-                          {
-                              assertThat(responseBody.getString(jobIdKey)).isEqualTo(payload.getString(jobIdKey));
-                          }
-                          assertThat(responseBody.getString("status")).isEqualTo("CREATED");
-                      }
-                  })
-                  .completeNow();
-                  client.close();
-              });
-        context.awaitCompletion(10, TimeUnit.SECONDS);
+        String expectedJobId = payload == null ? null : payload.getString(JOB_ID);
+        postThenComplete(context, String.format(CREATE_RESTORE_JOB_ENDPOINT, keyspace, table),
+                         payload,
+                         asyncResult -> {
+                             HttpResponse<?> resp = asyncResult.result();
+                             assertThat(resp).isNotNull();
+                             assertThat(resp.statusCode()).isEqualTo(expectedStatusCode);
+                             if (expectedStatusCode == HttpResponseStatus.OK.code())
+                             {
+                                 JsonObject responseBody = resp.bodyAsJsonObject();
+
+                                 if (expectedJobId == null)
+                                 {
+                                     assertThat(responseBody.containsKey(JOB_ID)).isTrue();
+                                 }
+                                 else
+                                 {
+                                     assertThat(responseBody.getString(JOB_ID)).isEqualTo(expectedJobId);
+                                 }
+                             }
+                         });
     }
 }

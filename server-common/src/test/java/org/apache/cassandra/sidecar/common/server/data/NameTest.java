@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class NameTest
 {
     private final Name unquoted = new Name("valid_keyspace");
-    private final Name quoted = new Name("QuotedName", "\"QuotedName\"");
+    private final Name quoted = new Name("\"QuotedName\"");
     private final Name anotherUnquoted = new Name("valid_keyspace");
 
     @Test

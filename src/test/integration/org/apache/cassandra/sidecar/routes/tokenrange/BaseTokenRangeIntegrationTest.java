@@ -41,7 +41,7 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
-import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioner;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
@@ -187,8 +187,8 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         }
 
         List<Range<BigInteger>> expectedRanges = new ArrayList<>();
-        BigInteger startToken = Partitioner.Murmur3.minToken;
-        BigInteger endToken = Partitioner.Murmur3.maxToken;
+        BigInteger startToken = Partitioners.MURMUR3.minimumToken().toBigInteger();
+        BigInteger endToken = Partitioners.MURMUR3.maximumToken().toBigInteger();
 
         BigInteger prevToken = tokens.pollFirst();
         Range<BigInteger> firstRange = Range.openClosed(startToken, prevToken);

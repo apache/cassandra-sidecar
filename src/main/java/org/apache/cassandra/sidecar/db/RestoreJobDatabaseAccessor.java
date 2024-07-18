@@ -52,18 +52,16 @@ import org.jetbrains.annotations.Nullable;
  * It encapsulates the CRUD operations for RestoreJob
  */
 @Singleton
-public class RestoreJobDatabaseAccessor extends DatabaseAccessor
+public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSchema>
 {
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private final RestoreJobsSchema restoreJobsSchema;
 
     @Inject
     public RestoreJobDatabaseAccessor(SidecarSchema sidecarSchema,
                                       RestoreJobsSchema restoreJobsSchema,
                                       CQLSessionProvider cqlSessionProvider)
     {
-        super(sidecarSchema, cqlSessionProvider);
-        this.restoreJobsSchema = restoreJobsSchema;
+        super(sidecarSchema, restoreJobsSchema, cqlSessionProvider);
     }
 
     public RestoreJob create(CreateRestoreJobRequestPayload payload, QualifiedTableName qualifiedTableName)
@@ -83,21 +81,23 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
                                    .jobSecrets(payload.secrets())
                                    .sstableImportOptions(payload.importOptions())
                                    .expireAt(payload.expireAtAsDate())
-                                   .consistencyLevel(payload.consistencyLevel())
+                                   .consistencyLevel(payload.consistencyConfig().consistencyLevel)
+                                   .localDatacenter(payload.consistencyConfig().localDatacenter)
                                    .build();
         ByteBuffer secrets = serializeValue(job.secrets, "secrets");
         ByteBuffer importOptions = serializeValue(job.importOptions, "sstable import options");
-        BoundStatement statement = restoreJobsSchema.insertJob()
-                                                    .bind(job.createdAt,
-                                                          job.jobId,
-                                                          job.keyspaceName,
-                                                          job.tableName,
-                                                          job.jobAgent,
-                                                          job.status.name(),
-                                                          secrets,
-                                                          importOptions,
-                                                          job.consistencyLevel,
-                                                          job.expireAt);
+        BoundStatement statement = tableSchema.insertJob()
+                                              .bind(job.createdAt,
+                                                    job.jobId,
+                                                    job.keyspaceName,
+                                                    job.tableName,
+                                                    job.jobAgent,
+                                                    job.status.name(),
+                                                    secrets,
+                                                    importOptions,
+                                                    job.consistencyLevelText(),
+                                                    job.localDatacenter,
+                                                    job.expireAt);
 
         execute(statement);
         return job;
@@ -134,8 +134,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
             {
                 byte[] secretBytes = MAPPER.writeValueAsBytes(secrets);
                 wrappedSecrets = ByteBuffer.wrap(secretBytes);
-                batchStatement.add(restoreJobsSchema.updateBlobSecrets()
-                                                    .bind(createdAt, jobId, wrappedSecrets));
+                batchStatement.add(tableSchema.updateBlobSecrets()
+                                              .bind(createdAt, jobId, wrappedSecrets));
             }
             catch (JsonProcessingException e)
             {
@@ -145,17 +145,17 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
         }
         if (status != null)
         {
-            batchStatement.add(restoreJobsSchema.updateStatus().bind(createdAt, jobId, status.name()));
+            batchStatement.add(tableSchema.updateStatus().bind(createdAt, jobId, status.name()));
             updateBuilder.jobStatus(status);
         }
         if (jobAgent != null)
         {
-            batchStatement.add(restoreJobsSchema.updateJobAgent().bind(createdAt, jobId, jobAgent));
+            batchStatement.add(tableSchema.updateJobAgent().bind(createdAt, jobId, jobAgent));
             updateBuilder.jobAgent(jobAgent);
         }
         if (expireAt != null)
         {
-            batchStatement.add(restoreJobsSchema.updateExpireAt().bind(createdAt, jobId, expireAt));
+            batchStatement.add(tableSchema.updateExpireAt().bind(createdAt, jobId, expireAt));
             updateBuilder.expireAt(expireAt);
         }
 
@@ -173,8 +173,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
         {
             status = status + ": " + reason;
         }
-        BoundStatement statement = restoreJobsSchema.updateStatus()
-                                                    .bind(createdAt, jobId, status);
+        BoundStatement statement = tableSchema.updateStatus()
+                                              .bind(createdAt, jobId, status);
         execute(statement);
     }
 
@@ -182,7 +182,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = restoreJobsSchema.selectJob().bind(RestoreJob.toLocalDate(jobId), jobId);
+        BoundStatement statement = tableSchema.selectJob().bind(RestoreJob.toLocalDate(jobId), jobId);
         ResultSet resultSet = execute(statement);
         Row row = resultSet.one();
         if (row == null)
@@ -207,7 +207,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = restoreJobsSchema.findAllByCreatedAt().bind(date);
+        BoundStatement statement = tableSchema.findAllByCreatedAt().bind(date);
         ResultSet resultSet = execute(statement);
         List<RestoreJob> result = new ArrayList<>();
         for (Row row : resultSet)

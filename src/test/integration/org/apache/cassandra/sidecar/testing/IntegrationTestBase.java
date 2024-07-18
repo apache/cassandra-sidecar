@@ -60,6 +60,7 @@ import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
+import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
@@ -131,6 +132,28 @@ public abstract class IntegrationTestBase
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
 
+    @AfterEach
+    void tearDown() throws InterruptedException
+    {
+        CountDownLatch closeLatch = new CountDownLatch(1);
+        client.close();
+        server.close().onSuccess(res -> closeLatch.countDown());
+        if (closeLatch.await(60, TimeUnit.SECONDS))
+            logger.info("Close event received before timeout.");
+        else
+            logger.error("Close event timed out.");
+        sidecarTestContext.close();
+    }
+
+    protected void waitForSchemaReady(long timeout, TimeUnit timeUnit)
+    {
+        CountDownLatch latch = new CountDownLatch(1);
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> latch.countDown());
+        awaitLatchOrTimeout(latch, timeout, timeUnit);
+        assertThat(latch.getCount()).describedAs("Sidecar schema not initialized").isZero();
+    }
+
     /**
      * Some tests may want to "manage" fewer instances than the complete cluster.
      * Therefore, override this if your test wants to manage fewer than the complete cluster size.
@@ -143,19 +166,6 @@ public abstract class IntegrationTestBase
     protected int getNumInstancesToManage(int clusterSize)
     {
         return -1;
-    }
-
-    @AfterEach
-    void tearDown() throws InterruptedException
-    {
-        CountDownLatch closeLatch = new CountDownLatch(1);
-        client.close();
-        server.close().onSuccess(res -> closeLatch.countDown());
-        if (closeLatch.await(60, TimeUnit.SECONDS))
-            logger.info("Close event received before timeout.");
-        else
-            logger.error("Close event timed out.");
-        sidecarTestContext.close();
     }
 
     protected void testWithClient(VertxTestContext context, Consumer<WebClient> tester) throws Exception
@@ -315,9 +325,9 @@ public abstract class IntegrationTestBase
 
     private static QualifiedTableName uniqueTestTableFullName(String tablePrefix)
     {
-        String unquotedTableName = tablePrefix + TEST_TABLE_ID.getAndIncrement();
-        return new QualifiedTableName(new Name(TEST_KEYSPACE, Metadata.quoteIfNecessary(TEST_KEYSPACE)),
-                                      new Name(unquotedTableName, Metadata.quoteIfNecessary(unquotedTableName)));
+        String uniqueTableName = tablePrefix + TEST_TABLE_ID.getAndIncrement();
+        return new QualifiedTableName(new Name(Metadata.quoteIfNecessary(TEST_KEYSPACE)),
+                                      new Name(Metadata.quoteIfNecessary(uniqueTableName)));
     }
 
     /**

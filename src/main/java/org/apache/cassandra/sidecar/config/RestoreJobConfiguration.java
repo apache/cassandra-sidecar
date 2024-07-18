@@ -58,4 +58,9 @@ public interface RestoreJobConfiguration
      * @return the delay in seconds between each report of the same slow task
      */
     long slowTaskReportDelaySeconds();
+
+    /**
+     * @return the delay in milliseconds for {@link org.apache.cassandra.sidecar.restore.RingTopologyRefresher}
+     */
+    long ringTopologyRefreshDelayMillis();
 }

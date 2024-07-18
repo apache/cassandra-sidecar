@@ -19,47 +19,32 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.math.BigInteger;
-import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Row;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.server.data.RestoreSliceStatus;
-import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
-import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
-import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.locator.LocalTokenRangesProvider;
-import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
-import org.apache.cassandra.sidecar.restore.RestoreJobUtil;
-import org.apache.cassandra.sidecar.restore.RestoreSliceHandler;
-import org.apache.cassandra.sidecar.restore.RestoreSliceTask;
-import org.apache.cassandra.sidecar.restore.RestoreSliceTracker;
-import org.apache.cassandra.sidecar.restore.StorageClient;
-import org.apache.cassandra.sidecar.restore.StorageClientPool;
-import org.apache.cassandra.sidecar.utils.SSTableImporter;
-import org.jetbrains.annotations.NotNull;
 
 /**
- * <p>Data object that contains all values that matter to the restore job slice.</p>
- *
- * <p>How the staged files are organized on disk? For each slice,</p>
- * <ol>
- * <li>the S3 object is downloaded to the path at "stageDirectory/key". It is a zip file.</li>
- * <li>the zip is then extracted to the directory at "stageDirectory/keyspace/table/".
- *    The extracted sstables are imported into Cassandra.</li>
- * </ol>
+ * Data object that contains all values that matter to the restore job slice.
  */
 public class RestoreSlice
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RestoreSlice.class);
+
     private final UUID jobId;
     private final String keyspace;
     private final String table;
@@ -68,29 +53,11 @@ public class RestoreSlice
     private final String bucket;
     private final String key;
     private final String checksum; // etag
-    // The path to the directory that stores the s3 object of the slice and the sstables after unzipping.
-    // Its value is "baseStageDirectory/uploadId"
-    private final Path stageDirectory;
-    // The path to the staged s3 object (file). The path is inside stageDirectory.
-    // Its value is "stageDirectory/key"
-    private final Path stagedObjectPath;
-    private final String uploadId;
-    private final InstanceMetadata owner;
     private final BigInteger startToken;
     private final BigInteger endToken;
-    private final Map<String, RestoreSliceStatus> statusByReplica;
-    private final Set<String> replicas;
     private final long creationTimeNanos;
     private final long compressedSize;
     private final long uncompressedSize;
-    private RestoreSliceTracker tracker;
-
-    // mutable states
-    private boolean existsOnS3 = false;
-    private boolean hasStaged = false;
-    private boolean hasImported = false;
-    private int downloadAttempt = 0;
-    private volatile boolean isCancelled = false;
 
     public static Builder builder()
     {
@@ -107,14 +74,8 @@ public class RestoreSlice
         this.bucket = builder.bucket;
         this.key = builder.key;
         this.checksum = builder.checksum;
-        this.stageDirectory = builder.stageDirectory;
-        this.stagedObjectPath = builder.stagedObjectPath;
-        this.uploadId = builder.uploadId;
-        this.owner = builder.owner;
         this.startToken = builder.startToken;
         this.endToken = builder.endToken;
-        this.statusByReplica = builder.statusByReplica;
-        this.replicas = builder.replicas;
         this.compressedSize = builder.compressedSize;
         this.uncompressedSize = builder.uncompressedSize;
         this.creationTimeNanos = System.nanoTime();
@@ -128,8 +89,6 @@ public class RestoreSlice
     @Override
     public int hashCode()
     {
-        // Note: destinationPathInStaging and owner are not included as they are 'transient'.
-        // status_by_replicas and replicas are not added as instances can be added
         return Objects.hash(jobId, keyspace, table, sliceId, bucketId, bucket, key,
                             checksum, startToken, endToken, compressedSize, uncompressedSize);
     }
@@ -144,8 +103,6 @@ public class RestoreSlice
             return false;
 
         RestoreSlice that = (RestoreSlice) obj;
-        // Note: destinationPathInStaging and owner are not included as they are 'transient'.
-        // status_by_replicas and replicas are not added as instances can be added
         return Objects.equals(this.jobId, that.jobId)
                && Objects.equals(this.keyspace, that.keyspace)
                && Objects.equals(this.table, that.table)
@@ -160,132 +117,73 @@ public class RestoreSlice
                && this.uncompressedSize == that.uncompressedSize;
     }
 
-    // -- INTERNAL FLOW CONTROL METHODS --
-
     /**
-     * Register the {@link RestoreSliceTracker} for the slice
+     * Splits the slice based on the topology changes.
+     * <p></p>
+     * When the current topology has pending ranges, it results into the slice S being split into
+     * multiple sub-ranges, say, s1 and s2. The updater splits, and persists the new slices to database.
+     * The original slice S is then deleted.
+     * The new slices still reference to the same s3 object, i.e. {@code <bucket/key/checksum>}
+     *
+     * @param topology topology to guide the splitting
+     * @return a list of slices of the sub-ranges
      */
-    public void registerTracker(RestoreSliceTracker tracker)
+    public List<RestoreSlice> splitMaybe(@Nullable TokenRangeReplicasResponse topology)
     {
-        this.tracker = tracker;
-    }
-
-    /**
-     * Mark the slice as completed
-     */
-    public void complete()
-    {
-        tracker.completeSlice(this);
-    }
-
-    /**
-     * Mark the slice has completed the stage phase
-     */
-    public void completeStagePhase()
-    {
-        this.hasStaged = true;
-    }
-
-    /**
-     * Mark the slice has completed the import phase
-     */
-    public void completeImportPhase()
-    {
-        this.hasImported = true;
-    }
-
-    public void failAtInstance(int instanceId)
-    {
-        statusByReplica.put(String.valueOf(instanceId), RestoreSliceStatus.FAILED);
-    }
-
-    /**
-     * Fail the job, including all its owning slices, with the provided {@link RestoreJobFatalException}.
-     */
-    public void fail(RestoreJobFatalException exception)
-    {
-        tracker.fail(exception);
-        failAtInstance(owner().id());
-    }
-
-    /**
-     * Request to clean up out of range data. It is requested when detecting the slice contains out of range data
-     */
-    public void requestOutOfRangeDataCleanup()
-    {
-        tracker.requestOutOfRangeDataCleanup();
-    }
-
-    public void setExistsOnS3()
-    {
-        this.existsOnS3 = true;
-    }
-
-    public void incrementDownloadAttempt()
-    {
-        this.downloadAttempt++;
-    }
-
-    /**
-     * Cancel the slice to prevent processing them in the future.
-     */
-    public void cancel()
-    {
-        isCancelled = true;
-    }
-
-    /**
-     * @return {@link RestoreSliceTask} of the restore slice. See {@link RestoreSliceTask} for the steps.
-     */
-    public RestoreSliceHandler toAsyncTask(StorageClientPool s3ClientPool,
-                                           TaskExecutorPool executorPool,
-                                           SSTableImporter importer,
-                                           double requiredUsableSpacePercentage,
-                                           RestoreSliceDatabaseAccessor sliceDatabaseAccessor,
-                                           RestoreJobUtil restoreJobUtil,
-                                           LocalTokenRangesProvider localTokenRangesProvider,
-                                           SidecarMetrics metrics)
-    {
-        if (isCancelled)
-            return RestoreSliceTask.failed(RestoreJobExceptions.ofFatalSlice("Restore slice is cancelled",
-                                                                                 this, null), this);
-
-        try
+        if (topology == null)
         {
-            StorageClient s3Client = s3ClientPool.storageClient(job());
-            return new RestoreSliceTask(this, s3Client,
-                                        executorPool, importer,
-                                        requiredUsableSpacePercentage,
-                                        sliceDatabaseAccessor,
-                                        restoreJobUtil,
-                                        localTokenRangesProvider,
-                                        metrics);
+            return Collections.singletonList(this);
         }
-        catch (IllegalStateException illegalState)
+
+        List<RestoreSlice> splits = new ArrayList<>();
+        TokenRange sliceRange = new TokenRange(startToken(), endToken());
+        for (TokenRangeReplicasResponse.ReplicaInfo replicaInfo : topology.writeReplicas())
         {
-            // The slice is not registered with a tracker, retry later.
-            return RestoreSliceTask.failed(RestoreJobExceptions.ofSlice("Restore slice is not started",
-                                                                           this, illegalState), this);
+            TokenRange range = new TokenRange(Token.from(replicaInfo.start()), Token.from(replicaInfo.end()));
+            if (range.encloses(sliceRange))
+            {
+                return Collections.singletonList(this);
+            }
+            else if (range.overlaps(sliceRange))
+            {
+                TokenRange intersection = range.intersection(sliceRange);
+                // Adjust the slice range to match with the write replica and persist.
+                // The object location remains the same as sidecar need to download the same object.
+                // It just needs a narrower range of data within the slice
+                splits.add(unbuild()
+                           .startToken(intersection.start().toBigInteger())
+                           .endToken(intersection.end().toBigInteger())
+                           .build());
+            }
+
+            if (range.largerThan(sliceRange))
+            {
+                // all following ranges are larger the original range; exit the iteration early.
+                break;
+            }
         }
-        catch (Exception cause)
+
+        if (splits.isEmpty())
         {
-            return RestoreSliceTask.failed(RestoreJobExceptions.ofFatalSlice("Restore slice is failed",
-                                                                                this, cause), this);
+            throw new IllegalStateException("Token range of the slice is not found in the write replicas. " +
+                                            "slice range: " + formatRange(startToken, endToken));
         }
+        else
+        {
+            LOGGER.info("The slice is split. splitsCount={} splits={}",
+                        splits.size(), splits.stream().map(s -> formatRange(s.startToken, s.endToken))
+                        .collect(Collectors.toList()));
+        }
+
+        return splits;
+    }
+
+    private String formatRange(BigInteger start, BigInteger end)
+    {
+        return "(" + start + ", " + end + ']';
     }
 
     // -- (self-explanatory) GETTERS --
-
-    @NotNull
-    public final RestoreJob job() // disable override to always lookup from registered tracker
-    {
-        if (tracker == null)
-        {
-            throw new IllegalStateException("Restore slice is not registered with a tracker");
-        }
-
-        return tracker.restoreJob();
-    }
 
     public UUID jobId()
     {
@@ -327,11 +225,6 @@ public class RestoreSlice
         return checksum;
     }
 
-    public String uploadId()
-    {
-        return uploadId;
-    }
-
     public BigInteger startToken()
     {
         return this.startToken;
@@ -340,33 +233,6 @@ public class RestoreSlice
     public BigInteger endToken()
     {
         return this.endToken;
-    }
-
-    public Map<String, RestoreSliceStatus> statusByReplica()
-    {
-        return statusByReplica;
-    }
-
-    public Set<String> replicas()
-    {
-        return this.replicas;
-    }
-
-    /**
-     * @return the path to the directory that stores the s3 object of the slice
-     *         and the sstables after unzipping
-     */
-    public Path stageDirectory()
-    {
-        return stageDirectory;
-    }
-
-    /**
-     * @return the path to the staged s3 object
-     */
-    public Path stagedObjectPath()
-    {
-        return stagedObjectPath;
     }
 
     public long compressedSize()
@@ -384,47 +250,14 @@ public class RestoreSlice
         return creationTimeNanos;
     }
 
-    public InstanceMetadata owner()
-    {
-        return owner;
-    }
-
-    public boolean existsOnS3()
-    {
-        return existsOnS3;
-    }
-
-    public boolean hasStaged()
-    {
-        return hasStaged;
-    }
-
-    public boolean hasImported()
-    {
-        return hasImported;
-    }
-
-    public int downloadAttempt()
-    {
-        return downloadAttempt;
-    }
-
-    public boolean isCancelled()
-    {
-        return isCancelled;
-    }
-
     // -------------
 
-    public String shortDescription()
-    {
-        return "SliceId: " + sliceId + ", Key: " + key + ", Bucket: " + bucket + ", Checksum: " + checksum;
-    }
-
-    public static RestoreSlice from(Row row)
+    public static RestoreSlice from(Row row, RestoreJob restoreJob)
     {
         Builder builder = new Builder();
         builder.jobId(row.getUUID("job_id"));
+        builder.keyspace(restoreJob.keyspaceName);
+        builder.table(restoreJob.tableName);
         builder.sliceId(row.getString("slice_id"));
         builder.bucketId(row.getShort("bucket_id"));
         builder.storageBucket(row.getString("bucket"));
@@ -434,8 +267,6 @@ public class RestoreSlice
         builder.endToken(row.getVarint("end_token"));
         builder.compressedSize(row.getLong("compressed_size"));
         builder.uncompressedSize(row.getLong("uncompressed_size"));
-        builder.replicaStatus(row.getMap("status_by_replica", String.class, RestoreSliceStatus.class));
-        builder.replicas(row.getSet("all_replicas", String.class));
         return builder.build();
     }
 
@@ -452,14 +283,8 @@ public class RestoreSlice
         private String bucket;
         private String key;
         private String checksum; // etag
-        private Path stageDirectory;
-        private Path stagedObjectPath;
-        private String uploadId;
-        private InstanceMetadata owner;
         private BigInteger startToken;
         private BigInteger endToken;
-        private Map<String, RestoreSliceStatus> statusByReplica;
-        private Set<String> replicas;
         private long compressedSize;
         private long uncompressedSize;
 
@@ -477,13 +302,8 @@ public class RestoreSlice
             this.bucket = slice.bucket;
             this.key = slice.key;
             this.checksum = slice.checksum;
-            this.stageDirectory = slice.stageDirectory;
-            this.uploadId = slice.uploadId;
-            this.owner = slice.owner;
             this.startToken = slice.startToken;
             this.endToken = slice.endToken;
-            this.statusByReplica = Collections.unmodifiableMap(slice.statusByReplica);
-            this.replicas = Collections.unmodifiableSet(slice.replicas);
         }
 
         public Builder jobId(UUID jobId)
@@ -526,19 +346,6 @@ public class RestoreSlice
             return update(b -> b.checksum = checksum);
         }
 
-        public Builder stageDirectory(Path basePath, String uploadId)
-        {
-            return update(b -> {
-                b.stageDirectory = basePath.resolve(uploadId);
-                b.uploadId = uploadId;
-            });
-        }
-
-        public Builder ownerInstance(InstanceMetadata owner)
-        {
-            return update(b -> b.owner = owner);
-        }
-
         public Builder startToken(BigInteger startToken)
         {
             return update(b -> b.startToken = startToken);
@@ -557,16 +364,6 @@ public class RestoreSlice
         public Builder uncompressedSize(long uncompressedSize)
         {
             return update(b -> b.uncompressedSize = uncompressedSize);
-        }
-
-        public Builder replicaStatus(Map<String, RestoreSliceStatus> statusByReplica)
-        {
-            return update(b -> b.statusByReplica = new HashMap<>(statusByReplica));
-        }
-
-        public Builder replicas(Set<String> replicas)
-        {
-            return update(b -> b.replicas = new HashSet<>(replicas));
         }
 
         /**
@@ -601,8 +398,6 @@ public class RestoreSlice
         @Override
         public RestoreSlice build()
         {
-            // precompute the path to the to-be-staged object on disk
-            stagedObjectPath = stageDirectory.resolve(key);
             return new RestoreSlice(this);
         }
 

@@ -41,14 +41,7 @@ public class CreateRestoreJobSliceRequest extends Request
      */
     public CreateRestoreJobSliceRequest(String keyspace, String table, UUID jobId, CreateSliceRequestPayload payload)
     {
-        this(keyspace, table, jobId, payload, false);
-    }
-
-    // todo: drop me once the dev endpoint is promoted
-    public CreateRestoreJobSliceRequest(String keyspace, String table, UUID jobId, CreateSliceRequestPayload payload,
-                                        boolean useDevApi)
-    {
-        super(requestURI(keyspace, table, jobId, useDevApi));
+        super(requestURI(keyspace, table, jobId));
         this.payload = payload;
     }
 
@@ -64,12 +57,9 @@ public class CreateRestoreJobSliceRequest extends Request
         return payload;
     }
 
-    static String requestURI(String keyspace, String table, UUID jobId, boolean useDevApi)
+    static String requestURI(String keyspace, String table, UUID jobId)
     {
-        String api = useDevApi
-                     ? ApiEndpointsV1.DEV_RESTORE_JOB_SLICES_ROUTE
-                     : ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE;
-        return api
+        return ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE
                .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
                .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, jobId.toString());

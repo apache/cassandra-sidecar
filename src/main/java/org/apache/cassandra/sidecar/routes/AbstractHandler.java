@@ -219,6 +219,11 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
             return wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause.getMessage(), cause);
         }
 
+        if (cause instanceof IllegalStateException)
+        {
+            return wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, cause.getMessage(), cause);
+        }
+
         return wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, cause);
     }
 

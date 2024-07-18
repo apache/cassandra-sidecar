@@ -221,9 +221,7 @@ public abstract class TaskExecutorPool implements WorkerExecutor
 
     Future<Void> closeInternal()
     {
-        return workerExecutor == null
-               ? Future.succeededFuture()
-               : workerExecutor.close();
+        return workerExecutor.close();
     }
 
     /**

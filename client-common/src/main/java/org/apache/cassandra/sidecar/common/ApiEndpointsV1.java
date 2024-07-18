@@ -37,6 +37,7 @@ public final class ApiEndpointsV1
     public static final String COMPONENT_PATH_PARAM = ":component";
     public static final String INDEX_PATH_PARAM = ":index";
     public static final String UPLOAD_ID_PATH_PARAM = ":uploadId";
+    public static final String JOB_ID_PATH_PARAM = ":jobId";
 
     public static final String PER_KEYSPACE = "/keyspaces/" + KEYSPACE_PATH_PARAM;
     public static final String PER_TABLE = "/tables/" + TABLE_PATH_PARAM;
@@ -96,17 +97,17 @@ public final class ApiEndpointsV1
     public static final String KEYSPACE_TOKEN_MAPPING_ROUTE = API_V1 + PER_KEYSPACE + "/token-range-replicas";
 
     // Blob Transport Extension
-    public static final String JOB_ID_PATH_PARAM = ":jobId";
     public static final String RESTORE_JOBS = "/restore-jobs";
     public static final String SLICES = "/slices";
     public static final String ABORT = "/abort";
+    public static final String PROGRESS = "/progress";
+    public static final String FETCH_POLICY_QUERY_PARAM = "fetch-policy";
     public static final String PER_RESTORE_JOB = RESTORE_JOBS + "/" + JOB_ID_PATH_PARAM;
     public static final String CREATE_RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + RESTORE_JOBS;
-    public static final String RESTORE_JOB_SLICES_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB + SLICES;
-    public static final String DEV_RESTORE_JOB_SLICES_ROUTE = API + "/dev" + PER_KEYSPACE +
-                                                              PER_TABLE + PER_RESTORE_JOB + SLICES;
     public static final String RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB;
-    public static final String ABORT_RESTORE_JOB_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_RESTORE_JOB + ABORT;
+    public static final String RESTORE_JOB_SLICES_ROUTE = RESTORE_JOB_ROUTE + SLICES;
+    public static final String ABORT_RESTORE_JOB_ROUTE = RESTORE_JOB_ROUTE + ABORT;
+    public static final String RESTORE_JOB_PROGRESS_ROUTE = RESTORE_JOB_ROUTE + PROGRESS;
 
     private ApiEndpointsV1()
     {
