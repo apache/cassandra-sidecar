@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,6 @@ import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit tests for {@link Server} lifecycle
@@ -209,7 +209,7 @@ class ServerTest
         }
         catch (Exception exception)
         {
-            fail(exception);
+            Assertions.fail(exception);
         }
     }
 
