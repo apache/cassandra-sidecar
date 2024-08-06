@@ -127,7 +127,31 @@ public class ServerVerticle extends AbstractVerticle
         {
             throw new IllegalStateException("No servers are running");
         }
-        deployedServers.forEach(server -> server.updateTrafficShapingOptions(options));
+        deployedServers.forEach(server -> {
+            try
+            {
+                server.updateTrafficShapingOptions(options);
+            }
+            catch (IllegalStateException ex)
+            {
+                if (ex.getMessage() != null
+                    && ex.getMessage().contains("Unable to update traffic shaping options because the server was not configured to use traffic shaping during startup"))
+                {
+                    // Swallowing the exception here is okay. The way vert.x works is by creating a
+                    // main io.vertx.core.net.impl.TCPServerBase object per host/port. Child handlers
+                    // will inherit the main's io.netty.handler.traffic.GlobalTrafficShapingHandler
+                    // since this configuration is a global configuration for a given host/port.
+                    // As long as we are able to set the traffic shaping changes to the main server
+                    // these changes will take effect on the child servers as well. A child server
+                    // is created when there are multiple verticles configured.
+                    LOGGER.warn("Unable to update traffic shaping options for server={}", server, ex);
+                }
+                else
+                {
+                    throw ex;
+                }
+            }
+        });
     }
 
     /**
