@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.server;
 
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +46,7 @@ import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 /**
  * Unit tests for {@link Server} lifecycle
@@ -67,9 +69,20 @@ class ServerTest
     }
 
     @AfterEach
-    void clear()
+    void tearDown()
     {
         registry().removeMatching((name, metric) -> true);
+        if (server != null)
+        {
+            try
+            {
+                server.close().toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
+            }
+            catch (Exception ex)
+            {
+                LOGGER.error("Unable to close server after 30 seconds", ex);
+            }
+        }
     }
 
     @Test
@@ -179,6 +192,20 @@ class ServerTest
                   waitUntilUpdate.flag();
                   context.completeNow();
               });
+    }
+
+    @Test
+    @DisplayName("Updating traffic shaping options with non-zero listen port should succeed")
+    void updateTrafficShapingOptionsWithNonZeroListenPort()
+    {
+        configureServer("config/sidecar_single_instance_default_port.yaml");
+
+        assertThatNoException().isThrownBy(() -> {
+            server.start().toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
+            TrafficShapingOptions update = new TrafficShapingOptions()
+                                           .setOutboundGlobalBandwidth(100 * 1024 * 1024);
+            server.updateTrafficShapingOptions(update);
+        });
     }
 
     @Test
