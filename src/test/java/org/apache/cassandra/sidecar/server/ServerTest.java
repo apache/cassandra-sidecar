@@ -22,10 +22,10 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
@@ -47,6 +47,7 @@ import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 /**
  * Unit tests for {@link Server} lifecycle
@@ -200,17 +201,12 @@ class ServerTest
     {
         configureServer("config/sidecar_single_instance_default_port.yaml");
 
-        try
-        {
+        assertThatNoException().isThrownBy(() -> {
             server.start().toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
             TrafficShapingOptions update = new TrafficShapingOptions()
                                            .setOutboundGlobalBandwidth(100 * 1024 * 1024);
             server.updateTrafficShapingOptions(update);
-        }
-        catch (Exception exception)
-        {
-            Assertions.fail(exception);
-        }
+        });
     }
 
     @Test

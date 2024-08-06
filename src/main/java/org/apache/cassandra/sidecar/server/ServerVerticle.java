@@ -134,6 +134,9 @@ public class ServerVerticle extends AbstractVerticle
             }
             catch (IllegalStateException ex)
             {
+                // Sidecar always configures the traffic shaping option; such IllegalStateException is thrown due
+                // to a vert.x bug.
+                // See following comment for details
                 if (ex.getMessage() != null
                     && ex.getMessage().contains("Unable to update traffic shaping options because the server was not configured to use traffic shaping during startup"))
                 {
