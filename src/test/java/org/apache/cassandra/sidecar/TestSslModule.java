@@ -20,11 +20,18 @@ package org.apache.cassandra.sidecar;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.sidecar.auth.authentication.AuthenticatorConfig;
+import org.apache.cassandra.sidecar.auth.authorization.AuthorizerConfig;
+import org.apache.cassandra.sidecar.config.AuthenticatorConfiguration;
+import org.apache.cassandra.sidecar.config.AuthorizerConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.AuthenticatorConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.AuthorizerConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
@@ -39,20 +46,48 @@ public class TestSslModule extends TestModule
 {
     private static final Logger logger = LoggerFactory.getLogger(TestSslModule.class);
     private final Path certPath;
+    private Path keystorePath;
+    private Path truststorePath;
 
     public TestSslModule(Path certPath)
     {
         this.certPath = certPath;
     }
 
+    public TestSslModule(Path certPath, Path keystorePath, Path truststorePath)
+    {
+        this.certPath = certPath;
+        this.keystorePath = keystorePath;
+        this.truststorePath = truststorePath;
+    }
+
     @Override
     public SidecarConfigurationImpl abstractConfig()
     {
         ClassLoader classLoader = TestSslModule.class.getClassLoader();
-        Path keyStorePath = writeResourceToPath(classLoader, certPath, "certs/test.p12");
+
+        Path keyStorePath;
+        Path trustStorePath;
+
+        if (this.keystorePath != null)
+        {
+            keyStorePath = this.keystorePath;
+        }
+        else
+        {
+            keyStorePath = writeResourceToPath(classLoader, certPath, "certs/test.p12");
+        }
         String keyStorePassword = "password";
 
-        Path trustStorePath = writeResourceToPath(classLoader, certPath, "certs/ca.p12");
+        if (this.truststorePath != null)
+        {
+            trustStorePath = this.truststorePath;
+        }
+        else
+        {
+            trustStorePath = writeResourceToPath(classLoader, certPath, "certs/ca.p12");
+        }
+
         String trustStorePassword = "password";
 
         if (!Files.exists(keyStorePath))
@@ -76,6 +111,17 @@ public class TestSslModule extends TestModule
                                                                       trustStorePassword))
                             .build();
 
-        return super.abstractConfig(sslConfiguration);
+        AuthenticatorConfiguration authenticatorConfiguration =
+        AuthenticatorConfigurationImpl.builder()
+                                      .authorizedIdentities(Collections.emptySet())
+                                      .authConfig(AuthenticatorConfig.AllowAllAuthenticator)
+                                      .build();
+
+        AuthorizerConfiguration authorizerConfiguration =
+        AuthorizerConfigurationImpl.builder()
+                                   .authConfig(AuthorizerConfig.AllowAllAuthorizer)
+                                   .build();
+
+        return super.abstractConfig(sslConfiguration, authenticatorConfiguration, authorizerConfiguration);
     }
 }

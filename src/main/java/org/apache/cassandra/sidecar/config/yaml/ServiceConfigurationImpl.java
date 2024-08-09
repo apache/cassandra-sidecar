@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
+import org.apache.cassandra.sidecar.config.RefreshPermissionCachesConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
@@ -60,6 +61,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
     public static final String SSTABLE_SNAPSHOT_PROPERTY = "sstable_snapshot";
+    public static final String REFRESH_PERMISSION_CACHES_PROPERTY = "refresh_permission_caches";
     public static final String WORKER_POOLS_PROPERTY = "worker_pools";
     private static final String JMX_PROPERTY = "jmx";
     private static final String TRAFFIC_SHAPING_PROPERTY = "traffic_shaping";
@@ -123,6 +125,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = SCHEMA)
     protected final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
 
+    @JsonProperty(value = REFRESH_PERMISSION_CACHES_PROPERTY)
+    protected final RefreshPermissionCachesConfiguration refreshPermissionCachesConfiguration;
+
     /**
      * Constructs a new {@link ServiceConfigurationImpl} with the default values
      */
@@ -148,6 +153,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         serverVerticleInstances = builder.serverVerticleInstances;
         throttleConfiguration = builder.throttleConfiguration;
         sstableUploadConfiguration = builder.sstableUploadConfiguration;
+        refreshPermissionCachesConfiguration = builder.refreshPermissionCachesConfiguration;
         sstableImportConfiguration = builder.sstableImportConfiguration;
         sstableSnapshotConfiguration = builder.sstableSnapshotConfiguration;
         workerPoolsConfiguration = builder.workerPoolsConfiguration;
@@ -280,6 +286,16 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
+    @JsonProperty(value = REFRESH_PERMISSION_CACHES_PROPERTY)
+    public RefreshPermissionCachesConfiguration refreshPermissionCachesConfiguration()
+    {
+        return refreshPermissionCachesConfiguration;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @JsonProperty(value = WORKER_POOLS_PROPERTY)
     public Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration()
     {
@@ -338,6 +354,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected SSTableUploadConfiguration sstableUploadConfiguration = new SSTableUploadConfigurationImpl();
         protected SSTableImportConfiguration sstableImportConfiguration = new SSTableImportConfigurationImpl();
         protected SSTableSnapshotConfiguration sstableSnapshotConfiguration = new SSTableSnapshotConfigurationImpl();
+        protected RefreshPermissionCachesConfiguration refreshPermissionCachesConfiguration = new RefreshPermissionCachesConfigurationImpl();
         protected Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration =
         DEFAULT_WORKER_POOLS_CONFIGURATION;
         protected JmxConfiguration jmxConfiguration = new JmxConfigurationImpl();
@@ -485,6 +502,11 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         public Builder sstableSnapshotConfiguration(SSTableSnapshotConfiguration sstableSnapshotConfiguration)
         {
             return update(b -> b.sstableSnapshotConfiguration = sstableSnapshotConfiguration);
+        }
+
+        public Builder refreshPermissionCachesConfiguration(RefreshPermissionCachesConfiguration refreshPermissionCachesConfiguration)
+        {
+            return update(b -> b.refreshPermissionCachesConfiguration(refreshPermissionCachesConfiguration));
         }
 
         /**

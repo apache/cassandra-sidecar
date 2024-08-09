@@ -31,11 +31,14 @@ import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import io.vertx.core.Future;
+import org.apache.cassandra.sidecar.auth.authorization.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SSTableImportConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -67,7 +70,9 @@ class CacheFactoryTest
                                 .sstableImportConfiguration(ssTableImportConfiguration)
                                 .build();
         SSTableImporter mockSSTableImporter = mock(SSTableImporter.class);
-        cacheFactory = new CacheFactory(serviceConfiguration, mockSSTableImporter, fakeTicker::read);
+        SystemAuthDatabaseAccessor mockSystemAuthDatabaseAccessor = mock(SystemAuthDatabaseAccessor.class);
+        SidecarConfiguration sidecarConfiguration = new SidecarConfigurationImpl();
+        cacheFactory = new CacheFactory(sidecarConfiguration, serviceConfiguration, mockSSTableImporter, fakeTicker::read, mockSystemAuthDatabaseAccessor);
     }
 
     @Test

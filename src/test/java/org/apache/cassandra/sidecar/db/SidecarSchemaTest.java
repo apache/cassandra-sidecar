@@ -179,7 +179,19 @@ public class SidecarSchemaTest
             "FROM sidecar_internal.restore_range_v1 WHERE job_id = ? AND bucket_id = ? ALLOW FILTERING",
 
             "UPDATE sidecar_internal.restore_range_v1 SET status_by_replica = status_by_replica + ? " +
-            "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?"
+            "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?",
+
+            "SELECT resource, permissions FROM system_auth.role_permissions WHERE role = ?",
+
+            "SELECT is_superuser FROM system_auth.roles WHERE role = ?;",
+
+            "SELECT * FROM system_auth.role_permissions;",
+
+            "SELECT role FROM system_auth.identity_to_role WHERE identity = ?",
+
+            "SELECT role, is_superuser FROM system_auth.roles;",
+
+            "SELECT * FROM system_auth.identity_to_role;"
             );
 
             Set<String> expected = new HashSet<>(expectedPrepStatements);

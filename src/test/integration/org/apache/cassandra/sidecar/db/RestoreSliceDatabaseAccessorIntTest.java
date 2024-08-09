@@ -25,14 +25,19 @@ import com.datastax.driver.core.utils.UUIDs;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.CassandraTestContext;
+import org.apache.cassandra.testing.SimpleCassandraVersion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 class RestoreSliceDatabaseAccessorIntTest extends IntegrationTestBase
 {
     @CassandraIntegrationTest
-    void testCrudOperations()
+    void testCrudOperations(CassandraTestContext cassandraTestContext)
     {
+        assumeThat(cassandraTestContext.version).as("TTL is only supported in Cassandra 5.1")
+                                                .isGreaterThanOrEqualTo(SimpleCassandraVersion.create(5, 1, 0));
         waitForSchemaReady(10, TimeUnit.SECONDS);
 
         RestoreSliceDatabaseAccessor accessor = injector.getInstance(RestoreSliceDatabaseAccessor.class);

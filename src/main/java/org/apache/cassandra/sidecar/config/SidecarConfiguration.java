@@ -75,4 +75,14 @@ public interface SidecarConfiguration
      * @return the configuration for Amazon S3 client
      */
     S3ClientConfiguration s3ClientConfiguration();
+
+    /**
+     * @return the configuration for the authenticator
+     */
+    AuthenticatorConfiguration authenticatorConfiguration();
+
+    /**
+     * @return the configuration for the authorizer
+     */
+    AuthorizerConfiguration authorizerConfiguration();
 }

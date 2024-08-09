@@ -56,11 +56,13 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.HealthCheckPeriodicTask;
 import org.apache.cassandra.sidecar.tasks.KeyStoreCheckPeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.tasks.RefreshPermissionCachesPeriodicTask;
 import org.apache.cassandra.sidecar.utils.SslUtils;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
 /**
  * The Sidecar {@link Server} class that manages the start and stop lifecycle of the service
@@ -80,6 +82,7 @@ public class Server
     protected final List<ServerVerticle> deployedServerVerticles = new CopyOnWriteArrayList<>();
     // Keeps track of all the Cassandra instance identifiers where CQL is ready
     private final Set<Integer> cqlReadyInstanceIds = Collections.synchronizedSet(new HashSet<>());
+    private final RefreshPermissionCachesPeriodicTask refreshPermissionCachesPeriodicTask;
 
     @Inject
     public Server(Vertx vertx,
@@ -89,7 +92,8 @@ public class Server
                   ExecutorPools executorPools,
                   PeriodicTaskExecutor periodicTaskExecutor,
                   HttpServerOptionsProvider optionsProvider,
-                  SidecarMetrics metrics)
+                  SidecarMetrics metrics,
+                  RefreshPermissionCachesPeriodicTask refreshPermissionCachesPeriodicTask)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -99,6 +103,7 @@ public class Server
         this.periodicTaskExecutor = periodicTaskExecutor;
         this.optionsProvider = optionsProvider;
         this.metrics = metrics;
+        this.refreshPermissionCachesPeriodicTask = refreshPermissionCachesPeriodicTask;
     }
 
     /**
@@ -283,6 +288,9 @@ public class Server
         MessageConsumer<JsonObject> cqlReadyConsumer = vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address());
         cqlReadyConsumer.handler(message -> onCqlReady(cqlReadyConsumer, message));
 
+        vertx.eventBus().localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(), h -> {
+            periodicTaskExecutor.schedule(this.refreshPermissionCachesPeriodicTask);
+        });
 
         return Future.succeededFuture(deploymentId);
     }

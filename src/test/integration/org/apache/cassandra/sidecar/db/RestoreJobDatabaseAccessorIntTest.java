@@ -31,18 +31,24 @@ import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.CassandraTestContext;
+import org.apache.cassandra.testing.SimpleCassandraVersion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
 {
+
     QualifiedTableName qualifiedTableName = new QualifiedTableName("ks", "tbl");
     RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
     long expiresAtMillis = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1);
 
     @CassandraIntegrationTest
-    void testCrudOperations()
+    void testCrudOperations(CassandraTestContext cassandraTestContext)
     {
+        assumeThat(cassandraTestContext.version).as("TTL is only supported in Cassandra 5.1")
+                                                .isGreaterThanOrEqualTo(SimpleCassandraVersion.create(5, 1, 0));
         waitForSchemaReady(10, TimeUnit.SECONDS);
 
         RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
