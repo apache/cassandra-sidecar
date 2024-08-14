@@ -200,7 +200,7 @@ public class CertificateBuilder
 
     private SecureRandom secureRandom()
     {
-        return Objects.requireNonNullElse(random, SECURE_RANDOM);
+        return (random != null) ? random : Objects.requireNonNull(SECURE_RANDOM, "defaultObj");
     }
 
     private KeyPair generateKeyPair() throws GeneralSecurityException

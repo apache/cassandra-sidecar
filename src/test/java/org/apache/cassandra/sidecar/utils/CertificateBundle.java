@@ -46,7 +46,7 @@ public class CertificateBundle
         this.chain = chain.clone();
         this.root = root;
         this.keyPair = keyPair;
-        this.alias = Objects.requireNonNullElse(alias, "1");
+        this.alias = (alias != null) ? alias : "1";
     }
 
     public KeyStore toKeyStore(char[] keyEntryPassword) throws KeyStoreException
