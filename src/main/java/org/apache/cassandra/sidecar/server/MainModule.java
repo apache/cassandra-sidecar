@@ -702,10 +702,11 @@ public class MainModule extends AbstractModule
             conf.authenticatorConfiguration().authConfig().equals(AuthenticatorConfig.MutualTlsAuthenticator))
         {
             return new MutualTlsAuthenticationProvider(mTlsCertificateValidator, identityValidator);
-        } else if (conf != null &&
-                   conf.authenticatorConfiguration() != null &&
-                   conf.authenticatorConfiguration().authConfig() != null &&
-                   conf.authenticatorConfiguration().authConfig().equals(AuthenticatorConfig.AllowAllAuthenticator))
+        }
+        else if (conf != null &&
+                 conf.authenticatorConfiguration() != null &&
+                 conf.authenticatorConfiguration().authConfig() != null &&
+                 conf.authenticatorConfiguration().authConfig().equals(AuthenticatorConfig.AllowAllAuthenticator))
         {
             return new AllowAllAuthenticationProvider();
         }
