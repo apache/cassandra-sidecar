@@ -21,8 +21,7 @@ package org.apache.cassandra.sidecar.restore;
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.Channel;
-import java.nio.channels.WritableByteChannel;
-import java.nio.file.FileAlreadyExistsException;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumSet;
@@ -38,8 +37,13 @@ import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.common.data.StorageCredentials;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
+import org.apache.cassandra.sidecar.common.utils.HttpRange;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
+import org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
@@ -47,8 +51,8 @@ import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
-import software.amazon.awssdk.core.async.ResponsePublisher;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
@@ -66,6 +70,7 @@ public class StorageClient
     private static final Logger LOGGER = LoggerFactory.getLogger(StorageClient.class);
 
     private final S3AsyncClient client;
+    private final int rangeHeaderSize;
     private final SidecarRateLimiter downloadRateLimiter;
     private final Map<UUID, Credentials> credentialsProviders = new ConcurrentHashMap<>();
 
@@ -73,12 +78,15 @@ public class StorageClient
     StorageClient(S3AsyncClient client)
     {
         // no rate-limiting
-        this(client, SidecarRateLimiter.create(-1));
+        this(client,
+             S3ClientConfigurationImpl.DEFAULT_RANGE_GET_OBJECT_BYTES_SIZE,
+             SidecarRateLimiter.create(-1));
     }
 
-    StorageClient(S3AsyncClient client, SidecarRateLimiter downloadRateLimiter)
+    StorageClient(S3AsyncClient client, int rangeHeaderSize, SidecarRateLimiter downloadRateLimiter)
     {
         this.client = client;
+        this.rangeHeaderSize = rangeHeaderSize;
         this.downloadRateLimiter = downloadRateLimiter;
     }
 
@@ -117,14 +125,18 @@ public class StorageClient
         credentialsProviders.remove(jobId);
     }
 
+    /**
+     * Check object existence with matching checksum
+     * @param range restore range
+     * @return future of HeadObjectResponse
+     */
     public CompletableFuture<HeadObjectResponse> objectExists(RestoreRange range)
     {
         Credentials credentials = credentialsProviders.get(range.jobId());
         if (credentials == null)
         {
-            CompletableFuture<HeadObjectResponse> failedFuture = new CompletableFuture<>();
-            failedFuture.completeExceptionally(credentialsNotFound(range));
-            return failedFuture;
+            LOGGER.warn("Credentials not found. jobId={}", range.jobId());
+            return failedFuture(credentialsNotFound(range));
         }
 
         // https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html
@@ -140,15 +152,13 @@ public class StorageClient
                      .whenComplete(logCredentialOnRequestFailure(range, credentials));
     }
 
-    public CompletableFuture<File> downloadObjectIfAbsent(RestoreRange range)
+    public Future<File> downloadObjectIfAbsent(RestoreRange range, TaskExecutorPool taskExecutorPool)
     {
         Credentials credentials = credentialsProviders.get(range.jobId());
         if (credentials == null)
         {
             LOGGER.warn("Credentials to download object not found. jobId={}", range.jobId());
-            CompletableFuture<File> failedFuture = new CompletableFuture<>();
-            failedFuture.completeExceptionally(credentialsNotFound(range));
-            return failedFuture;
+            return Future.failedFuture(credentialsNotFound(range));
         }
 
         Path objectPath = range.stagedObjectPath();
@@ -163,27 +173,22 @@ public class StorageClient
             // TODO 2: extend restore_job table to define the multi-part upload chunk size, in order to perform local
             //         verification of the etag/checksum
             // For now, we just skip download, assuming the scenario is rare and no maliciousness
-            return CompletableFuture.completedFuture(object);
+            return Future.succeededFuture(object);
         }
 
-        if (!object.getParentFile().mkdirs())
+        try
         {
-            LOGGER.warn("Error occurred while creating directory. jobId={} sliceKey={}",
-                        range.jobId(), range.sliceKey());
-
+            Files.createDirectories(objectPath.getParent());
+        }
+        catch (Exception ex)
+        {
+            LOGGER.error("Error occurred while creating directory. jobId={} sliceKey={}",
+                         range.jobId(), range.sliceKey(), ex);
+            return Future.failedFuture(ex);
         }
 
         LOGGER.info("Downloading object. jobId={} sliceKey={}", range.jobId(), range.sliceKey());
-        // https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
-        GetObjectRequest request =
-        GetObjectRequest.builder()
-                        .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
-                        .bucket(range.sliceBucket())
-                        .key(range.sliceKey())
-                        .build();
-        return rateLimitedGetObject(range, client, request, objectPath)
-               .whenComplete(logCredentialOnRequestFailure(range, credentials))
-               .thenApply(res -> object);
+        return rangeGetObject(range, credentials, objectPath, taskExecutorPool);
     }
 
     public void close()
@@ -196,6 +201,71 @@ public class StorageClient
         {
             LOGGER.warn("Error when closing", ex);
         }
+    }
+
+    // Range-GetObject with http range header
+    private Future<File> rangeGetObject(RestoreRange range, Credentials credentials, Path destinationPath, TaskExecutorPool taskExecutorPool)
+    {
+        HttpRangesIterator iterator = new HttpRangesIterator(range.sliceObjectLength(), rangeHeaderSize);
+        Preconditions.checkState(iterator.hasNext(), "SliceObject is empty. sliceKey=" + range.sliceKey());
+
+        SeekableByteChannel seekableByteChannel;
+        try
+        {
+            seekableByteChannel = Files.newByteChannel(destinationPath, EnumSet.of(CREATE_NEW, WRITE));
+        }
+        catch (IOException e)
+        {
+            LOGGER.error("Failed to create file channel for downloading. jobId={} sliceKey={}",
+                         range.jobId(), range.sliceKey(), e);
+            return Future.failedFuture(e);
+        }
+        Future<SeekableByteChannel> channelFuture = Future.succeededFuture(seekableByteChannel);
+        while (iterator.hasNext())
+        {
+            HttpRange httpRange = iterator.next();
+            // Schedule each part download in the taskExecutorPool with ordered == true.
+            // Parts are downloaded one by one in sequence.
+            channelFuture = channelFuture.compose(channel -> taskExecutorPool.executeBlocking(() -> {
+                // the length is guaranteed to be no greater than rangeHeaderSize (int)
+                int actualRangeSize = (int) httpRange.length();
+                // throttle the download throughput
+                downloadRateLimiter.acquire(actualRangeSize);
+                // https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
+                GetObjectRequest request =
+                GetObjectRequest.builder()
+                                .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
+                                .bucket(range.sliceBucket())
+                                .key(range.sliceKey())
+                                .range(httpRange.toString())
+                                .build();
+                // note: it is a blocking get; No parallelism in getting the ranges of the same object
+                ResponseBytes<GetObjectResponse> bytes = client.getObject(request, AsyncResponseTransformer.toBytes()).get();
+                channel.write(bytes.asByteBuffer());
+                return channel;
+            }, true));
+        }
+        return channelFuture
+               // eventually is evaluated in both success and failure cases
+               .eventually(() -> taskExecutorPool.runBlocking(() -> {
+                   ThrowableUtils.propagate(() -> closeChannel(seekableByteChannel));
+               }, true))
+               .compose(channel -> Future.succeededFuture(destinationPath.toFile()),
+                        failure -> { // failure mapper; log the credential on failure
+                            LOGGER.error("Request is not successful. jobId={} credentials={}",
+                                         range.jobId(), credentials.readCredentials, failure);
+                            try
+                            {
+                                Files.deleteIfExists(destinationPath);
+                            }
+                            catch (IOException e)
+                            {
+                                LOGGER.warn("Failed to clean up the failed download. jobId={} sliceKey={}",
+                                            range.jobId(), range.sliceKey(), e);
+                                failure.addSuppressed(e);
+                            }
+                            return Future.failedFuture(failure);
+                        });
     }
 
     private boolean matches(Credentials c1, Credentials c2)
@@ -225,107 +295,30 @@ public class StorageClient
         return (ignored, cause) -> {
             if (cause != null)
             {
-                LOGGER.error("GetObjectRequest is not successful. jobId={} credentials={}",
+                LOGGER.error("Request is not successful. jobId={} credentials={}",
                              range.jobId(), credentials.readCredentials, cause);
             }
         };
     }
 
     /**
-     * Returns a {@link CompletableFuture} to the {@link GetObjectResponse}. It writes the object from S3 to a file
-     * applying rate limiting on the download throughput.
-     *
-     * @param range           the range to be restored
-     * @param client          the S3 client
-     * @param request         the {@link GetObjectRequest request}
-     * @param destinationPath the path where the object will be persisted
-     * @return a {@link CompletableFuture} of the {@link GetObjectResponse}
-     */
-    private CompletableFuture<GetObjectResponse> rateLimitedGetObject(RestoreRange range,
-                                                                      S3AsyncClient client,
-                                                                      GetObjectRequest request,
-                                                                      Path destinationPath)
-    {
-        return client.getObject(request, AsyncResponseTransformer.toPublisher())
-                     .thenCompose(responsePublisher -> subscribeRateLimitedWrite(range,
-                                                                                 destinationPath,
-                                                                                 responsePublisher));
-    }
-
-    /**
-     * Returns a {@link CompletableFuture} to the {@link GetObjectResponse} and consuming the GetObjectResponse
-     * by subscribing to the {@code publisher}. Applying backpressure on the received bytes by rate limiting
-     * the download throughput using the {@code downloadRateLimiter} object.
-     *
-     * @param range           the range to be restored
-     * @param destinationPath the path where the object will be persisted
-     * @param publisher       the {@link ResponsePublisher}
-     * @return a {@link CompletableFuture} to the {@link GetObjectResponse}
-     */
-    CompletableFuture<GetObjectResponse> subscribeRateLimitedWrite(RestoreRange range,
-                                                                   Path destinationPath,
-                                                                   ResponsePublisher<GetObjectResponse> publisher)
-    {
-        // closed at the completion of subscribeFuture
-        WritableByteChannel channel;
-        try
-        {
-            // always create new file, and fails if it already exists
-            // this is consistent with the expectation that we won't
-            // re-download a file that already exists
-            // The channel is closed on completion of streaming asynchronously
-            channel = Files.newByteChannel(destinationPath, EnumSet.of(CREATE_NEW, WRITE));
-        }
-        catch (FileAlreadyExistsException fileAlreadyExistsException)
-        {
-            LOGGER.info("Skipping download. File already exists. jobId={} sliceKey={}",
-                        range.jobId(), range.sliceKey());
-            return CompletableFuture.completedFuture(publisher.response());
-        }
-        catch (IOException e)
-        {
-            LOGGER.error("Error occurred while creating channel. destinationPath={} jobId={} sliceKey={}",
-                         destinationPath, range.jobId(), range.sliceKey(), e);
-            throw new RuntimeException(e);
-        }
-        // CompletableFuture that will be notified when all events have been consumed or if an error occurs.
-        return publisher
-               .subscribe(buffer -> {
-                   downloadRateLimiter.acquire(buffer.remaining()); // apply backpressure on the received bytes
-                   ThrowableUtils.propagate(() -> channel.write(buffer));
-               })
-               .whenComplete((v, subscribeThrowable) -> {
-                   // finally close the channel and log error if failed
-                   closeChannel(channel);
-
-                   if (subscribeThrowable != null)
-                   {
-                       LOGGER.error("Error occurred while downloading. jobId={} sliceKey={}",
-                                    range.jobId(), range.sliceKey(), subscribeThrowable);
-                   }
-               })
-               .thenApply(v -> publisher.response());
-    }
-
-    /**
-     * Closes the channel if not-null. Wraps any {@link IOException} in a {@link RuntimeException}
+     * Closes the channel if not-null and open
      *
      * @param channel the channel to be closed
-     * @throws RuntimeException wrapping any {@link IOException}
      */
-    private void closeChannel(Channel channel)
+    private void closeChannel(Channel channel) throws IOException
     {
         if (channel != null && channel.isOpen())
         {
-            try
-            {
-                channel.close();
-            }
-            catch (IOException e)
-            {
-                LOGGER.error("Failed to close channel", e);
-            }
+            channel.close();
         }
+    }
+
+    private static <T> CompletableFuture<T> failedFuture(Throwable cause)
+    {
+        CompletableFuture<T> failure = new CompletableFuture<>();
+        failure.completeExceptionally(cause);
+        return failure;
     }
 
     private static class Credentials

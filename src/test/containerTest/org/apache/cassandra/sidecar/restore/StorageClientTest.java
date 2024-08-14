@@ -25,29 +25,36 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.adobe.testing.s3mock.testcontainers.S3MockContainer;
 import com.datastax.driver.core.utils.UUIDs;
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.data.StorageCredentials;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.assertj.core.data.Percentage;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -72,29 +79,28 @@ class StorageClientTest
     private static final String testBucket = "bucket";
     private static final String testData = "testData";
     private static final String checksum = BinaryUtils.toHex(Md5Utils.computeMD5Hash(testData.getBytes()));
-    private static final String testFileName = "testFile";
     private static final String largeTestFileName = "largeTestFile";
     private static final String testEncKeyRef =
     "arn:aws:kms:us-east-1:1234567890:key/valid-test-key-ref";
-    private S3MockContainer s3Mock;
-    private S3AsyncClient s3AsyncClient;
-    private StorageClient client;
-    private RestoreJob restoreJob;
-
-    private RestoreRange testRange;
-    private RestoreRange largeTestRange;
+    private static S3MockContainer s3Mock;
+    private static S3AsyncClient s3AsyncClient;
+    private static StorageClient client;
+    private static RestoreJob restoreJob;
+    private static RestoreRange testRange;
+    private static RestoreRange largeTestRange;
+    private static Path largeFilePath;
+    private static TaskExecutorPool taskExecutorPool;
 
     @TempDir
-    Path testFolder;
+    private static Path testFolder;
 
-    @BeforeEach
-    void setup() throws Exception
+    @BeforeAll
+    static void setup() throws Exception
     {
         s3Mock = new S3MockContainer("3.5.1")
                  .withValidKmsKeys(testEncKeyRef)
                  .withInitialBuckets(testBucket);
         s3Mock.start();
-        String httpsEndpoint = s3Mock.getHttpsEndpoint();
         // test credential defined in s3mock
         StorageCredentials credentials = StorageCredentials.builder()
                                                            .accessKeyId("foo")
@@ -107,36 +113,44 @@ class StorageClientTest
                                .jobSecrets(new RestoreJobSecrets(credentials, credentials))
                                .sstableImportOptions(SSTableImportOptions.defaults())
                                .build();
-        s3AsyncClient = S3AsyncClient.builder()
-                                     .region(Region.US_WEST_1)
-                                     // provide a dummy credential to prevent client from identifying credentials
-                                     .credentialsProvider(StaticCredentialsProvider.create(
-                                     AwsBasicCredentials.create("foo", "bar")))
-                                     .endpointOverride(new URI(httpsEndpoint))
-                                     // required to prevent client from "manipulating" the object path
-                                     .forcePathStyle(true)
-                                     .httpClient(NettyNioAsyncHttpClient.builder().buildWithDefaults(
-                                         AttributeMap.builder()
-                                                     .put(TRUST_ALL_CERTIFICATES, Boolean.TRUE)
-                                                     .build()))
-                                     .build();
+        s3AsyncClient = buildS3AsyncClient(Duration.ofSeconds(60));
         client = new StorageClient(s3AsyncClient);
         client.authenticate(restoreJob);
-        Path testPath = testFolder.resolve(testFileName);
-        Files.deleteIfExists(testPath);
-        testRange = getMockRange(restoreJob.jobId, testBucket, "key", checksum, testPath);
+        Path stageDirPath = testFolder.resolve("stage");
+        testRange = getMockRange(restoreJob.jobId, testBucket, "key", checksum, stageDirPath, testData.length());
         putObject(testRange, testData);
 
-        Path largeFilePath = prepareTestFile(testFolder, largeTestFileName, LARGE_FILE_IN_BYTES); // 1MB
+        largeFilePath = prepareTestFile(testFolder, largeTestFileName, LARGE_FILE_IN_BYTES); // 1MB
         largeTestRange = getMockRange(restoreJob.jobId, testBucket, "largeKey",
-                                      computeChecksum(largeFilePath), largeFilePath);
+                                      computeChecksum(largeFilePath), stageDirPath,
+                                      LARGE_FILE_IN_BYTES);
         putObject(largeTestRange, largeFilePath);
-        // delete file after putting it in S3
-        Files.deleteIfExists(largeFilePath);
+
+        taskExecutorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
     }
 
-    @AfterEach
-    void cleanup()
+    static S3AsyncClient buildS3AsyncClient(Duration apiCallTimeout) throws Exception
+    {
+        String httpsEndpoint = s3Mock.getHttpsEndpoint();
+        return S3AsyncClient.builder()
+                            .region(Region.US_WEST_1)
+                            .overrideConfiguration(b -> b.apiCallTimeout(apiCallTimeout)
+                                                         .apiCallAttemptTimeout(apiCallTimeout))
+                            // provide a dummy credential to prevent client from identifying credentials
+                            .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create("foo", "bar")))
+                            .endpointOverride(new URI(httpsEndpoint))
+                            // required to prevent client from "manipulating" the object path
+                            .forcePathStyle(true)
+                            .httpClient(NettyNioAsyncHttpClient.builder().buildWithDefaults(
+                            AttributeMap.builder()
+                                        .put(TRUST_ALL_CERTIFICATES, Boolean.TRUE)
+                                        .build()))
+                            .build();
+    }
+
+    @AfterAll
+    static void cleanup()
     {
         s3Mock.stop();
         client.close();
@@ -183,7 +197,8 @@ class StorageClientTest
     @Test
     void testGetObject() throws Exception
     {
-        File downloaded = client.downloadObjectIfAbsent(testRange).get();
+        File downloaded = client.downloadObjectIfAbsent(testRange, taskExecutorPool)
+                                .toCompletionStage().toCompletableFuture().get();
         assertThat(downloaded.exists()).isTrue();
         assertThat(new String(Files.readAllBytes(downloaded.toPath()))).isEqualTo(testData);
     }
@@ -192,27 +207,52 @@ class StorageClientTest
     void testGetObjectHasExistingFileOnDisk() throws Exception
     {
         Path existingPath = testFolder.resolve(UUID.randomUUID().toString());
+        Files.createDirectories(existingPath);
+        Files.createFile(existingPath.resolve("key"));
         RestoreRange sliceHasFileOnDisk = getMockRange(restoreJob.jobId, testBucket, "key", checksum, existingPath);
-        File downloaded = client.downloadObjectIfAbsent(sliceHasFileOnDisk).get();
+        File downloaded = client.downloadObjectIfAbsent(sliceHasFileOnDisk, taskExecutorPool)
+                                .toCompletionStage().toCompletableFuture().get();
         assertThat(downloaded.getAbsolutePath()).isEqualTo(existingPath.resolve("key").toString());
     }
 
     @Test
     void testGetObjectThroughputRateLimited() throws Exception
     {
-        // only allow 1/4 the speed of transfer
-        client = new StorageClient(s3AsyncClient, SidecarRateLimiter.create(LARGE_FILE_IN_BYTES >> 2));
+        // only allow 1/4 the speed of transfer; each request downloads 128 KiB
+        StorageClient client = new StorageClient(s3AsyncClient, 128 * 1024, SidecarRateLimiter.create(LARGE_FILE_IN_BYTES >> 2));
         client.authenticate(restoreJob);
         // Download should take around 4 seconds (256 KB/s for a 1MB file)
         long startNanos = System.nanoTime();
-        File downloaded = client.downloadObjectIfAbsent(largeTestRange).get();
+        File downloaded = client.downloadObjectIfAbsent(largeTestRange, taskExecutorPool)
+                                .toCompletionStage().toCompletableFuture().get();
         assertThat(downloaded.exists()).isTrue();
         long elapsedNanos = System.nanoTime() - startNanos;
         assertThat(TimeUnit.NANOSECONDS.toMillis(elapsedNanos)).isCloseTo(TimeUnit.SECONDS.toMillis(4),
                                                                           Percentage.withPercentage(95));
+        byte[] downloadedBytes = Files.readAllBytes(downloaded.toPath());
+        byte[] originalBytes = Files.readAllBytes(largeFilePath);
+        assertThat(Arrays.equals(downloadedBytes, originalBytes)).isTrue();
+    }
+
+    @Test
+    void testApiCallTimeout() throws Exception
+    {
+        try (S3AsyncClient s3Client = buildS3AsyncClient(Duration.ofMillis(1)))
+        {
+            StorageClient client = new StorageClient(s3Client);
+            client.authenticate(restoreJob);
+            assertThatThrownBy(() -> client.objectExists(testRange).get())
+            .hasMessageContaining(" Client execution did not complete before the specified timeout configuration: 1 millis")
+            .hasRootCauseInstanceOf(ApiCallTimeoutException.class);
+        }
     }
 
     private RestoreRange getMockRange(UUID jobId, String bucket, String key, String checksum, Path localPath)
+    {
+        return getMockRange(jobId, bucket, key, checksum, localPath, 0);
+    }
+
+    private static RestoreRange getMockRange(UUID jobId, String bucket, String key, String checksum, Path localPath, long length)
     {
         RestoreRange mock = mock(RestoreRange.class, RETURNS_DEEP_STUBS);
         when(mock.jobId()).thenReturn(jobId);
@@ -220,6 +260,7 @@ class StorageClientTest
         when(mock.sliceKey()).thenReturn(key);
         when(mock.sliceChecksum()).thenReturn(checksum);
         when(mock.stageDirectory()).thenReturn(localPath);
+        when(mock.sliceObjectLength()).thenReturn(length);
         if (localPath != null)
         {
             when(mock.stagedObjectPath()).thenReturn(localPath.resolve(key));
@@ -227,7 +268,7 @@ class StorageClientTest
         return mock;
     }
 
-    private void putObject(RestoreRange range, String stringData) throws Exception
+    private static void putObject(RestoreRange range, String stringData) throws Exception
     {
         PutObjectRequest request = PutObjectRequest.builder()
                                                    .bucket(range.sliceBucket())
@@ -237,7 +278,7 @@ class StorageClientTest
         s3AsyncClient.putObject(request, AsyncRequestBody.fromString(stringData)).get();
     }
 
-    private void putObject(RestoreRange range, Path path) throws Exception
+    private static void putObject(RestoreRange range, Path path) throws Exception
     {
         PutObjectRequest request = PutObjectRequest.builder()
                                                    .bucket(range.sliceBucket())

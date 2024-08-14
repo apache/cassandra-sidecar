@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
@@ -28,10 +29,13 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import io.netty.handler.ssl.OpenSsl;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -52,6 +56,8 @@ import software.amazon.awssdk.utils.ThreadFactoryBuilder;
 @Singleton
 public class StorageClientPool implements SdkAutoCloseable
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StorageClientPool.class);
+
     private final Map<String, StorageClient> clientPool = new ConcurrentHashMap<>();
     private final Map<UUID, StorageClient> clientByJobId = new ConcurrentHashMap<>();
     private final ThreadPoolExecutor sharedExecutor;
@@ -100,12 +106,18 @@ public class StorageClientPool implements SdkAutoCloseable
     private StorageClient storageClient(String region)
     {
         return clientPool.computeIfAbsent(region, k -> {
+            logIfOpenSslUnavailable();
+
             Map<SdkAdvancedAsyncClientOption<?>, ?> advancedOptions = Collections.singletonMap(
             SdkAdvancedAsyncClientOption.FUTURE_COMPLETION_EXECUTOR, sharedExecutor
             );
+            Duration apiCallTimeout = Duration.ofSeconds(clientConfig.apiCallTimeoutMillis());
             S3AsyncClientBuilder clientBuilder =
             S3AsyncClient.builder()
                          .region(Region.of(region))
+                         // Setting the same timeout for apiCall and apiCallAttempt; There is 1 attempt effectively, as we do retry in the application
+                         .overrideConfiguration(b -> b.apiCallAttemptTimeout(apiCallTimeout)
+                                                      .apiCallTimeout(apiCallTimeout))
                          .asyncConfiguration(b -> b.advancedOptions(advancedOptions));
             S3ProxyConfiguration s3ProxyConfiguration = clientConfig.proxyConfig();
             URI endpointOverride = s3ProxyConfiguration.endpointOverride();
@@ -113,6 +125,7 @@ public class StorageClientPool implements SdkAutoCloseable
                 clientBuilder.endpointOverride(endpointOverride)
                              .forcePathStyle(true);
 
+            NettyNioAsyncHttpClient.Builder nettyClientBuilder = NettyNioAsyncHttpClient.builder();
             S3ProxyConfiguration config = clientConfig.proxyConfig();
             if (config.isPresent())
             {
@@ -123,11 +136,11 @@ public class StorageClientPool implements SdkAutoCloseable
                                                                    .username(config.username())
                                                                    .password(config.password())
                                                                    .build();
-                NettyNioAsyncHttpClient.Builder httpClientBuilder = NettyNioAsyncHttpClient.builder();
-                clientBuilder.httpClientBuilder(httpClientBuilder.proxyConfiguration(proxyConfig));
+                nettyClientBuilder.proxyConfiguration(proxyConfig);
             }
+            clientBuilder.httpClientBuilder(nettyClientBuilder);
 
-            return new StorageClient(clientBuilder.build(), ingressFileRateLimiter);
+            return new StorageClient(clientBuilder.build(), clientConfig.rangeGetObjectBytesSize(), ingressFileRateLimiter);
         });
     }
 
@@ -137,5 +150,13 @@ public class StorageClientPool implements SdkAutoCloseable
         clientPool.values().forEach(StorageClient::close);
         clientPool.clear();
         clientByJobId.clear();
+    }
+
+    private void logIfOpenSslUnavailable()
+    {
+        if (!OpenSsl.isAvailable())
+        {
+            LOGGER.info("OpenSSL is not available for S3AsyncClient");
+        }
     }
 }

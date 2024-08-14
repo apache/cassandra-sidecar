@@ -36,6 +36,19 @@ public interface S3ClientConfiguration
     long threadKeepAliveSeconds();
 
     /**
+     * Returns range bytes size to produce <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-range">Range header</a> for range-get object.
+     * The size should not be too large (long request) or too small (too many request). 5 to 10 MiB would be ideal to start with.
+     * @return range bytes size.
+     */
+    int rangeGetObjectBytesSize();
+
+    /**
+     * API call timeout in milliseconds for S3 API calls.
+     * @return duration of timeout in milliseconds
+     */
+    long apiCallTimeoutMillis();
+
+    /**
      * Route traffic through a proxy in the environment that requires doing so, when a proxy is specified
      *
      * @return the proxy configuration, if specified

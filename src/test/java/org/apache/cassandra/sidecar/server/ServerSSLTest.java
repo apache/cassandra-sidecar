@@ -277,7 +277,7 @@ class ServerSSLTest
               .compose(s -> validateHealthEndpoint(clientWithP12Keystore(true, false)))
               .onComplete(context.failing(throwable -> {
                   assertThat(throwable).isNotNull()
-                                       .hasMessageContaining("Received fatal alert: bad_certificate");
+                                       .hasMessageContaining("Received fatal alert: certificate_required");
                   context.completeNow();
               }));
     }

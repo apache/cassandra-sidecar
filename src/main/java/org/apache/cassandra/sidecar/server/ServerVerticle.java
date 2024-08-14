@@ -138,7 +138,8 @@ public class ServerVerticle extends AbstractVerticle
                 // to a vert.x bug.
                 // See following comment for details
                 if (ex.getMessage() != null
-                    && ex.getMessage().contains("Unable to update traffic shaping options because the server was not configured to use traffic shaping during startup"))
+                    && ex.getMessage().contains("Unable to update traffic shaping options " +
+                                                "because the server was not configured to use traffic shaping during startup"))
                 {
                     // TODO: we need to rollback this change once vert.x fixes this problem
                     // Swallowing the exception here is okay for now until we get a proper fix in vert.x.

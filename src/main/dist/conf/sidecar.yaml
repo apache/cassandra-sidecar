@@ -185,6 +185,8 @@ s3_client:
   concurrency: 4
   thread_name_prefix: s3-client
   thread_keep_alive_seconds: 60
+  api_call_timeout_millis: 60000 # 1 minute
+  range_get_object_bytes_size: 5242880  # 5 MiB
 #  proxy_config:
 #    uri:
 #    username:

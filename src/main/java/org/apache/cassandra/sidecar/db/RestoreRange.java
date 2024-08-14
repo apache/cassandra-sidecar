@@ -33,7 +33,6 @@ import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.response.data.RestoreRangeJson;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
-import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
@@ -108,6 +107,7 @@ public class RestoreRange
     private final RestoreJobProgressTracker tracker;
 
     // mutable states
+    private Long sliceObjectLength; // content length value from the HeadObjectResponse; it should be the same with the slice#compressedSize
     private boolean existsOnS3 = false;
     private boolean hasStaged = false;
     private boolean hasImported = false;
@@ -234,9 +234,10 @@ public class RestoreRange
         tracker.requestOutOfRangeDataCleanup();
     }
 
-    public void setExistsOnS3()
+    public void setExistsOnS3(Long objectLength)
     {
         this.existsOnS3 = true;
+        this.sliceObjectLength = objectLength;
     }
 
     public void incrementDownloadAttempt()
@@ -329,19 +330,22 @@ public class RestoreRange
         return readSliceProperty(RestoreSlice::checksum);
     }
 
-    public Long sliceCreationTimeNanos()
+    public long sliceCreationTimeNanos()
     {
-        return readSliceProperty(RestoreSlice::creationTimeNanos);
+        return Objects.requireNonNull(source, "Source slice does not exist")
+                      .creationTimeNanos();
     }
 
-    public Long sliceCompressedSize()
+    public long sliceCompressedSize()
     {
-        return readSliceProperty(RestoreSlice::compressedSize);
+        return Objects.requireNonNull(source, "Source slice does not exist")
+                      .compressedSize();
     }
 
-    public Long sliceUncompressedSize()
+    public long sliceUncompressedSize()
     {
-        return readSliceProperty(RestoreSlice::uncompressedSize);
+        return Objects.requireNonNull(source, "Source slice does not exist")
+                      .uncompressedSize();
     }
 
     public String keyspace()
@@ -413,6 +417,11 @@ public class RestoreRange
         return existsOnS3;
     }
 
+    public long sliceObjectLength()
+    {
+        return sliceObjectLength == null ? 0 : sliceObjectLength;
+    }
+
     public boolean hasStaged()
     {
         return hasStaged;
@@ -447,8 +456,7 @@ public class RestoreRange
 
     public long estimatedSpaceRequiredInBytes()
     {
-        Preconditions.checkState(source != null, "Cannot estimate space requirement without source slice");
-        return source.compressedSize() + source.uncompressedSize();
+        return sliceCompressedSize() + sliceUncompressedSize();
     }
 
     // -------------
