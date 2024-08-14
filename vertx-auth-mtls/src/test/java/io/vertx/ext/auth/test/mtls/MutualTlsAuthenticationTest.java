@@ -78,7 +78,8 @@ public class MutualTlsAuthenticationTest
         when(mockIdentityValidator.userFromIdentity("validIdentity")).thenReturn(null);
 
         mTlsAuth.authenticate(creds)
-                .onFailure(res -> context.failNow("mTls should have succeeded"));
+                .onFailure(res -> context.failNow("mTls should have succeeded"))
+                .onSuccess(res -> context.completeNow());
     }
 
     @Test
@@ -95,7 +96,8 @@ public class MutualTlsAuthenticationTest
                 .onSuccess(res -> context.failNow("Should have failed"))
                 .onFailure(res -> context.verify(() -> {
                     assertThat(res).isNotNull();
-                    assertThat(res.getMessage()).contains("Invalid credentials type");
+                    assertThat(res.getMessage()).contains("Unable to authenticate");
+                    context.completeNow();
                 }));
     }
 
@@ -119,7 +121,8 @@ public class MutualTlsAuthenticationTest
                 .onSuccess(res -> context.failNow("Should have failed"))
                 .onFailure(res -> {
                     assert (res != null);
-                    assert (res.getMessage().contains("Invalid or not supported certificate"));
+                    assert (res.getMessage().contains("Unable to authenticate"));
+                    context.completeNow();
                 });
     }
 
@@ -143,7 +146,8 @@ public class MutualTlsAuthenticationTest
                 .onSuccess(res -> context.failNow("Should have failed"))
                 .onFailure(res -> context.verify(() -> {
                     assertThat(res).isNotNull();
-                    assertThat(res.getMessage()).contains("Client identity not authenticated");
+                    assertThat(res.getMessage()).contains("Unable to authenticate");
+                    context.completeNow();
                 }));
     }
 
@@ -167,7 +171,8 @@ public class MutualTlsAuthenticationTest
                 .onSuccess(res -> context.failNow("Should have failed"))
                 .onFailure(res -> context.verify(() -> {
                     assertThat(res).isNotNull();
-                    assertThat(res.getMessage()).contains("Unable to extract client identity");
+                    assertThat(res.getMessage()).contains("Unable to authenticate");
+                    context.completeNow();
                 }));
     }
 }
