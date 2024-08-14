@@ -82,6 +82,7 @@
             <Class name="org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder$SnapshotFile" />
             <Class name="org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandlerTest" />
             <Class name="org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor" />
+            <Class name="org.apache.cassandra.sidecar.restore.StorageClient" />
         </Or>
     </Match>
 

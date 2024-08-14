@@ -218,6 +218,21 @@ dependencies {
         }
     }
 
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}")  // for openSSL
+
+    // The newer versions (2.0.48.Final+) of tcnative require explicit dependency declarations,
+    // including the classifiers. See https://netty.io/wiki/forked-tomcat-native.html#gradle-and-bazel
+    // for details.
+
+    // openSSL native libraries for linux x86-64 architectures
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'linux-x86_64')
+    // openSSL native libraries for macOS aarch-64 architectures
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'osx-aarch_64')
+    // openSSL native libraries for linux aarch-64 architectures
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'linux-aarch_64')
+    // openSSL native libraries for macOS x86-64 architectures
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'osx-x86_64')
+
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
@@ -319,7 +334,6 @@ clean.doLast {
 
 test {
     systemProperty "vertxweb.environment", "dev"
-    systemProperty "logback.configurationFile", "logback-sidecar.xml"
     systemProperty "vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.SLF4JLogDelegateFactory"
     // ordinarily we don't need integration tests
     // see the integrationTest task

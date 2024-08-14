@@ -274,8 +274,6 @@ public class RestoreProcessor implements PeriodicTask
             else
             {
                 LOGGER.error("Slice failed with unrecoverable failure. sliceKey={}", range.sliceKey(), cause);
-                // fail the slice and mark the slice has failed on its owning instance.
-                // In the phase 1 implementation, all slices of the job get aborted
                 range.fail(RestoreJobExceptions.toFatal(cause));
                 if (range.job().isManagedBySidecar())
                 {

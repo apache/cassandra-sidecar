@@ -80,6 +80,7 @@ import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -138,9 +139,11 @@ class RestoreRangeTaskTest
     void testRestoreSucceeds()
     {
         RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
-        when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(null));
-        when(mockStorageClient.downloadObjectIfAbsent(mockRange))
-        .thenReturn(CompletableFuture.completedFuture(new File(".")));
+        HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
+        when(headObjectResponse.contentLength()).thenReturn(1L);
+        when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
+        .thenReturn(Future.succeededFuture(new File(".")));
         RestoreRangeTask task = createTask(mockRange, job);
 
         Promise<RestoreRange> promise = Promise.promise();
@@ -167,8 +170,8 @@ class RestoreRangeTaskTest
         RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
         // the existence of the slice is already confirmed by the s3 client
         when(mockRange.existsOnS3()).thenReturn(true);
-        when(mockStorageClient.downloadObjectIfAbsent(mockRange))
-        .thenReturn(CompletableFuture.completedFuture(new File(".")));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
+        .thenReturn(Future.succeededFuture(new File(".")));
         RestoreRangeTask task = createTask(mockRange, job);
 
         Promise<RestoreRange> promise = Promise.promise();
@@ -220,9 +223,11 @@ class RestoreRangeTaskTest
         doReturn(true).when(job).isManagedBySidecar();
         when(mockRange.job()).thenReturn(job);
         when(mockRange.stagedObjectPath()).thenReturn(Paths.get("nonexist"));
-        when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(null));
-        when(mockStorageClient.downloadObjectIfAbsent(mockRange))
-        .thenReturn(CompletableFuture.completedFuture(new File(".")));
+        HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
+        when(headObjectResponse.contentLength()).thenReturn(1L);
+        when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
+        .thenReturn(Future.succeededFuture(new File(".")));
         RestoreRangeTask task = createTask(mockRange, job);
 
         Promise<RestoreRange> promise = Promise.promise();
@@ -246,7 +251,7 @@ class RestoreRangeTaskTest
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
         when(mockStorageClient.objectExists(mockRange))
         .thenThrow(new RuntimeException("Should not call this method"));
-        when(mockStorageClient.downloadObjectIfAbsent(mockRange))
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
         .thenThrow(new RuntimeException("Should not call this method"));
         RestoreRangeTask task = createTask(mockRange, job);
 
@@ -319,8 +324,11 @@ class RestoreRangeTaskTest
         Path stagedPath = testFolder.resolve("slice.zip");
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
         when(mockRange.isCancelled()).thenReturn(false);
-        when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(null));
-        when(mockStorageClient.downloadObjectIfAbsent(mockRange)).thenThrow(new RuntimeException("Random exception"));
+        HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
+        when(headObjectResponse.contentLength()).thenReturn(1L);
+        when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
+        .thenThrow(new RuntimeException("Random exception"));
 
         Promise<RestoreRange> promise = Promise.promise();
 
@@ -356,8 +364,11 @@ class RestoreRangeTaskTest
         Path stagedPath = testFolder.resolve("slice.zip");
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
         when(mockRange.isCancelled()).thenReturn(false);
-        when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(null));
-        when(mockStorageClient.downloadObjectIfAbsent(mockRange)).thenReturn(CompletableFuture.completedFuture(null));
+        HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
+        when(headObjectResponse.contentLength()).thenReturn(1L);
+        when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
+        .thenReturn(Future.succeededFuture(null));
 
         Promise<RestoreRange> promise = Promise.promise();
 

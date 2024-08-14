@@ -199,9 +199,10 @@ public class RestoreRangeTask implements RestoreRangeHandler
         return failOnCancelled(range, null)
                // 1. check object existence and validate eTag / checksum
                .compose(value -> checkObjectExistence())
-               // 2. download slice/object when the remote object exists
                .compose(value -> failOnCancelled(range, value))
-               .compose(headObject -> downloadSlice())
+               // 2. download slice/object (with partNumber) when the remote object exists
+               .compose(value -> downloadSlice())
+               .compose(value -> failOnCancelled(range, value))
                // 3. unzip the file and import/commit
                .compose(this::unzipAndImport);
     }
@@ -218,10 +219,10 @@ public class RestoreRangeTask implements RestoreRangeHandler
         // even if the file already exists on disk, we should still check the object existence
         return
         fromCompletionStage(s3Client.objectExists(range))
-        .compose(exists -> { // on success
+        .compose(headObjectResponse -> { // on success
             long durationNanos = currentTimeInNanos() - range.sliceCreationTimeNanos();
             metrics.sliceReplicationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
-            range.setExistsOnS3();
+            range.setExistsOnS3(headObjectResponse.contentLength());
             LOGGER.debug("Slice is now available on S3. jobId={} sliceKey={} replicationTimeNanos={}",
                          range.jobId(), range.sliceKey(), durationNanos);
             return Future.succeededFuture();
@@ -285,7 +286,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
 
         LOGGER.info("Begin downloading restore slice. sliceKey={}", range.sliceKey());
         Future<File> future =
-        fromCompletionStage(s3Client.downloadObjectIfAbsent(range))
+        s3Client.downloadObjectIfAbsent(range, executorPool)
         .recover(cause -> { // converts to restore job exception
             LOGGER.warn("Failed to download restore slice. sliceKey={}", range.sliceKey(), cause);
 

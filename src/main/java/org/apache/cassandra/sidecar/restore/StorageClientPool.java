@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +33,7 @@ import com.google.common.util.concurrent.SidecarRateLimiter;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import io.netty.handler.ssl.SslProvider;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -103,9 +105,13 @@ public class StorageClientPool implements SdkAutoCloseable
             Map<SdkAdvancedAsyncClientOption<?>, ?> advancedOptions = Collections.singletonMap(
             SdkAdvancedAsyncClientOption.FUTURE_COMPLETION_EXECUTOR, sharedExecutor
             );
+            Duration apiCallTimeout = Duration.ofSeconds(clientConfig.apiCallTimeoutMillis());
             S3AsyncClientBuilder clientBuilder =
             S3AsyncClient.builder()
                          .region(Region.of(region))
+                         // Setting the same timeout for apiCall and apiCallAttempt; There is 1 attempt effectively, as we do retry in the application
+                         .overrideConfiguration(b -> b.apiCallAttemptTimeout(apiCallTimeout)
+                                                      .apiCallTimeout(apiCallTimeout))
                          .asyncConfiguration(b -> b.advancedOptions(advancedOptions));
             S3ProxyConfiguration s3ProxyConfiguration = clientConfig.proxyConfig();
             URI endpointOverride = s3ProxyConfiguration.endpointOverride();
@@ -113,6 +119,8 @@ public class StorageClientPool implements SdkAutoCloseable
                 clientBuilder.endpointOverride(endpointOverride)
                              .forcePathStyle(true);
 
+            NettyNioAsyncHttpClient.Builder nettyClientBuilder = NettyNioAsyncHttpClient.builder()
+                                                                                        .sslProvider(SslProvider.OPENSSL);
             S3ProxyConfiguration config = clientConfig.proxyConfig();
             if (config.isPresent())
             {
@@ -123,11 +131,11 @@ public class StorageClientPool implements SdkAutoCloseable
                                                                    .username(config.username())
                                                                    .password(config.password())
                                                                    .build();
-                NettyNioAsyncHttpClient.Builder httpClientBuilder = NettyNioAsyncHttpClient.builder();
-                clientBuilder.httpClientBuilder(httpClientBuilder.proxyConfiguration(proxyConfig));
+                nettyClientBuilder.proxyConfiguration(proxyConfig);
             }
+            clientBuilder.httpClientBuilder(nettyClientBuilder);
 
-            return new StorageClient(clientBuilder.build(), ingressFileRateLimiter);
+            return new StorageClient(clientBuilder.build(), clientConfig.rangeGetObjectBytesSize(), ingressFileRateLimiter);
         });
     }
 
