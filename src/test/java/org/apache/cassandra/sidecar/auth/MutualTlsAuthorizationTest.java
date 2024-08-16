@@ -203,11 +203,11 @@ public class MutualTlsAuthorizationTest
               .as(BodyCodec.string())
               .ssl(true)
               .send(testContext.succeeding(response -> testContext.verify(() ->
-                                          {
-                                              assertThat(response.statusCode()).isEqualTo(OK.code());
-                                              assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
-                                              testContext.completeNow();
-                                          })));
+                                                                          {
+                                                                              assertThat(response.statusCode()).isEqualTo(OK.code());
+                                                                              assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+                                                                              testContext.completeNow();
+                                                                          })));
     }
 
     @Test
@@ -234,11 +234,11 @@ public class MutualTlsAuthorizationTest
               .as(BodyCodec.string())
               .ssl(true)
               .send(testContext.succeeding(response -> testContext.verify(() ->
-                                          {
-                                              assertThat(response.statusCode()).isEqualTo(OK.code());
-                                              assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
-                                              testContext.completeNow();
-                                          })));
+                                                                          {
+                                                                              assertThat(response.statusCode()).isEqualTo(OK.code());
+                                                                              assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+                                                                              testContext.completeNow();
+                                                                          })));
     }
 
     @Test
@@ -265,12 +265,12 @@ public class MutualTlsAuthorizationTest
               .as(BodyCodec.string())
               .ssl(true)
               .send(testContext.succeeding(response -> testContext.verify(() ->
-                                          {
-                                              assertThat(response.statusCode()).isEqualTo(UNAUTHORIZED.code());
-                                              assertThat(response.body())
-                                              .isEqualTo("{\"status\":\"Unauthorized\",\"code\":401,\"message\":\"Not Authorized\"}");
-                                              testContext.completeNow();
-                                          })));
+                                                                          {
+                                                                              assertThat(response.statusCode()).isEqualTo(UNAUTHORIZED.code());
+                                                                              assertThat(response.body())
+                                                                              .isEqualTo("{\"status\":\"Unauthorized\",\"code\":401,\"message\":\"Not Authorized\"}");
+                                                                              testContext.completeNow();
+                                                                          })));
     }
 
     @Test
@@ -302,12 +302,12 @@ public class MutualTlsAuthorizationTest
               .as(BodyCodec.string())
               .ssl(true)
               .send(testContext.succeeding(response -> testContext.verify(() ->
-                                          {
-                                              assertThat(response.statusCode()).isEqualTo(UNAUTHORIZED.code());
-                                              assertThat(response.body())
-                                              .isEqualTo("{\"status\":\"Unauthorized\",\"code\":401,\"message\":\"Not Authorized\"}");
-                                              testContext.completeNow();
-                                          })));
+                                                                          {
+                                                                              assertThat(response.statusCode()).isEqualTo(UNAUTHORIZED.code());
+                                                                              assertThat(response.body())
+                                                                              .isEqualTo("{\"status\":\"Unauthorized\",\"code\":401,\"message\":\"Not Authorized\"}");
+                                                                              testContext.completeNow();
+                                                                          })));
     }
 
     @Test
@@ -334,12 +334,12 @@ public class MutualTlsAuthorizationTest
               .as(BodyCodec.string())
               .ssl(true)
               .send(testContext.succeeding(response -> testContext.verify(() ->
-                                          {
-                                              assertThat(response.statusCode()).isEqualTo(UNAUTHORIZED.code());
-                                              assertThat(response.body())
-                                              .isEqualTo("{\"status\":\"Unauthorized\",\"code\":401,\"message\":\"Not Authorized\"}");
-                                              testContext.completeNow();
-                                          })));
+                                                                          {
+                                                                              assertThat(response.statusCode()).isEqualTo(UNAUTHORIZED.code());
+                                                                              assertThat(response.body())
+                                                                              .isEqualTo("{\"status\":\"Unauthorized\",\"code\":401,\"message\":\"Not Authorized\"}");
+                                                                              testContext.completeNow();
+                                                                          })));
     }
 
     @Test
@@ -365,11 +365,11 @@ public class MutualTlsAuthorizationTest
               .as(BodyCodec.string())
               .ssl(true)
               .send(testContext.succeeding(response -> testContext.verify(() ->
-                                          {
-                                              assertThat(response.statusCode()).isEqualTo(OK.code());
-                                              assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
-                                              testContext.completeNow();
-                                          })));
+                                                                          {
+                                                                              assertThat(response.statusCode()).isEqualTo(OK.code());
+                                                                              assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+                                                                              testContext.completeNow();
+                                                                          })));
     }
 
     @Test
@@ -407,12 +407,43 @@ public class MutualTlsAuthorizationTest
               .as(BodyCodec.string())
               .ssl(true)
               .send(testContext.succeeding(response -> testContext.verify(() ->
-                                          {
-                                              assertThat(response.statusCode()).isEqualTo(UNAUTHORIZED.code());
-                                              assertThat(response.body())
-                                              .isEqualTo("{\"status\":\"Unauthorized\",\"code\":401,\"message\":\"Not Authorized\"}");
-                                              testContext.completeNow();
-                                          })));
+                                                                          {
+                                                                              assertThat(response.statusCode()).isEqualTo(UNAUTHORIZED.code());
+                                                                              assertThat(response.body())
+                                                                              .isEqualTo("{\"status\":\"Unauthorized\",\"code\":401,\"message\":\"Not Authorized\"}");
+                                                                              testContext.completeNow();
+                                                                          })));
+    }
+
+    @Test
+    void testSidecarSpecificPermissions(VertxTestContext testContext) throws Exception
+    {
+        AndAuthorization auth1 = AndAuthorization.create();
+        OrAuthorization auth1Or = OrAuthorization.create();
+        auth1Or.addAuthorization(RoleBasedAuthorization.create(MutualTlsPermissions.UPLOAD_SSTABLE.name())
+                                                       .setResource("<ALL KEYSPACES>"));
+        auth1Or.addAuthorization(RoleBasedAuthorization.create(MutualTlsPermissions.UPLOAD_SSTABLE.name())
+                                                       .setResource("<keyspace system_auth>"));
+        auth1.addAuthorization(auth1Or);
+
+        when(mockRequiredPermissionsProvider.requiredPermissions("GET /api/v1/__health", new HashMap<>()))
+        .thenReturn(auth1);
+
+        Path clientKeystorePath = generateClientCertificate(null, ca, "spiffe://identity7");
+
+        String url = "/api/v1/__health";
+
+        WebClient client = client(clientKeystorePath, truststorePath);
+
+        client.get(server.actualPort(), "localhost", url)
+              .as(BodyCodec.string())
+              .ssl(true)
+              .send(testContext.succeeding(response -> testContext.verify(() ->
+                                                                          {
+                                                                              assertThat(response.statusCode()).isEqualTo(OK.code());
+                                                                              assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+                                                                              testContext.completeNow();
+                                                                          })));
     }
 
     private WebClient client(Path clientKeystorePath, Path clientTruststorePath)
@@ -452,12 +483,6 @@ public class MutualTlsAuthorizationTest
         return ssc.toTempKeyStorePath(tempDir.toPath(), "cassandra".toCharArray(), "cassandra".toCharArray());
     }
 
-    @Test
-    void testSidecarSpecificPermissions()
-    {
-
-    }
-
     @Singleton
     private static class MutualTLSAuthorizationTestCacheFactory extends CacheFactory
     {
@@ -484,20 +509,16 @@ public class MutualTlsAuthorizationTest
                                                   value, key, "roles", cause))
                     .buildAsync(systemAuthDatabaseAccessor::isSuperUser);
 
-            CompletableFuture<Boolean> adminSuperUser = CompletableFuture.completedFuture(true);
-            rolesToSuperUser.put("admin", adminSuperUser);
-            CompletableFuture<Boolean> user1SuperUser = CompletableFuture.completedFuture(false);
-            rolesToSuperUser.put("user1", user1SuperUser);
-            CompletableFuture<Boolean> user2SuperUser = CompletableFuture.completedFuture(false);
-            rolesToSuperUser.put("user2", user2SuperUser);
-            CompletableFuture<Boolean> user3SuperUser = CompletableFuture.completedFuture(false);
-            rolesToSuperUser.put("user3", user3SuperUser);
-            CompletableFuture<Boolean> user4SuperUser = CompletableFuture.completedFuture(false);
-            rolesToSuperUser.put("user4", user4SuperUser);
-            CompletableFuture<Boolean> user5SuperUser = CompletableFuture.completedFuture(false);
-            rolesToSuperUser.put("user5", user5SuperUser);
-            CompletableFuture<Boolean> user6SuperUser = CompletableFuture.completedFuture(false);
-            rolesToSuperUser.put("user6", user6SuperUser);
+            CompletableFuture<Boolean> superUserTrue = CompletableFuture.completedFuture(true);
+            CompletableFuture<Boolean> superUserFalse = CompletableFuture.completedFuture(false);
+            rolesToSuperUser.put("admin", superUserTrue);
+            rolesToSuperUser.put("user1", superUserFalse);
+            rolesToSuperUser.put("user2", superUserFalse);
+            rolesToSuperUser.put("user3", superUserFalse);
+            rolesToSuperUser.put("user4", superUserFalse);
+            rolesToSuperUser.put("user5", superUserFalse);
+            rolesToSuperUser.put("user6", superUserFalse);
+            rolesToSuperUser.put("user7", superUserFalse);
 
             return rolesToSuperUser;
         }
@@ -531,6 +552,8 @@ public class MutualTlsAuthorizationTest
             identityToRoles.put("spiffe://identity5", user5Role);
             CompletableFuture<String> user6Role = CompletableFuture.completedFuture("user6");
             identityToRoles.put("spiffe://identity6", user6Role);
+            CompletableFuture<String> user7Role = CompletableFuture.completedFuture("user7");
+            identityToRoles.put("spiffe://identity7", user7Role);
 
             return identityToRoles;
         }
@@ -612,6 +635,15 @@ public class MutualTlsAuthorizationTest
                                                            .setResource("<keyspace system_auth>"));
             CompletableFuture<AndAuthorization> user6AuthFuture = CompletableFuture.completedFuture(user6Auth);
             roleToPermissions.put("user6", user6AuthFuture);
+
+            AndAuthorization user7Auth = AndAuthorization
+                                         .create()
+                                         .addAuthorization(RoleBasedAuthorization
+                                                           .create(MutualTlsPermissions.UPLOAD_SSTABLE.name())
+                                                           .setResource("<keyspace system_auth>"));
+
+            CompletableFuture<AndAuthorization> user7AuthFuture = CompletableFuture.completedFuture(user7Auth);
+            roleToPermissions.put("user7", user7AuthFuture);
 
             return roleToPermissions;
         }
