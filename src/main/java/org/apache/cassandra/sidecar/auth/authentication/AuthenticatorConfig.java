@@ -19,10 +19,10 @@
 package org.apache.cassandra.sidecar.auth.authentication;
 
 /**
- * Enum for the supported authentication providers
+ * Supported authentication providers
  */
 public enum AuthenticatorConfig
 {
-    MutualTlsAuthenticator,
-    AllowAllAuthenticator
+    MutualTls,
+    AllowAll
 }

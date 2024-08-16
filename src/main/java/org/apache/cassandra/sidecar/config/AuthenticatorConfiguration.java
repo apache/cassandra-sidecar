@@ -29,6 +29,9 @@ import org.apache.cassandra.sidecar.auth.authentication.IdentityValidatorConfig;
  */
 public interface AuthenticatorConfiguration
 {
+    AuthenticatorConfig DEFAULT_AUTHENTICATOR = AuthenticatorConfig.AllowAll;
+    IdentityValidatorConfig DEFAULT_ID_VALIDATOR = IdentityValidatorConfig.AllowAll;
+    CertificateValidatorConfig DEFAULT_CERT_VALIDATOR = CertificateValidatorConfig.AllowAll;
 
     /**
      * Returns the desired authentication scheme as provided in the yaml file

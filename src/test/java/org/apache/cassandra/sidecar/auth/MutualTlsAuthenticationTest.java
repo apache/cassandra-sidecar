@@ -394,14 +394,14 @@ public class MutualTlsAuthenticationTest
             AuthenticatorConfiguration authenticatorConfiguration =
             AuthenticatorConfigurationImpl.builder()
                                           .authorizedIdentities(Collections.singleton("spiffe://test.com/auth"))
-                                          .authConfig(AuthenticatorConfig.MutualTlsAuthenticator)
-                                          .certValidator(CertificateValidatorConfig.SpiffeCertificateValidator)
-                                          .idValidator(IdentityValidatorConfig.MutualTlsIdentityValidator)
+                                          .authConfig(AuthenticatorConfig.MutualTls)
+                                          .certValidator(CertificateValidatorConfig.Spiffe)
+                                          .idValidator(IdentityValidatorConfig.MutualTls)
                                           .build();
 
             AuthorizerConfiguration authorizerConfiguration =
             AuthorizerConfigurationImpl.builder()
-                                       .authConfig(AuthorizerConfig.AllowAllAuthorizer)
+                                       .authConfig(AuthorizerConfig.AllowAll)
                                        .build();
 
             return super.abstractConfig(sslConfiguration, authenticatorConfiguration, authorizerConfiguration);

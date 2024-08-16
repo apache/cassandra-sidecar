@@ -27,6 +27,8 @@ import org.apache.cassandra.sidecar.auth.authorization.AuthorizerConfig;
  */
 public interface AuthorizerConfiguration
 {
+    AuthorizerConfig DEFAULT_AUTHORIZER = AuthorizerConfig.AllowAll;
+
     /**
      * Returns the desired authorization scheme as provided in the yaml file
      *

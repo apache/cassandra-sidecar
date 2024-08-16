@@ -114,12 +114,12 @@ public class TestSslModule extends TestModule
         AuthenticatorConfiguration authenticatorConfiguration =
         AuthenticatorConfigurationImpl.builder()
                                       .authorizedIdentities(Collections.emptySet())
-                                      .authConfig(AuthenticatorConfig.AllowAllAuthenticator)
+                                      .authConfig(AuthenticatorConfig.AllowAll)
                                       .build();
 
         AuthorizerConfiguration authorizerConfiguration =
         AuthorizerConfigurationImpl.builder()
-                                   .authConfig(AuthorizerConfig.AllowAllAuthorizer)
+                                   .authConfig(AuthorizerConfig.AllowAll)
                                    .build();
 
         return super.abstractConfig(sslConfiguration, authenticatorConfiguration, authorizerConfiguration);

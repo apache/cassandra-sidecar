@@ -91,6 +91,7 @@ public class MutualTlsAuthorizationHandler implements AuthorizationHandler
      */
     public AuthorizationHandler variableConsumer(BiConsumer<RoutingContext, AuthorizationContext> handler)
     {
+        // We do not intend to perform request params validations for AuthZ
         return null;
     }
 

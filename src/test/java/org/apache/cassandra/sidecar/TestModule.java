@@ -114,11 +114,11 @@ public class TestModule extends AbstractModule
                             .build();
         AuthenticatorConfiguration authenticatorConfiguration =
         AuthenticatorConfigurationImpl.builder()
-                                      .authConfig(AuthenticatorConfig.AllowAllAuthenticator)
+                                      .authConfig(AuthenticatorConfig.AllowAll)
                                       .build();
         AuthorizerConfiguration authorizerConfiguration =
         AuthorizerConfigurationImpl.builder()
-                                   .authConfig(AuthorizerConfig.AllowAllAuthorizer).build();
+                                   .authConfig(AuthorizerConfig.AllowAll).build();
         return abstractConfig(sslConfiguration, authenticatorConfiguration, authorizerConfiguration);
     }
 

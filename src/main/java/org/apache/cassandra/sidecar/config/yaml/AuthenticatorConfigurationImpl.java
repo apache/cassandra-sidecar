@@ -108,10 +108,10 @@ public class AuthenticatorConfigurationImpl implements AuthenticatorConfiguratio
      */
     public static class Builder implements DataObjectBuilder<Builder, AuthenticatorConfiguration>
     {
-        protected AuthenticatorConfig authConfig;
+        protected AuthenticatorConfig authConfig = DEFAULT_AUTHENTICATOR;
         protected Set<String> authorizedIdentities;
-        protected CertificateValidatorConfig certValidator;
-        protected IdentityValidatorConfig idValidator;
+        protected CertificateValidatorConfig certValidator = DEFAULT_CERT_VALIDATOR;
+        protected IdentityValidatorConfig idValidator = DEFAULT_ID_VALIDATOR;
 
         protected Builder()
         {

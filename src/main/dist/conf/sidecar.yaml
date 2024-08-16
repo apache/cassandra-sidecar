@@ -141,17 +141,17 @@ sidecar:
 
 # Authentication Configuration
 authenticator:
-  auth_config: AllowAllAuthenticator # Valid options are MutualTlsAuthenticator or AllowAllAuthenticator
-  # Valid options are SpiffeCertificateValidator, AllowAllCertificateValidator or RejectAllCertificateValidator
-  cert_validator: AllowAllCertificateValidator
-  # Valid options are MutualTlsIdentityValidator, AllowAllIdentityValidator or RejectAllCertificateValidator
-  id_validator: AllowAllIdentityValidator
+  auth_config: AllowAll # Valid options are MutualTls or AllowAll
+  # Valid options are Spiffe, AllowAll or RejectAll
+  cert_validator: AllowAll
+  # Valid options are MutualTls, AllowAll or RejectAll
+  id_validator: AllowAll
   authorized_identities:
     - spiffe://authorized/admin/identities
 
 # Authorizer Configuration
 authorizer:
-  auth_config: AllowAllAuthorizer # valid options are AllowAllAuthorizer or MutualTLSAuthorizer
+  auth_config: AllowAll # valid options are AllowAll or MutualTLS
   role_to_sidecar_permissions: # Permissions mapping roles to sidecar specific permissions
 #    - role: "trusted_role"
 #      permissions:

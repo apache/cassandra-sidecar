@@ -161,6 +161,10 @@ import static org.apache.cassandra.sidecar.auth.authorization.MutualTlsPermissio
 import static org.apache.cassandra.sidecar.auth.authorization.MutualTlsPermissions.UPLOAD_SSTABLE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.API_V1_ALL_ROUTES;
 import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
+import static org.apache.cassandra.sidecar.config.AuthenticatorConfiguration.DEFAULT_AUTHENTICATOR;
+import static org.apache.cassandra.sidecar.config.AuthenticatorConfiguration.DEFAULT_CERT_VALIDATOR;
+import static org.apache.cassandra.sidecar.config.AuthenticatorConfiguration.DEFAULT_ID_VALIDATOR;
+import static org.apache.cassandra.sidecar.config.AuthorizerConfiguration.DEFAULT_AUTHORIZER;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
@@ -268,9 +272,8 @@ public class MainModule extends AbstractModule
     @Singleton
     public Router vertxRouter(Vertx vertx,
                               AuthenticationHandler authenticationHandler,
-                              PermissionsAccessor permissionsAccessor,
+                              AuthorizationProvider authorizationProvider,
                               RequiredPermissionsProvider requiredPermissionsProvider,
-                              SidecarConfiguration sidecarConfiguration,
                               ServiceConfiguration conf,
                               CassandraHealthHandler cassandraHealthHandler,
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
@@ -322,8 +325,7 @@ public class MainModule extends AbstractModule
         // Add custom routers
         // Provides a simple REST endpoint to determine if Sidecar is available
         router.get(ApiEndpointsV1.HEALTH_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/__health",
                                             new ArrayList<>()))
@@ -332,24 +334,21 @@ public class MainModule extends AbstractModule
         // Backwards compatibility for the Cassandra health endpoint
         //noinspection deprecation
         router.get(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/cassandra/__health",
                                             new ArrayList<>()))
               .handler(cassandraHealthHandler);
 
         router.get(ApiEndpointsV1.CASSANDRA_NATIVE_HEALTH_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/cassandra/native/__health",
                                             new ArrayList<>()))
               .handler(cassandraHealthHandler);
 
         router.get(ApiEndpointsV1.CASSANDRA_JMX_HEALTH_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/cassandra/jmx/__health",
                                             new ArrayList<>()))
@@ -357,8 +356,7 @@ public class MainModule extends AbstractModule
 
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_COMPONENTS_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/keyspace/:keyspace/table/:table/snapshots/:snapshot/component/:component",
                                             Arrays.asList(STREAM_SSTABLES)))
@@ -366,8 +364,7 @@ public class MainModule extends AbstractModule
               .handler(fileStreamHandler);
 
         router.get(ApiEndpointsV1.COMPONENTS_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/keyspaces/:keyspace/tables/:table/snapshots/:snapshot/components/:component",
                                             Arrays.asList(STREAM_SSTABLES)))
@@ -376,8 +373,7 @@ public class MainModule extends AbstractModule
 
         // Support for routes that want to stream SStable index components
         router.get(ApiEndpointsV1.COMPONENTS_WITH_SECONDARY_INDEX_ROUTE_SUPPORT)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/keyspaces/:keyspace/tables/:table/snapshots/:snapshot/components/:index/:component",
                                             Arrays.asList(STREAM_SSTABLES)))
@@ -386,16 +382,14 @@ public class MainModule extends AbstractModule
 
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_SNAPSHOTS_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/keyspace/:keyspace/table/:table/snapshots/:snapshot",
                                             Arrays.asList(LIST_SNAPSHOTS)))
               .handler(listSnapshotHandler);
 
         router.get(ApiEndpointsV1.SNAPSHOTS_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/keyspaces/:keyspace/tables/:table/snapshots/:snapshot",
                                             Arrays.asList(LIST_SNAPSHOTS)))
@@ -405,8 +399,7 @@ public class MainModule extends AbstractModule
               // Leverage the validateTableExistence. Currently, JMX does not validate for non-existent keyspace.
               // Additionally, the current JMX implementation to clear snapshots does not support passing a table
               // as a parameter.
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "DELETE /api/v1/keyspaces/:keyspace/tables/:table/snapshots/:snapshot",
                                             Arrays.asList(CLEAR_SNAPSHOTS)))
@@ -414,8 +407,7 @@ public class MainModule extends AbstractModule
               .handler(clearSnapshotHandler);
 
         router.put(ApiEndpointsV1.SNAPSHOTS_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "PUT /api/v1/keyspaces/:keyspace/tables/:table/snapshots/:snapshot",
                                             Arrays.asList(CREATE_SNAPSHOT)))
@@ -423,16 +415,14 @@ public class MainModule extends AbstractModule
 
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_ALL_KEYSPACES_SCHEMA_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/schema/keyspaces",
                                             Arrays.asList(KEYSPACE_SCHEMA)))
               .handler(schemaHandler);
 
         router.get(ApiEndpointsV1.ALL_KEYSPACES_SCHEMA_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/cassandra/schema",
                                             Arrays.asList(KEYSPACE_SCHEMA)))
@@ -440,88 +430,77 @@ public class MainModule extends AbstractModule
 
         //noinspection deprecation
         router.get(ApiEndpointsV1.DEPRECATED_KEYSPACE_SCHEMA_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/schema/keyspaces/:keyspace",
                                             Arrays.asList(KEYSPACE_SCHEMA)))
               .handler(schemaHandler);
 
         router.get(ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/keyspaces/:keyspace/schema",
                                             Arrays.asList(KEYSPACE_SCHEMA)))
               .handler(schemaHandler);
 
         router.get(ApiEndpointsV1.RING_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/cassandra/ring",
                                             Arrays.asList(RING)))
               .handler(ringHandler);
 
         router.get(ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/cassandra/ring/keyspaces/:keyspace",
                                             Arrays.asList(RING)))
               .handler(ringHandler);
 
         router.put(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "PUT /api/v1/uploads/:uploadId/keyspaces/:keyspace/tables/:table/components/:component",
                                             Arrays.asList(UPLOAD_SSTABLE)))
               .handler(ssTableUploadHandler);
 
         router.get(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/keyspaces/:keyspace/token-range-replicas",
                                             Arrays.asList(KEYSPACE_TOKEN_MAPPING)))
               .handler(tokenRangeHandler);
 
         router.put(ApiEndpointsV1.SSTABLE_IMPORT_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "PUT /api/v1/uploads/:uploadId/keyspaces/:keyspace/tables/:table/import",
                                             Arrays.asList(UPLOAD_SSTABLE)))
               .handler(ssTableImportHandler);
 
         router.delete(ApiEndpointsV1.SSTABLE_CLEANUP_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "DELETE /api/v1/uploads/:uploadId",
                                             Arrays.asList(CLEANUP_SSTABLE)))
               .handler(ssTableCleanupHandler);
 
         router.get(ApiEndpointsV1.GOSSIP_INFO_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/cassandra/gossip",
                                             Arrays.asList(GOSSIP_INFO)))
               .handler(gossipInfoHandler);
 
         router.get(ApiEndpointsV1.TIME_SKEW_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/time-skew",
                                             Arrays.asList()))
               .handler(timeSkewHandler);
 
         router.get(ApiEndpointsV1.NODE_SETTINGS_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/cassandra/settings",
                                             Arrays.asList()))
@@ -529,8 +508,7 @@ public class MainModule extends AbstractModule
 
         router.post(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE)
               .handler(BodyHandler.create())
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "POST /api/v1/keyspaces/:keyspace/tables/:table/restore-jobs",
                                             Arrays.asList(CREATE_RESTORE_JOB)))
@@ -540,8 +518,7 @@ public class MainModule extends AbstractModule
 
         router.post(ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE)
               .handler(BodyHandler.create())
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "POST /api/v1/keyspaces/:keyspace/tables/:table/restore-jobs/:jobId/slices",
                                             Arrays.asList(CREATE_RESTORE_JOB)))
@@ -551,8 +528,7 @@ public class MainModule extends AbstractModule
               .handler(createRestoreSliceHandler);
 
         router.get(ApiEndpointsV1.RESTORE_JOB_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/keyspaces/:keyspace/tables/:table/restore-jobs/:jobId",
                                             Arrays.asList(RESTORE_JOB)))
@@ -562,8 +538,7 @@ public class MainModule extends AbstractModule
 
         router.patch(ApiEndpointsV1.RESTORE_JOB_ROUTE)
               .handler(BodyHandler.create())
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "PATCH /api/v1/keyspaces/:keyspace/tables/:table/restore-jobs/:jobId",
                                             Arrays.asList(PATCH_RESTORE_JOB)))
@@ -573,8 +548,7 @@ public class MainModule extends AbstractModule
 
         router.post(ApiEndpointsV1.ABORT_RESTORE_JOB_ROUTE)
               .handler(BodyHandler.create())
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "POST /api/v1/keyspaces/:keyspace/tables/:table/restore-jobs/:jobId/abort",
                                             Arrays.asList(ABORT_RESTORE_JOB)))
@@ -583,8 +557,7 @@ public class MainModule extends AbstractModule
               .handler(abortRestoreJobHandler);
 
         router.get(ApiEndpointsV1.RESTORE_JOB_PROGRESS_ROUTE)
-              .handler(authorizationHandler(sidecarConfiguration,
-                                            permissionsAccessor,
+              .handler(authorizationHandler(authorizationProvider,
                                             requiredPermissionsProvider,
                                             "GET /api/v1/keyspaces/:keyspace/tables/:table/restore-jobs/:jobId/ progress",
                                             Arrays.asList(RESTORE_JOB_PROGRESS)))
@@ -595,34 +568,14 @@ public class MainModule extends AbstractModule
         return router;
     }
 
-    public AuthorizationHandler authorizationHandler(SidecarConfiguration conf,
-                                                     PermissionsAccessor permissionsAccessor,
+    public AuthorizationHandler authorizationHandler(AuthorizationProvider authzProvider,
                                                      RequiredPermissionsProvider requiredPermissionsProvider,
                                                      String endpoint,
                                                      List<MutualTlsPermissions> permissions)
     {
         requiredPermissionsProvider.putPermissionsMapping(endpoint, permissions);
 
-        AuthorizationProvider authProvider;
-        if (conf.authenticatorConfiguration() != null &&
-            conf.authenticatorConfiguration().authConfig() != null &&
-            conf.authorizerConfiguration().authConfig().equals(AuthorizerConfig.MutualTlsAuthorizer))
-        {
-            authProvider = new MutualTlsAuthorizationProvider(permissionsAccessor);
-        }
-        else if (conf.authenticatorConfiguration() != null &&
-                 conf.authenticatorConfiguration().authConfig() != null &&
-                 conf.authorizerConfiguration().authConfig().equals(AuthorizerConfig.AllowAllAuthorizer))
-        {
-            authProvider = new AllowAllAuthorizationProvider();
-        }
-        else
-        {
-            LOGGER.warn("Incorrect configuration - Using AllowAllAuthorizationProvider as default");
-            authProvider = new AllowAllAuthorizationProvider();
-        }
-
-        return (new MutualTlsAuthorizationHandler(requiredPermissionsProvider)).addAuthorizationProvider(authProvider);
+        return (new MutualTlsAuthorizationHandler(requiredPermissionsProvider)).addAuthorizationProvider(authzProvider);
     }
 
     @Provides
@@ -643,23 +596,31 @@ public class MainModule extends AbstractModule
     @Singleton
     public MutualTlsCertificateValidator certificateValidator(SidecarConfiguration conf)
     {
-        if (conf != null && conf.authenticatorConfiguration() != null && conf.authenticatorConfiguration().certValidator() != null)
+        CertificateValidatorConfig certificateValidatorType = DEFAULT_CERT_VALIDATOR;
+        if (conf.authenticatorConfiguration() != null && conf.authenticatorConfiguration().certValidator() != null)
         {
-            if (conf.authenticatorConfiguration().certValidator().equals(CertificateValidatorConfig.SpiffeCertificateValidator))
-            {
-                return new SpiffeCertificateValidator();
-            }
-            else if (conf.authenticatorConfiguration().certValidator().equals(CertificateValidatorConfig.RejectAllCertificateValidator))
-            {
-                return new RejectAllCertificateValidator();
-            }
-            else
-            {
-                return new AllowAllCertificateValidator();
-            }
+            certificateValidatorType = conf.authenticatorConfiguration().certValidator();
         }
-        LOGGER.warn("No valid certificate validator was listed - Defaulting to the AllowAllCertificateValidator");
-        return new AllowAllCertificateValidator();
+        else
+        {
+            LOGGER.warn("No valid certificate validator was configured - Defaulting to {}", DEFAULT_CERT_VALIDATOR);
+        }
+
+        MutualTlsCertificateValidator validator = null;
+        switch (certificateValidatorType)
+        {
+            case Spiffe:
+                validator = new SpiffeCertificateValidator();
+                break;
+            case RejectAll:
+                validator = new RejectAllCertificateValidator();
+                break;
+            case AllowAll:
+                validator = new AllowAllCertificateValidator();
+                break;
+        }
+
+        return validator;
     }
 
     @Provides
@@ -667,27 +628,61 @@ public class MainModule extends AbstractModule
     public MutualTlsIdentityValidator identityValidator(SidecarConfiguration conf,
                                                         PermissionsAccessor permissionsAccessor)
     {
-        if (conf != null && conf.authenticatorConfiguration() != null && conf.authenticatorConfiguration().idValidator() != null)
+        IdentityValidatorConfig validatorType = DEFAULT_ID_VALIDATOR;
+        if (conf.authenticatorConfiguration() != null && conf.authenticatorConfiguration().idValidator() != null)
         {
-            if (conf.authenticatorConfiguration().idValidator().equals(IdentityValidatorConfig.MutualTlsIdentityValidator))
-            {
-                return new MutualTlsIdentityValidatorImpl(s -> ((permissionsAccessor.getRoleFromIdentity(s) != null) ||
-                                                                (conf != null &&
-                                                                 conf.authenticatorConfiguration() != null &&
-                                                                 conf.authenticatorConfiguration().authorizedIdentities() != null &&
-                                                                 conf.authenticatorConfiguration().authorizedIdentities().contains(s))));
-            }
-            else if (conf.authenticatorConfiguration().idValidator().equals(IdentityValidatorConfig.RejectAllIdentityValidator))
-            {
-                return new RejectAllIdentityValidator();
-            }
-            else
-            {
-                return new AllowAllIdentityValidator();
-            }
+            validatorType = conf.authenticatorConfiguration().idValidator();
         }
-        LOGGER.warn("No valid identity validator was listed - Defaulting to the AllowAllIdentityValidator");
-        return new AllowAllIdentityValidator();
+        else
+        {
+            LOGGER.warn("No valid identity validator was configured - Defaulting to {}", DEFAULT_ID_VALIDATOR);
+        }
+
+        MutualTlsIdentityValidator validator = null;
+        switch (validatorType)
+        {
+            case MutualTls:
+                validator = new MutualTlsIdentityValidatorImpl(s -> ((permissionsAccessor.getRoleFromIdentity(s) != null) ||
+                                                                     conf.authenticatorConfiguration().authorizedIdentities().contains(s)));
+                break;
+            case RejectAll:
+                validator = new RejectAllIdentityValidator();
+                break;
+            case AllowAll:
+                validator = new AllowAllIdentityValidator();
+                break;
+        }
+
+        return validator;
+    }
+
+    @Provides
+    @Singleton
+    public AuthorizationProvider authorizationProvider(PermissionsAccessor permissionsAccessor,
+                                                       SidecarConfiguration conf)
+    {
+        AuthorizerConfig authorizer = DEFAULT_AUTHORIZER;
+        if (conf.authorizerConfiguration() != null && conf.authorizerConfiguration().authConfig() != null)
+        {
+            authorizer = conf.authorizerConfiguration().authConfig();
+        }
+        else
+        {
+            LOGGER.warn("Incorrect configuration - Defaulting to {}", DEFAULT_AUTHORIZER);
+        }
+
+        AuthorizationProvider provider = null;
+        switch (authorizer)
+        {
+            case MutualTls:
+                provider = new MutualTlsAuthorizationProvider(permissionsAccessor);
+                break;
+            case AllowAll:
+                provider = new AllowAllAuthorizationProvider();
+                break;
+        }
+
+        return provider;
     }
 
     @Provides
@@ -696,22 +691,28 @@ public class MainModule extends AbstractModule
                                                          MutualTlsIdentityValidator identityValidator,
                                                          SidecarConfiguration conf)
     {
-        if (conf != null &&
-            conf.authenticatorConfiguration() != null &&
-            conf.authenticatorConfiguration().authConfig() != null &&
-            conf.authenticatorConfiguration().authConfig().equals(AuthenticatorConfig.MutualTlsAuthenticator))
+        AuthenticatorConfig authenticator = DEFAULT_AUTHENTICATOR;
+        if (conf.authenticatorConfiguration() != null && conf.authenticatorConfiguration().authConfig() != null)
         {
-            return new MutualTlsAuthenticationProvider(mTlsCertificateValidator, identityValidator);
+            authenticator = conf.authenticatorConfiguration().authConfig();
         }
-        else if (conf != null &&
-                 conf.authenticatorConfiguration() != null &&
-                 conf.authenticatorConfiguration().authConfig() != null &&
-                 conf.authenticatorConfiguration().authConfig().equals(AuthenticatorConfig.AllowAllAuthenticator))
+        else
         {
-            return new AllowAllAuthenticationProvider();
+            LOGGER.warn("No valid authentication provider was configured - Defaulting to {}", DEFAULT_AUTHENTICATOR);
         }
-        LOGGER.warn("Incorrect configuration - Using AllowAllAuthenticationProvider as default");
-        return new AllowAllAuthenticationProvider();
+
+        AuthenticationProvider provider = null;
+        switch (authenticator)
+        {
+            case MutualTls:
+                provider = new MutualTlsAuthenticationProvider(mTlsCertificateValidator, identityValidator);
+                break;
+            case AllowAll:
+                provider = new AllowAllAuthenticationProvider();
+                break;
+        }
+
+        return provider;
     }
 
     @Provides

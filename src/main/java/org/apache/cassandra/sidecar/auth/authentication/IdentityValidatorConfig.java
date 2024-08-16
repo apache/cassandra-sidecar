@@ -19,11 +19,11 @@
 package org.apache.cassandra.sidecar.auth.authentication;
 
 /**
- * Enum for the supported identity validators
+ * Supported identity validators
  */
 public enum IdentityValidatorConfig
 {
-    MutualTlsIdentityValidator,
-    AllowAllIdentityValidator,
-    RejectAllIdentityValidator
+    MutualTls,
+    AllowAll,
+    RejectAll
 }

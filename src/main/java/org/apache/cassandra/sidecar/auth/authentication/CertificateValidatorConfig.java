@@ -19,11 +19,11 @@
 package org.apache.cassandra.sidecar.auth.authentication;
 
 /**
- * Enum for the supported Certificate Validators
+ * Supported Certificate Validators
  */
 public enum CertificateValidatorConfig
 {
-    SpiffeCertificateValidator,
-    AllowAllCertificateValidator,
-    RejectAllCertificateValidator
+    Spiffe,
+    AllowAll,
+    RejectAll
 }

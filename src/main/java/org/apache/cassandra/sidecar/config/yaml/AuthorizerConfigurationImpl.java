@@ -75,7 +75,7 @@ public class AuthorizerConfigurationImpl implements AuthorizerConfiguration
      */
     public static class Builder implements DataObjectBuilder<Builder, AuthorizerConfiguration>
     {
-        protected AuthorizerConfig authConfig;
+        protected AuthorizerConfig authConfig = DEFAULT_AUTHORIZER;
         protected List<RoleToSidecarPermissionsConfiguration> roleToSidecarPermissions;
 
         protected Builder()
