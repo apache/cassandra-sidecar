@@ -29,11 +29,13 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.OpenSsl;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -54,6 +56,8 @@ import software.amazon.awssdk.utils.ThreadFactoryBuilder;
 @Singleton
 public class StorageClientPool implements SdkAutoCloseable
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StorageClientPool.class);
+
     private final Map<String, StorageClient> clientPool = new ConcurrentHashMap<>();
     private final Map<UUID, StorageClient> clientByJobId = new ConcurrentHashMap<>();
     private final ThreadPoolExecutor sharedExecutor;
@@ -102,6 +106,8 @@ public class StorageClientPool implements SdkAutoCloseable
     private StorageClient storageClient(String region)
     {
         return clientPool.computeIfAbsent(region, k -> {
+            logIfOpenSslUnavailable();
+
             Map<SdkAdvancedAsyncClientOption<?>, ?> advancedOptions = Collections.singletonMap(
             SdkAdvancedAsyncClientOption.FUTURE_COMPLETION_EXECUTOR, sharedExecutor
             );
@@ -119,8 +125,7 @@ public class StorageClientPool implements SdkAutoCloseable
                 clientBuilder.endpointOverride(endpointOverride)
                              .forcePathStyle(true);
 
-            NettyNioAsyncHttpClient.Builder nettyClientBuilder = NettyNioAsyncHttpClient.builder()
-                                                                                        .sslProvider(SslProvider.OPENSSL);
+            NettyNioAsyncHttpClient.Builder nettyClientBuilder = NettyNioAsyncHttpClient.builder();
             S3ProxyConfiguration config = clientConfig.proxyConfig();
             if (config.isPresent())
             {
@@ -145,5 +150,13 @@ public class StorageClientPool implements SdkAutoCloseable
         clientPool.values().forEach(StorageClient::close);
         clientPool.clear();
         clientByJobId.clear();
+    }
+
+    private void logIfOpenSslUnavailable()
+    {
+        if (!OpenSsl.isAvailable())
+        {
+            LOGGER.info("OpenSSL is not available for S3AsyncClient");
+        }
     }
 }
