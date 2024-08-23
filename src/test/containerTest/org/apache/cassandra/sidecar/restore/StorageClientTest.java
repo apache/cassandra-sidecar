@@ -218,8 +218,8 @@ class StorageClientTest
     @Test
     void testGetObjectThroughputRateLimited() throws Exception
     {
-        // only allow 1/4 the speed of transfer; each request downloads 1024 bytes (it is an extremely low value only for testing)
-        StorageClient client = new StorageClient(s3AsyncClient, 1024, SidecarRateLimiter.create(LARGE_FILE_IN_BYTES >> 2));
+        // only allow 1/4 the speed of transfer; each request downloads 128 KiB
+        StorageClient client = new StorageClient(s3AsyncClient, 128 * 1024, SidecarRateLimiter.create(LARGE_FILE_IN_BYTES >> 2));
         client.authenticate(restoreJob);
         // Download should take around 4 seconds (256 KB/s for a 1MB file)
         long startNanos = System.nanoTime();
