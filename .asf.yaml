@@ -25,9 +25,9 @@ github:
   description: "Sidecar for Apache Cassandra®"
   homepage: https://cassandra.apache.org/
   enabled_merge_buttons:
-    squash:  false
+    squash:  true
     merge:   false
-    rebase:  true
+    rebase:  false
   features:
     wiki: false
     issues: false
@@ -35,3 +35,8 @@ github:
   autolink_jira:
     - CASSANDRASC
     - CASSANDRA
+  protected_branches:
+    trunk:
+      required_status_checks:
+        # strict means "Require branches to be up-to-date before merging", i.e. enforcing rebase for the head branch.
+        strict: true
