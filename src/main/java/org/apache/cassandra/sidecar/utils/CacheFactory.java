@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -32,8 +33,13 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
+import io.vertx.ext.auth.authorization.AndAuthorization;
+import org.apache.cassandra.sidecar.auth.authorization.SystemAuthDatabaseAccessor;
+import org.apache.cassandra.sidecar.config.AuthorizerConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.RoleToSidecarPermissionsConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -45,19 +51,38 @@ public class CacheFactory
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheFactory.class);
 
     private final Cache<SSTableImporter.ImportOptions, Future<Void>> ssTableImportCache;
+    protected final AsyncLoadingCache<String, Boolean> rolesToSuperUserCache;
+    protected final AsyncLoadingCache<String, String> identityToRolesCache;
+    protected final AsyncLoadingCache<String, AndAuthorization> roleToPermissionsCache;
+    protected final SystemAuthDatabaseAccessor systemAuthDatabaseAccessor;
+    protected final AuthorizerConfiguration authorizerConfiguration;
 
     @Inject
-    public CacheFactory(ServiceConfiguration configuration, SSTableImporter ssTableImporter)
+    public CacheFactory(SidecarConfiguration sidecarConfiguration,
+                        ServiceConfiguration serviceConfiguration,
+                        SSTableImporter ssTableImporter,
+                        SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
     {
-        this(configuration, ssTableImporter, Ticker.systemTicker());
+        this(sidecarConfiguration, serviceConfiguration, ssTableImporter, Ticker.systemTicker(), systemAuthDatabaseAccessor);
     }
 
     @VisibleForTesting
-    CacheFactory(ServiceConfiguration configuration, SSTableImporter ssTableImporter, Ticker ticker)
+    CacheFactory(SidecarConfiguration sidecarConfiguration,
+                ServiceConfiguration serviceConfiguration,
+                 SSTableImporter ssTableImporter,
+                 Ticker ticker,
+                 SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
     {
-        this.ssTableImportCache = initSSTableImportCache(configuration.sstableImportConfiguration()
-                                                                      .cacheConfiguration(),
-                                                         ssTableImporter, ticker);
+        this.ssTableImportCache = initSSTableImportCache(serviceConfiguration.sstableImportConfiguration().cacheConfiguration(),
+                                                         ssTableImporter,
+                                                         ticker);
+
+        CacheConfiguration permissionsCacheConfig = serviceConfiguration.refreshPermissionCachesConfiguration().cacheConfiguration();
+        this.systemAuthDatabaseAccessor = systemAuthDatabaseAccessor;
+        this.rolesToSuperUserCache = initRolesToSuperUserCache(permissionsCacheConfig, ticker);
+        this.identityToRolesCache = initIdentityToRolesCache(permissionsCacheConfig, ticker);
+        this.roleToPermissionsCache = initRoleToPermissionsCache(permissionsCacheConfig, ticker);
+        this.authorizerConfiguration = sidecarConfiguration.authorizerConfiguration();
     }
 
     /**
@@ -66,6 +91,21 @@ public class CacheFactory
     public Cache<SSTableImporter.ImportOptions, Future<Void>> ssTableImportCache()
     {
         return ssTableImportCache;
+    }
+
+    public AsyncLoadingCache<String, Boolean> rolesToSuperUserCache()
+    {
+        return rolesToSuperUserCache;
+    }
+
+    public AsyncLoadingCache<String, String> identityToRolesCache()
+    {
+        return identityToRolesCache;
+    }
+
+    public AsyncLoadingCache<String, AndAuthorization> roleToPermissionsCache()
+    {
+        return roleToPermissionsCache;
     }
 
     /**
@@ -98,5 +138,60 @@ public class CacheFactory
                                         }
                        )
                        .build();
+    }
+
+    protected AsyncLoadingCache<String, Boolean> initRolesToSuperUserCache(CacheConfiguration cacheConfiguration, Ticker ticker)
+    {
+        LOGGER.info("Initializing 'roles' cache");
+        assert systemAuthDatabaseAccessor != null;
+        return Caffeine.newBuilder()
+                       .ticker(ticker)
+                       .maximumSize(cacheConfiguration.maximumSize())
+                       .expireAfterWrite(Duration.of(cacheConfiguration.expireAfterAccessMillis(), ChronoUnit.SECONDS))
+                       .removalListener((key, value, cause) ->
+                                        LOGGER.debug("Removed entry '{}' with key '{}' from {} with cause {}",
+                                                     value, key, "roles", cause))
+                       .buildAsync(systemAuthDatabaseAccessor::isSuperUser);
+    }
+
+    protected AsyncLoadingCache<String, String> initIdentityToRolesCache(CacheConfiguration cacheConfiguration, Ticker ticker)
+    {
+        LOGGER.info("Initializing 'identity_to_role' cache");
+        assert systemAuthDatabaseAccessor != null;
+        return Caffeine.newBuilder()
+                       .ticker(ticker)
+                       .maximumSize(cacheConfiguration.maximumSize())
+                       .expireAfterWrite(Duration.of(cacheConfiguration.expireAfterAccessMillis(), ChronoUnit.SECONDS))
+                       .removalListener((key, value, cause) ->
+                                        LOGGER.debug("Removed entry '{}' with key '{}' from {} with cause {}",
+                                                     value, key, "identity_to_role", cause))
+                       .buildAsync(systemAuthDatabaseAccessor::findRoleFromIdentity);
+    }
+
+    protected AsyncLoadingCache<String, AndAuthorization> initRoleToPermissionsCache(CacheConfiguration cacheConfiguration, Ticker ticker)
+    {
+        LOGGER.info("Initializing 'role_permissions' cache");
+        assert systemAuthDatabaseAccessor != null;
+        return Caffeine.newBuilder()
+                       .ticker(ticker)
+                       .maximumSize(cacheConfiguration.maximumSize())
+                       .expireAfterWrite(Duration.of(cacheConfiguration.expireAfterAccessMillis(), ChronoUnit.SECONDS))
+                       .removalListener((key, value, cause) ->
+                                        LOGGER.debug("Removed entry '{}' with key '{}' from {} with cause {}",
+                                                     value, key, "role_permissions", cause))
+                       .buildAsync(key -> {
+                           AndAuthorization authFromCassandra = systemAuthDatabaseAccessor.findPermissionsFromResourceRole(key);
+                           if (authFromCassandra == null)
+                           {
+                               for (RoleToSidecarPermissionsConfiguration authFromSidecar : authorizerConfiguration.roleToSidecarPermissions())
+                               {
+                                   if (authFromSidecar.role().equals(key))
+                                   {
+                                       return authFromSidecar.permissions();
+                                   }
+                               }
+                           }
+                           return authFromCassandra;
+                       });
     }
 }

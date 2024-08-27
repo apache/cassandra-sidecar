@@ -50,7 +50,6 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class TokenRangeReplicaMapHandler extends AbstractHandler<Name>
 {
-
     @Inject
     public TokenRangeReplicaMapHandler(InstanceMetadataFetcher metadataFetcher,
                                        CassandraInputValidator validator,

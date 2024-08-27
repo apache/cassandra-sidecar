@@ -49,8 +49,7 @@ public class CassandraHealthHandler extends AbstractHandler<Void>
      * @param validator       a validator instance to validate Cassandra-specific input
      */
     @Inject
-    protected CassandraHealthHandler(InstanceMetadataFetcher metadataFetcher,
-                                     ExecutorPools executorPools,
+    protected CassandraHealthHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools,
                                      CassandraInputValidator validator)
     {
         super(metadataFetcher, executorPools, validator);
@@ -77,6 +76,7 @@ public class CassandraHealthHandler extends AbstractHandler<Void>
         boolean isServiceUp = context.request().path().contains(JMX)
                               ? delegate != null && delegate.isJmxUp()
                               : delegate != null && delegate.isNativeUp();
+
         if (isServiceUp)
         {
             context.json(OK_STATUS);

@@ -83,6 +83,14 @@ sidecar:
     min_free_space_percent: 10
     # file_permissions: "rw-r--r--" # when not specified, the default file permissions are owner read & write, group & others read
   allowable_time_skew_in_minutes: 60
+  # Insert here cache details
+  refresh_permission_caches:
+    initial_delay_millis: 0
+    poll_freq_millis: 30000
+    stale_after_millis: 3600000
+    cache:
+      expire_after_access_millis: 7200000
+      maximum_size: 10000
   sstable_import:
     poll_interval_millis: 100
     cache:
@@ -113,23 +121,43 @@ sidecar:
 #
 # Enable SSL configuration (Disabled by default)
 #
-#  ssl:
-#    enabled: true
-#    use_openssl: true
-#    handshake_timeout_sec: 10
-#    client_auth: NONE # valid options are NONE, REQUEST, REQUIRED
-#    accepted_protocols:
-#     - TLSv1.2
-#     - TLSv1.3
-#    cipher_suites: []
-#    keystore:
-#      type: PKCS12
-#      path: "path/to/keystore.p12"
-#      password: password
-#      check_interval_sec: 300
-#    truststore:
-#      path: "path/to/truststore.p12"
-#      password: password
+#ssl:
+#  enabled: true
+#  use_openssl: true
+#  handshake_timeout_sec: 10
+#  client_auth: REQUIRED # valid options are NONE, REQUEST, REQUIRED
+#  accepted_protocols:
+#   - TLSv1.2
+#   - TLSv1.3
+#  cipher_suites: []
+#  keystore:
+#    type: PKCS12
+#    path: "path/to/keystore.p12"
+#    password: password
+#    check_interval_sec: 300
+#  truststore:
+#    path: "path/to/truststore.jks"
+#    password: password
+
+# Authentication Configuration
+authenticator:
+  auth_config: AllowAll # Valid options are MutualTls or AllowAll
+  # Valid options are Spiffe, AllowAll or RejectAll
+  cert_validator: AllowAll
+  # Valid options are MutualTls, AllowAll or RejectAll
+  id_validator: AllowAll
+  authorized_identities:
+    - spiffe://authorized/admin/identities
+
+# Authorizer Configuration
+authorizer:
+  auth_config: AllowAll # valid options are AllowAll or MutualTLS
+  role_to_sidecar_permissions: # Permissions mapping roles to sidecar specific permissions
+#    - role: "trusted_role"
+#      permissions:
+#        - ClEANUP_SSTABLE
+#           - "< KEYSPACE system_auth >"
+#           - "< TABLE system_auth.roles >"
 
 driver_parameters:
   contact_points:

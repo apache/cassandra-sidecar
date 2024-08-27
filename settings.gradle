@@ -24,7 +24,7 @@ include "adapters:cassandra41"
 include "client-common"
 include "server-common"
 include "client"
+include "vertx-auth-mtls"
 include "vertx-client"
 include "vertx-client-shaded"
 include "docs"
-

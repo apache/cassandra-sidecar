@@ -44,8 +44,10 @@ import net.bytebuddy.pool.TypePool;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.SimpleCassandraVersion;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Multi-DC Cluster shrink scenarios integration tests for token range replica mapping endpoint with the in-jvm
@@ -61,6 +63,8 @@ class LeavingTestMultiDC extends LeavingBaseTest
                                                 ConfigurableCassandraTestContext cassandraTestContext)
     throws Exception
     {
+        assumeThat(cassandraTestContext.version).as("TTL is only supported in Cassandra 5.1")
+                                                .isGreaterThanOrEqualTo(SimpleCassandraVersion.create(5, 1, 0));
         BBHelperLeavingNodesMultiDC.reset();
         int leavingNodesPerDC = 1;
         UpgradeableCluster cluster = getMultiDCCluster(BBHelperLeavingNodesMultiDC::install, cassandraTestContext);

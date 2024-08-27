@@ -243,8 +243,10 @@ class ServerTest
               .onFailure(context::failNow)
               .onSuccess(v -> {
                   vertx.setTimer(100, handle -> {
-                      assertThat(registry().getMetrics().keySet().stream())
-                      .anyMatch(name -> name.contains("/api/v1/__health"));
+                      if (registry().getMetrics().keySet().stream().noneMatch(name -> name.contains("/api/v1/__health")))
+                      {
+                          context.failNow("unable to find metric");
+                      }
                       waitUntilCheck.flag();
                       context.completeNow();
                   });

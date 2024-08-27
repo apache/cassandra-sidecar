@@ -40,8 +40,7 @@ public class CassandraSidecarDaemon
 
     public static void main(String[] args)
     {
-        String yamlConfigurationPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
-
+        String yamlConfigurationPath = System.getProperty("sidecar.config", "file://./conf/sidecar.yaml");
         Path confPath;
         try
         {

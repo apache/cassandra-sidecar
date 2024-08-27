@@ -38,6 +38,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.config.AuthenticatorConfiguration;
+import org.apache.cassandra.sidecar.config.AuthorizerConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
@@ -69,6 +71,12 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
 
     @JsonProperty("ssl")
     protected final SslConfiguration sslConfiguration;
+
+    @JsonProperty("authenticator")
+    protected final AuthenticatorConfiguration authenticatorConfiguration;
+
+    @JsonProperty("authorizer")
+    protected final AuthorizerConfiguration authorizerConfiguration;
 
     @JsonProperty("healthcheck")
     protected final HealthCheckConfiguration healthCheckConfiguration;
@@ -102,6 +110,8 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         driverConfiguration = builder.driverConfiguration;
         restoreJobConfiguration = builder.restoreJobConfiguration;
         s3ClientConfiguration = builder.s3ClientConfiguration;
+        authenticatorConfiguration = builder.authenticatorConfiguration;
+        authorizerConfiguration = builder.authorizerConfiguration;
     }
 
     /**
@@ -211,6 +221,26 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return s3ClientConfiguration;
     }
 
+    /**
+     * @return the configuration for the authenticator
+     */
+    @Override
+    @JsonProperty("authenticator")
+    public AuthenticatorConfiguration authenticatorConfiguration()
+    {
+        return authenticatorConfiguration;
+    }
+
+    /**
+     * @return the configuration for the authorizer
+     */
+    @Override
+    @JsonProperty("authorizer")
+    public AuthorizerConfiguration authorizerConfiguration()
+    {
+        return authorizerConfiguration;
+    }
+
     public static SidecarConfigurationImpl readYamlConfiguration(String yamlConfigurationPath) throws IOException
     {
         try
@@ -300,6 +330,8 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
      */
     public static class Builder implements DataObjectBuilder<Builder, SidecarConfigurationImpl>
     {
+        private AuthenticatorConfiguration authenticatorConfiguration;
+        private AuthorizerConfiguration authorizerConfiguration;
         private InstanceConfiguration cassandraInstance;
         private List<InstanceConfiguration> cassandraInstances;
         private ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl();
@@ -375,6 +407,28 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder healthCheckConfiguration(HealthCheckConfiguration healthCheckConfiguration)
         {
             return update(b -> b.healthCheckConfiguration = healthCheckConfiguration);
+        }
+
+        /**
+         * Sets the {@code authenticatorConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param authenticatorConfiguration the {@code authenticatorConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder authenticatorConfiguration(AuthenticatorConfiguration authenticatorConfiguration)
+        {
+            return update(b -> b.authenticatorConfiguration = authenticatorConfiguration);
+        }
+
+        /**
+         * Sets the {@code authorizerConfiguration} and returns a reference to this Building enabling method chaining.
+         *
+         * @param authorizerConfiguration the {@code authorizerConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder authorizerConfig(AuthorizerConfiguration authorizerConfiguration)
+        {
+            return update(b -> b.authorizerConfiguration = authorizerConfiguration);
         }
 
         /**

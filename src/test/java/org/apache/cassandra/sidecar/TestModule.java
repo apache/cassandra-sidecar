@@ -33,6 +33,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import org.apache.cassandra.sidecar.auth.authentication.AuthenticatorConfig;
+import org.apache.cassandra.sidecar.auth.authorization.AuthorizerConfig;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.InstancesConfigImpl;
@@ -41,6 +43,8 @@ import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.config.AuthenticatorConfiguration;
+import org.apache.cassandra.sidecar.config.AuthorizerConfiguration;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
@@ -49,11 +53,14 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.AuthenticatorConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.AuthorizerConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.RestoreJobConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SSTableUploadConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ThrottleConfigurationImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
@@ -99,10 +106,25 @@ public class TestModule extends AbstractModule
 
     protected SidecarConfigurationImpl abstractConfig()
     {
-        return abstractConfig(null);
+        SslConfiguration sslConfiguration =
+        SslConfigurationImpl.builder()
+                            .enabled(false)
+                            .useOpenSsl(false)
+                            .clientAuth("NONE")
+                            .build();
+        AuthenticatorConfiguration authenticatorConfiguration =
+        AuthenticatorConfigurationImpl.builder()
+                                      .authConfig(AuthenticatorConfig.AllowAll)
+                                      .build();
+        AuthorizerConfiguration authorizerConfiguration =
+        AuthorizerConfigurationImpl.builder()
+                                   .authConfig(AuthorizerConfig.AllowAll).build();
+        return abstractConfig(sslConfiguration, authenticatorConfiguration, authorizerConfiguration);
     }
 
-    protected SidecarConfigurationImpl abstractConfig(SslConfiguration sslConfiguration)
+    protected SidecarConfigurationImpl abstractConfig(SslConfiguration sslConfiguration,
+                                                      AuthenticatorConfiguration authenticatorConfiguration,
+                                                      AuthorizerConfiguration authorizerConfiguration)
     {
         ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(5, 5);
         SSTableUploadConfiguration uploadConfiguration = new SSTableUploadConfigurationImpl(0F);
@@ -132,6 +154,8 @@ public class TestModule extends AbstractModule
                                        .sslConfiguration(sslConfiguration)
                                        .restoreJobConfiguration(restoreJobConfiguration)
                                        .healthCheckConfiguration(healthCheckConfiguration)
+                                       .authenticatorConfiguration(authenticatorConfiguration)
+                                       .authorizerConfig(authorizerConfiguration)
                                        .build();
     }
 

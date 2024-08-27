@@ -20,6 +20,9 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.util.NoSuchElementException;
 
+import javax.security.cert.CertificateExpiredException;
+import javax.security.cert.CertificateNotYetValidException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,7 +122,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
                                            HttpServerRequest httpRequest,
                                            String host,
                                            SocketAddress remoteAddress,
-                                           T request);
+                                           T request) throws CertificateNotYetValidException, CertificateExpiredException;
 
     /**
      * Returns the host from the path if the requests contains the {@code /instance/} path parameter,

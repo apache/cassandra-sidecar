@@ -179,6 +179,9 @@ configurations {
 }
 
 dependencies {
+    implementation group: 'org.bouncycastle', name: 'bcpkix-jdk18on', version: '1.78.1'
+    implementation(project(':vertx-auth-mtls'))
+
     compileOnly('org.jetbrains:annotations:23.0.0')
     testCompileOnly('org.jetbrains:annotations:23.0.0')
     integrationTestCompileOnly('org.jetbrains:annotations:23.0.0')
@@ -274,6 +277,14 @@ dependencies {
     integrationTestImplementation(group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: "${project.jacksonVersion}")
 
     containerTestImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') // 3.x version do not support java 11
+
+    testImplementation group: 'junit', name: 'junit', version: '4.13'
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    implementation group: 'org.apache.commons', name: 'commons-collections4', version: '4.3'
+    implementation 'org.jetbrains:annotations:24.0.0'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.2'
+    implementation group: 'org.codehaus.httpcache4j.uribuilder', name: 'uribuilder', version: '1.0.0'
 }
 
 jar {
@@ -398,12 +409,9 @@ def integrationTest = task("integrationTest")
             systemProperty "cassandra.sidecar.versions_to_test", versionsToTest
         }
         useJUnitPlatform() {
-            if (name.contains("HeavyWeight"))
-            {
+            if (name.contains("HeavyWeight")) {
                 includeTags "heavy"
-            }
-            else
-            {
+            } else {
                 excludeTags "heavy"
             }
         }
@@ -430,8 +438,7 @@ def integrationTest = task("integrationTest")
             logger.lifecycle("--")
             if (totalTime >= 60) { // log the tests that take 1 minute and more
                 logger.warn("$descriptor.displayName took $totalTime s")
-            }
-            else {
+            } else {
                 logger.info("$descriptor.displayName took $totalTime s")
             }
         }

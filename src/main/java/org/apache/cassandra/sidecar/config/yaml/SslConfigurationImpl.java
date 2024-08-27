@@ -52,6 +52,7 @@ public class SslConfigurationImpl implements SslConfiguration
     @JsonProperty(value = "handshake_timeout_sec")
     protected final long handshakeTimeoutInSeconds;
 
+    @JsonProperty(value = "client_auth")
     protected String clientAuth;
 
     @JsonProperty(value = "cipher_suites")

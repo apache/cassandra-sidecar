@@ -110,6 +110,11 @@ public interface ServiceConfiguration
     SSTableSnapshotConfiguration sstableSnapshotConfiguration();
 
     /**
+     * @return the configuration for the permissions caches
+     */
+    RefreshPermissionCachesConfiguration refreshPermissionCachesConfiguration();
+
+    /**
      * @return the configured worker pools for the service
      */
     Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration();

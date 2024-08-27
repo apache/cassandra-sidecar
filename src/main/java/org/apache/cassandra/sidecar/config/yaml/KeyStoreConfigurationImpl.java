@@ -20,14 +20,14 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
+import org.apache.cassandra.sidecar.utils.FileUtils;
 
 /**
  * Encapsulates key or trust store option configurations
  */
 public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
 {
-    @JsonProperty("path")
-    protected final String path;
+    protected String path;
 
     @JsonProperty("password")
     protected final String password;
@@ -50,7 +50,7 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
 
     public KeyStoreConfigurationImpl(String path, String password, String type, int checkIntervalInSeconds)
     {
-        this.path = path;
+        setPath(path);
         this.password = password;
         this.type = type;
         this.checkIntervalInSeconds = checkIntervalInSeconds;
@@ -64,6 +64,16 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
     public String path()
     {
         return path;
+    }
+
+    /**
+     *
+     * @param path
+     */
+    @JsonProperty(value = "path")
+    public void setPath(String path)
+    {
+        this.path = FileUtils.maybeResolveHomeDirectory(path);
     }
 
     /**
