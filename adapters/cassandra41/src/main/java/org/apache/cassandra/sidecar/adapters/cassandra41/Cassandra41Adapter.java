@@ -21,9 +21,11 @@ package org.apache.cassandra.sidecar.adapters.cassandra41;
 import java.net.InetSocketAddress;
 
 import org.apache.cassandra.sidecar.adapters.base.CassandraAdapter;
+import org.apache.cassandra.sidecar.adapters.base.CassandraMetricsOperations;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
@@ -49,5 +51,11 @@ public class Cassandra41Adapter extends CassandraAdapter
     public StorageOperations storageOperations()
     {
         return new Cassandra41StorageOperations(jmxClient, dnsResolver);
+    }
+
+    @Override
+    public MetricsOperations metricsOperations()
+    {
+        return new CassandraMetricsOperations(jmxClient);
     }
 }
