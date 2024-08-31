@@ -33,6 +33,7 @@ plugins {
     id('java-library')
     id('maven-publish')
     id('com.github.johnrengelman.shadow') version '6.1.0'
+    id('jacoco')
 }
 
 group 'org.apache.cassandra.sidecar'

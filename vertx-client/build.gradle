@@ -25,6 +25,7 @@ plugins {
     id('java-library')
     id('idea')
     id('maven-publish')
+    id('jacoco')
 }
 
 group 'org.apache.cassandra.sidecar'

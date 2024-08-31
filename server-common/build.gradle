@@ -26,7 +26,8 @@ plugins {
     id 'java-library'
     id 'idea'
     id 'maven-publish'
-    id "com.github.spotbugs"
+    id 'com.github.spotbugs'
+    id 'jacoco'
     id 'java-test-fixtures'
 }
 
