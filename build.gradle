@@ -246,6 +246,7 @@ tasks.register('buildIgnoreRatList', Exec) {
     description 'Builds a list of ignored files for the rat task from the unversioned git files'
     commandLine 'bash', '-c', "git clean --force -d --dry-run -x | cut -c 14-"
     doFirst {
+        mkdir(buildDir)
         standardOutput new FileOutputStream("${buildDir}/.rat-excludes.txt")
     }
     // allows task to fail when git/cut commands are unavailable or fail
