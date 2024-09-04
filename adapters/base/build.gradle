@@ -26,7 +26,7 @@ plugins {
     id 'java-library'
     id 'idea'
     id 'maven-publish'
-    id 'com.github.spotbugs'
+    id "com.github.spotbugs"
 }
 
 group 'org.apache.cassandra.sidecar'
