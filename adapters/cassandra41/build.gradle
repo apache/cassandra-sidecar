@@ -27,7 +27,6 @@ plugins {
     id 'idea'
     id 'maven-publish'
     id 'com.github.spotbugs'
-    id 'jacoco'
 }
 
 group 'org.apache.cassandra.sidecar'

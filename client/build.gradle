@@ -29,8 +29,6 @@ plugins {
     id('java-test-fixtures')
     // and is published
     id('maven-publish')
-    // and reports test results
-    id('jacoco')
 }
 
 group 'org.apache.cassandra.sidecar'

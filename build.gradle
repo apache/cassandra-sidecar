@@ -49,15 +49,14 @@ plugins {
     // Release Audit Tool (RAT) plugin for checking project licenses
     id("org.nosphere.apache.rat") version "0.8.0"
 
-    // Sonarqube integration
     id 'jacoco'
-    id 'org.sonarqube' version '5.0.0.4638'
 }
 
 // Force checkstyle, rat, and spotBugs to run before test tasks for faster feedback
 def codeCheckTasks = task("codeCheckTasks")
 
 allprojects {
+    apply plugin: 'jacoco'
     apply plugin: 'checkstyle'
     apply plugin: "com.github.spotbugs"
 

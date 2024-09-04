@@ -28,8 +28,6 @@ plugins {
     id 'idea'
     id 'maven-publish'
 
-    // todo move to all projects or subprojects.  possibly only include with java projects
-    id 'jacoco'
     id 'com.github.spotbugs'
 }
 
