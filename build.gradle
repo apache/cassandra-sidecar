@@ -105,7 +105,6 @@ application {
     applicationName = 'cassandra-sidecar'
     // Config file location should be in file:/// format for local files,
     def confFile = "file:" + File.separator + File.separator + "APP_HOME_TO_REPLACE/conf/sidecar.yaml"
-
     applicationDefaultJvmArgs = ["-Dsidecar.logdir=./logs",
                                  "-Dsidecar.config=" + confFile,
                                  "-Dlogback.configurationFile=./conf/logback.xml",
@@ -129,6 +128,15 @@ run {
                "-javaagent:$projectDir/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
 }
 
+distributions {
+    main {
+        contents {
+            from 'LICENSE.txt'
+            from 'server/src/main/dist'
+        }
+    }
+}
+
 configurations {
     jolokia
 
@@ -142,6 +150,7 @@ configurations {
 }
 
 dependencies {
+    runtimeOnly(project(':server'))
     jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
 }
 
@@ -235,10 +244,6 @@ buildRpm {
 
 buildDeb {
     group = "build"
-}
-
-applicationDistribution.from("LICENSE.txt") {
-    into ""
 }
 
 tasks.register('buildIgnoreRatList', Exec) {

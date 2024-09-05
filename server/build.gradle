@@ -30,6 +30,8 @@ plugins {
     id('maven-publish')
 }
 
+sourceCompatibility = 1.8
+
 println("Using DTest jar: ${dtestVersion}")
 
 def integrationMaxHeapSize = System.getenv("INTEGRATION_MAX_HEAP_SIZE") ?: "8g"

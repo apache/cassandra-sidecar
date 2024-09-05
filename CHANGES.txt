@@ -1,6 +1,5 @@
 1.0.0
 -----
- * Move root project into a subproject in gradle (CASSANDRASC-145)
  * Improve S3 download throttling with range-GetObject (CASSANDRASC-142)
  * Updating traffic shaping options throws IllegalStateException (CASSANDRASC-140)
  * Add restore job progress endpoint and consistency check on restore ranges (CASSANDRASC-132)
