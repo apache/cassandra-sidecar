@@ -428,7 +428,7 @@ jobs:
     <<: *base_job
     steps:
       - checkout
-      - run: ./gradlew --info clean jibDockerBuild
+      - run: ./gradlew --info clean :server:jibDockerBuild
 
   docs_build:
     docker:

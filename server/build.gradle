@@ -1,0 +1,325 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+import java.nio.file.Paths
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id('idea')
+    // a java project
+    id('java')
+    // which produces test fixtures
+    id('java-test-fixtures')
+    // and is published
+    id('maven-publish')
+    // and produces a docker image
+    id('com.google.cloud.tools.jib') version '2.2.0'
+}
+
+sourceCompatibility = 1.8
+
+println("Using DTest jar: ${dtestVersion}")
+
+def integrationMaxHeapSize = System.getenv("INTEGRATION_MAX_HEAP_SIZE") ?: "8g"
+println("Using ${integrationMaxHeapSize} maxHeapSize")
+
+def integrationMaxParallelForks = (System.getenv("INTEGRATION_MAX_PARALLEL_FORKS") ?: "4") as int
+println("Using ${integrationMaxParallelForks} maxParallelForks")
+
+// add additional test source set
+sourceSets {
+    integrationTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/test/integration')
+        }
+    }
+
+    containerTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/test/containerTest')
+        }
+    }
+}
+
+// and mark it as test root
+idea {
+    module {
+        testSourceDirs += sourceSets.integrationTest.java.srcDirs
+        testSourceDirs += sourceSets.containerTest.java.srcDirs
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    containerTestImplementation.extendsFrom testImplementation
+}
+
+dependencies {
+    compileOnly('org.jetbrains:annotations:23.0.0')
+    testCompileOnly('org.jetbrains:annotations:23.0.0')
+    integrationTestCompileOnly('org.jetbrains:annotations:23.0.0')
+
+    implementation("io.vertx:vertx-web:${project.vertxVersion}") {
+        exclude group: 'junit', module: 'junit'
+    }
+    implementation("io.vertx:vertx-dropwizard-metrics:${project.vertxVersion}")
+    implementation("io.vertx:vertx-web-client:${project.vertxVersion}")
+
+    implementation('com.datastax.cassandra:cassandra-driver-core:3.11.3')
+    implementation('com.google.inject:guice:4.2.2')
+    implementation("com.github.ben-manes.caffeine:caffeine:2.9.3")
+
+    // Trying to be exactly compatible with Cassandra's deps
+    implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
+    implementation('ch.qos.logback:logback-core:1.2.3')
+    implementation('ch.qos.logback:logback-classic:1.2.3')
+
+
+    implementation(group: 'org.apache.commons', name: 'commons-lang3', version: '3.13.0')
+    implementation(group: 'commons-codec', name: 'commons-codec', version: "${project.commonsCodecVersion}")
+
+    // Jackson for yaml-based configuration parsing
+    implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
+    implementation(group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: "${project.jacksonVersion}")
+
+    // aws sdk BOM + s3
+    implementation platform(group: 'software.amazon.awssdk', name:'bom', version:"${project.awsSdkVersion}")
+    implementation('software.amazon.awssdk:s3')
+    implementation('software.amazon.awssdk:netty-nio-client')
+    implementation('io.netty:netty-transport-classes-epoll') {
+        version {
+            // Some integration tests are failing with version 4.1.100.final due to netty bootstrapping issue in cassandra java driver.
+            // Force the version to the old version unblocks the integration test.
+            strictly '4.1.86.Final'
+        }
+    }
+
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}")  // for openSSL
+
+    // The newer versions (2.0.48.Final+) of tcnative require explicit dependency declarations,
+    // including the classifiers. See https://netty.io/wiki/forked-tomcat-native.html#gradle-and-bazel
+    // for details.
+
+    // openSSL native libraries for linux x86-64 architectures
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'linux-x86_64')
+    // openSSL native libraries for macOS aarch-64 architectures
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'osx-aarch_64')
+    // openSSL native libraries for linux aarch-64 architectures
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'linux-aarch_64')
+    // openSSL native libraries for macOS x86-64 architectures
+    implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'osx-x86_64')
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
+    testImplementation "org.assertj:assertj-core:3.24.2"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
+
+    testImplementation('com.google.guava:guava-testlib:31.1-jre') {
+        exclude group: 'junit', module: 'junit'
+    }
+
+    testImplementation('com.datastax.cassandra:cassandra-driver-core:3.11.3:tests')
+    testImplementation('org.mockito:mockito-core:4.10.0')
+    testImplementation('org.mockito:mockito-inline:4.10.0')
+    testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
+    testImplementation(testFixtures(project(":client-common")))
+    testImplementation(testFixtures(project(":server-common")))
+
+    implementation(project(":server-common"))
+    implementation(project(":adapters:base"))
+    implementation(project(":adapters:cassandra41"))
+
+    testFixturesApi(testFixtures(project(":server-common")))
+    testFixturesImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
+    testFixturesImplementation('com.google.inject:guice:4.2.2')
+    testFixturesImplementation('org.mockito:mockito-core:4.10.0')
+    testFixturesImplementation("org.junit.jupiter:junit-jupiter-api:${project.junitVersion}")
+    testFixturesImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")
+    testFixturesImplementation("org.assertj:assertj-core:3.24.2")
+    testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}") {
+        exclude group: 'junit', module: 'junit'
+    }
+    integrationTestImplementation(group: 'org.apache.cassandra', name: "${dtestDependencyName}", version: "${dtestVersion}")
+    integrationTestImplementation(group: 'org.apache.cassandra', name: 'dtest-api', version: "${dtestApiVersion}")
+    integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
+    // Needed by the Cassandra dtest framework
+    integrationTestImplementation("org.junit.vintage:junit-vintage-engine:${junitVersion}")
+    // Needed for snapshot manifest validation
+    integrationTestImplementation(group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: "${project.jacksonVersion}")
+
+    containerTestImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') // 3.x version do not support java 11
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            groupId rootProject.group
+            artifactId rootProject.name
+            version System.getenv("CODE_VERSION") ?: "${version}"
+        }
+    }
+}
+
+test {
+    systemProperty "vertxweb.environment", "dev"
+    systemProperty "vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.SLF4JLogDelegateFactory"
+    // ordinarily we don't need integration tests
+    // see the integrationTest task
+    useJUnitPlatform()
+    if (Os.isFamily(Os.FAMILY_MAC)) {
+        jvmArgs "-XX:-MaxFDLimit"
+    }
+    reports {
+        junitXml.enabled = true
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "test").toFile()
+        println("Destination directory for unit tests: ${destDir}")
+        junitXml.destination = destDir
+        html.enabled = true
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+    finalizedBy jacocoTestReport // report is always generated after tests run
+}
+
+def JDK11_OPTIONS = ['-XX:-MaxFDLimit',
+                     '-Djdk.attach.allowAttachSelf=true',
+                     '--add-exports', 'java.base/jdk.internal.misc=ALL-UNNAMED',
+                     '--add-exports', 'java.base/jdk.internal.ref=ALL-UNNAMED',
+                     '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED',
+                     '--add-exports', 'java.management.rmi/com.sun.jmx.remote.internal.rmi=ALL-UNNAMED',
+                     '--add-exports', 'java.rmi/sun.rmi.registry=ALL-UNNAMED',
+                     '--add-exports', 'java.rmi/sun.rmi.server=ALL-UNNAMED',
+                     '--add-exports', 'java.sql/java.sql=ALL-UNNAMED',
+                     '--add-opens', 'java.base/java.lang.module=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.loader=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.ref=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.math=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.module=ALL-UNNAMED',
+                     '--add-opens', 'java.base/jdk.internal.util.jar=ALL-UNNAMED',
+                     '--add-opens', 'jdk.management/com.sun.management.internal=ALL-UNNAMED']
+
+def integrationTest = task("integrationTest")
+
+['integrationTestLightWeight', 'integrationTestHeavyWeight'].each { name ->
+    tasks.register(name, Test) {
+        if (JavaVersion.current().isJava11Compatible()) {
+            jvmArgs(JDK11_OPTIONS)
+            println("JVM arguments for $project.name are $allJvmArgs")
+        }
+        systemProperty "cassandra.test.dtest_jar_path", rootProject.file("dtest-jars")
+        // Disable direct memory allocator as it doesn't release properly
+        systemProperty "cassandra.netty_use_heap_allocator", "true"
+        systemProperty "vertxweb.environment", "dev"
+        // config logback for in-jvm clusters
+        systemProperty "logback.configurationFile", "src/test/resources/logback-in-jvm-dtest.xml"
+        // Because tests are forked, we need to explicitly pass the system property from the
+        // Gradle JVM down to the children
+
+        def versionsToTest = System.getProperty("cassandra.sidecar.versions_to_test", null)
+        if (versionsToTest != "" && versionsToTest != null) {
+            systemProperty "cassandra.sidecar.versions_to_test", versionsToTest
+        }
+        useJUnitPlatform() {
+            if (name.contains("HeavyWeight"))
+            {
+                includeTags "heavy"
+            }
+            else
+            {
+                excludeTags "heavy"
+            }
+        }
+
+        reports {
+            junitXml.enabled = true
+            def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "integration").toFile()
+            println("Destination directory for integration tests: ${destDir}")
+            junitXml.destination = destDir
+            html.enabled = true
+        }
+        testLogging {
+            events "started", "passed", "skipped", "failed"
+        }
+        testClassesDirs = sourceSets.integrationTest.output.classesDirs
+        classpath = sourceSets.integrationTest.runtimeClasspath
+        shouldRunAfter test
+        forkEvery = 1 // DTest framework tends to have issues without forkEvery test class
+        maxHeapSize = integrationMaxHeapSize
+        maxParallelForks = integrationMaxParallelForks
+
+        afterTest { descriptor, result ->
+            def totalTime = (result.endTime - result.startTime) / 1000.0
+            logger.lifecycle("--")
+            if (totalTime >= 60) { // log the tests that take 1 minute and more
+                logger.warn("$descriptor.displayName took $totalTime s")
+            }
+            else {
+                logger.info("$descriptor.displayName took $totalTime s")
+            }
+        }
+        finalizedBy jacocoTestReport // report is always generated after tests run
+    }
+}
+
+tasks.register("containerTest", Test) {
+    if (JavaVersion.current().isJava11Compatible()) {
+        jvmArgs(JDK11_OPTIONS)
+        println("JVM arguments for $project.name are $allJvmArgs")
+    } else {
+        jvmArgs '-XX:-MaxFDLimit'
+    }
+
+    useJUnitPlatform()
+    reports {
+        junitXml.enabled = true
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "containerTest").toFile()
+        println("Destination directory for testcontainer tests: ${destDir}")
+        junitXml.destination = destDir
+        html.enabled = true
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+    testClassesDirs = sourceSets.containerTest.output.classesDirs
+    classpath = sourceSets.containerTest.runtimeClasspath
+    shouldRunAfter test
+    finalizedBy jacocoTestReport // report is always generated after tests run
+}
+
+compileIntegrationTestJava.onlyIf { "true" != System.getenv("skipIntegrationTest") }
+checkstyleIntegrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
+spotbugsIntegrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
+compileContainerTestJava.onlyIf { "true" != System.getenv("skipContainerTest") }
+checkstyleContainerTest.onlyIf { "true" != System.getenv("skipContainerTest") }
+spotbugsContainerTest.onlyIf { "true" != System.getenv("skipContainerTest") }
+
+integrationTest.dependsOn integrationTestLightWeight, integrationTestHeavyWeight
+check.dependsOn containerTest, integrationTest, jacocoTestReport

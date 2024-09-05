@@ -28,9 +28,7 @@ plugins {
     id 'idea'
     id 'maven-publish'
 
-    // todo move to all projects or subprojects.  possibly only include with java projects
-    id 'jacoco'
-    id "com.github.spotbugs"
+    id 'com.github.spotbugs'
 }
 
 group 'org.apache.cassandra.sidecar'
