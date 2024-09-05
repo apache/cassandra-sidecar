@@ -28,6 +28,8 @@ plugins {
     id('java-test-fixtures')
     // and is published
     id('maven-publish')
+    // and produces a docker image
+    id('com.google.cloud.tools.jib') version '2.2.0'
 }
 
 sourceCompatibility = 1.8
