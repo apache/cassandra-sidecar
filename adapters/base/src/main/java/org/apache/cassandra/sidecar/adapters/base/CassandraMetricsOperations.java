@@ -36,7 +36,7 @@ import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 
 /**
- * An interface that pulls methods from the Cassandra Metrics Proxy
+ * Default implementation that pulls methods from the Cassandra Metrics Proxy
  */
 public class CassandraMetricsOperations implements MetricsOperations
 {
@@ -56,17 +56,11 @@ public class CassandraMetricsOperations implements MetricsOperations
     }
 
     /**
-     * Retrieve the connected client stats metrics from the cluster
-     * @param params the request parameters that are the filter options for the data returned
-     * @return the requested client stats
+     * {@inheritDoc}
      */
-    public ClientStatsResponse clientStats(Map<String, String> params)
+    @Override
+    public ClientStatsResponse clientStats(boolean isListConnections, boolean isVerbose, boolean isByProtocol, boolean isClientOptions)
     {
-        boolean isListConnections = Boolean.valueOf(params.getOrDefault("list-connections", "false"));
-        boolean isVerbose = Boolean.valueOf(params.getOrDefault("verbose", "false"));
-        boolean isByProtocol = Boolean.valueOf(params.getOrDefault("by-protocol", "false"));
-        boolean isClientOptions = Boolean.valueOf(params.getOrDefault("client-options", "false"));
-
         ClientStatsResponse.Builder response = ClientStatsResponse.builder();
 
         JmxGaugeOperations gaugeMetric = jmxClient.proxy(JmxGaugeOperations.class, metricMBeanName("Client", "connections"));

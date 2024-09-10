@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,13 +62,13 @@ public class ClientStatsHandlerIntegrationTest extends IntegrationTestBase
     void retrieveClientStatsWithClientOptions(VertxTestContext context, CassandraTestContext cassandraTestContext)
     throws Exception
     {
-        Map<String, Boolean> params = Collections.singletonMap("client-options", true);
+        Map<String, Boolean> expectedParams = Collections.singletonMap("client-options", true);
         String testRoute = "/api/v1/storage/client-stats?client-options=true";
         testWithClient(context, client -> {
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
-                      assertClientStatsResponse(response, params, cassandraTestContext.version.toString());
+                      assertClientStatsResponse(response, expectedParams, cassandraTestContext.version.toString());
                       context.completeNow();
                   }));
         });
@@ -77,13 +78,13 @@ public class ClientStatsHandlerIntegrationTest extends IntegrationTestBase
     void retrieveClientStatsByProtocol(VertxTestContext context, CassandraTestContext cassandraTestContext)
     throws Exception
     {
-        Map<String, Boolean> params = Collections.singletonMap("by-protocol", true);
+        Map<String, Boolean> expectedParams = Collections.singletonMap("by-protocol", true);
         String testRoute = "/api/v1/storage/client-stats?by-protocol=true";
         testWithClient(context, client -> {
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
-                      assertClientStatsResponse(response, params, cassandraTestContext.version.toString());
+                      assertClientStatsResponse(response, expectedParams, cassandraTestContext.version.toString());
                       context.completeNow();
                   }));
         });
@@ -93,13 +94,85 @@ public class ClientStatsHandlerIntegrationTest extends IntegrationTestBase
     void retrieveClientStatsVerbose(VertxTestContext context, CassandraTestContext cassandraTestContext)
     throws Exception
     {
-        Map<String, Boolean> params = Collections.singletonMap("verbose", true);
+        Map<String, Boolean> expectedParams = Collections.singletonMap("verbose", true);
         String testRoute = "/api/v1/storage/client-stats?verbose=true";
         testWithClient(context, client -> {
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
-                      assertClientStatsResponse(response, params, cassandraTestContext.version.toString());
+                      assertClientStatsResponse(response, expectedParams, cassandraTestContext.version.toString());
+                      context.completeNow();
+                  }));
+        });
+    }
+
+    @CassandraIntegrationTest
+    void retrieveClientStatsListConns(VertxTestContext context, CassandraTestContext cassandraTestContext)
+    throws Exception
+    {
+        Map<String, Boolean> expectedParams = Collections.singletonMap("list-connections", true);
+        String testRoute = "/api/v1/storage/client-stats?list-connections=true";
+        testWithClient(context, client -> {
+            client.get(server.actualPort(), "127.0.0.1", testRoute)
+                  .expect(ResponsePredicate.SC_OK)
+                  .send(context.succeeding(response -> {
+                      assertClientStatsResponse(response, expectedParams, cassandraTestContext.version.toString());
+                      context.completeNow();
+                  }));
+        });
+    }
+
+    @CassandraIntegrationTest
+    void retrieveClientStatsListConnsAndVerbose(VertxTestContext context, CassandraTestContext cassandraTestContext)
+    throws Exception
+    {
+        Map<String, Boolean> expectedParams = new HashMap<>();
+        expectedParams.put("verbose", true);
+        expectedParams.put("list-connections", true);
+        String testRoute = "/api/v1/storage/client-stats?list-connections=true&verbose=true";
+        testWithClient(context, client -> {
+            client.get(server.actualPort(), "127.0.0.1", testRoute)
+                  .expect(ResponsePredicate.SC_OK)
+                  .send(context.succeeding(response -> {
+                      assertClientStatsResponse(response, expectedParams, cassandraTestContext.version.toString());
+                      context.completeNow();
+                  }));
+        });
+    }
+
+    @CassandraIntegrationTest
+    void retrieveClientStatsMultipleParams(VertxTestContext context, CassandraTestContext cassandraTestContext)
+    throws Exception
+    {
+        Map<String, Boolean> expectedParams = new HashMap<>();
+        expectedParams.put("verbose", true);
+        expectedParams.put("list-connections", true);
+        expectedParams.put("by-protocol", true);
+        String testRoute = "/api/v1/storage/client-stats?list-connections=true&verbose=true&by-protocol=true";
+        testWithClient(context, client -> {
+            client.get(server.actualPort(), "127.0.0.1", testRoute)
+                  .expect(ResponsePredicate.SC_OK)
+                  .send(context.succeeding(response -> {
+                      assertClientStatsResponse(response, expectedParams, cassandraTestContext.version.toString());
+                      context.completeNow();
+                  }));
+        });
+    }
+
+    @CassandraIntegrationTest
+    void retrieveClientStatsInvalidParams(VertxTestContext context, CassandraTestContext cassandraTestContext)
+    throws Exception
+    {
+        Map<String, Boolean> expectedParams = new HashMap<>();
+        expectedParams.put("verbose", false);
+        expectedParams.put("list-connections", false);
+        expectedParams.put("by-protocol", false);
+        String testRoute = "/api/v1/storage/client-stats?list-connections=abc&verbose=123&by-protocol=xyz";
+        testWithClient(context, client -> {
+            client.get(server.actualPort(), "127.0.0.1", testRoute)
+                  .expect(ResponsePredicate.SC_OK)
+                  .send(context.succeeding(response -> {
+                      assertClientStatsResponse(response, expectedParams, cassandraTestContext.version.toString());
                       context.completeNow();
                   }));
         });
