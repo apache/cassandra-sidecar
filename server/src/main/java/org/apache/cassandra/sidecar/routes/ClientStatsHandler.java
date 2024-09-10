@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
 import io.vertx.core.http.HttpServerRequest;
@@ -32,12 +29,33 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
+import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
 /**
  * Handler for retrieving client stats
  */
 public class ClientStatsHandler extends AbstractHandler<Void>
 {
+
+    public enum ClientStatsParams
+    {
+        listConnections("list-connections"),
+        byProtocol("by-protocol"),
+        verbose("verbose"),
+        clientOptions("client-options");
+
+        private final String value;
+
+        ClientStatsParams(String value)
+        {
+            this.value = value;
+        }
+
+        String getValue()
+        {
+            return value;
+        }
+    }
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
      *
@@ -75,11 +93,16 @@ public class ClientStatsHandler extends AbstractHandler<Void>
             return;
         }
 
-        Map<String, String> params = httpRequest.params().entries()
-                                                 .stream()
-                                                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        boolean isListConnections = parseBooleanQueryParam(httpRequest,"list-connections", false);
+        boolean isVerbose = parseBooleanQueryParam(httpRequest,"verbose", false);
+        boolean isByProtocol = parseBooleanQueryParam(httpRequest,"by-protocol", false);
+        boolean isClientOptions = parseBooleanQueryParam(httpRequest,"client-options", false);
+
         executorPools.service()
-                     .executeBlocking(() -> operations.clientStats(params))
+                     .executeBlocking(() -> operations.clientStats(isListConnections,
+                                                                   isVerbose,
+                                                                   isByProtocol,
+                                                                   isClientOptions))
                      .onSuccess(context::json)
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }

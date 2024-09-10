@@ -28,9 +28,13 @@ import org.apache.cassandra.sidecar.common.response.ClientStatsResponse;
 public interface MetricsOperations
 {
     /**
-     * Get the connected cassandra-client statistics from the cluster
-     * @param params the request parameters that are the filter options for the data returned
+     * Retrieve the connected client stats metrics from the cluster
+     * @param isListConnections boolean parameter to list connection details
+     * @param isVerbose boolean parameter for verbose response
+     * @param isByProtocol boolean parameter to return stats by protocol-version
+     * @param isClientOptions boolean parameter to include client-options
      * @return the requested client stats
      */
-    ClientStatsResponse clientStats(Map<String, String> params);
+    ClientStatsResponse clientStats(boolean isListConnections, boolean isVerbose, boolean isByProtocol, boolean isClientOptions);
+
 }
