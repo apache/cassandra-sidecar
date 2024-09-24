@@ -49,7 +49,7 @@ import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
@@ -66,7 +66,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJobDiscoverer.class);
 
     private final RestoreJobConfiguration restoreJobConfig;
-    private final SidecarSchema sidecarSchema;
+    private final SidecarSchemaInitializer sidecarSchemaInitializer;
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
     private final RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor;
     private final RestoreRangeDatabaseAccessor restoreRangeDatabaseAccessor;
@@ -82,7 +82,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
 
     @Inject
     public RestoreJobDiscoverer(SidecarConfiguration config,
-                                SidecarSchema sidecarSchema,
+                                SidecarSchemaInitializer sidecarSchemaInitializer,
                                 RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
                                 RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor,
                                 RestoreRangeDatabaseAccessor restoreRangeDatabaseAccessor,
@@ -93,7 +93,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                                 SidecarMetrics metrics)
     {
         this(config.restoreJobConfiguration(),
-             sidecarSchema,
+             sidecarSchemaInitializer,
              restoreJobDatabaseAccessor,
              restoreSliceDatabaseAccessor,
              restoreRangeDatabaseAccessor,
@@ -106,7 +106,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
 
     @VisibleForTesting
     RestoreJobDiscoverer(RestoreJobConfiguration restoreJobConfig,
-                         SidecarSchema sidecarSchema,
+                         SidecarSchemaInitializer sidecarSchemaInitializer,
                          RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
                          RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor,
                          RestoreRangeDatabaseAccessor restoreRangeDatabaseAccessor,
@@ -117,7 +117,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
                          SidecarMetrics metrics)
     {
         this.restoreJobConfig = restoreJobConfig;
-        this.sidecarSchema = sidecarSchema;
+        this.sidecarSchemaInitializer = sidecarSchemaInitializer;
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
         this.restoreSliceDatabaseAccessor = restoreSliceDatabaseAccessor;
         this.restoreRangeDatabaseAccessor = restoreRangeDatabaseAccessor;
@@ -133,7 +133,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
     @Override
     public boolean shouldSkip()
     {
-        boolean shouldSkip = !sidecarSchema.isInitialized();
+        boolean shouldSkip = !sidecarSchemaInitializer.isInitialized();
         if (shouldSkip)
         {
             LOGGER.trace("Skipping restore job discovering");

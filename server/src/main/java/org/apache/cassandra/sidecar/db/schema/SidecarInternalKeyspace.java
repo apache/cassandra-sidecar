@@ -24,6 +24,8 @@ import java.util.Set;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.common.server.data.AbstractSchema;
+import org.apache.cassandra.sidecar.common.server.data.TableSchema;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.NotNull;

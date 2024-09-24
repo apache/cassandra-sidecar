@@ -27,23 +27,20 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.Session;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import org.apache.cassandra.sidecar.common.response.data.SidecarSchemaModificationException;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
-
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
+import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 
 /**
- * Encapsulates all {@link AbstractSchema} related operations for features provided by Sidecar
+ * Encapsulates all related operations for features provided by Sidecar
  */
-public class SidecarSchema
+public class SidecarSchemaInitializer
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SidecarSchema.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SidecarSchemaInitializer.class);
     protected static final long INITIALIZATION_LOOP_DELAY_MILLIS = 1000;
 
     private final Vertx vertx;
@@ -56,12 +53,12 @@ public class SidecarSchema
 
     private boolean isInitialized = false;
 
-    public SidecarSchema(Vertx vertx,
-                         ExecutorPools executorPools,
-                         SidecarConfiguration config,
-                         SidecarInternalKeyspace sidecarInternalKeyspace,
-                         CQLSessionProvider cqlSessionProvider,
-                         SchemaMetrics metrics)
+    public SidecarSchemaInitializer(Vertx vertx,
+                                    ExecutorPools executorPools,
+                                    SidecarConfiguration config,
+                                    SidecarInternalKeyspace sidecarInternalKeyspace,
+                                    CQLSessionProvider cqlSessionProvider,
+                                    SchemaMetrics metrics)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -83,8 +80,8 @@ public class SidecarSchema
     {
         EventBus eventBus = vertx.eventBus();
 
-        eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), message -> startSidecarSchemaInitializer());
-        eventBus.localConsumer(ON_SERVER_STOP.address(), message -> cancelTimer(initializationTimerId.get()));
+        eventBus.localConsumer(SidecarServerEvents.ON_CASSANDRA_CQL_READY.address(), message -> startSidecarSchemaInitializer());
+        eventBus.localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> cancelTimer(initializationTimerId.get()));
     }
 
     @VisibleForTesting
@@ -179,6 +176,6 @@ public class SidecarSchema
 
     protected void reportSidecarSchemaInitialized()
     {
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), "SidecarSchema initialized");
+        vertx.eventBus().publish(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), "SidecarSchema initialized");
     }
 }

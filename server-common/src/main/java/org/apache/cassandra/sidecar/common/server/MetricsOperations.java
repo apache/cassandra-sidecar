@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.common.server;
 
-import java.util.Map;
-
 import org.apache.cassandra.sidecar.common.response.ClientStatsResponse;
 
 /**
@@ -30,11 +28,8 @@ public interface MetricsOperations
     /**
      * Retrieve the connected client stats metrics from the cluster
      * @param isListConnections boolean parameter to list connection details
-     * @param isVerbose boolean parameter for verbose response
-     * @param isByProtocol boolean parameter to return stats by protocol-version
-     * @param isClientOptions boolean parameter to include client-options
      * @return the requested client stats
      */
-    ClientStatsResponse clientStats(boolean isListConnections, boolean isVerbose, boolean isByProtocol, boolean isClientOptions);
+    ClientStatsResponse clientStats(boolean isListConnections);
 
 }

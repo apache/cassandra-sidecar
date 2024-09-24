@@ -16,25 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.db.schema;
-
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import org.jetbrains.annotations.NotNull;
+package org.apache.cassandra.sidecar.common.response.data;
 
 /**
- * Abstract base schema class for table schema
+ * Exception thrown when modifications to schema managed by Sidecar fail
  */
-public abstract class TableSchema extends AbstractSchema
+public class SidecarSchemaModificationException extends RuntimeException
 {
-    protected abstract String tableName();
-
-    @Override
-    protected boolean exists(@NotNull Metadata metadata)
+    public SidecarSchemaModificationException(String message, Throwable cause)
     {
-        KeyspaceMetadata ksMetadata = metadata.getKeyspace(keyspaceName());
-        if (ksMetadata == null)
-            return false;
-        return ksMetadata.getTable(tableName()) != null;
+        super(message, cause);
     }
 }

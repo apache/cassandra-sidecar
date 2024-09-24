@@ -55,7 +55,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.stubbing.Answer;
@@ -70,7 +70,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link SidecarSchema} setup.
+ * Unit tests for {@link SidecarSchemaInitializer} setup.
  */
 @ExtendWith(VertxExtension.class)
 public class SidecarSchemaTest
@@ -81,7 +81,7 @@ public class SidecarSchemaTest
     private static List<String> interceptedPrepStmts = new ArrayList<>();
 
     private Vertx vertx;
-    private SidecarSchema sidecarSchema;
+    private SidecarSchemaInitializer sidecarSchemaInitializer;
     Server server;
 
     @BeforeEach
@@ -92,7 +92,7 @@ public class SidecarSchemaTest
                                                                      .with(new SidecarSchemaTestModule())));
         this.vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
-        sidecarSchema = injector.getInstance(SidecarSchema.class);
+        sidecarSchemaInitializer = injector.getInstance(SidecarSchemaInitializer.class);
 
         VertxTestContext context = new VertxTestContext();
         server.start()
@@ -117,12 +117,12 @@ public class SidecarSchemaTest
     @Test
     void testSchemaInitOnStartup(VertxTestContext context)
     {
-        sidecarSchema.startSidecarSchemaInitializer();
+        sidecarSchemaInitializer.startSidecarSchemaInitializer();
         context.verify(() -> {
             int maxWaitTime = 20; // about 10 seconds
             while (interceptedPrepStmts.size() < 10
                    || interceptedExecStmts.size() < 3
-                   || !sidecarSchema.isInitialized())
+                   || !sidecarSchemaInitializer.isInitialized())
             {
                 if (maxWaitTime-- <= 0)
                 {
@@ -189,7 +189,7 @@ public class SidecarSchemaTest
             assertTrue(notInExpected.isEmpty(),
                        "Found the following statements that are not contained in expected: " + notInExpected);
 
-            assertTrue(sidecarSchema.isInitialized());
+            assertTrue(sidecarSchemaInitializer.isInitialized());
             context.completeNow();
         });
     }
