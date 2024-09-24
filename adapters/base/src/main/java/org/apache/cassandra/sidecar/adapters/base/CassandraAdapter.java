@@ -158,9 +158,10 @@ public class CassandraAdapter implements ICassandraAdapter
         return new CassandraStorageOperations(jmxClient, dnsResolver);
     }
 
+    @Override
     public MetricsOperations metricsOperations()
     {
-        return new CassandraMetricsOperations(jmxClient);
+        return new CassandraMetricsOperations(cqlSessionProvider);
     }
 
     /**

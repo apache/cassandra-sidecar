@@ -78,7 +78,7 @@ import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
@@ -536,14 +536,14 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarSchema sidecarSchema(Vertx vertx,
-                                       ExecutorPools executorPools,
-                                       SidecarConfiguration configuration,
-                                       CQLSessionProvider cqlSessionProvider,
-                                       RestoreJobsSchema restoreJobsSchema,
-                                       RestoreSlicesSchema restoreSlicesSchema,
-                                       RestoreRangesSchema restoreRangesSchema,
-                                       SidecarMetrics metrics)
+    public SidecarSchemaInitializer sidecarSchema(Vertx vertx,
+                                                  ExecutorPools executorPools,
+                                                  SidecarConfiguration configuration,
+                                                  CQLSessionProvider cqlSessionProvider,
+                                                  RestoreJobsSchema restoreJobsSchema,
+                                                  RestoreSlicesSchema restoreSlicesSchema,
+                                                  RestoreRangesSchema restoreRangesSchema,
+                                                  SidecarMetrics metrics)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
@@ -551,8 +551,8 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreRangesSchema);
         SchemaMetrics schemaMetrics = metrics.server().schema();
-        return new SidecarSchema(vertx, executorPools, configuration,
-                                 sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
+        return new SidecarSchemaInitializer(vertx, executorPools, configuration,
+                                            sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
     }
 
     @Provides

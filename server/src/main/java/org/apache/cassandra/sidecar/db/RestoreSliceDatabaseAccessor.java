@@ -29,9 +29,10 @@ import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
+import org.apache.cassandra.sidecar.common.server.data.DatabaseAccessor;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
 
 /**
  * {@link RestoreSliceDatabaseAccessor} is a data accessor to Cassandra.
@@ -40,17 +41,20 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 @Singleton
 public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlicesSchema>
 {
+    private final SidecarSchemaInitializer sidecarSchemaInitializer;
+
     @Inject
-    protected RestoreSliceDatabaseAccessor(SidecarSchema sidecarSchema,
+    protected RestoreSliceDatabaseAccessor(SidecarSchemaInitializer sidecarSchemaInitializer,
                                            RestoreSlicesSchema restoreSlicesSchema,
                                            CQLSessionProvider cqlSessionProvider)
     {
-        super(sidecarSchema, restoreSlicesSchema, cqlSessionProvider);
+        super(restoreSlicesSchema, cqlSessionProvider);
+        this.sidecarSchemaInitializer = sidecarSchemaInitializer;
     }
 
     public RestoreSlice create(RestoreSlice slice)
     {
-        sidecarSchema.ensureInitialized();
+        sidecarSchemaInitializer.ensureInitialized();
 
         BoundStatement statement = tableSchema.insertSlice()
                                               .bind(slice.jobId(),
@@ -76,7 +80,7 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlices
      */
     public List<RestoreSlice> selectByJobByBucketByTokenRange(RestoreJob restoreJob, short bucketId, TokenRange range)
     {
-        sidecarSchema.ensureInitialized();
+        sidecarSchemaInitializer.ensureInitialized();
         Token firstToken = range.firstToken();
         Preconditions.checkArgument(firstToken != null, "range cannot be empty");
 

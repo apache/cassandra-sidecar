@@ -38,13 +38,13 @@ import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.common.response.data.SidecarSchemaModificationException;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarSchemaTest;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
-import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -56,13 +56,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests metrics emitted for {@link SidecarSchema}
+ * Tests metrics emitted for {@link SidecarSchemaInitializer}
  */
 public class SchemaMetricsTest
 {
     private static final Logger logger = LoggerFactory.getLogger(SidecarSchemaTest.class);
     private Vertx vertx;
-    private SidecarSchema sidecarSchema;
+    private SidecarSchemaInitializer sidecarSchemaInitializer;
     private SidecarMetrics metrics;
     Server server;
 
@@ -74,7 +74,7 @@ public class SchemaMetricsTest
                                                                      .with(new SchemaFailureSimulateModule())));
         this.vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
-        sidecarSchema = injector.getInstance(SidecarSchema.class);
+        sidecarSchemaInitializer = injector.getInstance(SidecarSchemaInitializer.class);
         metrics = injector.getInstance(SidecarMetrics.class);
 
         VertxTestContext context = new VertxTestContext();
@@ -99,7 +99,7 @@ public class SchemaMetricsTest
     @Test
     public void testSchemaModificationFailure()
     {
-        sidecarSchema.startSidecarSchemaInitializer();
+        sidecarSchemaInitializer.startSidecarSchemaInitializer();
         loopAssert(3, () -> {
             assertThat(metrics.server().schema().failedInitializations.metric.getValue())
             .isGreaterThanOrEqualTo(1);
@@ -123,19 +123,19 @@ public class SchemaMetricsTest
 
         @Provides
         @Singleton
-        public SidecarSchema sidecarSchema(Vertx vertx,
-                                           ExecutorPools executorPools,
-                                           SidecarConfiguration configuration,
-                                           CQLSessionProvider cqlSessionProvider,
-                                           SidecarMetrics metrics)
+        public SidecarSchemaInitializer sidecarSchema(Vertx vertx,
+                                                      ExecutorPools executorPools,
+                                                      SidecarConfiguration configuration,
+                                                      CQLSessionProvider cqlSessionProvider,
+                                                      SidecarMetrics metrics)
         {
             SidecarInternalKeyspace sidecarInternalKeyspace = mock(SidecarInternalKeyspace.class);
             when(sidecarInternalKeyspace.initialize(any()))
             .thenThrow(new SidecarSchemaModificationException("Simulated failure",
                                                               new RuntimeException("Simulated exception")));
             SchemaMetrics schemaMetrics = metrics.server().schema();
-            return new SidecarSchema(vertx, executorPools, configuration,
-                                     sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
+            return new SidecarSchemaInitializer(vertx, executorPools, configuration,
+                                                sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
         }
     }
 }

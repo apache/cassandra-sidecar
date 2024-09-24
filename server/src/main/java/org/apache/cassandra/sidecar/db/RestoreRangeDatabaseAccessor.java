@@ -28,8 +28,9 @@ import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.data.DatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
 
 /**
  * {@link RestoreSliceDatabaseAccessor} is a data accessor to Cassandra.
@@ -38,17 +39,20 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 @Singleton
 public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRangesSchema>
 {
+    private final SidecarSchemaInitializer sidecarSchemaInitializer;
+
     @Inject
-    protected RestoreRangeDatabaseAccessor(SidecarSchema sidecarSchema,
+    protected RestoreRangeDatabaseAccessor(SidecarSchemaInitializer sidecarSchemaInitializer,
                                            RestoreRangesSchema tableSchema,
                                            CQLSessionProvider sessionProvider)
     {
-        super(sidecarSchema, tableSchema, sessionProvider);
+        super(tableSchema, sessionProvider);
+        this.sidecarSchemaInitializer = sidecarSchemaInitializer;
     }
 
     public RestoreRange create(RestoreRange range)
     {
-        sidecarSchema.ensureInitialized();
+        sidecarSchemaInitializer.ensureInitialized();
 
         BoundStatement statement = tableSchema.insert()
                                               .bind(range.jobId(),
@@ -65,7 +69,7 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
 
     public RestoreRange updateStatus(RestoreRange range)
     {
-        sidecarSchema.ensureInitialized();
+        sidecarSchemaInitializer.ensureInitialized();
 
         BoundStatement statement = tableSchema.updateStatus()
                                               .bind(range.statusTextByReplica(),
@@ -80,7 +84,7 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
     // todo: change to stream api and paginate
     public List<RestoreRange> findAll(UUID jobId, short bucketId)
     {
-        sidecarSchema.ensureInitialized();
+        sidecarSchemaInitializer.ensureInitialized();
 
         BoundStatement statement = tableSchema.findAll()
                                               .bind(jobId,

@@ -36,26 +36,6 @@ import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryP
  */
 public class ClientStatsHandler extends AbstractHandler<Void>
 {
-
-    public enum ClientStatsParams
-    {
-        listConnections("list-connections"),
-        byProtocol("by-protocol"),
-        verbose("verbose"),
-        clientOptions("client-options");
-
-        private final String value;
-
-        ClientStatsParams(String value)
-        {
-            this.value = value;
-        }
-
-        String getValue()
-        {
-            return value;
-        }
-    }
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
      *
@@ -93,16 +73,10 @@ public class ClientStatsHandler extends AbstractHandler<Void>
             return;
         }
 
-        boolean isListConnections = parseBooleanQueryParam(httpRequest,"list-connections", false);
-        boolean isVerbose = parseBooleanQueryParam(httpRequest,"verbose", false);
-        boolean isByProtocol = parseBooleanQueryParam(httpRequest,"by-protocol", false);
-        boolean isClientOptions = parseBooleanQueryParam(httpRequest,"client-options", false);
+        boolean isListConnections = parseBooleanQueryParam(httpRequest, "all", false);
 
         executorPools.service()
-                     .executeBlocking(() -> operations.clientStats(isListConnections,
-                                                                   isVerbose,
-                                                                   isByProtocol,
-                                                                   isClientOptions))
+                     .executeBlocking(() -> operations.clientStats(isListConnections))
                      .onSuccess(context::json)
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }

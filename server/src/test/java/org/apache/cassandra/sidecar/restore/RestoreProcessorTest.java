@@ -37,7 +37,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
@@ -59,18 +59,18 @@ import static org.mockito.Mockito.when;
 class RestoreProcessorTest
 {
     private RestoreProcessor processor;
-    private SidecarSchema sidecarSchema;
+    private SidecarSchemaInitializer sidecarSchemaInitializer;
     private PeriodicTaskExecutor periodicTaskExecutor;
 
     @BeforeEach
     void setup()
     {
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
-        sidecarSchema = mock(SidecarSchema.class);
+        sidecarSchemaInitializer = mock(SidecarSchemaInitializer.class);
         RestoreProcessor delegate = injector.getInstance(RestoreProcessor.class);
         processor = spy(delegate);
         when(processor.delay()).thenReturn(100L);
-        when(processor.sidecarSchema()).thenReturn(sidecarSchema);
+        when(processor.sidecarSchema()).thenReturn(sidecarSchemaInitializer);
         periodicTaskExecutor = injector.getInstance(PeriodicTaskExecutor.class);
     }
 
@@ -85,7 +85,7 @@ class RestoreProcessorTest
     void testMaxProcessConcurrency()
     {
         // SidecarSchema is initialized
-        when(sidecarSchema.isInitialized()).thenReturn(true);
+        when(sidecarSchemaInitializer.isInitialized()).thenReturn(true);
 
         int concurrency = TestModule.RESTORE_MAX_CONCURRENCY;
         periodicTaskExecutor.schedule(processor);
@@ -145,7 +145,7 @@ class RestoreProcessorTest
     @Test
     void testSkipExecuteWhenSidecarSchemaIsNotInitialized()
     {
-        when(sidecarSchema.isInitialized()).thenReturn(false);
+        when(sidecarSchemaInitializer.isInitialized()).thenReturn(false);
 
         assertThat(processor.shouldSkip()).isTrue();
         assertThat(processor.activeSlices()).isZero();
@@ -167,7 +167,7 @@ class RestoreProcessorTest
     @Test
     void testLongRunningHandlerDetection()
     {
-        when(sidecarSchema.isInitialized()).thenReturn(true);
+        when(sidecarSchemaInitializer.isInitialized()).thenReturn(true);
         periodicTaskExecutor.schedule(processor);
 
         CountDownLatch latch = new CountDownLatch(1);
@@ -202,7 +202,7 @@ class RestoreProcessorTest
     @Test
     void testSubmitFailedTask()
     {
-        when(sidecarSchema.isInitialized()).thenReturn(true);
+        when(sidecarSchemaInitializer.isInitialized()).thenReturn(true);
         periodicTaskExecutor.schedule(processor);
 
         RestoreRange range = RestoreRangeTest.createTestRange();

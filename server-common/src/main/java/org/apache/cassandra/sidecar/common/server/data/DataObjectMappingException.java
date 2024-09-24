@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.exceptions;
+package org.apache.cassandra.sidecar.common.server.data;
 
 /**
- * Exception thrown when modifications to schema managed by Sidecar fail
+ * Exception thrown during mapping a data object into/from database record
  */
-public class SidecarSchemaModificationException extends RuntimeException
+public class DataObjectMappingException extends RuntimeException
 {
-    public SidecarSchemaModificationException(String message, Throwable cause)
+    public DataObjectMappingException(String message, Throwable cause)
     {
         super(message, cause);
     }
