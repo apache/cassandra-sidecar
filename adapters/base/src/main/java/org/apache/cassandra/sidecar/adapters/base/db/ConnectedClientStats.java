@@ -18,24 +18,18 @@
 
 package org.apache.cassandra.sidecar.adapters.base.db;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Map;
 
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.utils.Bytes;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.data.DataObjectMappingException;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Representation of the ClientStats connection metadata
+ * Representation of the connected clients metadata
  */
-public class ClientStats
+public class ConnectedClientStats
 {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public final String address;
     public final int port;
@@ -54,14 +48,14 @@ public class ClientStats
     public final String authenticationMode;
     public final Map<String, String> authMetadata;
 
-    public static ClientStats.Builder builder()
+    public static ConnectedClientStats.Builder builder()
     {
-        return new ClientStats.Builder();
+        return new ConnectedClientStats.Builder();
     }
 
-    public static ClientStats from(@NotNull Row row) throws DataObjectMappingException
+    public static ConnectedClientStats from(@NotNull Row row) throws DataObjectMappingException
     {
-        ClientStats.Builder builder = new ClientStats.Builder();
+        ConnectedClientStats.Builder builder = new ConnectedClientStats.Builder();
         builder.address(row.getInet("address").getHostAddress())
                .port(row.getInt("port"))
                .hostname(row.getString("hostname"))
@@ -77,30 +71,7 @@ public class ClientStats
         return builder.build();
     }
 
-    private static Map<String, String> deserializeMap(ByteBuffer bytes, String fieldNameHint)
-    {
-        return bytes == null
-               ? null
-               : deserializeToMap(bytes,
-                                  new TypeReference<Map<String, String>>()
-                                  {
-                                  },
-                                  fieldNameHint);
-    }
-
-    private static <T> Map<String, String> deserializeToMap(ByteBuffer byteBuffer, TypeReference<Map<String, String>> type, String fieldNameHint)
-    {
-        try
-        {
-            return MAPPER.readValue(Bytes.getArray(byteBuffer), type);
-        }
-        catch (IOException e)
-        {
-            throw new DataObjectMappingException("Failed to deserialize " + fieldNameHint, e);
-        }
-    }
-
-    private ClientStats(Builder builder)
+    private ConnectedClientStats(Builder builder)
     {
         this.address = builder.address;
         this.port = builder.port;
@@ -121,9 +92,9 @@ public class ClientStats
     }
 
     /**
-     * Builder for {@link ClientStats}
+     * Builder for {@link ConnectedClientStats}
      */
-    public static class Builder implements DataObjectBuilder<ClientStats.Builder, ClientStats>
+    public static class Builder implements DataObjectBuilder<ConnectedClientStats.Builder, ConnectedClientStats>
     {
         private String address;
         private int port;
@@ -144,26 +115,6 @@ public class ClientStats
 
         private Builder()
         {
-        }
-
-        private Builder(ClientStats clientStats)
-        {
-            this.address = clientStats.address;
-            this.port = clientStats.port;
-            this.hostname = clientStats.hostname;
-            this.username = clientStats.username;
-            this.connectionStage = clientStats.connectionStage;
-            this.protocolVersion = clientStats.protocolVersion;
-            this.clientOptions = clientStats.clientOptions;
-            this.driverName = clientStats.driverName;
-            this.driverVersion = clientStats.driverVersion;
-            this.sslEnabled = clientStats.sslEnabled;
-            this.sslProtocol = clientStats.sslProtocol;
-            this.sslCipherSuite = clientStats.sslCipherSuite;
-            this.keyspaceName = clientStats.keyspaceName;
-            this.requestCount = clientStats.requestCount;
-            this.authMetadata = clientStats.authMetadata;
-            this.authenticationMode = clientStats.authenticationMode;
         }
 
         public Builder address(String address)
@@ -251,9 +202,9 @@ public class ClientStats
             return this;
         }
 
-        public ClientStats build()
+        public ConnectedClientStats build()
         {
-            return new ClientStats(this);
+            return new ConnectedClientStats(this);
         }
     }
 }

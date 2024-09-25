@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.common.server;
 
-import org.apache.cassandra.sidecar.common.response.ClientStatsResponse;
+import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 
 /**
  * An interface that defines interactions with the metrics system in Cassandra.
@@ -30,6 +30,6 @@ public interface MetricsOperations
      * @param isListConnections boolean parameter to list connection details
      * @return the requested client stats
      */
-    ClientStatsResponse clientStats(boolean isListConnections);
+    ConnectedClientStatsResponse connectedClientStats(boolean isListConnections);
 
 }

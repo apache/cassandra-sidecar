@@ -30,36 +30,37 @@ import org.apache.cassandra.sidecar.common.server.data.DatabaseAccessor;
 /**
  * DataAccessor implementation to read client connection stats from the table represented in {@link ClientStatsSchema}
  */
-public class ClientStatsDatabaseAccessor extends DatabaseAccessor<ClientStatsSchema>
+public class ConnectedClientStatsDatabaseAccessor extends DatabaseAccessor<ClientStatsSchema>
 {
-    public ClientStatsDatabaseAccessor(CQLSessionProvider sessionProvider, ClientStatsSchema tableSchema)
+    public ConnectedClientStatsDatabaseAccessor(CQLSessionProvider sessionProvider, ClientStatsSchema tableSchema)
     {
         super(tableSchema, sessionProvider);
     }
 
     /**
      * Query for a summary of the client connection stats
-     * @return {@link ClientStatsSummary} with total connections and counts grouped by user
+     * @return {@link ConnectedClientStatsSummary} with total connections and counts grouped by user
      */
-    public ClientStatsSummary summary()
+    public ConnectedClientStatsSummary summary()
     {
         tableSchema.prepareStatements(session());
         BoundStatement statement = tableSchema.connectionCountByUser().bind();
         ResultSet resultSet = execute(statement);
-        ClientStatsSummary stats = ClientStatsSummary.from(resultSet);
-        return stats;
+        return ConnectedClientStatsSummary.from(resultSet);
     }
 
     /**
      * Query for all the client connection metadata with an entry per connection
-     * @return {@link ClientStats} for each connection
+     * @return {@link ConnectedClientStats} for each connection
      */
-    public Set<ClientStats> connections()
+    public Set<ConnectedClientStats> stats()
     {
         tableSchema.prepareStatements(session());
         BoundStatement statement = tableSchema.listAll().bind();
         ResultSet resultSet = execute(statement);
-        Set<ClientStats> stats = resultSet.all().stream().map(ClientStats::from).collect(Collectors.toSet());
-        return stats;
+        return resultSet.all()
+                        .stream()
+                        .map(ConnectedClientStats::from)
+                        .collect(Collectors.toSet());
     }
 }
