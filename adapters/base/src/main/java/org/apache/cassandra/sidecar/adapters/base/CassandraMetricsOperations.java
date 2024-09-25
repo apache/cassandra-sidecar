@@ -22,11 +22,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.cassandra.sidecar.adapters.base.db.ClientStats;
-import org.apache.cassandra.sidecar.adapters.base.db.ClientStatsDatabaseAccessor;
-import org.apache.cassandra.sidecar.adapters.base.db.ClientStatsSummary;
+import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStats;
+import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsDatabaseAccessor;
+import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsSummary;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ClientStatsSchema;
-import org.apache.cassandra.sidecar.common.response.ClientStatsResponse;
+import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
@@ -37,27 +37,27 @@ import org.apache.cassandra.sidecar.common.server.MetricsOperations;
  */
 public class CassandraMetricsOperations implements MetricsOperations
 {
-    private ClientStatsDatabaseAccessor dbAccessor;
+    private ConnectedClientStatsDatabaseAccessor dbAccessor;
 
     /**
      * Creates a new instance with the provided {@link JmxClient}
      */
     public CassandraMetricsOperations(CQLSessionProvider session)
     {
-        this.dbAccessor = new ClientStatsDatabaseAccessor(session, new ClientStatsSchema());
+        this.dbAccessor = new ConnectedClientStatsDatabaseAccessor(session, new ClientStatsSchema());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public ClientStatsResponse clientStats(boolean isListConnections)
+    public ConnectedClientStatsResponse connectedClientStats(boolean isListConnections)
     {
-        ClientStatsResponse.Builder response = ClientStatsResponse.builder();
+        ConnectedClientStatsResponse.Builder response = ConnectedClientStatsResponse.builder();
 
         if (isListConnections)
         {
-            Set<ClientConnectionEntry> entries = transformToResponse(dbAccessor.connections());
+            Set<ClientConnectionEntry> entries = transform(dbAccessor.stats());
             Map<String, Long> connectionsByUser = entries.stream()
                                                          .collect(Collectors.groupingBy(ClientConnectionEntry::user,
                                                                                         Collectors.counting()));
@@ -68,14 +68,14 @@ public class CassandraMetricsOperations implements MetricsOperations
         }
         else
         {
-            ClientStatsSummary summary = dbAccessor.summary();
+            ConnectedClientStatsSummary summary = dbAccessor.summary();
             response.connectionsByUser(summary.connectionsByUser);
             response.totalConnectedClients(summary.totalConnectedClients);
         }
         return response.build();
     }
 
-    private Set<ClientConnectionEntry> transformToResponse(Set<ClientStats> stats)
+    private Set<ClientConnectionEntry> transform(Set<ConnectedClientStats> stats)
     {
 
         return stats.stream().map(stat -> {

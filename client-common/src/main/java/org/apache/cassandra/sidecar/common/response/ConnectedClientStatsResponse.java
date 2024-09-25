@@ -28,10 +28,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 
 /**
- * Class response for the ClientStats API
+ * Class response for the ConnectedClientStats API
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ClientStatsResponse
+public class ConnectedClientStatsResponse
 {
 
     @JsonProperty("clientConnections")
@@ -58,19 +58,19 @@ public class ClientStatsResponse
 
 
     /**
-     * Constructs a new {@link ClientStatsResponse} from the configured {@link Builder}.
+     * Constructs a new {@link ConnectedClientStatsResponse} from the configured {@link Builder}.
      *
      * @param builder the builder used to create this object
      */
     @VisibleForTesting
-    protected ClientStatsResponse(Builder builder)
+    protected ConnectedClientStatsResponse(Builder builder)
     {
         clientConnections = builder.clientConnections;
         totalConnectedClients = builder.totalConnectedClients;
         connectionsByUser = builder.connectionsByUser;
     }
 
-    public ClientStatsResponse()
+    public ConnectedClientStatsResponse()
     {
         this(builder());
     }
@@ -133,9 +133,9 @@ public class ClientStatsResponse
         {
         }
 
-        public ClientStatsResponse build()
+        public ConnectedClientStatsResponse build()
         {
-            return new ClientStatsResponse(this);
+            return new ConnectedClientStatsResponse(this);
         }
     }
 }

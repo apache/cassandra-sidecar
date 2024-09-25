@@ -29,17 +29,17 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Representation of a summary of client connections stats
  */
-public class ClientStatsSummary
+public class ConnectedClientStatsSummary
 {
     public final int totalConnectedClients;
     public final Map<String, Long> connectionsByUser;
 
-    public static ClientStatsSummary.Builder builder()
+    public static ConnectedClientStatsSummary.Builder builder()
     {
-        return new ClientStatsSummary.Builder();
+        return new ConnectedClientStatsSummary.Builder();
     }
 
-    public static ClientStatsSummary from(@NotNull ResultSet resultSet) throws DataObjectMappingException
+    public static ConnectedClientStatsSummary from(@NotNull ResultSet resultSet) throws DataObjectMappingException
     {
 
         Map<String, Long> resultMap = resultSet.all().stream()
@@ -47,23 +47,23 @@ public class ClientStatsSummary
                                                                          r -> r.getLong("connection_count")));
         int totalConnections = resultMap.values().stream().mapToInt(Math::toIntExact).sum();
 
-        ClientStatsSummary.Builder builder = new ClientStatsSummary.Builder();
+        ConnectedClientStatsSummary.Builder builder = new ConnectedClientStatsSummary.Builder();
         builder.connectionsByUser(resultMap);
         builder.totalConnectedClients(totalConnections);
 
         return builder.build();
     }
 
-    private ClientStatsSummary(ClientStatsSummary.Builder builder)
+    private ConnectedClientStatsSummary(ConnectedClientStatsSummary.Builder builder)
     {
         this.connectionsByUser = builder.connectionsByUser;
         this.totalConnectedClients = builder.totalConnectedClients;
     }
 
     /**
-     * Builder for {@link ClientStatsSummary}
+     * Builder for {@link ConnectedClientStatsSummary}
      */
-    public static class Builder implements DataObjectBuilder<ClientStatsSummary.Builder, ClientStatsSummary>
+    public static class Builder implements DataObjectBuilder<ConnectedClientStatsSummary.Builder, ConnectedClientStatsSummary>
     {
         private int totalConnectedClients;
         private Map<String, Long> connectionsByUser;
@@ -72,30 +72,30 @@ public class ClientStatsSummary
         {
         }
 
-        private Builder(ClientStatsSummary summary)
+        private Builder(ConnectedClientStatsSummary summary)
         {
             this.connectionsByUser = summary.connectionsByUser;
             this.totalConnectedClients = summary.totalConnectedClients;
         }
 
-        public ClientStatsSummary.Builder totalConnectedClients(int count)
+        public ConnectedClientStatsSummary.Builder totalConnectedClients(int count)
         {
             return update(b -> b.totalConnectedClients = count);
         }
 
-        public ClientStatsSummary.Builder connectionsByUser(Map<String, Long> connections)
+        public ConnectedClientStatsSummary.Builder connectionsByUser(Map<String, Long> connections)
         {
             return update(b -> b.connectionsByUser = connections);
         }
 
-        public ClientStatsSummary.Builder self()
+        public ConnectedClientStatsSummary.Builder self()
         {
             return this;
         }
 
-        public ClientStatsSummary build()
+        public ConnectedClientStatsSummary build()
         {
-            return new ClientStatsSummary(this);
+            return new ConnectedClientStatsSummary(this);
         }
     }
 }

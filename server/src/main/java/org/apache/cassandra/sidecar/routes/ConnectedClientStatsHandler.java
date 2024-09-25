@@ -32,9 +32,9 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraService
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
 /**
- * Handler for retrieving client stats
+ * Handler for retrieving stats for connected clients
  */
-public class ClientStatsHandler extends AbstractHandler<Void>
+public class ConnectedClientStatsHandler extends AbstractHandler<Void>
 {
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -43,7 +43,7 @@ public class ClientStatsHandler extends AbstractHandler<Void>
      * @param executorPools   executor pools for blocking executions
      */
     @Inject
-    protected ClientStatsHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools)
+    protected ConnectedClientStatsHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, null);
     }
@@ -76,7 +76,7 @@ public class ClientStatsHandler extends AbstractHandler<Void>
         boolean isListConnections = parseBooleanQueryParam(httpRequest, "all", false);
 
         executorPools.service()
-                     .executeBlocking(() -> operations.clientStats(isListConnections))
+                     .executeBlocking(() -> operations.connectedClientStats(isListConnections))
                      .onSuccess(context::json)
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }

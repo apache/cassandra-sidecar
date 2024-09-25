@@ -109,7 +109,7 @@ public final class ApiEndpointsV1
     public static final String ABORT_RESTORE_JOB_ROUTE = RESTORE_JOB_ROUTE + ABORT;
     public static final String RESTORE_JOB_PROGRESS_ROUTE = RESTORE_JOB_ROUTE + PROGRESS;
 
-    public static final String CLIENT_STATS_ROUTE = API_V1 + CASSANDRA + "/client-stats";
+    public static final String CONNECTED_CLIENT_STATS_ROUTE = API_V1 + CASSANDRA + "stats/connected-clients";
 
     private ApiEndpointsV1()
     {
