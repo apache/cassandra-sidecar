@@ -25,7 +25,7 @@ import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ClientStatsSchema;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
-import org.apache.cassandra.sidecar.common.server.data.DatabaseAccessor;
+import org.apache.cassandra.sidecar.db.DatabaseAccessor;
 
 /**
  * DataAccessor implementation to read client connection stats from the table represented in {@link ClientStatsSchema}

@@ -38,9 +38,9 @@ import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 /**
  * Encapsulates all related operations for features provided by Sidecar
  */
-public class SidecarSchemaInitializer
+public class SidecarSchema
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SidecarSchemaInitializer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SidecarSchema.class);
     protected static final long INITIALIZATION_LOOP_DELAY_MILLIS = 1000;
 
     private final Vertx vertx;
@@ -53,12 +53,12 @@ public class SidecarSchemaInitializer
 
     private boolean isInitialized = false;
 
-    public SidecarSchemaInitializer(Vertx vertx,
-                                    ExecutorPools executorPools,
-                                    SidecarConfiguration config,
-                                    SidecarInternalKeyspace sidecarInternalKeyspace,
-                                    CQLSessionProvider cqlSessionProvider,
-                                    SchemaMetrics metrics)
+    public SidecarSchema(Vertx vertx,
+                         ExecutorPools executorPools,
+                         SidecarConfiguration config,
+                         SidecarInternalKeyspace sidecarInternalKeyspace,
+                         CQLSessionProvider cqlSessionProvider,
+                         SchemaMetrics metrics)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;

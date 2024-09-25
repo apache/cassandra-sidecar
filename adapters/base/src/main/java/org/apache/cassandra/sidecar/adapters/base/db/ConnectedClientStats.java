@@ -22,7 +22,7 @@ import java.util.Map;
 
 import com.datastax.driver.core.Row;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
-import org.apache.cassandra.sidecar.common.server.data.DataObjectMappingException;
+import org.apache.cassandra.sidecar.db.DataObjectMappingException;
 import org.jetbrains.annotations.NotNull;
 
 /**

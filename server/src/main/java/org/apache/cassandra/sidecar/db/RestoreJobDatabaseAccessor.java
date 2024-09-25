@@ -42,11 +42,9 @@ import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
-import org.apache.cassandra.sidecar.common.server.data.DataObjectMappingException;
-import org.apache.cassandra.sidecar.common.server.data.DatabaseAccessor;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -57,22 +55,22 @@ import org.jetbrains.annotations.Nullable;
 public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSchema>
 {
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    public final SidecarSchemaInitializer sidecarSchemaInitializer;
+    public final SidecarSchema sidecarSchema;
 
     @Inject
-    public RestoreJobDatabaseAccessor(SidecarSchemaInitializer sidecarSchemaInitializer,
+    public RestoreJobDatabaseAccessor(SidecarSchema sidecarSchema,
                                       RestoreJobsSchema restoreJobsSchema,
                                       CQLSessionProvider cqlSessionProvider)
     {
         super(restoreJobsSchema, cqlSessionProvider);
-        this.sidecarSchemaInitializer = sidecarSchemaInitializer;
+        this.sidecarSchema = sidecarSchema;
 
     }
 
     public RestoreJob create(CreateRestoreJobRequestPayload payload, QualifiedTableName qualifiedTableName)
     throws DataObjectMappingException
     {
-        sidecarSchemaInitializer.ensureInitialized();
+        sidecarSchema.ensureInitialized();
 
         UUID jobIdFromRequest = payload.jobId();
         UUID jobId = jobIdFromRequest == null ? UUIDs.timeBased() : jobIdFromRequest;
@@ -119,7 +117,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     public RestoreJob update(UpdateRestoreJobRequestPayload payload, UUID jobId)
     throws DataObjectMappingException
     {
-        sidecarSchemaInitializer.ensureInitialized();
+        sidecarSchema.ensureInitialized();
         RestoreJob.Builder updateBuilder = RestoreJob.builder();
         LocalDate createdAt = RestoreJob.toLocalDate(jobId);
         updateBuilder.createdAt(createdAt)
@@ -170,7 +168,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
 
     public void abort(UUID jobId, @Nullable String reason)
     {
-        sidecarSchemaInitializer.ensureInitialized();
+        sidecarSchema.ensureInitialized();
 
         LocalDate createdAt = RestoreJob.toLocalDate(jobId);
         String status = RestoreJobStatus.ABORTED.name();
@@ -185,7 +183,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
 
     public RestoreJob find(UUID jobId)
     {
-        sidecarSchemaInitializer.ensureInitialized();
+        sidecarSchema.ensureInitialized();
 
         BoundStatement statement = tableSchema.selectJob().bind(RestoreJob.toLocalDate(jobId), jobId);
         ResultSet resultSet = execute(statement);
@@ -210,7 +208,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
      */
     public List<RestoreJob> findAllByCreationDate(LocalDate date)
     {
-        sidecarSchemaInitializer.ensureInitialized();
+        sidecarSchema.ensureInitialized();
 
         BoundStatement statement = tableSchema.findAllByCreatedAt().bind(date);
         ResultSet resultSet = execute(statement);

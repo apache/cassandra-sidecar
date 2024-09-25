@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.server.data;
+package org.apache.cassandra.sidecar.db;
 
 /**
  * Exception thrown during mapping a data object into/from database record
