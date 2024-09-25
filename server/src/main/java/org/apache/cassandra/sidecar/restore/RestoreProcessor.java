@@ -43,7 +43,7 @@ import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
@@ -61,7 +61,7 @@ public class RestoreProcessor implements PeriodicTask
 
     private final TaskExecutorPool pool;
     private final StorageClientPool s3ClientPool;
-    private final SidecarSchemaInitializer sidecarSchemaInitializer;
+    private final SidecarSchema sidecarSchema;
     private final SSTableImporter importer;
     private final ConcurrencyLimiter processMaxConcurrency;
     private final WorkQueue workQueue = new WorkQueue();
@@ -81,7 +81,7 @@ public class RestoreProcessor implements PeriodicTask
     @Inject
     public RestoreProcessor(ExecutorPools executorPools,
                             SidecarConfiguration config,
-                            SidecarSchemaInitializer sidecarSchemaInitializer,
+                            SidecarSchema sidecarSchema,
                             StorageClientPool s3ClientPool,
                             SSTableImporter importer,
                             RestoreRangeDatabaseAccessor rangeDatabaseAccessor,
@@ -91,7 +91,7 @@ public class RestoreProcessor implements PeriodicTask
     {
         this.pool = executorPools.internal();
         this.s3ClientPool = s3ClientPool;
-        this.sidecarSchemaInitializer = sidecarSchemaInitializer;
+        this.sidecarSchema = sidecarSchema;
         this.processMaxConcurrency = new ConcurrencyLimiter(() -> config.restoreJobConfiguration()
                                                                         .processMaxConcurrency());
         this.requiredUsableSpacePercentage
@@ -305,9 +305,9 @@ public class RestoreProcessor implements PeriodicTask
     }
 
     @VisibleForTesting
-    SidecarSchemaInitializer sidecarSchema()
+    SidecarSchema sidecarSchema()
     {
-        return sidecarSchemaInitializer;
+        return sidecarSchema;
     }
 
     private class WorkQueue

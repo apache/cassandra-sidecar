@@ -44,7 +44,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarSchemaTest;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -56,13 +56,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests metrics emitted for {@link SidecarSchemaInitializer}
+ * Tests metrics emitted for {@link SidecarSchema}
  */
 public class SchemaMetricsTest
 {
     private static final Logger logger = LoggerFactory.getLogger(SidecarSchemaTest.class);
     private Vertx vertx;
-    private SidecarSchemaInitializer sidecarSchemaInitializer;
+    private SidecarSchema sidecarSchema;
     private SidecarMetrics metrics;
     Server server;
 
@@ -74,7 +74,7 @@ public class SchemaMetricsTest
                                                                      .with(new SchemaFailureSimulateModule())));
         this.vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
-        sidecarSchemaInitializer = injector.getInstance(SidecarSchemaInitializer.class);
+        sidecarSchema = injector.getInstance(SidecarSchema.class);
         metrics = injector.getInstance(SidecarMetrics.class);
 
         VertxTestContext context = new VertxTestContext();
@@ -99,7 +99,7 @@ public class SchemaMetricsTest
     @Test
     public void testSchemaModificationFailure()
     {
-        sidecarSchemaInitializer.startSidecarSchemaInitializer();
+        sidecarSchema.startSidecarSchemaInitializer();
         loopAssert(3, () -> {
             assertThat(metrics.server().schema().failedInitializations.metric.getValue())
             .isGreaterThanOrEqualTo(1);
@@ -123,19 +123,19 @@ public class SchemaMetricsTest
 
         @Provides
         @Singleton
-        public SidecarSchemaInitializer sidecarSchema(Vertx vertx,
-                                                      ExecutorPools executorPools,
-                                                      SidecarConfiguration configuration,
-                                                      CQLSessionProvider cqlSessionProvider,
-                                                      SidecarMetrics metrics)
+        public SidecarSchema sidecarSchema(Vertx vertx,
+                                           ExecutorPools executorPools,
+                                           SidecarConfiguration configuration,
+                                           CQLSessionProvider cqlSessionProvider,
+                                           SidecarMetrics metrics)
         {
             SidecarInternalKeyspace sidecarInternalKeyspace = mock(SidecarInternalKeyspace.class);
             when(sidecarInternalKeyspace.initialize(any()))
             .thenThrow(new SidecarSchemaModificationException("Simulated failure",
                                                               new RuntimeException("Simulated exception")));
             SchemaMetrics schemaMetrics = metrics.server().schema();
-            return new SidecarSchemaInitializer(vertx, executorPools, configuration,
-                                                sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
+            return new SidecarSchema(vertx, executorPools, configuration,
+                                     sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
         }
     }
 }

@@ -43,7 +43,7 @@ import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
@@ -72,7 +72,7 @@ class RestoreJobDiscovererTest
     private final RestoreJobManagerGroup mockManagers = mock(RestoreJobManagerGroup.class);
     private final LocalTokenRangesProvider rangesProvider = mock(LocalTokenRangesProvider.class);
     private final PeriodicTaskExecutor executor = mock(PeriodicTaskExecutor.class);
-    private final SidecarSchemaInitializer sidecarSchemaInitializer = mock(SidecarSchemaInitializer.class);
+    private final SidecarSchema sidecarSchema = mock(SidecarSchema.class);
     private SidecarMetrics metrics;
     private RestoreJobDiscoverer loop;
 
@@ -84,7 +84,7 @@ class RestoreJobDiscovererTest
         InstanceMetadataFetcher mockMetadataFetcher = mock(InstanceMetadataFetcher.class);
         metrics = new SidecarMetricsImpl(mockRegistryFactory, mockMetadataFetcher);
         loop = new RestoreJobDiscoverer(testConfig(),
-                                        sidecarSchemaInitializer,
+                                        sidecarSchema,
                                         mockJobAccessor,
                                         mockSliceAccessor,
                                         mockRangeAccessor,
@@ -146,7 +146,7 @@ class RestoreJobDiscovererTest
     @Test
     void testExecute()
     {
-        when(sidecarSchemaInitializer.isInitialized()).thenReturn(true);
+        when(sidecarSchema.isInitialized()).thenReturn(true);
         // setup, cassandra should return 3 jobs, a new job, a failed and a succeeded
         List<RestoreJob> mockResult = new ArrayList<>(3);
         UUID newJobId = UUIDs.timeBased();
@@ -228,7 +228,7 @@ class RestoreJobDiscovererTest
     @Test
     void testSkipExecuteWhenSidecarSchemaIsNotInitialized()
     {
-        when(sidecarSchemaInitializer.isInitialized()).thenReturn(false);
+        when(sidecarSchema.isInitialized()).thenReturn(false);
         assertThat(loop.shouldSkip()).isTrue();
     }
 
@@ -236,7 +236,7 @@ class RestoreJobDiscovererTest
     void testExecuteWithExpiredJobs()
     {
         // setup: all 3 jobs are expired. All of them should be aborted via mockJobAccessor
-        when(sidecarSchemaInitializer.isInitialized()).thenReturn(true);
+        when(sidecarSchema.isInitialized()).thenReturn(true);
         List<RestoreJob> mockResult = IntStream.range(0, 3)
                                                .boxed()
                                                .map(x -> createUpdatedJob(UUIDs.timeBased(), "agent",

@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.adapters.base.db.schema;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import org.apache.cassandra.sidecar.common.server.data.TableSchema;
+import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.jetbrains.annotations.NotNull;
 
 /**

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.server.data;
+package org.apache.cassandra.sidecar.db.schema;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

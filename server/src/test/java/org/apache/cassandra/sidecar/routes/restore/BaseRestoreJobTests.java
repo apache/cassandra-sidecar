@@ -66,7 +66,7 @@ import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 import org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer;
@@ -247,9 +247,9 @@ public abstract class BaseRestoreJobTests
             Function<UpdateRestoreJobRequestPayload, RestoreJob> updateFunc;
             Function<UUID, RestoreJob> lookupFunc;
 
-            TestRestoreJobDatabaseAccessor(SidecarSchemaInitializer sidecarSchemaInitializer)
+            TestRestoreJobDatabaseAccessor(SidecarSchema sidecarSchema)
             {
-                super(sidecarSchemaInitializer, null, null);
+                super(sidecarSchema, null, null);
             }
 
             @Override
@@ -282,9 +282,9 @@ public abstract class BaseRestoreJobTests
         {
             Function<RestoreSlice, RestoreSlice> createFunc;
 
-            TestRestoreSliceDatabaseAccessor(SidecarSchemaInitializer sidecarSchemaInitializer)
+            TestRestoreSliceDatabaseAccessor(SidecarSchema sidecarSchema)
             {
-                super(sidecarSchemaInitializer, null, null);
+                super(sidecarSchema, null, null);
             }
 
             @Override
@@ -306,9 +306,9 @@ public abstract class BaseRestoreJobTests
             UnaryOperator<RestoreRange> updateStatusFunc;
             Function<UUID, List<RestoreRange>> findAllFunc;
 
-            TestRestoreRangeDatabaseAccessor(SidecarSchemaInitializer sidecarSchemaInitializer)
+            TestRestoreRangeDatabaseAccessor(SidecarSchema sidecarSchema)
             {
-                super(sidecarSchemaInitializer, null, null);
+                super(sidecarSchema, null, null);
             }
 
             @Override
@@ -373,23 +373,23 @@ public abstract class BaseRestoreJobTests
 
         @Provides
         @Singleton
-        public RestoreJobDatabaseAccessor restoreJobs(SidecarSchemaInitializer sidecarSchemaInitializer)
+        public RestoreJobDatabaseAccessor restoreJobs(SidecarSchema sidecarSchema)
         {
-            return new TestRestoreJobDatabaseAccessor(sidecarSchemaInitializer);
+            return new TestRestoreJobDatabaseAccessor(sidecarSchema);
         }
 
         @Provides
         @Singleton
-        public RestoreSliceDatabaseAccessor restoreSlices(SidecarSchemaInitializer sidecarSchemaInitializer)
+        public RestoreSliceDatabaseAccessor restoreSlices(SidecarSchema sidecarSchema)
         {
-            return new TestRestoreSliceDatabaseAccessor(sidecarSchemaInitializer);
+            return new TestRestoreSliceDatabaseAccessor(sidecarSchema);
         }
 
         @Provides
         @Singleton
-        public RestoreRangeDatabaseAccessor restoreRanges(SidecarSchemaInitializer sidecarSchemaInitializer)
+        public RestoreRangeDatabaseAccessor restoreRanges(SidecarSchema sidecarSchema)
         {
-            return new TestRestoreRangeDatabaseAccessor(sidecarSchemaInitializer);
+            return new TestRestoreRangeDatabaseAccessor(sidecarSchema);
         }
 
         @Provides

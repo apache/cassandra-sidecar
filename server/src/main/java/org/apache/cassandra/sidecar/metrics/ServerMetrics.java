@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 import static org.apache.cassandra.sidecar.metrics.SidecarMetrics.APP_PREFIX;
 
@@ -45,7 +45,7 @@ public interface ServerMetrics
     RestoreMetrics restore();
 
     /**
-     * @return metrics related to {@link SidecarSchemaInitializer} that are tracked.
+     * @return metrics related to {@link SidecarSchema} that are tracked.
      */
     SchemaMetrics schema();
 
