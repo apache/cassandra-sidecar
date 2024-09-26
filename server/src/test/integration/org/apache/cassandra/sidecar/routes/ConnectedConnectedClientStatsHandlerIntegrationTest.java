@@ -34,7 +34,6 @@ import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
-import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,8 +43,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 public class ConnectedConnectedClientStatsHandlerIntegrationTest extends IntegrationTestBase
 {
+    private static final int DEFAULT_CONNECTION_COUNT = 2;
+
     @CassandraIntegrationTest
-    void retrieveClientStatsDefault(VertxTestContext context, CassandraTestContext cassandraTestContext)
+    void retrieveClientStatsDefault(VertxTestContext context)
     throws Exception
     {
         String testRoute = "/api/v1/cassandra/stats/connected-clients";
@@ -53,14 +54,14 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
-                      assertClientStatsResponse(response, Collections.emptyMap(), cassandraTestContext.version.toString());
+                      assertClientStatsResponse(response, Collections.emptyMap());
                       context.completeNow();
                   }));
         });
     }
 
     @CassandraIntegrationTest
-    void retrieveClientStatsListConnections(VertxTestContext context, CassandraTestContext cassandraTestContext)
+    void retrieveClientStatsListConnections(VertxTestContext context)
     throws Exception
     {
         Map<String, Boolean> expectedParams = Collections.singletonMap("all", true);
@@ -69,14 +70,33 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
-                      assertClientStatsResponse(response, expectedParams, cassandraTestContext.version.toString());
+                      assertClientStatsResponse(response, expectedParams);
                       context.completeNow();
                   }));
         });
     }
 
     @CassandraIntegrationTest
-    void retrieveClientStatsInvalidParams(VertxTestContext context, CassandraTestContext cassandraTestContext)
+    void retrieveClientStatsMultipleConnections(VertxTestContext context)
+    throws Exception
+    {
+        // Creates an additional connection pair
+        createTestKeyspace();
+
+        Map<String, Boolean> expectedParams = Collections.singletonMap("all", true);
+        String testRoute = "/api/v1/cassandra/stats/connected-clients?all=true";
+        testWithClient(context, client -> {
+            client.get(server.actualPort(), "127.0.0.1", testRoute)
+                  .expect(ResponsePredicate.SC_OK)
+                  .send(context.succeeding(response -> {
+                      assertClientStatsResponse(response, expectedParams, 4);
+                      context.completeNow();
+                  }));
+        });
+    }
+
+    @CassandraIntegrationTest
+    void retrieveClientStatsInvalidParams(VertxTestContext context)
     throws Exception
     {
         Map<String, Boolean> expectedParams = new HashMap<>();
@@ -88,13 +108,17 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
-                      assertClientStatsResponse(response, expectedParams, cassandraTestContext.version.toString());
+                      assertClientStatsResponse(response, expectedParams);
                       context.completeNow();
                   }));
         });
     }
 
-    void assertClientStatsResponse(HttpResponse<Buffer> response, Map<String, Boolean> params, String cassandraVersion)
+    void assertClientStatsResponse(HttpResponse<Buffer> response, Map<String, Boolean> params)
+    {
+        assertClientStatsResponse(response, params, DEFAULT_CONNECTION_COUNT);
+    }
+    void assertClientStatsResponse(HttpResponse<Buffer> response, Map<String, Boolean> params, int expectedConnections)
     {
         boolean isListConnections = params.getOrDefault("all", false);
 
@@ -103,11 +127,12 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
         assertThat(clientStats).isNotNull();
         assertThat(clientStats.connectionsByUser()).isNotEmpty();
         assertThat(clientStats.connectionsByUser()).containsKey("anonymous");
-        assertThat(clientStats.totalConnectedClients()).isGreaterThan(0);
+        assertThat(clientStats.totalConnectedClients()).isEqualTo(expectedConnections);
 
         Set<ClientConnectionEntry> stats = clientStats.clientConnections();
         if (isListConnections)
         {
+            assertThat(stats.size()).isEqualTo(expectedConnections);
             for (ClientConnectionEntry stat : stats)
             {
                 assertThat(stat.address()).contains("127.0.0.1");
