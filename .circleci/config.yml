@@ -26,7 +26,7 @@ version: 2.1
 aliases:
   base_job: &base_job
     machine:
-      image: ubuntu-2004:202010-01
+      image: ubuntu-2204:edge
     working_directory: ~/repo
     environment:
       TERM: dumb
