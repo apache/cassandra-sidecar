@@ -144,4 +144,9 @@ public interface ServiceConfiguration
      * @return the configuration for sidecar schema
      */
     SchemaKeyspaceConfiguration schemaKeyspaceConfiguration();
+
+    /**
+     * @return the configuration for the Vertx filesystem options
+     */
+    VertxFilesystemOptionsConfiguration vertxFilesystemOptionsConfiguration();
 }
