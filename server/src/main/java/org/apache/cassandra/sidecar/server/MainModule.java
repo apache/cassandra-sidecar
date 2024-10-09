@@ -38,6 +38,7 @@ import com.google.inject.name.Named;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.file.FileSystemOptions;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.dropwizard.Match;
 import io.vertx.ext.dropwizard.MatchType;
@@ -65,10 +66,12 @@ import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
+import org.apache.cassandra.sidecar.config.FileSystemOptionsConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
@@ -162,7 +165,20 @@ public class MainModule extends AbstractModule
                                         // Monitor all V1 endpoints.
                                         // Additional filtering is done by configuring yaml fields 'metrics.include|exclude'
                                         .addMonitoredHttpServerRoute(serverRouteMatch);
-        return Vertx.vertx(new VertxOptions().setMetricsOptions(dropwizardMetricsOptions));
+
+        VertxOptions vertxOptions = new VertxOptions().setMetricsOptions(dropwizardMetricsOptions);
+        VertxConfiguration vertxConfiguration = sidecarConfiguration.vertxConfiguration();
+        FileSystemOptionsConfiguration fsOptions = vertxConfiguration != null ? vertxConfiguration.filesystemOptionsConfiguration() : null;
+
+        if (fsOptions != null)
+        {
+            vertxOptions.setFileSystemOptions(new FileSystemOptions()
+                                              .setClassPathResolvingEnabled(fsOptions.classpathResolvingEnabled())
+                                              .setFileCacheDir(fsOptions.fileCacheDir())
+                                              .setFileCachingEnabled(fsOptions.fileCachingEnabled()));
+        }
+
+        return Vertx.vertx(vertxOptions);
     }
 
     @Provides
@@ -510,7 +526,7 @@ public class MainModule extends AbstractModule
         return new RestoreRangesSchema(configuration.serviceConfiguration()
                                                     .schemaKeyspaceConfiguration(),
                                        configuration.restoreJobConfiguration()
-                                                         .restoreJobTablesTtlSeconds());
+                                                    .restoreJobTablesTtlSeconds());
     }
 
     @Provides

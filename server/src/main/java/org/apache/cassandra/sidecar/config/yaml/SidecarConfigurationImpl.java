@@ -48,6 +48,8 @@ import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.config.VertxConfiguration;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Configuration for this Sidecar process
@@ -85,6 +87,10 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @JsonProperty("s3_client")
     protected final S3ClientConfiguration s3ClientConfiguration;
 
+    @JsonProperty("vertx")
+    @Nullable
+    protected final VertxConfiguration vertxConfiguration;
+
     public SidecarConfigurationImpl()
     {
         this(builder());
@@ -102,6 +108,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         driverConfiguration = builder.driverConfiguration;
         restoreJobConfiguration = builder.restoreJobConfiguration;
         s3ClientConfiguration = builder.s3ClientConfiguration;
+        vertxConfiguration = builder.vertxConfiguration;
     }
 
     /**
@@ -211,6 +218,17 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return s3ClientConfiguration;
     }
 
+    /**
+     * @return the configuration for vert.x
+     */
+    @Override
+    @JsonProperty("vertx")
+    @Nullable
+    public VertxConfiguration vertxConfiguration()
+    {
+        return vertxConfiguration;
+    }
+
     public static SidecarConfigurationImpl readYamlConfiguration(String yamlConfigurationPath) throws IOException
     {
         try
@@ -311,6 +329,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         private DriverConfiguration driverConfiguration = new DriverConfigurationImpl();
         private RestoreJobConfiguration restoreJobConfiguration = new RestoreJobConfigurationImpl();
         private S3ClientConfiguration s3ClientConfiguration = new S3ClientConfigurationImpl();
+        private VertxConfiguration vertxConfiguration = new VertxConfigurationImpl();
 
         protected Builder()
         {
@@ -434,6 +453,18 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder s3ClientConfiguration(S3ClientConfiguration configuration)
         {
             return update(b -> b.s3ClientConfiguration = configuration);
+        }
+
+        /**
+         * Sets the {@code vertxConfiguration} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param configuration the {@code vertxConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder vertxConfiguration(VertxConfiguration configuration)
+        {
+            return update(b -> b.vertxConfiguration = configuration);
         }
 
         /**

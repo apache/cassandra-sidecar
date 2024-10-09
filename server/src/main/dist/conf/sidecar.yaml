@@ -110,6 +110,11 @@ sidecar:
     replication_strategy: SimpleStrategy
     replication_factor: 1
 
+vertx:
+  filesystem_options:
+    classpath_resolving_enabled: false
+    file_caching_enabled: false
+
 #
 # Enable SSL configuration (Disabled by default)
 #

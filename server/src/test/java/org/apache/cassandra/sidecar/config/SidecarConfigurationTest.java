@@ -274,6 +274,22 @@ class SidecarConfigurationTest
         assertThat(pattern.matcher("throttled_429")).matches();
     }
 
+    @Test
+    void testVertxFilesystemOptionsConfiguration() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_vertx_filesystem_options.yaml");
+        SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+        assertThat(sidecarConfiguration).isNotNull();
+        assertThat(sidecarConfiguration.serviceConfiguration()).isNotNull();
+        VertxConfiguration vertxConfiguration = sidecarConfiguration.vertxConfiguration();
+        assertThat(vertxConfiguration).isNotNull();
+        FileSystemOptionsConfiguration vertxFsOptions = vertxConfiguration.filesystemOptionsConfiguration();
+        assertThat(vertxFsOptions).isNotNull();
+        assertThat(vertxFsOptions.fileCachingEnabled()).isTrue();
+        assertThat(vertxFsOptions.fileCacheDir()).isEqualTo("/path/to/vertx/cache");
+        assertThat(vertxFsOptions.classpathResolvingEnabled()).isTrue();
+    }
+
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
     {
         assertThat(config.cassandraInstances()).isNotNull().hasSize(1);
@@ -308,6 +324,11 @@ class SidecarConfigurationTest
 
         // cassandra input validation configuration
         validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
+
+        // vertx FileSystemOptions
+        VertxConfiguration vertxConfiguration = config.vertxConfiguration();
+        assertThat(vertxConfiguration).isNotNull();
+        validateVertxFilesystemOptionsClasspathResolvingDisabled(vertxConfiguration.filesystemOptionsConfiguration());
     }
 
     void validateMultipleInstancesSidecarConfiguration(SidecarConfiguration config, boolean withSslConfiguration)
@@ -437,6 +458,14 @@ class SidecarConfigurationTest
         assertThat(config.allowedPatternForComponentName())
         .isEqualTo("[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)");
         assertThat(config.allowedPatternForRestrictedComponentName()).isEqualTo("[a-zA-Z0-9_-]+(.db|TOC.txt)");
+    }
+
+    void validateVertxFilesystemOptionsClasspathResolvingDisabled(FileSystemOptionsConfiguration config)
+    {
+        assertThat(config).isNotNull();
+        assertThat(config.classpathResolvingEnabled()).isFalse();
+        assertThat(config.fileCacheDir()).isNotNull();
+        assertThat(config.fileCachingEnabled()).isNotNull();
     }
 
     void validateSslConfigurationFromYaml(SslConfiguration config)
