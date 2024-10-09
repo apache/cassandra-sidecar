@@ -28,7 +28,7 @@ import org.apache.cassandra.sidecar.config.FileSystemOptionsConfiguration;
 public class FileSystemOptionsConfigurationImpl implements FileSystemOptionsConfiguration
 {
     @JsonProperty(value = "classpath_resolving_enabled")
-    private final boolean classPathResolvingEnabled;
+    private final boolean classpathResolvingEnabled;
 
     private String fileCacheDir;
 
@@ -45,12 +45,12 @@ public class FileSystemOptionsConfigurationImpl implements FileSystemOptionsConf
              DEFAULT_FILE_CACHING_ENABLED);
     }
 
-    public FileSystemOptionsConfigurationImpl(boolean classPathResolvingEnabled,
+    public FileSystemOptionsConfigurationImpl(boolean classpathResolvingEnabled,
                                               String fileCacheDir,
                                               boolean fileCachingEnabled)
     {
 
-        this.classPathResolvingEnabled = classPathResolvingEnabled;
+        this.classpathResolvingEnabled = classpathResolvingEnabled;
         this.fileCachingEnabled = fileCachingEnabled;
         setFileCacheDir(fileCacheDir);
     }
@@ -59,7 +59,7 @@ public class FileSystemOptionsConfigurationImpl implements FileSystemOptionsConf
     @JsonProperty(value = "classpath_resolving_enabled")
     public boolean classpathResolvingEnabled()
     {
-        return classPathResolvingEnabled;
+        return classpathResolvingEnabled;
     }
 
     @Override

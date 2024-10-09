@@ -587,13 +587,13 @@ public class MainModule extends AbstractModule
      * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
      * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
      *
-     * @param vertx             the vertx instance
-     * @param cassandraInstance the cassandra instance configuration
-     * @param versionProvider   a Cassandra version provider
-     * @param sidecarVersion    the version of the Sidecar from the current binary
-     * @param jmxConfiguration  the configuration for the JMX Client
-     * @param session           the CQL Session provider
-     * @param registryFactory   factory for creating cassandra instance specific registry
+     * @param vertx                 the vertx instance
+     * @param cassandraInstance     the cassandra instance configuration
+     * @param versionProvider       a Cassandra version provider
+     * @param sidecarVersion        the version of the Sidecar from the current binary
+     * @param jmxConfiguration      the configuration for the JMX Client
+     * @param session               the CQL Session provider
+     * @param registryFactory       factory for creating cassandra instance specific registry
      * @return the build instance metadata object
      */
     private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
