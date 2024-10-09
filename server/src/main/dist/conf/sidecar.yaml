@@ -68,9 +68,6 @@ sidecar:
   tcp_keep_alive: false
   accept_backlog: 1024
   server_verticle_instances: 1
-  vertx_filesystem_options:
-    class_path_resolving_enabled: false
-    file_caching_enabled: false
   throttle:
     stream_requests_per_sec: 5000
     timeout_sec: 10
@@ -112,6 +109,11 @@ sidecar:
     keyspace: sidecar_internal
     replication_strategy: SimpleStrategy
     replication_factor: 1
+
+vertx:
+  filesystem_options:
+    classpath_resolving_enabled: false
+    file_caching_enabled: false
 
 #
 # Enable SSL configuration (Disabled by default)

@@ -33,7 +33,6 @@ import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
-import org.apache.cassandra.sidecar.config.VertxFilesystemOptionsConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 /**
@@ -65,7 +64,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     private static final String JMX_PROPERTY = "jmx";
     private static final String TRAFFIC_SHAPING_PROPERTY = "traffic_shaping";
     private static final String SCHEMA = "schema";
-    private static final String VERTX_FILESYSTEM_OPTIONS = "vertx_filesystem_options";
     protected static final Map<String, WorkerPoolConfiguration> DEFAULT_WORKER_POOLS_CONFIGURATION
     = Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
     {{
@@ -125,9 +123,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = SCHEMA)
     protected final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
 
-    @JsonProperty(value = VERTX_FILESYSTEM_OPTIONS)
-    protected final VertxFilesystemOptionsConfiguration vertxFilesystemOptionsConfiguration;
-
     /**
      * Constructs a new {@link ServiceConfigurationImpl} with the default values
      */
@@ -159,7 +154,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         jmxConfiguration = builder.jmxConfiguration;
         trafficShapingConfiguration = builder.trafficShapingConfiguration;
         schemaKeyspaceConfiguration = builder.schemaKeyspaceConfiguration;
-        vertxFilesystemOptionsConfiguration = builder.vertxFilesystemOptionsConfiguration;
     }
 
     /**
@@ -322,16 +316,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         return schemaKeyspaceConfiguration;
     }
 
-    /**
-     * @return the configuration for the Vertx filesystem options
-     */
-    @Override
-    @JsonProperty(VERTX_FILESYSTEM_OPTIONS)
-    public VertxFilesystemOptionsConfiguration vertxFilesystemOptionsConfiguration()
-    {
-        return vertxFilesystemOptionsConfiguration;
-    }
-
     public static Builder builder()
     {
         return new Builder();
@@ -359,7 +343,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected JmxConfiguration jmxConfiguration = new JmxConfigurationImpl();
         protected TrafficShapingConfiguration trafficShapingConfiguration = new TrafficShapingConfigurationImpl();
         protected SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = new SchemaKeyspaceConfigurationImpl();
-        private VertxFilesystemOptionsConfiguration vertxFilesystemOptionsConfiguration = new VertxFilesystemOptionsConfigurationImpl();
 
         private Builder()
         {
@@ -548,18 +531,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         public Builder schemaKeyspaceConfiguration(SchemaKeyspaceConfiguration schemaKeyspaceConfiguration)
         {
             return update(b -> b.schemaKeyspaceConfiguration = schemaKeyspaceConfiguration);
-        }
-
-        /**
-         * Sets the {@code vertxFilesystemOptions} and returns a reference to this Builder enabling
-         * method chaining.
-         *
-         * @param configuration the {@code vertxFilesystemOptions} to set
-         * @return a reference to this Builder
-         */
-        public Builder vertxFilesystemOptions(VertxFilesystemOptionsConfiguration configuration)
-        {
-            return update(b -> b.vertxFilesystemOptionsConfiguration = configuration);
         }
 
         /**

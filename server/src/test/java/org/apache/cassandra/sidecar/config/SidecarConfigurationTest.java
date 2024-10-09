@@ -281,12 +281,12 @@ class SidecarConfigurationTest
         SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(sidecarConfiguration).isNotNull();
         assertThat(sidecarConfiguration.serviceConfiguration()).isNotNull();
-        VertxFilesystemOptionsConfiguration vertxFsOptions = sidecarConfiguration.serviceConfiguration()
-                                                                                 .vertxFilesystemOptionsConfiguration();
+        FileSystemOptionsConfiguration vertxFsOptions = sidecarConfiguration.vertxConfiguration()
+                                                                            .filesystemOptionsConfiguration();
         assertThat(vertxFsOptions).isNotNull();
         assertThat(vertxFsOptions.fileCachingEnabled()).isTrue();
         assertThat(vertxFsOptions.fileCacheDir()).isEqualTo("/path/to/vertx/cache");
-        assertThat(vertxFsOptions.classPathResolvingEnabled()).isTrue();
+        assertThat(vertxFsOptions.classpathResolvingEnabled()).isTrue();
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
@@ -323,6 +323,9 @@ class SidecarConfigurationTest
 
         // cassandra input validation configuration
         validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
+
+        // vertx FileSystemOptions
+        validateVertxFilesystemOptionsClasspathResolvingDisabled(config.vertxConfiguration().filesystemOptionsConfiguration());
     }
 
     void validateMultipleInstancesSidecarConfiguration(SidecarConfiguration config, boolean withSslConfiguration)
@@ -428,9 +431,6 @@ class SidecarConfigurationTest
         assertThat(snapshotConfig.snapshotListCacheConfiguration().enabled()).isTrue();
         assertThat(snapshotConfig.snapshotListCacheConfiguration().maximumSize()).isEqualTo(450);
         assertThat(snapshotConfig.snapshotListCacheConfiguration().expireAfterAccessMillis()).isEqualTo(350);
-
-        // vertx FileSystemOptions
-        validateVertxFilesystemOptionsConfiguration(serviceConfiguration.vertxFilesystemOptionsConfiguration());
     }
 
     private void validateHealthCheckConfigurationFromYaml(HealthCheckConfiguration config)
@@ -457,10 +457,10 @@ class SidecarConfigurationTest
         assertThat(config.allowedPatternForRestrictedComponentName()).isEqualTo("[a-zA-Z0-9_-]+(.db|TOC.txt)");
     }
 
-    void validateVertxFilesystemOptionsConfiguration(VertxFilesystemOptionsConfiguration config)
+    void validateVertxFilesystemOptionsClasspathResolvingDisabled(FileSystemOptionsConfiguration config)
     {
         assertThat(config).isNotNull();
-        assertThat(config.classPathResolvingEnabled()).isFalse();
+        assertThat(config.classpathResolvingEnabled()).isFalse();
         assertThat(config.fileCacheDir()).isNotNull();
         assertThat(config.fileCachingEnabled()).isNotNull();
     }

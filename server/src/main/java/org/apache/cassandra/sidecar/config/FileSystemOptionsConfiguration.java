@@ -23,7 +23,7 @@ import io.vertx.core.file.FileSystemOptions;
 /**
  * Exposes configuration in Sidecar for vert.x {@link FileSystemOptions}
  */
-public interface VertxFilesystemOptionsConfiguration
+public interface FileSystemOptionsConfiguration
 {
     /**
      * When vert.x cannot find the file on the filesystem it tries to resolve the
@@ -32,7 +32,7 @@ public interface VertxFilesystemOptionsConfiguration
      *
      * @return {@code true} if classpath resolving is enabled, {@code false} otherwise.
      */
-    boolean classPathResolvingEnabled();
+    boolean classpathResolvingEnabled();
 
     /**
      * When vert.x reads a file that is packaged with the application it gets

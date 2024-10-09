@@ -71,9 +71,6 @@ sidecar:
   tcp_keep_alive: false
   accept_backlog: 1024
   server_verticle_instances: 1
-  vertx_filesystem_options:
-    class_path_resolving_enabled: false
-    file_caching_enabled: false
   throttle:
     stream_requests_per_sec: 5000
     timeout_sec: 10
@@ -109,6 +106,11 @@ sidecar:
   jmx:
     max_retries: 42
     retry_delay_millis: 1234
+
+vertx:
+  filesystem_options:
+    classpath_resolving_enabled: false
+    file_caching_enabled: false
 
 #
 # Enable SSL configuration (Disabled by default)

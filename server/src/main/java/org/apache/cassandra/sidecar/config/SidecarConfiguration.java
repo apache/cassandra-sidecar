@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.config;
 
 import java.util.List;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Configuration for this Sidecar process
  */
@@ -75,4 +77,9 @@ public interface SidecarConfiguration
      * @return the configuration for Amazon S3 client
      */
     S3ClientConfiguration s3ClientConfiguration();
+
+    /**
+     * @return the configuration for vert.x
+     */
+    @Nullable VertxConfiguration vertxConfiguration();
 }

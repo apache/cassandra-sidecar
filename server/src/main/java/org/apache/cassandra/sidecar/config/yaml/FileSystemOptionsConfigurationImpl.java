@@ -20,14 +20,14 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.core.file.FileSystemOptions;
-import org.apache.cassandra.sidecar.config.VertxFilesystemOptionsConfiguration;
+import org.apache.cassandra.sidecar.config.FileSystemOptionsConfiguration;
 
 /**
  * Encapsulates configuration needed for vert.x {@link io.vertx.core.file.FileSystemOptions}
  */
-public class VertxFilesystemOptionsConfigurationImpl implements VertxFilesystemOptionsConfiguration
+public class FileSystemOptionsConfigurationImpl implements FileSystemOptionsConfiguration
 {
-    @JsonProperty(value = "class_path_resolving_enabled")
+    @JsonProperty(value = "classpath_resolving_enabled")
     private final boolean classPathResolvingEnabled;
 
     private String fileCacheDir;
@@ -38,16 +38,16 @@ public class VertxFilesystemOptionsConfigurationImpl implements VertxFilesystemO
     public static final boolean DEFAULT_CLASSPATH_RESOLVING_ENABLED = false;
     public static final boolean DEFAULT_FILE_CACHING_ENABLED = false;
 
-    public VertxFilesystemOptionsConfigurationImpl()
+    public FileSystemOptionsConfigurationImpl()
     {
         this(DEFAULT_CLASSPATH_RESOLVING_ENABLED,
              FileSystemOptions.DEFAULT_FILE_CACHING_DIR,
              DEFAULT_FILE_CACHING_ENABLED);
     }
 
-    public VertxFilesystemOptionsConfigurationImpl(boolean classPathResolvingEnabled,
-                                                   String fileCacheDir,
-                                                   boolean fileCachingEnabled)
+    public FileSystemOptionsConfigurationImpl(boolean classPathResolvingEnabled,
+                                              String fileCacheDir,
+                                              boolean fileCachingEnabled)
     {
 
         this.classPathResolvingEnabled = classPathResolvingEnabled;
@@ -56,8 +56,8 @@ public class VertxFilesystemOptionsConfigurationImpl implements VertxFilesystemO
     }
 
     @Override
-    @JsonProperty(value = "class_path_resolving_enabled")
-    public boolean classPathResolvingEnabled()
+    @JsonProperty(value = "classpath_resolving_enabled")
+    public boolean classpathResolvingEnabled()
     {
         return classPathResolvingEnabled;
     }
