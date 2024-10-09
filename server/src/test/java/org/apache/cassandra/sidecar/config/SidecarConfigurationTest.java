@@ -281,8 +281,9 @@ class SidecarConfigurationTest
         SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(sidecarConfiguration).isNotNull();
         assertThat(sidecarConfiguration.serviceConfiguration()).isNotNull();
-        FileSystemOptionsConfiguration vertxFsOptions = sidecarConfiguration.vertxConfiguration()
-                                                                            .filesystemOptionsConfiguration();
+        VertxConfiguration vertxConfiguration = sidecarConfiguration.vertxConfiguration();
+        assertThat(vertxConfiguration).isNotNull();
+        FileSystemOptionsConfiguration vertxFsOptions = vertxConfiguration.filesystemOptionsConfiguration();
         assertThat(vertxFsOptions).isNotNull();
         assertThat(vertxFsOptions.fileCachingEnabled()).isTrue();
         assertThat(vertxFsOptions.fileCacheDir()).isEqualTo("/path/to/vertx/cache");
@@ -325,7 +326,9 @@ class SidecarConfigurationTest
         validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
 
         // vertx FileSystemOptions
-        validateVertxFilesystemOptionsClasspathResolvingDisabled(config.vertxConfiguration().filesystemOptionsConfiguration());
+        VertxConfiguration vertxConfiguration = config.vertxConfiguration();
+        assertThat(vertxConfiguration).isNotNull();
+        validateVertxFilesystemOptionsClasspathResolvingDisabled(vertxConfiguration.filesystemOptionsConfiguration());
     }
 
     void validateMultipleInstancesSidecarConfiguration(SidecarConfiguration config, boolean withSslConfiguration)
