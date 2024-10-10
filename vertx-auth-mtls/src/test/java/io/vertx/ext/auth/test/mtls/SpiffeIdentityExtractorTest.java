@@ -18,12 +18,13 @@
 
 package io.vertx.ext.auth.test.mtls;
 
-import io.vertx.ext.auth.authentication.CredentialValidationException;
-import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
-import org.junit.jupiter.api.Test;
-
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+
+import org.junit.jupiter.api.Test;
+
+import io.vertx.ext.auth.authentication.CredentialValidationException;
+import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

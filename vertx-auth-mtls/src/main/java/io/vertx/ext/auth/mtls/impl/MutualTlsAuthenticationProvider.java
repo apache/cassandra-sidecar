@@ -18,6 +18,8 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
+import java.security.cert.Certificate;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -29,8 +31,6 @@ import io.vertx.ext.auth.authentication.Credentials;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
 import io.vertx.ext.auth.mtls.CertificateIdentityValidator;
 import io.vertx.ext.auth.mtls.CertificateValidator;
-
-import java.security.cert.Certificate;
 
 /**
  * {@link AuthenticationProvider} implementation for mTLS (MutualTLS) authentication. With mTLS authentication

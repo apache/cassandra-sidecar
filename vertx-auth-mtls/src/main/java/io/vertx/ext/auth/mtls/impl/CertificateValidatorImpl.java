@@ -18,16 +18,6 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
-import io.vertx.ext.auth.authentication.CertificateCredentials;
-import io.vertx.ext.auth.authentication.CredentialValidationException;
-import io.vertx.ext.auth.mtls.CertificateValidator;
-
-import javax.naming.InvalidNameException;
-import javax.naming.NamingException;
-import javax.naming.directory.Attribute;
-import javax.naming.directory.Attributes;
-import javax.naming.ldap.LdapName;
-import javax.naming.ldap.Rdn;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.X509Certificate;
@@ -35,6 +25,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import javax.naming.InvalidNameException;
+import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.ldap.LdapName;
+import javax.naming.ldap.Rdn;
+
+import io.vertx.ext.auth.authentication.CertificateCredentials;
+import io.vertx.ext.auth.authentication.CredentialValidationException;
+import io.vertx.ext.auth.mtls.CertificateValidator;
 
 /**
  * {@link CertificateValidator} implementation that can be used for validating certificates.
@@ -102,10 +102,14 @@ public class CertificateValidatorImpl implements CertificateValidator
         {
             issuerAttrs = getAttributes(new LdapName(certificate.getIssuerDN().getName()));
 
-            boolean trustedCN = trustedCNs.isEmpty() || trustedCNs.contains(getAttribute(issuerAttrs, "CN"));
-            boolean trustedOrganization = trustedIssuerOrganization == null || getAttribute(issuerAttrs, "O").equalsIgnoreCase(trustedIssuerOrganization);
-            boolean trustedOrganizationUnit = trustedIssuerOrganizationUnit == null || getAttribute(issuerAttrs, "OU").equalsIgnoreCase(trustedIssuerOrganizationUnit);
-            boolean trustedCountry = trustedIssuerCountry == null || getAttribute(issuerAttrs, "C").equalsIgnoreCase(trustedIssuerCountry);
+            boolean trustedCN
+            = trustedCNs.isEmpty() || trustedCNs.contains(getAttribute(issuerAttrs, "CN"));
+            boolean trustedOrganization
+            = trustedIssuerOrganization == null || getAttribute(issuerAttrs, "O").equalsIgnoreCase(trustedIssuerOrganization);
+            boolean trustedOrganizationUnit
+            = trustedIssuerOrganizationUnit == null || getAttribute(issuerAttrs, "OU").equalsIgnoreCase(trustedIssuerOrganizationUnit);
+            boolean trustedCountry
+            = trustedIssuerCountry == null || getAttribute(issuerAttrs, "C").equalsIgnoreCase(trustedIssuerCountry);
 
             return trustedCN && trustedOrganization && trustedOrganizationUnit && trustedCountry;
         }
@@ -123,7 +127,8 @@ public class CertificateValidatorImpl implements CertificateValidator
     {
         List<Rdn> rdns = ldapName.getRdns();
         List<Attributes> attributes = new ArrayList<>(rdns.size());
-        for (int i = 0; i < rdns.size(); ++i) {
+        for (int i = 0; i < rdns.size(); ++i)
+        {
             attributes.add(rdns.get(i).toAttributes());
         }
         return attributes;
@@ -135,7 +140,8 @@ public class CertificateValidatorImpl implements CertificateValidator
         {
             Attributes attributes = attributesList.get(i);
             Attribute value = attributes.get(attributeName);
-            if (value != null) {
+            if (value != null)
+            {
                 return value.get().toString();
             }
         }

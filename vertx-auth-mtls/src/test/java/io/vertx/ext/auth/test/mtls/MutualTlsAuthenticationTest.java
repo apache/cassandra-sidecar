@@ -18,6 +18,15 @@
 
 package io.vertx.ext.auth.test.mtls;
 
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.util.Collections;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.TokenCredentials;
@@ -27,14 +36,6 @@ import io.vertx.ext.auth.mtls.CertificateValidator;
 import io.vertx.ext.auth.mtls.impl.MutualTlsAuthenticationProvider;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

@@ -18,8 +18,9 @@
 
 package io.vertx.ext.auth.test.mtls;
 
-import io.vertx.ext.auth.mtls.impl.SpiffeIdentityValidator;
 import org.junit.jupiter.api.Test;
+
+import io.vertx.ext.auth.mtls.impl.SpiffeIdentityValidator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

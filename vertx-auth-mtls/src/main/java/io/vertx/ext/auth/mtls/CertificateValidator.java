@@ -18,9 +18,9 @@
 
 package io.vertx.ext.auth.mtls;
 
-import io.vertx.ext.auth.authentication.CertificateCredentials;
-
 import java.security.cert.CertificateParsingException;
+
+import io.vertx.ext.auth.authentication.CertificateCredentials;
 
 /**
  * Interface for validating certificates for mutual TLS authentication.

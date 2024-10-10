@@ -18,15 +18,15 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
-import io.vertx.ext.auth.authentication.CredentialValidationException;
-import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
-
 import java.security.cert.Certificate;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
+import io.vertx.ext.auth.authentication.CredentialValidationException;
+import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
 
 /**
  * {@link CertificateIdentityExtractor} implementation for SPIFFE certificates for extracting SPIFFE identity.

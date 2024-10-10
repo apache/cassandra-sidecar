@@ -18,10 +18,10 @@
 
 package io.vertx.ext.auth.mtls;
 
-import io.vertx.ext.auth.authentication.CredentialValidationException;
-
 import java.security.cert.Certificate;
 import java.security.cert.CertificateParsingException;
+
+import io.vertx.ext.auth.authentication.CredentialValidationException;
 
 /**
  * Extracts a valid identity from certificate chain provided.

@@ -18,13 +18,13 @@
 
 package io.vertx.ext.auth.authentication;
 
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.JsonObject;
-
 import java.security.cert.Certificate;
 import java.util.Collections;
 import java.util.List;
 import javax.net.ssl.SSLPeerUnverifiedException;
+
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Certificates based {@link Credentials} implementation, carries user's certificates, which can be used for
