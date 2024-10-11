@@ -18,9 +18,10 @@
 
 package org.apache.cassandra.sidecar.common.response.data;
 
-import com.google.common.annotations.VisibleForTesting;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Class representing an entry of the Client Connection Stats
@@ -40,40 +41,40 @@ public class ClientConnectionEntry
         return port;
     }
 
-    @JsonProperty("ssl")
-    public Boolean ssl()
+    @JsonProperty("sslEnabled")
+    public Boolean sslEnabled()
     {
-        return ssl;
+        return sslEnabled;
     }
 
-    @JsonProperty("cipher")
-    public String cipher()
+    @JsonProperty("sslCipherSuite")
+    public String sslCipherSuite()
     {
-        return cipher;
+        return sslCipherSuite;
     }
 
-    @JsonProperty("protocol")
-    public String protocol()
+    @JsonProperty("sslProtocol")
+    public String sslProtocol()
     {
-        return protocol;
+        return sslProtocol;
     }
 
-    @JsonProperty("version")
-    public String version()
+    @JsonProperty("protocolVersion")
+    public String protocolVersion()
     {
-        return version;
+        return protocolVersion;
     }
 
-    @JsonProperty("user")
-    public String user()
+    @JsonProperty("username")
+    public String username()
     {
-        return user;
+        return username;
     }
 
-    @JsonProperty("requests")
-    public int requests()
+    @JsonProperty("requestCount")
+    public long requestCount()
     {
-        return requests;
+        return requestCount;
     }
 
     @JsonProperty("driverName")
@@ -90,192 +91,36 @@ public class ClientConnectionEntry
 
     private final String address;
     private final int port;
-    private final Boolean ssl;
-    private final String cipher;
-    private final String protocol;
-    private final String version;
-    private final String user;
-    private final int requests;
+    private final Boolean sslEnabled;
+    private final String sslCipherSuite;
+    private final String sslProtocol;
+    private final String protocolVersion;
+    private final String username;
+    private final long requestCount;
     private final String driverName;
     private final String driverVersion;
 
-    /**
-     * Constructs a new {@link ClientConnectionEntry} from the configured {@link Builder}.
-     *
-     * @param builder the builder used to create this object
-     */
-    @VisibleForTesting
-    protected ClientConnectionEntry(Builder builder)
+    @JsonCreator
+    public ClientConnectionEntry(@NotNull @JsonProperty("address") String address,
+                                 @NotNull @JsonProperty("port") int port,
+                                 @NotNull @JsonProperty("sslEnabled") boolean sslEnabled,
+                                 @NotNull @JsonProperty("sslCipherSuite") String sslCipherSuite,
+                                 @NotNull @JsonProperty("sslProtocol") String sslProtocol,
+                                 @NotNull @JsonProperty("protocolVersion") String protocolVersion,
+                                 @NotNull @JsonProperty("username") String username,
+                                 @NotNull @JsonProperty("requestCount") long requestCount,
+                                 @NotNull @JsonProperty("driverName") String driverName,
+                                 @NotNull @JsonProperty("driverVersion") String driverVersion)
     {
-        address = builder.address;
-        port = builder.port;
-        ssl = builder.ssl;
-        cipher = builder.cipher;
-        protocol = builder.protocol;
-        version = builder.version;
-        user = builder.user;
-        requests = builder.requests;
-        driverName = builder.driverName;
-        driverVersion = builder.driverVersion;
-    }
-
-    public ClientConnectionEntry()
-    {
-        this(builder());
-    }
-
-    /**
-     * @return a new {@code ClientStatsResponse} builder
-     */
-    public static Builder builder()
-    {
-        return new Builder();
-    }
-
-    /**
-     * {@code ClientStatsResponse} builder static inner class.
-     */
-    public static final class Builder
-    {
-        private String address;
-        private int port;
-        private Boolean ssl;
-        private String cipher;
-        private String protocol;
-        private String version;
-        private String user;
-        private int requests;
-        private String driverName;
-        private String driverVersion;
-
-        /**
-         * Sets the {@code address} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param address the {@code address} to set
-         * @return a reference to this Builder
-         */
-        public Builder address(String address)
-        {
-            this.address = address;
-            return this;
-        }
-
-        /**
-         * Sets the {@code port} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param port the {@code address} to set
-         * @return a reference to this Builder
-         */
-        public Builder port(int port)
-        {
-            this.port = port;
-            return this;
-        }
-
-
-        /**
-         * Sets the {@code ssl} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param ssl the {@code ssl} to set
-         * @return a reference to this Builder
-         */
-        public Builder ssl(Boolean ssl)
-        {
-            this.ssl = ssl;
-            return this;
-        }
-
-        /**
-         * Sets the {@code cipher} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param cipher the {@code cipher} to set
-         * @return a reference to this Builder
-         */
-        public Builder cipher(String cipher)
-        {
-            this.cipher = cipher;
-             return this;
-        }
-
-        /**
-         * Sets the {@code protocol} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param protocol the {@code protocol} to set
-         * @return a reference to this Builder
-         */
-        public Builder protocol(String protocol)
-        {
-            this.protocol = protocol;
-            return this;
-        }
-
-        /**
-         * Sets the {@code version} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param version the {@code version} to set
-         * @return a reference to this Builder
-         */
-        public Builder version(String version)
-        {
-            this.version = version;
-            return this;
-        }
-
-        /**
-         * Sets the {@code user} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param user the {@code user} to set
-         * @return a reference to this Builder
-         */
-        public Builder user(String user)
-        {
-            this.user = user;
-            return this;
-        }
-
-        /**
-         * Sets the {@code requests} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param requests the {@code requests} to set
-         * @return a reference to this Builder
-         */
-        public Builder requests(int requests)
-        {
-            this.requests = requests;
-            return this;
-        }
-
-        /**
-         * Sets the {@code driverName} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param driverName the {@code driverName} to set
-         * @return a reference to this Builder
-         */
-        public Builder driverName(String driverName)
-        {
-            this.driverName = driverName;
-            return this;
-        }
-
-        /**
-         * Sets the {@code driverVersion} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param driverVersion the {@code driverVersion} to set
-         * @return a reference to this Builder
-         */
-        public Builder driverVersion(String driverVersion)
-        {
-            this.driverVersion = driverVersion;
-            return this;
-        }
-        
-        private Builder()
-        {
-        }
-
-        public ClientConnectionEntry build()
-        {
-            return new ClientConnectionEntry(this);
-        }
+        this.address = address;
+        this.port = port;
+        this.sslEnabled = sslEnabled;
+        this.sslCipherSuite = sslCipherSuite;
+        this.sslProtocol = sslProtocol;
+        this.protocolVersion = protocolVersion;
+        this.username = username;
+        this.requestCount = requestCount;
+        this.driverName = driverName;
+        this.driverVersion = driverVersion;
     }
 }

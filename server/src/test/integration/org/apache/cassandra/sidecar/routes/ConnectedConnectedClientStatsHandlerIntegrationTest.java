@@ -20,8 +20,8 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -49,12 +49,13 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
     void retrieveClientStatsDefault(VertxTestContext context)
     throws Exception
     {
+        Map<String, Boolean> expectedParams = Collections.singletonMap("summary", true);
         String testRoute = "/api/v1/cassandra/stats/connected-clients";
         testWithClient(context, client -> {
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
-                      assertClientStatsResponse(response, Collections.emptyMap());
+                      assertClientStatsResponse(response, expectedParams);
                       context.completeNow();
                   }));
         });
@@ -64,8 +65,8 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
     void retrieveClientStatsListConnections(VertxTestContext context)
     throws Exception
     {
-        Map<String, Boolean> expectedParams = Collections.singletonMap("all", true);
-        String testRoute = "/api/v1/cassandra/stats/connected-clients?all=true";
+        Map<String, Boolean> expectedParams = Collections.singletonMap("summary", false);
+        String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
         testWithClient(context, client -> {
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
@@ -83,8 +84,8 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
         // Creates an additional connection pair
         createTestKeyspace();
 
-        Map<String, Boolean> expectedParams = Collections.singletonMap("all", true);
-        String testRoute = "/api/v1/cassandra/stats/connected-clients?all=true";
+        Map<String, Boolean> expectedParams = Collections.singletonMap("summary", true);
+        String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=true";
         testWithClient(context, client -> {
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
@@ -95,15 +96,17 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
         });
     }
 
+    /**
+     * Expects unrecognized params to be ignored and invalid value for the expected parameter to be defaulted to true
+     * to prevent heavyweight query in the bad request case.
+     */
     @CassandraIntegrationTest
-    void retrieveClientStatsInvalidParams(VertxTestContext context)
+    void retrieveClientStatsInvalidParamaterValue(VertxTestContext context)
     throws Exception
     {
         Map<String, Boolean> expectedParams = new HashMap<>();
-        expectedParams.put("verbose", false);
-        expectedParams.put("list-connections", false);
-        expectedParams.put("by-protocol", false);
-        String testRoute = "/api/v1/cassandra/stats/connected-clients?all=123&bad-arg=xyz";
+        expectedParams.put("summary", true);
+        String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=123&bad-arg=xyz";
         testWithClient(context, client -> {
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
@@ -120,7 +123,7 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
     }
     void assertClientStatsResponse(HttpResponse<Buffer> response, Map<String, Boolean> params, int expectedConnections)
     {
-        boolean isListConnections = params.getOrDefault("all", false);
+        boolean isSummary = params.get("summary");
 
         logger.info("Response:" + response.bodyAsString());
         ConnectedClientStatsResponse clientStats = response.bodyAsJson(ConnectedClientStatsResponse.class);
@@ -129,23 +132,23 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
         assertThat(clientStats.connectionsByUser()).containsKey("anonymous");
         assertThat(clientStats.totalConnectedClients()).isEqualTo(expectedConnections);
 
-        Set<ClientConnectionEntry> stats = clientStats.clientConnections();
-        if (isListConnections)
+        List<ClientConnectionEntry> stats = clientStats.clientConnections();
+        if (isSummary)
+        {
+            assertThat(stats).isNull();
+        }
+        else
         {
             assertThat(stats.size()).isEqualTo(expectedConnections);
             for (ClientConnectionEntry stat : stats)
             {
                 assertThat(stat.address()).contains("127.0.0.1");
                 // Test uses default WebClient without options
-                assertThat(stat.ssl()).isEqualTo(false);
+                assertThat(stat.sslEnabled()).isEqualTo(false);
                 assertThat(stat.driverName()).isEqualTo("DataStax Java Driver");
                 assertThat(stat.driverVersion()).isNotNull();
-                assertThat(stat.user()).isEqualTo("anonymous");
+                assertThat(stat.username()).isEqualTo("anonymous");
             }
-        }
-        else
-        {
-            assertThat(stats).isNull();
         }
     }
 }

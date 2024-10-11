@@ -33,8 +33,8 @@ public class ClientStatsSchema extends TableSchema
     private static final String TABLE_NAME = "clients";
     private static final String KEYSPACE_NAME = "system_views";
 
-    private PreparedStatement listAll;
-    private PreparedStatement selectUserConnections;
+    private PreparedStatement statsStatement;
+    private PreparedStatement connectionsByUserStatement;
 
     @Override
     protected String keyspaceName()
@@ -44,8 +44,8 @@ public class ClientStatsSchema extends TableSchema
 
     public void prepareStatements(@NotNull Session session)
     {
-        listAll = prepare(listAll, session, ClientStatsSchema.listAllStatement());
-        selectUserConnections = prepare(selectUserConnections, session, ClientStatsSchema.selectConnectionsByUserStatement());
+        statsStatement = prepare(statsStatement, session, ClientStatsSchema.statsStatement());
+        connectionsByUserStatement = prepare(connectionsByUserStatement, session, ClientStatsSchema.selectConnectionsByUserStatement());
     }
 
     @Override
@@ -67,17 +67,17 @@ public class ClientStatsSchema extends TableSchema
         return TABLE_NAME;
     }
 
-    public PreparedStatement listAll()
+    public PreparedStatement stats()
     {
-        return listAll;
+        return statsStatement;
     }
 
-    public PreparedStatement connectionCountByUser()
+    public PreparedStatement connectionsByUser()
     {
-        return selectUserConnections;
+        return connectionsByUserStatement;
     }
 
-    static String listAllStatement()
+    static String statsStatement()
     {
         return String.format("SELECT address, " +
                              "port, " +
@@ -87,6 +87,7 @@ public class ClientStatsSchema extends TableSchema
                              "protocol_version, " +
                              "driver_name, " +
                              "driver_version, " +
+                             "request_count, " +
                              "ssl_enabled, " +
                              "ssl_protocol, " +
                              "ssl_cipher_suite " +

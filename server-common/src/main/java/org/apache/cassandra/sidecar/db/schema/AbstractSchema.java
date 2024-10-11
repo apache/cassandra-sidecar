@@ -25,7 +25,7 @@ import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
-import org.apache.cassandra.sidecar.common.response.data.SidecarSchemaModificationException;
+import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.jetbrains.annotations.NotNull;
 
 /**

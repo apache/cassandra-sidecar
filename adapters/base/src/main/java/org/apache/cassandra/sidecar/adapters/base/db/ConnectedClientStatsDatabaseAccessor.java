@@ -18,8 +18,8 @@
 
 package org.apache.cassandra.sidecar.adapters.base.db;
 
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
@@ -44,23 +44,21 @@ public class ConnectedClientStatsDatabaseAccessor extends DatabaseAccessor<Clien
     public ConnectedClientStatsSummary summary()
     {
         tableSchema.prepareStatements(session());
-        BoundStatement statement = tableSchema.connectionCountByUser().bind();
+        BoundStatement statement = tableSchema.connectionsByUser().bind();
         ResultSet resultSet = execute(statement);
         return ConnectedClientStatsSummary.from(resultSet);
     }
 
     /**
-     * Query for all the client connection metadata with an entry per connection
+     * Query for all the client connection stats with an entry per connection
      * @return {@link ConnectedClientStats} for each connection
      */
-    public Set<ConnectedClientStats> stats()
+    public Stream<ConnectedClientStats> stats()
     {
         tableSchema.prepareStatements(session());
-        BoundStatement statement = tableSchema.listAll().bind();
+        BoundStatement statement = tableSchema.stats().bind();
         ResultSet resultSet = execute(statement);
-        return resultSet.all()
-                        .stream()
-                        .map(ConnectedClientStats::from)
-                        .collect(Collectors.toSet());
+        return StreamSupport.stream(resultSet.spliterator(), false)
+                            .map(ConnectedClientStats::from);
     }
 }

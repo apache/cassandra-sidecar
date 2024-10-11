@@ -20,9 +20,9 @@ package org.apache.cassandra.sidecar.adapters.base.db;
 
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import com.datastax.driver.core.ResultSet;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.db.DataObjectMappingException;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,69 +34,23 @@ public class ConnectedClientStatsSummary
     public final int totalConnectedClients;
     public final Map<String, Long> connectionsByUser;
 
-    public static ConnectedClientStatsSummary.Builder builder()
-    {
-        return new ConnectedClientStatsSummary.Builder();
-    }
-
     public static ConnectedClientStatsSummary from(@NotNull ResultSet resultSet) throws DataObjectMappingException
     {
 
-        Map<String, Long> resultMap = resultSet.all().stream()
-                                               .collect(Collectors.toMap(r -> r.getString("username"),
+        Map<String, Long> resultMap = StreamSupport.stream(resultSet.spliterator(), false)
+                                                             .collect(Collectors.toMap(r -> r.getString("username"),
                                                                          r -> r.getLong("connection_count")));
         int totalConnections = resultMap.values().stream().mapToInt(Math::toIntExact).sum();
 
-        ConnectedClientStatsSummary.Builder builder = new ConnectedClientStatsSummary.Builder();
-        builder.connectionsByUser(resultMap);
-        builder.totalConnectedClients(totalConnections);
-
-        return builder.build();
+        return new ConnectedClientStatsSummary(resultMap, totalConnections);
     }
 
-    private ConnectedClientStatsSummary(ConnectedClientStatsSummary.Builder builder)
+    public ConnectedClientStatsSummary(Map<String, Long> connectionsByUser, int totalConnections)
     {
-        this.connectionsByUser = builder.connectionsByUser;
-        this.totalConnectedClients = builder.totalConnectedClients;
+        this.totalConnectedClients = totalConnections;
+        this.connectionsByUser = connectionsByUser;
     }
 
-    /**
-     * Builder for {@link ConnectedClientStatsSummary}
-     */
-    public static class Builder implements DataObjectBuilder<ConnectedClientStatsSummary.Builder, ConnectedClientStatsSummary>
-    {
-        private int totalConnectedClients;
-        private Map<String, Long> connectionsByUser;
 
-        private Builder()
-        {
-        }
-
-        private Builder(ConnectedClientStatsSummary summary)
-        {
-            this.connectionsByUser = summary.connectionsByUser;
-            this.totalConnectedClients = summary.totalConnectedClients;
-        }
-
-        public ConnectedClientStatsSummary.Builder totalConnectedClients(int count)
-        {
-            return update(b -> b.totalConnectedClients = count);
-        }
-
-        public ConnectedClientStatsSummary.Builder connectionsByUser(Map<String, Long> connections)
-        {
-            return update(b -> b.connectionsByUser = connections);
-        }
-
-        public ConnectedClientStatsSummary.Builder self()
-        {
-            return this;
-        }
-
-        public ConnectedClientStatsSummary build()
-        {
-            return new ConnectedClientStatsSummary(this);
-        }
-    }
 }
 

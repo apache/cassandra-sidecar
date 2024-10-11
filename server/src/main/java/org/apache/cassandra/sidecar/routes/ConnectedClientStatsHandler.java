@@ -18,17 +18,13 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
 /**
@@ -59,26 +55,14 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Void>
                                Void request)
     {
 
-        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-        if (delegate == null)
-        {
-            context.fail(cassandraServiceUnavailable());
-            return;
-        }
-        MetricsOperations operations = delegate.metricsOperations();
-        Metadata metadata = delegate.metadata();
-        if (operations == null || metadata == null)
-        {
-            context.fail(cassandraServiceUnavailable());
-            return;
-        }
+        ifMetricsOpsAvailable(context, host, operations -> {
+            boolean summaryOnly = parseBooleanQueryParam(httpRequest, "summary", true);
 
-        boolean isListConnections = parseBooleanQueryParam(httpRequest, "all", false);
-
-        executorPools.service()
-                     .executeBlocking(() -> operations.connectedClientStats(isListConnections))
-                     .onSuccess(context::json)
-                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+            executorPools.service()
+                         .executeBlocking(() -> operations.connectedClientStats(summaryOnly))
+                         .onSuccess(context::json)
+                         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+        });
     }
 
     protected Void extractParamsOrThrow(RoutingContext context)
