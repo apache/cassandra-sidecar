@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.response.data;
+package org.apache.cassandra.sidecar.exceptions;
 
 /**
  * Exception thrown when modifications to schema managed by Sidecar fail

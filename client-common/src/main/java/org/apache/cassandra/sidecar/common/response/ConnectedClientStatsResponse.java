@@ -18,8 +18,8 @@
 
 package org.apache.cassandra.sidecar.common.response;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -35,7 +35,7 @@ public class ConnectedClientStatsResponse
 {
 
     @JsonProperty("clientConnections")
-    public Set<ClientConnectionEntry> clientConnections()
+    public List<ClientConnectionEntry> clientConnections()
     {
         return clientConnections;
     }
@@ -52,9 +52,9 @@ public class ConnectedClientStatsResponse
         return connectionsByUser;
     }
 
-    private Set<ClientConnectionEntry> clientConnections;
+    private final List<ClientConnectionEntry> clientConnections;
     private final long totalConnectedClients;
-    private Map<String, Long> connectionsByUser;
+    private final Map<String, Long> connectionsByUser;
 
 
     /**
@@ -88,7 +88,7 @@ public class ConnectedClientStatsResponse
      */
     public static final class Builder
     {
-        private Set<ClientConnectionEntry> clientConnections;
+        private List<ClientConnectionEntry> clientConnections;
         private long totalConnectedClients;
 
         private Map<String, Long> connectionsByUser;
@@ -99,7 +99,7 @@ public class ConnectedClientStatsResponse
          * @param clientConnections the list of {@code clientConnections} to set
          * @return a reference to this Builder
          */
-        public Builder clientConnections(Set<ClientConnectionEntry> clientConnections)
+        public Builder clientConnections(List<ClientConnectionEntry> clientConnections)
         {
             this.clientConnections = clientConnections;
             return this;

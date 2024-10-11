@@ -27,9 +27,9 @@ public interface MetricsOperations
 {
     /**
      * Retrieve the connected client stats metrics from the cluster
-     * @param isListConnections boolean parameter to list connection details
-     * @return the requested client stats
+     * @param summaryOnly boolean parameter to list connection summary only
+     * @return the requested client stats, in full or summary
      */
-    ConnectedClientStatsResponse connectedClientStats(boolean isListConnections);
+    ConnectedClientStatsResponse connectedClientStats(boolean summaryOnly);
 
 }
