@@ -27,9 +27,8 @@ import org.jetbrains.annotations.NotNull;
  * Holds the prepared statements for operations related to client connection stats retrieved from
  * the "clients" virtual table
  */
-public class ClientStatsSchema extends TableSchema
+public class ConnectedClientsSchema extends TableSchema
 {
-
     private static final String TABLE_NAME = "clients";
     private static final String KEYSPACE_NAME = "system_views";
 
@@ -44,8 +43,8 @@ public class ClientStatsSchema extends TableSchema
 
     public void prepareStatements(@NotNull Session session)
     {
-        statsStatement = prepare(statsStatement, session, ClientStatsSchema.statsStatement());
-        connectionsByUserStatement = prepare(connectionsByUserStatement, session, ClientStatsSchema.selectConnectionsByUserStatement());
+        statsStatement = prepare(statsStatement, session, statsStatement());
+        connectionsByUserStatement = prepare(connectionsByUserStatement, session, selectConnectionsByUserStatement());
     }
 
     @Override
@@ -77,23 +76,9 @@ public class ClientStatsSchema extends TableSchema
         return connectionsByUserStatement;
     }
 
-    static String statsStatement()
+    private String statsStatement()
     {
-        return String.format("SELECT address, " +
-                             "port, " +
-                             "hostname, " +
-                             "username, " +
-                             "connection_stage, " +
-                             "protocol_version, " +
-                             "driver_name, " +
-                             "driver_version, " +
-                             "request_count, " +
-                             "ssl_enabled, " +
-                             "ssl_protocol, " +
-                             "ssl_cipher_suite " +
-                             "FROM %s.%s;",
-                             KEYSPACE_NAME,
-                             TABLE_NAME);
+        return String.format("SELECT * FROM %s.%s;", KEYSPACE_NAME, TABLE_NAME);
     }
 
     static String selectConnectionsByUserStatement()

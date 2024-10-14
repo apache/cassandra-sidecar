@@ -23,16 +23,16 @@ import java.util.stream.StreamSupport;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
-import org.apache.cassandra.sidecar.adapters.base.db.schema.ClientStatsSchema;
+import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.DatabaseAccessor;
 
 /**
- * DataAccessor implementation to read client connection stats from the table represented in {@link ClientStatsSchema}
+ * DataAccessor implementation to read client connection stats from the table represented in {@link ConnectedClientsSchema}
  */
-public class ConnectedClientStatsDatabaseAccessor extends DatabaseAccessor<ClientStatsSchema>
+public class ConnectedClientStatsDatabaseAccessor extends DatabaseAccessor<ConnectedClientsSchema>
 {
-    public ConnectedClientStatsDatabaseAccessor(CQLSessionProvider sessionProvider, ClientStatsSchema tableSchema)
+    public ConnectedClientStatsDatabaseAccessor(CQLSessionProvider sessionProvider, ConnectedClientsSchema tableSchema)
     {
         super(tableSchema, sessionProvider);
     }

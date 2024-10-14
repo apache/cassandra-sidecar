@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.common.response.data;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -88,6 +90,30 @@ public class ClientConnectionEntry
     {
         return driverVersion;
     }
+    @JsonProperty("keyspaceName")
+    public String keyspaceName()
+    {
+        return keyspaceName;
+    }
+
+    @JsonProperty("clientOptions")
+    public Map<String, String> clientOptions()
+    {
+        return clientOptions;
+    }
+
+    @JsonProperty("authenticationMode")
+    public String authenticationMode()
+    {
+        return authenticationMode;
+    }
+
+    @JsonProperty("authenticationMetadata")
+    public Map<String, String> authenticationMetadata()
+    {
+        return authenticationMetadata;
+    }
+
 
     private final String address;
     private final int port;
@@ -100,17 +126,27 @@ public class ClientConnectionEntry
     private final String driverName;
     private final String driverVersion;
 
+    private final Map<String, String> clientOptions;
+    private final String keyspaceName;
+    private final String authenticationMode;
+    private final Map<String, String> authenticationMetadata;
+
+
     @JsonCreator
     public ClientConnectionEntry(@NotNull @JsonProperty("address") String address,
                                  @NotNull @JsonProperty("port") int port,
                                  @NotNull @JsonProperty("sslEnabled") boolean sslEnabled,
-                                 @NotNull @JsonProperty("sslCipherSuite") String sslCipherSuite,
-                                 @NotNull @JsonProperty("sslProtocol") String sslProtocol,
+                                 @JsonProperty("sslCipherSuite") String sslCipherSuite,
+                                 @JsonProperty("sslProtocol") String sslProtocol,
                                  @NotNull @JsonProperty("protocolVersion") String protocolVersion,
                                  @NotNull @JsonProperty("username") String username,
                                  @NotNull @JsonProperty("requestCount") long requestCount,
                                  @NotNull @JsonProperty("driverName") String driverName,
-                                 @NotNull @JsonProperty("driverVersion") String driverVersion)
+                                 @NotNull @JsonProperty("driverVersion") String driverVersion,
+                                 @JsonProperty("keyspaceName") String keyspaceName,
+                                 @JsonProperty("clientOptions") Map<String, String> clientOptions,
+                                 @JsonProperty("authenticationMode") String authMode,
+                                 @JsonProperty("authenticationMetadata") Map<String, String> authMetadata)
     {
         this.address = address;
         this.port = port;
@@ -122,5 +158,9 @@ public class ClientConnectionEntry
         this.requestCount = requestCount;
         this.driverName = driverName;
         this.driverVersion = driverVersion;
+        this.keyspaceName = keyspaceName;
+        this.clientOptions = clientOptions;
+        this.authenticationMode = authMode;
+        this.authenticationMetadata = authMetadata;
     }
 }

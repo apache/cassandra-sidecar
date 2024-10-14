@@ -21,8 +21,7 @@ package org.apache.cassandra.sidecar.common.response;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.annotations.VisibleForTesting;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
@@ -58,84 +57,19 @@ public class ConnectedClientStatsResponse
 
 
     /**
-     * Constructs a new {@link ConnectedClientStatsResponse} from the configured {@link Builder}.
+     * Constructs a new {@link ConnectedClientStatsResponse}.
      *
-     * @param builder the builder used to create this object
+     * @param clientConnections list of client connection stats
+     * @param totalConnectedClients total count of the connected clients
+     * @param connectionsByUser mapping of user to the no. connections
      */
-    @VisibleForTesting
-    protected ConnectedClientStatsResponse(Builder builder)
+    @JsonCreator
+    public ConnectedClientStatsResponse(@JsonProperty("clientConnections") List<ClientConnectionEntry> clientConnections,
+                                        @JsonProperty("totalConnectedClients") long totalConnectedClients,
+                                        @JsonProperty("connectionsByUser") Map<String, Long> connectionsByUser)
     {
-        clientConnections = builder.clientConnections;
-        totalConnectedClients = builder.totalConnectedClients;
-        connectionsByUser = builder.connectionsByUser;
-    }
-
-    public ConnectedClientStatsResponse()
-    {
-        this(builder());
-    }
-
-    /**
-     * @return a new {@code ClientStatsResponse} builder
-     */
-    public static Builder builder()
-    {
-        return new Builder();
-    }
-
-    /**
-     * {@code ClientStatsResponse} builder static inner class.
-     */
-    public static final class Builder
-    {
-        private List<ClientConnectionEntry> clientConnections;
-        private long totalConnectedClients;
-
-        private Map<String, Long> connectionsByUser;
-
-        /**
-         * Sets the client connection metadata and returns a reference to this Builder enabling method chaining.
-         *
-         * @param clientConnections the list of {@code clientConnections} to set
-         * @return a reference to this Builder
-         */
-        public Builder clientConnections(List<ClientConnectionEntry> clientConnections)
-        {
-            this.clientConnections = clientConnections;
-            return this;
-        }
-
-        /**
-         * Sets the {@code totalConnectedClients} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param totalConnectedClients the {@code totalConnectedClients} to set
-         * @return a reference to this Builder
-         */
-        public Builder totalConnectedClients(long totalConnectedClients)
-        {
-            this.totalConnectedClients = totalConnectedClients;
-            return this;
-        }
-
-        /**
-         * Sets the {@code connectionsByUser} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param connectionsByUser the {@code connectionsByUser} to set
-         * @return a reference to this Builder
-         */
-        public Builder connectionsByUser(Map<String, Long> connectionsByUser)
-        {
-            this.connectionsByUser = connectionsByUser;
-            return this;
-        }
-
-        private Builder()
-        {
-        }
-
-        public ConnectedClientStatsResponse build()
-        {
-            return new ConnectedClientStatsResponse(this);
-        }
+        this.clientConnections = clientConnections;
+        this.totalConnectedClients = totalConnectedClients;
+        this.connectionsByUser = connectionsByUser;
     }
 }
