@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStats;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsDatabaseAccessor;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsSummary;
-import org.apache.cassandra.sidecar.adapters.base.db.schema.ClientStatsSchema;
+import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -45,7 +45,7 @@ public class CassandraMetricsOperations implements MetricsOperations
      */
     public CassandraMetricsOperations(CQLSessionProvider session)
     {
-        this.dbAccessor = new ConnectedClientStatsDatabaseAccessor(session, new ClientStatsSchema());
+        this.dbAccessor = new ConnectedClientStatsDatabaseAccessor(session, new ConnectedClientsSchema());
     }
 
     /**
@@ -67,23 +67,13 @@ public class CassandraMetricsOperations implements MetricsOperations
         Map<String, Long> connectionsByUser = entries.stream().collect(Collectors.groupingBy(ClientConnectionEntry::username,
                                                                                              Collectors.counting()));
         long totalConnectedClients = entries.size();
-        return ConnectedClientStatsResponse.builder()
-                                           .clientConnections(entries)
-                                           .connectionsByUser(connectionsByUser)
-                                           .totalConnectedClients(totalConnectedClients)
-                                           .build();
+        return new ConnectedClientStatsResponse(entries, totalConnectedClients, connectionsByUser);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public ConnectedClientStatsResponse connectedClientSummary()
+    private ConnectedClientStatsResponse connectedClientSummary()
     {
         ConnectedClientStatsSummary summary = dbAccessor.summary();
-        return ConnectedClientStatsResponse.builder()
-                                           .connectionsByUser(summary.connectionsByUser)
-                                           .totalConnectedClients(summary.totalConnectedClients)
-                                           .build();
+        return new ConnectedClientStatsResponse(null, summary.totalConnectedClients, summary.connectionsByUser);
     }
 
     private List<ClientConnectionEntry> statsToEntries(Stream<ConnectedClientStats> stats)
@@ -94,7 +84,8 @@ public class CassandraMetricsOperations implements MetricsOperations
 
     private static @NotNull ClientConnectionEntry statToEntry(ConnectedClientStats stat)
     {
-        // TODO: javadoc regarding removal builder for efficiency when we have lots of entries
+        // Note: We explicitly use constructor params based object creation instead of builder in order to optimize the
+        // number of potential objects created for each row of the table queried, specifically since we know this can be large
         return new ClientConnectionEntry(stat.address,
                                          stat.port,
                                          stat.sslEnabled,
@@ -104,6 +95,10 @@ public class CassandraMetricsOperations implements MetricsOperations
                                          stat.username,
                                          stat.requestCount,
                                          stat.driverName,
-                                         stat.driverVersion);
+                                         stat.driverVersion,
+                                         stat.keyspaceName,
+                                         stat.clientOptions,
+                                         stat.authenticationMode,
+                                         stat.authenticationMetadata);
     }
 }

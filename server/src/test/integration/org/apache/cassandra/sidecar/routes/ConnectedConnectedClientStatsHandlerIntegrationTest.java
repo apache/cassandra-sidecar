@@ -22,9 +22,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import com.datastax.driver.core.Session;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -33,6 +35,7 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
+import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,6 +68,7 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
     void retrieveClientStatsListConnections(VertxTestContext context)
     throws Exception
     {
+
         Map<String, Boolean> expectedParams = Collections.singletonMap("summary", false);
         String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
         testWithClient(context, client -> {
@@ -78,14 +82,33 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
     }
 
     @CassandraIntegrationTest
+    void retrieveClientStatsListConnectionsWithKeyspace(VertxTestContext context)
+    throws Exception
+    {
+        createTestKeyspace();
+        Session session = maybeGetSession();
+        session.execute("USE " + TEST_KEYSPACE);
+
+        Map<String, Boolean> expectedParams = Collections.singletonMap("summary", false);
+        String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
+        testWithClient(context, client -> {
+            client.get(server.actualPort(), "127.0.0.1", testRoute)
+                  .expect(ResponsePredicate.SC_OK)
+                  .send(context.succeeding(response -> {
+                      assertClientStatsResponse(response, expectedParams, 4, true);
+                      context.completeNow();
+                  }));
+        });
+    }
+
+    @CassandraIntegrationTest
     void retrieveClientStatsMultipleConnections(VertxTestContext context)
     throws Exception
     {
         // Creates an additional connection pair
         createTestKeyspace();
-
-        Map<String, Boolean> expectedParams = Collections.singletonMap("summary", true);
-        String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=true";
+        Map<String, Boolean> expectedParams = Collections.singletonMap("summary", false);
+        String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
         testWithClient(context, client -> {
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .expect(ResponsePredicate.SC_OK)
@@ -121,7 +144,12 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
     {
         assertClientStatsResponse(response, params, DEFAULT_CONNECTION_COUNT);
     }
+
     void assertClientStatsResponse(HttpResponse<Buffer> response, Map<String, Boolean> params, int expectedConnections)
+    {
+        assertClientStatsResponse(response, params, expectedConnections, false);
+    }
+    void assertClientStatsResponse(HttpResponse<Buffer> response, Map<String, Boolean> params, int expectedConnections, boolean usingKeyspace)
     {
         boolean isSummary = params.get("summary");
 
@@ -135,7 +163,7 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
         List<ClientConnectionEntry> stats = clientStats.clientConnections();
         if (isSummary)
         {
-            assertThat(stats).isNull();
+            assertThat(stats).isEmpty();
         }
         else
         {
@@ -143,11 +171,22 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
             for (ClientConnectionEntry stat : stats)
             {
                 assertThat(stat.address()).contains("127.0.0.1");
-                // Test uses default WebClient without options
                 assertThat(stat.sslEnabled()).isEqualTo(false);
                 assertThat(stat.driverName()).isEqualTo("DataStax Java Driver");
                 assertThat(stat.driverVersion()).isNotNull();
                 assertThat(stat.username()).isEqualTo("anonymous");
+                if (sidecarTestContext.version.isGreaterThan(SimpleCassandraVersion.create("4.0.0")))
+                {
+                    assertThat(stat.clientOptions()).isNotNull();
+                    assertThat(stat.clientOptions().containsKey("CQL_VERSION")).isTrue();
+                }
+            }
+
+            // TODO: Add validations for fields in trunk once dtest jars can advance beyond TCM commit
+            if (usingKeyspace
+               && sidecarTestContext.version.compareTo(SimpleCassandraVersion.create("5.0.0")) >= 0)
+            {
+                assertThat(stats.stream().map(ClientConnectionEntry::keyspaceName).collect(Collectors.toSet())).contains(TEST_KEYSPACE);
             }
         }
     }

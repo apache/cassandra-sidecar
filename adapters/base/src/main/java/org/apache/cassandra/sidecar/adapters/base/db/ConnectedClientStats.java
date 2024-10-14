@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.adapters.base.db;
 
+import java.util.Map;
+
 import com.datastax.driver.core.Row;
 import org.apache.cassandra.sidecar.db.DataObjectMappingException;
 import org.jetbrains.annotations.NotNull;
@@ -27,7 +29,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ConnectedClientStats
 {
-
     public final String address;
     public final int port;
     public final String hostname;
@@ -40,10 +41,10 @@ public class ConnectedClientStats
     public final String sslProtocol;
     public final String sslCipherSuite;
     public final long requestCount;
-//    public final Map<String, String> clientOptions;
-//    public final String keyspaceName;
-//    public final String authenticationMode;
-//    public final Map<String, String> authMetadata;
+    public final Map<String, String> clientOptions;
+    public final String keyspaceName;
+    public final String authenticationMode;
+    public final Map<String, String> authenticationMetadata;
 
     public static ConnectedClientStats from(@NotNull Row row) throws DataObjectMappingException
     {
@@ -64,5 +65,23 @@ public class ConnectedClientStats
         this.sslProtocol = row.getString("ssl_protocol");
         this.sslCipherSuite = row.getString("ssl_cipher_suite");
         this.requestCount = row.getLong("request_count");
+        this.keyspaceName = getStringFieldIfExists(row, "keyspace_name");
+        this.authenticationMode = getStringFieldIfExists(row, "authentication_mode");
+        this.authenticationMetadata = getMapFieldIfExists(row, "authentication_metadata");
+        this.clientOptions = getMapFieldIfExists(row, "client_options");
+    }
+
+    public String getStringFieldIfExists(@NotNull Row row, String fieldName)
+    {
+        return (row.getColumnDefinitions().contains(fieldName)) ? row.getString(fieldName) : null;
+    }
+
+    public Map getMapFieldIfExists(@NotNull Row row, String fieldName)
+    {
+        if ((row.getColumnDefinitions().contains(fieldName)))
+        {
+            return row.getMap(fieldName, String.class, String.class);
+        }
+        return null;
     }
 }
