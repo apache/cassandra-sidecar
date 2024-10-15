@@ -53,6 +53,7 @@ public class CertificateCredentialsTest
         HttpConnection connection = mock(HttpConnection.class);
         when(connection.peerCertificates()).thenReturn(Collections.emptyList());
         when(request.connection()).thenReturn(connection);
+
         assertThatThrownBy(() -> new CertificateCredentials(request).checkValid())
                 .isInstanceOf(CredentialValidationException.class);
     }
