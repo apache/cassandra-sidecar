@@ -55,7 +55,7 @@ public class CertificateCredentials implements Credentials
         }
         catch (SSLPeerUnverifiedException e)
         {
-            return null;
+            return Collections.emptyList();
         }
     }
 
