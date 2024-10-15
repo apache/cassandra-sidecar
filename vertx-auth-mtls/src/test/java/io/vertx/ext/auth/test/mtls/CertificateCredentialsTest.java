@@ -48,7 +48,7 @@ public class CertificateCredentialsTest
     }
 
     @Test
-    public void testNonCertificateBasedConnection() throws Exception
+    public void testNonCertificateBasedConnection()
     {
         HttpServerRequest request = mock(HttpServerRequest.class);
         HttpConnection connection = mock(HttpConnection.class);
