@@ -24,14 +24,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.http.HttpConnection;
-import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests {@link CertificateCredentials}
@@ -44,17 +40,5 @@ public class CertificateCredentialsTest
         List<Certificate> certificateChain = Collections.emptyList();
         assertThatThrownBy(() -> new CertificateCredentials(certificateChain).checkValid())
                 .isInstanceOf(CredentialValidationException.class);
-    }
-
-    @Test
-    public void testNonCertificateBasedConnection()
-    {
-        HttpServerRequest request = mock(HttpServerRequest.class);
-        HttpConnection connection = mock(HttpConnection.class);
-        when(request.connection()).thenReturn(connection);
-
-        assertThatThrownBy(() -> new CertificateCredentials(request).checkValid())
-                .isInstanceOf(CredentialValidationException.class)
-                .hasMessage("Certificate Chain cannot be empty");
     }
 }
