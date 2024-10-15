@@ -19,7 +19,6 @@
 package io.vertx.ext.auth.test.mtls;
 
 import java.security.cert.Certificate;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
