@@ -28,9 +28,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator;
-import io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl;
-import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,12 +38,17 @@ import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.TokenCredentials;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
 import io.vertx.ext.auth.mtls.CertificateValidator;
+import io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator;
+import io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl;
 import io.vertx.ext.auth.mtls.impl.MutualTlsAuthenticationProvider;
+import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests {@link MutualTlsAuthenticationProvider}

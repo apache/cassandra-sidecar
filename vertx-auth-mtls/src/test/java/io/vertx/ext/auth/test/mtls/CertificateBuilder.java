@@ -68,13 +68,13 @@ public class CertificateBuilder
 
     public CertificateBuilder notBefore(Date notBefore)
     {
-        this.notBefore = notBefore;
+        this.notBefore = Date.from(notBefore.toInstant());
         return this;
     }
 
     public CertificateBuilder notAfter(Date notAfter)
     {
-        this.notAfter = notAfter;
+        this.notAfter = Date.from(notBefore.toInstant());
         return this;
     }
 
