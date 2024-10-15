@@ -38,26 +38,6 @@ public class CertificateCredentials implements Credentials
         this.certificateChain = Collections.unmodifiableList(certificateChain);
     }
 
-    public CertificateCredentials(HttpServerRequest request)
-    {
-        this(extractCertificateChain(request));
-    }
-
-    /**
-     * @return The certificate chain as a list of certificates
-     */
-    private static List<Certificate> extractCertificateChain(HttpServerRequest request)
-    {
-        try
-        {
-            return request.connection().peerCertificates();
-        }
-        catch (Exception e)
-        {
-            throw new CredentialValidationException("Could not extract certificates from request", e);
-        }
-    }
-
     /**
      * @return The certificate chain contained in {@link CertificateCredentials}
      */
@@ -87,5 +67,25 @@ public class CertificateCredentials implements Credentials
     public JsonObject toJson()
     {
         throw new UnsupportedOperationException("Deprecated authentication method");
+    }
+
+    public static CertificateCredentials fromRequest(HttpServerRequest request)
+    {
+        return new CertificateCredentials(extractCertificateChain(request));
+    }
+
+    /**
+     * @return The certificate chain as a list of certificates
+     */
+    private static List<Certificate> extractCertificateChain(HttpServerRequest request)
+    {
+        try
+        {
+            return request.connection().peerCertificates();
+        }
+        catch (Exception e)
+        {
+            throw new InvalidCredentialException("Could not extract certificates from request", e);
+        }
     }
 }
