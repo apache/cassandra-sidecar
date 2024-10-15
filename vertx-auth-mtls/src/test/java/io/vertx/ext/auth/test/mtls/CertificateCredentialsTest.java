@@ -19,6 +19,7 @@
 package io.vertx.ext.auth.test.mtls;
 
 import java.security.cert.Certificate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -51,7 +52,7 @@ public class CertificateCredentialsTest
     {
         HttpServerRequest request = mock(HttpServerRequest.class);
         HttpConnection connection = mock(HttpConnection.class);
-        when(connection.peerCertificates()).thenReturn(Collections.emptyList());
+        when(connection.peerCertificates()).thenReturn(new ArrayList<>());
         when(request.connection()).thenReturn(connection);
 
         assertThatThrownBy(() -> new CertificateCredentials(request).checkValid())
