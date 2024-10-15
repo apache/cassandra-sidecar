@@ -21,7 +21,6 @@ package io.vertx.ext.auth.authentication;
 import java.security.cert.Certificate;
 import java.util.Collections;
 import java.util.List;
-import javax.net.ssl.SSLPeerUnverifiedException;
 
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
@@ -53,9 +52,9 @@ public class CertificateCredentials implements Credentials
         {
             return request.connection().peerCertificates();
         }
-        catch (SSLPeerUnverifiedException e)
+        catch (Exception e)
         {
-            return Collections.emptyList();
+            throw new CredentialValidationException("Could not extract certificates from request", e);
         }
     }
 
@@ -75,9 +74,9 @@ public class CertificateCredentials implements Credentials
     @Override
     public <V> void checkValid(V arg) throws CredentialValidationException
     {
-        if (certificateChain == null || certificateChain.isEmpty())
+        if (certificateChain.isEmpty())
         {
-            throw new CredentialValidationException("Certificate Chain cannot be null or empty");
+            throw new CredentialValidationException("Certificate Chain cannot be empty");
         }
     }
 

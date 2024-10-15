@@ -22,9 +22,9 @@ import java.security.cert.Certificate;
 import java.util.Collections;
 import java.util.List;
 
+import io.vertx.core.http.HttpConnection;
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.http.HttpConnection;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
