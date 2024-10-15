@@ -52,7 +52,6 @@ public class CertificateCredentialsTest
     {
         HttpServerRequest request = mock(HttpServerRequest.class);
         HttpConnection connection = mock(HttpConnection.class);
-        when(connection.peerCertificates()).thenReturn(new ArrayList<>());
         when(request.connection()).thenReturn(connection);
 
         assertThatThrownBy(() -> new CertificateCredentials(request).checkValid())
