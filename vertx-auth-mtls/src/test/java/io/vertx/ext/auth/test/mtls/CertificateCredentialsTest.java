@@ -42,7 +42,8 @@ public class CertificateCredentialsTest
     public void testEmptyCertificateChain()
     {
         List<Certificate> certificateChain = Collections.emptyList();
-        assertThatThrownBy(() -> new CertificateCredentials(certificateChain)).isInstanceOf(CredentialValidationException.class);
+        assertThatThrownBy(() -> new CertificateCredentials(certificateChain).checkValid())
+                .isInstanceOf(CredentialValidationException.class);
     }
 
     @Test
@@ -52,6 +53,7 @@ public class CertificateCredentialsTest
         HttpConnection connection = mock(HttpConnection.class);
         when(connection.peerCertificates()).thenReturn(Collections.emptyList());
         when(request.connection()).thenReturn(connection);
-        assertThatThrownBy(() -> new CertificateCredentials(request)).isInstanceOf(CredentialValidationException.class);
+        assertThatThrownBy(() -> new CertificateCredentials(request).checkValid())
+                .isInstanceOf(CredentialValidationException.class);
     }
 }

@@ -20,12 +20,12 @@ package io.vertx.ext.auth.mtls.impl;
 
 import java.security.cert.Certificate;
 import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import javax.naming.InvalidNameException;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
@@ -46,14 +46,6 @@ public class CertificateValidatorImpl implements CertificateValidator
     private final String trustedIssuerOrganizationUnit;
     private final String trustedIssuerCountry;
 
-    public CertificateValidatorImpl()
-    {
-        this.trustedCNs = Collections.emptySet();
-        this.trustedIssuerOrganization = null;
-        this.trustedIssuerOrganizationUnit = null;
-        this.trustedIssuerCountry = null;
-    }
-
     public CertificateValidatorImpl(Set<String> trustedCNs,
                                     String trustedIssuerOrganization,
                                     String trustedIssuerOrganizationUnit,
@@ -66,60 +58,72 @@ public class CertificateValidatorImpl implements CertificateValidator
     }
 
     @Override
-    public boolean isValidCertificate(CertificateCredentials credentials)
+    public void verifyCertificate(CertificateCredentials credentials)
     {
         credentials.checkValid();
+        // First certificate in certificate chain is usually PrivateKeyEntry.
         Certificate certificate = credentials.certificateChain().get(0);
-        if (certificate instanceof X509Certificate)
+        if (!(certificate instanceof X509Certificate))
         {
-            X509Certificate castedCert = (X509Certificate) certificate;
-            if (!isValidIssuer(castedCert))
-            {
-                return false;
-            }
-
-            try
-            {
-                castedCert.checkValidity();
-                return true;
-            }
-            catch (CertificateExpiredException e)
-            {
-                throw new CredentialValidationException("Expired certificates shared for authentication");
-            }
-            catch (Exception e)
-            {
-                return false;
-            }
+            throw new CredentialValidationException("No X509Certificate found for validating");
         }
-        return false;
+
+        X509Certificate castedCert = (X509Certificate) certificate;
+        validateIssuer(castedCert);
+        try
+        {
+            castedCert.checkValidity();
+        }
+        catch (CertificateExpiredException e)
+        {
+            throw new CredentialValidationException("Expired certificates shared for authentication", e);
+        }
+        catch (CertificateNotYetValidException e)
+        {
+            throw new CredentialValidationException("Invalid certificates shared", e);
+        }
     }
 
-    private boolean isValidIssuer(X509Certificate certificate)
+    private void validateIssuer(X509Certificate certificate)
     {
         List<Attributes> issuerAttrs;
         try
         {
             issuerAttrs = getAttributes(new LdapName(certificate.getIssuerDN().getName()));
-
-            boolean trustedCN
-            = trustedCNs.isEmpty() || trustedCNs.contains(getAttribute(issuerAttrs, "CN"));
-            boolean trustedOrganization
-            = trustedIssuerOrganization == null || getAttribute(issuerAttrs, "O").equalsIgnoreCase(trustedIssuerOrganization);
-            boolean trustedOrganizationUnit
-            = trustedIssuerOrganizationUnit == null || getAttribute(issuerAttrs, "OU").equalsIgnoreCase(trustedIssuerOrganizationUnit);
-            boolean trustedCountry
-            = trustedIssuerCountry == null || getAttribute(issuerAttrs, "C").equalsIgnoreCase(trustedIssuerCountry);
-
-            return trustedCN && trustedOrganization && trustedOrganizationUnit && trustedCountry;
-        }
-        catch (InvalidNameException e)
-        {
-            throw new CredentialValidationException("Certificate issuer could not be verified");
+            validateCN(issuerAttrs);
+            validateAttribute(issuerAttrs, "O", trustedIssuerOrganization);
+            validateAttribute(issuerAttrs, "OU", trustedIssuerOrganizationUnit);
+            validateAttribute(issuerAttrs, "C", trustedIssuerCountry);
         }
         catch (NamingException e)
         {
-            throw new CredentialValidationException("Error validating certificate issuer");
+            throw new CredentialValidationException("Expected issuer attributes could not be extracted", e);
+        }
+    }
+
+    private void validateCN(List<Attributes> attributes) throws NamingException
+    {
+        if (trustedCNs.isEmpty())
+        {
+            return;
+        }
+        String attribute = getAttribute(attributes, "CN");
+        if (!trustedCNs.contains(attribute))
+        {
+            throw new CredentialValidationException("CN " + attribute + " not trusted");
+        }
+    }
+
+    private void validateAttribute(List<Attributes> attributes, String attributeName, String trustedAttribute) throws NamingException
+    {
+        if (trustedAttribute == null)
+        {
+            return;
+        }
+        String attribute = getAttribute(attributes, attributeName);
+        if (!attribute.equalsIgnoreCase(trustedAttribute))
+        {
+            throw new CredentialValidationException(attribute + " attribute not trusted");
         }
     }
 

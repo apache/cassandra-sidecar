@@ -19,9 +19,8 @@
 package io.vertx.ext.auth.mtls.impl;
 
 import java.security.cert.Certificate;
-import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -29,27 +28,49 @@ import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
 
 /**
- * {@link CertificateIdentityExtractor} implementation for SPIFFE certificates for extracting SPIFFE identity.
+ * {@link CertificateIdentityExtractor} implementation for SPIFFE certificates for extracting valid SPIFFE identity.
  * SPIFFE is a URI, present as part of SAN of client certificates, it uniquely identifies client.
  */
 public class SpiffeIdentityExtractor implements CertificateIdentityExtractor
 {
+    // SpiffeIdentityExtractor can extract and validate only URI type SAN identities. As per RFC 5280 standards,
+    // here https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.6 URI type is represented with number 6.
     private static final int SUBJECT_ALT_NAME_URI_TYPE = 6;
     private static final String SPIFFE_PREFIX = "spiffe://";
+    private final String trustedDomain;
+
+    public SpiffeIdentityExtractor()
+    {
+        this(null);
+    }
+
+    public SpiffeIdentityExtractor(String trustedDomain)
+    {
+        this.trustedDomain = trustedDomain;
+    }
 
     @Override
-    public String identity(Certificate[] certificateChain) throws CredentialValidationException, CertificateParsingException
+    public String validIdentity(List<Certificate> certificateChain) throws CredentialValidationException
     {
-        X509Certificate[] castedCerts = castCertsToX509(certificateChain);
-        if (castedCerts.length == 0)
+        List<X509Certificate> castedCerts = castCertsToX509(certificateChain);
+        if (castedCerts.isEmpty())
         {
-            throw new CredentialValidationException("No based X509Certificate found for validating");
+            throw new CredentialValidationException("Certificate chain shared is empty");
         }
-        X509Certificate privateCert = castedCerts[0];
 
-        Collection<List<?>> subjectAltNames = privateCert.getSubjectAlternativeNames();
-        if (subjectAltNames != null && !subjectAltNames.isEmpty())
+        // First certificate in certificate chain is usually PrivateKeyEntry.
+        X509Certificate privateCert = castedCerts.get(0);
+
+        String identity = extractIdentity(privateCert);
+        validateIdentity(identity);
+        return identity;
+    }
+
+    protected String extractIdentity(X509Certificate certificate)
+    {
+        try
         {
+            Collection<List<?>> subjectAltNames = certificate.getSubjectAlternativeNames();
             for (List<?> item : subjectAltNames)
             {
                 Integer type = (Integer) item.get(0);
@@ -60,23 +81,64 @@ public class SpiffeIdentityExtractor implements CertificateIdentityExtractor
                 }
             }
         }
+        catch (Exception e)
+        {
+            throw new CredentialValidationException("Error reading SAN of certificate", e);
+        }
+        throw new CredentialValidationException("Unable to extract SPIFFE identity from certificate");
+    }
 
-        throw new CredentialValidationException("Unable to extract valid Spiffe ID from certificate");
+    protected void validateIdentity(String identity)
+    {
+        verifyPrefix(identity);
+        if (trustedDomain != null)
+        {
+            verifyDomain(identity);
+        }
     }
 
     /**
-     * Filters instances of {@link X509Certificate} certificates and returns the certificate chain as
-     * {@link X509Certificate} certificates.
+     * Filters instances of {@link X509Certificate} certificates and returns chain of {@link X509Certificate} certificates.
      *
      * @param certificateChain client certificate chain
-     * @return an array of {@link X509Certificate} certificates
+     * @return chain of {@link X509Certificate} certificates
      */
-    private X509Certificate[] castCertsToX509(Certificate[] certificateChain) throws CredentialValidationException
+    private List<X509Certificate> castCertsToX509(List<Certificate> certificateChain) throws CredentialValidationException
     {
-        if (certificateChain == null || certificateChain.length == 0)
+        List<X509Certificate> x509Certs = new ArrayList<>();
+        for (Certificate cert : certificateChain)
         {
-            throw new CredentialValidationException("Certificate chain shared is empty");
+            if (cert instanceof X509Certificate)
+            {
+                x509Certs.add((X509Certificate) cert);
+            }
         }
-        return Arrays.stream(certificateChain).filter(certificate -> certificate instanceof X509Certificate).toArray(X509Certificate[]::new);
+        return x509Certs;
+    }
+
+    private void verifyPrefix(String identity)
+    {
+        if (!identity.startsWith(SPIFFE_PREFIX))
+        {
+            throw new CredentialValidationException("Spiffe identity must start with prefix " + SPIFFE_PREFIX);
+        }
+    }
+
+    private void verifyDomain(String identity)
+    {
+        String uriSuffix = identity.replaceFirst(SPIFFE_PREFIX, "");
+        String[] uriSuffixParts = uriSuffix.split("/");
+        boolean domainPresentCheck = uriSuffixParts.length > 0;
+
+        if (!domainPresentCheck)
+        {
+            throw new CredentialValidationException("Spiffe identity extracted " + identity + " does not contain domain information");
+        }
+
+        String domain = uriSuffixParts[0];
+        if (!domain.equals(trustedDomain))
+        {
+            throw new CredentialValidationException("Spiffe Identity domain " + domain + " is not trusted");
+        }
     }
 }

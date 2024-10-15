@@ -18,8 +18,6 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
-import java.security.cert.Certificate;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -29,7 +27,6 @@ import io.vertx.ext.auth.authentication.AuthenticationProvider;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.Credentials;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
-import io.vertx.ext.auth.mtls.CertificateIdentityValidator;
 import io.vertx.ext.auth.mtls.CertificateValidator;
 
 /**
@@ -40,15 +37,12 @@ public class MutualTlsAuthenticationProvider implements AuthenticationProvider
 {
     private final CertificateValidator certificateValidator;
     private final CertificateIdentityExtractor identityExtractor;
-    private final CertificateIdentityValidator identityValidator;
 
     public MutualTlsAuthenticationProvider(CertificateValidator certificateValidator,
-                                           CertificateIdentityExtractor identityExtractor,
-                                           CertificateIdentityValidator identityValidator)
+                                           CertificateIdentityExtractor identityExtractor)
     {
         this.certificateValidator = certificateValidator;
         this.identityExtractor = identityExtractor;
-        this.identityValidator = identityValidator;
     }
 
     @Override
@@ -60,31 +54,22 @@ public class MutualTlsAuthenticationProvider implements AuthenticationProvider
         }
 
         CertificateCredentials certificateCredentials = (CertificateCredentials) credentials;
-        String identity;
         try
         {
-            certificateValidator.isValidCertificate(certificateCredentials);
-            identity = identityExtractor.identity(certificateCredentials.certificateChain().toArray(new Certificate[0]));
+            certificateValidator.verifyCertificate(certificateCredentials);
+            String identity = identityExtractor.validIdentity(certificateCredentials.certificateChain());
+            return Future.succeededFuture(User.fromName(identity));
         }
         catch (Exception e)
         {
-            return Future.failedFuture("Invalid certificate passed");
+            return Future.failedFuture(e);
         }
-
-        if (identity == null || identity.isEmpty())
-        {
-            return Future.failedFuture("Could not extract identity from certificate");
-        }
-        if (!identityValidator.isValidIdentity(identity))
-        {
-            return Future.failedFuture("Certificate identity is not a valid identity");
-        }
-        return Future.succeededFuture(User.fromName(identity));
     }
 
     /**
-     * @deprecated use {@code authenticate(Credentials credentials, Handler<AsyncResult<User>> resultHandler)} instead
+     * Use {@code authenticate(Credentials credentials, Handler<AsyncResult<User>> resultHandler)} instead
      */
+    @Deprecated
     @Override
     public void authenticate(JsonObject credentials, Handler<AsyncResult<User>> resultHandler)
     {

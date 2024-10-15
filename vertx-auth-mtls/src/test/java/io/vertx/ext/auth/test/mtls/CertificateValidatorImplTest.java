@@ -32,7 +32,6 @@ import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.CertificateValidator;
 import io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
@@ -52,7 +51,7 @@ public class CertificateValidatorImplTest
                 = CertificateBuilder.builder()
                 .issuerName("CN=Vertx Auth, OU=ssl_test, O=Vertx, L=Unknown, ST=Unknown, C=US").buildSelfSigned();
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
-        assertThat(certificateValidator.isValidCertificate(credentials)).isTrue();
+        certificateValidator.verifyCertificate(credentials);
     }
 
     @Test
@@ -64,7 +63,9 @@ public class CertificateValidatorImplTest
                 .trustedIssuerCountry("US").build();
         Certificate certificate = mock(Certificate.class);
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
-        assertThat(certificateValidator.isValidCertificate(credentials)).isFalse();
+        assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
+                .isInstanceOf(CredentialValidationException.class)
+                .hasMessage("No X509Certificate found for validating");
     }
 
     @Test
@@ -78,7 +79,9 @@ public class CertificateValidatorImplTest
                 = CertificateBuilder.builder()
                 .issuerName("CN=Vertx Auth, OU=ssl_test, O=NonTrustedOrganization, L=Unknown, ST=Unknown, C=US").buildSelfSigned();
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
-        assertThat(certificateValidator.isValidCertificate(credentials)).isFalse();
+        assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
+                .isInstanceOf(CredentialValidationException.class)
+                .hasMessage("NonTrustedOrganization attribute not trusted");
     }
 
     @Test
@@ -92,7 +95,9 @@ public class CertificateValidatorImplTest
                 = CertificateBuilder.builder()
                 .issuerName("CN=Vertx Auth, OU=ssl_test, L=Unknown, ST=Unknown, C=US").buildSelfSigned();
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
-        assertThatThrownBy(() -> certificateValidator.isValidCertificate(credentials)).isInstanceOf(CredentialValidationException.class);
+        assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
+                .isInstanceOf(CredentialValidationException.class)
+                .hasMessage("Expected attribute O not found");
     }
 
     @Test
@@ -107,7 +112,7 @@ public class CertificateValidatorImplTest
                 .notAfter(Date.from(Instant.now().minus(1, ChronoUnit.DAYS)))
                 .issuerName("CN=Vertx Auth, OU=ssl_test, O=Vertx, L=Unknown, ST=Unknown, C=US").buildSelfSigned();
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
-        assertThatThrownBy(() -> certificateValidator.isValidCertificate(credentials))
+        assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
                 .isInstanceOf(CredentialValidationException.class)
                 .hasMessage("Expired certificates shared for authentication");
     }

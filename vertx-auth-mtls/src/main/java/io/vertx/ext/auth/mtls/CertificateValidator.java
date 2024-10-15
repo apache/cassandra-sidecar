@@ -18,9 +18,8 @@
 
 package io.vertx.ext.auth.mtls;
 
-import java.security.cert.CertificateParsingException;
-
 import io.vertx.ext.auth.authentication.CertificateCredentials;
+import io.vertx.ext.auth.authentication.CredentialValidationException;
 
 /**
  * Interface for validating certificates for mutual TLS authentication.
@@ -30,7 +29,7 @@ import io.vertx.ext.auth.authentication.CertificateCredentials;
 public interface CertificateValidator
 {
     /**
-     * Perform any checks that are to be performed on the certificate before authenticating user.
+     * Validates if certificates shared as part of {@link CertificateCredentials} are valid.
      *
      * <p>For example:
      * <ul>
@@ -41,7 +40,7 @@ public interface CertificateValidator
      * </ul>
      *
      * @param credentials user certificate credentials shared
-     * @return {@code true} if the credentials are valid, {@code false} otherwise
+     * @throws CredentialValidationException when certificate is not valid.
      */
-    boolean isValidCertificate(CertificateCredentials credentials) throws CertificateParsingException;
+    void verifyCertificate(CertificateCredentials credentials) throws CredentialValidationException;
 }

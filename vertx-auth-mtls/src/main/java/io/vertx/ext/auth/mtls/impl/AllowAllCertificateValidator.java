@@ -31,12 +31,11 @@ public class AllowAllCertificateValidator implements CertificateValidator
     /**
      * Marks all shared {@link CertificateCredentials} as valid.
      *
-     * @param credentials client credentials shared with
-     * @return {@code true} regardless of user credentials shared
+     * @param credentials client credentials shared
      */
     @Override
-    public boolean isValidCertificate(CertificateCredentials credentials)
+    public void verifyCertificate(CertificateCredentials credentials)
     {
-        return true;
+        // do nothing
     }
 }
