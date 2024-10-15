@@ -205,7 +205,6 @@ public class MutualTlsAuthenticationTest
 
         mTlsAuth = new MutualTlsAuthenticationProvider(certificateValidator, identityExtracter);
 
-        Date yesterday = Date.from(Instant.now().minus(1, ChronoUnit.DAYS));
         X509Certificate certificate
                 = CertificateBuilder
                 .builder()
