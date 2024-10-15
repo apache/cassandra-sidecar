@@ -18,9 +18,7 @@
 
 package io.vertx.ext.auth.mtls;
 
-import java.security.cert.Certificate;
-import java.util.List;
-
+import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 
 /**
@@ -30,7 +28,7 @@ import io.vertx.ext.auth.authentication.CredentialValidationException;
 public interface CertificateIdentityExtractor
 {
     /**
-     * Extracts a valid identity out of {@code List<Certificate>} certificate chain. This identity can later be used
+     * Extracts a valid identity out of {@link CertificateCredentials} certificate chain. This identity can later be used
      * for authorizing user's resource level permissions. If a valid identity could not be extracted, then throws
      * {@code CredentialValidationException}
      *
@@ -41,9 +39,9 @@ public interface CertificateIdentityExtractor
      *  <li>any other fields in the certificate can be combined and be used as identifier of the certificate
      * </ul>
      *
-     * @param certificateChain certificate chain of user
+     * @param certificateCredentials certificate chain of user that is already verified
      * @return {@code String} identity string extracted from certificate, uniquely represents client
      * @throws CredentialValidationException when a valid identity cannot be extracted from certificate chain.
      */
-    String validIdentity(List<Certificate> certificateChain) throws CredentialValidationException;
+    String validIdentity(CertificateCredentials certificateCredentials) throws CredentialValidationException;
 }

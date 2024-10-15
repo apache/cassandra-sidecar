@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.vertx.ext.auth.test.mtls;
+package io.vertx.ext.auth.mtls.impl;
 
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -38,10 +38,6 @@ import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.TokenCredentials;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
 import io.vertx.ext.auth.mtls.CertificateValidator;
-import io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator;
-import io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl;
-import io.vertx.ext.auth.mtls.impl.MutualTlsAuthenticationProvider;
-import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -77,7 +73,7 @@ public class MutualTlsAuthenticationTest
         List<Certificate> certChain = Collections.singletonList(validCert.cert());
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
-        when(mockIdentityExtracter.validIdentity(certChain)).thenReturn("default");
+        when(mockIdentityExtracter.validIdentity(credentials)).thenReturn("default");
 
         mTlsAuth.authenticate(credentials)
                 .onFailure(res -> context.failNow("mTls should have succeeded"))
@@ -185,7 +181,7 @@ public class MutualTlsAuthenticationTest
         List<Certificate> certChain = Collections.singletonList(validCert.cert());
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
-        when(mockIdentityExtracter.validIdentity(certChain)).thenThrow(new RuntimeException("Bad Identity"));
+        when(mockIdentityExtracter.validIdentity(credentials)).thenThrow(new RuntimeException("Bad Identity"));
 
         mTlsAuth.authenticate(credentials)
                 .onSuccess(res -> context.failNow("Should have failed"))

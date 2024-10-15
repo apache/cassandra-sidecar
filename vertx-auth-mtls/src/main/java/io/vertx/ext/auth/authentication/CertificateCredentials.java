@@ -19,6 +19,7 @@
 package io.vertx.ext.auth.authentication;
 
 import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,10 +33,33 @@ import io.vertx.core.json.JsonObject;
 public class CertificateCredentials implements Credentials
 {
     private final List<Certificate> certificateChain;
+    private final X509Certificate peerCertificate;
+
+    public CertificateCredentials(Certificate certificate)
+    {
+        this(Collections.singletonList(certificate));
+    }
 
     public CertificateCredentials(List<Certificate> certificateChain)
     {
         this.certificateChain = Collections.unmodifiableList(certificateChain);
+        this.peerCertificate = getPeerCertificate();
+    }
+
+    /**
+     * Create {@link CertificateCredentials} from {@link HttpServerRequest}
+     * @return CertificateCredentials
+     */
+    public static CertificateCredentials fromHttpRequest(HttpServerRequest request)
+    {
+        try
+        {
+            return new CertificateCredentials(request.connection().peerCertificates());
+        }
+        catch (Exception e)
+        {
+            throw new IllegalArgumentException("Could not extract certificates from request", e);
+        }
     }
 
     /**
@@ -44,6 +68,14 @@ public class CertificateCredentials implements Credentials
     public List<Certificate> certificateChain()
     {
         return certificateChain;
+    }
+
+    /**
+     * @return peer's certificate. It does not return null value once {@link #checkValid()} passes
+     */
+    public X509Certificate peerCertificate()
+    {
+        return peerCertificate;
     }
 
     public void checkValid() throws CredentialValidationException
@@ -69,23 +101,14 @@ public class CertificateCredentials implements Credentials
         throw new UnsupportedOperationException("Deprecated authentication method");
     }
 
-    public static CertificateCredentials fromRequest(HttpServerRequest request)
+    private X509Certificate getPeerCertificate()
     {
-        return new CertificateCredentials(extractCertificateChain(request));
-    }
+        // First certificate in the chain is peer's own cert
+        if (!certificateChain.isEmpty() && certificateChain.get(0) instanceof X509Certificate)
+        {
+            return (X509Certificate) certificateChain.get(0);
+        }
 
-    /**
-     * @return The certificate chain as a list of certificates
-     */
-    private static List<Certificate> extractCertificateChain(HttpServerRequest request)
-    {
-        try
-        {
-            return request.connection().peerCertificates();
-        }
-        catch (Exception e)
-        {
-            throw new InvalidCredentialException("Could not extract certificates from request", e);
-        }
+        return null;
     }
 }

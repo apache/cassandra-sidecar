@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-package io.vertx.ext.auth.test.mtls;
+package io.vertx.ext.auth.mtls.impl;
 
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
 
+import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
-import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,15 +46,16 @@ public class SpiffeIdentityExtractorTest
                 .issuerName("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
                 .addSanUriName("spiffe://vertx.auth/unitTest/mtls")
                 .buildSelfSigned();
-        assertThat(identityExtractor.validIdentity(Collections.singletonList(certificate))).isEqualTo("spiffe://vertx.auth/unitTest/mtls");
+        assertThat(identityExtractor.validIdentity(new CertificateCredentials(certificate)))
+        .isEqualTo("spiffe://vertx.auth/unitTest/mtls");
     }
 
     @Test
     public void testDifferentCertificateType()
     {
         Certificate mockCertificate = mock(Certificate.class);
-        assertThatThrownBy(() -> identityExtractor.validIdentity(Collections.singletonList(mockCertificate)))
-                .isInstanceOf(CredentialValidationException.class);
+        assertThatThrownBy(() -> identityExtractor.validIdentity(new CertificateCredentials(mockCertificate)))
+        .isInstanceOf(CredentialValidationException.class);
     }
 
     @Test
@@ -67,9 +67,9 @@ public class SpiffeIdentityExtractorTest
                 .issuerName("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
                 .addSanUriName("randomuri://extracted/from/certificate")
                 .buildSelfSigned();
-        assertThatThrownBy(() -> identityExtractor.validIdentity(Collections.singletonList(certificate)))
-                .isInstanceOf(CredentialValidationException.class)
-                .hasMessage("Unable to extract SPIFFE identity from certificate");
+        assertThatThrownBy(() -> identityExtractor.validIdentity(new CertificateCredentials(certificate)))
+        .isInstanceOf(CredentialValidationException.class)
+        .hasMessage("Unable to extract SPIFFE identity from certificate");
     }
 
     @Test
@@ -80,9 +80,9 @@ public class SpiffeIdentityExtractorTest
                 .builder()
                 .issuerName("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
                 .buildSelfSigned();
-        assertThatThrownBy(() -> identityExtractor.validIdentity(Collections.singletonList(certificate)))
-                .isInstanceOf(CredentialValidationException.class)
-                .hasMessage("Error reading SAN of certificate");
+        assertThatThrownBy(() -> identityExtractor.validIdentity(new CertificateCredentials(certificate)))
+        .isInstanceOf(CredentialValidationException.class)
+        .hasMessage("Error reading SAN of certificate");
     }
 
     @Test
@@ -95,8 +95,17 @@ public class SpiffeIdentityExtractorTest
                 .addSanUriName("spiffe://nontrusted/unitTest/mtls")
                 .buildSelfSigned();
         SpiffeIdentityExtractor identityExtractorWithTrust = new SpiffeIdentityExtractor("vertx.auth");
-        assertThatThrownBy(() -> identityExtractorWithTrust.validIdentity(Collections.singletonList(certificate)))
+        assertThatThrownBy(() -> identityExtractorWithTrust.validIdentity(new CertificateCredentials(certificate)))
+        .isInstanceOf(CredentialValidationException.class)
+        .hasMessage("Spiffe Identity domain nontrusted is not trusted");
+    }
+
+    @Test
+    public void testNonX509CertificatePeerCertificate()
+    {
+        Certificate certificate = mock(Certificate.class);
+        assertThatThrownBy(() -> identityExtractor.validIdentity(new CertificateCredentials(certificate)))
                 .isInstanceOf(CredentialValidationException.class)
-                .hasMessage("Spiffe Identity domain nontrusted is not trusted");
+                .hasMessage("No X509Certificate found for validating");
     }
 }

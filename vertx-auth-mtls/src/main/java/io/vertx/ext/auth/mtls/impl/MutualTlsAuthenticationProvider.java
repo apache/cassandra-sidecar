@@ -57,7 +57,7 @@ public class MutualTlsAuthenticationProvider implements AuthenticationProvider
         try
         {
             certificateValidator.verifyCertificate(certificateCredentials);
-            String identity = identityExtractor.validIdentity(certificateCredentials.certificateChain());
+            String identity = identityExtractor.validIdentity(certificateCredentials);
             return Future.succeededFuture(User.fromName(identity));
         }
         catch (Exception e)

@@ -18,12 +18,11 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
-import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
 
@@ -50,16 +49,15 @@ public class SpiffeIdentityExtractor implements CertificateIdentityExtractor
     }
 
     @Override
-    public String validIdentity(List<Certificate> certificateChain) throws CredentialValidationException
+    public String validIdentity(CertificateCredentials certificateCredentials) throws CredentialValidationException
     {
-        List<X509Certificate> castedCerts = castCertsToX509(certificateChain);
-        if (castedCerts.isEmpty())
-        {
-            throw new CredentialValidationException("Certificate chain shared is empty");
-        }
-
         // First certificate in certificate chain is usually PrivateKeyEntry.
-        X509Certificate privateCert = castedCerts.get(0);
+        X509Certificate privateCert = certificateCredentials.peerCertificate();
+
+        if (privateCert == null)
+        {
+            throw new CredentialValidationException("No X509Certificate found for validating");
+        }
 
         String identity = extractIdentity(privateCert);
         validateIdentity(identity);
@@ -95,25 +93,6 @@ public class SpiffeIdentityExtractor implements CertificateIdentityExtractor
         {
             verifyDomain(identity);
         }
-    }
-
-    /**
-     * Filters instances of {@link X509Certificate} certificates and returns chain of {@link X509Certificate} certificates.
-     *
-     * @param certificateChain client certificate chain
-     * @return chain of {@link X509Certificate} certificates
-     */
-    private List<X509Certificate> castCertsToX509(List<Certificate> certificateChain) throws CredentialValidationException
-    {
-        List<X509Certificate> x509Certs = new ArrayList<>();
-        for (Certificate cert : certificateChain)
-        {
-            if (cert instanceof X509Certificate)
-            {
-                x509Certs.add((X509Certificate) cert);
-            }
-        }
-        return x509Certs;
     }
 
     private void verifyPrefix(String identity)

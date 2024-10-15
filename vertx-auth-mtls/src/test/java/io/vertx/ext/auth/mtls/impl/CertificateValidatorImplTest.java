@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.vertx.ext.auth.test.mtls;
+package io.vertx.ext.auth.mtls.impl;
 
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
@@ -30,8 +30,8 @@ import org.junit.jupiter.api.Test;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.CertificateValidator;
-import io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl;
 
+import static io.vertx.ext.auth.authentication.CertificateCredentialsTest.createTestCredentials;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
@@ -40,27 +40,23 @@ import static org.mockito.Mockito.mock;
  */
 public class CertificateValidatorImplTest
 {
+    private final CertificateValidator certificateValidator = CertificateValidatorImpl.builder()
+                                                                                      .trustedCNs(Collections.singleton("Vertx Auth"))
+                                                                                      .trustedIssuerOrganization("Vertx")
+                                                                                      .trustedIssuerOrganizationUnit("ssl_test")
+                                                                                      .trustedIssuerCountry("US")
+                                                                                      .build();
+
     @Test
-    public void testValidCertificateCredentials() throws Exception
+    public void testValidCertificateCredentials()
     {
-        CertificateValidator certificateValidator
-                = CertificateValidatorImpl.builder().trustedCNs(Collections.singleton("Vertx Auth"))
-                .trustedIssuerOrganization("Vertx").trustedIssuerOrganizationUnit("ssl_test")
-                .trustedIssuerCountry("US").build();
-        X509Certificate certificate
-                = CertificateBuilder.builder()
-                .issuerName("CN=Vertx Auth, OU=ssl_test, O=Vertx, L=Unknown, ST=Unknown, C=US").buildSelfSigned();
-        CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
+        CertificateCredentials credentials = createTestCredentials();
         certificateValidator.verifyCertificate(credentials);
     }
 
     @Test
-    public void testInvalidCertificateType() throws Exception
+    public void testInvalidCertificateType()
     {
-        CertificateValidator certificateValidator
-                = CertificateValidatorImpl.builder().trustedCNs(Collections.singleton("Vertx Auth"))
-                .trustedIssuerOrganization("Vertx").trustedIssuerOrganizationUnit("ssl_test")
-                .trustedIssuerCountry("US").build();
         Certificate certificate = mock(Certificate.class);
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
         assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
@@ -69,32 +65,24 @@ public class CertificateValidatorImplTest
     }
 
     @Test
-    public void testNonTrustedIssuer() throws Exception
+    public void testNonTrustedIssuer()
     {
-        CertificateValidator certificateValidator
-                = CertificateValidatorImpl.builder().trustedCNs(Collections.singleton("Vertx Auth"))
-                .trustedIssuerOrganization("Vertx").trustedIssuerOrganizationUnit("ssl_test")
-                .trustedIssuerCountry("US").build();
-        X509Certificate certificate
-                = CertificateBuilder.builder()
-                .issuerName("CN=Vertx Auth, OU=ssl_test, O=NonTrustedOrganization, L=Unknown, ST=Unknown, C=US").buildSelfSigned();
-        CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
+        CertificateCredentials credentials = createTestCredentials("CN=Vertx Auth, OU=ssl_test, " +
+                                                                   "O=NonTrustedOrganization, " +
+                                                                   "L=Unknown, ST=Unknown, C=US");
         assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
                 .isInstanceOf(CredentialValidationException.class)
                 .hasMessage("NonTrustedOrganization attribute not trusted");
     }
 
     @Test
-    public void testInvalidIssuer() throws Exception
+    public void testInvalidIssuer()
     {
         CertificateValidator certificateValidator
                 = CertificateValidatorImpl.builder().trustedCNs(Collections.singleton("Vertx Auth"))
                 .trustedIssuerOrganization("MissingIssuerOrganization").trustedIssuerOrganizationUnit("ssl_test")
                 .trustedIssuerCountry("US").build();
-        X509Certificate certificate
-                = CertificateBuilder.builder()
-                .issuerName("CN=Vertx Auth, OU=ssl_test, L=Unknown, ST=Unknown, C=US").buildSelfSigned();
-        CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
+        CertificateCredentials credentials = createTestCredentials("CN=Vertx Auth, OU=ssl_test, L=Unknown, ST=Unknown, C=US");
         assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
                 .isInstanceOf(CredentialValidationException.class)
                 .hasMessage("Expected attribute O not found");
@@ -103,10 +91,6 @@ public class CertificateValidatorImplTest
     @Test
     public void testExpiredCertificate() throws Exception
     {
-        CertificateValidator certificateValidator
-                = CertificateValidatorImpl.builder().trustedCNs(Collections.singleton("Vertx Auth"))
-                .trustedIssuerOrganization("Vertx").trustedIssuerOrganizationUnit("ssl_test")
-                .trustedIssuerCountry("US").build();
         X509Certificate certificate
                 = CertificateBuilder.builder()
                 .notAfter(Date.from(Instant.now().minus(1, ChronoUnit.DAYS)))

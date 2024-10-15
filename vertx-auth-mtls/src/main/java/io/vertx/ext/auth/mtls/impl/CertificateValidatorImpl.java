@@ -18,7 +18,6 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
-import java.security.cert.Certificate;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
@@ -61,18 +60,15 @@ public class CertificateValidatorImpl implements CertificateValidator
     public void verifyCertificate(CertificateCredentials credentials)
     {
         credentials.checkValid();
-        // First certificate in certificate chain is usually PrivateKeyEntry.
-        Certificate certificate = credentials.certificateChain().get(0);
-        if (!(certificate instanceof X509Certificate))
+        X509Certificate peerCertificate = credentials.peerCertificate();
+        if (peerCertificate == null)
         {
             throw new CredentialValidationException("No X509Certificate found for validating");
         }
-
-        X509Certificate castedCert = (X509Certificate) certificate;
-        validateIssuer(castedCert);
+        validateIssuer(peerCertificate);
         try
         {
-            castedCert.checkValidity();
+            peerCertificate.checkValidity();
         }
         catch (CertificateExpiredException e)
         {
