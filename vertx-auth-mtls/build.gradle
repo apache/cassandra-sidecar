@@ -53,7 +53,7 @@ dependencies {
     implementation(group: 'io.vertx', name: 'vertx-codegen', version: "$vertxVersion")
     testImplementation(group: 'org.assertj', name: 'assertj-core', version: '3.26.3')
     testImplementation(group: 'org.mockito', name: 'mockito-core', version: '4.11.0')
-    testFixturesApi(group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.70')
+    testFixturesApi(group: 'org.bouncycastle', name: 'bcpkix-jdk18on', version: '1.78.1')
 }
 
 java {
