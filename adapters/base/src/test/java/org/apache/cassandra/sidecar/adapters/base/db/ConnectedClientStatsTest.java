@@ -92,14 +92,20 @@ public class ConnectedClientStatsTest
         {
             ks = "test";
             authMode = "password";
-            authMetadata = new HashMap<String, String>() {{
+            authMetadata = new HashMap<String, String>()
+            {
+                {
                 put("identity", TEST_SPIFFE_IDENTITY);
-            }};
-            clientOptions = new HashMap<String, String>() {{
+                }
+            };
+            clientOptions = new HashMap<String, String>()
+            {
+                {
                 put("CQL_VERSION", "3.4.6");
                 put("DRIVER_NAME", "DataStax Python Driver");
                 put("DRIVER_VERSION", "3.25.0");
-            }};
+                }
+            };
             when(mockRow.getColumnDefinitions().contains(anyString())).thenReturn(true);
         }
 
