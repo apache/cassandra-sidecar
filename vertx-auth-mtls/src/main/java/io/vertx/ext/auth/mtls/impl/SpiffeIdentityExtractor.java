@@ -99,7 +99,7 @@ public class SpiffeIdentityExtractor implements CertificateIdentityExtractor
     {
         if (!identity.startsWith(SPIFFE_PREFIX))
         {
-            throw new CredentialValidationException("Spiffe identity must start with prefix " + SPIFFE_PREFIX);
+            throw new CredentialValidationException("SPIFFE identity must start with prefix " + SPIFFE_PREFIX);
         }
     }
 
@@ -111,13 +111,13 @@ public class SpiffeIdentityExtractor implements CertificateIdentityExtractor
 
         if (!domainPresentCheck)
         {
-            throw new CredentialValidationException("Spiffe identity extracted " + identity + " does not contain domain information");
+            throw new CredentialValidationException("SPIFFE identity extracted " + identity + " does not contain domain information");
         }
 
         String domain = uriSuffixParts[0];
         if (!domain.equals(trustedDomain))
         {
-            throw new CredentialValidationException("Spiffe Identity domain " + domain + " is not trusted");
+            throw new CredentialValidationException("SPIFFE Identity domain " + domain + " is not trusted");
         }
     }
 }

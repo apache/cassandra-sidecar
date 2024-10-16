@@ -32,7 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import auth.mtls.utils.CertificateBuilder;
+import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.TokenCredentials;

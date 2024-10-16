@@ -23,7 +23,7 @@ import java.security.cert.X509Certificate;
 
 import org.junit.jupiter.api.Test;
 
-import auth.mtls.utils.CertificateBuilder;
+import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 
@@ -98,7 +98,7 @@ public class SpiffeIdentityExtractorTest
         SpiffeIdentityExtractor identityExtractorWithTrust = new SpiffeIdentityExtractor("vertx.auth");
         assertThatThrownBy(() -> identityExtractorWithTrust.validIdentity(new CertificateCredentials(certificate)))
         .isInstanceOf(CredentialValidationException.class)
-        .hasMessage("Spiffe Identity domain nontrusted is not trusted");
+        .hasMessage("SPIFFE Identity domain nontrusted is not trusted");
     }
 
     @Test

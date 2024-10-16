@@ -27,7 +27,7 @@ import java.util.Date;
 
 import org.junit.jupiter.api.Test;
 
-import auth.mtls.utils.CertificateBuilder;
+import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.CertificateValidator;

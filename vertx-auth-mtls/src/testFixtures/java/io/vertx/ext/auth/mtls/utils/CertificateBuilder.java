@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package auth.mtls.utils;
+package io.vertx.ext.auth.mtls.utils;
 
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
