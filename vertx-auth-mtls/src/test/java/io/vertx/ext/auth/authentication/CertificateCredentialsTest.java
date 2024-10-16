@@ -61,6 +61,15 @@ public class CertificateCredentialsTest
         .hasMessage("Could not extract certificates from request");
     }
 
+    @Test
+    void testToJson()
+    {
+        Certificate certificate = mock(Certificate.class);
+        CertificateCredentials credentials = new CertificateCredentials(certificate);
+        assertThatThrownBy(() -> credentials.toJson())
+        .isInstanceOf(UnsupportedOperationException.class);
+    }
+
     public static CertificateCredentials createTestCredentials()
     {
         return createTestCredentials("CN=Vertx Auth, OU=ssl_test, O=Vertx, L=Unknown, ST=Unknown, C=US");

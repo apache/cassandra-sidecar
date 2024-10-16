@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.TokenCredentials;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
@@ -42,6 +43,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -244,5 +246,17 @@ public class MutualTlsAuthenticationTest
                     assertThat(res.getMessage()).contains("Error reading SAN of certificate");
                     context.completeNow();
                 }));
+    }
+
+    @Test
+    public void testAuthenticateWithJson()
+    {
+        CertificateIdentityExtractor mockIdentityExtracter = mock(CertificateIdentityExtractor.class);
+
+        mTlsAuth = new MutualTlsAuthenticationImpl(ALLOW_ALL_CERTIFICATE_VALIDATOR, mockIdentityExtracter);
+        JsonObject json = new JsonObject();
+
+        assertThatThrownBy(() -> mTlsAuth.authenticate(json, user -> {}))
+        .isInstanceOf(UnsupportedOperationException.class);
     }
 }
