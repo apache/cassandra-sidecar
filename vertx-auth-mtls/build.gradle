@@ -21,6 +21,7 @@ import java.nio.file.Paths
 plugins {
     id('java-library')
     id('idea')
+    id('maven-publish')
     id('java-test-fixtures')
 }
 
@@ -58,6 +59,17 @@ dependencies {
 java {
     withJavadocJar()
     withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            groupId project.group
+            artifactId "${archivesBaseName}"
+            version System.getenv("CODE_VERSION") ?: "${version}"
+        }
+    }
 }
 
 javadoc {
