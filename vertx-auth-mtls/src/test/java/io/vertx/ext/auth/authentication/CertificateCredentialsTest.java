@@ -25,8 +25,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import auth.mtls.utils.CertificateBuilder;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.ext.auth.mtls.impl.CertificateBuilder;
 
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -71,8 +71,8 @@ public class CertificateCredentialsTest
         try
         {
             X509Certificate certificate = CertificateBuilder.builder()
-                                            .issuerName(issuerName)
-                                            .buildSelfSigned();
+                                                            .issuerName(issuerName)
+                                                            .buildSelfSigned();
             return new CertificateCredentials(Collections.singletonList(certificate));
         }
         catch (Exception e)

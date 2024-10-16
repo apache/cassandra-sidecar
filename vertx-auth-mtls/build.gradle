@@ -21,17 +21,13 @@ import java.nio.file.Paths
 plugins {
     id('java-library')
     id('idea')
-    id('maven-publish')
+    id('java-test-fixtures')
 }
 
 group 'org.apache.cassandra.sidecar'
 version project.version
 
 sourceCompatibility = 1.8
-
-repositories {
-    mavenCentral()
-}
 
 test {
     useJUnitPlatform()
@@ -50,27 +46,17 @@ configurations {
 }
 
 dependencies {
-    implementation(group: 'io.vertx', name: 'vertx-auth-common', version: '4.5.8')
-    testImplementation(group: 'io.vertx', name: 'vertx-junit5', version: '4.5.8')
+    // We keep Vert.x version latest here, for easier contribution back to Vert.x project
+    implementation(group: 'io.vertx', name: 'vertx-auth-common', version: '4.5.10')
+    testImplementation(group: 'io.vertx', name: 'vertx-junit5', version: '4.5.10')
     testImplementation(group: 'org.assertj', name: 'assertj-core', version: '3.26.3')
     testImplementation(group: 'org.mockito', name: 'mockito-core', version: '2.1.0')
-    testImplementation(group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.70')
+    testFixturesImplementation(group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.70')
 }
 
 java {
     withJavadocJar()
     withSourcesJar()
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-            groupId project.group
-            artifactId "${archivesBaseName}"
-            version System.getenv("CODE_VERSION") ?: "${version}"
-        }
-    }
 }
 
 javadoc {

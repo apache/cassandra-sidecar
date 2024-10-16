@@ -28,18 +28,19 @@ import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.Credentials;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
 import io.vertx.ext.auth.mtls.CertificateValidator;
+import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
 
 /**
  * {@link AuthenticationProvider} implementation for mTLS (MutualTLS) authentication. With mTLS authentication
  * both server and client exchange certificates and validates each other's certificates.
  */
-public class MutualTlsAuthenticationProvider implements AuthenticationProvider
+public class MutualTlsAuthenticationImpl implements MutualTlsAuthentication
 {
     private final CertificateValidator certificateValidator;
     private final CertificateIdentityExtractor identityExtractor;
 
-    public MutualTlsAuthenticationProvider(CertificateValidator certificateValidator,
-                                           CertificateIdentityExtractor identityExtractor)
+    public MutualTlsAuthenticationImpl(CertificateValidator certificateValidator,
+                                       CertificateIdentityExtractor identityExtractor)
     {
         this.certificateValidator = certificateValidator;
         this.identityExtractor = identityExtractor;

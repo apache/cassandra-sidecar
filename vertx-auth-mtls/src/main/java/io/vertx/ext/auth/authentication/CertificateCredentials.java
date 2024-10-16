@@ -48,6 +48,7 @@ public class CertificateCredentials implements Credentials
 
     /**
      * Create {@link CertificateCredentials} from {@link HttpServerRequest}
+     *
      * @return CertificateCredentials
      */
     public static CertificateCredentials fromHttpRequest(HttpServerRequest request)

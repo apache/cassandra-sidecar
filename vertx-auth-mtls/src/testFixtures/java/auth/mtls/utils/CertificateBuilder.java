@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.vertx.ext.auth.mtls.impl;
+package auth.mtls.utils;
 
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
@@ -58,7 +58,7 @@ public class CertificateBuilder
     private Date notBefore = Date.from(Instant.now().minus(1, ChronoUnit.DAYS));
     private Date notAfter = Date.from(Instant.now().plus(1, ChronoUnit.DAYS));
     private X500Name issuerName;
-    private List<GeneralName> subjectAlternativeNames = new ArrayList<>();
+    private final List<GeneralName> subjectAlternativeNames = new ArrayList<>();
 
     public CertificateBuilder serial(BigInteger serial)
     {
