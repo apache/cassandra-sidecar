@@ -47,9 +47,9 @@ configurations {
 
 dependencies {
     // We keep Vert.x version latest here, for easier contribution back to Vert.x project
-    implementation(group: 'io.vertx', name: 'vertx-auth-common', version: '4.5.10')
-    implementation(group: 'io.vertx', name: 'vertx-junit5', version: '4.5.10')
-    testImplementation(group: 'io.vertx', name: 'vertx-codegen', version: '4.5.10')
+    implementation(group: 'io.vertx', name: 'vertx-auth-common', version: "$vertxVersion")
+    implementation(group: 'io.vertx', name: 'vertx-junit5', version: "$vertxVersion")
+    implementation(group: 'io.vertx', name: 'vertx-codegen', version: "$vertxVersion")
     testImplementation(group: 'org.assertj', name: 'assertj-core', version: '3.26.3')
     testImplementation(group: 'org.mockito', name: 'mockito-core', version: '4.11.0')
     testFixturesApi(group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.70')
