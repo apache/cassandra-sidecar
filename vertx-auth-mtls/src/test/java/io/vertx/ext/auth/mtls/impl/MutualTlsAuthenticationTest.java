@@ -38,6 +38,7 @@ import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.TokenCredentials;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
 import io.vertx.ext.auth.mtls.CertificateValidator;
+import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
 import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -55,7 +56,7 @@ import static org.mockito.Mockito.when;
 public class MutualTlsAuthenticationTest
 {
     private static final CertificateValidator ALLOW_ALL_CERTIFICATE_VALIDATOR = new AllowAllCertificateValidator();
-    MutualTlsAuthenticationImpl mTlsAuth;
+    MutualTlsAuthentication mTlsAuth;
     SelfSignedCertificate validCert;
 
     @BeforeEach
@@ -71,7 +72,7 @@ public class MutualTlsAuthenticationTest
     {
         CertificateIdentityExtractor mockIdentityExtracter = mock(CertificateIdentityExtractor.class);
 
-        mTlsAuth = new MutualTlsAuthenticationImpl(ALLOW_ALL_CERTIFICATE_VALIDATOR, mockIdentityExtracter);
+        mTlsAuth = MutualTlsAuthentication.create(ALLOW_ALL_CERTIFICATE_VALIDATOR, mockIdentityExtracter);
         List<Certificate> certChain = Collections.singletonList(validCert.cert());
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
