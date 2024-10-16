@@ -19,6 +19,8 @@
 package org.apache.cassandra.sidecar.adapters.base.db;
 
 import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -67,16 +69,39 @@ public class ConnectedClientStatsTest
     {
         ColumnDefinitions mockColumnDefinitions = mock(ColumnDefinitions.class);
         when(mockRow.getColumnDefinitions()).thenReturn(mockColumnDefinitions);
-        when(mockRow.getColumnDefinitions().contains(anyString())).thenAnswer(i -> {
-            String input = i.getArgument(0, String.class);
-            return !("keyspace_name".equals(input)
-                     || "authentication_mode".equals(input)
-                     || "authentication_metadata".equals(input)
-                     || "client_options".equals(input));
-        });
 
-        String clientOptionsStr = "{ \"CQL_VERSION\": \"3.4.6\", \"DRIVER_NAME\": \"DataStax Python Driver\", \"DRIVER_VERSION\": \"3.25.0\" }";
-        String authMetadataStr = "{ \"identity\": \"" + TEST_SPIFFE_IDENTITY + "\" }";
+        String ks;
+        String authMode;
+        Map<String, String> authMetadata = null;
+        Map<String, String> clientOptions = null;
+
+        // Case where the fields introduced in newer C* versions are not present
+        if (isMissingFields)
+        {
+            ks = null;
+            authMode = null;
+            when(mockRow.getColumnDefinitions().contains(anyString())).thenAnswer(i -> {
+                String input = i.getArgument(0, String.class);
+                return !("keyspace_name".equals(input)
+                         || "authentication_mode".equals(input)
+                         || "authentication_metadata".equals(input)
+                         || "client_options".equals(input));
+            });
+        }
+        else
+        {
+            ks = "test";
+            authMode = "password";
+            authMetadata = new HashMap<String, String>() {{
+                put("identity", TEST_SPIFFE_IDENTITY);
+            }};
+            clientOptions = new HashMap<String, String>() {{
+                put("CQL_VERSION", "3.4.6");
+                put("DRIVER_NAME", "DataStax Python Driver");
+                put("DRIVER_VERSION", "3.25.0");
+            }};
+            when(mockRow.getColumnDefinitions().contains(anyString())).thenReturn(true);
+        }
 
         when(mockRow.getInet("address")).thenReturn(InetAddress.getLoopbackAddress());
         when(mockRow.getInt("port")).thenReturn(0);
@@ -90,13 +115,10 @@ public class ConnectedClientStatsTest
         when(mockRow.getString("ssl_protocol")).thenReturn("");
         when(mockRow.getString("ssl_cipher_suite")).thenReturn("");
         when(mockRow.getLong("request_count")).thenReturn(10L);
-        String ks = isMissingFields ? null : "test";
-        String authMode = isMissingFields ? null : "password";
-        String authMetadata = isMissingFields ? null : authMetadataStr;
-        String clientOptions = isMissingFields ? null : clientOptionsStr;
         when(mockRow.getString("keyspace_name")).thenReturn(ks);
+        when(mockRow.getMap("authentication_metadata", String.class, String.class)).thenReturn(authMetadata);
         when(mockRow.getString("authentication_mode")).thenReturn(authMode);
-        when(mockRow.getString("authentication_metadata")).thenReturn(authMetadata);
-        when(mockRow.getString("client_options")).thenReturn(clientOptions);
+        when(mockRow.getMap("client_options", String.class, String.class)).thenReturn(clientOptions);
+
     }
 }
