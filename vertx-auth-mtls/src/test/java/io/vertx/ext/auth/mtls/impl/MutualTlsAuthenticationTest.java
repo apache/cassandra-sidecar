@@ -257,7 +257,8 @@ public class MutualTlsAuthenticationTest
         mTlsAuth = new MutualTlsAuthenticationImpl(ALLOW_ALL_CERTIFICATE_VALIDATOR, mockIdentityExtracter);
         JsonObject json = new JsonObject();
 
-        assertThatThrownBy(() -> mTlsAuth.authenticate(json, user -> {}))
+        assertThatThrownBy(() -> mTlsAuth.authenticate(json, user -> {
+        }))
         .isInstanceOf(UnsupportedOperationException.class);
     }
 }
