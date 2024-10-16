@@ -60,11 +60,9 @@ public class MutualTlsAuthenticationTest
     SelfSignedCertificate validCert;
 
     @BeforeEach
-    public void setUp() throws CertificateException, InterruptedException
+    public void setUp() throws CertificateException
     {
         validCert = new SelfSignedCertificate();
-        VertxTestContext context = new VertxTestContext();
-        context.awaitCompletion(5, TimeUnit.SECONDS);
     }
 
     @Test
