@@ -18,12 +18,14 @@
 
 package io.vertx.ext.auth.mtls;
 
+import io.vertx.codegen.annotations.VertxGen;
 import io.vertx.ext.auth.authentication.AuthenticationProvider;
 import io.vertx.ext.auth.mtls.impl.MutualTlsAuthenticationImpl;
 
 /**
  * Factory interface for creating a MTLS {@link io.vertx.ext.auth.authentication.AuthenticationProvider}.
  */
+@VertxGen
 public interface MutualTlsAuthentication extends AuthenticationProvider
 {
     /**
