@@ -163,7 +163,7 @@ public class ConnectedConnectedClientStatsHandlerIntegrationTest extends Integra
         List<ClientConnectionEntry> stats = clientStats.clientConnections();
         if (isSummary)
         {
-            assertThat(stats).isEmpty();
+            assertThat(stats).isNull();
         }
         else
         {
