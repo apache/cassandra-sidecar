@@ -27,10 +27,10 @@ import java.util.Date;
 
 import org.junit.jupiter.api.Test;
 
-import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.CertificateValidator;
+import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
 
 import static io.vertx.ext.auth.authentication.CertificateCredentialsTest.createTestCredentials;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

@@ -25,8 +25,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
 
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
