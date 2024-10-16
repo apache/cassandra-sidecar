@@ -50,8 +50,8 @@ dependencies {
     implementation(group: 'io.vertx', name: 'vertx-auth-common', version: '4.5.10')
     testImplementation(group: 'io.vertx', name: 'vertx-junit5', version: '4.5.10')
     testImplementation(group: 'org.assertj', name: 'assertj-core', version: '3.26.3')
-    testImplementation(group: 'org.mockito', name: 'mockito-core', version: '2.1.0')
-    testFixturesImplementation(group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.70')
+    testImplementation(group: 'org.mockito', name: 'mockito-core', version: '4.11.0')
+    testFixturesApi(group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.70')
 }
 
 java {

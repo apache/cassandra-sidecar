@@ -27,6 +27,8 @@ import org.junit.jupiter.api.Test;
 
 import auth.mtls.utils.CertificateBuilder;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.impl.Http1xServerRequest;
+import io.vertx.core.http.impl.Http2ServerRequest;
 
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -54,7 +56,7 @@ public class CertificateCredentialsTest
     @Test
     void testNonCertificateBasedConnection()
     {
-        HttpServerRequest request = mock(HttpServerRequest.class);
+        Http1xServerRequest request = mock(Http1xServerRequest.class);
 
         assertThatThrownBy(() -> CertificateCredentials.fromHttpRequest(request))
         .isInstanceOf(IllegalArgumentException.class)
