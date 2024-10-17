@@ -34,6 +34,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
@@ -155,6 +156,12 @@ public class CassandraAdapter implements ICassandraAdapter
     public StorageOperations storageOperations()
     {
         return new CassandraStorageOperations(jmxClient, dnsResolver);
+    }
+
+    @Override
+    public MetricsOperations metricsOperations()
+    {
+        return new CassandraMetricsOperations(cqlSessionProvider);
     }
 
     /**

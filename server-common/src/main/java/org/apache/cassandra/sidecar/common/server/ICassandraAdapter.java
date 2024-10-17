@@ -74,6 +74,12 @@ public interface ICassandraAdapter
     StorageOperations storageOperations();
 
     /**
+     * @return the {@link MetricsOperations} implementation for the Cassandra cluster
+     */
+    MetricsOperations metricsOperations();
+
+
+    /**
      * @return the {@link ClusterMembershipOperations} implementation for handling cluster membership operations
      */
     ClusterMembershipOperations clusterMembershipOperations();
