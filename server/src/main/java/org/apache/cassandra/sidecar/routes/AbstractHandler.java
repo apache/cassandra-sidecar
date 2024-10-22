@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +32,9 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
@@ -40,6 +43,7 @@ import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 
@@ -96,6 +100,25 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
         {
             processFailure(exception, context, host, remoteAddress, requestParams);
         }
+    }
+
+    protected void ifMetricsOpsAvailable(RoutingContext context,
+                                         String host,
+                                         Consumer<MetricsOperations> ifAvailable)
+    {
+        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+        if (delegate == null)
+        {
+            context.fail(cassandraServiceUnavailable());
+            return;
+        }
+        MetricsOperations operations = delegate.metricsOperations();
+        if (operations == null)
+        {
+            context.fail(cassandraServiceUnavailable());
+            return;
+        }
+         ifAvailable.accept(operations);
     }
 
     /**

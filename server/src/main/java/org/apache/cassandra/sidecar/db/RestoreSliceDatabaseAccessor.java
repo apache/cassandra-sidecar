@@ -40,12 +40,15 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 @Singleton
 public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlicesSchema>
 {
+    private final SidecarSchema sidecarSchema;
+
     @Inject
     protected RestoreSliceDatabaseAccessor(SidecarSchema sidecarSchema,
                                            RestoreSlicesSchema restoreSlicesSchema,
                                            CQLSessionProvider cqlSessionProvider)
     {
-        super(sidecarSchema, restoreSlicesSchema, cqlSessionProvider);
+        super(restoreSlicesSchema, cqlSessionProvider);
+        this.sidecarSchema = sidecarSchema;
     }
 
     public RestoreSlice create(RestoreSlice slice)

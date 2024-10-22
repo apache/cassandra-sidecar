@@ -31,7 +31,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Abstract schema
  */
-abstract class AbstractSchema
+public abstract class AbstractSchema
 {
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     private boolean initialized = false;

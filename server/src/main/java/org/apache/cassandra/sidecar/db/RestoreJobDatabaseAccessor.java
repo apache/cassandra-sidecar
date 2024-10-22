@@ -55,13 +55,16 @@ import org.jetbrains.annotations.Nullable;
 public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSchema>
 {
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    public final SidecarSchema sidecarSchema;
 
     @Inject
     public RestoreJobDatabaseAccessor(SidecarSchema sidecarSchema,
                                       RestoreJobsSchema restoreJobsSchema,
                                       CQLSessionProvider cqlSessionProvider)
     {
-        super(sidecarSchema, restoreJobsSchema, cqlSessionProvider);
+        super(restoreJobsSchema, cqlSessionProvider);
+        this.sidecarSchema = sidecarSchema;
+
     }
 
     public RestoreJob create(CreateRestoreJobRequestPayload payload, QualifiedTableName qualifiedTableName)
