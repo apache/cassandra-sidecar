@@ -1403,13 +1403,16 @@ abstract class SidecarClientTest
     @Test
     public void testConnectedClientStats() throws Exception
     {
-        String connectedClientStatsResponseAsString = "{\"clientConnections\":[{\"address\":\"127.0.0.1\",\"port\":54628,\"sslEnabled\":false" +
-                                                      ",\"sslCipherSuite\":\"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256\",\"sslProtocol\":\"TLSv1.2\"" +
-                                                      ",\"protocolVersion\":\"5\",\"username\":\"anonymous\",\"requestCount\":39,\"driverName\":\"DataStax Java Driver\"" +
-                                                      ",\"driverVersion\":\"3.11.3\",\"keyspaceName\":\"test\",\"authenticationMode\":\"MutualTls\"" +
+        String connectedClientStatsResponseAsString = "{\"clientConnections\":[{\"address\":\"127.0.0.1\",\"port\":54628" +
+                                                      ",\"sslEnabled\":false,\"sslCipherSuite\":\"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256\"" +
+                                                      ",\"sslProtocol\":\"TLSv1.2\",\"protocolVersion\":\"5\",\"username\":\"anonymous\"" +
+                                                      ",\"requestCount\":39,\"driverName\":\"DataStax Java Driver\"" +
+                                                      ",\"driverVersion\":\"3.11.3\",\"keyspaceName\":\"test\"" +
+                                                      ",\"authenticationMode\":\"MutualTls\"" +
                                                       ",\"authenticationMetadata\":{\"identity\":\"spiffe://test.cassandra.apache.org/unitTest/mtls\"}" +
-                                                      ",\"clientOptions\":{\"CQL_VERSION\":\"3.4.6\",\"DRIVER_NAME\":\"DataStax Python Driver\",\"DRIVER_VERSION\":\"3.25.0\"}}]" +
-                                                      ",\"totalConnectedClients\":1,\"connectionsByUser\":{\"anonymous\":1}}";
+                                                      ",\"clientOptions\":{\"CQL_VERSION\":\"3.4.6\",\"DRIVER_NAME\":\"DataStax Python Driver\"" +
+                                                      ",\"DRIVER_VERSION\":\"3.25.0\"}}],\"totalConnectedClients\":1" +
+                                                      ",\"connectionsByUser\":{\"anonymous\":1}}";
 
         MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(connectedClientStatsResponseAsString);
         enqueue(response);

@@ -22,8 +22,14 @@ import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 
+/**
+ * Represents a request get the stats related to the clients connected to the node
+ */
 public class ConnectedClientStatsRequest extends JsonRequest<ConnectedClientStatsResponse>
 {
+    /**
+     * Constructs a request to retrieve the Cassandra node stats connected clients information
+     */
     public ConnectedClientStatsRequest()
     {
         super(ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE);
