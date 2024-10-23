@@ -16,24 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.http;
+package org.apache.cassandra.sidecar.common.request;
+
+import io.netty.handler.codec.http.HttpMethod;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.response.JobStatusResponse;
 
 /**
- * Custom header names for sidecar
+ * Represents a request to retrieve the status of a async job
  */
-public final class SidecarHttpHeaderNames
+public class JobStatusRequest extends JsonRequest<JobStatusResponse>
 {
-    /**
-     * {@code "cassandra-content-xxhash32"}
-     */
-    public static final String CONTENT_XXHASH32 = "cassandra-content-xxhash32";
-    /**
-     * {@code "cassandra-content-xxhash32-seed"}
-     */
-    public static final String CONTENT_XXHASH32_SEED = "cassandra-content-xxhash32-seed";
 
     /**
-     * {@code "cassandra-sidecar-job-uuid"}
+     * Constructs a request to retrieve status for a specified job
      */
-    public static final String ASYNC_JOB_UUID = "cassandra-sidecar-job-uuid";
+    public JobStatusRequest(String jobId)
+    {
+        super(ApiEndpointsV1.JOB_STATUS_ROUTE
+              .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, jobId));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public HttpMethod method()
+    {
+        return HttpMethod.GET;
+    }
 }

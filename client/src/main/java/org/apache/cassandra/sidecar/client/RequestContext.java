@@ -34,6 +34,8 @@ import org.apache.cassandra.sidecar.common.request.ClearSnapshotRequest;
 import org.apache.cassandra.sidecar.common.request.CreateSnapshotRequest;
 import org.apache.cassandra.sidecar.common.request.GossipInfoRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
+import org.apache.cassandra.sidecar.common.request.JobStatusRequest;
+import org.apache.cassandra.sidecar.common.request.ListJobsRequest;
 import org.apache.cassandra.sidecar.common.request.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
 import org.apache.cassandra.sidecar.common.request.Request;
@@ -71,6 +73,7 @@ public class RequestContext
     protected static final NodeSettingsRequest NODE_SETTINGS_REQUEST = new NodeSettingsRequest();
     protected static final RingRequest RING_REQUEST = new RingRequest();
     protected static final GossipInfoRequest GOSSIP_INFO_REQUEST = new GossipInfoRequest();
+    protected static final ListJobsRequest LIST_JOBS_REQUEST = new ListJobsRequest();
     protected static final RetryPolicy DEFAULT_RETRY_POLICY = new NoRetryPolicy();
     protected static final RetryPolicy DEFAULT_EXPONENTIAL_BACKOFF_RETRY_POLICY =
     new ExponentialBackoffRetryPolicy(10, 500L, 60_000L);
@@ -473,6 +476,29 @@ public class RequestContext
         {
             return request(new UploadSSTableRequest(keyspace, tableName, uploadId, component, digest, filename));
         }
+
+        /**
+         * Sets the {@code request} to be a {@link JobStatusRequest} and returns a reference to this Builder
+         * enabling method chaining.
+         *
+         * @return a reference to this Builder
+         */
+        public Builder jobStatusRequest(String jobId)
+        {
+            return request(new JobStatusRequest(jobId));
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link ListJobsRequest} and returns a reference to this Builder
+         * enabling method chaining.
+         *
+         * @return a reference to this Builder
+         */
+        public Builder listJobsRequest()
+        {
+            return request(LIST_JOBS_REQUEST);
+        }
+
 
         /**
          * Sets the {@code retryPolicy} to be an
