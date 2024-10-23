@@ -109,6 +109,9 @@ public final class ApiEndpointsV1
     public static final String ABORT_RESTORE_JOB_ROUTE = RESTORE_JOB_ROUTE + ABORT;
     public static final String RESTORE_JOB_PROGRESS_ROUTE = RESTORE_JOB_ROUTE + PROGRESS;
 
+    public static final String LIST_JOBS_ROUTE = API_V1 + CASSANDRA + "/jobs";
+    public static final String JOB_STATUS_ROUTE = API_V1 + CASSANDRA + "/jobs/" + JOB_ID_PATH_PARAM + "/status";
+
     private ApiEndpointsV1()
     {
         throw new IllegalStateException(getClass() + " is a constants container and shall not be instantiated");

@@ -79,6 +79,7 @@ import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.job.JobTracker;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
@@ -89,7 +90,9 @@ import org.apache.cassandra.sidecar.routes.CassandraHealthHandler;
 import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.GossipInfoHandler;
+import org.apache.cassandra.sidecar.routes.JobStatusHandler;
 import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
+import org.apache.cassandra.sidecar.routes.ListJobsHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
@@ -210,6 +213,8 @@ public class MainModule extends AbstractModule
                               AbortRestoreJobHandler abortRestoreJobHandler,
                               CreateRestoreSliceHandler createRestoreSliceHandler,
                               RestoreJobProgressHandler restoreJobProgressHandler,
+                              JobStatusHandler jobStatusHandler,
+                              ListJobsHandler listJobsHandler,
                               ErrorHandler errorHandler)
     {
         Router router = Router.router(vertx);
@@ -293,6 +298,12 @@ public class MainModule extends AbstractModule
 
         router.get(ApiEndpointsV1.RING_ROUTE)
               .handler(ringHandler);
+
+        router.get(ApiEndpointsV1.JOB_STATUS_ROUTE)
+              .handler(jobStatusHandler);
+
+        router.get(ApiEndpointsV1.LIST_JOBS_ROUTE)
+              .handler(listJobsHandler);
 
         router.get(ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE)
               .handler(ringHandler);
@@ -581,6 +592,13 @@ public class MainModule extends AbstractModule
     public LocalTokenRangesProvider localTokenRangesProvider(InstancesConfig instancesConfig, DnsResolver dnsResolver)
     {
         return new CachedLocalTokenRanges(instancesConfig, dnsResolver);
+    }
+
+    @Provides
+    @Singleton
+    public JobTracker jobTracker()
+    {
+        return new JobTracker(64);
     }
 
     /**

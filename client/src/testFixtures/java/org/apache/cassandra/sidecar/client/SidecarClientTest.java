@@ -68,6 +68,8 @@ import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
+import org.apache.cassandra.sidecar.common.response.JobStatusResponse;
+import org.apache.cassandra.sidecar.common.response.ListJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
@@ -78,6 +80,7 @@ import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
+import org.apache.cassandra.sidecar.common.utils.JobResult;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
@@ -1262,6 +1265,45 @@ abstract class SidecarClientTest
                                         .toByteArray();
             assertThat(new String(bytes, StandardCharsets.UTF_8)).isEqualTo("TOC.txt\nSt");
         }
+    }
+
+    @Test
+    public void testJobStatus() throws Exception
+    {
+        UUID jobId = UUID.randomUUID();
+        String jobStatusAsString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"Running\",\"operation\":\"test\"}";
+
+        MockResponse response = new MockResponse()
+                                .setResponseCode(OK.code())
+                                .setHeader("content-type", "application/json")
+                                .setBody(jobStatusAsString);
+        enqueue(response);
+
+        JobStatusResponse result = client.jobStatus(jobId.toString()).get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.jobId()).isEqualTo(jobId);
+        assertThat(result.status()).isEqualTo(JobResult.JobStatus.Running);
+        assertThat(result.operation()).isEqualTo("test");
+        validateResponseServed(ApiEndpointsV1.JOB_STATUS_ROUTE.replaceAll(JOB_ID_PATH_PARAM, jobId.toString()));
+    }
+
+    @Test
+    public void testlistJobs() throws Exception
+    {
+        UUID jobId = UUID.randomUUID();
+        String listJobsString = "{\"jobs\":[{\"jobId\":\"" + jobId + "\",\"status\":\"Running\",\"failureReason\":\"\",\"operation\":\"test\"}]}";
+
+        MockResponse response = new MockResponse()
+                                .setResponseCode(OK.code())
+                                .setHeader("content-type", "application/json")
+                                .setBody(listJobsString);
+        enqueue(response);
+
+        ListJobsResponse result = client.listJobs().get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.jobs()).isNotNull();
+        assertThat(result.jobs().get(0).jobId).isEqualTo(jobId);
+        validateResponseServed(ApiEndpointsV1.LIST_JOBS_ROUTE);
     }
 
     @Test
