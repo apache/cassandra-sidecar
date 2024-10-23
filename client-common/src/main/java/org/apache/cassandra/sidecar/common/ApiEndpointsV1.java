@@ -118,6 +118,9 @@ public final class ApiEndpointsV1
 
     public static final String CONNECTED_CLIENT_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/connected-clients";
 
+    public static final String LIST_JOBS_ROUTE = API_V1 + CASSANDRA + "/jobs";
+    public static final String JOB_STATUS_ROUTE = API_V1 + CASSANDRA + "/jobs/" + JOB_ID_PATH_PARAM + "/status";
+
     private ApiEndpointsV1()
     {
         throw new IllegalStateException(getClass() + " is a constants container and shall not be instantiated");

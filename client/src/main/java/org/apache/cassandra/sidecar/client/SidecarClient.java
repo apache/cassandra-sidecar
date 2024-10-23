@@ -51,6 +51,8 @@ import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestP
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
+import org.apache.cassandra.sidecar.common.response.JobStatusResponse;
+import org.apache.cassandra.sidecar.common.response.ListJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
@@ -592,6 +594,27 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                    .connectedClientStatsRequest()
                                    .build());
     }
+
+    /**
+     * Executes the job status request using the default retry policy and configured selection policy
+     *
+     * @return a completable future of the node settings
+     */
+    public CompletableFuture<JobStatusResponse> jobStatus(String jobId)
+    {
+        return executor.executeRequestAsync(requestBuilder().jobStatusRequest(jobId).build());
+    }
+
+    /**
+     * Executes the list jobs request using the default retry policy and configured selection policy
+     *
+     * @return a completable future of the jobs list
+     */
+    public CompletableFuture<ListJobsResponse> listJobs()
+    {
+        return executor.executeRequestAsync(requestBuilder().listJobsRequest().build());
+    }
+
 
     /**
      * Returns a copy of the request builder with the default parameters configured for the client.
