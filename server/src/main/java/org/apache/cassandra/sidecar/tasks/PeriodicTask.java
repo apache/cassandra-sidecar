@@ -80,7 +80,7 @@ public interface PeriodicTask
 
     /**
      * Specify whether the task should be skipped.
-     *
+     * // TODO: consider returning the reason to skip, instead of just a boolean value
      * @return {@code true} to skip; otherwise, return {@code false}
      */
     default boolean shouldSkip()

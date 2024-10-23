@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -37,8 +38,6 @@ import org.jetbrains.annotations.Nullable;
 public class ConsistencyVerifiers
 {
     private static final String UNKNOWN_DC = "ConsistencyVerifiers.UnknownDc";
-    private static final String ONLY_LOCAL_DC_CHECK_ERR_MSG = "Parameter 'all' should contain the write replicas " +
-                                                              "in local datacenter only";
 
     private ConsistencyVerifiers()
     {
@@ -138,19 +137,19 @@ public class ConsistencyVerifiers
         public static final ForOne INSTANCE = new ForOne();
 
         @Override
-        public Result verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
         {
             if (!succeeded.isEmpty())
             {
-                return Result.SATISFIED;
+                return ConsistencyVerificationResult.SATISFIED;
             }
 
             if (failed.size() == sum(all))
             {
-                return Result.FAILED;
+                return ConsistencyVerificationResult.FAILED;
             }
 
-            return Result.PENDING;
+            return ConsistencyVerificationResult.PENDING;
         }
     }
 
@@ -166,20 +165,20 @@ public class ConsistencyVerifiers
         public static final ForTwo INSTANCE = new ForTwo();
 
         @Override
-        public Result verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
         {
             if (succeeded.size() >= 2)
             {
-                return Result.SATISFIED;
+                return ConsistencyVerificationResult.SATISFIED;
             }
 
             // When it can at most pass on one instance, it must fail
             if (failed.size() == sum(all) - 1)
             {
-                return Result.FAILED;
+                return ConsistencyVerificationResult.FAILED;
             }
 
-            return Result.PENDING;
+            return ConsistencyVerificationResult.PENDING;
         }
     }
 
@@ -195,7 +194,7 @@ public class ConsistencyVerifiers
         public static final ForEachQuorum INSTANCE = new ForEachQuorum();
 
         @Override
-        public Result verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
         {
             // flatten and invert to get the mapping from instance to dc name
             Map<String, String> dcByInstance = new HashMap<>(sum(all));
@@ -233,15 +232,15 @@ public class ConsistencyVerifiers
             }
             if (allSatisfied)
             {
-                return Result.SATISFIED;
+                return ConsistencyVerificationResult.SATISFIED;
             }
 
             if (anyFailed)
             {
-                return Result.FAILED;
+                return ConsistencyVerificationResult.FAILED;
             }
 
-            return Result.PENDING;
+            return ConsistencyVerificationResult.PENDING;
         }
     }
 
@@ -257,19 +256,19 @@ public class ConsistencyVerifiers
         public static final ForQuorum INSTANCE = new ForQuorum();
 
         @Override
-        public Result verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
         {
             if (geQuorum(succeeded.size(), sum(all)))
             {
-                return Result.SATISFIED;
+                return ConsistencyVerificationResult.SATISFIED;
             }
 
             if (geQuorum(failed.size(), sum(all)))
             {
-                return Result.FAILED;
+                return ConsistencyVerificationResult.FAILED;
             }
 
-            return Result.PENDING;
+            return ConsistencyVerificationResult.PENDING;
         }
     }
 
@@ -285,19 +284,19 @@ public class ConsistencyVerifiers
         public static final ForAll INSTANCE = new ForAll();
 
         @Override
-        public Result verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
         {
             if (succeeded.size() == sum(all))
             {
-                return Result.SATISFIED;
+                return ConsistencyVerificationResult.SATISFIED;
             }
 
             if (!failed.isEmpty())
             {
-                return Result.FAILED;
+                return ConsistencyVerificationResult.FAILED;
             }
 
-            return Result.PENDING;
+            return ConsistencyVerificationResult.PENDING;
         }
     }
 
@@ -316,19 +315,19 @@ public class ConsistencyVerifiers
         }
 
         @Override
-        protected Result verifyForLocalDC(InstanceSetByDc localPassed, InstanceSetByDc localFailed, InstanceSetByDc localAll)
+        protected ConsistencyVerificationResult verifyForLocalDC(InstanceSetByDc localPassed, InstanceSetByDc localFailed, InstanceSetByDc localAll)
         {
             if (sum(localPassed) > 0)
             {
-                return Result.SATISFIED;
+                return ConsistencyVerificationResult.SATISFIED;
             }
 
             if (sum(localFailed) == sum(localAll))
             {
-                return Result.FAILED;
+                return ConsistencyVerificationResult.FAILED;
             }
 
-            return Result.PENDING;
+            return ConsistencyVerificationResult.PENDING;
         }
     }
 
@@ -347,21 +346,21 @@ public class ConsistencyVerifiers
         }
 
         @Override
-        protected Result verifyForLocalDC(InstanceSetByDc localPassed, InstanceSetByDc localFailed, InstanceSetByDc localAll)
+        protected ConsistencyVerificationResult verifyForLocalDC(InstanceSetByDc localPassed, InstanceSetByDc localFailed, InstanceSetByDc localAll)
         {
             // Over quorum instances have passed
             if (geQuorum(sum(localPassed), sum(localAll)))
             {
-                return Result.SATISFIED;
+                return ConsistencyVerificationResult.SATISFIED;
             }
 
             // Over quorum instances have failed
             if (geQuorum(sum(localFailed), sum(localAll)))
             {
-                return Result.FAILED;
+                return ConsistencyVerificationResult.FAILED;
             }
 
-            return Result.PENDING;
+            return ConsistencyVerificationResult.PENDING;
         }
     }
 
@@ -377,7 +376,7 @@ public class ConsistencyVerifiers
         }
 
         @Override
-        public Result verify(@NotNull Set<String> succeeded, @NotNull Set<String> failed, @NotNull InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(@NotNull Set<String> succeeded, @NotNull Set<String> failed, @NotNull InstanceSetByDc all)
         {
             Preconditions.checkArgument(all.containsDatacenter(localDatacenter),
                                         "Parameter 'all' should contain the local datacenter: " + localDatacenter);
@@ -388,6 +387,8 @@ public class ConsistencyVerifiers
             return verifyForLocalDC(localPassed, localFailed, localAll);
         }
 
-        protected abstract Result verifyForLocalDC(InstanceSetByDc localPassed, InstanceSetByDc localFailed, InstanceSetByDc localAll);
+        protected abstract ConsistencyVerificationResult verifyForLocalDC(InstanceSetByDc localPassed,
+                                                                          InstanceSetByDc localFailed,
+                                                                          InstanceSetByDc localAll);
     }
 }

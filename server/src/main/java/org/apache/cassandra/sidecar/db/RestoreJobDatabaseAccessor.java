@@ -124,6 +124,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         RestoreJobStatus status = payload.status();
         String jobAgent = payload.jobAgent();
         Date expireAt = payload.expireAtAsDate();
+        Long sliceCount = payload.sliceCount();
         // all updates are going to the same partition. We use unlogged explicitly.
         // Cassandra internally combine those updates into the same mutation.
         BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
@@ -157,6 +158,11 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         {
             batchStatement.add(tableSchema.updateExpireAt().bind(createdAt, jobId, expireAt));
             updateBuilder.expireAt(expireAt);
+        }
+        if (sliceCount != null)
+        {
+            batchStatement.add(tableSchema.updateSliceCount().bind(createdAt, jobId, sliceCount));
+            updateBuilder.sliceCount(sliceCount);
         }
 
         execute(batchStatement);

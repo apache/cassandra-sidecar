@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.exceptions;
 
 import org.apache.cassandra.sidecar.db.RestoreRange;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Utility methods to create {@link RestoreJobException}
@@ -28,18 +29,31 @@ public class RestoreJobExceptions
     private RestoreJobExceptions() {}
 
     /**
+     * Create a {@link RestoreJobException} with cause.
+     * If the cause is already a {@link RestoreJobException}, the retryable property is preserved.
+     * @param cause
+     * @return a new {@link RestoreJobException}
+     */
+    public static RestoreJobException propagate(Throwable cause)
+    {
+        return propagate(null, cause);
+    }
+
+    /**
      * Create a {@link RestoreJobException} with message and cause.
      * If the cause is already a {@link RestoreJobException}, the retryable property is preserved.
      * @param message
      * @param cause
      * @return a new {@link RestoreJobException}
      */
-    public static RestoreJobException propagate(String message, Throwable cause)
+    public static RestoreJobException propagate(@Nullable String message, Throwable cause)
     {
         String concatMessage = message;
         if (cause.getMessage() != null)
         {
-            concatMessage = concatMessage + ':' + cause.getMessage();
+            concatMessage = concatMessage == null
+                            ? cause.getMessage()
+                            : concatMessage + ':' + cause.getMessage();
         }
         if (cause instanceof RestoreJobException)
         {

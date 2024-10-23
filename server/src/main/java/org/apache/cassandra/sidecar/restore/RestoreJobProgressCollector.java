@@ -16,7 +16,7 @@
 
 package org.apache.cassandra.sidecar.restore;
 
-import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 
 /**
@@ -35,7 +35,7 @@ public interface RestoreJobProgressCollector
      * @param range a range to be restored
      * @param checkResult result of the consistency check
      */
-    void collect(RestoreRange range, ConsistencyVerifier.Result checkResult);
+    void collect(RestoreRange range, ConsistencyVerificationResult checkResult);
 
     /**
      * Produce the {@link RestoreJobProgress} from the collected per range progress

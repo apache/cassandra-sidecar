@@ -19,6 +19,7 @@ package org.apache.cassandra.sidecar.cluster;
 import java.util.Set;
 
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -35,15 +36,5 @@ public interface ConsistencyVerifier
      *                  instances are grouped by dc
      * @return result
      */
-    Result verify(@NotNull Set<String> succeeded, @NotNull Set<String> failed, @NotNull InstanceSetByDc all);
-
-    /**
-     * Verification result
-     */
-    enum Result
-    {
-        SATISFIED,  // the passed replicas have satisfied the consistency level
-        PENDING,    // no conclusion can be made yet
-        FAILED,     // the failed replicas have failed the consistency level
-    }
+    ConsistencyVerificationResult verify(@NotNull Set<String> succeeded, @NotNull Set<String> failed, @NotNull InstanceSetByDc all);
 }

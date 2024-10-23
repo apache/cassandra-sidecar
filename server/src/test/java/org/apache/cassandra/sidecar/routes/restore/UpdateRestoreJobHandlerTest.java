@@ -141,6 +141,22 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
                                              payload, context, HttpResponseStatus.OK.code());
     }
 
+    @Test
+    void testUpdateSliceCount(VertxTestContext context) throws Throwable
+    {
+        String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
+        long sliceCount = 100;
+        mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
+        mockUpdateRestoreJob(payload -> {
+            assertThat(payload.sliceCount()).isEqualTo(sliceCount);
+            return createTestNewJob(jobId);
+        });
+        JsonObject payload = new JsonObject();
+        payload.put("sliceCount", sliceCount);
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId,
+                                             payload, context, HttpResponseStatus.OK.code());
+    }
+
     private RestoreJob createTestNewJob(String jobId)
     {
         return RestoreJob.builder()

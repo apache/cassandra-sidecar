@@ -79,6 +79,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
     private int inflightJobsCount = 0;
     private int jobDiscoveryRecencyDays;
     private PeriodicTaskExecutor periodicTaskExecutor;
+    private volatile boolean isExecuting = false;
 
     @Inject
     public RestoreJobDiscoverer(SidecarConfiguration config,
@@ -136,9 +137,16 @@ public class RestoreJobDiscoverer implements PeriodicTask
         boolean shouldSkip = !sidecarSchema.isInitialized();
         if (shouldSkip)
         {
-            LOGGER.trace("Skipping restore job discovering");
+            LOGGER.trace("Skipping restore job discovering due to sidecarSchema not initialized");
         }
-        // skip the task when sidecar schema is not initialized
+
+        shouldSkip = shouldSkip || isExecuting;
+        if (isExecuting)
+        {
+            LOGGER.trace("Skipping restore job discovering due to overlapping execution of this task");
+        }
+
+        // skip the task
         return shouldSkip;
     }
 
@@ -154,11 +162,33 @@ public class RestoreJobDiscoverer implements PeriodicTask
     @Override
     public void execute(Promise<Void> promise)
     {
-        executeInternal();
+        executeBlocking();
         promise.tryComplete();
     }
 
-    public void executeInternal()
+    /**
+     * Execute the job discovery task in the blocking way.
+     * The method can be invoked by external call-sites and synchronized
+     */
+    public synchronized void executeBlocking()
+    {
+        if (isExecuting)
+        {
+            return;
+        }
+
+        try
+        {
+            isExecuting = true;
+            executeInternal();
+        }
+        finally
+        {
+            isExecuting = false;
+        }
+    }
+
+    private void executeInternal()
     {
         Preconditions.checkState(periodicTaskExecutor != null, "Loop executor is not registered");
 
@@ -171,56 +201,13 @@ public class RestoreJobDiscoverer implements PeriodicTask
         // reset in-flight jobs
         inflightJobsCount = 0;
         List<RestoreJob> restoreJobs = restoreJobDatabaseAccessor.findAllRecent(jobDiscoveryRecencyDays);
-        long nowMillis = System.currentTimeMillis();
-        LocalDate today = LocalDate.fromMillisSinceEpoch(nowMillis);
         RestoreJobManagerGroup restoreJobManagers = restoreJobManagerGroupSingleton.get();
-        int days = 0;
-        int abortedJobs = 0;
-        int expiredJobs = 0;
+        RunContext context = new RunContext();
         for (RestoreJob job : restoreJobs)
         {
-            if (jobIdsByDay.shouldLogJob(job))
-            {
-                LOGGER.info("Found job. jobId={} job={}", job.jobId, job);
-            }
-
             try
             {
-                switch (job.status)
-                {
-                    case CREATED:
-                    case STAGED:
-                        if (job.expireAt == null // abort all old jobs that has no expireAt value
-                            || job.expireAt.getTime() < nowMillis)
-                        {
-                            expiredJobs += 1;
-                            boolean aborted = abortJob(job);
-                            abortedJobs += (aborted ? 1 : 0);
-                            break; // do not proceed further if the job has expired
-                        }
-                        // find the oldest non-completed job
-                        days = Math.max(days, delta(today, job.createdAt));
-                        restoreJobManagers.updateRestoreJob(job);
-                        if (job.isManagedBySidecar())
-                        {
-                            ringTopologyRefresher.register(job);
-                            // todo: potential exceedingly number of queries
-                            findSlicesAndSubmit(job);
-                        }
-                        inflightJobsCount += 1;
-                        break;
-                    case FAILED:
-                    case ABORTED:
-                    case SUCCEEDED:
-                        restoreJobManagers.removeJobInternal(job);
-                        if (job.isManagedBySidecar())
-                        {
-                            ringTopologyRefresher.unregister(job);
-                        }
-                        break;
-                    default:
-                        LOGGER.warn("Encountered unknown job status. jobId={} status={}", job.jobId, job.status);
-                }
+                processOneJob(job, restoreJobManagers, context);
             }
             catch (Exception exception) // do not fail on the job. Continue to drain the entire list
             {
@@ -229,13 +216,13 @@ public class RestoreJobDiscoverer implements PeriodicTask
         }
         jobIdsByDay.cleanupMaybe();
         // shrink recency to lookup less data next time
-        jobDiscoveryRecencyDays = Math.min(days, jobDiscoveryRecencyDays);
+        jobDiscoveryRecencyDays = Math.min(context.days, jobDiscoveryRecencyDays);
         LOGGER.info("Exit job discovery. " +
                     "inflightJobsCount={} " +
                     "jobDiscoveryRecencyDays={} " +
                     "expiredJobs={} " +
                     "abortedJobs={}",
-                    inflightJobsCount, jobDiscoveryRecencyDays, expiredJobs, abortedJobs);
+                    inflightJobsCount, jobDiscoveryRecencyDays, context.expiredJobs, context.abortedJobs);
         metrics.activeJobs.metric.setValue(inflightJobsCount);
 
         boolean hasInflightJobsNow = hasInflightJobs();
@@ -250,6 +237,52 @@ public class RestoreJobDiscoverer implements PeriodicTask
     public void registerPeriodicTaskExecutor(PeriodicTaskExecutor executor)
     {
         this.periodicTaskExecutor = executor;
+    }
+
+    private void processOneJob(RestoreJob job, RestoreJobManagerGroup restoreJobManagers, RunContext context)
+    {
+        if (jobIdsByDay.shouldLogJob(job))
+        {
+            LOGGER.info("Found job. jobId={} job={}", job.jobId, job);
+        }
+
+        switch (job.status)
+        {
+            case CREATED:
+            case STAGE_READY:
+            case STAGED:
+            case IMPORT_READY:
+                if (job.expireAt == null // abort all old jobs that has no expireAt value
+                    || job.expireAt.getTime() < context.nowMillis)
+                {
+                    context.expiredJobs += 1;
+                    boolean aborted = abortJob(job);
+                    context.abortedJobs += (aborted ? 1 : 0);
+                    break; // do not proceed further if the job has expired
+                }
+                // find the oldest non-completed job
+                context.days = Math.max(context.days, delta(context.today, job.createdAt));
+                restoreJobManagers.updateRestoreJob(job);
+                if (job.isManagedBySidecar())
+                {
+                    ringTopologyRefresher.register(job);
+                    // todo: potential exceedingly number of queries
+                    findSlicesAndSubmit(job);
+                }
+                inflightJobsCount += 1;
+                break;
+            case FAILED:
+            case ABORTED:
+            case SUCCEEDED:
+                restoreJobManagers.removeJobInternal(job);
+                if (job.isManagedBySidecar())
+                {
+                    ringTopologyRefresher.unregister(job);
+                }
+                break;
+            default:
+                LOGGER.warn("Encountered unknown job status. jobId={} status={}", job.jobId, job.status);
+        }
     }
 
     // find all slices of the job that should be downloaded to the local instances,
@@ -307,7 +340,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
         catch (RestoreJobFatalException e)
         {
             LOGGER.error("Restore range failed. startToken={} endToken={} instance={}",
-                         range.startToken(), range.endToken(), range.owner().host());
+                         range.startToken(), range.endToken(), range.owner().host(), e);
             range.fail(e);
             restoreRangeDatabaseAccessor.updateStatus(range);
             return RestoreJobProgressTracker.Status.FAILED;
@@ -381,5 +414,14 @@ public class RestoreJobDiscoverer implements PeriodicTask
     int jobDiscoveryRecencyDays()
     {
         return jobDiscoveryRecencyDays;
+    }
+
+    static class RunContext
+    {
+        long nowMillis = System.currentTimeMillis();
+        LocalDate today = LocalDate.fromMillisSinceEpoch(nowMillis);
+        int days = 0;
+        int abortedJobs = 0;
+        int expiredJobs = 0;
     }
 }

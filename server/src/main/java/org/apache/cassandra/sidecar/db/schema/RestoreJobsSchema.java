@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class RestoreJobsSchema extends TableSchema
 {
-    private static final String RESTORE_JOB_TABLE_NAME = "restore_job_v3";
+    private static final String RESTORE_JOB_TABLE_NAME = "restore_job_v4";
 
     private final SchemaKeyspaceConfiguration keyspaceConfig;
     private final long tableTtlSeconds;
@@ -41,6 +41,7 @@ public class RestoreJobsSchema extends TableSchema
     private PreparedStatement updateStatus;
     private PreparedStatement updateJobAgent;
     private PreparedStatement updateExpireAt;
+    private PreparedStatement updateSliceCount;
     private PreparedStatement selectJob;
     private PreparedStatement findAllByCreatedAt;
 
@@ -64,6 +65,7 @@ public class RestoreJobsSchema extends TableSchema
         updateStatus = prepare(updateStatus, session, CqlLiterals.updateStatus(keyspaceConfig));
         updateJobAgent = prepare(updateJobAgent, session, CqlLiterals.updateJobAgent(keyspaceConfig));
         updateExpireAt = prepare(updateExpireAt, session, CqlLiterals.updateExpireAt(keyspaceConfig));
+        updateSliceCount = prepare(updateSliceCount, session, CqlLiterals.updateSliceCount(keyspaceConfig));
         selectJob = prepare(selectJob, session, CqlLiterals.selectJob(keyspaceConfig));
         findAllByCreatedAt = prepare(findAllByCreatedAt, session, CqlLiterals.findAllByCreatedAt(keyspaceConfig));
     }
@@ -87,6 +89,7 @@ public class RestoreJobsSchema extends TableSchema
                              "  blob_secrets blob," +
                              "  import_options blob," +
                              "  expire_at timestamp," +
+                             "  slice_count bigint," +
                              "  bucket_count smallint," +
                              "  consistency_level text," +
                              "  local_datacenter text," +
@@ -118,6 +121,11 @@ public class RestoreJobsSchema extends TableSchema
     public PreparedStatement updateExpireAt()
     {
         return updateExpireAt;
+    }
+
+    public PreparedStatement updateSliceCount()
+    {
+        return updateSliceCount;
     }
 
     public PreparedStatement selectJob()
@@ -186,6 +194,15 @@ public class RestoreJobsSchema extends TableSchema
                              ") VALUES (?, ?, ?)", config);
         }
 
+        static String updateSliceCount(SchemaKeyspaceConfiguration config)
+        {
+            return withTable("INSERT INTO %s.%s (" +
+                             "  created_at," +
+                             "  job_id," +
+                             "  slice_count" +
+                             ") VALUES (?, ?, ?)", config);
+        }
+
         static String selectJob(SchemaKeyspaceConfiguration config)
         {
             return withTable("SELECT created_at, " +
@@ -198,7 +215,8 @@ public class RestoreJobsSchema extends TableSchema
                              "import_options, " +
                              "consistency_level, " +
                              "local_datacenter, " +
-                             "expire_at " +
+                             "expire_at, " +
+                             "slice_count " +
                              "FROM %s.%s " +
                              "WHERE created_at = ? AND job_id = ?", config);
         }
@@ -215,7 +233,8 @@ public class RestoreJobsSchema extends TableSchema
                              "import_options, " +
                              "consistency_level, " +
                              "local_datacenter, " +
-                             "expire_at " +
+                             "expire_at, " +
+                             "slice_count " +
                              "FROM %s.%s " +
                              "WHERE created_at = ?", config);
         }

@@ -47,6 +47,7 @@ class UpdateRestoreJobRequestPayloadTest
         assertThat(req.status()).isNull();
         assertThat(req.expireAtInMillis()).isNull();
         assertThat(req.expireAtAsDate()).isNull();
+        assertThat(req.sliceCount()).isNull();
         assertThat(req.secrets()).isNull();
     }
 
@@ -60,6 +61,19 @@ class UpdateRestoreJobRequestPayloadTest
 
         assertThat(req.expireAtAsDate()).isEqualTo(date);
         assertThat(req.expireAtInMillis()).isEqualTo(time);
+
+        assertThat(mapper.writeValueAsString(req)).isEqualTo(json);
+    }
+
+    @Test
+    void testSliceCount() throws JsonProcessingException
+    {
+        long sliceCount = 123L;
+        String json = "{\"sliceCount\":" + sliceCount + "}";
+        UpdateRestoreJobRequestPayload req = mapper.readValue(json, UpdateRestoreJobRequestPayload.class);
+        assertThat(req.sliceCount()).isEqualTo(sliceCount);
+
+        assertThat(mapper.writeValueAsString(req)).isEqualTo(json);
     }
 
     @Test
@@ -67,12 +81,13 @@ class UpdateRestoreJobRequestPayloadTest
     {
         RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
         UpdateRestoreJobRequestPayload payload = new UpdateRestoreJobRequestPayload(null, secrets
-                                                                                    , null, null);
+                                                                                    , null, null, null);
         String json = mapper.writeValueAsString(payload);
         assertThat(json).contains(RestoreJobConstants.JOB_SECRETS)
                         .doesNotContain(RestoreJobConstants.JOB_AGENT,
                                         RestoreJobConstants.JOB_EXPIRE_AT,
-                                        RestoreJobConstants.JOB_STATUS)
+                                        RestoreJobConstants.JOB_STATUS,
+                                        RestoreJobConstants.JOB_SLICE_COUNT)
                         .doesNotContain("empty"); // ignored by @JsonIgnore
     }
 }

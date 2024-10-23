@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.cluster.instance;
 
 import java.util.List;
+import java.util.function.Function;
 
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
@@ -41,7 +42,7 @@ public interface InstanceMetadata
     String host();
 
     /**
-     * @return the port number of the Cassandra instance
+     * @return the native transport port number of the Cassandra instance
      */
     int port();
 
@@ -58,10 +59,24 @@ public interface InstanceMetadata
     /**
      * @return a {@link CassandraAdapterDelegate} specific for the instance
      */
-    @Nullable CassandraAdapterDelegate delegate();
+    @Nullable
+    CassandraAdapterDelegate delegate();
 
     /**
      * @return {@link InstanceMetrics} metrics specific for the Cassandra instance
      */
     @NotNull InstanceMetrics metrics();
+
+    /**
+     * Get value from {@link CassandraAdapterDelegate}
+     * @param mapper the function is evaluated only when delegate is not null
+     * @return value retrieved from {@link CassandraAdapterDelegate} or null
+     * @param <T> value type
+     */
+    @Nullable
+    default <T> T getFromDelegate(Function<CassandraAdapterDelegate, T> mapper)
+    {
+        CassandraAdapterDelegate delegate = delegate();
+        return delegate == null ? null : mapper.apply(delegate);
+    }
 }

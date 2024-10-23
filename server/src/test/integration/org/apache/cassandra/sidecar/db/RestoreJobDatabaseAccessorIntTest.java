@@ -54,8 +54,15 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
         assertThat(foundJobs).hasSize(1);
         assertJob(foundJobs.get(0), jobId, RestoreJobStatus.CREATED, expiresAtMillis, secrets);
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.CREATED, expiresAtMillis, secrets);
+
+        // update the slice count field and verify the correct value is read back
+        UpdateRestoreJobRequestPayload setSliceCount
+        = new UpdateRestoreJobRequestPayload(null, null, null, null, 100L);
+        accessor.update(setSliceCount, jobId);
+        assertThat(accessor.find(jobId).sliceCount).isEqualTo(100L);
+
         UpdateRestoreJobRequestPayload markSucceeded
-        = new UpdateRestoreJobRequestPayload(null, null, RestoreJobStatus.SUCCEEDED, null);
+        = new UpdateRestoreJobRequestPayload(null, null, RestoreJobStatus.SUCCEEDED, null, null);
         accessor.update(markSucceeded, jobId);
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.SUCCEEDED, expiresAtMillis, secrets);
 

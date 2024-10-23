@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.restore;
 
-import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier.Result;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
@@ -65,19 +65,19 @@ public class RestoreJobProgressCollectors
             progressBuilder = new RestoreJobProgress.Builder(restoreJob);
         }
 
-        protected boolean shouldSkip(Result checkResult)
+        protected boolean shouldSkip(ConsistencyVerificationResult checkResult)
         {
             return false;
         }
 
         @Override
-        public void collect(RestoreRange range, Result checkResult)
+        public void collect(RestoreRange range, ConsistencyVerificationResult checkResult)
         {
-            if (checkResult == Result.FAILED)
+            if (checkResult == ConsistencyVerificationResult.FAILED)
             {
                 seenFailed = true;
             }
-            else if (checkResult == Result.PENDING)
+            else if (checkResult == ConsistencyVerificationResult.PENDING)
             {
                 seenPending = true;
             }
@@ -104,24 +104,24 @@ public class RestoreJobProgressCollectors
         @Override
         public RestoreJobProgress toRestoreJobProgress()
         {
-            Result overallStatus = determineOverallStatus();
+            ConsistencyVerificationResult overallStatus = determineOverallStatus();
             return progressBuilder.withOverallStatus(overallStatus)
                                   .build();
         }
 
-        private Result determineOverallStatus()
+        private ConsistencyVerificationResult determineOverallStatus()
         {
             if (seenFailed)
             {
-                return Result.FAILED;
+                return ConsistencyVerificationResult.FAILED;
             }
             else if (seenPending)
             {
-                return Result.PENDING;
+                return ConsistencyVerificationResult.PENDING;
             }
             else
             {
-                return Result.SATISFIED;
+                return ConsistencyVerificationResult.SATISFIED;
             }
         }
     }
@@ -156,10 +156,10 @@ public class RestoreJobProgressCollectors
         }
 
         @Override
-        protected boolean shouldSkip(Result checkResult)
+        protected boolean shouldSkip(ConsistencyVerificationResult checkResult)
         {
             // do not collect the ranges that have satisfied
-            return checkResult == Result.SATISFIED || checkResult == Result.PENDING;
+            return checkResult == ConsistencyVerificationResult.SATISFIED || checkResult == ConsistencyVerificationResult.PENDING;
         }
     }
 
@@ -178,10 +178,10 @@ public class RestoreJobProgressCollectors
         }
 
         @Override
-        protected boolean shouldSkip(Result checkResult)
+        protected boolean shouldSkip(ConsistencyVerificationResult checkResult)
         {
             // do not collect the ranges that have satisfied
-            return checkResult == Result.SATISFIED;
+            return checkResult == ConsistencyVerificationResult.SATISFIED;
         }
     }
 }

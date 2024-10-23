@@ -143,9 +143,21 @@ public class CassandraAdapter implements ICassandraAdapter
     }
 
     @Override
-    public InetSocketAddress localNativeTransportPort()
+    public InetSocketAddress localNativeTransportAddress()
     {
         return localNativeTransportAddress;
+    }
+
+    @Override
+    public InetSocketAddress localStorageBroadcastAddress()
+    {
+        Metadata metadata = metadata();
+        if (metadata == null)
+        {
+            return null;
+        }
+
+        return getHost(metadata).getBroadcastSocketAddress();
     }
 
     /**

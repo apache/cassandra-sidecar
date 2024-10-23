@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.db.schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
@@ -44,7 +45,7 @@ abstract class AbstractSchema
 
     protected PreparedStatement prepare(PreparedStatement cached, Session session, String cqlLiteral)
     {
-        return cached == null ? session.prepare(cqlLiteral) : cached;
+        return cached == null ? session.prepare(cqlLiteral).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM) : cached;
     }
 
     protected boolean initializeInternal(@NotNull Session session)

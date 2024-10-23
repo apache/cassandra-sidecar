@@ -28,6 +28,7 @@ public class RestoreJobConstants
     public static final String JOB_STATUS = "status";
     public static final String JOB_SECRETS = "secrets";
     public static final String JOB_EXPIRE_AT = "expireAt";
+    public static final String JOB_SLICE_COUNT = "sliceCount";
     public static final String JOB_IMPORT_OPTIONS = "importOptions";
     public static final String JOB_CREATED_AT = "createdAt";
     public static final String JOB_KEYSPACE = "keyspace";
@@ -52,10 +53,11 @@ public class RestoreJobConstants
     public static final String CREDENTIALS_REGION = "region";
 
     // -- restore job status fields
-    public static final String JOB_STATUS_MESSAGE = "message";
-    public static final String JOB_STATUS_SUMMARY = "summary";
-    public static final String JOB_STATUS_FAILED_RANGES = "failedRanges";
-    public static final String JOB_STATUS_ABORTED_RANGES = "abortedRanges";
-    public static final String JOB_STATUS_PENDING_RANGES = "pendingRanges";
-    public static final String JOB_STATUS_SUCCEEDED_RANGES = "succeededRanges";
+    public static final String JOB_PROGRESS_MESSAGE = "message";
+    public static final String JOB_PROGRESS_STATUS = "status";
+    public static final String JOB_PROGRESS_SUMMARY = "summary";
+    public static final String JOB_PROGRESS_FAILED_RANGES = "failedRanges";
+    public static final String JOB_PROGRESS_ABORTED_RANGES = "abortedRanges";
+    public static final String JOB_PROGRESS_PENDING_RANGES = "pendingRanges";
+    public static final String JOB_PROGRESS_SUCCEEDED_RANGES = "succeededRanges";
 }

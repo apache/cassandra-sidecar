@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.restore;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -33,7 +33,7 @@ class RestoreJobProgressCollectFirstFailedTest extends BaseRestoreJobProgressCol
     void testContinueCollectOnSatisfied()
     {
         assertThat(collector.canCollectMore()).isTrue();
-        createRangesAndCollect(1, ConsistencyVerifier.Result.SATISFIED);
+        createRangesAndCollect(1, ConsistencyVerificationResult.SATISFIED);
         assertThat(collector.canCollectMore()).isTrue();
     }
 
@@ -41,11 +41,11 @@ class RestoreJobProgressCollectFirstFailedTest extends BaseRestoreJobProgressCol
     void testStopCollectionOnFirstFailed()
     {
         assertThat(collector.canCollectMore()).isTrue();
-        createRangesAndCollect(1, ConsistencyVerifier.Result.PENDING);
+        createRangesAndCollect(1, ConsistencyVerificationResult.PENDING);
         assertThat(collector.canCollectMore()).isTrue();
-        createRangesAndCollect(1, ConsistencyVerifier.Result.FAILED);
+        createRangesAndCollect(1, ConsistencyVerificationResult.FAILED);
         assertThat(collector.canCollectMore()).isFalse();
-        createRangesAndCollect(1, ConsistencyVerifier.Result.PENDING);
+        createRangesAndCollect(1, ConsistencyVerificationResult.PENDING);
         assertThat(collector.canCollectMore()).isFalse();
     }
 
@@ -53,11 +53,11 @@ class RestoreJobProgressCollectFirstFailedTest extends BaseRestoreJobProgressCol
     void testCollectMixed()
     {
         // The collector with FIRST_FAILED policy skips SATISFIED and PENDING ranges and stops after seeing the first FAILED
-        createRangesAndCollect(3, ConsistencyVerifier.Result.SATISFIED);
-        createRangesAndCollect(1, ConsistencyVerifier.Result.PENDING);
-        createRangesAndCollect(1, ConsistencyVerifier.Result.FAILED);
+        createRangesAndCollect(3, ConsistencyVerificationResult.SATISFIED);
+        createRangesAndCollect(1, ConsistencyVerificationResult.PENDING);
+        createRangesAndCollect(1, ConsistencyVerificationResult.FAILED);
         // collector should stop from collecting
-        createRangesAndCollect(5, ConsistencyVerifier.Result.PENDING); // not being collected
+        createRangesAndCollect(5, ConsistencyVerificationResult.PENDING); // not being collected
         RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges have failed. Current job status: CREATED");
         assertJobSummary(payload.summary());

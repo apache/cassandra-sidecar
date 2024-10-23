@@ -78,7 +78,8 @@ public class RestoreJobTest
                .jobStatus(status)
                .consistencyLevel(consistencyLevel)
                .localDatacenter(dcName)
-               .expireAt(new Date(System.currentTimeMillis() + 10000L));
+               .expireAt(new Date(System.currentTimeMillis() + 10000L))
+               .sliceCount(100L);
         return builder.build();
     }
 

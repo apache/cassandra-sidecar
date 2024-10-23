@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.restore;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -33,7 +33,7 @@ class RestoreJobProgressCollectAllFailedAndPendingTest extends BaseRestoreJobPro
     void testAlwaysCollectMore()
     {
         assertThat(collector.canCollectMore()).isTrue();
-        for (ConsistencyVerifier.Result result : ConsistencyVerifier.Result.values())
+        for (ConsistencyVerificationResult result : ConsistencyVerificationResult.values())
         {
             createRangesAndCollect(1, result);
             assertThat(collector.canCollectMore()).isTrue();
@@ -43,9 +43,9 @@ class RestoreJobProgressCollectAllFailedAndPendingTest extends BaseRestoreJobPro
     @Test
     void testNotCollectSatisfied()
     {
-        createRangesAndCollect(5, ConsistencyVerifier.Result.SATISFIED);
-        createRangesAndCollect(1, ConsistencyVerifier.Result.PENDING);
-        createRangesAndCollect(1, ConsistencyVerifier.Result.FAILED);
+        createRangesAndCollect(5, ConsistencyVerificationResult.SATISFIED);
+        createRangesAndCollect(1, ConsistencyVerificationResult.PENDING);
+        createRangesAndCollect(1, ConsistencyVerificationResult.FAILED);
         RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges have failed. Current job status: CREATED");
         assertJobSummary(payload.summary());
