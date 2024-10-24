@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -76,10 +77,10 @@ public class RestoreJobDiscoverer implements PeriodicTask
     private final RestoreMetrics metrics;
     private final JobIdsByDay jobIdsByDay;
     private final RingTopologyRefresher ringTopologyRefresher;
+    private final AtomicBoolean isExecuting = new AtomicBoolean(false);
     private int inflightJobsCount = 0;
     private int jobDiscoveryRecencyDays;
     private PeriodicTaskExecutor periodicTaskExecutor;
-    private volatile boolean isExecuting = false;
 
     @Inject
     public RestoreJobDiscoverer(SidecarConfiguration config,
@@ -139,9 +140,9 @@ public class RestoreJobDiscoverer implements PeriodicTask
         {
             LOGGER.trace("Skipping restore job discovering due to sidecarSchema not initialized");
         }
-
-        shouldSkip = shouldSkip || isExecuting;
-        if (isExecuting)
+        boolean executing = isExecuting.get();
+        shouldSkip = shouldSkip || executing;
+        if (executing)
         {
             LOGGER.trace("Skipping restore job discovering due to overlapping execution of this task");
         }
@@ -162,29 +163,29 @@ public class RestoreJobDiscoverer implements PeriodicTask
     @Override
     public void execute(Promise<Void> promise)
     {
-        executeBlocking();
+        tryExecute();
         promise.tryComplete();
     }
 
     /**
-     * Execute the job discovery task in the blocking way.
-     * The method can be invoked by external call-sites and synchronized
+     * Try to execute the job discovery task in the blocking way. It returns immediately, if another thread is executing already.
+     * The method can be invoked by external call-sites.
      */
-    public synchronized void executeBlocking()
+    public void tryExecute()
     {
-        if (isExecuting)
+        if (!isExecuting.compareAndSet(false, true))
         {
+            LOGGER.debug("Another thread is executing the restore job discovery already. Skipping...");
             return;
         }
 
         try
         {
-            isExecuting = true;
             executeInternal();
         }
         finally
         {
-            isExecuting = false;
+            isExecuting.set(false);
         }
     }
 
