@@ -74,7 +74,7 @@ public interface InstanceMetadata
      * @param <T> value type
      */
     @Nullable
-    default <T> T getFromDelegate(Function<CassandraAdapterDelegate, T> mapper)
+    default <T> T applyFromDelegate(Function<CassandraAdapterDelegate, T> mapper)
     {
         CassandraAdapterDelegate delegate = delegate();
         return delegate == null ? null : mapper.apply(delegate);

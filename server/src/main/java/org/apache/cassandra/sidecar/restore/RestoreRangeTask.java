@@ -150,7 +150,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
                 {
                     if (Files.exists(range.stagedObjectPath()))
                     {
-                        LOGGER.info("The slice has been staged already. sliceKey={} stagedFilePath={}",
+                        LOGGER.debug("The slice has been staged already. sliceKey={} stagedFilePath={}",
                                      range.sliceKey(), range.stagedObjectPath());
                         range.completeStagePhase(); // update the flag if missed
                         rangeDatabaseAccessor.updateStatus(range);

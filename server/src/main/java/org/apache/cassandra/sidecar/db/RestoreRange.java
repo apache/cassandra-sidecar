@@ -189,7 +189,6 @@ public class RestoreRange
                && Objects.equals(this.bucketId, that.bucketId)
                && Objects.equals(this.sliceId, that.sliceId);
     }
-
     // -- INTERNAL FLOW CONTROL METHODS --
 
     /**
@@ -381,7 +380,7 @@ public class RestoreRange
 
     public Map<String, RestoreRangeStatus> statusByReplica()
     {
-        return statusByReplica;
+        return Collections.unmodifiableMap(statusByReplica);
     }
 
     public Map<String, String> statusTextByReplica()
@@ -502,7 +501,7 @@ public class RestoreRange
     {
         try
         {
-            InetSocketAddress storageAddress = instance.getFromDelegate(CassandraAdapterDelegate::localStorageBroadcastAddress);
+            InetSocketAddress storageAddress = instance.applyFromDelegate(CassandraAdapterDelegate::localStorageBroadcastAddress);
             return storageAddress.getAddress().getHostAddress() + ':' + storageAddress.getPort();
         }
         catch (NullPointerException npe) // various places can throw NPE. Catch them all in one single place.

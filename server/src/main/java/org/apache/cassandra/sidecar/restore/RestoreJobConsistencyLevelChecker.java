@@ -109,7 +109,7 @@ public class RestoreJobConsistencyLevelChecker
                    if (shouldForceRestoreJobDiscoverRun(restoreJob, ranges))
                    {
                        // schedule the adhoc restore job discovery in a background thread.
-                       taskExecutorPool.runBlocking(restoreJobDiscoverer::tryExecute, false);
+                       taskExecutorPool.runBlocking(restoreJobDiscoverer::tryExecuteDiscovery, false);
                        return RestoreJobProgress.pending(restoreJob);
                    }
                    concludeRanges(ranges, topology, verifier, successCriteria, collector);

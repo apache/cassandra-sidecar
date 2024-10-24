@@ -163,7 +163,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
     @Override
     public void execute(Promise<Void> promise)
     {
-        tryExecute();
+        tryExecuteDiscovery();
         promise.tryComplete();
     }
 
@@ -171,7 +171,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
      * Try to execute the job discovery task in the blocking way. It returns immediately, if another thread is executing already.
      * The method can be invoked by external call-sites.
      */
-    public void tryExecute()
+    public void tryExecuteDiscovery()
     {
         if (!isExecuting.compareAndSet(false, true))
         {

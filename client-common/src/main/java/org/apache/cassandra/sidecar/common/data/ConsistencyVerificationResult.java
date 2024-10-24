@@ -23,7 +23,16 @@ package org.apache.cassandra.sidecar.common.data;
  */
 public enum ConsistencyVerificationResult
 {
-    SATISFIED,  // the passed replicas have satisfied the consistency level
-    PENDING,    // no conclusion can be made yet
-    FAILED,     // the failed replicas have failed the consistency level
+    /**
+     * the passed replicas have satisfied the consistency level
+     */
+    SATISFIED,
+    /**
+     * no conclusion can be made yet
+     */
+    PENDING,
+    /**
+     * the failed replicas have failed the consistency level
+     */
+    FAILED,
 }
