@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.math.BigInteger;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import com.datastax.driver.core.Row;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
@@ -50,14 +52,14 @@ import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * A {@link RestoreRange}, similar to {@link RestoreSlice}, represents the data of a narrower token range.
- *
+ * <p>
  * Conceptually, a {@link RestoreSlice} can be split into multiple {@link RestoreRange}s. A range only belongs to,
  * i.e. fully enclosed in, a slice. In other words, a range is derived from a lice.
  * As slices do not overlap, the ranges have no overlap too.
  * When no split is needed for a slice, its range is equivalent to itself, in terms of token range.
- *
+ * <p>
  * In additional, {@link RestoreRange} contains the control flow of applying/importing data to Cassandra.
- *
+ * <p>
  * Why is {@link RestoreRange} required?
  * Range is introduced to better align with the current Cassandra token topology.
  * Restore slice represents the client-side generated dataset and its token range,
@@ -65,13 +67,15 @@ import org.jetbrains.annotations.VisibleForTesting;
  * On the server side, especially the token topology of Cassandra has changed, there can be no exact match of the
  * token range of a slice and the Cassandra node's owning token range. The slice has to be split into ranges that fit
  * into the Cassandra nodes properly.
- *
- *
+ * <p>
  * How the staged files are organized on disk?
+ * <p>
  * For each slice,
- * - the S3 object is downloaded to the path at "stageDirectory/key". It is a zip file.
- * - the zip is then extracted to the directory at "stageDirectory/keyspace/table/".
- *   The extracted sstables are imported into Cassandra.
+ * <ul>
+ *     <li>the S3 object is downloaded to the path at "stageDirectory/key". It is a zip file.</li>
+ *     <li>the zip is then extracted to the directory at "stageDirectory/keyspace/table/".
+ *     The extracted sstables are imported into Cassandra.</li>
+ * </ul>
  */
 public class RestoreRange
 {
@@ -147,7 +151,7 @@ public class RestoreRange
         this.stagedObjectPath = builder.stagedObjectPath;
         this.uploadId = builder.uploadId;
         this.owner = builder.owner;
-        this.statusByReplica = builder.statusByReplica;
+        this.statusByReplica = new HashMap<>(builder.statusByReplica);
         this.tracker = builder.tracker;
     }
 
@@ -185,7 +189,6 @@ public class RestoreRange
                && Objects.equals(this.bucketId, that.bucketId)
                && Objects.equals(this.sliceId, that.sliceId);
     }
-
     // -- INTERNAL FLOW CONTROL METHODS --
 
     /**
@@ -202,6 +205,7 @@ public class RestoreRange
     public void completeStagePhase()
     {
         this.hasStaged = true;
+        updateRangeStatusForInstance(owner(), RestoreRangeStatus.STAGED);
     }
 
     /**
@@ -210,11 +214,7 @@ public class RestoreRange
     public void completeImportPhase()
     {
         this.hasImported = true;
-    }
-
-    public void failAtInstance(int instanceId)
-    {
-        statusByReplica.put(String.valueOf(instanceId), RestoreRangeStatus.FAILED);
+        updateRangeStatusForInstance(owner(), RestoreRangeStatus.SUCCEEDED);
     }
 
     /**
@@ -223,7 +223,7 @@ public class RestoreRange
     public void fail(RestoreJobFatalException exception)
     {
         tracker.fail(exception);
-        failAtInstance(owner().id());
+        updateRangeStatusForInstance(owner(), RestoreRangeStatus.FAILED);
     }
 
     /**
@@ -380,7 +380,7 @@ public class RestoreRange
 
     public Map<String, RestoreRangeStatus> statusByReplica()
     {
-        return statusByReplica;
+        return Collections.unmodifiableMap(statusByReplica);
     }
 
     public Map<String, String> statusTextByReplica()
@@ -484,6 +484,30 @@ public class RestoreRange
             return null;
         }
         return func.apply(source);
+    }
+
+    private void updateRangeStatusForInstance(InstanceMetadata instance, RestoreRangeStatus status)
+    {
+        // skip if the belong job is not managed by sidecar
+        if (!job().isManagedBySidecar())
+        {
+            return;
+        }
+
+        statusByReplica.put(storageAddressWithPort(instance), status);
+    }
+
+    private String storageAddressWithPort(InstanceMetadata instance)
+    {
+        try
+        {
+            InetSocketAddress storageAddress = instance.applyFromDelegate(CassandraAdapterDelegate::localStorageBroadcastAddress);
+            return storageAddress.getAddress().getHostAddress() + ':' + storageAddress.getPort();
+        }
+        catch (NullPointerException npe) // various places can throw NPE. Catch them all in one single place.
+        {
+            throw new NullPointerException("Unexpected null storageBroadcastAddress from CassandraAdapter");
+        }
     }
 
     /**

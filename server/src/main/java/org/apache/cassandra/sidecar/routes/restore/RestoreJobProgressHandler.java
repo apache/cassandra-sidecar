@@ -89,14 +89,14 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     {
         RoutingContextUtils
         .getAsFuture(context, SC_RESTORE_JOB)
-        .map(this::ensureRestoreJobIsManagedBySidecar)
+        .map(this::validateSidecarManagedRestoreJob)
         .compose(restoreJob -> consistencyLevelChecker.check(restoreJob, fetchPolicy))
         .map(RestoreJobProgress::toResponsePayload)
         .onSuccess(context::json)
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, fetchPolicy));
     }
 
-    private RestoreJob ensureRestoreJobIsManagedBySidecar(RestoreJob restoreJob)
+    private RestoreJob validateSidecarManagedRestoreJob(RestoreJob restoreJob)
     {
         if (!restoreJob.isManagedBySidecar())
         {
@@ -104,6 +104,13 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
                                     "Only Sidecar-managed restore jobs are allowed. " +
                                     "jobId=" + restoreJob.jobId +
                                     " jobManager=" + restoreJob.restoreJobManager.name());
+        }
+
+        if (restoreJob.sliceCount == null)
+        {
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                    "Controller must set the sliceCount for Sidecar-managed restore job. " +
+                                    "jobId=" + restoreJob.jobId);
         }
         return restoreJob;
     }

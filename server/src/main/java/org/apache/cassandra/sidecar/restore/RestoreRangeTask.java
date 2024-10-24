@@ -146,7 +146,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
             RestoreJob job = range.job();
             if (job.isManagedBySidecar())
             {
-                if (job.status == RestoreJobStatus.CREATED)
+                if (job.status == RestoreJobStatus.STAGE_READY)
                 {
                     if (Files.exists(range.stagedObjectPath()))
                     {
@@ -170,7 +170,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
                                return Future.succeededFuture();
                            });
                 }
-                else if (job.status == RestoreJobStatus.STAGED)
+                else if (job.status == RestoreJobStatus.IMPORT_READY)
                 {
                     return unzipAndImport(range.stagedObjectPath().toFile(),
                                           // persist status
@@ -178,7 +178,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
                 }
                 else
                 {
-                    String msg = "Unexpected restore job status. Expected only CREATED or STAGED when " +
+                    String msg = "Unexpected restore job status. Expected only STAGE_READY or IMPORT_READY when " +
                                  "processing active slices. Found status: " + job.statusWithOptionalDescription();
                     Exception unexpectedState = new IllegalStateException(msg);
                     return Future.failedFuture(RestoreJobExceptions.ofFatal("Unexpected restore job status",
@@ -191,7 +191,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
             }
         })
         .onSuccess(v -> event.tryComplete(range))
-        .onFailure(cause -> event.tryFail(RestoreJobExceptions.propagate(cause.getMessage(), cause)));
+        .onFailure(cause -> event.tryFail(RestoreJobExceptions.propagate(cause)));
     }
 
     private Future<Void> downloadSliceAndImport()
@@ -295,6 +295,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
             {
                 LOGGER.warn("Downloading restore slice times out. sliceKey={}", range.sliceKey());
                 instanceMetrics.restore().sliceDownloadTimeouts.metric.update(1);
+                return Future.failedFuture(RestoreJobExceptions.of("Download object times out. Retry later", range, cause));
             }
             return Future.failedFuture(RestoreJobExceptions.ofFatal("Unrecoverable error when downloading object", range, cause));
         });
@@ -331,13 +332,12 @@ public class RestoreRangeTask implements RestoreRangeHandler
                success -> { // successMapper
                    if (onSuccessCommit == null)
                    {
-                       range.completeImportPhase();
                        return Future.succeededFuture();
                    }
 
                    return executorPool.runBlocking(() -> {
-                       onSuccessCommit.run();
                        range.completeImportPhase();
+                       onSuccessCommit.run();
                    });
                },
                failure -> { // failureMapper

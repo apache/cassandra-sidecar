@@ -384,9 +384,15 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     @Override
-    public InetSocketAddress localNativeTransportPort()
+    public InetSocketAddress localNativeTransportAddress()
     {
-        return fromAdapter(ICassandraAdapter::localNativeTransportPort);
+        return fromAdapter(ICassandraAdapter::localNativeTransportAddress);
+    }
+
+    @Override
+    public InetSocketAddress localStorageBroadcastAddress()
+    {
+        return fromAdapter(ICassandraAdapter::localStorageBroadcastAddress);
     }
 
     @Nullable

@@ -20,8 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RestoreRangeJson;
@@ -35,10 +35,17 @@ import org.jetbrains.annotations.Nullable;
 public class RestoreJobProgress
 {
     private final RestoreJob restoreJob;
-    private final ConsistencyVerifier.Result overallStatus;
+    private final ConsistencyVerificationResult overallStatus;
     private final List<RestoreRange> failedRanges;
     private final List<RestoreRange> pendingRanges;
     private final List<RestoreRange> succeededRanges;
+
+    public static RestoreJobProgress pending(RestoreJob restoreJob)
+    {
+        Builder builder = new Builder(restoreJob)
+                          .withOverallStatus(ConsistencyVerificationResult.PENDING);
+        return new RestoreJobProgress(builder);
+    }
 
     private RestoreJobProgress(Builder builder)
     {
@@ -52,6 +59,7 @@ public class RestoreJobProgress
     public RestoreJobProgressResponsePayload toResponsePayload()
     {
         return RestoreJobProgressResponsePayload.builder()
+                                                .withStatus(overallStatus)
                                                 .withSucceededRanges(toJson(succeededRanges))
                                                 .withFailedRanges(toJson(failedRanges))
                                                 .withPendingRanges(toJson(pendingRanges))
@@ -101,7 +109,7 @@ public class RestoreJobProgress
     static class Builder implements DataObjectBuilder<Builder, RestoreJobProgress>
     {
         private final RestoreJob restoreJob;
-        private ConsistencyVerifier.Result overallStatus;
+        private ConsistencyVerificationResult overallStatus;
         private List<RestoreRange> failedRanges;
         private List<RestoreRange> pendingRanges;
         private List<RestoreRange> succeededRanges;
@@ -111,7 +119,7 @@ public class RestoreJobProgress
             this.restoreJob = restoreJob;
         }
 
-        public Builder withOverallStatus(ConsistencyVerifier.Result overallStatus)
+        public Builder withOverallStatus(ConsistencyVerificationResult overallStatus)
         {
             return update(b -> b.overallStatus = overallStatus);
         }

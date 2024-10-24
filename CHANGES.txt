@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Fix restore job of coordinated write not proceeding (CASSANDRASC-152)
  * Add vert.x auth subproject for mTLS authentication support in Sidecar (CASSANDRASC-146)
  * Improve S3 download throttling with range-GetObject (CASSANDRASC-142)
  * Updating traffic shaping options throws IllegalStateException (CASSANDRASC-140)

@@ -27,9 +27,9 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier.Result;
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,17 +46,17 @@ class ConsistencyVerifiersTest
         assertThat(verifier.verify(Collections.emptySet(), // no passed instances
                                    replicas(1, 4),  // 4 instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
         assertThat(verifier.verify(Collections.emptySet(),
                                    replicas(1, 6), // all instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.FAILED);
+        .isEqualTo(ConsistencyVerificationResult.FAILED);
 
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(2, 6), // the rest fail
                                    allReplicasByDc))
-        .isEqualTo(Result.SATISFIED);
+        .isEqualTo(ConsistencyVerificationResult.SATISFIED);
     }
 
     @Test
@@ -66,17 +66,17 @@ class ConsistencyVerifiersTest
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(2, 4), // 3 instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(1, 5), // 5 out of 6 instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.FAILED);
+        .isEqualTo(ConsistencyVerificationResult.FAILED);
 
         assertThat(verifier.verify(replicas(1, 2), // 2 instances pass
                                    replicas(3, 6), // the rest fail
                                    allReplicasByDc))
-        .isEqualTo(Result.SATISFIED);
+        .isEqualTo(ConsistencyVerificationResult.SATISFIED);
     }
 
     @Test
@@ -86,17 +86,17 @@ class ConsistencyVerifiersTest
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(2, 4), // 3 instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(2, 5), // 4 out of 6 instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.FAILED);
+        .isEqualTo(ConsistencyVerificationResult.FAILED);
 
         assertThat(verifier.verify(replicas(1, 4), // 1 instance passed
                                    replicas(5, 6), // the rest fail
                                    allReplicasByDc))
-        .isEqualTo(Result.SATISFIED);
+        .isEqualTo(ConsistencyVerificationResult.SATISFIED);
     }
 
     @Test
@@ -106,17 +106,17 @@ class ConsistencyVerifiersTest
         assertThat(verifier.verify(Collections.emptySet(),
                                    replicas(2, 3), // 2 out of 3 local instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
         assertThat(verifier.verify(Collections.emptySet(),
                                    replicas(1, 3), // 3 out of 3 local instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.FAILED);
+        .isEqualTo(ConsistencyVerificationResult.FAILED);
 
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passed
                                    replicas(2, 3), // the rest of local instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.SATISFIED);
+        .isEqualTo(ConsistencyVerificationResult.SATISFIED);
 
         ConsistencyVerifier dc2LocalVerifier = ConsistencyVerifiers.forConsistencyLevel(ConsistencyLevel.LOCAL_ONE, "dc-2");
         Set<String> set = Collections.emptySet();
@@ -132,17 +132,17 @@ class ConsistencyVerifiersTest
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(2, 2), // 1 instance fails
                                    allReplicasByDc))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(2, 3), // 2 out of 3 local instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.FAILED);
+        .isEqualTo(ConsistencyVerificationResult.FAILED);
 
         assertThat(verifier.verify(replicas(1, 2), // 2 instances pass
                                    replicas(3, 3), // the rest fail
                                    allReplicasByDc))
-        .isEqualTo(Result.SATISFIED);
+        .isEqualTo(ConsistencyVerificationResult.SATISFIED);
 
         ConsistencyVerifier dc2LocalVerifier = ConsistencyVerifiers.forConsistencyLevel(ConsistencyLevel.LOCAL_ONE, "dc-2");
         Set<String> set = Collections.emptySet();
@@ -158,17 +158,17 @@ class ConsistencyVerifiersTest
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(3, 4), // 1 instance in each dc fails
                                    allReplicasByDc))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(2, 5), // 4 out of 6 instances fail
                                    allReplicasByDc))
-        .isEqualTo(Result.FAILED);
+        .isEqualTo(ConsistencyVerificationResult.FAILED);
 
         assertThat(verifier.verify(replicas(2, 5), // 1 instance passes
                                    replicas(1, 1), // the rest fail
                                    allReplicasByDc))
-        .isEqualTo(Result.SATISFIED);
+        .isEqualTo(ConsistencyVerificationResult.SATISFIED);
     }
 
     @Test
@@ -178,18 +178,18 @@ class ConsistencyVerifiersTest
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    Collections.emptySet(),
                                    allReplicasByDc))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
 
         assertThat(verifier.verify(replicas(1, 1), // 1 instance passes
                                    replicas(2, 2), // any instance fails
                                    allReplicasByDc))
-        .isEqualTo(Result.FAILED);
+        .isEqualTo(ConsistencyVerificationResult.FAILED);
 
         assertThat(verifier.verify(replicas(1, 6), // all instances pass
                                    Collections.emptySet(),
                                    allReplicasByDc))
-        .isEqualTo(Result.SATISFIED);
+        .isEqualTo(ConsistencyVerificationResult.SATISFIED);
     }
 
     private Set<String> replicas(int start, int end)

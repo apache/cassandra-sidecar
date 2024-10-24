@@ -34,7 +34,9 @@ import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
 import org.apache.cassandra.sidecar.cluster.ConsistencyVerifiers;
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
+import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
@@ -62,15 +64,19 @@ public class RestoreJobConsistencyLevelChecker
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJobConsistencyLevelChecker.class);
 
     private final RingTopologyRefresher ringTopologyRefresher;
+    private final RestoreJobDiscoverer restoreJobDiscoverer;
     private final RestoreRangeDatabaseAccessor rangeDatabaseAccessor;
     private final TaskExecutorPool taskExecutorPool;
+    private volatile boolean firstTimeSinceImportReady = true;
 
     @Inject
     public RestoreJobConsistencyLevelChecker(RingTopologyRefresher ringTopologyRefresher,
+                                             RestoreJobDiscoverer restoreJobDiscoverer,
                                              RestoreRangeDatabaseAccessor rangeDatabaseAccessor,
                                              ExecutorPools executorPools)
     {
         this.ringTopologyRefresher = ringTopologyRefresher;
+        this.restoreJobDiscoverer = restoreJobDiscoverer;
         this.rangeDatabaseAccessor = rangeDatabaseAccessor;
         this.taskExecutorPool = executorPools.internal();
     }
@@ -100,14 +106,35 @@ public class RestoreJobConsistencyLevelChecker
                    return rangeDatabaseAccessor.findAll(restoreJob.jobId, bucketId);
                })
                .map(ranges -> {
-                   if (ranges.isEmpty())
+                   if (shouldForceRestoreJobDiscoverRun(restoreJob, ranges))
                    {
-                       LOGGER.error("No restore ranges found. jobId={}", restoreJob.jobId);
-                       throw new IllegalStateException("No restore ranges found for job: " + restoreJob.jobId);
+                       // schedule the adhoc restore job discovery in a background thread.
+                       taskExecutorPool.runBlocking(restoreJobDiscoverer::tryExecuteDiscovery, false);
+                       return RestoreJobProgress.pending(restoreJob);
                    }
                    concludeRanges(ranges, topology, verifier, successCriteria, collector);
                    return collector.toRestoreJobProgress();
                });
+    }
+
+    private boolean shouldForceRestoreJobDiscoverRun(RestoreJob restoreJob, List<RestoreRange> ranges)
+    {
+        long foundSliceCount = sliceCountFromRanges(ranges);
+        if (foundSliceCount < restoreJob.sliceCount)
+        {
+            LOGGER.warn("Not all restore ranges are found. Mark the progress as pending and force restore job discover run. " +
+                        "jobId={} expectedSliceCount={} foundSliceCount={}", restoreJob.jobId, restoreJob.sliceCount, foundSliceCount);
+            return true;
+        }
+
+        if (restoreJob.status == RestoreJobStatus.IMPORT_READY && firstTimeSinceImportReady)
+        {
+            firstTimeSinceImportReady = false;
+            LOGGER.info("First time checking consistency of the restore job after import_ready. " +
+                        "Mark the progress as pending and force restore job discover run. jobId={}", restoreJob.jobId);
+            return true;
+        }
+        return false;
     }
 
     private static void concludeRanges(List<RestoreRange> ranges,
@@ -123,7 +150,7 @@ public class RestoreJobConsistencyLevelChecker
                 return;
             }
 
-            ConsistencyVerifier.Result res = concludeOneRange(topology, verifier, successCriteria, range);
+            ConsistencyVerificationResult res = concludeOneRange(topology, verifier, successCriteria, range);
             collector.collect(range, res);
         }
     }
@@ -140,10 +167,10 @@ public class RestoreJobConsistencyLevelChecker
      * @param range range to check
      * @return result of the consistency verification
      */
-    private static ConsistencyVerifier.Result concludeOneRange(TokenRangeReplicasResponse topology,
-                                                               ConsistencyVerifier verifier,
-                                                               RestoreRangeStatus successCriteria,
-                                                               RestoreRange range)
+    private static ConsistencyVerificationResult concludeOneRange(TokenRangeReplicasResponse topology,
+                                                                  ConsistencyVerifier verifier,
+                                                                  RestoreRangeStatus successCriteria,
+                                                                  RestoreRange range)
     {
         Map<RestoreRangeStatus, Set<String>> groupByStatus = groupReplicaByStatus(range.statusByReplica());
         Set<String> succeeded = groupByStatus.getOrDefault(successCriteria, Collections.emptySet());
@@ -151,18 +178,18 @@ public class RestoreJobConsistencyLevelChecker
         InstanceSetByDc replicaSet = replicaSetForRange(range, topology);
         if (replicaSet == null) // cannot proceed to verify yet. Return pending
         {
-            return ConsistencyVerifier.Result.PENDING;
+            return ConsistencyVerificationResult.PENDING;
         }
 
-        ConsistencyVerifier.Result result = verifier.verify(succeeded, failed, replicaSet);
+        ConsistencyVerificationResult result = verifier.verify(succeeded, failed, replicaSet);
         switch (result)
         {
             case FAILED:
-                return ConsistencyVerifier.Result.FAILED;
+                return ConsistencyVerificationResult.FAILED;
             case PENDING:
-                return ConsistencyVerifier.Result.PENDING;
+                return ConsistencyVerificationResult.PENDING;
             default:
-                return ConsistencyVerifier.Result.SATISFIED;
+                return ConsistencyVerificationResult.SATISFIED;
         }
     }
 
@@ -208,11 +235,16 @@ public class RestoreJobConsistencyLevelChecker
         return null;
     }
 
+    private static long sliceCountFromRanges(List<RestoreRange> ranges)
+    {
+        return ranges.stream().map(RestoreRange::sliceId).distinct().count();
+    }
+
     @VisibleForTesting
-    static ConsistencyVerifier.Result concludeOneRangeUnsafe(TokenRangeReplicasResponse topology,
-                                                             ConsistencyVerifier verifier,
-                                                             RestoreRangeStatus successCriteria,
-                                                             RestoreRange range)
+    static ConsistencyVerificationResult concludeOneRangeUnsafe(TokenRangeReplicasResponse topology,
+                                                                ConsistencyVerifier verifier,
+                                                                RestoreRangeStatus successCriteria,
+                                                                RestoreRange range)
     {
         return concludeOneRange(topology, verifier, successCriteria, range);
     }

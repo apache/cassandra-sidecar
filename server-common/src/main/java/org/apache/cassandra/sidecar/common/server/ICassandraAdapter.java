@@ -25,6 +25,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Core Cassandra Adapter interface
@@ -63,10 +64,18 @@ public interface ICassandraAdapter
     ResultSet executeLocal(Statement statement);
 
     /**
-     * The address on which the local instance is listening for CQL connections
-     * @return the {@link InetSocketAddress} representing the local address and port.
+     * The address on which the local Cassandra instance is listening for CQL connections
+     * @return the {@link InetSocketAddress} representing the address and port.
      */
-    InetSocketAddress localNativeTransportPort();
+    InetSocketAddress localNativeTransportAddress();
+
+    /**
+     * The address on which the local Cassandra instance broadcasts the intra-cluster storage traffic
+     * @return the {@link InetSocketAddress} representing the address and port.
+     *         When CQL connection is not yet established, returns null
+     */
+    @Nullable
+    InetSocketAddress localStorageBroadcastAddress();
 
     /**
      * @return the {@link StorageOperations} implementation for the Cassandra cluster

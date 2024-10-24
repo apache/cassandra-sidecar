@@ -37,6 +37,7 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaInfo;
@@ -61,9 +62,9 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(jobId -> createTestingJob(jobId, RestoreJobStatus.CREATED));
         getThenComplete(context, TEST_PROGRESS_ROUTE,
-                     asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.BAD_REQUEST,
-                                                                "Only Sidecar-managed restore jobs are allowed. " +
-                                                                "jobId=8e5799a4-d277-11ed-8d85-6916bb9b8056 jobManager=SPARK"));
+                        asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.BAD_REQUEST,
+                                                                   "Only Sidecar-managed restore jobs are allowed. " +
+                                                                   "jobId=8e5799a4-d277-11ed-8d85-6916bb9b8056 jobManager=SPARK"));
     }
 
     @Test
@@ -71,20 +72,22 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(jobId -> createTestingJob(jobId, RestoreJobStatus.CREATED, ConsistencyLevel.QUORUM));
         getThenComplete(context, TEST_PROGRESS_ROUTE,
-                     asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.BAD_REQUEST,
-                                                                "Cannot check progress for restore job in CREATED status. " +
-                                                                "jobId: 8e5799a4-d277-11ed-8d85-6916bb9b8056"));
+                        asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.BAD_REQUEST,
+                                                                   "Cannot check progress for restore job in CREATED status. " +
+                                                                   "jobId: " + TEST_JOB_ID));
     }
 
     @Test
-    void testRetrieveProgressFailsWhenFindingNoRanges(VertxTestContext context)
+    void testRetrievePendingProgressWhenFindingNoRanges(VertxTestContext context)
     {
         mockLookupRestoreJob(jobId -> createTestingJob(jobId, RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM));
         mockTopologyInRefresher(() -> generateTestTopology(3));
         mockFindAllRestoreRanges(jobId -> Collections.emptyList()); // there are no ranges found for the job
         getThenComplete(context, TEST_PROGRESS_ROUTE,
-                     asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                                                "No restore ranges found for job: 8e5799a4-d277-11ed-8d85-6916bb9b8056"));
+                        asyncResult -> {
+                            RestoreJobProgressResponsePayload respBody = assertOKResponseAndExtractBody(asyncResult);
+                            assertPendingProgressRespBody(respBody);
+                        });
     }
 
     @Test
@@ -96,9 +99,9 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
             throw new RuntimeException("Failed to read from Cassandra");
         });
         getThenComplete(context, TEST_PROGRESS_ROUTE,
-                     asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                                                // todo: should we expose the actual cause to client?
-                                                                "Unexpected error encountered in handler"));
+                        asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                                                   // todo: should we expose the actual cause to client?
+                                                                   "Unexpected error encountered in handler"));
     }
 
     @Test
@@ -109,8 +112,8 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
             throw new IllegalStateException("Fails to load topology");
         });
         getThenComplete(context, TEST_PROGRESS_ROUTE,
-                     asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                                                "Fails to load topology"));
+                        asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                                                   "Fails to load topology"));
     }
 
     @Test
@@ -118,74 +121,69 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(jobId -> createTestingJob(jobId, RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM));
         getThenComplete(context, TEST_PROGRESS_ROUTE + "?fetch-policy=unknown_policy",
-                     asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.BAD_REQUEST,
+                        asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.BAD_REQUEST,
                                                                 "No RestoreJobProgressFetchPolicy found for unknown_policy"));
+    }
+
+    @Test
+    void testRetrieveProgressFailsWhenSliceCountIsNotSet(VertxTestContext context)
+    {
+        mockLookupRestoreJob(jobId -> createTestingJob(jobId, RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM)
+                                      .unbuild()
+                                      .sliceCount(null) // unset sliceCount
+                                      .build());
+        getThenComplete(context, TEST_PROGRESS_ROUTE + "?fetch-policy=first_failed",
+                        asyncResult -> assertStatusAndErrorMessage(asyncResult, HttpResponseStatus.BAD_REQUEST,
+                                                                   "Controller must set the sliceCount for Sidecar-managed restore job. " +
+                                                                   "jobId=" + TEST_JOB_ID));
     }
 
     @Test
     void testRetrieveProgressUsingAll(VertxTestContext context)
     {
-        mockLookupRestoreJob(jobId -> createTestingJob(jobId, RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM));
-        mockTopologyInRefresher(() -> generateTestTopology(3));
-        Map<String, RestoreRangeStatus> failedStatus = new HashMap<>();
-        failedStatus.put("instance-1", RestoreRangeStatus.FAILED);
-        failedStatus.put("instance-2", RestoreRangeStatus.FAILED);
-        RestoreRange failedRange = RestoreRangeTest.createTestRange(0, 10).unbuild().replicaStatus(failedStatus).build();
-        List<RestoreRange> ranges = Arrays.asList(failedRange, RestoreRangeTest.createTestRange(10, 15));
-        mockFindAllRestoreRanges(jobId -> ranges);
+        restoreJobProgressSetupWithFailedRange();
         getThenComplete(context, TEST_PROGRESS_ROUTE + "?fetch-policy=all",
-                     asyncResult -> {
-                         int rangesRetrieved = 0;
-                         RestoreJobProgressResponsePayload respBody = assertOKResponseAndExtractBody(asyncResult);
-                         assertFailedProgressRespBody(respBody);
-                         List<RestoreRangeJson> failedRanges = respBody.failedRanges();
-                         assertThat(failedRanges).hasSize(1);
-                         rangesRetrieved += failedRanges.size();
-                         assertRange(failedRanges.get(0), 0, 10);
-                         assertThat(respBody.succeededRanges()).isNull();
-                         List<RestoreRangeJson> pendingRanges = respBody.pendingRanges();
-                         assertThat(pendingRanges).hasSize(1);
-                         rangesRetrieved += pendingRanges.size();
-                         assertRange(pendingRanges.get(0), 10, 15);
-                         assertThat(respBody.abortedRanges()).isNull();
-                         // retrieving all 2 ranges back
-                         assertThat(rangesRetrieved).isEqualTo(2);
-                     });
+                        asyncResult -> {
+                            int rangesRetrieved = 0;
+                            RestoreJobProgressResponsePayload respBody = assertOKResponseAndExtractBody(asyncResult);
+                            assertFailedProgressRespBody(respBody);
+                            List<RestoreRangeJson> failedRanges = respBody.failedRanges();
+                            assertThat(failedRanges).hasSize(1);
+                            rangesRetrieved += failedRanges.size();
+                            assertRange(failedRanges.get(0), 0, 10);
+                            assertThat(respBody.succeededRanges()).isNull();
+                            List<RestoreRangeJson> pendingRanges = respBody.pendingRanges();
+                            assertThat(pendingRanges).hasSize(1);
+                            rangesRetrieved += pendingRanges.size();
+                            assertRange(pendingRanges.get(0), 10, 15);
+                            assertThat(respBody.abortedRanges()).isNull();
+                            // retrieving all 2 ranges back
+                            assertThat(rangesRetrieved).isEqualTo(2);
+                        });
     }
 
     @Test
     void testRetrieveProgressUsingAllFailedAndPending(VertxTestContext context)
     {
-        mockLookupRestoreJob(jobId -> createTestingJob(jobId, RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM));
-        mockTopologyInRefresher(() -> generateTestTopology(3));
-        Map<String, RestoreRangeStatus> failedStatus = new HashMap<>();
-        failedStatus.put("instance-1", RestoreRangeStatus.FAILED);
-        failedStatus.put("instance-2", RestoreRangeStatus.FAILED);
-        RestoreRange failedRange = RestoreRangeTest.createTestRange(0, 10).unbuild().replicaStatus(failedStatus).build();
-        Map<String, RestoreRangeStatus> satisfiedStatus = new HashMap<>();
-        satisfiedStatus.put("instance-2", RestoreRangeStatus.STAGED);
-        satisfiedStatus.put("instance-3", RestoreRangeStatus.STAGED);
-        RestoreRange satisfiedRange = RestoreRangeTest.createTestRange(15, 20).unbuild().replicaStatus(satisfiedStatus).build();
-        List<RestoreRange> ranges = Arrays.asList(failedRange, RestoreRangeTest.createTestRange(10, 15), satisfiedRange);
-        mockFindAllRestoreRanges(jobId -> ranges);
+        restoreJobProgressSetupWithFailedRange();
         getThenComplete(context, TEST_PROGRESS_ROUTE + "?fetch-policy=all_failed_and_pending",
-                     asyncResult -> {
-                         int rangesRetrieved = 0;
-                         RestoreJobProgressResponsePayload respBody = assertOKResponseAndExtractBody(asyncResult);
-                         assertFailedProgressRespBody(respBody);
-                         List<RestoreRangeJson> failedRanges = respBody.failedRanges();
-                         assertThat(failedRanges).hasSize(1);
-                         rangesRetrieved += failedRanges.size();
-                         assertRange(failedRanges.get(0), 0, 10);
-                         assertThat(respBody.succeededRanges()).isNull();
-                         List<RestoreRangeJson> pendingRanges = respBody.pendingRanges();
-                         assertThat(pendingRanges).hasSize(1);
-                         rangesRetrieved += pendingRanges.size();
-                         assertRange(pendingRanges.get(0), 10, 15);
-                         assertThat(respBody.abortedRanges()).isNull();
-                         // retrieving all 2 ranges back, while there are 3 ranges in total. One range is satisfied
-                         assertThat(rangesRetrieved).isEqualTo(2);
-                     });
+                        asyncResult -> {
+                            int rangesRetrieved = 0;
+                            RestoreJobProgressResponsePayload respBody = assertOKResponseAndExtractBody(asyncResult);
+                            assertFailedProgressRespBody(respBody);
+                            List<RestoreRangeJson> failedRanges = respBody.failedRanges();
+                            assertThat(failedRanges).hasSize(1);
+                            rangesRetrieved += failedRanges.size();
+                            assertRange(failedRanges.get(0), 0, 10);
+                            assertThat(respBody.succeededRanges()).isNull();
+                            List<RestoreRangeJson> pendingRanges = respBody.pendingRanges();
+                            assertThat(pendingRanges).hasSize(1);
+                            rangesRetrieved += pendingRanges.size();
+                            assertRange(pendingRanges.get(0), 10, 15);
+                            assertThat(respBody.abortedRanges()).isNull();
+                            // retrieving all 2 ranges back, while there are 3 ranges in total. One range is satisfied
+                            assertThat(rangesRetrieved).isEqualTo(2);
+                        });
     }
 
     @Test
@@ -203,26 +201,34 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
 
     void testFirstFailed(VertxTestContext context, boolean withQueryParam)
     {
-        mockLookupRestoreJob(jobId -> createTestingJob(jobId, RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM));
+        restoreJobProgressSetupWithFailedRange();
+        getThenComplete(context, TEST_PROGRESS_ROUTE + (withQueryParam ? "?fetch-policy=first_failed" : ""),
+                        asyncResult -> {
+                            RestoreJobProgressResponsePayload respBody = assertOKResponseAndExtractBody(asyncResult);
+                            assertFailedProgressRespBody(respBody);
+                            List<RestoreRangeJson> failedRanges = respBody.failedRanges();
+                            assertThat(failedRanges).hasSize(1);
+                            assertRange(failedRanges.get(0), 0, 10);
+                            // no ranges in other status are included in the response body when using FIRST_FAILED fetch policy
+                            assertThat(respBody.succeededRanges()).isNull();
+                            assertThat(respBody.pendingRanges()).isNull();
+                            assertThat(respBody.abortedRanges()).isNull();
+                        });
+    }
+
+    private void restoreJobProgressSetupWithFailedRange()
+    {
+        mockLookupRestoreJob(jobId -> createTestingJob(jobId, RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM)
+                                      .unbuild().sliceCount(2L).build()); // the test creates 2 slices
         mockTopologyInRefresher(() -> generateTestTopology(3));
         Map<String, RestoreRangeStatus> failedStatus = new HashMap<>();
         failedStatus.put("instance-1", RestoreRangeStatus.FAILED);
         failedStatus.put("instance-2", RestoreRangeStatus.FAILED);
-        RestoreRange failedRange = RestoreRangeTest.createTestRange(0, 10).unbuild().replicaStatus(failedStatus).build();
-        List<RestoreRange> ranges = Arrays.asList(failedRange, RestoreRangeTest.createTestRange(10, 15));
+        RestoreRange failedRange = RestoreRangeTest.createTestRange(0, 10)
+                                                   .unbuild().sliceId("slice-id1").replicaStatus(failedStatus).build();
+        RestoreRange pendingRange = RestoreRangeTest.createTestRange(10, 15).unbuild().sliceId("slice-id2").build();
+        List<RestoreRange> ranges = Arrays.asList(failedRange, pendingRange);
         mockFindAllRestoreRanges(jobId -> ranges);
-        getThenComplete(context, TEST_PROGRESS_ROUTE + (withQueryParam ? "?fetch-policy=first_failed" : ""),
-                     asyncResult -> {
-                         RestoreJobProgressResponsePayload respBody = assertOKResponseAndExtractBody(asyncResult);
-                         assertFailedProgressRespBody(respBody);
-                         List<RestoreRangeJson> failedRanges = respBody.failedRanges();
-                         assertThat(failedRanges).hasSize(1);
-                         assertRange(failedRanges.get(0), 0, 10);
-                         // no ranges in other status are included in the response body when using FIRST_FAILED fetch policy
-                         assertThat(respBody.succeededRanges()).isNull();
-                         assertThat(respBody.pendingRanges()).isNull();
-                         assertThat(respBody.abortedRanges()).isNull();
-                     });
     }
 
     // generate the artificial topology with fixed range length of 10 for each.
@@ -247,8 +253,7 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
         HttpResponse<?> response = asyncResult.result();
         assertThat(response).isNotNull();
         assertThat(response.statusCode()).isEqualTo(status.code());
-        assertThat(response.bodyAsJsonObject().getString("message"))
-        .isEqualTo(message);
+        assertThat(response.bodyAsJsonObject().getString("message")).isEqualTo(message);
     }
 
     private RestoreJobProgressResponsePayload assertOKResponseAndExtractBody(AsyncResult<HttpResponse<Buffer>> asyncResult)
@@ -267,10 +272,19 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
 
     private void assertFailedProgressRespBody(RestoreJobProgressResponsePayload respBody)
     {
+        assertProgressRespBody(respBody, "One or more ranges have failed.", ConsistencyVerificationResult.FAILED);
+    }
+
+    private void assertPendingProgressRespBody(RestoreJobProgressResponsePayload respBody)
+    {
+        assertProgressRespBody(respBody, "One or more ranges are in progress. None of the ranges fail.", ConsistencyVerificationResult.PENDING);
+    }
+
+    private void assertProgressRespBody(RestoreJobProgressResponsePayload respBody, String message, ConsistencyVerificationResult status)
+    {
         assertThat(respBody).isNotNull();
-        assertThat(respBody.message())
-        .isEqualTo("One or more ranges have failed. Current job status: STAGE_READY");
-        assertThat(respBody.summary().jobId())
-        .hasToString(TEST_JOB_ID);
+        assertThat(respBody.message()).startsWith(message);
+        assertThat(respBody.status()).isEqualTo(status);
+        assertThat(respBody.summary().jobId()).hasToString(TEST_JOB_ID);
     }
 }

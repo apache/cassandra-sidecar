@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.restore;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -33,7 +33,7 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
     void testAlwaysCollectMore()
     {
         assertThat(collector.canCollectMore()).isTrue();
-        for (ConsistencyVerifier.Result result : ConsistencyVerifier.Result.values())
+        for (ConsistencyVerificationResult result : ConsistencyVerificationResult.values())
         {
             createRangesAndCollect(1, result);
             assertThat(collector.canCollectMore()).isTrue();
@@ -44,7 +44,7 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
     void testCollectAllSatisfiedRanges()
     {
         int succeededRanges = 10;
-        createRangesAndCollect(succeededRanges, ConsistencyVerifier.Result.SATISFIED);
+        createRangesAndCollect(succeededRanges, ConsistencyVerificationResult.SATISFIED);
         RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
         assertThat(payload.message()).isEqualTo("All ranges have succeeded. Current job status: CREATED");
         assertJobSummary(payload.summary());
@@ -58,7 +58,7 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
     void testCollectAllFailed()
     {
         int failedRanges = 10;
-        createRangesAndCollect(failedRanges, ConsistencyVerifier.Result.FAILED);
+        createRangesAndCollect(failedRanges, ConsistencyVerificationResult.FAILED);
         RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges have failed. Current job status: CREATED");
         assertJobSummary(payload.summary());
@@ -72,7 +72,7 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
     void testCollectAllPending()
     {
         int pendingRanges = 10;
-        createRangesAndCollect(pendingRanges, ConsistencyVerifier.Result.PENDING);
+        createRangesAndCollect(pendingRanges, ConsistencyVerificationResult.PENDING);
         RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges are in progress. None of the ranges fail. Current job status: CREATED");
         assertJobSummary(payload.summary());
@@ -88,9 +88,9 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
         int pendingRanges = 3;
         int failedRanges = 1;
         int satisfiedRanges = 2;
-        createRangesAndCollect(pendingRanges, ConsistencyVerifier.Result.PENDING);
-        createRangesAndCollect(failedRanges, ConsistencyVerifier.Result.FAILED);
-        createRangesAndCollect(satisfiedRanges, ConsistencyVerifier.Result.SATISFIED);
+        createRangesAndCollect(pendingRanges, ConsistencyVerificationResult.PENDING);
+        createRangesAndCollect(failedRanges, ConsistencyVerificationResult.FAILED);
+        createRangesAndCollect(satisfiedRanges, ConsistencyVerificationResult.SATISFIED);
         RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges have failed. Current job status: CREATED");
         assertJobSummary(payload.summary());
@@ -105,8 +105,8 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
     {
         int pendingRanges = 3;
         int satisfiedRanges = 2;
-        createRangesAndCollect(pendingRanges, ConsistencyVerifier.Result.PENDING);
-        createRangesAndCollect(satisfiedRanges, ConsistencyVerifier.Result.SATISFIED);
+        createRangesAndCollect(pendingRanges, ConsistencyVerificationResult.PENDING);
+        createRangesAndCollect(satisfiedRanges, ConsistencyVerificationResult.SATISFIED);
         RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges are in progress. None of the ranges fail. Current job status: CREATED");
         assertJobSummary(payload.summary());

@@ -36,6 +36,7 @@ import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
+import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -160,6 +161,15 @@ public class RestoreProcessor implements PeriodicTask
                 break; // break in order to complete promise
             }
 
+            // only create task when the restore job status is import ready for the staged ranges
+            // otherwise, putting the range back to the staged queue and exit early.
+            if (range.hasStaged() && range.job().status != RestoreJobStatus.IMPORT_READY)
+            {
+                workQueue.offerStaged(range);
+                processMaxConcurrency.releasePermit();
+                break;
+            }
+
             Preconditions.checkState(range.canProduceTask(),
                                      "RestoreRangeTask cannot be produced by range " + range.shortDescription());
 
@@ -249,14 +259,21 @@ public class RestoreProcessor implements PeriodicTask
             {
                 restoreMetrics.sliceStageTime.metric.update(task.elapsedInNanos(), TimeUnit.NANOSECONDS);
                 LOGGER.info("Restore range has been staged successfully. sliceKey={}", range.sliceKey());
-                // the slice is not fully complete yet. Re-enqueue the slice.
-                workQueue.offer(range);
+                // the slice is not fully complete yet. Re-enqueue the slice to the staged queue.
+                workQueue.offerStaged(range);
             }
             else // log a warning and retry. It should not reach here.
             {
                 LOGGER.warn("Unexpected state of slice. It is neither staged nor imported. sliceKey={}",
                             range.sliceKey());
-                workQueue.offer(range);
+                if (range.hasStaged())
+                {
+                    workQueue.offerStaged(range);
+                }
+                else
+                {
+                    workQueue.offer(range);
+                }
             }
             return Future.succeededFuture();
         };
@@ -269,7 +286,14 @@ public class RestoreProcessor implements PeriodicTask
             {
                 LOGGER.warn("Slice failed with recoverable failure. sliceKey={}", range.sliceKey(), cause);
                 // re-enqueue the retryable failed slice
-                workQueue.offer(range);
+                if (range.hasStaged())
+                {
+                    workQueue.offerStaged(range);
+                }
+                else
+                {
+                    workQueue.offer(range);
+                }
             }
             else
             {
@@ -310,10 +334,27 @@ public class RestoreProcessor implements PeriodicTask
         return sidecarSchema;
     }
 
+    /**
+     * A facade that encapsulates the queuing of restore ranges of 2 phases, newly created and staged, as well as related metrics aggregation.
+     * <ul>
+     * <li>
+     * When the restore job is managed by Spark/external controller, restore ranges are only enqueued in the restoreRanges queue, as the job
+     * has only 1 phase. The stagedRestoreRanges queue is not used at all.
+     * </li>
+     * <li>
+     * When the restore job is managed by Sidecar, there are 2 phases in the import/restore procedure. The newly created restore ranges are
+     * enqueued in the restoreRanges queue first, once the slices/objects have been downloaded, the restore ranges are enqueued into the
+     * stagedRestoreRanges queue. When it is ready to import, RestoreProcessor polls restore ranges from the staged queue and import.
+     * </li>
+     * </ul>
+     */
     private class WorkQueue
     {
         // use concurrent collection for non-blocking read operations
+        // the work queue for all newly create restore ranges
         private final Queue<RestoreRange> restoreRanges = new ConcurrentLinkedQueue<>();
+        // the work queue for staged restore ranges
+        private final Queue<RestoreRange> stagedRestoreRanges = new ConcurrentLinkedQueue<>();
         // use non-concurrent map since all the update operations are (required to)
         // synchronized for restoreRanges and pendingRangesPerInstance
         private final Map<Integer, AtomicInteger> pendingRangesPerInstance = new HashMap<>();
@@ -326,6 +367,12 @@ public class RestoreProcessor implements PeriodicTask
             return restoreRanges.offer(range);
         }
 
+        synchronized boolean offerStaged(RestoreRange range)
+        {
+            increment(pendingRangesPerInstance, range);
+            return stagedRestoreRanges.offer(range);
+        }
+
         synchronized void remove(RestoreRange range)
         {
             decrementIfPresent(pendingRangesPerInstance, range);
@@ -334,7 +381,7 @@ public class RestoreProcessor implements PeriodicTask
 
         synchronized RestoreRange poll()
         {
-            RestoreRange slice = restoreRanges.poll();
+            RestoreRange slice = pollInternal();
             if (slice == null)
             {
                 return null;
@@ -356,11 +403,6 @@ public class RestoreProcessor implements PeriodicTask
             restoreRanges.clear();
             pendingRangesPerInstance.clear();
             activeRangesPerInstance.clear();
-        }
-
-        RestoreRange peek()
-        {
-            return restoreRanges.peek();
         }
 
         void decrementActiveSliceCount(RestoreRange range)
@@ -406,6 +448,27 @@ public class RestoreProcessor implements PeriodicTask
                 counter.decrementAndGet();
                 return counter;
             });
+        }
+
+        private RestoreRange peek()
+        {
+            RestoreRange range = restoreRanges.peek();
+            if (range == null)
+            {
+                range = stagedRestoreRanges.peek();
+            }
+            return range;
+        }
+
+        private RestoreRange pollInternal()
+        {
+            RestoreRange range = restoreRanges.poll();
+            if (range == null)
+            {
+                range = stagedRestoreRanges.poll();
+            }
+
+            return range;
         }
 
         private InstanceRestoreMetrics instanceRestoreMetrics(int instanceId)

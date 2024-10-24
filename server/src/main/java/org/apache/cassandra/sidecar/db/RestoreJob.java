@@ -64,6 +64,7 @@ public class RestoreJob
     public final @Nullable ConsistencyLevel consistencyLevel;
     public final @Nullable String localDatacenter;
     public final Manager restoreJobManager;
+    public final Long sliceCount;
 
     private final String statusText;
 
@@ -92,7 +93,8 @@ public class RestoreJob
                .expireAt(row.getTimestamp("expire_at"))
                .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
                .consistencyLevel(consistencyConfig.consistencyLevel)
-               .localDatacenter(consistencyConfig.localDatacenter);
+               .localDatacenter(consistencyConfig.localDatacenter)
+               .sliceCount(row.get("slice_count", Long.class));
 
         return builder.build();
     }
@@ -155,6 +157,7 @@ public class RestoreJob
         this.consistencyLevel = builder.consistencyLevel;
         this.localDatacenter = builder.localDatacenter;
         this.restoreJobManager = builder.manager;
+        this.sliceCount = builder.sliceCount;
     }
 
     public Builder unbuild()
@@ -244,6 +247,7 @@ public class RestoreJob
         private ConsistencyLevel consistencyLevel;
         private String localDatacenter;
         private Manager manager;
+        private Long sliceCount;
 
         private Builder()
         {
@@ -265,6 +269,8 @@ public class RestoreJob
             this.bucketCount = restoreJob.bucketCount;
             this.consistencyLevel = restoreJob.consistencyLevel;
             this.localDatacenter = restoreJob.localDatacenter;
+            this.manager = restoreJob.restoreJobManager;
+            this.sliceCount = restoreJob.sliceCount;
         }
 
         public Builder createdAt(LocalDate createdAt)
@@ -326,6 +332,11 @@ public class RestoreJob
         public Builder expireAt(Date expireAt)
         {
             return update(b -> b.expireAt = expireAt);
+        }
+
+        public Builder sliceCount(Long sliceCount)
+        {
+            return update(b -> b.sliceCount = sliceCount);
         }
 
         public Builder bucketCount(short bucketCount)

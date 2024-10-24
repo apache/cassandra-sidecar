@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,27 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.cluster;
-
-import java.util.Set;
-
-import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
-import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
-import org.jetbrains.annotations.NotNull;
+package org.apache.cassandra.sidecar.common.data;
 
 /**
- * Verifier to check the progress with the consistency level
+ * Verification result
  */
-public interface ConsistencyVerifier
+public enum ConsistencyVerificationResult
 {
     /**
-     * Verify the current progress and conclude a result
-     *
-     * @param succeeded current instances succeed
-     * @param failed    current instances fail
-     * @param all       all participant instances considering the replication strategy;
-     *                  instances are grouped by dc
-     * @return result
+     * the passed replicas have satisfied the consistency level
      */
-    ConsistencyVerificationResult verify(@NotNull Set<String> succeeded, @NotNull Set<String> failed, @NotNull InstanceSetByDc all);
+    SATISFIED,
+    /**
+     * no conclusion can be made yet
+     */
+    PENDING,
+    /**
+     * the failed replicas have failed the consistency level
+     */
+    FAILED,
 }

@@ -23,7 +23,7 @@ import java.nio.file.Paths;
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
-import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobSummaryResponsePayload;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -50,7 +50,7 @@ abstract class BaseRestoreJobProgressCollectorTest
         assertThat(payload.succeededRanges()).isNull();
     }
 
-    protected void createRangesAndCollect(int count, ConsistencyVerifier.Result result)
+    protected void createRangesAndCollect(int count, ConsistencyVerificationResult result)
     {
         for (int i = 0; i < count; i++)
         {

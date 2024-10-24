@@ -28,10 +28,10 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier;
-import org.apache.cassandra.sidecar.cluster.ConsistencyVerifier.Result;
 import org.apache.cassandra.sidecar.cluster.ConsistencyVerifiers;
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
+import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaInfo;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
@@ -57,7 +57,7 @@ class RestoreJobConsistencyLevelCheckerTest
 
         assertThat(concludeOneRangeUnsafe(topology, ConsistencyVerifiers.ForOne.INSTANCE, RestoreRangeStatus.STAGED, range))
         .describedAs("When unable to find replica set for the range, pending should be returned")
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
     }
 
     @Test
@@ -74,7 +74,7 @@ class RestoreJobConsistencyLevelCheckerTest
 
         assertThat(concludeOneRangeUnsafe(topology, ConsistencyVerifiers.ForOne.INSTANCE, RestoreRangeStatus.STAGED, range))
         .describedAs("When unable to find replica set for the range, pending should be returned")
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
     }
 
     @Test
@@ -104,14 +104,14 @@ class RestoreJobConsistencyLevelCheckerTest
         Map<String, RestoreRangeStatus> replicaStatus = new HashMap<>();
         range = range.unbuild().replicaStatus(replicaStatus).build();
         assertThat(concludeOneRangeUnsafe(topology, ConsistencyVerifiers.ForOne.INSTANCE, RestoreRangeStatus.STAGED, range))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
         replicaStatus.put("i-1", RestoreRangeStatus.FAILED);
         replicaStatus.put("i-2", RestoreRangeStatus.FAILED);
         replicaStatus.put("i-3", RestoreRangeStatus.CREATED);
         range = range.unbuild().replicaStatus(replicaStatus).build();
         assertThat(concludeOneRangeUnsafe(topology, ConsistencyVerifiers.ForOne.INSTANCE, RestoreRangeStatus.STAGED, range))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
         replicaStatus.put("i-1", RestoreRangeStatus.STAGED);
         replicaStatus.put("i-2", RestoreRangeStatus.CREATED);
@@ -119,7 +119,7 @@ class RestoreJobConsistencyLevelCheckerTest
         range = range.unbuild().replicaStatus(replicaStatus).build();
         assertThat(concludeOneRangeUnsafe(topology, ConsistencyVerifiers.ForOne.INSTANCE, RestoreRangeStatus.STAGED, range))
         .describedAs("As long as one replica reports STAGED, it is good for CL_ONE")
-        .isEqualTo(Result.SATISFIED);
+        .isEqualTo(ConsistencyVerificationResult.SATISFIED);
 
         replicaStatus.put("i-1", RestoreRangeStatus.FAILED);
         replicaStatus.put("i-2", RestoreRangeStatus.FAILED);
@@ -127,7 +127,7 @@ class RestoreJobConsistencyLevelCheckerTest
         range = range.unbuild().replicaStatus(replicaStatus).build();
         assertThat(concludeOneRangeUnsafe(topology, ConsistencyVerifiers.ForOne.INSTANCE, RestoreRangeStatus.STAGED, range))
         .describedAs("When all replicas fail, it fails for CL_ONE")
-        .isEqualTo(Result.FAILED);
+        .isEqualTo(ConsistencyVerificationResult.FAILED);
     }
 
     @Test
@@ -144,28 +144,28 @@ class RestoreJobConsistencyLevelCheckerTest
         Map<String, RestoreRangeStatus> replicaStatus = new HashMap<>();
         range = range.unbuild().replicaStatus(replicaStatus).build();
         assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
         replicaStatus.put("i-1", RestoreRangeStatus.FAILED);
         replicaStatus.put("i-2", RestoreRangeStatus.STAGED);
         replicaStatus.put("i-3", RestoreRangeStatus.CREATED);
         range = range.unbuild().replicaStatus(replicaStatus).build();
         assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
-        .isEqualTo(Result.PENDING);
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
 
         replicaStatus.put("i-1", RestoreRangeStatus.STAGED);
         replicaStatus.put("i-2", RestoreRangeStatus.STAGED);
         replicaStatus.put("i-3", RestoreRangeStatus.FAILED);
         range = range.unbuild().replicaStatus(replicaStatus).build();
         assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
-        .isEqualTo(Result.SATISFIED);
+        .isEqualTo(ConsistencyVerificationResult.SATISFIED);
 
         replicaStatus.put("i-1", RestoreRangeStatus.STAGED);
         replicaStatus.put("i-2", RestoreRangeStatus.FAILED);
         replicaStatus.put("i-3", RestoreRangeStatus.FAILED);
         range = range.unbuild().replicaStatus(replicaStatus).build();
         assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
-        .isEqualTo(Result.FAILED);
+        .isEqualTo(ConsistencyVerificationResult.FAILED);
     }
 
     private Map<String, List<String>> replicaByDc(int dcCount, int replicasPerDc)
