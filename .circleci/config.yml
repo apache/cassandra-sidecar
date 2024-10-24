@@ -24,12 +24,6 @@ version: 2.1
 
 # need to reuse the same base environment for several tests
 aliases:
-  base_job: &base_job
-    machine:
-      image: ubuntu-2204:edge
-    working_directory: ~/repo
-    environment:
-      TERM: dumb
   centos: &centos
     docker:
       - image: centos:centos8
@@ -425,8 +419,10 @@ jobs:
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
 
   docker_build:
-    <<: *base_job
+    docker:
+      - image: cimg/openjdk:11.0
     steps:
+      - setup_remote_docker
       - checkout
       - run: ./gradlew --info clean :server:jibDockerBuild
 
