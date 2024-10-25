@@ -66,6 +66,7 @@ import org.apache.cassandra.sidecar.common.request.Request;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
+import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
@@ -75,6 +76,7 @@ import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
@@ -1396,6 +1398,46 @@ abstract class SidecarClientTest
                                                                          .readString(Charset.defaultCharset());
                                    assertThat(reqBodyString).isEqualTo(expectedReqBodyString);
                                });
+    }
+
+    @Test
+    public void testConnectedClientStats() throws Exception
+    {
+        String connectedClientStatsResponseAsString = "{\"clientConnections\":[{\"address\":\"127.0.0.1\",\"port\":54628" +
+                                                      ",\"sslEnabled\":false,\"sslCipherSuite\":\"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256\"" +
+                                                      ",\"sslProtocol\":\"TLSv1.2\",\"protocolVersion\":\"5\",\"username\":\"anonymous\"" +
+                                                      ",\"requestCount\":39,\"driverName\":\"DataStax Java Driver\"" +
+                                                      ",\"driverVersion\":\"3.11.3\",\"keyspaceName\":\"test\"" +
+                                                      ",\"authenticationMode\":\"MutualTls\"" +
+                                                      ",\"authenticationMetadata\":{\"identity\":\"spiffe://test.cassandra.apache.org/unitTest/mtls\"}" +
+                                                      ",\"clientOptions\":{\"CQL_VERSION\":\"3.4.6\",\"DRIVER_NAME\":\"DataStax Python Driver\"" +
+                                                      ",\"DRIVER_VERSION\":\"3.25.0\"}}],\"totalConnectedClients\":1" +
+                                                      ",\"connectionsByUser\":{\"anonymous\":1}}";
+
+        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(connectedClientStatsResponseAsString);
+        enqueue(response);
+        ConnectedClientStatsResponse result = client.connectedClientStats().get();
+
+        assertThat(result).isNotNull();
+        assertThat(result.clientConnections()).isNotNull().hasSize(1);
+        assertThat(result.totalConnectedClients()).isNotNull().isEqualTo(1);
+        assertThat(result.connectionsByUser()).isNotNull().containsKey("anonymous");
+        ClientConnectionEntry entry = result.clientConnections().iterator().next();
+        assertThat(entry.address()).isEqualTo("127.0.0.1");
+        assertThat(entry.port()).isEqualTo(54628);
+        assertThat(entry.sslEnabled()).isEqualTo(false);
+        assertThat(entry.sslCipherSuite()).isEqualTo("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
+        assertThat(entry.sslProtocol()).isEqualTo("TLSv1.2");
+        assertThat(entry.protocolVersion()).isEqualTo("5");
+        assertThat(entry.username()).isEqualTo("anonymous");
+        assertThat(entry.requestCount()).isEqualTo(39);
+        assertThat(entry.driverName()).isEqualTo("DataStax Java Driver");
+        assertThat(entry.driverVersion()).isEqualTo("3.11.3");
+        assertThat(entry.keyspaceName()).isEqualTo("test");
+        assertThat(entry.authenticationMode()).isEqualTo("MutualTls");
+        assertThat(entry.authenticationMetadata()).containsKey("identity");
+        assertThat(entry.clientOptions()).containsKeys("CQL_VERSION", "DRIVER_NAME", "DRIVER_VERSION");
+        validateResponseServed(ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE);
     }
 
     private void enqueue(MockResponse response)

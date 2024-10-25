@@ -38,12 +38,15 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 @Singleton
 public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRangesSchema>
 {
+    private final SidecarSchema sidecarSchema;
+
     @Inject
     protected RestoreRangeDatabaseAccessor(SidecarSchema sidecarSchema,
                                            RestoreRangesSchema tableSchema,
                                            CQLSessionProvider sessionProvider)
     {
-        super(sidecarSchema, tableSchema, sessionProvider);
+        super(tableSchema, sessionProvider);
+        this.sidecarSchema = sidecarSchema;
     }
 
     public RestoreRange create(RestoreRange range)

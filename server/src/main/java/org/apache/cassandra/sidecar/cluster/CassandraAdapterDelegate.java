@@ -50,6 +50,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
@@ -400,6 +401,13 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     public StorageOperations storageOperations()
     {
         return fromAdapter(ICassandraAdapter::storageOperations);
+    }
+
+    @Nullable
+    @Override
+    public MetricsOperations metricsOperations()
+    {
+        return fromAdapter(ICassandraAdapter::metricsOperations);
     }
 
     @Nullable

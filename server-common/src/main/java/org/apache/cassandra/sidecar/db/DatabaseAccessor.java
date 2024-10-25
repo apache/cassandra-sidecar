@@ -25,7 +25,6 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
-import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.jetbrains.annotations.NotNull;
 
@@ -36,17 +35,14 @@ import org.jetbrains.annotations.NotNull;
  */
 public abstract class DatabaseAccessor<T extends TableSchema>
 {
-    public final SidecarSchema sidecarSchema;
     public final CQLSessionProvider cqlSessionProvider;
     protected final T tableSchema;
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    protected DatabaseAccessor(SidecarSchema sidecarSchema,
-                               T tableSchema,
+    protected DatabaseAccessor(T tableSchema,
                                CQLSessionProvider sessionProvider)
     {
-        this.sidecarSchema = sidecarSchema;
         this.tableSchema = tableSchema;
         this.cqlSessionProvider = sessionProvider;
     }

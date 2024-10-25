@@ -19,11 +19,12 @@
 package org.apache.cassandra.sidecar.metrics;
 
 import com.codahale.metrics.MetricRegistry;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 import static org.apache.cassandra.sidecar.metrics.ServerMetrics.SERVER_PREFIX;
 
 /**
- * Tracks metrics for {@link org.apache.cassandra.sidecar.db.schema.SidecarSchema} and other schema related handling
+ * Tracks metrics for {@link SidecarSchema} and other schema related handling
  * done by Sidecar
  */
 public class SchemaMetrics

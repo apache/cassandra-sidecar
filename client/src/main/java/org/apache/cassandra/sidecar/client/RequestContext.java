@@ -31,6 +31,7 @@ import org.apache.cassandra.sidecar.common.request.CassandraJmxHealthRequest;
 import org.apache.cassandra.sidecar.common.request.CassandraNativeHealthRequest;
 import org.apache.cassandra.sidecar.common.request.CleanSSTableUploadSessionRequest;
 import org.apache.cassandra.sidecar.common.request.ClearSnapshotRequest;
+import org.apache.cassandra.sidecar.common.request.ConnectedClientStatsRequest;
 import org.apache.cassandra.sidecar.common.request.CreateSnapshotRequest;
 import org.apache.cassandra.sidecar.common.request.GossipInfoRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
@@ -472,6 +473,17 @@ public class RequestContext
                                             Digest digest, String filename)
         {
             return request(new UploadSSTableRequest(keyspace, tableName, uploadId, component, digest, filename));
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link ConnectedClientStatsRequest} and returns a reference to this Builder
+         * enabling method chaining.
+         *
+         * @return a reference to this Builder
+         */
+        public Builder connectedClientStatsRequest()
+        {
+            return request(new ConnectedClientStatsRequest());
         }
 
         /**

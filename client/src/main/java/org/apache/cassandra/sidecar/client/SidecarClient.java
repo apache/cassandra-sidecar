@@ -48,6 +48,7 @@ import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayloa
 import org.apache.cassandra.sidecar.common.request.data.Digest;
 import org.apache.cassandra.sidecar.common.request.data.RestoreJobProgressRequestParams;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
@@ -578,6 +579,18 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
         return executor.executeRequestAsync(requestBuilder()
                                             .request(new RestoreJobProgressRequest(params))
                                             .build());
+    }
+
+    /**
+     * Executes the connected client stats request using the default retry policy and configured selection policy
+     *
+     * @return a completable future of the connected client stats
+     */
+    public CompletableFuture<ConnectedClientStatsResponse> connectedClientStats()
+    {
+        return executeRequestAsync(requestBuilder()
+                                   .connectedClientStatsRequest()
+                                   .build());
     }
 
     /**

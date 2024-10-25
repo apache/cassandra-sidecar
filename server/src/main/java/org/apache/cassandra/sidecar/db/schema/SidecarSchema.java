@@ -39,7 +39,7 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
 /**
- * Encapsulates all {@link AbstractSchema} related operations for features provided by Sidecar
+ * Encapsulates all related operations for features provided by Sidecar
  */
 public class SidecarSchema
 {
