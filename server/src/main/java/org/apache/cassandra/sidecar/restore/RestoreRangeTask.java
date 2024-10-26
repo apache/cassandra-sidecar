@@ -330,15 +330,13 @@ public class RestoreRangeTask implements RestoreRangeHandler
                .compose(this::commit)
                .compose(
                success -> { // successMapper
+                   range.completeImportPhase();
                    if (onSuccessCommit == null)
                    {
                        return Future.succeededFuture();
                    }
 
-                   return executorPool.runBlocking(() -> {
-                       range.completeImportPhase();
-                       onSuccessCommit.run();
-                   });
+                   return executorPool.runBlocking(onSuccessCommit::run);
                },
                failure -> { // failureMapper
                    logWarnIfHasHttpExceptionCauseOnCommit(failure, range);

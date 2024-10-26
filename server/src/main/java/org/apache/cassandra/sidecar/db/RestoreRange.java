@@ -506,7 +506,9 @@ public class RestoreRange
         }
         catch (NullPointerException npe) // various places can throw NPE. Catch them all in one single place.
         {
-            throw new NullPointerException("Unexpected null storageBroadcastAddress from CassandraAdapter");
+            NullPointerException e = new NullPointerException("Unexpected null storageBroadcastAddress from CassandraAdapter");
+            e.addSuppressed(npe);
+            throw e;
         }
     }
 

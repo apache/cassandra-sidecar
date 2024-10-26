@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Fix RestoreRangeTask not terminating (CASSANDRASC-153)
  * Fix restore job of coordinated write not proceeding (CASSANDRASC-152)
  * Add vert.x auth subproject for mTLS authentication support in Sidecar (CASSANDRASC-146)
  * Improve S3 download throttling with range-GetObject (CASSANDRASC-142)

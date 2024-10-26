@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.restore;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,6 +60,7 @@ import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
@@ -71,7 +73,6 @@ import org.apache.cassandra.sidecar.restore.RestoreSliceManifest.ManifestEntry;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 import org.apache.cassandra.sidecar.utils.XXHash32Provider;
-import org.mockito.Mockito;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
@@ -81,6 +82,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -102,20 +104,21 @@ class RestoreRangeTaskTest
     @BeforeEach
     void setup()
     {
-        mockRange = mock(RestoreRange.class, Mockito.RETURNS_DEEP_STUBS);
-        when(mockRange.stageDirectory()).thenReturn(Paths.get("."));
-        when(mockRange.sliceId()).thenReturn("testing-slice");
-        when(mockRange.sliceKey()).thenReturn("storage-key");
-        when(mockRange.keyspace()).thenReturn("test_ks");
-        when(mockRange.table()).thenReturn("test_tbl");
-        when(mockRange.uploadId()).thenReturn("upload-id");
         InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
         when(instanceMetadata.id()).thenReturn(1);
         when(instanceMetadata.host()).thenReturn("host-1");
         when(instanceMetadata.metrics()).thenReturn(new InstanceMetricsImpl(registry(1)));
+        when(instanceMetadata.applyFromDelegate(any())).thenReturn(new InetSocketAddress(9043));
         InstanceMetadataFetcher mockInstanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
         when(mockInstanceMetadataFetcher.instance(1)).thenReturn(instanceMetadata);
-        when(mockRange.owner()).thenReturn(instanceMetadata);
+        RestoreSlice slice = RestoreSlice.builder()
+                                         .sliceId("testing-slice").storageKey("storage-key").keyspace("test_ks").table("test_tbl")
+                                         .build();
+        RestoreRange range = RestoreRange.builderFromSlice(slice)
+                                         .stageDirectory(Paths.get("."), "upload-id")
+                                         .ownerInstance(instanceMetadata)
+                                         .build();
+        mockRange = spy(range);
         mockStorageClient = mock(StorageClient.class);
         mockSSTableImporter = mock(SSTableImporter.class);
         executorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
@@ -150,6 +153,12 @@ class RestoreRangeTaskTest
         task.handle(promise);
         getBlocking(promise.future()); // no error is thrown
 
+        assertThat(mockRange.hasStaged())
+        .describedAs("hasStaged should only be set by sidecar-managed restore job")
+        .isFalse();
+        assertThat(mockRange.hasImported())
+        .describedAs("Succeeded range should result in hasImported state")
+        .isTrue();
         // assert on the stats collected
         InstanceRestoreMetrics instanceRestoreMetrics = metrics.instance(1).restore();
         assertThat(metrics.server().restore().sliceReplicationTime.metric.getSnapshot().getValues()).hasSize(1);
@@ -182,6 +191,8 @@ class RestoreRangeTaskTest
         .describedAs("The replication time of the slice has been captured when confirming the existence." +
                      "It should not be captured again in this run.")
         .isEmpty();
+        assertThat(mockRange.hasStaged()).isFalse();
+        assertThat(mockRange.hasImported()).isTrue();
     }
 
     @Test
@@ -197,6 +208,8 @@ class RestoreRangeTaskTest
         assertThatThrownBy(() -> getBlocking(promise.future()))
         .hasRootCauseExactlyInstanceOf(RestoreJobFatalException.class)
         .hasMessageContaining("Restore range is cancelled");
+        assertThat(mockRange.hasStaged()).isFalse();
+        assertThat(mockRange.hasImported()).isFalse();
     }
 
     @Test
@@ -213,6 +226,8 @@ class RestoreRangeTaskTest
         assertThatThrownBy(() -> getBlocking(promise.future()))
         .hasRootCauseExactlyInstanceOf(RestoreJobException.class) // NOT a fatal exception
         .hasMessageContaining("Object not found");
+        assertThat(mockRange.hasStaged()).isFalse();
+        assertThat(mockRange.hasImported()).isFalse();
     }
 
     @Test
@@ -221,8 +236,8 @@ class RestoreRangeTaskTest
         // test specific setup
         RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGE_READY));
         doReturn(true).when(job).isManagedBySidecar();
-        when(mockRange.job()).thenReturn(job);
-        when(mockRange.stagedObjectPath()).thenReturn(Paths.get("nonexist"));
+        doReturn(job).when(mockRange).job();
+        doReturn(Paths.get("nonexist")).when(mockRange).stagedObjectPath();
         HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
         when(headObjectResponse.contentLength()).thenReturn(1L);
         when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
@@ -237,6 +252,8 @@ class RestoreRangeTaskTest
         verify(mockRange, times(1)).completeStagePhase();
         verify(mockRange, times(0)).completeImportPhase(); // should not be called in this phase
         verify(mockRangeAccessor, times(1)).updateStatus(mockRange);
+        assertThat(mockRange.hasStaged()).isTrue();
+        assertThat(mockRange.hasImported()).isFalse();
     }
 
     @Test
@@ -245,7 +262,7 @@ class RestoreRangeTaskTest
         // test specific setup
         RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGE_READY));
         doReturn(true).when(job).isManagedBySidecar();
-        when(mockRange.job()).thenReturn(job);
+        doReturn(job).when(mockRange).job();
         Path stagedPath = testFolder.resolve("slice.zip");
         Files.createFile(stagedPath);
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
@@ -262,6 +279,8 @@ class RestoreRangeTaskTest
         verify(mockRange, times(1)).completeStagePhase();
         verify(mockRange, times(0)).completeImportPhase(); // should not be called in this phase
         verify(mockRangeAccessor, times(1)).updateStatus(mockRange);
+        assertThat(mockRange.hasStaged()).isTrue();
+        assertThat(mockRange.hasImported()).isFalse();
     }
 
     @Test
@@ -270,7 +289,7 @@ class RestoreRangeTaskTest
         // test specific setup
         RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.IMPORT_READY));
         doReturn(true).when(job).isManagedBySidecar();
-        when(mockRange.job()).thenReturn(job);
+        doReturn(job).when(mockRange).job();
         RestoreRangeTask task = createTask(mockRange, job);
 
         Promise<RestoreRange> promise = Promise.promise();
@@ -280,6 +299,7 @@ class RestoreRangeTaskTest
         verify(mockRange, times(0)).completeStagePhase(); // should not be called in the phase
         verify(mockRange, times(1)).completeImportPhase();
         verify(mockRangeAccessor, times(1)).updateStatus(mockRange);
+        assertThat(mockRange.hasImported()).isTrue();
     }
 
     @Test
@@ -297,6 +317,7 @@ class RestoreRangeTaskTest
         Future<?> failure = task.commit(testFolder.toFile());
         assertThat(failure.failed()).isTrue();
         assertThat(failure.cause()).hasMessageContaining("Import failed");
+        assertThat(mockRange.hasImported()).isFalse();
     }
 
     @Test
@@ -583,7 +604,8 @@ class RestoreRangeTaskTest
 
     private RestoreRangeTask createTask(RestoreRange range, RestoreJob job, Supplier<Long> currentNanoTimeSupplier)
     {
-        when(range.job()).thenReturn(job);
+        doReturn(job).when(range).job();
+        doNothing().when(range).requestOutOfRangeDataCleanup();
         assertThat(range.job()).isSameAs(job);
         assertThat(range.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
         assertThat(range.job().status).isEqualTo(job.status);
@@ -595,7 +617,8 @@ class RestoreRangeTaskTest
 
     private RestoreRangeTask createTaskWithExceptions(RestoreRange range, RestoreJob job)
     {
-        when(range.job()).thenReturn(job);
+        doReturn(job).when(range).job();
+        doNothing().when(range).requestOutOfRangeDataCleanup();
         assertThat(range.job()).isSameAs(job);
         assertThat(range.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
         assertThat(range.job().status).isEqualTo(job.status);
@@ -628,11 +651,11 @@ class RestoreRangeTaskTest
             instanceMetrics.restore().sliceUnzipTime.metric.update(123L, TimeUnit.NANOSECONDS);
             instanceMetrics.restore().sliceValidationTime.metric.update(123L, TimeUnit.NANOSECONDS);
             instanceMetrics.restore().sliceImportTime.metric.update(123L, TimeUnit.NANOSECONDS);
+            range.completeImportPhase();
             if (onSuccessCommit != null)
             {
                 onSuccessCommit.run();
             }
-            range.completeImportPhase();
             return Future.succeededFuture();
         }
 
