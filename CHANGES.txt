@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Remove duplicated AbstractSchema class (CASSANDRASC-154)
  * Fix RestoreRangeTask not terminating (CASSANDRASC-153)
  * Fix restore job of coordinated write not proceeding (CASSANDRASC-152)
  * Add vert.x auth subproject for mTLS authentication support in Sidecar (CASSANDRASC-146)
