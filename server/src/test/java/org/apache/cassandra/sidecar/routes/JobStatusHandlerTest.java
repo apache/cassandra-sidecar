@@ -51,7 +51,6 @@ import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
-import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -150,9 +149,15 @@ public class JobStatusHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/jobs/" + failedUuid + "/status";
         client.get(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_INTERNAL_SERVER_ERROR)
+              .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(INTERNAL_SERVER_ERROR.code());
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  JobStatusResponse jobStatus = response.bodyAsJson(JobStatusResponse.class);
+                  assertThat(jobStatus.jobId()).isEqualTo(failedUuid);
+                  assertThat(jobStatus.status()).isEqualTo(JobResult.JobStatus.Failed);
+                  assertThat(jobStatus.operation()).isEqualTo("testFailed");
+                  assertThat(jobStatus.reason()).isEqualTo("Simulated failure");
+
                   context.completeNow();
               }));
     }
@@ -171,10 +176,12 @@ public class JobStatusHandlerTest
             when(completedMock.operation()).thenReturn("testCompleted");
             Job failedMock = mock(Job.class);
             when(failedMock.status()).thenReturn(JobResult.JobStatus.Failed);
+            when(failedMock.operation()).thenReturn("testFailed");
+            when(failedMock.failureReason()).thenReturn("Simulated failure");
 
-            when(mockManager.getJobIfExists(String.valueOf(runningUuid))).thenReturn(runningMock);
-            when(mockManager.getJobIfExists(String.valueOf(completedUuid))).thenReturn(completedMock);
-            when(mockManager.getJobIfExists(String.valueOf(failedUuid))).thenReturn(failedMock);
+            when(mockManager.getJobIfExists(runningUuid)).thenReturn(runningMock);
+            when(mockManager.getJobIfExists(completedUuid)).thenReturn(completedMock);
+            when(mockManager.getJobIfExists(failedUuid)).thenReturn(failedMock);
             return mockManager;
         }
     }

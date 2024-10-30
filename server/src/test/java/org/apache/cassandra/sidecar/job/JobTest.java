@@ -51,7 +51,7 @@ public class JobTest
                 return "test";
             }
 
-            public boolean jobInProgress()
+            public boolean checkInflightJob()
             {
                 return false;
             }
@@ -76,7 +76,7 @@ public class JobTest
         {
             public Supplier<JobResult> jobOperationSupplier() throws Exception
             {
-                throw new Exception("Job failed");
+                throw new Exception("Test Job failed");
             }
 
             public String operation()
@@ -84,7 +84,7 @@ public class JobTest
                 return "test";
             }
 
-            public boolean jobInProgress()
+            public boolean checkInflightJob()
             {
                 return false;
             }
@@ -93,7 +93,7 @@ public class JobTest
 
         assertThat(failingJob.isResultAvailable(5)).isTrue();
         assertThat(failingJob.status()).isEqualTo(JobResult.JobStatus.Failed);
-        assertThat(failingJob.failureReason()).isEqualTo("Job failed");
+        assertThat(failingJob.failureReason()).contains("Test Job failed");
     }
 
     @Test
@@ -114,7 +114,7 @@ public class JobTest
                 return "test";
             }
 
-            public boolean jobInProgress()
+            public boolean checkInflightJob()
             {
                 return true;
             }

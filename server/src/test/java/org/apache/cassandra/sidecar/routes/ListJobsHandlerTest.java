@@ -155,7 +155,7 @@ public class ListJobsHandlerTest
             return "test";
         }
 
-        public boolean jobInProgress()
+        public boolean checkInflightJob()
         {
             return false;
         }

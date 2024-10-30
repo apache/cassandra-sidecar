@@ -71,7 +71,7 @@ public class JobManager
      * @param jobId identifier of the job
      * @return instance of the job or null
      */
-    public Job getJobIfExists(String jobId)
+    public Job getJobIfExists(UUID jobId)
     {
         return jobTracker.get(jobId);
     }
@@ -79,38 +79,24 @@ public class JobManager
     /**
      * Asynchronously submit (and lazily create, via the supplier) the job, if it is not currently being
      * tracked and is not running downstream. The job is triggered on a separate internal thread-pool.
-     * The job execution failure behavior is tracked within the job.
+     * The job execution failure behavior is tracked within the {@link Job}.
      * @param jobId job identifier
      * @param jobSupplier supplier used to create an instance of the job
      * @return the instance of the job that is either being tracked or was just submitted
      */
     public Job trySubmitJob(UUID jobId, Supplier<Job> jobSupplier)
     {
-        Job job;
-        if (!jobTracker.containsKey(jobId))
-        {
-            job = jobSupplier.get();
+
+        return jobTracker.computeIfAbsent(jobId, id -> {
+            Job job = jobSupplier.get();
             LOGGER.info("Created job with ID: {}, operation: {}", job.jobId(), job.operation());
-            jobTracker.put(jobId, job);
-            if (!job.jobInProgress())
+            jobTracker.put(job.jobId(), job);
+            if (!job.checkInflightJob())
             {
                 LOGGER.info("Triggering downstream job with ID: {}, operation: {}", job.jobId(), job.operation());
-                executorPools.service().executeBlocking(() -> {
-                    triggerJob(job);
-                    return job;
-                });
+                executorPools.internal().runBlocking(() -> job.execute());
             }
-        }
-        else
-        {
-            job = jobTracker.get(jobId);
-        }
-        return job;
-    }
-
-    private void triggerJob(Job job)
-    {
-        executorPools.internal().runBlocking(() -> job.execute());
-        job.setStatus(JobStatus.Running);
+            return job;
+        });
     }
 }

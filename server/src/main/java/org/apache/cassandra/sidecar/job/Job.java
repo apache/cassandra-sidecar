@@ -104,7 +104,12 @@ public abstract class Job
      * For synchronous jobs this should always return false.
      * @return true if the job is running downstream
      */
-    public abstract boolean jobInProgress();
+    public abstract boolean checkInflightJob();
+
+    /**
+     * Execute the job behavior as specified in the operation supplier {@link #jobOperationSupplier()},
+     * while tracking the status of the job's lifecycle.
+     */
     public void execute()
     {
         try
@@ -117,11 +122,15 @@ public abstract class Job
         }
         catch (Exception e)
         {
-            LOGGER.error("Failed to execute job {} with reason: {}", jobId, e.getMessage());
+            String reason = (e.getCause() != null) ? e.getCause().getMessage() : e.getMessage();
+            LOGGER.error("Failed to execute job {} with reason: {}", jobId, reason);
             status = JobStatus.Failed;
-            failureReason = e.getMessage();
+            failureReason = reason;
         }
-        latch.countDown();
+        finally
+        {
+            latch.countDown();
+        }
     }
 
     /**

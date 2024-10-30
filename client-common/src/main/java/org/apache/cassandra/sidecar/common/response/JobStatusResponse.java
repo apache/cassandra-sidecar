@@ -32,15 +32,18 @@ public class JobStatusResponse
     private final UUID jobId;
     private final JobResult.JobStatus status;
     private final String operation;
+    private final String reason;
 
     @JsonCreator
     public JobStatusResponse(@JsonProperty("jobId") UUID jobId,
                              @JsonProperty("jobStatus") JobResult.JobStatus status,
-                             @JsonProperty("operation") String operation)
+                             @JsonProperty("operation") String operation,
+                             @JsonProperty("reason") String reason)
     {
         this.jobId = jobId;
         this.status = status;
         this.operation = operation;
+        this.reason = reason;
     }
 
     /**
@@ -69,4 +72,14 @@ public class JobStatusResponse
     {
         return operation;
     }
+
+    /**
+     * @return reason for job failure
+     */
+    @JsonProperty("reason")
+    public String reason()
+    {
+        return reason;
+    }
+
 }

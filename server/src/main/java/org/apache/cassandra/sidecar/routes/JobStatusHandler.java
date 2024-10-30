@@ -56,45 +56,58 @@ public class JobStatusHandler extends AbstractHandler<Void>
     @Override
     public void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
     {
+        UUID jobUUID = verifyJobIdPresent(context);
 
+        executorPools.service().executeBlocking(() -> {
+                         Job job = jobManager.getJobIfExists(jobUUID);
+                         if (job == null)
+                         {
+                             String response = String.format("Unknown job with ID:%s. Please retry the operation.", jobUUID);
+                             logger.info(response);
+                             context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, response));
+                         }
+                         return job;
+                     })
+                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request))
+                     .onSuccess(job -> sendStatusBasedResponse(context, jobUUID, job));
+    }
+
+    private UUID verifyJobIdPresent(RoutingContext context)
+    {
         String jobId = context.pathParam("jobId");
         if (jobId == null)
         {
-            context.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "'jobId' is required but not supplied");
         }
 
-        Job job = jobManager.getJobIfExists(jobId);
-        if (job == null)
+        UUID jobUUID;
+        try
         {
-            String response = String.format("Unknown job with ID:%s. Please retry the operation.", jobId);
-            logger.info(response);
-            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, response));
-            return;
+            jobUUID = UUID.fromString(jobId);
         }
-
-        executorPools.service()
-                     .runBlocking(() -> {
-                         sendStatusBasedResponse(context, jobId, job);
-                     })
-                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+        catch (IllegalArgumentException e)
+        {
+            String response = String.format("Invalid job ID provided :%s.", jobId);
+            logger.info(response);
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, response);
+        }
+        return jobUUID;
     }
 
-    public void sendStatusBasedResponse(RoutingContext context, String jobId, Job job)
+    public void sendStatusBasedResponse(RoutingContext context, UUID jobId, Job job)
     {
         switch(job.status())
         {
             case Completed:
-                context.response().setStatusCode(HttpResponseStatus.OK.code());
-                context.json(new JobStatusResponse(UUID.fromString(jobId), job.status(), job.operation()));
-                break;
             case Failed:
-                context.fail(wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, job.failureReason()));
+                context.response().setStatusCode(HttpResponseStatus.OK.code());
+                context.json(new JobStatusResponse(jobId, job.status(), job.operation(), job.failureReason()));
                 break;
             case Pending:
             case Running:
                 context.response()
                        .setStatusCode(HttpResponseStatus.ACCEPTED.code())
-                       .putHeader(ASYNC_JOB_UUID, jobId)
+                       .putHeader(ASYNC_JOB_UUID, jobId.toString())
                        .end();
                 break;
         }
