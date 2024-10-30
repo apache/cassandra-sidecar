@@ -176,13 +176,13 @@ public class RestoreJob
     }
 
     /**
-     * Check whether the {@link RestoreJob} has expired by comparing {@link #expireAt} with {@param referenceTimestampMillis}
+     * Check whether the {@link RestoreJob} has expired at the {@param referenceTimestampMillis}
      * @param referenceTimestampMillis the number of milliseconds since January 1, 1970, 00:00:00 GMT
      * @return true if the job expires at the referenceTimestampMillis; false, otherwise
      */
     public boolean hasExpired(long referenceTimestampMillis)
     {
-        return expireAt != null && expireAt.getTime() <= referenceTimestampMillis;
+        return expireAt != null && referenceTimestampMillis >= expireAt.getTime();
     }
 
     /**
