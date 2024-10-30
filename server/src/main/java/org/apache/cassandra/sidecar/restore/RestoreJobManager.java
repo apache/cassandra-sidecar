@@ -152,7 +152,7 @@ public class RestoreJobManager
 
     /**
      * Find obsolete job data on disk and delete them
-     * The obsoleteness is determined by {@link RestoreJobConfiguration#jobDiscoveryRecencyDays}
+     * The obsoleteness is determined by comparing with {@link RestoreJobConfiguration#jobDiscoveryMinimumRecencyDays}
      */
     void deleteObsoleteDataAsync()
     {
@@ -169,7 +169,7 @@ public class RestoreJobManager
     }
 
     /**
-     * Find the restore job directories that are older than {@link RestoreJobConfiguration#jobDiscoveryRecencyDays}
+     * Find the restore job directories that are older than {@link RestoreJobConfiguration#jobDiscoveryMinimumRecencyDays}
      * Note that the returned Stream should be closed by the caller.
      * @return a future of stream of path. When failed to list, return a failed failure.
      */
@@ -229,7 +229,7 @@ public class RestoreJobManager
 
     // returns true only when all conditions are met
     // 1. the path is a directory,
-    // 2. it is older than jobDiscoveryRecencyDays
+    // 2. it is older than jobDiscoveryMinimumRecencyDays
     // 3. its file name indicates it is a restore job directory
     boolean isObsoleteRestoreJobDir(Path path)
     {
@@ -242,7 +242,7 @@ public class RestoreJobManager
             return false;
 
         long delta = System.currentTimeMillis() - originTs;
-        long gapInMillis = TimeUnit.DAYS.toMillis(restoreJobConfig.jobDiscoveryRecencyDays());
+        long gapInMillis = TimeUnit.DAYS.toMillis(restoreJobConfig.jobDiscoveryMinimumRecencyDays());
         return delta > gapInMillis;
     }
 

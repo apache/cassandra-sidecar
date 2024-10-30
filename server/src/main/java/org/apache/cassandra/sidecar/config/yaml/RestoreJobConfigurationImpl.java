@@ -33,7 +33,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
 
     private static final long DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY_MILLIS = TimeUnit.MINUTES.toMillis(5);
     private static final long DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY_MILLIS = TimeUnit.MINUTES.toMillis(10);
-    private static final int DEFAULT_JOB_DISCOVERY_RECENCY_DAYS = 5;
+    private static final int DEFAULT_JOB_DISCOVERY_MINIMUM_RECENCY_DAYS = 5;
     private static final int DEFAULT_PROCESS_MAX_CONCURRENCY = 20; // process at most 20 slices concurrently
     private static final long DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS = TimeUnit.DAYS.toSeconds(90);
     // A restore task is considered slow if it has been in the "active" list for 10 minutes.
@@ -48,8 +48,8 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     @JsonProperty(value = "job_discovery_idle_loop_delay_millis")
     protected final long jobDiscoveryIdleLoopDelayMillis;
 
-    @JsonProperty(value = "job_discovery_recency_days")
-    protected final int jobDiscoveryRecencyDays;
+    @JsonProperty(value = "job_discovery_minimum_recency_days")
+    protected final int jobDiscoveryMinimumRecencyDays;
 
     @JsonProperty(value = "slice_process_max_concurrency")
     protected final int processMaxConcurrency;
@@ -75,7 +75,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     {
         this.jobDiscoveryActiveLoopDelayMillis = builder.jobDiscoveryActiveLoopDelayMillis;
         this.jobDiscoveryIdleLoopDelayMillis = builder.jobDiscoveryIdleLoopDelayMillis;
-        this.jobDiscoveryRecencyDays = builder.jobDiscoveryRecencyDays;
+        this.jobDiscoveryMinimumRecencyDays = builder.jobDiscoveryMinimumRecencyDays;
         this.processMaxConcurrency = builder.processMaxConcurrency;
         this.restoreJobTablesTtlSeconds = builder.restoreJobTablesTtlSeconds;
         this.slowTaskThresholdSeconds = builder.slowTaskThresholdSeconds;
@@ -92,9 +92,9 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
             throw new IllegalArgumentException("restoreJobTablesTtl cannot be less than "
                                                + MIN_RESTORE_JOB_TABLES_TTL_SECONDS);
         }
-        if (TimeUnit.DAYS.toSeconds(jobDiscoveryRecencyDays()) >= ttl)
+        if (TimeUnit.DAYS.toSeconds(jobDiscoveryMinimumRecencyDays()) >= ttl)
         {
-            throw new IllegalArgumentException("JobDiscoveryRecencyDays (in seconds) cannot be greater than "
+            throw new IllegalArgumentException("JobDiscoveryMinimumRecencyDays (in seconds) cannot be greater than "
                                                + ttl);
         }
     }
@@ -123,10 +123,10 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "job_discovery_recency_days")
-    public int jobDiscoveryRecencyDays()
+    @JsonProperty(value = "job_discovery_minimum_recency_days")
+    public int jobDiscoveryMinimumRecencyDays()
     {
-        return jobDiscoveryRecencyDays;
+        return jobDiscoveryMinimumRecencyDays;
     }
 
     /**
@@ -190,7 +190,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         private long slowTaskReportDelaySeconds = DEFAULT_RESTORE_JOB_SLOW_TASK_REPORT_DELAY_SECONDS;
         private long jobDiscoveryActiveLoopDelayMillis = DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY_MILLIS;
         private long jobDiscoveryIdleLoopDelayMillis = DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY_MILLIS;
-        private int jobDiscoveryRecencyDays = DEFAULT_JOB_DISCOVERY_RECENCY_DAYS;
+        private int jobDiscoveryMinimumRecencyDays = DEFAULT_JOB_DISCOVERY_MINIMUM_RECENCY_DAYS;
         private int processMaxConcurrency = DEFAULT_PROCESS_MAX_CONCURRENCY;
         private long restoreJobTablesTtlSeconds = DEFAULT_RESTORE_JOB_TABLES_TTL_SECONDS;
         private long ringTopologyRefreshDelayMillis = DEFAULT_RING_TOPOLOGY_REFRESH_DELAY_MILLIS;
@@ -230,15 +230,15 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         }
 
         /**
-         * Sets the {@code jobDiscoveryRecencyDays} and returns a reference to this Builder enabling
+         * Sets the {@code jobDiscoveryMinimumRecencyDays} and returns a reference to this Builder enabling
          * method chaining.
          *
-         * @param jobDiscoveryRecencyDays the {@code jobDiscoveryRecencyDays} to set
+         * @param jobDiscoveryMinimumRecencyDays the {@code jobDiscoveryMinimumRecencyDays} to set
          * @return a reference to this Builder
          */
-        public Builder jobDiscoveryRecencyDays(int jobDiscoveryRecencyDays)
+        public Builder jobDiscoveryMinimumRecencyDays(int jobDiscoveryMinimumRecencyDays)
         {
-            return update(b -> b.jobDiscoveryRecencyDays = jobDiscoveryRecencyDays);
+            return update(b -> b.jobDiscoveryMinimumRecencyDays = jobDiscoveryMinimumRecencyDays);
         }
 
         /**

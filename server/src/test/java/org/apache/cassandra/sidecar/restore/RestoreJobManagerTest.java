@@ -78,7 +78,7 @@ class RestoreJobManagerTest
         RestoreJobConfiguration restoreJobConfiguration = mock(RestoreJobConfiguration.class);
         when(restoreJobConfiguration.jobDiscoveryActiveLoopDelayMillis()).thenReturn(0L);
         when(restoreJobConfiguration.jobDiscoveryIdleLoopDelayMillis()).thenReturn(0L);
-        when(restoreJobConfiguration.jobDiscoveryRecencyDays()).thenReturn(jobRecencyDays);
+        when(restoreJobConfiguration.jobDiscoveryMinimumRecencyDays()).thenReturn(jobRecencyDays);
         when(restoreJobConfiguration.processMaxConcurrency()).thenReturn(0);
         when(restoreJobConfiguration.restoreJobTablesTtlSeconds()).thenReturn(TimeUnit.DAYS.toSeconds(14) + 1);
 

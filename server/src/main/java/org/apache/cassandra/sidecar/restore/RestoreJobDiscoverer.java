@@ -123,7 +123,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
         this.restoreSliceDatabaseAccessor = restoreSliceDatabaseAccessor;
         this.restoreRangeDatabaseAccessor = restoreRangeDatabaseAccessor;
-        this.jobDiscoveryRecencyDays = restoreJobConfig.jobDiscoveryRecencyDays();
+        this.jobDiscoveryRecencyDays = restoreJobConfig.jobDiscoveryMinimumRecencyDays();
         this.restoreJobManagerGroupSingleton = restoreJobManagerGroupProvider;
         this.localTokenRangesProvider = cachedLocalTokenRanges;
         this.instanceMetadataFetcher = instanceMetadataFetcher;
@@ -216,8 +216,8 @@ public class RestoreJobDiscoverer implements PeriodicTask
             }
         }
         jobIdsByDay.cleanupMaybe();
-        // resize to the earliestInDays with 1 extra day
-        jobDiscoveryRecencyDays = context.earliestInDays + 1;
+        // resize to the earliestInDays with the minimum days as defined in jobDiscoveryMinimumRecencyDays
+        jobDiscoveryRecencyDays = Math.max(context.earliestInDays, restoreJobConfig.jobDiscoveryMinimumRecencyDays());
         LOGGER.info("Exit job discovery. " +
                     "inflightJobsCount={} " +
                     "jobDiscoveryRecencyDays={} " +

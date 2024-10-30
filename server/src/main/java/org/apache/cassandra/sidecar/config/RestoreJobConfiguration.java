@@ -35,9 +35,9 @@ public interface RestoreJobConfiguration
     long jobDiscoveryIdleLoopDelayMillis();
 
     /**
-     * @return the number of days in the past to look up the restore jobs
+     * @return the minimum number of days in the past to look up the restore jobs
      */
-    int jobDiscoveryRecencyDays();
+    int jobDiscoveryMinimumRecencyDays();
 
     /**
      * @return the maximum number of slices to be processed concurrently

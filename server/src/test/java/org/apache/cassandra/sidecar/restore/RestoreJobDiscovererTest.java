@@ -66,7 +66,7 @@ class RestoreJobDiscovererTest
 {
     private static final long activeLoopDelay = 1000;
     private static final long idleLoopDelay = 2000;
-    private static final int recencyDays = 10;
+    private static final int recencyDays = 5;
     private final RestoreJobDatabaseAccessor mockJobAccessor = mock(RestoreJobDatabaseAccessor.class);
     private final RestoreSliceDatabaseAccessor mockSliceAccessor = mock(RestoreSliceDatabaseAccessor.class);
     private final RestoreRangeDatabaseAccessor mockRangeAccessor = mock(RestoreRangeDatabaseAccessor.class);
@@ -182,7 +182,7 @@ class RestoreJobDiscovererTest
         .isTrue();
         assertThat(loop.jobDiscoveryRecencyDays())
         .describedAs("The recency days should be adjusted to 1")
-        .isOne();
+        .isEqualTo(5);
 
         // Execution 2
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
@@ -295,14 +295,14 @@ class RestoreJobDiscovererTest
     void testAdjustRecencyDays()
     {
         when(sidecarSchema.isInitialized()).thenReturn(true);
-        assertThat(loop.jobDiscoveryRecencyDays()).isEqualTo(10);
+        assertThat(loop.jobDiscoveryRecencyDays()).isEqualTo(5);
         loop.registerPeriodicTaskExecutor(executor);
 
         executeBlocking();
 
         assertThat(loop.jobDiscoveryRecencyDays())
         .describedAs("Recency days is adjusted to 1 since there is no jobs running")
-        .isEqualTo(1);
+        .isEqualTo(5);
 
         // set up an old job that is created 10 days ago
         long now = System.currentTimeMillis();
@@ -314,8 +314,8 @@ class RestoreJobDiscovererTest
         executeBlocking();
 
         assertThat(loop.jobDiscoveryRecencyDays())
-        .describedAs("Recency days is adjusted accordingly to the earliest job (10 days) plus an extra day")
-        .isEqualTo(11);
+        .describedAs("Recency days is adjusted accordingly to the earliest job (10 days)")
+        .isEqualTo(10);
     }
 
     private RestoreJobConfiguration testConfig()
@@ -323,7 +323,7 @@ class RestoreJobDiscovererTest
         RestoreJobConfiguration restoreJobConfiguration = mock(RestoreJobConfiguration.class);
         when(restoreJobConfiguration.jobDiscoveryActiveLoopDelayMillis()).thenReturn(activeLoopDelay);
         when(restoreJobConfiguration.jobDiscoveryIdleLoopDelayMillis()).thenReturn(idleLoopDelay);
-        when(restoreJobConfiguration.jobDiscoveryRecencyDays()).thenReturn(recencyDays);
+        when(restoreJobConfiguration.jobDiscoveryMinimumRecencyDays()).thenReturn(recencyDays);
         when(restoreJobConfiguration.processMaxConcurrency()).thenReturn(TestModule.RESTORE_MAX_CONCURRENCY);
         when(restoreJobConfiguration.restoreJobTablesTtlSeconds()).thenReturn(TimeUnit.DAYS.toSeconds(14) + 1);
 
