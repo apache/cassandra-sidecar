@@ -269,9 +269,10 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     // or, the other way around, depending on the geographic location (i.e. different timezones).
     // Example 1. 23:01 UTC is 00:01 CET (UTC +1) of the next day.
     // Example 2. 00:01 UTC of the next day is 17:01 PST (UTC -8)
-    private LocalDate dateInPast(long referenceTimestampMillis, int days)
+    static LocalDate dateInPast(long referenceTimestampMillis, int days)
     {
-        return LocalDate.fromMillisSinceEpoch(referenceTimestampMillis - ONE_DAY_MILLISECONDS);
+        long daysInMillis = days * ONE_DAY_MILLISECONDS;
+        return LocalDate.fromMillisSinceEpoch(referenceTimestampMillis - daysInMillis);
     }
 
     private static <T> ByteBuffer serializeValue(T value, String type)
