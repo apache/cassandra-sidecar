@@ -279,6 +279,12 @@ public class RestoreRange
                                                                         this, null), this);
         }
 
+        if (tracker.restoreJob().hasExpired(System.currentTimeMillis()))
+        {
+            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore job has expired",
+                                                                        this, null), this);
+        }
+
         try
         {
             StorageClient s3Client = s3ClientPool.storageClient(job());
@@ -463,11 +469,11 @@ public class RestoreRange
 
     public String shortDescription()
     {
-        return "StartToken: " + startToken + ", EndToken: " + endToken +
-               ", SliceId: " + sliceId +
-               ", Key: " + sliceKey() +
-               ", Bucket: " + sliceBucket() +
-               ", Checksum: " + sliceChecksum();
+        return "RestoreRange{" +
+               "sliceId='" + sliceId + '\'' +
+               ", sliceKey='" + sliceKey() + '\'' +
+               ", sliceBucket='" + sliceBucket() + '\'' +
+               '}';
     }
 
     @VisibleForTesting

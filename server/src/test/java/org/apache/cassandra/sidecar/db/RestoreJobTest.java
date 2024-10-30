@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.db;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
@@ -160,5 +161,18 @@ public class RestoreJobTest
             RestoreJob job = createTestingJob(jobId, "ks", RestoreJobStatus.CREATED, cl, dcName);
             assertThat(job.isManagedBySidecar()).isTrue();
         }
+    }
+
+    @Test
+    void testHasExpired()
+    {
+        long timestamp = System.currentTimeMillis();
+        Date expireAt = new Date(timestamp + TimeUnit.HOURS.toMillis(1));
+        RestoreJob job = createNewTestingJob(UUIDs.startOf(timestamp)).unbuild().expireAt(expireAt).build();
+        assertThat(job.hasExpired(timestamp)).isFalse();
+        assertThat(job.hasExpired(timestamp - 1000)).isFalse();
+        assertThat(job.hasExpired(expireAt.getTime() - 1)).isFalse();
+        assertThat(job.hasExpired(expireAt.getTime())).isTrue();
+        assertThat(job.hasExpired(expireAt.getTime() + 1)).isTrue();
     }
 }

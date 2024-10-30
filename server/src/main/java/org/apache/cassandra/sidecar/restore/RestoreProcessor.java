@@ -170,9 +170,6 @@ public class RestoreProcessor implements PeriodicTask
                 break;
             }
 
-            Preconditions.checkState(range.canProduceTask(),
-                                     "RestoreRangeTask cannot be produced by range " + range.shortDescription());
-
             // capture the new queue length after polling
             workQueue.captureImportQueueLength();
             RestoreRangeHandler task = range.toAsyncTask(s3ClientPool, pool, importer,

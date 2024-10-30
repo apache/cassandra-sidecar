@@ -38,7 +38,8 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
 {
     QualifiedTableName qualifiedTableName = new QualifiedTableName("ks", "tbl");
     RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
-    long expiresAtMillis = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1);
+    long now = System.currentTimeMillis();
+    long expiresAtMillis = now + TimeUnit.HOURS.toMillis(1);
 
     @CassandraIntegrationTest
     void testCrudOperations()
@@ -46,11 +47,11 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
         waitForSchemaReady(10, TimeUnit.SECONDS);
 
         RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
-        assertThat(accessor.findAllRecent(3)).isEmpty();
+        assertThat(accessor.findAllRecent(now, 3)).isEmpty();
 
         // update this job
         UUID jobId = createJob(accessor);
-        List<RestoreJob> foundJobs = accessor.findAllRecent(3);
+        List<RestoreJob> foundJobs = accessor.findAllRecent(now, 3);
         assertThat(foundJobs).hasSize(1);
         assertJob(foundJobs.get(0), jobId, RestoreJobStatus.CREATED, expiresAtMillis, secrets);
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.CREATED, expiresAtMillis, secrets);
@@ -68,14 +69,14 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
 
         // abort this job with reason
         jobId = createJob(accessor);
-        foundJobs = accessor.findAllRecent(3);
+        foundJobs = accessor.findAllRecent(now, 3);
         assertThat(foundJobs).hasSize(2);
         accessor.abort(jobId, "Reason");
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.ABORTED, expiresAtMillis, secrets, "Reason");
 
         // abort this job w/o reason
         jobId = createJob(accessor);
-        foundJobs = accessor.findAllRecent(3);
+        foundJobs = accessor.findAllRecent(now, 3);
         assertThat(foundJobs).hasSize(3);
         accessor.abort(jobId, null);
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.ABORTED, expiresAtMillis, secrets, null);

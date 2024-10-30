@@ -201,9 +201,9 @@ public class RestoreJobDiscoverer implements PeriodicTask
         boolean hasInflightJobBefore = hasInflightJobs();
         // reset in-flight jobs
         inflightJobsCount = 0;
-        List<RestoreJob> restoreJobs = restoreJobDatabaseAccessor.findAllRecent(jobDiscoveryRecencyDays);
-        RestoreJobManagerGroup restoreJobManagers = restoreJobManagerGroupSingleton.get();
         RunContext context = new RunContext();
+        List<RestoreJob> restoreJobs = restoreJobDatabaseAccessor.findAllRecent(context.nowMillis, jobDiscoveryRecencyDays);
+        RestoreJobManagerGroup restoreJobManagers = restoreJobManagerGroupSingleton.get();
         for (RestoreJob job : restoreJobs)
         {
             try
@@ -216,8 +216,8 @@ public class RestoreJobDiscoverer implements PeriodicTask
             }
         }
         jobIdsByDay.cleanupMaybe();
-        // shrink recency to lookup less data next time
-        jobDiscoveryRecencyDays = Math.min(context.days, jobDiscoveryRecencyDays);
+        // resize to the earliestInDays with 1 extra day
+        jobDiscoveryRecencyDays = context.earliestInDays + 1;
         LOGGER.info("Exit job discovery. " +
                     "inflightJobsCount={} " +
                     "jobDiscoveryRecencyDays={} " +
@@ -253,16 +253,20 @@ public class RestoreJobDiscoverer implements PeriodicTask
             case STAGE_READY:
             case STAGED:
             case IMPORT_READY:
-                if (job.expireAt == null // abort all old jobs that has no expireAt value
-                    || job.expireAt.getTime() < context.nowMillis)
+                if (job.hasExpired(context.nowMillis))
                 {
                     context.expiredJobs += 1;
                     boolean aborted = abortJob(job);
-                    context.abortedJobs += (aborted ? 1 : 0);
+                    if (aborted)
+                    {
+                        // finalize the job once aborted; otherwise retry in the next periodic task run
+                        context.abortedJobs += 1;
+                        finalizeJob(restoreJobManagers, job);
+                    }
                     break; // do not proceed further if the job has expired
                 }
                 // find the oldest non-completed job
-                context.days = Math.max(context.days, delta(context.today, job.createdAt));
+                context.earliestInDays = Math.max(context.earliestInDays, delta(context.today, job.createdAt));
                 restoreJobManagers.updateRestoreJob(job);
                 if (job.isManagedBySidecar())
                 {
@@ -275,14 +279,19 @@ public class RestoreJobDiscoverer implements PeriodicTask
             case FAILED:
             case ABORTED:
             case SUCCEEDED:
-                restoreJobManagers.removeJobInternal(job);
-                if (job.isManagedBySidecar())
-                {
-                    ringTopologyRefresher.unregister(job);
-                }
+                finalizeJob(restoreJobManagers, job);
                 break;
             default:
                 LOGGER.warn("Encountered unknown job status. jobId={} status={}", job.jobId, job.status);
+        }
+    }
+
+    private void finalizeJob(RestoreJobManagerGroup restoreJobManagers, RestoreJob job)
+    {
+        restoreJobManagers.removeJobInternal(job);
+        if (job.isManagedBySidecar())
+        {
+            ringTopologyRefresher.unregister(job);
         }
     }
 
@@ -421,7 +430,7 @@ public class RestoreJobDiscoverer implements PeriodicTask
     {
         long nowMillis = System.currentTimeMillis();
         LocalDate today = LocalDate.fromMillisSinceEpoch(nowMillis);
-        int days = 0;
+        int earliestInDays = 0;
         int abortedJobs = 0;
         int expiredJobs = 0;
     }

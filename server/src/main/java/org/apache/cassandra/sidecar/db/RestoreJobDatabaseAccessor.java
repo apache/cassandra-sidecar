@@ -55,6 +55,7 @@ import org.jetbrains.annotations.Nullable;
 public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSchema>
 {
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final long ONE_DAY_MILLISECONDS = TimeUnit.DAYS.toMillis(1);
     public final SidecarSchema sidecarSchema;
 
     @Inject
@@ -233,13 +234,15 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     }
 
     /**
-     * Find all the recent restore jobs
+     * Find all the recent restore jobs relative to the anchor timestamp
+     *
+     * @param referenceTimestampMillis anchor timestamp
      * @param days number of days to search back; the value should be non-negative.
      * @return the list of recent restore job
      *
      * Note that in the implementation, one extra day is considered to overcome the timezone differences.
      */
-    public List<RestoreJob> findAllRecent(int days)
+    public List<RestoreJob> findAllRecent(long referenceTimestampMillis, int days)
     {
         Preconditions.checkArgument(days >= 0,
                                     "Input days cannot be negative. We can only look up the created jobs");
@@ -254,7 +257,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         // add the jobs in the chronicle order
         for (int i = actualDays; i >= 0; i--)
         {
-            result.addAll(findAllByCreationDate(dateInPast(i)));
+            result.addAll(findAllByCreationDate(dateInPast(referenceTimestampMillis, i)));
         }
         return result;
     }
@@ -266,11 +269,9 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     // or, the other way around, depending on the geographic location (i.e. different timezones).
     // Example 1. 23:01 UTC is 00:01 CET (UTC +1) of the next day.
     // Example 2. 00:01 UTC of the next day is 17:01 PST (UTC -8)
-    private LocalDate dateInPast(int days)
+    private LocalDate dateInPast(long referenceTimestampMillis, int days)
     {
-        long now = System.currentTimeMillis();
-        long delta = TimeUnit.DAYS.toMillis(days);
-        return LocalDate.fromMillisSinceEpoch(now - delta);
+        return LocalDate.fromMillisSinceEpoch(referenceTimestampMillis - ONE_DAY_MILLISECONDS);
     }
 
     private static <T> ByteBuffer serializeValue(T value, String type)

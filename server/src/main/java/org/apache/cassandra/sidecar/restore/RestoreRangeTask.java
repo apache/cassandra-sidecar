@@ -227,47 +227,59 @@ public class RestoreRangeTask implements RestoreRangeHandler
                          range.jobId(), range.sliceKey(), durationNanos);
             return Future.succeededFuture();
         }, cause -> { // failure mapper: converts throwable to restore job specific exceptions
-            S3Exception s3Exception = ThrowableUtils.getCause(cause, S3Exception.class);
-            RestoreJobException jobException;
-            if (s3Exception == null) // has non-null cause, but not S3Exception
-            {
-                jobException = RestoreJobExceptions.ofFatal("Unexpected error when checking object existence", range, cause);
-            }
-            else if (s3Exception instanceof NoSuchKeyException)
-            {
-                jobException = RestoreJobExceptions.of("Object not found", range, null);
-            }
-            else if (s3Exception.statusCode() == 412)
-            {
-                // When checksum/eTag does not match, it should be an unrecoverable error and fail immediately.
-                // For such scenario, we expect "S3Exception: (Status Code: 412)". Also see,
-                // https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
-                jobException = RestoreJobExceptions.ofFatal("Object checksum mismatched", range, s3Exception);
-                instanceMetrics.restore().sliceChecksumMismatches.metric.update(1);
-            }
-            else if (s3Exception.statusCode() == 403)
-            {
-                // Fail immediately if 403 forbidden is returned.
-                // There might be permission issue on accessing the object.
-                jobException = RestoreJobExceptions.ofFatal("Object access is forbidden", range, s3Exception);
-                metrics.tokenUnauthorized.metric.update(1);
-            }
-            else if (s3Exception.statusCode() == 400 &&
-                     s3Exception.getMessage().contains("token has expired"))
-            {
-                // Fail the job if 400, token has expired.
-                // https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList
-                jobException = RestoreJobExceptions.ofFatal("Token has expired", range, s3Exception);
-                metrics.tokenExpired.metric.update(1);
-            }
-            else
-            {
-                // Retry the other S3Exceptions
-                jobException = RestoreJobExceptions.of("Unable to check object existence", range, s3Exception);
-            }
-
-            return Future.failedFuture(jobException);
+            return Future.failedFuture(toRestoreJobException(cause));
         });
+    }
+
+    private RestoreJobException toRestoreJobException(Throwable cause)
+    {
+        S3Exception s3Exception = ThrowableUtils.getCause(cause, S3Exception.class);
+        if (s3Exception == null) // has non-null cause, but not S3Exception
+        {
+            return RestoreJobExceptions.ofFatal("Unexpected error when checking object existence", range, cause);
+        }
+        else if (s3Exception instanceof NoSuchKeyException)
+        {
+            return RestoreJobExceptions.of("Object not found", range, s3Exception.awsErrorDetails(), null);
+        }
+        // status code based handling
+        else if (s3Exception.statusCode() == 400
+                 && s3Exception.awsErrorDetails().errorCode().equalsIgnoreCase("ExpiredToken"))
+        {
+            metrics.tokenExpired.metric.update(1);
+            // Fail the job if 400 and token has expired.
+            // https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList
+            return RestoreJobExceptions.ofFatal("Token has expired", range, s3Exception.awsErrorDetails(), s3Exception);
+        }
+        else if (s3Exception.statusCode() == 403)
+        {
+            metrics.tokenUnauthorized.metric.update(1);
+            // Fail immediately if 403 forbidden is returned.
+            // There might be permission issue on accessing the object.
+            return RestoreJobExceptions.ofFatal("Object access is forbidden", range, s3Exception.awsErrorDetails(), s3Exception);
+        }
+        else if (s3Exception.statusCode() == 404)
+        {
+            if (s3Exception.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey"))
+            {
+                return RestoreJobExceptions.of("Object not found", range, s3Exception.awsErrorDetails(), null);
+            }
+            else if (s3Exception.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchBucket"))
+            {
+                return RestoreJobExceptions.ofFatal("Bucket not found", range, s3Exception.awsErrorDetails(), null);
+            }
+        }
+        else if (s3Exception.statusCode() == 412)
+        {
+            instanceMetrics.restore().sliceChecksumMismatches.metric.update(1);
+            // When checksum/eTag does not match, it should be an unrecoverable error and fail immediately.
+            // For such scenario, we expect "S3Exception: (Status Code: 412)". Also see,
+            // https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
+            return RestoreJobExceptions.ofFatal("Object checksum mismatched", range, s3Exception.awsErrorDetails(), s3Exception);
+        }
+
+        // Retry the other S3Exceptions
+        return RestoreJobExceptions.of("Unable to check object existence. ", range, s3Exception.awsErrorDetails(), s3Exception);
     }
 
     private long currentTimeInNanos()

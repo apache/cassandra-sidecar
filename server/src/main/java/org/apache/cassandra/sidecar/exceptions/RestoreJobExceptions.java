@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.exceptions;
 
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.jetbrains.annotations.Nullable;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 
 /**
  * Utility methods to create {@link RestoreJobException}
@@ -79,8 +80,23 @@ public class RestoreJobExceptions
         return new RestoreJobException(title + ". " + range.shortDescription(), cause);
     }
 
+    public static RestoreJobException of(String title, RestoreRange range, AwsErrorDetails awsErrorDetails, Throwable cause)
+    {
+        return new RestoreJobException(title + ". " + range.shortDescription() + toString(awsErrorDetails), cause);
+    }
+
     public static RestoreJobFatalException ofFatal(String title, RestoreRange range, Throwable cause)
     {
         return new RestoreJobFatalException(title + ". " + range.shortDescription(), cause);
+    }
+
+    public static RestoreJobFatalException ofFatal(String title, RestoreRange range, AwsErrorDetails awsErrorDetails, Throwable cause)
+    {
+        return new RestoreJobFatalException(title + ". " + range.shortDescription() + toString(awsErrorDetails), cause);
+    }
+
+    private static String toString(Object obj)
+    {
+        return obj == null ? "" : " " + obj;
     }
 }
