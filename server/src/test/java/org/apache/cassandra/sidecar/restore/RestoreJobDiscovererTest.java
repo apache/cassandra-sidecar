@@ -301,7 +301,7 @@ class RestoreJobDiscovererTest
         executeBlocking();
 
         assertThat(loop.jobDiscoveryRecencyDays())
-        .describedAs("Recency days is adjusted to 1 since there is no jobs running")
+        .describedAs("Recency days is adjusted to 1 since there are no jobs running")
         .isEqualTo(5);
 
         // set up an old job that is created 10 days ago
