@@ -106,7 +106,7 @@ public class RestoreRangeTest
         RestoreRange range = createTestRange(expiredJob, Paths.get("."), false);
         RestoreRangeHandler handler = createRestoreRangeHandler(range);
         assertFailedHandler(range, handler,
-                            "Restore job has expired at 2024-10-31T00:30:46.231Z. " +
+                            "Restore job expired on 2024-10-31T00:30:46.231Z. " +
                             "RestoreRange{sliceId='sliceId-123', sliceKey='myKey', sliceBucket='myBucket'}");
     }
 
