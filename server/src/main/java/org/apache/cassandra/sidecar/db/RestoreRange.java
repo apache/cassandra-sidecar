@@ -281,7 +281,7 @@ public class RestoreRange
 
         if (tracker.restoreJob().hasExpired(System.currentTimeMillis()))
         {
-            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore job has expired at " + tracker.restoreJob().expireAt,
+            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore job has expired at " + tracker.restoreJob().expireAt.toInstant(),
                                                                         this, null), this);
         }
 
