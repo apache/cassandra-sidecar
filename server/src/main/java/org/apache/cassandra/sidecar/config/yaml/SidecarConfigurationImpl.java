@@ -38,6 +38,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
@@ -72,6 +73,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @JsonProperty("ssl")
     protected final SslConfiguration sslConfiguration;
 
+    @JsonProperty("access_control")
+    protected final AccessControlConfiguration accessControlConfiguration;
+
     @JsonProperty("healthcheck")
     protected final HealthCheckConfiguration healthCheckConfiguration;
 
@@ -102,6 +106,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         cassandraInstances = builder.cassandraInstances;
         serviceConfiguration = builder.serviceConfiguration;
         sslConfiguration = builder.sslConfiguration;
+        accessControlConfiguration = builder.accessControlConfiguration;
         healthCheckConfiguration = builder.healthCheckConfiguration;
         metricsConfiguration = builder.metricsConfiguration;
         cassandraInputValidationConfiguration = builder.cassandraInputValidationConfiguration;
@@ -159,6 +164,16 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     public SslConfiguration sslConfiguration()
     {
         return sslConfiguration;
+    }
+
+    /**
+     * @return configuration needed for setting up access control in sidecar.
+     */
+    @Override
+    @JsonProperty("access_control")
+    public AccessControlConfiguration accessControlConfiguration()
+    {
+        return accessControlConfiguration;
     }
 
     /**
@@ -322,6 +337,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         private List<InstanceConfiguration> cassandraInstances;
         private ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl();
         private SslConfiguration sslConfiguration = null;
+        private AccessControlConfiguration accessControlConfiguration = new AccessControlConfigurationImpl();
         private HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl();
         private MetricsConfiguration metricsConfiguration = new MetricsConfigurationImpl();
         private CassandraInputValidationConfiguration cassandraInputValidationConfiguration
@@ -383,6 +399,17 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder sslConfiguration(SslConfiguration sslConfiguration)
         {
             return update(b -> b.sslConfiguration = sslConfiguration);
+        }
+
+        /**
+         * Sets the {@code accessControlConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param accessControlConfiguration the {@code accessControlConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder accessControlConfiguration(AccessControlConfiguration accessControlConfiguration)
+        {
+            return update(b -> b.accessControlConfiguration = accessControlConfiguration);
         }
 
         /**

@@ -96,7 +96,9 @@ public class CertificateValidatorImplTest
         X509Certificate certificate
         = CertificateBuilder.builder()
                             .notAfter(Date.from(Instant.now().minus(1, ChronoUnit.DAYS)))
-                            .issuerName("CN=Vertx Auth, OU=ssl_test, O=Vertx, L=Unknown, ST=Unknown, C=US").buildSelfSigned();
+                            .subject("CN=Vertx Auth, OU=ssl_test, O=Vertx, L=Unknown, ST=Unknown, C=US")
+                            .buildSelfSigned()
+                            .certificate();
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
         assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
         .isInstanceOf(CredentialValidationException.class)

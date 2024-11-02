@@ -18,12 +18,16 @@
 
 package org.apache.cassandra.sidecar.testing;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -38,6 +42,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +55,11 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.JksOptions;
+import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
+import io.vertx.ext.auth.mtls.utils.CertificateBundle;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
@@ -64,6 +73,7 @@ import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
+import static org.apache.cassandra.sidecar.testing.IntegrationTestModule.ADMIN_IDENTITY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -83,16 +93,29 @@ public abstract class IntegrationTestBase
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     protected Vertx vertx;
     protected Server server;
+    @TempDir
+    protected File tempDir;
+    protected CertificateBundle ca;
+    protected Path serverKeystorePath;
+    protected Path clientKeystorePath;
+    protected Path truststorePath;
     protected WebClient client;
     protected CassandraSidecarTestContext sidecarTestContext;
     protected Injector injector;
     private final List<Throwable> testExceptions = new ArrayList<>();
 
     @BeforeEach
-    void setup(AbstractCassandraTestContext cassandraTestContext, TestInfo testInfo) throws InterruptedException
+    void setup(AbstractCassandraTestContext cassandraTestContext, TestInfo testInfo) throws Exception
     {
         testExceptions.clear();
+
+        setCAs();
+        serverKeystorePath = serverKeystorePath();
+        clientKeystorePath = clientKeystorePath(ADMIN_IDENTITY);
+
         IntegrationTestModule integrationTestModule = new IntegrationTestModule();
+        integrationTestModule.setServerKeystorePath(serverKeystorePath);
+        integrationTestModule.setTruststorePath(truststorePath);
         System.setProperty("cassandra.testtag", testInfo.getTestClass().get().getCanonicalName());
         System.setProperty("suitename", testInfo.getDisplayName() + ": " + cassandraTestContext.version);
         int clusterSize = cassandraTestContext.clusterSize();
@@ -104,7 +127,7 @@ public abstract class IntegrationTestBase
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);
-        client = WebClient.create(vertx);
+        client = createClient(clientKeystorePath, truststorePath);
         VertxTestContext context = new VertxTestContext();
 
         if (sidecarTestContext.isClusterBuilt())
@@ -362,5 +385,57 @@ public abstract class IntegrationTestBase
     {
         instancesConfig.instances()
                        .forEach(instanceMetadata -> instanceMetadata.delegate().healthCheck());
+    }
+
+    protected void setCAs() throws Exception
+    {
+        ca
+        = CertificateBuilder.builder()
+                            .subject("CN=Apache cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
+                            .isCertificateAuthority(true)
+                            .buildSelfSigned();
+        truststorePath
+        = ca.toTempKeyStorePath(tempDir.toPath(), "password".toCharArray(), "password".toCharArray());
+    }
+
+    protected Path serverKeystorePath() throws Exception
+    {
+        CertificateBundle keystore
+        = CertificateBuilder.builder()
+                            .subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                            .addSanDnsName("localhost")
+                            .addSanIpAddress("127.0.0.1")
+                            .buildIssuedBy(ca);
+        return keystore.toTempKeyStorePath(tempDir.toPath(), "password".toCharArray(), "password".toCharArray());
+    }
+
+    protected Path clientKeystorePath(String identity) throws Exception
+    {
+        return clientKeystorePath(identity, false);
+    }
+
+    protected Path clientKeystorePath(String identity, boolean expired) throws Exception
+    {
+        CertificateBuilder builder
+        = CertificateBuilder.builder()
+                            .subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                            .addSanDnsName("localhost")
+                            .addSanIpAddress("127.0.0.1")
+                            .addSanUriName(identity);
+        if (expired)
+        {
+            builder.notAfter(Date.from(Instant.now().minus(1, ChronoUnit.DAYS)));
+        }
+        CertificateBundle clientKeystore = builder.buildIssuedBy(ca);
+        return clientKeystore.toTempKeyStorePath(tempDir.toPath(), "password".toCharArray(), "password".toCharArray());
+    }
+
+    protected WebClient createClient(Path clientKeystorePath, Path truststorePath) throws Exception
+    {
+        WebClientOptions options = new WebClientOptions();
+        options.setSsl(true);
+        options.setKeyStoreOptions(new JksOptions().setPath(clientKeystorePath.toAbsolutePath().toString()).setPassword("password"));
+        options.setTrustStoreOptions(new JksOptions().setPath(truststorePath.toAbsolutePath().toString()).setPassword("password"));
+        return WebClient.create(vertx, options);
     }
 }

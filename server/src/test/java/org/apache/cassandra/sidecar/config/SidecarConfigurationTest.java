@@ -290,6 +290,34 @@ class SidecarConfigurationTest
         assertThat(vertxFsOptions.classpathResolvingEnabled()).isTrue();
     }
 
+    @Test
+    void testAccessControlConfiguration() throws Exception
+    {
+        Path yamlPath = yaml("config/sidecar_multiple_instances.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+
+        AccessControlConfiguration accessControlConfiguration = config.accessControlConfiguration();
+        assertThat(accessControlConfiguration).isNotNull();
+        assertThat(accessControlConfiguration.enabled()).isTrue();
+
+        MutualTlsAuthenticatorConfiguration mTLSConfig = accessControlConfiguration.authenticatorsConfiguration().mTlsAuthenticatorConfiguration();
+        assertThat(mTLSConfig.enabled()).isTrue();
+        assertThat(mTLSConfig.certificateValidator()).isEqualTo("io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator");
+        assertThat(mTLSConfig.certificateIdentityExtractor()).isEqualTo("org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor");
+
+        assertThat(accessControlConfiguration.adminIdentities().size()).isEqualTo(2);
+        assertThat(accessControlConfiguration.adminIdentities()).contains("spiffe://authorized/admin/identity1");
+        assertThat(accessControlConfiguration.adminIdentities()).contains("spiffe://authorized/admin/identity2");
+
+        assertThat(accessControlConfiguration.permissionCacheConfiguration()).isNotNull();
+        CacheConfiguration permissionCacheConfiguration = accessControlConfiguration.permissionCacheConfiguration();
+        assertThat(permissionCacheConfiguration.enabled()).isTrue();
+        assertThat(permissionCacheConfiguration.expireAfterAccessMillis()).isEqualTo(300000);
+        assertThat(permissionCacheConfiguration.maximumSize()).isEqualTo(1000);
+        assertThat(permissionCacheConfiguration.warmingRetries()).isEqualTo(5);
+        assertThat(permissionCacheConfiguration.warmingRetryIntervalMillis()).isEqualTo(2000);
+    }
+
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
     {
         assertThat(config.cassandraInstances()).isNotNull().hasSize(1);

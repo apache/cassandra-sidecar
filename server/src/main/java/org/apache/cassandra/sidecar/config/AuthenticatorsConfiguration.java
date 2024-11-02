@@ -19,36 +19,13 @@
 package org.apache.cassandra.sidecar.config;
 
 /**
- * Configuration class that encapsulates parameters needed for Caches
+ * Configuration used to support multiple authenticators in Sidecar.
  */
-public interface CacheConfiguration
+public interface AuthenticatorsConfiguration
 {
     /**
-     * @return the configured amount of time in milliseconds after the entry's creation, the most recent
-     * replacement of its value, or its last access has elapsed to be considered an expired entry in the cache
+     * @return configuration needed for mTLS authentication in Sidecar. With mTLS, both server and client exchange
+     * certificates and verify each other
      */
-    long expireAfterAccessMillis();
-
-    /**
-     * @return the maximum number of entries the cache may contain
-     */
-    long maximumSize();
-
-    /**
-     * @return {@code true} if the cache is enabled, {@code false} otherwise
-     */
-    default boolean enabled()
-    {
-        return true;
-    }
-
-    /**
-     * @return number of retries for cache warming
-     */
-    int warmingRetries();
-
-    /**
-     * @return interval duration in millis inbetween cache warming retries
-     */
-    long warmingRetryIntervalMillis();
+    MutualTlsAuthenticatorConfiguration mTlsAuthenticatorConfiguration();
 }

@@ -148,8 +148,10 @@ dependencies {
     implementation(project(":server-common"))
     implementation(project(":adapters:base"))
     implementation(project(":adapters:cassandra41"))
+    implementation(project(":vertx-auth-mtls"))
 
     testFixturesApi(testFixtures(project(":server-common")))
+    testFixturesApi(testFixtures(project(":vertx-auth-mtls")))
     testFixturesImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
     testFixturesImplementation('com.google.inject:guice:4.2.2')
     testFixturesImplementation('org.mockito:mockito-core:4.10.0')

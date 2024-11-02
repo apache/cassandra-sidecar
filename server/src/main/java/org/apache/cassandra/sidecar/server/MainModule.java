@@ -39,15 +39,25 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.file.FileSystemOptions;
+import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
+import io.vertx.ext.auth.mtls.CertificateValidator;
+import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
+import io.vertx.ext.auth.mtls.impl.MutualTlsAuthenticationImpl;
+import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.dropwizard.Match;
 import io.vertx.ext.dropwizard.MatchType;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.ChainAuthHandler;
 import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
+import org.apache.cassandra.sidecar.accesscontrol.AuthCacheService;
+import org.apache.cassandra.sidecar.accesscontrol.IdentityRoleCache;
+import org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor;
+import org.apache.cassandra.sidecar.accesscontrol.authentication.MutualTlsAuthenticationHandler;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.adapters.cassandra41.Cassandra41Factory;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
@@ -69,16 +79,19 @@ import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration
 import org.apache.cassandra.sidecar.config.FileSystemOptionsConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
+import org.apache.cassandra.sidecar.config.MutualTlsAuthenticatorConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
@@ -184,7 +197,59 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
+    public IdentityRoleCache identityRoleCache(SidecarConfiguration sidecarConfiguration,
+                                               AuthCacheService authCacheService,
+                                               SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
+    {
+        IdentityRoleCache identityRoleCache
+        = new IdentityRoleCache(sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
+                                systemAuthDatabaseAccessor);
+        authCacheService.register(identityRoleCache);
+        return identityRoleCache;
+    }
+
+    @Provides
+    @Singleton
+    public ChainAuthHandler chainAuthHandler(SidecarConfiguration sidecarConfiguration, IdentityRoleCache identityRoleCache, ExecutorPools executorPools)
+    {
+        ChainAuthHandler chainAuthHandler = ChainAuthHandler.any();
+        try
+        {
+            MutualTlsAuthenticatorConfiguration mTLSAuthenticatorConfig = sidecarConfiguration
+                                                                          .accessControlConfiguration()
+                                                                          .authenticatorsConfiguration()
+                                                                          .mTlsAuthenticatorConfiguration();
+            if (mTLSAuthenticatorConfig.enabled())
+            {
+                CertificateValidator certificateValidator = (CertificateValidator) Class.forName(mTLSAuthenticatorConfig.certificateValidator()).newInstance();
+                CertificateIdentityExtractor certificateIdentityExtractor;
+                if (mTLSAuthenticatorConfig.certificateIdentityExtractor().equalsIgnoreCase(CassandraIdentityExtractor.class.getName()))
+                {
+                    certificateIdentityExtractor
+                    = new CassandraIdentityExtractor(identityRoleCache, sidecarConfiguration.accessControlConfiguration().adminIdentities());
+                }
+                else
+                {
+                    certificateIdentityExtractor = new SpiffeIdentityExtractor();
+                }
+                MutualTlsAuthentication mTLSAuthProvider = new MutualTlsAuthenticationImpl(certificateValidator, certificateIdentityExtractor);
+                MutualTlsAuthenticationHandler mTLSAuthHandler = new MutualTlsAuthenticationHandler(mTLSAuthProvider, executorPools);
+                chainAuthHandler.add(mTLSAuthHandler);
+            }
+            return chainAuthHandler;
+        }
+        catch (ClassNotFoundException | InstantiationException | IllegalAccessException e)
+        {
+            LOGGER.error("Unexpected error configuring authentication handlers, ", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Provides
+    @Singleton
     public Router vertxRouter(Vertx vertx,
+                              SidecarConfiguration sidecarConfiguration,
+                              ChainAuthHandler chainAuthHandler,
                               ServiceConfiguration conf,
                               CassandraHealthHandler cassandraHealthHandler,
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
@@ -220,6 +285,12 @@ public class MainModule extends AbstractModule
               .handler(loggerHandler)
               .handler(TimeoutHandler.create(conf.requestTimeoutMillis(),
                                              HttpResponseStatus.REQUEST_TIMEOUT.code()));
+
+        // chain authentication before all requests
+        if (sidecarConfiguration.accessControlConfiguration().enabled())
+        {
+            router.route().handler(chainAuthHandler);
+        }
 
         router.route()
               .path(ApiEndpointsV1.API + "/*")
@@ -536,6 +607,13 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
+    public SystemAuthSchema systemAuthSchema()
+    {
+        return new SystemAuthSchema();
+    }
+
+    @Provides
+    @Singleton
     public SidecarSchema sidecarSchema(Vertx vertx,
                                        ExecutorPools executorPools,
                                        SidecarConfiguration configuration,
@@ -543,6 +621,7 @@ public class MainModule extends AbstractModule
                                        RestoreJobsSchema restoreJobsSchema,
                                        RestoreSlicesSchema restoreSlicesSchema,
                                        RestoreRangesSchema restoreRangesSchema,
+                                       SystemAuthSchema systemAuthSchema,
                                        SidecarMetrics metrics)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
@@ -550,6 +629,7 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(restoreJobsSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreRangesSchema);
+        sidecarInternalKeyspace.registerTableSchema(systemAuthSchema);
         SchemaMetrics schemaMetrics = metrics.server().schema();
         return new SidecarSchema(vertx, executorPools, configuration,
                                  sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);

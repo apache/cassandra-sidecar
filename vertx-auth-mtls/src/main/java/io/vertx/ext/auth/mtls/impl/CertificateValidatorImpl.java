@@ -45,6 +45,11 @@ public class CertificateValidatorImpl implements CertificateValidator
     private final String trustedIssuerOrganizationUnit;
     private final String trustedIssuerCountry;
 
+    public CertificateValidatorImpl()
+    {
+        this(Collections.emptySet(), null, null, null);
+    }
+
     public CertificateValidatorImpl(Set<String> trustedCNs,
                                     String trustedIssuerOrganization,
                                     String trustedIssuerOrganizationUnit,

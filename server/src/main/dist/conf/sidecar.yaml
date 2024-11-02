@@ -136,6 +136,22 @@ vertx:
 #      path: "path/to/truststore.p12"
 #      password: password
 
+access_control:
+  enabled: false
+  authenticators:
+    mtls_authenticator:
+      enabled: false
+      certificate_validator: io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator
+      certificate_identity_extractor: org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor
+  admin_identities:
+#    - spiffe://authorized/admin/identities
+  permission_cache:
+    enabled: true
+    expire_after_access_millis: 300000
+    maximum_size: 10000
+    warming_retries: 5
+    warming_retry_interval_millis: 2000
+
 driver_parameters:
   contact_points:
     - "127.0.0.1:9042"

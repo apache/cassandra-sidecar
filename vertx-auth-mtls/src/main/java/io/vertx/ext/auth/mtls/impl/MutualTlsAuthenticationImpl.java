@@ -18,6 +18,8 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
+import java.util.List;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -57,9 +59,10 @@ public class MutualTlsAuthenticationImpl implements MutualTlsAuthentication
         CertificateCredentials certificateCredentials = (CertificateCredentials) credentials;
         try
         {
+            certificateCredentials.checkValid();
             certificateValidator.verifyCertificate(certificateCredentials);
-            String identity = identityExtractor.validIdentity(certificateCredentials);
-            return Future.succeededFuture(User.fromName(identity));
+            List<String> identities = identityExtractor.validIdentities(certificateCredentials);
+            return Future.succeededFuture(MutualTlsUser.fromIdentities(identities));
         }
         catch (Exception e)
         {

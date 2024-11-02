@@ -20,7 +20,9 @@ package io.vertx.ext.auth.mtls.impl;
 
 import java.security.cert.X509Certificate;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
@@ -49,7 +51,7 @@ public class SpiffeIdentityExtractor implements CertificateIdentityExtractor
     }
 
     @Override
-    public String validIdentity(CertificateCredentials certificateCredentials) throws CredentialValidationException
+    public List<String> validIdentities(CertificateCredentials certificateCredentials) throws CredentialValidationException
     {
         // First certificate in certificate chain is usually PrivateKeyEntry.
         X509Certificate privateCert = certificateCredentials.peerCertificate();
@@ -61,7 +63,7 @@ public class SpiffeIdentityExtractor implements CertificateIdentityExtractor
 
         String identity = extractIdentity(privateCert);
         validateIdentity(identity);
-        return identity;
+        return Collections.singletonList(identity);
     }
 
     protected String extractIdentity(X509Certificate certificate)

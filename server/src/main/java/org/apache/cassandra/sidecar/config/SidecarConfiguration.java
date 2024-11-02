@@ -49,6 +49,11 @@ public interface SidecarConfiguration
     SslConfiguration sslConfiguration();
 
     /**
+     * @return configuration needed for setting up access control in sidecar.
+     */
+    AccessControlConfiguration accessControlConfiguration();
+
+    /**
      * @return the configuration for the health check service
      */
     HealthCheckConfiguration healthCheckConfiguration();

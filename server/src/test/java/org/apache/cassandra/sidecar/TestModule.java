@@ -41,6 +41,7 @@ import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
@@ -49,6 +50,7 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.RestoreJobConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SSTableUploadConfigurationImpl;
@@ -104,6 +106,12 @@ public class TestModule extends AbstractModule
 
     protected SidecarConfigurationImpl abstractConfig(SslConfiguration sslConfiguration)
     {
+        return abstractConfig(sslConfiguration, new AccessControlConfigurationImpl());
+    }
+
+    protected SidecarConfigurationImpl abstractConfig(SslConfiguration sslConfiguration,
+                                                      AccessControlConfiguration accessControlConfiguration)
+    {
         ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(5, 5);
         SSTableUploadConfiguration uploadConfiguration = new SSTableUploadConfigurationImpl(0F);
         SchemaKeyspaceConfiguration schemaKeyspaceConfiguration =
@@ -130,6 +138,7 @@ public class TestModule extends AbstractModule
         return SidecarConfigurationImpl.builder()
                                        .serviceConfiguration(serviceConfiguration)
                                        .sslConfiguration(sslConfiguration)
+                                       .accessControlConfiguration(accessControlConfiguration)
                                        .restoreJobConfiguration(restoreJobConfiguration)
                                        .healthCheckConfiguration(healthCheckConfiguration)
                                        .build();

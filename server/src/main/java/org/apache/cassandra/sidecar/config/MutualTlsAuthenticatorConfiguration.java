@@ -18,37 +18,28 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
+import io.vertx.ext.auth.mtls.CertificateValidator;
+
 /**
- * Configuration class that encapsulates parameters needed for Caches
+ * Configuration needed for setting up Mutual TLS authentication in Sidecar.
  */
-public interface CacheConfiguration
+public interface MutualTlsAuthenticatorConfiguration
 {
     /**
-     * @return the configured amount of time in milliseconds after the entry's creation, the most recent
-     * replacement of its value, or its last access has elapsed to be considered an expired entry in the cache
+     * @return boolean flag indicating whether the configured authenticator is enabled.
      */
-    long expireAfterAccessMillis();
+    boolean enabled();
 
     /**
-     * @return the maximum number of entries the cache may contain
+     * @return class name of {@link CertificateValidator} implementation to be used for validating details within a
+     * certificate.
      */
-    long maximumSize();
+    String certificateValidator();
 
     /**
-     * @return {@code true} if the cache is enabled, {@code false} otherwise
+     * @return class name of {@link CertificateIdentityExtractor} implementation to be used for extracting valid
+     * identities out of certificate.
      */
-    default boolean enabled()
-    {
-        return true;
-    }
-
-    /**
-     * @return number of retries for cache warming
-     */
-    int warmingRetries();
-
-    /**
-     * @return interval duration in millis inbetween cache warming retries
-     */
-    long warmingRetryIntervalMillis();
+    String certificateIdentityExtractor();
 }

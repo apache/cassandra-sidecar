@@ -46,6 +46,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SSLOptions;
 import io.vertx.core.net.TrafficShapingOptions;
 import io.vertx.ext.web.Router;
+import org.apache.cassandra.sidecar.accesscontrol.AuthCacheService;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
@@ -76,6 +77,7 @@ public class Server
     protected final Router router;
     protected final PeriodicTaskExecutor periodicTaskExecutor;
     protected final HttpServerOptionsProvider optionsProvider;
+    protected final AuthCacheService authCacheService;
     protected final SidecarMetrics metrics;
     protected final List<ServerVerticle> deployedServerVerticles = new CopyOnWriteArrayList<>();
     // Keeps track of all the Cassandra instance identifiers where CQL is ready
@@ -89,6 +91,7 @@ public class Server
                   ExecutorPools executorPools,
                   PeriodicTaskExecutor periodicTaskExecutor,
                   HttpServerOptionsProvider optionsProvider,
+                  AuthCacheService authCacheService,
                   SidecarMetrics metrics)
     {
         this.vertx = vertx;
@@ -98,6 +101,7 @@ public class Server
         this.router = router;
         this.periodicTaskExecutor = periodicTaskExecutor;
         this.optionsProvider = optionsProvider;
+        this.authCacheService = authCacheService;
         this.metrics = metrics;
     }
 
@@ -325,6 +329,7 @@ public class Server
         {
             cqlReadyConsumer.unregister(); // stop listening to CQL ready events
             notifyAllCassandraCqlAreReady();
+            authCacheService.warmCaches();
             LOGGER.info("CQL is ready for all Cassandra instances. {}", cqlReadyInstanceIds);
         }
     }

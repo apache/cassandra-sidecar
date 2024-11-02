@@ -18,37 +18,30 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import java.util.Set;
+
 /**
- * Configuration class that encapsulates parameters needed for Caches
+ * Configuration stored for controlling user access to Sidecar.
  */
-public interface CacheConfiguration
+public interface AccessControlConfiguration
 {
     /**
-     * @return the configured amount of time in milliseconds after the entry's creation, the most recent
-     * replacement of its value, or its last access has elapsed to be considered an expired entry in the cache
+     * @return whether access control is enabled, if yes requests need to be authenticated/authorized before allowed
      */
-    long expireAfterAccessMillis();
+    boolean enabled();
 
     /**
-     * @return the maximum number of entries the cache may contain
+     * @return configuration needed for setting up authenticators in Sidecar
      */
-    long maximumSize();
+    AuthenticatorsConfiguration authenticatorsConfiguration();
 
     /**
-     * @return {@code true} if the cache is enabled, {@code false} otherwise
+     * @return A {@code Set<String>} of admin identities that are both authenticated and authorized by default.
      */
-    default boolean enabled()
-    {
-        return true;
-    }
+    Set<String> adminIdentities();
 
     /**
-     * @return number of retries for cache warming
+     * @return the configuration used for creating permissions related caches
      */
-    int warmingRetries();
-
-    /**
-     * @return interval duration in millis inbetween cache warming retries
-     */
-    long warmingRetryIntervalMillis();
+    CacheConfiguration permissionCacheConfiguration();
 }

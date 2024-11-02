@@ -81,7 +81,7 @@ public class CertificateCredentials implements Credentials
 
     public void checkValid() throws CredentialValidationException
     {
-        checkValid(this);
+        checkValid(null);
     }
 
     @Override

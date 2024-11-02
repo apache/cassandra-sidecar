@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add mTLS Authentication in Sidecar (CASSANDRASC-156)
  * Fix dangling restore jobs (CASSANDRASC-155)
  * Remove duplicated AbstractSchema class (CASSANDRASC-154)
  * Fix RestoreRangeTask not terminating (CASSANDRASC-153)

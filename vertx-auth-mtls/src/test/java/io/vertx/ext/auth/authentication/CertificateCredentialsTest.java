@@ -80,8 +80,9 @@ public class CertificateCredentialsTest
         try
         {
             X509Certificate certificate = CertificateBuilder.builder()
-                                                            .issuerName(issuerName)
-                                                            .buildSelfSigned();
+                                                            .subject(issuerName)
+                                                            .buildSelfSigned()
+                                                            .certificate();
             return new CertificateCredentials(Collections.singletonList(certificate));
         }
         catch (Exception e)
