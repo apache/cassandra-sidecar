@@ -69,7 +69,7 @@ jobs:
       - install_common
       - setup_remote_docker
       - checkout
-      - run: ./gradlew check -x integrationTest --stacktrace
+      - run: ./gradlew build -x integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -212,7 +212,7 @@ jobs:
       - setup_remote_docker
       - install_common
       - checkout
-      - run: ./gradlew check -x integrationTest --stacktrace
+      - run: ./gradlew build -x integrationTest --stacktrace
 
       - store_artifacts:
           path: build/reports

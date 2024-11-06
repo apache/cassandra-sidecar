@@ -176,7 +176,7 @@ public class RestoreJob
     }
 
     /**
-     * Check whether the {@link RestoreJob} has expired at the {@param referenceTimestampMillis}
+     * Check whether the {@link RestoreJob} has expired at the referenceTimestampMillis
      * @param referenceTimestampMillis the number of milliseconds since January 1, 1970, 00:00:00 GMT
      * @return true if the job expires at the referenceTimestampMillis; false, otherwise
      */
