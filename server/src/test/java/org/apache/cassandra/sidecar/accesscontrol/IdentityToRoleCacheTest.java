@@ -21,9 +21,7 @@ package org.apache.cassandra.sidecar.accesscontrol;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -37,7 +35,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test {@link IdentityToRoleCache}
  */
-class IdentityRoleCacheTest
+class IdentityToRoleCacheTest
 {
     @Test
     void testFindRole()
@@ -65,7 +63,7 @@ class IdentityRoleCacheTest
         assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isFalse();
         // loaded with load function
         assertThat(identityToRoleCache.get("spiffe://cassandra/sidecar/test")).isEqualTo("cassandra-role");
-        assertThat(identityToRoleCache.getAll().size()).isZero();
+        assertThat(identityToRoleCache.getAll().size()).isOne();
     }
 
     @Test
@@ -97,10 +95,11 @@ class IdentityRoleCacheTest
         when(mockDbAccessor.findAllIdentityToRoles()).thenReturn(Collections.singletonMap("spiffe://cassandra/sidecar/test", "cassandra-role"));
         CacheConfiguration mockConfig = mockCacheConfig();
         IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(mockConfig, mockDbAccessor);
-        assertThat(identityToRoleCache.getAll().size()).isZero();
+        assertThat(identityToRoleCache.cache.asMap().size()).isZero();
         // warming cache
         identityToRoleCache.warm();
         assertThat(identityToRoleCache.getAll().size()).isOne();
+        assertThat(identityToRoleCache.cache.asMap().size()).isOne();
         assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isTrue();
         assertThat(identityToRoleCache.get("spiffe://cassandra/sidecar/test")).isEqualTo("cassandra-role");
     }
@@ -111,6 +110,8 @@ class IdentityRoleCacheTest
         when(mockConfig.enabled()).thenReturn(true);
         when(mockConfig.expireAfterAccessMillis()).thenReturn(3000L);
         when(mockConfig.maximumSize()).thenReturn(10L);
+        when(mockConfig.warmupRetries()).thenReturn(5);
+        when(mockConfig.warmupRetryIntervalMillis()).thenReturn(10L);
         return mockConfig;
     }
 }

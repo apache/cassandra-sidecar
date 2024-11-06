@@ -126,8 +126,7 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
 
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
-                  assertThat(response.bodyAsString()).contains("Error validating credentials passed");
+                  assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.UNAUTHORIZED.code());
                   context.completeNow();
               }));
     }

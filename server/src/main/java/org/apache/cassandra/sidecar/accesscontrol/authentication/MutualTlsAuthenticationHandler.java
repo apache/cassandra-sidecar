@@ -18,16 +18,12 @@
 
 package org.apache.cassandra.sidecar.accesscontrol.authentication;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
-import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
@@ -64,19 +60,7 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
         .executeBlocking(promise -> {
             authProvider.authenticate(certificateCredentials)
                         .onSuccess(promise::complete)
-                        .onFailure(cause -> {
-                            if (cause instanceof CredentialValidationException)
-                            {
-                                // If credentials are invalid, reject the promise with a BAD_REQUEST error
-                                promise.fail(new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
-                                                               "Error validating credentials passed"));
-                            }
-                            else
-                            {
-                                // In case of other failures, reject the promise with an UNAUTHORIZED error
-                                promise.fail(new HttpException(HttpResponseStatus.UNAUTHORIZED.code()));
-                            }
-                        });
+                        .onFailure(cause -> promise.fail(new HttpException(HttpResponseStatus.UNAUTHORIZED.code())));
         })
         .onSuccess(result -> handler.handle(Future.succeededFuture((User) result)))
         .onFailure(cause -> handler.handle(Future.failedFuture(cause)));

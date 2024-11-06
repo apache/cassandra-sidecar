@@ -198,8 +198,7 @@ public class MutualTLSAuthenticationHandlerTest
         client.get(server.actualPort(), "localhost", "/api/v1/__health")
               .send(testContext.succeeding(response -> {
                   testContext.verify(() -> {
-                      assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
-                      assertThat(response.bodyAsString()).contains("Error validating credentials passed");
+                      assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.UNAUTHORIZED.code());
                       testContext.completeNow();
                   });
               }));

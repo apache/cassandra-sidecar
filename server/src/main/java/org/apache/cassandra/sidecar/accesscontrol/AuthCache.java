@@ -47,6 +47,7 @@ public abstract class AuthCache<K, V>
     protected final Supplier<Map<K, V>> bulkLoadFunction;
     protected final CacheConfiguration config;
 
+    // cache is null when AuthCache is disabled
     protected volatile LoadingCache<K, V> cache;
 
     protected AuthCache(String name,
