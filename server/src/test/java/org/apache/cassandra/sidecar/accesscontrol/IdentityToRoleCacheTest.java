@@ -21,14 +21,18 @@ package org.apache.cassandra.sidecar.accesscontrol;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -107,6 +111,27 @@ class IdentityToRoleCacheTest
         assertThat(identityToRoleCache.cache.asMap().size()).isZero();
         // warming cache
         identityToRoleCache.warm();
+        assertThat(identityToRoleCache.getAll().size()).isOne();
+        assertThat(identityToRoleCache.cache.asMap().size()).isOne();
+        assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isTrue();
+        assertThat(identityToRoleCache.get("spiffe://cassandra/sidecar/test")).isEqualTo("cassandra-role");
+    }
+
+    @Test
+    void testCacheWarmingOnCqlReady()
+    {
+        SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
+        when(mockDbAccessor.findAllIdentityToRoles()).thenReturn(Collections.singletonMap("spiffe://cassandra/sidecar/test", "cassandra-role"));
+
+        CacheConfiguration mockConfig = mockCacheConfig();
+        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(vertx, mockConfig, mockDbAccessor);
+        assertThat(identityToRoleCache.cache.asMap().size()).isZero();
+
+        // warming cache
+        vertx.eventBus().publish(ON_ALL_CASSANDRA_CQL_READY.address(), new JsonObject());
+
+        Uninterruptibles.sleepUninterruptibly(5, TimeUnit.SECONDS);
+
         assertThat(identityToRoleCache.getAll().size()).isOne();
         assertThat(identityToRoleCache.cache.asMap().size()).isOne();
         assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isTrue();
