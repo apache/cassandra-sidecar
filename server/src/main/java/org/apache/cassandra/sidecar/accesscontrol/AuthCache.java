@@ -33,13 +33,10 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 
 /**
- * {@link AuthCache} caches information needed for authenticating sidecar users.
+ * Caches information needed for authenticating sidecar users.
  *
- * @param <K> key stored in cache for retrieving value
- * @param <V> value cached
- *
- * for {@link IdentityRoleCache} key will be String representing identity extracted from certificate and value will
- * be String representing Cassandra role associated with the identity
+ * @param <K> Key type
+ * @param <V> Value type
  */
 public abstract class AuthCache<K, V>
 {
