@@ -121,6 +121,7 @@ class IdentityToRoleCacheTest
     void testCacheWarmingOnCqlReady()
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
+        when(mockDbAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test")).thenReturn("cassandra-role");
         when(mockDbAccessor.findAllIdentityToRoles()).thenReturn(Collections.singletonMap("spiffe://cassandra/sidecar/test", "cassandra-role"));
 
         CacheConfiguration mockConfig = mockCacheConfig();
@@ -130,7 +131,7 @@ class IdentityToRoleCacheTest
         // warming cache
         vertx.eventBus().publish(ON_ALL_CASSANDRA_CQL_READY.address(), new JsonObject());
 
-        Uninterruptibles.sleepUninterruptibly(5, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
 
         assertThat(identityToRoleCache.getAll().size()).isOne();
         assertThat(identityToRoleCache.cache.asMap().size()).isOne();
@@ -145,7 +146,7 @@ class IdentityToRoleCacheTest
         when(mockConfig.expireAfterAccessMillis()).thenReturn(3000L);
         when(mockConfig.maximumSize()).thenReturn(10L);
         when(mockConfig.warmupRetries()).thenReturn(5);
-        when(mockConfig.warmupRetryIntervalMillis()).thenReturn(10L);
+        when(mockConfig.warmupRetryIntervalMillis()).thenReturn(1000L);
         return mockConfig;
     }
 }

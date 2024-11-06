@@ -35,7 +35,7 @@ import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
 
 /**
  * Caches information needed for authenticating sidecar users.
@@ -125,7 +125,7 @@ public abstract class AuthCache<K, V>
     private void configureSidecarServerEventListener()
     {
         EventBus eventBus = vertx.eventBus();
-        eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), message -> warm());
+        eventBus.localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(), message -> warm());
     }
 
     @VisibleForTesting
