@@ -26,7 +26,7 @@ import java.util.Set;
 public interface AccessControlConfiguration
 {
     /**
-     * @return whether access control is enabled, if yes requests need to be authenticated/authorized before allowed
+     * @return whether access control is enabled, if yes requests need to be authenticated and authorized before allowed
      */
     boolean enabled();
 

@@ -38,11 +38,11 @@ public class CacheConfigurationImpl implements CacheConfiguration
     @JsonProperty(value = "enabled")
     protected final boolean enabled;
 
-    @JsonProperty("warming_retries")
-    protected final int warmingRetries;
+    @JsonProperty("warmup_retries")
+    protected final int warmupRetries;
 
-    @JsonProperty("warming_retry_interval_millis")
-    protected final long warmingRetryIntervalMillis;
+    @JsonProperty("warmup_interval_millis")
+    protected final long warmupRetryIntervalMillis;
 
     public CacheConfigurationImpl()
     {
@@ -55,13 +55,13 @@ public class CacheConfigurationImpl implements CacheConfiguration
         this(expireAfterAccessMillis, maximumSize, true, 5, 1000);
     }
 
-    public CacheConfigurationImpl(long expireAfterAccessMillis, long maximumSize, boolean enabled, int warmingRetries, long warmingRetryIntervalMillis)
+    public CacheConfigurationImpl(long expireAfterAccessMillis, long maximumSize, boolean enabled, int warmupRetries, long warmupRetryIntervalMillis)
     {
         this.expireAfterAccessMillis = expireAfterAccessMillis;
         this.maximumSize = maximumSize;
         this.enabled = enabled;
-        this.warmingRetries = warmingRetries;
-        this.warmingRetryIntervalMillis = warmingRetryIntervalMillis;
+        this.warmupRetries = warmupRetries;
+        this.warmupRetryIntervalMillis = warmupRetryIntervalMillis;
     }
 
     @Override
@@ -86,16 +86,14 @@ public class CacheConfigurationImpl implements CacheConfiguration
     }
 
     @JsonProperty(value = "warming_retries")
-    @Override
-    public int warmingRetries()
+    public int warmupRetries()
     {
-        return warmingRetries;
+        return warmupRetries;
     }
 
     @JsonProperty(value = "warming_retry_interval_millis")
-    @Override
-    public long warmingRetryIntervalMillis()
+    public long warmupRetryIntervalMillis()
     {
-        return warmingRetryIntervalMillis;
+        return warmupRetryIntervalMillis;
     }
 }

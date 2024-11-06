@@ -127,7 +127,7 @@ public class MutualTLSAuthenticationHandlerTest
         WebClient client = client(clientKeystorePath, truststorePath);
 
         when(mockSystemAuthDatabaseAccessor.findRoleFromIdentity(IDENTITY)).thenReturn("cassandra-role");
-        when(mockSystemAuthDatabaseAccessor.findAllIdentityRoles()).thenReturn(Collections.singletonMap(IDENTITY, "cassandra-role"));
+        when(mockSystemAuthDatabaseAccessor.findAllIdentityToRoles()).thenReturn(Collections.singletonMap(IDENTITY, "cassandra-role"));
 
         client.get(server.actualPort(), "localhost", "/api/v1/__health")
               .send(testContext.succeeding(response -> {
@@ -317,10 +317,10 @@ public class MutualTLSAuthenticationHandlerTest
 
         @Provides
         @Singleton
-        public IdentityRoleCache identityRoleCache(SidecarConfiguration sidecarConfiguration)
+        public IdentityToRoleCache identityRoleCache(SidecarConfiguration sidecarConfiguration)
         {
-            return new IdentityRoleCache(sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
-                                         systemAuthDatabaseAccessor);
+            return new IdentityToRoleCache(sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
+                                           systemAuthDatabaseAccessor);
         }
 
         private AuthenticatorsConfiguration getAuthenticatorsConfiguration()

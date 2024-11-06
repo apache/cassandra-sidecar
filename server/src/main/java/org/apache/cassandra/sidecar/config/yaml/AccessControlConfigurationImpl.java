@@ -28,7 +28,7 @@ import org.apache.cassandra.sidecar.config.AuthenticatorsConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 
 /**
- * Encapsulates configuration needed for creating authenticators in Sidecar.
+ * {@inheritDoc}
  */
 public class AccessControlConfigurationImpl implements AccessControlConfiguration
 {

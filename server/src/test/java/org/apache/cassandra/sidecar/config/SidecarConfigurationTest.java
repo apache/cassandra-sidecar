@@ -314,8 +314,8 @@ class SidecarConfigurationTest
         assertThat(permissionCacheConfiguration.enabled()).isTrue();
         assertThat(permissionCacheConfiguration.expireAfterAccessMillis()).isEqualTo(300000);
         assertThat(permissionCacheConfiguration.maximumSize()).isEqualTo(1000);
-        assertThat(permissionCacheConfiguration.warmingRetries()).isEqualTo(5);
-        assertThat(permissionCacheConfiguration.warmingRetryIntervalMillis()).isEqualTo(2000);
+        assertThat(permissionCacheConfiguration.warmupRetries()).isEqualTo(5);
+        assertThat(permissionCacheConfiguration.warmupRetryIntervalMillis()).isEqualTo(2000);
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)

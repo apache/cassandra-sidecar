@@ -40,7 +40,6 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
  */
 public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<MutualTlsAuthentication>
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MutualTlsAuthenticationHandler.class);
     private final ExecutorPools executorPools;
 
     public MutualTlsAuthenticationHandler(MutualTlsAuthentication authProvider,

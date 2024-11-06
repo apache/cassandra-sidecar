@@ -23,7 +23,7 @@ import org.apache.cassandra.sidecar.config.AuthenticatorsConfiguration;
 import org.apache.cassandra.sidecar.config.MutualTlsAuthenticatorConfiguration;
 
 /**
- * Encapsulates configuration needed to support multiple authenticators in Sidecar.
+ * {@inheritDoc}
  */
 public class AuthenticatorsConfigurationImpl implements AuthenticatorsConfiguration
 {

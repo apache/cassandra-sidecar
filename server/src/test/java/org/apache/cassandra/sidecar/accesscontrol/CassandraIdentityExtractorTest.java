@@ -43,7 +43,7 @@ class CassandraIdentityExtractorTest
     @Test
     void testExtractingIdentityWithRole() throws Exception
     {
-        IdentityRoleCache cache = identityRoleCache();
+        IdentityToRoleCache cache = identityRoleCache();
         cache.warm();
 
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.emptySet());
@@ -56,7 +56,7 @@ class CassandraIdentityExtractorTest
     @Test
     void testExtractingIdentityWithoutRole() throws Exception
     {
-        IdentityRoleCache cache = identityRoleCache();
+        IdentityToRoleCache cache = identityRoleCache();
         cache.warm();
 
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.emptySet());
@@ -69,7 +69,7 @@ class CassandraIdentityExtractorTest
     @Test
     void testAdminIdentities() throws Exception
     {
-        IdentityRoleCache cache = identityRoleCache();
+        IdentityToRoleCache cache = identityRoleCache();
 
         // passing empty cache
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.singleton("spiffe://sidecar/admin/identity"));
@@ -82,7 +82,7 @@ class CassandraIdentityExtractorTest
     @Test
     void testEmptyIdentities() throws Exception
     {
-        IdentityRoleCache cache = identityRoleCache();
+        IdentityToRoleCache cache = identityRoleCache();
 
         // passing empty cache
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.emptySet());
@@ -90,16 +90,16 @@ class CassandraIdentityExtractorTest
         assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate))).isInstanceOf(CredentialValidationException.class);
     }
 
-    private IdentityRoleCache identityRoleCache()
+    private IdentityToRoleCache identityRoleCache()
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test")).thenReturn("cassandra-role");
-        when(mockDbAccessor.findAllIdentityRoles()).thenReturn(Collections.singletonMap("spiffe://cassandra/sidecar/test", "cassandra-role"));
+        when(mockDbAccessor.findAllIdentityToRoles()).thenReturn(Collections.singletonMap("spiffe://cassandra/sidecar/test", "cassandra-role"));
         CacheConfiguration mockConfig = mock(CacheConfiguration.class);
         when(mockConfig.enabled()).thenReturn(true);
         when(mockConfig.expireAfterAccessMillis()).thenReturn(3000L);
         when(mockConfig.maximumSize()).thenReturn(10L);
-        return new IdentityRoleCache(mockConfig, mockDbAccessor);
+        return new IdentityToRoleCache(mockConfig, mockDbAccessor);
     }
 
     private X509Certificate certificate(String identity) throws Exception

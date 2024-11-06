@@ -30,8 +30,8 @@ import org.jetbrains.annotations.NotNull;
 public class SystemAuthSchema extends TableSchema
 {
     private static final String IDENTITY_TO_ROLE_TABLE = "identity_to_role";
-    PreparedStatement selectRoleFromIdentity;
-    PreparedStatement getAllRolesAndIdentities;
+    private PreparedStatement selectRoleFromIdentity;
+    private PreparedStatement getAllRolesAndIdentities;
 
     protected String keyspaceName()
     {
@@ -68,7 +68,7 @@ public class SystemAuthSchema extends TableSchema
     @Override
     protected String createSchemaStatement()
     {
-        return "";
+        return null;
     }
 
     @Override

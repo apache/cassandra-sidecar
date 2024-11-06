@@ -22,31 +22,26 @@ import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 
 /**
- * Caches entries from identity_to_role table. identity_to_role table maps valid certificate identity to Cassandra
- * role the identity holds. identity_to_role table is created in Cassandra versions 5.x and above
+ * Caches entries from system_auth.identity_to_role table. The table maps valid certificate identities to Cassandra
+ * roles. identity_to_role table is available since Cassandra versions 5.0
  */
-public class IdentityRoleCache extends AuthCache<String, String>
+public class IdentityToRoleCache extends AuthCache<String, String>
 {
     protected static final String NAME = "identity_to_role_cache";
     protected final SystemAuthDatabaseAccessor systemAuthDatabaseAccessor;
 
-    public IdentityRoleCache(CacheConfiguration config,
-                             SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
+    public IdentityToRoleCache(CacheConfiguration config,
+                               SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
     {
         super(NAME,
-              config.enabled(),
               systemAuthDatabaseAccessor::findRoleFromIdentity,
-              systemAuthDatabaseAccessor::findAllIdentityRoles,
-              config.warmingRetries(),
-              2000,
-              config.expireAfterAccessMillis(),
-              config.maximumSize());
+              systemAuthDatabaseAccessor::findAllIdentityToRoles,
+              config);
         this.systemAuthDatabaseAccessor = systemAuthDatabaseAccessor;
     }
 
-    public boolean contains(String identity)
+    public boolean containsKey(String identity)
     {
-
         if (cache == null)
         {
             return false;

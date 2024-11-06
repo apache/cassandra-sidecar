@@ -24,8 +24,7 @@ import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
 import org.apache.cassandra.sidecar.config.MutualTlsAuthenticatorConfiguration;
 
 /**
- * Encapsulates configuration needed for creating {@link io.vertx.ext.auth.mtls.impl.MutualTlsAuthenticationImpl}
- * authentication provider.
+ * {@inheritDoc}
  */
 public class MutualTlsAuthenticatorConfigurationImpl implements MutualTlsAuthenticatorConfiguration
 {

@@ -65,7 +65,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      *
      * @return - {@code List<Row>} containing each row in the identity to roles table
      */
-    public Map<String, String> findAllIdentityRoles()
+    public Map<String, String> findAllIdentityToRoles()
     {
         if (!tableSchemaPrepared())
         {

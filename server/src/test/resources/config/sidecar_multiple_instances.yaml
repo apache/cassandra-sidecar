@@ -147,8 +147,8 @@ access_control:
     enabled: true
     expire_after_access_millis: 300000
     maximum_size: 1000
-    warming_retries: 5
-    warming_retry_interval_millis: 2000
+    warmup_retries: 5
+    warmup_retry_interval_millis: 2000
 
 healthcheck:
   initial_delay_millis: 100

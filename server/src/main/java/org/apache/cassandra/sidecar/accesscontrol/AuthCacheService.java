@@ -30,7 +30,7 @@ import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 
 /**
- * {@link AuthCacheService} allows for easier maintenance of all {@link AuthCache}.
+ * Manages all {@link AuthCache}.
  */
 @Singleton
 public class AuthCacheService
@@ -68,10 +68,5 @@ public class AuthCacheService
         {
             cache.warm();
         }
-    }
-
-    public synchronized void invalidateCaches()
-    {
-        throw new UnsupportedOperationException("Currently invalidate of caches not supported");
     }
 }

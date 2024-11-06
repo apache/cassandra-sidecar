@@ -55,7 +55,7 @@ import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
 import org.apache.cassandra.sidecar.accesscontrol.AuthCacheService;
-import org.apache.cassandra.sidecar.accesscontrol.IdentityRoleCache;
+import org.apache.cassandra.sidecar.accesscontrol.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor;
 import org.apache.cassandra.sidecar.accesscontrol.authentication.MutualTlsAuthenticationHandler;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
@@ -197,20 +197,20 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public IdentityRoleCache identityRoleCache(SidecarConfiguration sidecarConfiguration,
-                                               AuthCacheService authCacheService,
-                                               SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
+    public IdentityToRoleCache identityRoleCache(SidecarConfiguration sidecarConfiguration,
+                                                 AuthCacheService authCacheService,
+                                                 SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
     {
-        IdentityRoleCache identityRoleCache
-        = new IdentityRoleCache(sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
-                                systemAuthDatabaseAccessor);
-        authCacheService.register(identityRoleCache);
-        return identityRoleCache;
+        IdentityToRoleCache identityToRoleCache
+        = new IdentityToRoleCache(sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
+                                  systemAuthDatabaseAccessor);
+        authCacheService.register(identityToRoleCache);
+        return identityToRoleCache;
     }
 
     @Provides
     @Singleton
-    public ChainAuthHandler chainAuthHandler(SidecarConfiguration sidecarConfiguration, IdentityRoleCache identityRoleCache, ExecutorPools executorPools)
+    public ChainAuthHandler chainAuthHandler(SidecarConfiguration sidecarConfiguration, IdentityToRoleCache identityToRoleCache, ExecutorPools executorPools)
     {
         ChainAuthHandler chainAuthHandler = ChainAuthHandler.any();
         try
@@ -226,7 +226,7 @@ public class MainModule extends AbstractModule
                 if (mTLSAuthenticatorConfig.certificateIdentityExtractor().equalsIgnoreCase(CassandraIdentityExtractor.class.getName()))
                 {
                     certificateIdentityExtractor
-                    = new CassandraIdentityExtractor(identityRoleCache, sidecarConfiguration.accessControlConfiguration().adminIdentities());
+                    = new CassandraIdentityExtractor(identityToRoleCache, sidecarConfiguration.accessControlConfiguration().adminIdentities());
                 }
                 else
                 {
