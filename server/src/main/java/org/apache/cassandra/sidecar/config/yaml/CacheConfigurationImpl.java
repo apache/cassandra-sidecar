@@ -41,7 +41,7 @@ public class CacheConfigurationImpl implements CacheConfiguration
     @JsonProperty("warmup_retries")
     protected final int warmupRetries;
 
-    @JsonProperty("warmup_interval_millis")
+    @JsonProperty("warmup_retry_interval_millis")
     protected final long warmupRetryIntervalMillis;
 
     public CacheConfigurationImpl()
