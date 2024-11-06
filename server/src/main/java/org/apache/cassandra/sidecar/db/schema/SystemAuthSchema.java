@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.db.schema;
 
 import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.jetbrains.annotations.NotNull;
@@ -27,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Schema for getting information stored in system_auth keyspace.
  */
-public class SystemAuthSchema extends TableSchema
+public class SystemAuthSchema extends CassandraExistingSchema
 {
     private static final String IDENTITY_TO_ROLE_TABLE = "identity_to_role";
     private PreparedStatement selectRoleFromIdentity;
@@ -41,9 +40,14 @@ public class SystemAuthSchema extends TableSchema
     @Override
     protected void prepareStatements(@NotNull Session session)
     {
+        KeyspaceMetadata keyspaceMetadata = session.getCluster().getMetadata().getKeyspace(keyspaceName());
+        if (keyspaceMetadata == null || keyspaceMetadata.getTable(IDENTITY_TO_ROLE_TABLE) == null)
+        {
+            return;
+        }
         selectRoleFromIdentity = prepare(selectRoleFromIdentity,
-                                          session,
-                                          CqlLiterals.selectRoleFromIdentity());
+                                         session,
+                                         CqlLiterals.selectRoleFromIdentity());
 
         getAllRolesAndIdentities = prepare(getAllRolesAndIdentities,
                                            session,
@@ -54,32 +58,6 @@ public class SystemAuthSchema extends TableSchema
     {
         throw new UnsupportedOperationException("SystemAuthSchema supports reading information from multiple " +
                                                 "tables in system_auth keyspace");
-    }
-
-    @Override
-    protected boolean exists(@NotNull Metadata metadata)
-    {
-        // check tables exists before preparing
-        KeyspaceMetadata keyspaceMetadata = metadata.getKeyspace(keyspaceName());
-        // identity_to_role table exists in Cassandra versions starting 5.x
-        return keyspaceMetadata != null && keyspaceMetadata.getTable(IDENTITY_TO_ROLE_TABLE) != null;
-    }
-
-    @Override
-    protected String createSchemaStatement()
-    {
-        return null;
-    }
-
-    @Override
-    protected boolean initializeInternal(@NotNull Session session)
-    {
-        // initialize schema after we make sure the necessary tables are present
-        if (exists(session.getCluster().getMetadata()))
-        {
-            return super.initializeInternal(session);
-        }
-        return true;
     }
 
     public PreparedStatement selectRoleFromIdentity()

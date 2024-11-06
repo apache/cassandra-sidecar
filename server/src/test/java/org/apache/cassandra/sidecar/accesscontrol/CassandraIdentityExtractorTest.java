@@ -21,8 +21,10 @@ package org.apache.cassandra.sidecar.accesscontrol;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.Vertx;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
@@ -40,6 +42,14 @@ import static org.mockito.Mockito.when;
  */
 class CassandraIdentityExtractorTest
 {
+    Vertx vertx;
+
+    @BeforeEach
+    void setup()
+    {
+        vertx = Vertx.vertx();
+    }
+
     @Test
     void testExtractingIdentityWithRole() throws Exception
     {
@@ -99,7 +109,7 @@ class CassandraIdentityExtractorTest
         when(mockConfig.enabled()).thenReturn(true);
         when(mockConfig.expireAfterAccessMillis()).thenReturn(3000L);
         when(mockConfig.maximumSize()).thenReturn(10L);
-        return new IdentityToRoleCache(mockConfig, mockDbAccessor);
+        return new IdentityToRoleCache(vertx, mockConfig, mockDbAccessor);
     }
 
     private X509Certificate certificate(String identity) throws Exception

@@ -54,7 +54,6 @@ import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
-import org.apache.cassandra.sidecar.accesscontrol.AuthCacheService;
 import org.apache.cassandra.sidecar.accesscontrol.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor;
 import org.apache.cassandra.sidecar.accesscontrol.authentication.MutualTlsAuthenticationHandler;
@@ -197,20 +196,22 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public IdentityToRoleCache identityRoleCache(SidecarConfiguration sidecarConfiguration,
-                                                 AuthCacheService authCacheService,
+    public IdentityToRoleCache identityRoleCache(Vertx vertx,
+                                                 SidecarConfiguration sidecarConfiguration,
                                                  SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
     {
         IdentityToRoleCache identityToRoleCache
-        = new IdentityToRoleCache(sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
+        = new IdentityToRoleCache(vertx,
+                                  sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
                                   systemAuthDatabaseAccessor);
-        authCacheService.register(identityToRoleCache);
         return identityToRoleCache;
     }
 
     @Provides
     @Singleton
-    public ChainAuthHandler chainAuthHandler(SidecarConfiguration sidecarConfiguration, IdentityToRoleCache identityToRoleCache, ExecutorPools executorPools)
+    public ChainAuthHandler chainAuthHandler(Vertx vertx,
+                                             SidecarConfiguration sidecarConfiguration,
+                                             IdentityToRoleCache identityToRoleCache)
     {
         ChainAuthHandler chainAuthHandler = ChainAuthHandler.any();
         try
@@ -232,8 +233,8 @@ public class MainModule extends AbstractModule
                 {
                     certificateIdentityExtractor = new SpiffeIdentityExtractor();
                 }
-                MutualTlsAuthentication mTLSAuthProvider = new MutualTlsAuthenticationImpl(certificateValidator, certificateIdentityExtractor);
-                MutualTlsAuthenticationHandler mTLSAuthHandler = new MutualTlsAuthenticationHandler(mTLSAuthProvider, executorPools);
+                MutualTlsAuthentication mTLSAuthProvider = new MutualTlsAuthenticationImpl(vertx, certificateValidator, certificateIdentityExtractor);
+                MutualTlsAuthenticationHandler mTLSAuthHandler = new MutualTlsAuthenticationHandler(mTLSAuthProvider);
                 chainAuthHandler.add(mTLSAuthHandler);
             }
             return chainAuthHandler;

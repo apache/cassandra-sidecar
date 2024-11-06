@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.TokenCredentials;
@@ -55,12 +56,14 @@ import static org.mockito.Mockito.when;
 public class MutualTlsAuthenticationTest
 {
     private static final CertificateValidator ALLOW_ALL_CERTIFICATE_VALIDATOR = new AllowAllCertificateValidator();
+    Vertx vertx;
     MutualTlsAuthentication mTlsAuth;
     SelfSignedCertificate validCert;
 
     @BeforeEach
     public void setUp() throws CertificateException
     {
+        vertx = Vertx.vertx();
         validCert = new SelfSignedCertificate();
     }
 
@@ -69,7 +72,7 @@ public class MutualTlsAuthenticationTest
     {
         CertificateIdentityExtractor mockIdentityExtracter = mock(CertificateIdentityExtractor.class);
 
-        mTlsAuth = MutualTlsAuthentication.create(ALLOW_ALL_CERTIFICATE_VALIDATOR, mockIdentityExtracter);
+        mTlsAuth = MutualTlsAuthentication.create(vertx, ALLOW_ALL_CERTIFICATE_VALIDATOR, mockIdentityExtracter);
         List<Certificate> certChain = Collections.singletonList(validCert.cert());
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
@@ -86,7 +89,7 @@ public class MutualTlsAuthenticationTest
         CertificateValidator mockCertificateValidator = mock(CertificateValidator.class);
         CertificateIdentityExtractor mockIdentityExtracter = mock(CertificateIdentityExtractor.class);
 
-        mTlsAuth = new MutualTlsAuthenticationImpl(mockCertificateValidator, mockIdentityExtracter);
+        mTlsAuth = new MutualTlsAuthenticationImpl(vertx, mockCertificateValidator, mockIdentityExtracter);
 
         TokenCredentials creds = new TokenCredentials();
 
@@ -106,7 +109,7 @@ public class MutualTlsAuthenticationTest
         = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
         CertificateIdentityExtractor identityExtracter = new SpiffeIdentityExtractor();
 
-        mTlsAuth = new MutualTlsAuthenticationImpl(certificateValidator, identityExtracter);
+        mTlsAuth = new MutualTlsAuthenticationImpl(vertx, certificateValidator, identityExtracter);
 
         X509Certificate certificate
         = CertificateBuilder
@@ -130,7 +133,7 @@ public class MutualTlsAuthenticationTest
         = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
         CertificateIdentityExtractor identityExtracter = new SpiffeIdentityExtractor();
 
-        mTlsAuth = new MutualTlsAuthenticationImpl(certificateValidator, identityExtracter);
+        mTlsAuth = new MutualTlsAuthenticationImpl(vertx, certificateValidator, identityExtracter);
 
         Date yesterday = Date.from(Instant.now().minus(1, ChronoUnit.DAYS));
         X509Certificate certificate
@@ -159,7 +162,7 @@ public class MutualTlsAuthenticationTest
         CertificateValidator mockCertificateValidator = mock(CertificateValidator.class);
         CertificateIdentityExtractor mockIdentityExtracter = mock(CertificateIdentityExtractor.class);
 
-        mTlsAuth = new MutualTlsAuthenticationImpl(mockCertificateValidator, mockIdentityExtracter);
+        mTlsAuth = new MutualTlsAuthenticationImpl(vertx, mockCertificateValidator, mockIdentityExtracter);
         Certificate mockCertificate = mock(Certificate.class);
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(mockCertificate));
 
@@ -179,7 +182,7 @@ public class MutualTlsAuthenticationTest
     {
         CertificateIdentityExtractor mockIdentityExtracter = mock(CertificateIdentityExtractor.class);
 
-        mTlsAuth = new MutualTlsAuthenticationImpl(ALLOW_ALL_CERTIFICATE_VALIDATOR, mockIdentityExtracter);
+        mTlsAuth = new MutualTlsAuthenticationImpl(vertx, ALLOW_ALL_CERTIFICATE_VALIDATOR, mockIdentityExtracter);
         List<Certificate> certChain = Collections.singletonList(validCert.cert());
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
@@ -201,7 +204,7 @@ public class MutualTlsAuthenticationTest
         = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
         CertificateIdentityExtractor identityExtracter = new SpiffeIdentityExtractor();
 
-        mTlsAuth = new MutualTlsAuthenticationImpl(certificateValidator, identityExtracter);
+        mTlsAuth = new MutualTlsAuthenticationImpl(vertx, certificateValidator, identityExtracter);
 
         X509Certificate certificate
         = CertificateBuilder
@@ -229,7 +232,7 @@ public class MutualTlsAuthenticationTest
         = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
         CertificateIdentityExtractor identityExtracter = new SpiffeIdentityExtractor();
 
-        mTlsAuth = new MutualTlsAuthenticationImpl(certificateValidator, identityExtracter);
+        mTlsAuth = new MutualTlsAuthenticationImpl(vertx, certificateValidator, identityExtracter);
 
         X509Certificate certificate
         = CertificateBuilder
@@ -255,7 +258,7 @@ public class MutualTlsAuthenticationTest
     {
         CertificateIdentityExtractor mockIdentityExtracter = mock(CertificateIdentityExtractor.class);
 
-        mTlsAuth = new MutualTlsAuthenticationImpl(ALLOW_ALL_CERTIFICATE_VALIDATOR, mockIdentityExtracter);
+        mTlsAuth = new MutualTlsAuthenticationImpl(vertx, ALLOW_ALL_CERTIFICATE_VALIDATOR, mockIdentityExtracter);
         JsonObject json = new JsonObject();
 
         assertThatThrownBy(() -> mTlsAuth.authenticate(json, user -> {

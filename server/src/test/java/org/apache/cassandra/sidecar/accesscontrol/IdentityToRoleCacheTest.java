@@ -22,13 +22,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +38,14 @@ import static org.mockito.Mockito.when;
  */
 class IdentityToRoleCacheTest
 {
+    Vertx vertx;
+
+    @BeforeEach
+    void setup()
+    {
+        vertx = Vertx.vertx();
+    }
+
     @Test
     void testFindRole()
     {
@@ -44,7 +53,7 @@ class IdentityToRoleCacheTest
         when(mockDbAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test")).thenReturn("cassandra-role");
         when(mockDbAccessor.findAllIdentityToRoles()).thenReturn(Collections.singletonMap("spiffe://cassandra/sidecar/test", "cassandra-role"));
         CacheConfiguration mockConfig = mockCacheConfig();
-        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(mockConfig, mockDbAccessor);
+        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(vertx, mockConfig, mockDbAccessor);
         assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isTrue();
         assertThat(identityToRoleCache.get("spiffe://cassandra/sidecar/test")).isEqualTo("cassandra-role");
         assertThat(identityToRoleCache.getAll().size()).isOne();
@@ -58,7 +67,7 @@ class IdentityToRoleCacheTest
         when(mockDbAccessor.findAllIdentityToRoles()).thenReturn(Collections.singletonMap("spiffe://cassandra/sidecar/test", "cassandra-role"));
         CacheConfiguration mockConfig = mock(CacheConfiguration.class);
         when(mockConfig.enabled()).thenReturn(false);
-        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(mockConfig, mockDbAccessor);
+        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(vertx, mockConfig, mockDbAccessor);
         assertThat(identityToRoleCache.cache).isNull();
         assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isFalse();
         // loaded with load function
@@ -79,7 +88,7 @@ class IdentityToRoleCacheTest
         } };
         when(mockDbAccessor.findAllIdentityToRoles()).thenReturn(identityRoles);
         CacheConfiguration mockConfig = mockCacheConfig();
-        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(mockConfig, mockDbAccessor);
+        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(vertx, mockConfig, mockDbAccessor);
         assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isTrue();
         assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test2")).isTrue();
         assertThat(identityToRoleCache.get("spiffe://cassandra/sidecar/test")).isEqualTo("cassandra-role");
@@ -94,7 +103,7 @@ class IdentityToRoleCacheTest
         when(mockDbAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test")).thenReturn("cassandra-role");
         when(mockDbAccessor.findAllIdentityToRoles()).thenReturn(Collections.singletonMap("spiffe://cassandra/sidecar/test", "cassandra-role"));
         CacheConfiguration mockConfig = mockCacheConfig();
-        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(mockConfig, mockDbAccessor);
+        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(vertx, mockConfig, mockDbAccessor);
         assertThat(identityToRoleCache.cache.asMap().size()).isZero();
         // warming cache
         identityToRoleCache.warm();

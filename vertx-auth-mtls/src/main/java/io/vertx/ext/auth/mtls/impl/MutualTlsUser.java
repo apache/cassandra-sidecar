@@ -19,9 +19,9 @@
 package io.vertx.ext.auth.mtls.impl;
 
 import java.util.List;
+import java.util.Objects;
 
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.impl.UserImpl;
 
 /**
@@ -43,6 +43,29 @@ public class MutualTlsUser extends UserImpl
     public List<String> identities()
     {
         return identities;
+    }
+
+    public boolean equals(Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
+        if (!super.equals(o))
+        {
+            return false;
+        }
+        MutualTlsUser that = (MutualTlsUser) o;
+        return Objects.equals(identities, that.identities) && super.equals(o);
+    }
+
+    public int hashCode()
+    {
+        return Objects.hash(super.hashCode(), identities);
     }
 
     public static MutualTlsUser fromIdentities(List<String> identities)

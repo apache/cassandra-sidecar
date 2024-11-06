@@ -19,6 +19,7 @@
 package io.vertx.ext.auth.mtls;
 
 import io.vertx.codegen.annotations.VertxGen;
+import io.vertx.core.Vertx;
 import io.vertx.ext.auth.authentication.AuthenticationProvider;
 import io.vertx.ext.auth.mtls.impl.MutualTlsAuthenticationImpl;
 
@@ -31,13 +32,15 @@ public interface MutualTlsAuthentication extends AuthenticationProvider
     /**
      * Create a MTLS authentication provider
      *
-     * @param certificateValidator {@link CertificateValidator} for validating details within {@link io.vertx.ext.auth.authentication.CertificateCredentials}
-     * @param identityExtractor    {@link CertificateIdentityExtractor} for extracting valid identity out of {@link io.vertx.ext.auth.authentication.CertificateCredentials}
+     * @param vertx                Vertx instance
+     * @param certificateValidator for validating details within {@link io.vertx.ext.auth.authentication.CertificateCredentials}
+     * @param identityExtractor    for extracting valid identity out of {@link io.vertx.ext.auth.authentication.CertificateCredentials}
      * @return the authentication provider
      */
-    static MutualTlsAuthentication create(CertificateValidator certificateValidator,
+    static MutualTlsAuthentication create(Vertx vertx,
+                                          CertificateValidator certificateValidator,
                                           CertificateIdentityExtractor identityExtractor)
     {
-        return new MutualTlsAuthenticationImpl(certificateValidator, identityExtractor);
+        return new MutualTlsAuthenticationImpl(vertx, certificateValidator, identityExtractor);
     }
 }

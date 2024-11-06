@@ -28,7 +28,6 @@ import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 
 /**
  * Handler for verifying user certificates for Mutual TLS authentication. {@link MutualTlsAuthenticationHandler} can be
@@ -36,13 +35,9 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
  */
 public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<MutualTlsAuthentication>
 {
-    private final ExecutorPools executorPools;
-
-    public MutualTlsAuthenticationHandler(MutualTlsAuthentication authProvider,
-                                          ExecutorPools executorPools)
+    public MutualTlsAuthenticationHandler(MutualTlsAuthentication authProvider)
     {
         super(authProvider);
-        this.executorPools = executorPools;
     }
 
     @Override
@@ -55,14 +50,9 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
         }
 
         CertificateCredentials certificateCredentials = CertificateCredentials.fromHttpRequest(ctx.request());
-        executorPools
-        .service()
-        .executeBlocking(promise -> {
-            authProvider.authenticate(certificateCredentials)
-                        .onSuccess(promise::complete)
-                        .onFailure(cause -> promise.fail(new HttpException(HttpResponseStatus.UNAUTHORIZED.code())));
-        })
-        .onSuccess(result -> handler.handle(Future.succeededFuture((User) result)))
-        .onFailure(cause -> handler.handle(Future.failedFuture(cause)));
+
+        authProvider.authenticate(certificateCredentials)
+                    .onSuccess(user -> handler.handle(Future.succeededFuture(user)))
+                    .onFailure(cause -> handler.handle(Future.failedFuture(new HttpException(HttpResponseStatus.UNAUTHORIZED.code(), cause))));
     }
 }

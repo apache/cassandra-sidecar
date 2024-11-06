@@ -29,9 +29,13 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 
 /**
  * Caches information needed for authenticating sidecar users.
@@ -43,6 +47,7 @@ public abstract class AuthCache<K, V>
 {
     protected static final Logger LOGGER = LoggerFactory.getLogger(AuthCache.class);
     protected final String name;
+    protected final Vertx vertx;
     protected final Function<K, V> loadFunction;
     protected final Supplier<Map<K, V>> bulkLoadFunction;
     protected final CacheConfiguration config;
@@ -51,15 +56,22 @@ public abstract class AuthCache<K, V>
     protected volatile LoadingCache<K, V> cache;
 
     protected AuthCache(String name,
+                        Vertx vertx,
                         Function<K, V> loadFunction,
                         Supplier<Map<K, V>> bulkLoadFunction,
                         CacheConfiguration cacheConfiguration)
     {
         this.name = name;
+        this.vertx = vertx;
         this.loadFunction = loadFunction;
         this.bulkLoadFunction = bulkLoadFunction;
         this.config = cacheConfiguration;
         this.cache = initCache();
+
+        if (this.config.enabled())
+        {
+            configureSidecarServerEventListener();
+        }
     }
 
     /**
@@ -110,7 +122,14 @@ public abstract class AuthCache<K, V>
                        .build(loadFunction::apply);
     }
 
-    public void warm()
+    private void configureSidecarServerEventListener()
+    {
+        EventBus eventBus = vertx.eventBus();
+        eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), message -> warm());
+    }
+
+    @VisibleForTesting
+    protected void warm()
     {
         if (!config.enabled())
         {
@@ -119,7 +138,7 @@ public abstract class AuthCache<K, V>
         }
 
         int retries = config.warmupRetries();
-        while(retries-- >= 1)
+        while (retries-- >= 1)
         {
             try
             {

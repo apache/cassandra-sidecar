@@ -20,14 +20,14 @@ package org.apache.cassandra.sidecar.adapters.base.db.schema;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import org.apache.cassandra.sidecar.db.schema.TableSchema;
+import org.apache.cassandra.sidecar.db.schema.CassandraExistingSchema;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Holds the prepared statements for operations related to client connection stats retrieved from
  * the "clients" virtual table
  */
-public class ConnectedClientsSchema extends TableSchema
+public class ConnectedClientsSchema extends CassandraExistingSchema
 {
     private static final String TABLE_NAME = "clients";
     private static final String KEYSPACE_NAME = "system_views";
@@ -45,19 +45,6 @@ public class ConnectedClientsSchema extends TableSchema
     {
         statsStatement = prepare(statsStatement, session, statsStatement());
         connectionsByUserStatement = prepare(connectionsByUserStatement, session, selectConnectionsByUserStatement());
-    }
-
-    @Override
-    protected boolean initializeInternal(@NotNull Session session)
-    {
-        prepareStatements(session);
-        return true;
-    }
-
-    @Override
-    protected String createSchemaStatement()
-    {
-        return null;
     }
 
     @Override

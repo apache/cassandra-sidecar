@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.accesscontrol;
 
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 
@@ -30,10 +31,12 @@ public class IdentityToRoleCache extends AuthCache<String, String>
     protected static final String NAME = "identity_to_role_cache";
     protected final SystemAuthDatabaseAccessor systemAuthDatabaseAccessor;
 
-    public IdentityToRoleCache(CacheConfiguration config,
+    public IdentityToRoleCache(Vertx vertx,
+                               CacheConfiguration config,
                                SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
     {
         super(NAME,
+              vertx,
               systemAuthDatabaseAccessor::findRoleFromIdentity,
               systemAuthDatabaseAccessor::findAllIdentityToRoles,
               config);
@@ -47,6 +50,6 @@ public class IdentityToRoleCache extends AuthCache<String, String>
             return false;
         }
         String role = get(identity);
-        return  role != null && !role.isEmpty();
+        return  role != null;
     }
 }

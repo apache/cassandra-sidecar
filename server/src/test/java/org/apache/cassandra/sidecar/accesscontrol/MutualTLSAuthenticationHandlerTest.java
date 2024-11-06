@@ -78,7 +78,7 @@ import static org.mockito.Mockito.when;
  * Test for Mutual TLS Authentication
  */
 @ExtendWith(VertxExtension.class)
-public class MutualTLSAuthenticationHandlerTest
+class MutualTLSAuthenticationHandlerTest
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(MutualTLSAuthenticationHandlerTest.class);
     private static final String IDENTITY = "spiffe://cassandra/sidecar/test";
@@ -270,7 +270,7 @@ public class MutualTLSAuthenticationHandlerTest
     /**
      * Override test module for mTLS test
      */
-    public class TestMTLSModule extends TestModule
+    public static class TestMTLSModule extends TestModule
     {
         private final Path keystorePath;
         private final Path truststorePath;
@@ -316,9 +316,11 @@ public class MutualTLSAuthenticationHandlerTest
 
         @Provides
         @Singleton
-        public IdentityToRoleCache identityRoleCache(SidecarConfiguration sidecarConfiguration)
+        public IdentityToRoleCache identityRoleCache(Vertx vertx,
+                                                     SidecarConfiguration sidecarConfiguration)
         {
-            return new IdentityToRoleCache(sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
+            return new IdentityToRoleCache(vertx,
+                                           sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
                                            systemAuthDatabaseAccessor);
         }
 
