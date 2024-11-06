@@ -85,13 +85,13 @@ public class CacheConfigurationImpl implements CacheConfiguration
         return enabled;
     }
 
-    @JsonProperty(value = "warming_retries")
+    @JsonProperty(value = "warmup_retries")
     public int warmupRetries()
     {
         return warmupRetries;
     }
 
-    @JsonProperty(value = "warming_retry_interval_millis")
+    @JsonProperty(value = "warmup_retry_interval_millis")
     public long warmupRetryIntervalMillis()
     {
         return warmupRetryIntervalMillis;

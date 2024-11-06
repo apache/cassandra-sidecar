@@ -41,6 +41,7 @@ public class SystemAuthSchema extends CassandraExistingSchema
     protected void prepareStatements(@NotNull Session session)
     {
         KeyspaceMetadata keyspaceMetadata = session.getCluster().getMetadata().getKeyspace(keyspaceName());
+        // identity_to_role table exists in Cassandra versions starting 5.x
         if (keyspaceMetadata == null || keyspaceMetadata.getTable(IDENTITY_TO_ROLE_TABLE) == null)
         {
             return;

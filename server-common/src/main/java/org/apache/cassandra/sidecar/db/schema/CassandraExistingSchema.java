@@ -40,6 +40,9 @@ public abstract class CassandraExistingSchema extends TableSchema
         return true;
     }
 
+    /**
+     * Should not create new tables, since schema is for existing tables.
+     */
     @Override
     protected String createSchemaStatement()
     {
