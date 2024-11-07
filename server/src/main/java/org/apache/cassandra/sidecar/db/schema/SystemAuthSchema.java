@@ -26,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Schema for getting information stored in system_auth keyspace.
  */
-public class SystemAuthSchema extends CassandraExistingSchema
+public class SystemAuthSchema extends CassandraSystemTableSchema
 {
     private static final String IDENTITY_TO_ROLE_TABLE = "identity_to_role";
     private PreparedStatement selectRoleFromIdentity;
