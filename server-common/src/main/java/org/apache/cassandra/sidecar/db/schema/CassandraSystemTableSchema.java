@@ -25,7 +25,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Schema for existing tables in Cassandra.
  */
-public abstract class CassandraExistingSchema extends TableSchema
+public abstract class CassandraSystemTableSchema extends TableSchema
 {
     @Override
     protected boolean exists(@NotNull Metadata metadata)
@@ -44,6 +44,7 @@ public abstract class CassandraExistingSchema extends TableSchema
      * Should not create new tables, since schema is for existing tables.
      */
     @Override
+
     protected String createSchemaStatement()
     {
         return null;
