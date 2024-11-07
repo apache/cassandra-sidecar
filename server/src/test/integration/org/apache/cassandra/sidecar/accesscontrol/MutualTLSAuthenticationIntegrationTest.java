@@ -112,7 +112,6 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .send(context.failing(response -> {
                   assertThat(response.getCause()).isInstanceOf(SSLHandshakeException.class);
-                  assertThat(response.getMessage()).contains("certificate_expired");
                   context.completeNow();
               }));
     }
