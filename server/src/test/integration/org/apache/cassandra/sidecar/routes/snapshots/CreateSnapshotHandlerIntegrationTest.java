@@ -56,9 +56,9 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 {
     @CassandraIntegrationTest
-    void createSnapshotEndpointFailsWhenKeyspaceDoesNotExist(VertxTestContext context) throws InterruptedException
+    void createSnapshotEndpointFailsWhenKeyspaceDoesNotExist(VertxTestContext context) throws Exception
     {
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         String testRoute = "/api/v1/keyspaces/non_existent/tables/testtable/snapshots/my-snapshot";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
@@ -69,11 +69,11 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
     @CassandraIntegrationTest
     void createSnapshotEndpointFailsWhenTableDoesNotExist(VertxTestContext context)
-    throws InterruptedException
+    throws Exception
     {
         createTestKeyspace();
 
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non_existent/snapshots/my-snapshot";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
@@ -85,7 +85,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void createSnapshotWithTtlFailsWhenUnitsAreNotSpecified(VertxTestContext context,
                                                             CassandraTestContext cassandraTestContext)
-    throws InterruptedException
+    throws Exception
     {
         assumeThat(cassandraTestContext.version).as("TTL is only supported in Cassandra 4.1")
                                                 .isGreaterThanOrEqualTo(SimpleCassandraVersion.create(4, 1, 0));
@@ -93,7 +93,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         String expectedErrorMessage = "Invalid duration: 500 Accepted units:[SECONDS, MINUTES, HOURS, DAYS] " +
                                       "where case matters and only non-negative values.";
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot?ttl=500",
@@ -113,7 +113,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void createSnapshotWithTtlFailsWhenTtlIsTooSmall(VertxTestContext context,
                                                      CassandraTestContext cassandraTestContext)
-    throws InterruptedException
+    throws Exception
     {
         if (cassandraTestContext.version.compareTo(SimpleCassandraVersion.create(4, 1, 0)) < 0)
         {
@@ -125,7 +125,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         String expectedErrorMessage = "ttl for snapshot must be at least 60 seconds";
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot?ttl=1s",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
@@ -143,12 +143,12 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
     @CassandraIntegrationTest
     void createSnapshotFailsWhenSnapshotAlreadyExists(VertxTestContext context)
-    throws InterruptedException
+    throws Exception
     {
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
@@ -169,12 +169,12 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
     @CassandraIntegrationTest
     void testCreateSnapshotEndpoint(VertxTestContext context)
-    throws InterruptedException
+    throws Exception
     {
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
@@ -198,7 +198,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
     @CassandraIntegrationTest
     void testCreateSnapshotEndpointWithTtl(VertxTestContext context,
-                                           CassandraTestContext cassandraTestContext) throws InterruptedException
+                                           CassandraTestContext cassandraTestContext) throws Exception
     {
         // TTL is only supported in Cassandra 4.1
         boolean validateExpectedTtl = cassandraTestContext.version
@@ -208,7 +208,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         QualifiedTableName tableName = createTestTableAndPopulate();
 
         long expectedTtlInSeconds = 61;
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/ttl-snapshot?ttl=%ds",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName(),
                                          expectedTtlInSeconds);
@@ -270,12 +270,12 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
     @CassandraIntegrationTest
     void testCreateSnapshotEndpointWithMixedCaseTableName(VertxTestContext context)
-    throws InterruptedException
+    throws Exception
     {
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate("QuOtEdTaBlENaMe");
 
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)

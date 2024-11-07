@@ -64,7 +64,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
 
     @CassandraIntegrationTest
     void testSSTableImport(VertxTestContext vertxTestContext)
-    throws IOException, InterruptedException
+    throws Exception
     {
         // Cassandra before 4.0 does not have the necessary JMX endpoints,
         // so we skip if the cluster version is below 4.0
@@ -126,7 +126,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         // Add new data (c, d) to table
         populateTable(session, tableName, Arrays.asList("c", "d"));
 
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + tableName.keyspace()
                            + "/tables/" + tableName.tableName() + "/import";
         sendRequest(vertxTestContext,

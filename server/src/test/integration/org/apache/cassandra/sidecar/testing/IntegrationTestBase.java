@@ -140,7 +140,7 @@ public abstract class IntegrationTestBase
             });
         }
 
-        client = WebClient.create(vertx);
+        client = client();
         server.start()
               .onSuccess(s -> {
                   sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
@@ -310,6 +310,12 @@ public abstract class IntegrationTestBase
         Session session = sidecarTestContext.session();
         assertThat(session).isNotNull();
         return session;
+    }
+
+    protected WebClient client() throws Exception
+    {
+        Path clientKeystorePath = clientKeystorePath(ADMIN_IDENTITY, false);
+        return createClient(clientKeystorePath, truststorePath);
     }
 
     protected void startAsync(String hints, Runnable runnable)

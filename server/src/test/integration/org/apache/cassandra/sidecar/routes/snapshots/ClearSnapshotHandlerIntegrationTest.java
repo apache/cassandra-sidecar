@@ -41,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ClearSnapshotHandlerIntegrationTest extends IntegrationTestBase
 {
     @CassandraIntegrationTest
-    void deleteSnapshotFailsWhenKeyspaceDoesNotExist(VertxTestContext context) throws InterruptedException
+    void deleteSnapshotFailsWhenKeyspaceDoesNotExist(VertxTestContext context) throws Exception
     {
         String testRoute = "/api/v1/keyspaces/non_existent/tables/testtable/snapshots/my-snapshot";
         assertNotFoundOnDeleteSnapshot(context, testRoute);
@@ -49,7 +49,7 @@ class ClearSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
     @CassandraIntegrationTest
     void deleteSnapshotFailsWhenTableDoesNotExist(VertxTestContext context)
-    throws InterruptedException
+    throws Exception
     {
         createTestKeyspace();
         createTestTableAndPopulate();
@@ -61,12 +61,12 @@ class ClearSnapshotHandlerIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(numDataDirsPerInstance = 1)
         // Set to > 1 to fail test
     void testDeleteSnapshotEndpoint(VertxTestContext context)
-    throws InterruptedException
+    throws Exception
     {
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         String snapshotName = "my-snapshot" + UUID.randomUUID();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName(),
@@ -119,9 +119,9 @@ class ClearSnapshotHandlerIntegrationTest extends IntegrationTestBase
         return tableName;
     }
 
-    private void assertNotFoundOnDeleteSnapshot(VertxTestContext context, String testRoute) throws InterruptedException
+    private void assertNotFoundOnDeleteSnapshot(VertxTestContext context, String testRoute) throws Exception
     {
-        WebClient client = WebClient.create(vertx);
+        WebClient client = client();
         client.delete(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeedingThenComplete());
