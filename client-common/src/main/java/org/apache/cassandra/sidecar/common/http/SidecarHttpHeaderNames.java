@@ -33,7 +33,7 @@ public final class SidecarHttpHeaderNames
     public static final String CONTENT_XXHASH32_SEED = "cassandra-content-xxhash32-seed";
 
     /**
-     * {@code "cassandra-sidecar-job-uuid"}
+     * {@code "cassandra-operations-job-uuid"}
      */
-    public static final String ASYNC_JOB_UUID = "cassandra-sidecar-job-uuid";
+    public static final String OPERATIONS_JOB_HEADER_NAME = "cassandra-operations-jobid";
 }

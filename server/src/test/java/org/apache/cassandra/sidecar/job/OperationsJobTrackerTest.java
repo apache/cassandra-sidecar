@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.common.utils.JobResult;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,25 +35,25 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.apache.cassandra.sidecar.job.JobTest.createJobWithSupplier;
+import static org.apache.cassandra.sidecar.job.OperationsJobTest.createJobWithSupplier;
 
 /**
  * Tests to validate job tracking
  */
-public class JobTrackerTest
+public class OperationsJobTrackerTest
 {
-    private JobTracker jobTracker;
+    private OperationsJobTracker jobTracker;
     private static final int trackerSize = 3;
 
-    Job job1 = createJobWithSupplier(() -> new JobResult(JobResult.JobStatus.Completed));
-    Job job2 = createJobWithSupplier(() -> new JobResult(JobResult.JobStatus.Completed));
-    Job job3 = createJobWithSupplier(() -> new JobResult(JobResult.JobStatus.Completed));
-    Job job4 = createJobWithSupplier(() -> new JobResult(JobResult.JobStatus.Completed));
+    OperationsJob job1 = createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed));
+    OperationsJob job2 = createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed));
+    OperationsJob job3 = createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed));
+    OperationsJob job4 = createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed));
 
     @BeforeEach
     void setUp()
     {
-        jobTracker = new JobTracker(trackerSize);
+        jobTracker = new OperationsJobTracker(trackerSize);
     }
 
     @Test
@@ -142,7 +142,7 @@ public class JobTrackerTest
         jobTracker.put(key1, job1);
         jobTracker.put(key2, job2);
 
-        ImmutableMap<UUID, Job> view = jobTracker.getJobsView();
+        ImmutableMap<UUID, OperationsJob> view = jobTracker.getJobsView();
         assertEquals(2, view.size());
         assertThrows(UnsupportedOperationException.class, () -> view.put(key3, job3));
     }
@@ -154,7 +154,7 @@ public class JobTrackerTest
         for (int i = 0; i < trackerSize; i++)
         {
             executorService.submit(() -> {
-                jobTracker.put(UUID.randomUUID(), createJobWithSupplier(() -> new JobResult(JobResult.JobStatus.Completed)));
+                jobTracker.put(UUID.randomUUID(), createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed)));
             });
         }
         executorService.shutdown();
@@ -171,7 +171,7 @@ public class JobTrackerTest
         UUID key3 = UUID.randomUUID();
         UUID key4 = UUID.randomUUID();
 
-        JobTracker jobTracker = new JobTracker(3);
+        OperationsJobTracker jobTracker = new OperationsJobTracker(3);
 
         jobTracker.putIfAbsent(key1, job1);
         jobTracker.putIfAbsent(key2, job2);

@@ -27,23 +27,23 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.cassandra.sidecar.common.utils.JobResult;
-import org.apache.cassandra.sidecar.common.utils.JobResult.JobStatus;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus;
 
 /**
- * An abstract class representing a Job managed by the sidecar.
+ * An abstract class representing a Operations job managed by the sidecar.
  *
  */
-public abstract class Job
+public abstract class OperationsJob
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Job.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OperationsJob.class);
 
     protected UUID jobId;
-    protected JobStatus status;
+    protected OperationsJobStatus status;
     protected String failureReason;
     final CountDownLatch latch = new CountDownLatch(1);
 
-    protected Job()
+    protected OperationsJob()
     {
 
     }
@@ -51,26 +51,26 @@ public abstract class Job
      * Constructs a job with a unique UUID, in Pending state
      * @param jobId UUID representing the Job to be created
      */
-    protected Job(UUID jobId)
+    protected OperationsJob(UUID jobId)
     {
         this.jobId = jobId;
-        this.status = JobStatus.Pending;
+        this.status = OperationsJobStatus.Pending;
         this.failureReason = "";
     }
 
     @VisibleForTesting
-    protected Job(UUID jobId, JobStatus status)
+    protected OperationsJob(UUID jobId, OperationsJobStatus status)
     {
         this.jobId = jobId;
         this.status = status;
         this.failureReason = "";
     }
 
-    public void setStatus(JobStatus status)
+    public void setStatus(OperationsJobStatus status)
     {
         this.status = status;
     }
-    public JobStatus status()
+    public OperationsJobStatus status()
     {
         return status;
     }
@@ -90,7 +90,7 @@ public abstract class Job
      * @return a function with the operation implementation that returns a {@code JobResult}
      * @throws Exception
      */
-    public abstract Supplier<JobResult> jobOperationSupplier() throws Exception;
+    public abstract Supplier<OperationsJobResult> jobOperationSupplier() throws Exception;
 
     /**
      * Provide a meaningful name of the operation executed by the concrete subclass.
@@ -115,7 +115,7 @@ public abstract class Job
         try
         {
             LOGGER.info("Executing job with ID: {}", jobId);
-            JobResult result = jobOperationSupplier().get();
+            OperationsJobResult result = jobOperationSupplier().get();
             status = result.status();
             failureReason = result.reason();
             LOGGER.debug("Job with ID: {} returned with status: {}", jobId, status);
@@ -124,7 +124,7 @@ public abstract class Job
         {
             String reason = (e.getCause() != null) ? e.getCause().getMessage() : e.getMessage();
             LOGGER.error("Failed to execute job {} with reason: {}", jobId, reason);
-            status = JobStatus.Failed;
+            status = OperationsJobStatus.Failed;
             failureReason = reason;
         }
         finally

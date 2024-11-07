@@ -25,35 +25,35 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Response structure of the list jobs API
+ * Response structure of the list operations jobs API
  */
-public class ListJobsResponse
+public class ListOperationsJobsResponse
 {
-    private final List<JobResponse> jobs;
+    private final List<OperationsJobsResponse> jobs;
 
     /**
-     * Constructs a {@link ListJobsResponse} object.
+     * Constructs a {@link ListOperationsJobsResponse} object.
      */
-    public ListJobsResponse()
+    public ListOperationsJobsResponse()
     {
         this.jobs = new ArrayList<>();
     }
 
-    public void addJob(JobResponse job)
+    public void addJob(OperationsJobsResponse job)
     {
         jobs.add(job);
     }
 
     @JsonProperty("jobs")
-    public List<JobResponse> jobs()
+    public List<OperationsJobsResponse> jobs()
     {
         return jobs;
     }
 
     /**
-     * Structure of the Job instance within the list jobs API response
+     * Structure of the operations job instance within the list operations jobs API response
      */
-    public static class JobResponse
+    public static class OperationsJobsResponse
     {
         public final UUID jobId;
         public final String status;
@@ -61,12 +61,12 @@ public class ListJobsResponse
         public final String operation;
 
         /**
-         * Constructs a {@link JobResponse} object.
+         * Constructs a {@link OperationsJobsResponse} object.
          */
-        public JobResponse(@JsonProperty("jobId") UUID jobId,
-                           @JsonProperty("status") String status,
-                           @JsonProperty("failureReason") String failureReason,
-                           @JsonProperty("operation") String operation)
+        public OperationsJobsResponse(@JsonProperty("jobId") UUID jobId,
+                                      @JsonProperty("status") String status,
+                                      @JsonProperty("failureReason") String failureReason,
+                                      @JsonProperty("operation") String operation)
         {
             this.jobId = jobId;
             this.status = status;

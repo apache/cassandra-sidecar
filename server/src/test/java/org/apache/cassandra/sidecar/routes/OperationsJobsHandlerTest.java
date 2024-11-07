@@ -43,10 +43,10 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
-import org.apache.cassandra.sidecar.common.response.JobStatusResponse;
-import org.apache.cassandra.sidecar.common.utils.JobResult;
-import org.apache.cassandra.sidecar.job.Job;
-import org.apache.cassandra.sidecar.job.JobManager;
+import org.apache.cassandra.sidecar.common.response.OperationsJobsResponse;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
+import org.apache.cassandra.sidecar.job.OperationsJob;
+import org.apache.cassandra.sidecar.job.OperationsJobManager;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -58,10 +58,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for the {@link JobStatusHandler}
+ * Tests for the {@link OperationsJobsHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class JobStatusHandlerTest
+public class OperationsJobsHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(GossipInfoHandlerTest.class);
     Vertx vertx;
@@ -76,7 +76,7 @@ public class JobStatusHandlerTest
     {
         Injector injector;
         Module testOverride = Modules.override(new TestModule())
-                                     .with(new JobStatusHandlerTest.JobStatusHandlerTestModule());
+                                     .with(new OperationsJobsHandlerTestModule());
         injector = Guice.createInjector(Modules.override(new MainModule())
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
@@ -104,7 +104,7 @@ public class JobStatusHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String uuid = UUID.randomUUID().toString();
-        String testRoute = "/api/v1/cassandra/jobs/" + uuid + "/status";
+        String testRoute = "/api/v1/cassandra/operations/jobs/" + uuid;
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeeding(response -> {
@@ -117,7 +117,7 @@ public class JobStatusHandlerTest
     void testGetJobStatusRunningJob(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/jobs/" + runningUuid + "/status";
+        String testRoute = "/api/v1/cassandra/operations/jobs/" + runningUuid;
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_ACCEPTED)
               .send(context.succeeding(response -> {
@@ -130,14 +130,14 @@ public class JobStatusHandlerTest
     void testGetJobStatusCompletedJob(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/jobs/" + completedUuid + "/status";
+        String testRoute = "/api/v1/cassandra/operations/jobs/" + completedUuid;
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
-                  JobStatusResponse jobStatus = response.bodyAsJson(JobStatusResponse.class);
+                  OperationsJobsResponse jobStatus = response.bodyAsJson(OperationsJobsResponse.class);
                   assertThat(jobStatus.jobId()).isEqualTo(completedUuid);
-                  assertThat(jobStatus.status()).isEqualTo(JobResult.JobStatus.Completed);
+                  assertThat(jobStatus.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Completed);
                   assertThat(jobStatus.operation()).isEqualTo("testCompleted");
                   context.completeNow();
               }));
@@ -147,14 +147,14 @@ public class JobStatusHandlerTest
     void testGetJobStatusFailedJob(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/jobs/" + failedUuid + "/status";
+        String testRoute = "/api/v1/cassandra/operations/jobs/" + failedUuid;
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
-                  JobStatusResponse jobStatus = response.bodyAsJson(JobStatusResponse.class);
+                  OperationsJobsResponse jobStatus = response.bodyAsJson(OperationsJobsResponse.class);
                   assertThat(jobStatus.jobId()).isEqualTo(failedUuid);
-                  assertThat(jobStatus.status()).isEqualTo(JobResult.JobStatus.Failed);
+                  assertThat(jobStatus.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Failed);
                   assertThat(jobStatus.operation()).isEqualTo("testFailed");
                   assertThat(jobStatus.reason()).isEqualTo("Simulated failure");
 
@@ -162,20 +162,20 @@ public class JobStatusHandlerTest
               }));
     }
 
-    static class JobStatusHandlerTestModule extends AbstractModule
+    static class OperationsJobsHandlerTestModule extends AbstractModule
     {
         @Provides
         @Singleton
-        public JobManager jobManager()
+        public OperationsJobManager jobManager()
         {
-            JobManager mockManager = mock(JobManager.class);
-            Job runningMock = mock(Job.class);
-            when(runningMock.status()).thenReturn(JobResult.JobStatus.Running);
-            Job completedMock = mock(Job.class);
-            when(completedMock.status()).thenReturn(JobResult.JobStatus.Completed);
+            OperationsJobManager mockManager = mock(OperationsJobManager.class);
+            OperationsJob runningMock = mock(OperationsJob.class);
+            when(runningMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.Running);
+            OperationsJob completedMock = mock(OperationsJob.class);
+            when(completedMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.Completed);
             when(completedMock.operation()).thenReturn("testCompleted");
-            Job failedMock = mock(Job.class);
-            when(failedMock.status()).thenReturn(JobResult.JobStatus.Failed);
+            OperationsJob failedMock = mock(OperationsJob.class);
+            when(failedMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.Failed);
             when(failedMock.operation()).thenReturn("testFailed");
             when(failedMock.failureReason()).thenReturn("Simulated failure");
 

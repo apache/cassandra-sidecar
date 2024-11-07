@@ -25,24 +25,28 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.common.response.JobStatusResponse;
+import org.apache.cassandra.sidecar.common.response.OperationsJobsResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.job.Job;
-import org.apache.cassandra.sidecar.job.JobManager;
+import org.apache.cassandra.sidecar.job.OperationsJob;
+import org.apache.cassandra.sidecar.job.OperationsJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.ASYNC_JOB_UUID;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONS_JOB_ID_PATH_PARAM;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.OPERATIONS_JOB_HEADER_NAME;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Handler for retrieving the status of async jobs running on the sidecar
+ * Handler for retrieving the status of async operations jobs running on the sidecar
  */
-public class JobStatusHandler extends AbstractHandler<Void>
+public class OperationsJobsHandler extends AbstractHandler<Void>
 {
-    private final JobManager jobManager;
+    private final OperationsJobManager jobManager;
     @Inject
-    public JobStatusHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools, CassandraInputValidator validator, JobManager jobManager)
+    public OperationsJobsHandler(InstanceMetadataFetcher metadataFetcher,
+                                 ExecutorPools executorPools,
+                                 CassandraInputValidator validator,
+                                 OperationsJobManager jobManager)
     {
         super(metadataFetcher, executorPools, validator);
         this.jobManager = jobManager;
@@ -56,10 +60,10 @@ public class JobStatusHandler extends AbstractHandler<Void>
     @Override
     public void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
     {
-        UUID jobUUID = verifyJobIdPresent(context);
+        UUID jobUUID = validateJobIdParam(context);
 
         executorPools.service().executeBlocking(() -> {
-                         Job job = jobManager.getJobIfExists(jobUUID);
+                         OperationsJob job = jobManager.getJobIfExists(jobUUID);
                          if (job == null)
                          {
                              String response = String.format("Unknown job with ID:%s. Please retry the operation.", jobUUID);
@@ -72,12 +76,13 @@ public class JobStatusHandler extends AbstractHandler<Void>
                      .onSuccess(job -> sendStatusBasedResponse(context, jobUUID, job));
     }
 
-    private UUID verifyJobIdPresent(RoutingContext context)
+    private UUID validateJobIdParam(RoutingContext context)
     {
-        String jobId = context.pathParam("jobId");
+        String jobId = context.pathParam(OPERATIONS_JOB_ID_PATH_PARAM.substring(1));
         if (jobId == null)
         {
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "'jobId' is required but not supplied");
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                    OPERATIONS_JOB_ID_PATH_PARAM + " is required but not supplied");
         }
 
         UUID jobUUID;
@@ -94,20 +99,20 @@ public class JobStatusHandler extends AbstractHandler<Void>
         return jobUUID;
     }
 
-    public void sendStatusBasedResponse(RoutingContext context, UUID jobId, Job job)
+    public void sendStatusBasedResponse(RoutingContext context, UUID jobId, OperationsJob job)
     {
         switch(job.status())
         {
             case Completed:
             case Failed:
                 context.response().setStatusCode(HttpResponseStatus.OK.code());
-                context.json(new JobStatusResponse(jobId, job.status(), job.operation(), job.failureReason()));
+                context.json(new OperationsJobsResponse(jobId, job.status(), job.operation(), job.failureReason()));
                 break;
             case Pending:
             case Running:
                 context.response()
                        .setStatusCode(HttpResponseStatus.ACCEPTED.code())
-                       .putHeader(ASYNC_JOB_UUID, jobId.toString())
+                       .putHeader(OPERATIONS_JOB_HEADER_NAME, jobId.toString())
                        .end();
                 break;
         }

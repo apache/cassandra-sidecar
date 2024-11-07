@@ -25,26 +25,30 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.common.response.ListJobsResponse;
+import org.apache.cassandra.sidecar.common.response.ListOperationsJobsResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.job.Job;
-import org.apache.cassandra.sidecar.job.JobManager;
+import org.apache.cassandra.sidecar.job.OperationsJob;
+import org.apache.cassandra.sidecar.job.OperationsJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
  * Handler for retrieving the all the jobs running on the sidecar
  */
-public class ListJobsHandler extends AbstractHandler<Void>
+public class ListOperationsJobsHandler extends AbstractHandler<Void>
 {
-    private final JobManager jobManager;
+    private final OperationsJobManager jobManager;
     @Inject
-    public ListJobsHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools, CassandraInputValidator validator, JobManager jobManager)
+    public ListOperationsJobsHandler(InstanceMetadataFetcher metadataFetcher,
+                                     ExecutorPools executorPools,
+                                     CassandraInputValidator validator,
+                                     OperationsJobManager jobManager)
     {
         super(metadataFetcher, executorPools, validator);
         this.jobManager = jobManager;
     }
 
+    @Override
     protected Void extractParamsOrThrow(RoutingContext context)
     {
         return null;
@@ -53,18 +57,14 @@ public class ListJobsHandler extends AbstractHandler<Void>
     @Override
     protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
     {
-        executorPools.service()
-                     .runBlocking(() -> {
-                         List<Job> jobs = jobManager.allInflightJobs();
-                         ListJobsResponse listResponse = new ListJobsResponse();
-                         jobs.forEach(job ->
-                                      listResponse.addJob(new ListJobsResponse.JobResponse(job.jobId(),
-                                                                                           job.status().name(),
-                                                                                           job.failureReason(),
-                                                                                           job.operation())));
-                         context.response().setStatusCode(HttpResponseStatus.OK.code());
-                         context.json(listResponse);
-                     })
-                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+        List<OperationsJob> jobs = jobManager.allInflightJobs();
+        ListOperationsJobsResponse listResponse = new ListOperationsJobsResponse();
+        jobs.forEach(job ->
+                     listResponse.addJob(new ListOperationsJobsResponse.OperationsJobsResponse(job.jobId(),
+                                                                                               job.status().name(),
+                                                                                               job.failureReason(),
+                                                                                               job.operation())));
+        context.response().setStatusCode(HttpResponseStatus.OK.code());
+        context.json(listResponse);
     }
 }

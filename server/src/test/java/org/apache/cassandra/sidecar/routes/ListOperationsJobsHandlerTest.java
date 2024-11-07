@@ -46,10 +46,10 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
-import org.apache.cassandra.sidecar.common.response.ListJobsResponse;
-import org.apache.cassandra.sidecar.common.utils.JobResult;
-import org.apache.cassandra.sidecar.job.Job;
-import org.apache.cassandra.sidecar.job.JobManager;
+import org.apache.cassandra.sidecar.common.response.ListOperationsJobsResponse;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
+import org.apache.cassandra.sidecar.job.OperationsJob;
+import org.apache.cassandra.sidecar.job.OperationsJobManager;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -59,26 +59,26 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for the {@link ListJobsHandler}
+ * Tests for the {@link ListOperationsJobsHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class ListJobsHandlerTest
+public class ListOperationsJobsHandlerTest
 {
-    static final Logger LOGGER = LoggerFactory.getLogger(ListJobsHandlerTest.class);
+    static final Logger LOGGER = LoggerFactory.getLogger(ListOperationsJobsHandlerTest.class);
     Vertx vertx;
     Server server;
 
     static UUID runningUuid = UUID.randomUUID();
     static UUID pendingUuid = UUID.randomUUID();
-    static SampleJob running = new SampleJob(runningUuid, JobResult.JobStatus.Running);
-    static SampleJob pending = new SampleJob(pendingUuid, JobResult.JobStatus.Pending);
+    static SampleOperationsJob running = new SampleOperationsJob(runningUuid, OperationsJobResult.OperationsJobStatus.Running);
+    static SampleOperationsJob pending = new SampleOperationsJob(pendingUuid, OperationsJobResult.OperationsJobStatus.Pending);
 
     @BeforeEach
     void before() throws InterruptedException
     {
         Injector injector;
         Module testOverride = Modules.override(new TestModule())
-                                     .with(new ListJobsHandlerTest.ListJobsTestModule());
+                                     .with(new ListOperationsJobsHandlerTest.ListJobsTestModule());
         injector = Guice.createInjector(Modules.override(new MainModule())
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
@@ -105,12 +105,12 @@ public class ListJobsHandlerTest
     void testListJobs(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/jobs";
+        String testRoute = "/api/v1/cassandra/operations/jobs";
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
-                  ListJobsResponse listJobs = response.bodyAsJson(ListJobsResponse.class);
+                  ListOperationsJobsResponse listJobs = response.bodyAsJson(ListOperationsJobsResponse.class);
                   assertThat(listJobs).isNotNull();
                   assertThat(listJobs.jobs()).isNotNull();
                   assertThat(listJobs.jobs().size()).isEqualTo(2);
@@ -124,28 +124,28 @@ public class ListJobsHandlerTest
     {
         @Provides
         @Singleton
-        public JobManager jobManager()
+        public OperationsJobManager jobManager()
         {
-            List<Job> testJobs = Arrays.asList(running, pending);
-            JobManager mockManager = mock(JobManager.class);
+            List<OperationsJob> testJobs = Arrays.asList(running, pending);
+            OperationsJobManager mockManager = mock(OperationsJobManager.class);
             when(mockManager.allInflightJobs()).thenReturn(testJobs);
             return mockManager;
         }
     }
 
-    static class SampleJob extends Job
+    static class SampleOperationsJob extends OperationsJob
     {
-        public SampleJob()
+        public SampleOperationsJob()
         {
             super();
         }
 
-        protected SampleJob(UUID jobId, JobResult.JobStatus status)
+        protected SampleOperationsJob(UUID jobId, OperationsJobResult.OperationsJobStatus status)
         {
             super(jobId, status);
         }
 
-        public Supplier<JobResult> jobOperationSupplier()
+        public Supplier<OperationsJobResult> jobOperationSupplier()
         {
             return null;
         }

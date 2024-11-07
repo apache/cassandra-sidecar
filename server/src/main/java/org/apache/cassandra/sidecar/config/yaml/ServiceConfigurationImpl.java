@@ -57,7 +57,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final String ALLOWABLE_SKEW_IN_MINUTES_PROPERTY = "allowable_time_skew_in_minutes";
     public static final int DEFAULT_ALLOWABLE_SKEW_IN_MINUTES = 60;
     private static final String SERVER_VERTICLE_INSTANCES_PROPERTY = "server_verticle_instances";
+    private static final String OPERATIONS_JOB_TRACKER_SIZE_PROPERTY = "operations_job_tracker_size";
     private static final int DEFAULT_SERVER_VERTICLE_INSTANCES = 1;
+    private static final int DEFAULT_OPERATIONS_JOB_TRACKER_SIZE = 64;
     public static final String THROTTLE_PROPERTY = "throttle";
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
@@ -101,6 +103,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
 
     @JsonProperty(value = SERVER_VERTICLE_INSTANCES_PROPERTY, defaultValue = DEFAULT_SERVER_VERTICLE_INSTANCES + "")
     protected final int serverVerticleInstances;
+
+    @JsonProperty(value = OPERATIONS_JOB_TRACKER_SIZE_PROPERTY, defaultValue = DEFAULT_OPERATIONS_JOB_TRACKER_SIZE + "")
+    protected final int operationsJobTrackerSize;
 
     @JsonProperty(value = THROTTLE_PROPERTY)
     protected final ThrottleConfiguration throttleConfiguration;
@@ -152,6 +157,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         acceptBacklog = builder.acceptBacklog;
         allowableSkewInMinutes = builder.allowableSkewInMinutes;
         serverVerticleInstances = builder.serverVerticleInstances;
+        operationsJobTrackerSize = builder.operationsJobTrackerSize;
         throttleConfiguration = builder.throttleConfiguration;
         sstableUploadConfiguration = builder.sstableUploadConfiguration;
         sstableImportConfiguration = builder.sstableImportConfiguration;
@@ -241,6 +247,16 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public int serverVerticleInstances()
     {
         return serverVerticleInstances;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = OPERATIONS_JOB_TRACKER_SIZE_PROPERTY)
+    public int operationsJobTrackerSize()
+    {
+        return operationsJobTrackerSize;
     }
 
     /**
@@ -352,6 +368,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected int acceptBacklog = DEFAULT_ACCEPT_BACKLOG;
         protected int allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
         protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
+        protected int operationsJobTrackerSize = DEFAULT_OPERATIONS_JOB_TRACKER_SIZE;
         protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
         protected SSTableUploadConfiguration sstableUploadConfiguration = new SSTableUploadConfigurationImpl();
         protected SSTableImportConfiguration sstableImportConfiguration = new SSTableImportConfigurationImpl();
@@ -460,6 +477,18 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         {
             return update(b -> b.serverVerticleInstances = serverVerticleInstances);
         }
+
+        /**
+         * Sets the {@code operationsJobTrackerSize} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param operationsJobTrackerSize the {@code operationsJobTrackerSize} to set
+         * @return a reference to this Builder
+         */
+        public Builder operationsJobTrackerSize(int operationsJobTrackerSize)
+        {
+            return update(b -> b.operationsJobTrackerSize = operationsJobTrackerSize);
+        }
+
 
         /**
          * Sets the {@code throttleConfiguration} and returns a reference to this Builder enabling method chaining.

@@ -34,14 +34,14 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Tracks and stores the results of long-running jobs running on the sidecar
  */
-public class JobTracker extends LinkedHashMap<UUID, Job>
+public class OperationsJobTracker extends LinkedHashMap<UUID, OperationsJob>
 {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(JobTracker.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OperationsJobTracker.class);
     int capacity;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-    public JobTracker(final int initialCapacity)
+    public OperationsJobTracker(int initialCapacity)
     {
         super(initialCapacity);
         this.capacity = initialCapacity;
@@ -51,7 +51,7 @@ public class JobTracker extends LinkedHashMap<UUID, Job>
      * {@inheritDoc}
      */
     @Override
-    public Job put(final UUID key, final Job value)
+    public OperationsJob put(UUID key, OperationsJob value)
     {
         lock.writeLock().lock();
         try
@@ -68,7 +68,7 @@ public class JobTracker extends LinkedHashMap<UUID, Job>
      * {@inheritDoc}
      */
     @Override
-    public Job putIfAbsent(final UUID key, final Job value)
+    public OperationsJob putIfAbsent(UUID key, OperationsJob value)
     {
         lock.writeLock().lock();
         try
@@ -85,7 +85,7 @@ public class JobTracker extends LinkedHashMap<UUID, Job>
      * {@inheritDoc}
      */
     @Override
-    public void putAll(final Map<? extends UUID, ? extends Job> m)
+    public void putAll(Map<? extends UUID, ? extends OperationsJob> m)
     {
         lock.writeLock().lock();
         try
@@ -102,7 +102,7 @@ public class JobTracker extends LinkedHashMap<UUID, Job>
      * {@inheritDoc}
      */
     @Override
-    public Job remove(final Object key)
+    public OperationsJob remove(Object key)
     {
         lock.writeLock().lock();
         try
@@ -136,7 +136,7 @@ public class JobTracker extends LinkedHashMap<UUID, Job>
      * {@inheritDoc}
      */
     @Override
-    public Job get(final Object key)
+    public OperationsJob get(Object key)
     {
         lock.readLock().lock();
         try
@@ -153,7 +153,7 @@ public class JobTracker extends LinkedHashMap<UUID, Job>
      * {@inheritDoc}
      */
     @Override
-    public boolean containsKey(final Object key)
+    public boolean containsKey(Object key)
     {
         lock.readLock().lock();
         try
@@ -221,7 +221,7 @@ public class JobTracker extends LinkedHashMap<UUID, Job>
      * {@inheritDoc}
      */
     @Override
-    protected boolean removeEldestEntry(final Map.Entry<UUID, Job> eldest)
+    protected boolean removeEldestEntry(Map.Entry<UUID, OperationsJob> eldest)
     {
         if (size() <= capacity)
         {
@@ -239,7 +239,7 @@ public class JobTracker extends LinkedHashMap<UUID, Job>
      * @return an immutable copy of the underlying mapping
      */
     @NotNull
-    ImmutableMap<UUID, Job> getJobsView()
+    ImmutableMap<UUID, OperationsJob> getJobsView()
     {
         lock.readLock().lock();
         try

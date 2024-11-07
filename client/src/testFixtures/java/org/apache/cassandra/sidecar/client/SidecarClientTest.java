@@ -69,10 +69,10 @@ import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
-import org.apache.cassandra.sidecar.common.response.JobStatusResponse;
-import org.apache.cassandra.sidecar.common.response.ListJobsResponse;
+import org.apache.cassandra.sidecar.common.response.ListOperationsJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
+import org.apache.cassandra.sidecar.common.response.OperationsJobsResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
@@ -82,7 +82,7 @@ import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
-import org.apache.cassandra.sidecar.common.utils.JobResult;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
@@ -92,6 +92,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.JOB_ID_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE_PATH_PARAM;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONS_JOB_ID_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32_SEED;
@@ -1270,7 +1271,7 @@ abstract class SidecarClientTest
     }
 
     @Test
-    public void testJobStatus() throws Exception
+    public void testOperationsJobs() throws Exception
     {
         UUID jobId = UUID.randomUUID();
         String jobStatusAsString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"Running\",\"operation\":\"test\"}";
@@ -1281,16 +1282,16 @@ abstract class SidecarClientTest
                                 .setBody(jobStatusAsString);
         enqueue(response);
 
-        JobStatusResponse result = client.jobStatus(jobId.toString()).get(30, TimeUnit.SECONDS);
+        OperationsJobsResponse result = client.operationsJob(jobId.toString()).get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.jobId()).isEqualTo(jobId);
-        assertThat(result.status()).isEqualTo(JobResult.JobStatus.Running);
+        assertThat(result.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Running);
         assertThat(result.operation()).isEqualTo("test");
-        validateResponseServed(ApiEndpointsV1.JOB_STATUS_ROUTE.replaceAll(JOB_ID_PATH_PARAM, jobId.toString()));
+        validateResponseServed(ApiEndpointsV1.OPERATIONS_JOBS_ROUTE.replaceAll(OPERATIONS_JOB_ID_PATH_PARAM, jobId.toString()));
     }
 
     @Test
-    public void testlistJobs() throws Exception
+    public void testlistOperationsJobs() throws Exception
     {
         UUID jobId = UUID.randomUUID();
         String listJobsString = "{\"jobs\":[{\"jobId\":\"" + jobId + "\",\"status\":\"Running\",\"failureReason\":\"\",\"operation\":\"test\"}]}";
@@ -1301,11 +1302,11 @@ abstract class SidecarClientTest
                                 .setBody(listJobsString);
         enqueue(response);
 
-        ListJobsResponse result = client.listJobs().get(30, TimeUnit.SECONDS);
+        ListOperationsJobsResponse result = client.listOperationsJobs().get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.jobs()).isNotNull();
         assertThat(result.jobs().get(0).jobId).isEqualTo(jobId);
-        validateResponseServed(ApiEndpointsV1.LIST_JOBS_ROUTE);
+        validateResponseServed(ApiEndpointsV1.LIST_OPERATIONS_JOBS_ROUTE);
     }
 
     @Test

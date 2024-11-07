@@ -90,6 +90,11 @@ public interface ServiceConfiguration
     int serverVerticleInstances();
 
     /**
+     * @return the size of the operations job tracker LRU cache
+     */
+    int operationsJobTrackerSize();
+
+    /**
      * @return the throttling configuration
      */
     ThrottleConfiguration throttleConfiguration();

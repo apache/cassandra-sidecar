@@ -22,23 +22,23 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.utils.JobResult;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 
 /**
- * Response structure of the jobs status API
+ * Response structure of the operations jobs API
  */
-public class JobStatusResponse
+public class OperationsJobsResponse
 {
     private final UUID jobId;
-    private final JobResult.JobStatus status;
+    private final OperationsJobResult.OperationsJobStatus status;
     private final String operation;
     private final String reason;
 
     @JsonCreator
-    public JobStatusResponse(@JsonProperty("jobId") UUID jobId,
-                             @JsonProperty("jobStatus") JobResult.JobStatus status,
-                             @JsonProperty("operation") String operation,
-                             @JsonProperty("reason") String reason)
+    public OperationsJobsResponse(@JsonProperty("jobId") UUID jobId,
+                                  @JsonProperty("jobStatus") OperationsJobResult.OperationsJobStatus status,
+                                  @JsonProperty("operation") String operation,
+                                  @JsonProperty("reason") String reason)
     {
         this.jobId = jobId;
         this.status = status;
@@ -47,7 +47,7 @@ public class JobStatusResponse
     }
 
     /**
-     * @return job id of restore job
+     * @return job id of operations job
      */
     @JsonProperty("jobId")
     public UUID jobId()
@@ -59,7 +59,7 @@ public class JobStatusResponse
      * @return status of the job
      */
     @JsonProperty("jobStatus")
-    public JobResult.JobStatus status()
+    public OperationsJobResult.OperationsJobStatus status()
     {
         return status;
     }

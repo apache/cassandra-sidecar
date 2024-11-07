@@ -26,22 +26,22 @@ import java.util.function.Supplier;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.common.utils.JobResult;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests to validate the Job APIs
  */
-public class JobTest
+public class OperationsJobTest
 {
 
-    public static Job createJobWithSupplier(Supplier<JobResult> supplier)
+    public static OperationsJob createJobWithSupplier(Supplier<OperationsJobResult> supplier)
     {
-        return new Job(UUID.randomUUID())
+        return new OperationsJob(UUID.randomUUID())
         {
             @Override
-            public Supplier<JobResult> jobOperationSupplier()
+            public Supplier<OperationsJobResult> jobOperationSupplier()
             {
                 return supplier;
             }
@@ -61,20 +61,20 @@ public class JobTest
     @Test
     void testJobCompletion()
     {
-        Job job = createJobWithSupplier(() -> new JobResult(JobResult.JobStatus.Completed));
+        OperationsJob job = createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed));
         Executors.newSingleThreadExecutor()
                  .submit(() -> job.execute());
         assertThat(job.isResultAvailable(5)).isTrue();
-        assertThat(job.status()).isEqualTo(JobResult.JobStatus.Completed);
+        assertThat(job.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Completed);
         assertThat(job.failureReason()).isEmpty();
     }
 
     @Test
     void testJobFailed()
     {
-        Job failingJob = new Job(UUID.randomUUID())
+        OperationsJob failingJob = new OperationsJob(UUID.randomUUID())
         {
-            public Supplier<JobResult> jobOperationSupplier() throws Exception
+            public Supplier<OperationsJobResult> jobOperationSupplier() throws Exception
             {
                 throw new Exception("Test Job failed");
             }
@@ -92,20 +92,20 @@ public class JobTest
         Executors.newSingleThreadExecutor().submit(() -> failingJob.execute());
 
         assertThat(failingJob.isResultAvailable(5)).isTrue();
-        assertThat(failingJob.status()).isEqualTo(JobResult.JobStatus.Failed);
+        assertThat(failingJob.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Failed);
         assertThat(failingJob.failureReason()).contains("Test Job failed");
     }
 
     @Test
     void testLongRunningJob()
     {
-        Job delayedJob = new Job(UUID.randomUUID())
+        OperationsJob delayedJob = new OperationsJob(UUID.randomUUID())
         {
-            public Supplier<JobResult> jobOperationSupplier()
+            public Supplier<OperationsJobResult> jobOperationSupplier()
             {
                 return () -> {
                     Uninterruptibles.sleepUninterruptibly(6, TimeUnit.SECONDS);
-                    return new JobResult(JobResult.JobStatus.Completed);
+                    return new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed);
                 };
             }
 
@@ -122,7 +122,7 @@ public class JobTest
 
         Executors.newSingleThreadExecutor().submit(() -> delayedJob.execute());
         assertThat(delayedJob.isResultAvailable(5)).isFalse();
-        assertThat(delayedJob.status()).isEqualTo(JobResult.JobStatus.Pending);
+        assertThat(delayedJob.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Pending);
         assertThat(delayedJob.failureReason()).isEmpty();
     }
 }
