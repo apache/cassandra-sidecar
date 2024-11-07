@@ -52,7 +52,9 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
         CertificateCredentials certificateCredentials = CertificateCredentials.fromHttpRequest(ctx.request());
 
         authProvider.authenticate(certificateCredentials)
-                    .onSuccess(user -> handler.handle(Future.succeededFuture(user)))
-                    .onFailure(cause -> handler.handle(Future.failedFuture(new HttpException(HttpResponseStatus.UNAUTHORIZED.code(), cause))));
+                    .recover(cause -> { // converts any exception to unauthorized http exception
+                        throw new HttpException(HttpResponseStatus.UNAUTHORIZED.code(), cause);
+                    })
+                    .andThen(handler);
     }
 }
