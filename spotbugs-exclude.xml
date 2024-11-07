@@ -83,6 +83,7 @@
             <Class name="org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandlerTest" />
             <Class name="org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor" />
             <Class name="org.apache.cassandra.sidecar.restore.StorageClient" />
+            <Class name="org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor" />
         </Or>
     </Match>
 

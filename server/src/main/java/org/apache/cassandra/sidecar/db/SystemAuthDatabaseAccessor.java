@@ -50,10 +50,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public String findRoleFromIdentity(String identity)
     {
-        if (!tableSchemaPrepared())
-        {
-            throw new IllegalStateException("SystemAuthSchema was not prepared, values can not be retrieved from table");
-        }
+        ensureIdentityToRoleTableAccess();
         BoundStatement statement = tableSchema.selectRoleFromIdentity()
                                               .bind(identity);
         ResultSet result = execute(statement);
@@ -67,10 +64,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public Map<String, String> findAllIdentityToRoles()
     {
-        if (!tableSchemaPrepared())
-        {
-            throw new IllegalStateException("SystemAuthSchema was not prepared, values can not be retrieved from table");
-        }
+        ensureIdentityToRoleTableAccess();
         BoundStatement statement = tableSchema.getAllRolesAndIdentities().bind();
 
         ResultSet resultSet = execute(statement);
@@ -82,8 +76,11 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
         return results;
     }
 
-    private boolean tableSchemaPrepared()
+    private void ensureIdentityToRoleTableAccess()
     {
-        return tableSchema.selectRoleFromIdentity() != null && tableSchema.getAllRolesAndIdentities() != null;
+        if (tableSchema.selectRoleFromIdentity() == null || tableSchema.getAllRolesAndIdentities() == null)
+        {
+            throw new IllegalStateException("SystemAuthSchema was not prepared, values can not be retrieved from table");
+        }
     }
 }

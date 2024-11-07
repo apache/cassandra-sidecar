@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.accesscontrol.authentication;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authentication.CertificateCredentials;

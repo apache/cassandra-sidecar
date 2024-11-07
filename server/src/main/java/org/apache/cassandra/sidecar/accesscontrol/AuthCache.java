@@ -66,10 +66,10 @@ public abstract class AuthCache<K, V>
         this.loadFunction = loadFunction;
         this.bulkLoadFunction = bulkLoadFunction;
         this.config = cacheConfiguration;
-        this.cache = initCache();
 
         if (this.config.enabled())
         {
+            this.cache = initCache();
             configureSidecarServerEventListener();
         }
     }
@@ -110,9 +110,6 @@ public abstract class AuthCache<K, V>
 
     private LoadingCache<K, V> initCache()
     {
-        if (!config.enabled())
-            return null;
-
         return Caffeine.newBuilder()
                        // setting refreshAfterWrite and expireAfterWrite to same value makes sure no stale
                        // data is fetched after expire time

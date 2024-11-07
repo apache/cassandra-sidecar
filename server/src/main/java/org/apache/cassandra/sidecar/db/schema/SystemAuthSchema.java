@@ -22,6 +22,7 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Schema for getting information stored in system_auth keyspace.
@@ -61,11 +62,13 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
                                                 "tables in system_auth keyspace");
     }
 
+    @Nullable
     public PreparedStatement selectRoleFromIdentity()
     {
         return selectRoleFromIdentity;
     }
 
+    @Nullable
     public PreparedStatement getAllRolesAndIdentities()
     {
         return getAllRolesAndIdentities;

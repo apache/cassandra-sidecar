@@ -44,7 +44,6 @@ public abstract class CassandraSystemTableSchema extends TableSchema
      * Should not create new tables, since schema is for existing tables.
      */
     @Override
-
     protected String createSchemaStatement()
     {
         return null;
