@@ -145,6 +145,20 @@ class IdentityToRoleCacheTest
         assertThat(identityToRoleCache.get("spiffe://cassandra/sidecar/test")).isEqualTo("cassandra-role");
     }
 
+    @Test
+    void testNullEntriesFromSystemAuthDatabaseAccessor()
+    {
+        SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
+        when(mockDbAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test")).thenReturn(null);
+        when(mockDbAccessor.findAllIdentityToRoles()).thenReturn(Collections.emptyMap());
+
+        SidecarConfiguration mockConfig = mockConfig();
+        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(vertx, executorPools, mockConfig, mockDbAccessor);
+
+        assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isFalse();
+        assertThat(identityToRoleCache.getAll().size()).isZero();
+    }
+
     private SidecarConfiguration mockConfig()
     {
         SidecarConfiguration mockConfig = mock(SidecarConfiguration.class);
