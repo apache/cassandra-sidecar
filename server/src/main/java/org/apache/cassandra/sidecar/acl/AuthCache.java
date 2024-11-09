@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.accesscontrol;
+package org.apache.cassandra.sidecar.acl;
 
 import java.util.Collections;
 import java.util.Map;
@@ -31,10 +31,11 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.jetbrains.annotations.VisibleForTesting;
 
-import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
 
 /**
@@ -51,18 +52,21 @@ public abstract class AuthCache<K, V>
     protected final Function<K, V> loadFunction;
     protected final Supplier<Map<K, V>> bulkLoadFunction;
     protected final CacheConfiguration config;
+    private final TaskExecutorPool internalPool;
 
     // cache is null when AuthCache is disabled
     protected volatile LoadingCache<K, V> cache;
 
     protected AuthCache(String name,
                         Vertx vertx,
+                        ExecutorPools executorPools,
                         Function<K, V> loadFunction,
                         Supplier<Map<K, V>> bulkLoadFunction,
                         CacheConfiguration cacheConfiguration)
     {
         this.name = name;
         this.vertx = vertx;
+        this.internalPool = executorPools.internal();
         this.loadFunction = loadFunction;
         this.bulkLoadFunction = bulkLoadFunction;
         this.config = cacheConfiguration;
@@ -81,7 +85,7 @@ public abstract class AuthCache<K, V>
      *
      * @param k key
      * @return The current value of {@code K} if cached or loaded.
-     *
+     * <p>
      * See {@link LoadingCache#get(Object)} for possible exceptions.
      */
     public V get(K k)
@@ -122,33 +126,39 @@ public abstract class AuthCache<K, V>
     private void configureSidecarServerEventListener()
     {
         EventBus eventBus = vertx.eventBus();
-        eventBus.localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(), message -> warm());
+        eventBus.localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(),
+                               message -> internalPool.executeBlocking(() -> {
+                                   warm(config.warmupRetries());
+                                   return null;
+                               }));
     }
 
     @VisibleForTesting
-    protected void warm()
+    protected void warm(int availableRetries)
     {
         if (!config.enabled())
         {
-            LOGGER.info("Cache {} not enabled, skipping pre-warming", name);
+            LOGGER.info("Cache={} not enabled, skipping pre-warming", name);
             return;
         }
 
-        int retries = config.warmupRetries();
-        while (retries-- >= 1)
+        if (availableRetries < 1)
         {
-            try
-            {
-                Map<K, V> entries = bulkLoadFunction.get();
-                cache.putAll(entries);
-                return;
-            }
-            catch (Exception e)
-            {
-                LOGGER.warn("Unexpected error encountered during cache {} pre-warming, ", name, e);
-                sleepUninterruptibly(config.warmupRetryIntervalMillis(), TimeUnit.MILLISECONDS);
-            }
+            LOGGER.warn("Retries exhausted, unexpected error pre-warming cache={}", name);
+            return;
         }
-        LOGGER.warn("Retries exhausted, unexpected error pre warming cache {}", name);
+
+        try
+        {
+            cache.putAll(bulkLoadFunction.get());
+        }
+        catch (Exception e)
+        {
+            LOGGER.warn("Unexpected error encountered during pre-warming of cache={} ", name, e);
+            vertx.setTimer(config.warmupRetryIntervalMillis(), t -> internalPool.executeBlocking(() -> {
+                warm(availableRetries - 1);
+                return null;
+            }));
+        }
     }
 }

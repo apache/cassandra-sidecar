@@ -54,7 +54,10 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
         BoundStatement statement = tableSchema.selectRoleFromIdentity()
                                               .bind(identity);
         ResultSet result = execute(statement);
-        return result.one().getString("role");
+        Row row = result.one();
+        // TODO: can this method return null? Does the cache support storing null values?
+        //       if not, do we need a sentinel value similar to what the cassandra codebase does?
+        return row != null ? row.getString("role") : null;
     }
 
     /**
@@ -80,7 +83,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
     {
         if (tableSchema.selectRoleFromIdentity() == null || tableSchema.getAllRolesAndIdentities() == null)
         {
-            throw new IllegalStateException("SystemAuthSchema was not prepared, values can not be retrieved from table");
+            throw new IllegalStateException("SystemAuthSchema was not prepared, values cannot be retrieved from table");
         }
     }
 }

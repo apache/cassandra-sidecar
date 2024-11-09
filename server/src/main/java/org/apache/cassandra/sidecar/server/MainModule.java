@@ -54,9 +54,9 @@ import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
-import org.apache.cassandra.sidecar.accesscontrol.IdentityToRoleCache;
-import org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor;
-import org.apache.cassandra.sidecar.accesscontrol.authentication.MutualTlsAuthenticationHandler;
+import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
+import org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor;
+import org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandler;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.adapters.cassandra41.Cassandra41Factory;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
@@ -84,7 +84,6 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
@@ -196,19 +195,6 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public IdentityToRoleCache identityRoleCache(Vertx vertx,
-                                                 SidecarConfiguration sidecarConfiguration,
-                                                 SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
-    {
-        IdentityToRoleCache identityToRoleCache
-        = new IdentityToRoleCache(vertx,
-                                  sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
-                                  systemAuthDatabaseAccessor);
-        return identityToRoleCache;
-    }
-
-    @Provides
-    @Singleton
     public ChainAuthHandler chainAuthHandler(Vertx vertx,
                                              SidecarConfiguration sidecarConfiguration,
                                              IdentityToRoleCache identityToRoleCache)
@@ -216,11 +202,12 @@ public class MainModule extends AbstractModule
         ChainAuthHandler chainAuthHandler = ChainAuthHandler.any();
         try
         {
+            boolean authenticatorConfigured = false;
             MutualTlsAuthenticatorConfiguration mTLSAuthenticatorConfig = sidecarConfiguration
                                                                           .accessControlConfiguration()
                                                                           .authenticatorsConfiguration()
                                                                           .mTlsAuthenticatorConfiguration();
-            if (mTLSAuthenticatorConfig.enabled())
+            if (mTLSAuthenticatorConfig != null)
             {
                 CertificateValidator certificateValidator = (CertificateValidator) Class.forName(mTLSAuthenticatorConfig.certificateValidator()).newInstance();
                 CertificateIdentityExtractor certificateIdentityExtractor;
@@ -234,9 +221,16 @@ public class MainModule extends AbstractModule
                     certificateIdentityExtractor = new SpiffeIdentityExtractor();
                 }
                 MutualTlsAuthentication mTLSAuthProvider = new MutualTlsAuthenticationImpl(vertx, certificateValidator, certificateIdentityExtractor);
-                MutualTlsAuthenticationHandler mTLSAuthHandler = new MutualTlsAuthenticationHandler(mTLSAuthProvider);
-                chainAuthHandler.add(mTLSAuthHandler);
+                chainAuthHandler.add(new MutualTlsAuthenticationHandler(mTLSAuthProvider));
+                authenticatorConfigured = true;
             }
+
+            if (sidecarConfiguration.accessControlConfiguration().enabled() && !authenticatorConfigured)
+            {
+                LOGGER.error("Access control was enabled, but no authenticator was set in config");
+                throw new RuntimeException("Invalid access control configuration, zero authenticators set");
+            }
+
             return chainAuthHandler;
         }
         catch (ClassNotFoundException | InstantiationException | IllegalAccessException e)
@@ -290,7 +284,7 @@ public class MainModule extends AbstractModule
         // chain authentication before all requests
         if (sidecarConfiguration.accessControlConfiguration().enabled())
         {
-            router.route().handler(chainAuthHandler);
+            router.route().order(RoutingOrder.HIGHEST.order).handler(chainAuthHandler);
         }
 
         router.route()
@@ -608,13 +602,6 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SystemAuthSchema systemAuthSchema()
-    {
-        return new SystemAuthSchema();
-    }
-
-    @Provides
-    @Singleton
     public SidecarSchema sidecarSchema(Vertx vertx,
                                        ExecutorPools executorPools,
                                        SidecarConfiguration configuration,
@@ -622,7 +609,6 @@ public class MainModule extends AbstractModule
                                        RestoreJobsSchema restoreJobsSchema,
                                        RestoreSlicesSchema restoreSlicesSchema,
                                        RestoreRangesSchema restoreRangesSchema,
-                                       SystemAuthSchema systemAuthSchema,
                                        SidecarMetrics metrics)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
@@ -630,7 +616,7 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(restoreJobsSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreRangesSchema);
-        sidecarInternalKeyspace.registerTableSchema(systemAuthSchema);
+        sidecarInternalKeyspace.registerTableSchema(new SystemAuthSchema());
         SchemaMetrics schemaMetrics = metrics.server().schema();
         return new SidecarSchema(vertx, executorPools, configuration,
                                  sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);

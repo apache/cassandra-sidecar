@@ -167,7 +167,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     }
 
     /**
-     * @return configuration needed for setting up access control in sidecar.
+     * @return configuration needed for setting up access control in Sidecar
      */
     @Override
     @JsonProperty("access_control")

@@ -47,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for {@link Server} lifecycle
@@ -249,6 +250,14 @@ class ServerTest
                       context.completeNow();
                   });
               });
+    }
+
+    @Test
+    @DisplayName("Invalid acccess control config, zero authenticators set")
+    void invalidAccessControlConfig()
+    {
+        assertThatThrownBy(() -> configureServer("config/sidecar_invalid_accesscontrol_config.yaml"))
+        .isInstanceOf(RuntimeException.class);
     }
 
     Future<String> validateHealthEndpoint(String deploymentId)

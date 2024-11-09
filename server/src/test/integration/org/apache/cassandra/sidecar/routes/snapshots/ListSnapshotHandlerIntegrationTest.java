@@ -61,7 +61,7 @@ class ListSnapshotHandlerIntegrationTest extends IntegrationTestBase
                         "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', 'Benjamin PRADES', 1);");
 
         // Create the snapshot
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/rank_snapshot", TEST_KEYSPACE, "rank_by_year_and_name");
         createSnapshot(client, testRoute)
         .compose(response -> {

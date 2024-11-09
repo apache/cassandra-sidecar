@@ -40,9 +40,9 @@ class SystemAuthDatabaseAccessorTest
                                                                                                mockCqlSessionProvider);
         assertThatThrownBy(()  -> systemAuthDatabaseAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test"))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessage("SystemAuthSchema was not prepared, values can not be retrieved from table");
+        .hasMessage("SystemAuthSchema was not prepared, values cannot be retrieved from table");
         assertThatThrownBy(systemAuthDatabaseAccessor::findAllIdentityToRoles)
         .isInstanceOf(IllegalStateException.class)
-        .hasMessage("SystemAuthSchema was not prepared, values can not be retrieved from table");
+        .hasMessage("SystemAuthSchema was not prepared, values cannot be retrieved from table");
     }
 }

@@ -143,7 +143,6 @@ access_control:
   # configured authenticators
   authenticators:
     mtls_authenticator:
-      enabled: false
       # Certificate validator is used to validate details within a certificate, such as issuer organization,
       # issuer country, CNs, certificate expiry etc.
       #
@@ -153,12 +152,12 @@ access_control:
       # CertificateIdentityExtractor is used to extract valid identities from certificates. These identities will be
       # used for authorizing users.
       #
-      # org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor verifies that identity
+      # org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor verifies that identity
       # extracted from certificate is present in identity_to_role table. Identities in identity_to_role table in
       # Cassandra are authenticated identities in Cassandra.
       #
       # other options are, io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor.
-      certificate_identity_extractor: org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor
+      certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor
   # Identities that are authenticated and authorized.
   admin_identities:
 #    - spiffe://authorized/admin/identities

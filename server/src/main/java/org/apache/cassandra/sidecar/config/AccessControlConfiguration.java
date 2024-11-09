@@ -21,12 +21,13 @@ package org.apache.cassandra.sidecar.config;
 import java.util.Set;
 
 /**
- * Configuration stored for controlling user access to Sidecar.
+ * Configuration for request authentication and authorization to Sidecar API
  */
 public interface AccessControlConfiguration
 {
     /**
-     * @return whether access control is enabled, if yes requests need to be authenticated and authorized before allowed
+     * @return whether access control is enabled, if {@code true} requests will be authenticated and authorized
+     * before allowed
      */
     boolean enabled();
 
@@ -36,7 +37,7 @@ public interface AccessControlConfiguration
     AuthenticatorsConfiguration authenticatorsConfiguration();
 
     /**
-     * @return A {@code Set<String>} of admin identities that are both authenticated and authorized by default.
+     * @return A {@code Set<String>} of administrative identities that are always authenticated and authorized
      */
     Set<String> adminIdentities();
 

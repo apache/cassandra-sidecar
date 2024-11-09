@@ -45,6 +45,7 @@ public class MutualTlsUser extends UserImpl
         return identities;
     }
 
+    @Override
     public boolean equals(Object o)
     {
         if (this == o)
@@ -63,6 +64,7 @@ public class MutualTlsUser extends UserImpl
         return Objects.equals(identities, that.identities) && super.equals(o);
     }
 
+    @Override
     public int hashCode()
     {
         return Objects.hash(super.hashCode(), identities);

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.accesscontrol;
+package org.apache.cassandra.sidecar.acl;
 
 import java.security.cert.X509Certificate;
 import java.util.Collections;
@@ -28,33 +28,39 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
-import org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor;
+import org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 
+import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Test for {@link org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor}
+ * Test for {@link org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor}
  */
 class CassandraIdentityExtractorTest
 {
     Vertx vertx;
+    ExecutorPools executorPools;
 
     @BeforeEach
     void setup()
     {
         vertx = Vertx.vertx();
+        executorPools = createdSharedTestPool(vertx);
     }
 
     @Test
     void testExtractingIdentityWithRole() throws Exception
     {
         IdentityToRoleCache cache = identityRoleCache();
-        cache.warm();
+        cache.warm(5);
 
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.emptySet());
 
@@ -67,7 +73,7 @@ class CassandraIdentityExtractorTest
     void testExtractingIdentityWithoutRole() throws Exception
     {
         IdentityToRoleCache cache = identityRoleCache();
-        cache.warm();
+        cache.warm(5);
 
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.emptySet());
 
@@ -105,11 +111,17 @@ class CassandraIdentityExtractorTest
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test")).thenReturn("cassandra-role");
         when(mockDbAccessor.findAllIdentityToRoles()).thenReturn(Collections.singletonMap("spiffe://cassandra/sidecar/test", "cassandra-role"));
-        CacheConfiguration mockConfig = mock(CacheConfiguration.class);
-        when(mockConfig.enabled()).thenReturn(true);
-        when(mockConfig.expireAfterAccessMillis()).thenReturn(3000L);
-        when(mockConfig.maximumSize()).thenReturn(10L);
-        return new IdentityToRoleCache(vertx, mockConfig, mockDbAccessor);
+
+        SidecarConfiguration mockSidecarConfig = mock(SidecarConfiguration.class);
+        AccessControlConfiguration mockAccessControlConfig = mock(AccessControlConfiguration.class);
+        when(mockSidecarConfig.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
+        CacheConfiguration mockCacheConfig = mock(CacheConfiguration.class);
+        when(mockCacheConfig.enabled()).thenReturn(true);
+        when(mockCacheConfig.expireAfterAccessMillis()).thenReturn(3000L);
+        when(mockCacheConfig.maximumSize()).thenReturn(10L);
+        when(mockAccessControlConfig.permissionCacheConfiguration()).thenReturn(mockCacheConfig);
+
+        return new IdentityToRoleCache(vertx, executorPools, mockSidecarConfig, mockDbAccessor);
     }
 
     private X509Certificate certificate(String identity) throws Exception

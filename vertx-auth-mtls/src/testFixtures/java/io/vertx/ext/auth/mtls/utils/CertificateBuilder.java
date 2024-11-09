@@ -46,6 +46,7 @@ import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 /**
@@ -139,13 +140,15 @@ public class CertificateBuilder
         return new CertificateBundle(SIGNATURE_ALGORITHM, new X509Certificate[]{ root }, root, keyPair, alias);
     }
 
-    public CertificateBundle buildIssuedBy(CertificateBundle issuer) throws Exception
+    public CertificateBundle buildIssuedBy(CertificateBundle issuer)
+    throws GeneralSecurityException, IOException, OperatorCreationException
     {
         String issuerSignAlgorithm = issuer.signatureAlgorithm();
         return buildIssuedBy(issuer, issuerSignAlgorithm);
     }
 
-    public CertificateBundle buildIssuedBy(CertificateBundle issuer, String issuerSignAlgorithm) throws Exception
+    public CertificateBundle buildIssuedBy(CertificateBundle issuer, String issuerSignAlgorithm)
+    throws GeneralSecurityException, IOException, OperatorCreationException
     {
         KeyPair keyPair = generateKeyPair();
 

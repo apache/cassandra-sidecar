@@ -16,32 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.accesscontrol.authentication;
+package org.apache.cassandra.sidecar.acl.authentication;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
-import org.apache.cassandra.sidecar.accesscontrol.IdentityToRoleCache;
+import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 /**
- * {@link CassandraIdentityExtractor} verifies SPIFFE identities extracted from certificate are mapped to a valid
- * role in Cassandra.
+ * {@link CassandraIdentityExtractor} verifies {@code SPIFFE} identities extracted from certificate are mapped
+ * to a valid role in Cassandra or a pre-configured administrative identity.
  */
 public class CassandraIdentityExtractor extends SpiffeIdentityExtractor
 {
     protected final IdentityToRoleCache identityToRoleCache;
-    protected final Set<String> adminIdentities = new HashSet<>();
+    protected final Set<String> adminIdentities;
 
     public CassandraIdentityExtractor(IdentityToRoleCache identityToRoleCache,
                                       Set<String> adminIdentities)
     {
         this.identityToRoleCache = identityToRoleCache;
-        this.adminIdentities.addAll(adminIdentities);
+        this.adminIdentities = adminIdentities != null
+                               ? Collections.unmodifiableSet(adminIdentities)
+                               : Collections.emptySet();
     }
 
     @Override

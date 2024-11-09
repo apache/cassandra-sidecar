@@ -53,7 +53,7 @@ import static org.mockito.Mockito.when;
  * Tests {@link MutualTlsAuthenticationImpl}
  */
 @ExtendWith(VertxExtension.class)
-public class MutualTlsAuthenticationTest
+public class MutualTlsAuthenticationProviderTest
 {
     private static final CertificateValidator ALLOW_ALL_CERTIFICATE_VALIDATOR = new AllowAllCertificateValidator();
     Vertx vertx;

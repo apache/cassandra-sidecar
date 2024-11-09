@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -60,8 +59,7 @@ class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
                                                       "[a-z]{2}-[0-9]-big-Data.db",
                                                       "[a-z]{2}-[0-9]-big-TOC.txt");
 
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/admin");
-        WebClient client = createClient(clientKeystorePath, truststorePath);
+        WebClient client = mTLSClient();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          table.keyspace(), table.tableName());
 

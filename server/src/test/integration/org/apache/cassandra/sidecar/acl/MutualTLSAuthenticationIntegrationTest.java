@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.accesscontrol;
+package org.apache.cassandra.sidecar.acl;
 
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;

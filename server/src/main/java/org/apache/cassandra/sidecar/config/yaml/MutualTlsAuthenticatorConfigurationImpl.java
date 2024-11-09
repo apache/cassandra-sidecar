@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl;
-import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
+import org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor;
 import org.apache.cassandra.sidecar.config.MutualTlsAuthenticatorConfiguration;
 
 /**
@@ -28,12 +28,8 @@ import org.apache.cassandra.sidecar.config.MutualTlsAuthenticatorConfiguration;
  */
 public class MutualTlsAuthenticatorConfigurationImpl implements MutualTlsAuthenticatorConfiguration
 {
-    private static final boolean DEFAULT_ENABLED = false;
     private static final String DEFAULT_CERTIFICATE_VALIDATOR = CertificateValidatorImpl.class.getCanonicalName();
-    private static final String DEFAULT_CERTIFICATE_IDENTITY_EXTRACTOR = SpiffeIdentityExtractor.class.getCanonicalName();
-
-    @JsonProperty(value = "enabled")
-    protected final boolean enabled;
+    private static final String DEFAULT_CERTIFICATE_IDENTITY_EXTRACTOR = CassandraIdentityExtractor.class.getCanonicalName();
 
     @JsonProperty(value = "certificate_validator")
     protected final String certificateValidator;
@@ -43,24 +39,13 @@ public class MutualTlsAuthenticatorConfigurationImpl implements MutualTlsAuthent
 
     public MutualTlsAuthenticatorConfigurationImpl()
     {
-        this(DEFAULT_ENABLED, DEFAULT_CERTIFICATE_VALIDATOR, DEFAULT_CERTIFICATE_IDENTITY_EXTRACTOR);
+        this(DEFAULT_CERTIFICATE_VALIDATOR, DEFAULT_CERTIFICATE_IDENTITY_EXTRACTOR);
     }
 
-    public MutualTlsAuthenticatorConfigurationImpl(boolean enabled, String certificateValidator, String identityExtractor)
+    public MutualTlsAuthenticatorConfigurationImpl(String certificateValidator, String identityExtractor)
     {
-        this.enabled = enabled;
         this.certificateValidator = certificateValidator;
         this.identityExtractor = identityExtractor;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    @JsonProperty(value = "enabled")
-    public boolean enabled()
-    {
-        return enabled;
     }
 
     /**

@@ -16,40 +16,42 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.accesscontrol;
+package org.apache.cassandra.sidecar.acl;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 
 /**
  * Caches entries from system_auth.identity_to_role table. The table maps valid certificate identities to Cassandra
  * roles. identity_to_role table is available since Cassandra versions 5.0
  */
+@Singleton
 public class IdentityToRoleCache extends AuthCache<String, String>
 {
     protected static final String NAME = "identity_to_role_cache";
     protected final SystemAuthDatabaseAccessor systemAuthDatabaseAccessor;
 
+    @Inject
     public IdentityToRoleCache(Vertx vertx,
-                               CacheConfiguration config,
+                               ExecutorPools executorPools,
+                               SidecarConfiguration sidecarConfiguration,
                                SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
     {
         super(NAME,
               vertx,
+              executorPools,
               systemAuthDatabaseAccessor::findRoleFromIdentity,
               systemAuthDatabaseAccessor::findAllIdentityToRoles,
-              config);
+              sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration());
         this.systemAuthDatabaseAccessor = systemAuthDatabaseAccessor;
     }
 
     public boolean containsKey(String identity)
     {
-        if (cache == null)
-        {
-            return false;
-        }
-        String role = get(identity);
-        return  role != null;
+        return cache != null && get(identity) != null;
     }
 }

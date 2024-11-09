@@ -66,7 +66,7 @@ class ClearSnapshotHandlerIntegrationTest extends IntegrationTestBase
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String snapshotName = "my-snapshot" + UUID.randomUUID();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName(),
@@ -121,7 +121,7 @@ class ClearSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
     private void assertNotFoundOnDeleteSnapshot(VertxTestContext context, String testRoute) throws Exception
     {
-        WebClient client = client();
+        WebClient client = mTLSClient();
         client.delete(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeedingThenComplete());

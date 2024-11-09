@@ -27,8 +27,7 @@ import org.apache.cassandra.sidecar.config.MutualTlsAuthenticatorConfiguration;
  */
 public class AuthenticatorsConfigurationImpl implements AuthenticatorsConfiguration
 {
-    private static final MutualTlsAuthenticatorConfiguration DEFAULT_MTLS_AUTHENTICATOR_CONFIGURATION
-    = new MutualTlsAuthenticatorConfigurationImpl();
+    private static final MutualTlsAuthenticatorConfiguration DEFAULT_MTLS_AUTHENTICATOR_CONFIGURATION = null;
 
     @JsonProperty(value = "mtls_authenticator")
     protected final MutualTlsAuthenticatorConfiguration mTlsAuthenticatorConfiguration;

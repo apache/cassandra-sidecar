@@ -149,9 +149,8 @@ public class IntegrationTestModule extends AbstractModule
     private AccessControlConfiguration accessControlConfiguration()
     {
         MutualTlsAuthenticatorConfiguration mTLSConfig
-        = new MutualTlsAuthenticatorConfigurationImpl(true,
-                                                      "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl",
-                                                      "org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor");
+        = new MutualTlsAuthenticatorConfigurationImpl("io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl",
+                                                      "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
         AuthenticatorsConfiguration authenticatorsConfiguration = new AuthenticatorsConfigurationImpl(mTLSConfig);
         return new AccessControlConfigurationImpl(true, authenticatorsConfiguration, Collections.singleton(ADMIN_IDENTITY), new CacheConfigurationImpl());
     }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.accesscontrol;
+package org.apache.cassandra.sidecar.acl;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -33,7 +33,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +55,6 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.AuthenticatorsConfiguration;
 import org.apache.cassandra.sidecar.config.MutualTlsAuthenticatorConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.AuthenticatorsConfigurationImpl;
@@ -91,7 +89,7 @@ class MutualTLSAuthenticationHandlerTest
     private Vertx vertx;
     private CertificateBundle ca;
     private Path truststorePath;
-    private SystemAuthDatabaseAccessor mockSystemAuthDatabaseAccessor = mock(SystemAuthDatabaseAccessor.class);
+    private final SystemAuthDatabaseAccessor mockSystemAuthDatabaseAccessor = mock(SystemAuthDatabaseAccessor.class);
 
     @BeforeEach
     void setUp() throws Exception
@@ -316,21 +314,17 @@ class MutualTLSAuthenticationHandlerTest
 
         @Provides
         @Singleton
-        public IdentityToRoleCache identityRoleCache(Vertx vertx,
-                                                     SidecarConfiguration sidecarConfiguration)
+        public SystemAuthDatabaseAccessor systemAuthDatabaseAccessor()
         {
-            return new IdentityToRoleCache(vertx,
-                                           sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
-                                           systemAuthDatabaseAccessor);
+            return systemAuthDatabaseAccessor;
         }
 
         private AuthenticatorsConfiguration getAuthenticatorsConfiguration()
         {
             MutualTlsAuthenticatorConfiguration mutualTlsAuthenticatorConfiguration
-            = new MutualTlsAuthenticatorConfigurationImpl(true,
-                                                          "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl",
-                                                          "org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor");
-           return new AuthenticatorsConfigurationImpl(mutualTlsAuthenticatorConfiguration);
+            = new MutualTlsAuthenticatorConfigurationImpl("io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl",
+                                                          "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
+            return new AuthenticatorsConfigurationImpl(mutualTlsAuthenticatorConfiguration);
         }
     }
 }

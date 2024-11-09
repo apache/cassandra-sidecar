@@ -301,9 +301,8 @@ class SidecarConfigurationTest
         assertThat(accessControlConfiguration.enabled()).isTrue();
 
         MutualTlsAuthenticatorConfiguration mTLSConfig = accessControlConfiguration.authenticatorsConfiguration().mTlsAuthenticatorConfiguration();
-        assertThat(mTLSConfig.enabled()).isTrue();
         assertThat(mTLSConfig.certificateValidator()).isEqualTo("io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator");
-        assertThat(mTLSConfig.certificateIdentityExtractor()).isEqualTo("org.apache.cassandra.sidecar.accesscontrol.authentication.CassandraIdentityExtractor");
+        assertThat(mTLSConfig.certificateIdentityExtractor()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
 
         assertThat(accessControlConfiguration.adminIdentities().size()).isEqualTo(2);
         assertThat(accessControlConfiguration.adminIdentities()).contains("spiffe://authorized/admin/identity1");

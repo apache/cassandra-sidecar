@@ -58,7 +58,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void createSnapshotEndpointFailsWhenKeyspaceDoesNotExist(VertxTestContext context) throws Exception
     {
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String testRoute = "/api/v1/keyspaces/non_existent/tables/testtable/snapshots/my-snapshot";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
@@ -73,7 +73,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     {
         createTestKeyspace();
 
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String testRoute = "/api/v1/keyspaces/testkeyspace/tables/non_existent/snapshots/my-snapshot";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
@@ -93,7 +93,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String expectedErrorMessage = "Invalid duration: 500 Accepted units:[SECONDS, MINUTES, HOURS, DAYS] " +
                                       "where case matters and only non-negative values.";
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot?ttl=500",
@@ -125,7 +125,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String expectedErrorMessage = "ttl for snapshot must be at least 60 seconds";
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot?ttl=1s",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
@@ -148,7 +148,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
@@ -174,7 +174,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
@@ -208,7 +208,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         QualifiedTableName tableName = createTestTableAndPopulate();
 
         long expectedTtlInSeconds = 61;
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/ttl-snapshot?ttl=%ds",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName(),
                                          expectedTtlInSeconds);
@@ -275,7 +275,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate("QuOtEdTaBlENaMe");
 
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                          tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)

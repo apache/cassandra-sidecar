@@ -27,11 +27,6 @@ import io.vertx.ext.auth.mtls.CertificateValidator;
 public interface MutualTlsAuthenticatorConfiguration
 {
     /**
-     * @return boolean flag indicating whether the configured authenticator is enabled.
-     */
-    boolean enabled();
-
-    /**
      * @return class name of {@link CertificateValidator} implementation to be used for validating details within a
      * certificate.
      */

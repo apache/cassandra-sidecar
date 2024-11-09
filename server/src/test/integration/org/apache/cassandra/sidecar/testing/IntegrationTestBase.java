@@ -140,7 +140,7 @@ public abstract class IntegrationTestBase
             });
         }
 
-        client = client();
+        client = mTLSClient();
         server.start()
               .onSuccess(s -> {
                   sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
@@ -312,7 +312,7 @@ public abstract class IntegrationTestBase
         return session;
     }
 
-    protected WebClient client() throws Exception
+    protected WebClient mTLSClient() throws Exception
     {
         Path clientKeystorePath = clientKeystorePath(ADMIN_IDENTITY, false);
         return createClient(clientKeystorePath, truststorePath);
@@ -436,7 +436,7 @@ public abstract class IntegrationTestBase
         return clientKeystore.toTempKeyStorePath(tempDir.toPath(), "password".toCharArray(), "password".toCharArray());
     }
 
-    protected WebClient createClient(Path clientKeystorePath, Path truststorePath) throws Exception
+    protected WebClient createClient(Path clientKeystorePath, Path truststorePath)
     {
         WebClientOptions options = new WebClientOptions();
         options.setSsl(true);

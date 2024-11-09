@@ -66,7 +66,7 @@ public class CertificateCredentialsTest
     {
         Certificate certificate = mock(Certificate.class);
         CertificateCredentials credentials = new CertificateCredentials(certificate);
-        assertThatThrownBy(() -> credentials.toJson())
+        assertThatThrownBy(credentials::toJson)
         .isInstanceOf(UnsupportedOperationException.class);
     }
 

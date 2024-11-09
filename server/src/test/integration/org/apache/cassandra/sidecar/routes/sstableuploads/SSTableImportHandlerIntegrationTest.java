@@ -125,7 +125,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         // Add new data (c, d) to table
         populateTable(session, tableName, Arrays.asList("c", "d"));
 
-        WebClient client = client();
+        WebClient client = mTLSClient();
         String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + tableName.keyspace()
                            + "/tables/" + tableName.tableName() + "/import";
         sendRequest(vertxTestContext,
