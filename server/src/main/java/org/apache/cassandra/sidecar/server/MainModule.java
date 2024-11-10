@@ -602,6 +602,13 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
+    public SystemAuthSchema systemAuthSchema()
+    {
+        return new SystemAuthSchema();
+    }
+
+    @Provides
+    @Singleton
     public SidecarSchema sidecarSchema(Vertx vertx,
                                        ExecutorPools executorPools,
                                        SidecarConfiguration configuration,
@@ -609,6 +616,7 @@ public class MainModule extends AbstractModule
                                        RestoreJobsSchema restoreJobsSchema,
                                        RestoreSlicesSchema restoreSlicesSchema,
                                        RestoreRangesSchema restoreRangesSchema,
+                                       SystemAuthSchema systemAuthSchema,
                                        SidecarMetrics metrics)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
@@ -616,7 +624,7 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(restoreJobsSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreRangesSchema);
-        sidecarInternalKeyspace.registerTableSchema(new SystemAuthSchema());
+        sidecarInternalKeyspace.registerTableSchema(systemAuthSchema);
         SchemaMetrics schemaMetrics = metrics.server().schema();
         return new SidecarSchema(vertx, executorPools, configuration,
                                  sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);

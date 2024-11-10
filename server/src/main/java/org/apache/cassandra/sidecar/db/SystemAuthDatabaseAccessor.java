@@ -55,8 +55,6 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
                                               .bind(identity);
         ResultSet result = execute(statement);
         Row row = result.one();
-        // TODO: can this method return null? Does the cache support storing null values?
-        //       if not, do we need a sentinel value similar to what the cassandra codebase does?
         return row != null ? row.getString("role") : null;
     }
 

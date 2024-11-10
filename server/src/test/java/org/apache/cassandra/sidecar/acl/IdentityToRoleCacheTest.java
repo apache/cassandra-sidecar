@@ -156,6 +156,7 @@ class IdentityToRoleCacheTest
         IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(vertx, executorPools, mockConfig, mockDbAccessor);
 
         assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isFalse();
+        assertThat(identityToRoleCache.get("spiffe://cassandra/sidecar/test")).isNull();
         assertThat(identityToRoleCache.getAll().size()).isZero();
     }
 
