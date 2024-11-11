@@ -38,6 +38,7 @@ import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigura
 import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.REGEX_TYPE;
 import static org.apache.cassandra.sidecar.config.yaml.VertxMetricsConfigurationImpl.DEFAULT_JMX_DOMAIN_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 
 /**
@@ -300,9 +301,12 @@ class SidecarConfigurationTest
         assertThat(accessControlConfiguration).isNotNull();
         assertThat(accessControlConfiguration.enabled()).isTrue();
 
-        MutualTlsAuthenticatorConfiguration mTLSConfig = accessControlConfiguration.authenticatorsConfiguration().mTlsAuthenticatorConfiguration();
-        assertThat(mTLSConfig.certificateValidator()).isEqualTo("io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator");
-        assertThat(mTLSConfig.certificateIdentityExtractor()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
+        List<ParameterizedClassConfiguration> authenticators = accessControlConfiguration.authenticatorsConfiguration();
+        assertThat(authenticators).isNotNull().hasSize(1);
+        assertThat(authenticators.get(0).className()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationProviderFactory");
+        assertThat(authenticators.get(0).parameters())
+        .contains(entry("certificate_validator", "io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator"),
+                  entry("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor"));
 
         assertThat(accessControlConfiguration.adminIdentities().size()).isEqualTo(2);
         assertThat(accessControlConfiguration.adminIdentities()).contains("spiffe://authorized/admin/identity1");

@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.db.schema;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,11 +34,6 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     private static final String IDENTITY_TO_ROLE_TABLE = "identity_to_role";
     private PreparedStatement selectRoleFromIdentity;
     private PreparedStatement getAllRolesAndIdentities;
-
-    @Inject
-    public SystemAuthSchema()
-    {
-    }
 
     protected String keyspaceName()
     {

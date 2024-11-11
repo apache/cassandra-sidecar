@@ -142,22 +142,23 @@ access_control:
   # Supports setting multiple authenticators, request is authenticated if it is authenticated by any of the
   # configured authenticators
   authenticators:
-    mtls_authenticator:
-      # Certificate validator is used to validate details within a certificate, such as issuer organization,
-      # issuer country, CNs, certificate expiry etc.
-      #
-      # io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator performs no checks, it marks all certificates as valid.
-      # other options are, io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl
-      certificate_validator: io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator
-      # CertificateIdentityExtractor is used to extract valid identities from certificates. These identities will be
-      # used for authorizing users.
-      #
-      # org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor verifies that identity
-      # extracted from certificate is present in identity_to_role table. Identities in identity_to_role table in
-      # Cassandra are authenticated identities in Cassandra.
-      #
-      # other options are, io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor.
-      certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor
+    - class_name: org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationProviderFactory
+      parameters:
+        # Certificate validator is used to validate details within a certificate, such as issuer organization,
+        # issuer country, CNs, certificate expiry etc.
+        #
+        # io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator performs no checks, it marks all certificates as valid.
+        # other options are, io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl
+        certificate_validator: io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator
+        # CertificateIdentityExtractor is used to extract valid identities from certificates. These identities will be
+        # used for authorizing users.
+        #
+        # org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor verifies that identity
+        # extracted from certificate is present in identity_to_role table. Identities in identity_to_role table in
+        # Cassandra are authenticated identities in Cassandra.
+        #
+        # other options are, io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor.
+        certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor
   # Identities that are authenticated and authorized.
   admin_identities:
 #    - spiffe://authorized/admin/identities

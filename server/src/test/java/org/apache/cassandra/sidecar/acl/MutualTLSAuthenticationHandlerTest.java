@@ -25,6 +25,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -53,14 +56,12 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
-import org.apache.cassandra.sidecar.config.AuthenticatorsConfiguration;
-import org.apache.cassandra.sidecar.config.MutualTlsAuthenticatorConfiguration;
+import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.AuthenticatorsConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.MutualTlsAuthenticatorConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.ParameterizedClassConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
@@ -110,7 +111,7 @@ class MutualTLSAuthenticationHandlerTest
     @AfterEach
     void tearDown() throws InterruptedException
     {
-        final CountDownLatch closeLatch = new CountDownLatch(1);
+        CountDownLatch closeLatch = new CountDownLatch(1);
         server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
@@ -305,9 +306,9 @@ class MutualTLSAuthenticationHandlerTest
                                                                           "password"))
                                 .build();
 
-            AuthenticatorsConfiguration authenticatorsConfiguration = getAuthenticatorsConfiguration();
+
             AccessControlConfiguration accessControlConfiguration
-            = new AccessControlConfigurationImpl(true, authenticatorsConfiguration, Collections.singleton(ADMIN_IDENTITY), new CacheConfigurationImpl());
+            = new AccessControlConfigurationImpl(true, authenticatorsConfiguration(), Collections.singleton(ADMIN_IDENTITY), new CacheConfigurationImpl());
 
             return super.abstractConfig(sslConfiguration, accessControlConfiguration);
         }
@@ -319,12 +320,19 @@ class MutualTLSAuthenticationHandlerTest
             return systemAuthDatabaseAccessor;
         }
 
-        private AuthenticatorsConfiguration getAuthenticatorsConfiguration()
+        private List<ParameterizedClassConfiguration> authenticatorsConfiguration()
         {
-            MutualTlsAuthenticatorConfiguration mutualTlsAuthenticatorConfiguration
-            = new MutualTlsAuthenticatorConfigurationImpl("io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl",
-                                                          "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
-            return new AuthenticatorsConfigurationImpl(mutualTlsAuthenticatorConfiguration);
+            Map<String, String> params = new HashMap<String, String>()
+            {
+                {
+                    put("certificate_validator", "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl");
+                    put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
+                }
+            };
+            ParameterizedClassConfiguration mTLSConfig
+            = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationProviderFactory",
+                                                      params);
+            return Collections.singletonList(mTLSConfig);
         }
     }
 }

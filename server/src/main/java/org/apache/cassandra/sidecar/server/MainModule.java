@@ -39,11 +39,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.file.FileSystemOptions;
-import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
-import io.vertx.ext.auth.mtls.CertificateValidator;
-import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
-import io.vertx.ext.auth.mtls.impl.MutualTlsAuthenticationImpl;
-import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.dropwizard.Match;
 import io.vertx.ext.dropwizard.MatchType;
@@ -54,9 +49,9 @@ import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
-import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
-import org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor;
-import org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandler;
+import org.apache.cassandra.sidecar.acl.authentication.AuthenticationProviderFactory;
+import org.apache.cassandra.sidecar.acl.authentication.AuthenticationProviderFactoryRegistry;
+import org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationProviderFactory;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.adapters.cassandra41.Cassandra41Factory;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
@@ -74,11 +69,12 @@ import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.FileSystemOptionsConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
-import org.apache.cassandra.sidecar.config.MutualTlsAuthenticatorConfiguration;
+import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
@@ -90,6 +86,7 @@ import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
@@ -195,49 +192,42 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
+    public AuthenticationProviderFactoryRegistry authProviderFactoryRegistry(MutualTLSAuthenticationProviderFactory mTLSAuthProviderFactory)
+    {
+        AuthenticationProviderFactoryRegistry registry = new AuthenticationProviderFactoryRegistry();
+        registry.register(mTLSAuthProviderFactory);
+        return registry;
+    }
+
+    @Provides
+    @Singleton
     public ChainAuthHandler chainAuthHandler(Vertx vertx,
                                              SidecarConfiguration sidecarConfiguration,
-                                             IdentityToRoleCache identityToRoleCache)
+                                             AuthenticationProviderFactoryRegistry registry) throws ConfigurationException
     {
+        AccessControlConfiguration accessControlConfiguration = sidecarConfiguration.accessControlConfiguration();
+        List<ParameterizedClassConfiguration> authList = accessControlConfiguration.authenticatorsConfiguration();
+        if (authList == null || authList.isEmpty())
+        {
+            LOGGER.error("Access control was enabled, but there are no configured authenticators");
+            throw new ConfigurationException("Invalid access control configuration. There are no configured authenticators");
+        }
+
         ChainAuthHandler chainAuthHandler = ChainAuthHandler.any();
-        try
+        for (ParameterizedClassConfiguration config : authList)
         {
-            boolean authenticatorConfigured = false;
-            MutualTlsAuthenticatorConfiguration mTLSAuthenticatorConfig = sidecarConfiguration
-                                                                          .accessControlConfiguration()
-                                                                          .authenticatorsConfiguration()
-                                                                          .mTlsAuthenticatorConfiguration();
-            if (mTLSAuthenticatorConfig != null)
+            AuthenticationProviderFactory factory = registry.getFactory(config.className());
+
+            if (factory == null)
             {
-                CertificateValidator certificateValidator = (CertificateValidator) Class.forName(mTLSAuthenticatorConfig.certificateValidator()).newInstance();
-                CertificateIdentityExtractor certificateIdentityExtractor;
-                if (mTLSAuthenticatorConfig.certificateIdentityExtractor().equalsIgnoreCase(CassandraIdentityExtractor.class.getName()))
-                {
-                    certificateIdentityExtractor
-                    = new CassandraIdentityExtractor(identityToRoleCache, sidecarConfiguration.accessControlConfiguration().adminIdentities());
-                }
-                else
-                {
-                    certificateIdentityExtractor = new SpiffeIdentityExtractor();
-                }
-                MutualTlsAuthentication mTLSAuthProvider = new MutualTlsAuthenticationImpl(vertx, certificateValidator, certificateIdentityExtractor);
-                chainAuthHandler.add(new MutualTlsAuthenticationHandler(mTLSAuthProvider));
-                authenticatorConfigured = true;
+                throw new ConfigurationException(String.format("Implementation for class %s has not been registered",
+                                                               config.className()));
             }
 
-            if (sidecarConfiguration.accessControlConfiguration().enabled() && !authenticatorConfigured)
-            {
-                LOGGER.error("Access control was enabled, but no authenticator was set in config");
-                throw new RuntimeException("Invalid access control configuration, zero authenticators set");
-            }
-
-            return chainAuthHandler;
+            factory.validate(config.parameters());
+            chainAuthHandler.add(factory.initialize(vertx, accessControlConfiguration, config.parameters()));
         }
-        catch (ClassNotFoundException | InstantiationException | IllegalAccessException e)
-        {
-            LOGGER.error("Unexpected error configuring authentication handlers, ", e);
-            throw new RuntimeException(e);
-        }
+        return chainAuthHandler;
     }
 
     @Provides
@@ -660,13 +650,13 @@ public class MainModule extends AbstractModule
      * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
      * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
      *
-     * @param vertx                 the vertx instance
-     * @param cassandraInstance     the cassandra instance configuration
-     * @param versionProvider       a Cassandra version provider
-     * @param sidecarVersion        the version of the Sidecar from the current binary
-     * @param jmxConfiguration      the configuration for the JMX Client
-     * @param session               the CQL Session provider
-     * @param registryFactory       factory for creating cassandra instance specific registry
+     * @param vertx             the vertx instance
+     * @param cassandraInstance the cassandra instance configuration
+     * @param versionProvider   a Cassandra version provider
+     * @param sidecarVersion    the version of the Sidecar from the current binary
+     * @param jmxConfiguration  the configuration for the JMX Client
+     * @param session           the CQL Session provider
+     * @param registryFactory   factory for creating cassandra instance specific registry
      * @return the build instance metadata object
      */
     private static InstanceMetadata buildInstanceMetadata(Vertx vertx,

@@ -18,32 +18,14 @@
 
 package org.apache.cassandra.sidecar.config;
 
-import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
-/**
- * Configuration for request authentication and authorization to Sidecar API
- */
-public interface AccessControlConfiguration
+import org.jetbrains.annotations.Nullable;
+
+public interface ParameterizedClassConfiguration
 {
-    /**
-     * @return whether access control is enabled, if {@code true} requests will be authenticated and authorized
-     * before allowed
-     */
-    boolean enabled();
-
-    /**
-     * @return configuration needed for setting up authenticators in Sidecar
-     */
-    List<ParameterizedClassConfiguration> authenticatorsConfiguration();
-
-    /**
-     * @return A {@code Set<String>} of administrative identities that are always authenticated and authorized
-     */
-    Set<String> adminIdentities();
-
-    /**
-     * @return the configuration used for creating permissions related caches
-     */
-    CacheConfiguration permissionCacheConfiguration();
+    String className();
+    
+    @Nullable
+    Map<String, String> parameters();
 }

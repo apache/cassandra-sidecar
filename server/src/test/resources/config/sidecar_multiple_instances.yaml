@@ -136,9 +136,10 @@ vertx:
 access_control:
   enabled: true
   authenticators:
-    mtls_authenticator:
-      certificate_validator: io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator
-      certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor
+    - class_name: org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationProviderFactory
+      parameters:
+        certificate_validator: io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator
+        certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor
   admin_identities:
     - spiffe://authorized/admin/identity1
     - spiffe://authorized/admin/identity2

@@ -19,13 +19,14 @@
 package org.apache.cassandra.sidecar.config.yaml;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
-import org.apache.cassandra.sidecar.config.AuthenticatorsConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 
 /**
  * {@inheritDoc}
@@ -33,7 +34,7 @@ import org.apache.cassandra.sidecar.config.CacheConfiguration;
 public class AccessControlConfigurationImpl implements AccessControlConfiguration
 {
     private static final boolean DEFAULT_ENABLED = false;
-    private static final AuthenticatorsConfiguration DEFAULT_AUTHENTICATORS_CONFIGURATION = new AuthenticatorsConfigurationImpl();
+    private static final List<ParameterizedClassConfiguration> DEFAULT_AUTHENTICATORS_CONFIGURATION = Collections.emptyList();
     private static final Set<String> DEFAULT_ADMIN_IDENTITIES = Collections.emptySet();
     private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION = new CacheConfigurationImpl(TimeUnit.HOURS.toMillis(2), 10_000);
 
@@ -41,7 +42,7 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
     protected final boolean enabled;
 
     @JsonProperty(value = "authenticators")
-    protected final AuthenticatorsConfiguration authenticatorsConfiguration;
+    protected final List<ParameterizedClassConfiguration> authenticatorsConfiguration;
 
     @JsonProperty(value = "admin_identities")
     protected final Set<String> adminIdentities;
@@ -55,7 +56,7 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
     }
 
     public AccessControlConfigurationImpl(boolean enabled,
-                                          AuthenticatorsConfiguration authenticatorsConfiguration,
+                                          List<ParameterizedClassConfiguration> authenticatorsConfiguration,
                                           Set<String> adminIdentities,
                                           CacheConfiguration permissionCacheConfiguration)
     {
@@ -80,7 +81,7 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
      */
     @Override
     @JsonProperty(value = "authenticators")
-    public AuthenticatorsConfiguration authenticatorsConfiguration()
+    public List<ParameterizedClassConfiguration> authenticatorsConfiguration()
     {
         return authenticatorsConfiguration;
     }
