@@ -602,13 +602,6 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SystemAuthSchema systemAuthSchema()
-    {
-        return new SystemAuthSchema();
-    }
-
-    @Provides
-    @Singleton
     public SidecarSchema sidecarSchema(Vertx vertx,
                                        ExecutorPools executorPools,
                                        SidecarConfiguration configuration,
