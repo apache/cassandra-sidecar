@@ -20,16 +20,16 @@ package org.apache.cassandra.sidecar.common.response;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.common.response.data.OperationsJobsEntry;
 
 /**
  * Response structure of the list operations jobs API
  */
 public class ListOperationsJobsResponse
 {
-    private final List<OperationsJobsResponse> jobs;
+    private final List<OperationsJobsEntry> jobs;
 
     /**
      * Constructs a {@link ListOperationsJobsResponse} object.
@@ -39,39 +39,15 @@ public class ListOperationsJobsResponse
         this.jobs = new ArrayList<>();
     }
 
-    public void addJob(OperationsJobsResponse job)
+    public void addJob(OperationsJobsEntry job)
     {
         jobs.add(job);
     }
 
     @JsonProperty("jobs")
-    public List<OperationsJobsResponse> jobs()
+    public List<OperationsJobsEntry> jobs()
     {
         return jobs;
     }
 
-    /**
-     * Structure of the operations job instance within the list operations jobs API response
-     */
-    public static class OperationsJobsResponse
-    {
-        public final UUID jobId;
-        public final String status;
-        public final String failureReason;
-        public final String operation;
-
-        /**
-         * Constructs a {@link OperationsJobsResponse} object.
-         */
-        public OperationsJobsResponse(@JsonProperty("jobId") UUID jobId,
-                                      @JsonProperty("status") String status,
-                                      @JsonProperty("failureReason") String failureReason,
-                                      @JsonProperty("operation") String operation)
-        {
-            this.jobId = jobId;
-            this.status = status;
-            this.failureReason = failureReason;
-            this.operation = operation;
-        }
-    }
 }

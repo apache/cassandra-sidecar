@@ -21,12 +21,12 @@ package org.apache.cassandra.sidecar.job;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
 import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 import org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus;
 
@@ -40,12 +40,14 @@ public abstract class OperationsJob
 
     protected UUID jobId;
     protected OperationsJobStatus status;
+    protected long creationTime;
+
     protected String failureReason;
     final CountDownLatch latch = new CountDownLatch(1);
 
     protected OperationsJob()
     {
-
+        this.creationTime = System.nanoTime();
     }
     /**
      * Constructs a job with a unique UUID, in Pending state
@@ -54,7 +56,8 @@ public abstract class OperationsJob
     protected OperationsJob(UUID jobId)
     {
         this.jobId = jobId;
-        this.status = OperationsJobStatus.Pending;
+        this.status = OperationsJobStatus.PENDING;
+        this.creationTime = System.nanoTime();
         this.failureReason = "";
     }
 
@@ -63,6 +66,7 @@ public abstract class OperationsJob
     {
         this.jobId = jobId;
         this.status = status;
+        this.creationTime = System.nanoTime();
         this.failureReason = "";
     }
 
@@ -84,13 +88,18 @@ public abstract class OperationsJob
         return jobId;
     }
 
+    public long creationTime()
+    {
+        return creationTime;
+    }
+
     /**
      * Supplier specifying the functionality of the job to be triggered when the job is executed. Subclasses to
      * provide operation-specific implementations
      * @return a function with the operation implementation that returns a {@code JobResult}
      * @throws Exception
      */
-    public abstract Supplier<OperationsJobResult> jobOperationSupplier() throws Exception;
+    protected abstract OperationsJobResult executeInternal() throws OperationsJobException;
 
     /**
      * Provide a meaningful name of the operation executed by the concrete subclass.
@@ -104,27 +113,27 @@ public abstract class OperationsJob
      * For synchronous jobs this should always return false.
      * @return true if the job is running downstream
      */
-    public abstract boolean checkInflightJob();
+    public abstract boolean isRunningDownstream();
 
     /**
-     * Execute the job behavior as specified in the operation supplier {@link #jobOperationSupplier()},
+     * Execute the job behavior as specified in the internal execution {@link #executeInternal()},
      * while tracking the status of the job's lifecycle.
      */
-    public void execute()
+    public final void execute()
     {
         try
         {
             LOGGER.info("Executing job with ID: {}", jobId);
-            OperationsJobResult result = jobOperationSupplier().get();
-            status = result.status();
-            failureReason = result.reason();
+            OperationsJobResult result = executeInternal();
+            status = result.status;
+            failureReason = result.reason;
             LOGGER.debug("Job with ID: {} returned with status: {}", jobId, status);
         }
         catch (Exception e)
         {
             String reason = (e.getCause() != null) ? e.getCause().getMessage() : e.getMessage();
             LOGGER.error("Failed to execute job {} with reason: {}", jobId, reason);
-            status = OperationsJobStatus.Failed;
+            status = OperationsJobStatus.FAILED;
             failureReason = reason;
         }
         finally
@@ -142,10 +151,11 @@ public abstract class OperationsJob
     {
         try
         {
-            return (!latch.await(waitSeconds, TimeUnit.SECONDS)) ? false : true;
+            return latch.await(waitSeconds, TimeUnit.SECONDS);
         }
         catch (final InterruptedException e)
         {
+            Thread.currentThread().interrupt();
             return false;
         }
     }

@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.job;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -223,13 +224,24 @@ public class OperationsJobTracker extends LinkedHashMap<UUID, OperationsJob>
     @Override
     protected boolean removeEldestEntry(Map.Entry<UUID, OperationsJob> eldest)
     {
-        if (size() <= capacity)
+
+        // We have reached capacity and the oldest entry is either ready for cleanup or stale
+        if (size() > capacity)
         {
-            return false;
+            if (System.nanoTime() - eldest.getValue().creationTime() > TimeUnit.DAYS.toNanos(1))
+            {
+                LOGGER.warn("Job tracker reached max size. Expiring job wth uuid={}, state={}, created={}",
+                            eldest.getKey(), eldest.getValue().status());
+                return true;
+            }
+            else
+            {
+                LOGGER.warn("Job tracker reached max size. Not evicting oldest job uuid={} status={}", eldest.getKey(), eldest.getValue().status());
+                // TODO: Optionally trigger cleanup to fetch next oldest to evict
+            }
         }
 
-        LOGGER.warn("Job tracker reached max size, so expiring job uuid={}", eldest.getKey());
-        return true;
+        return false;
     }
 
 

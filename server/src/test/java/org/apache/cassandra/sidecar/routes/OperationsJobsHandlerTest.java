@@ -137,7 +137,7 @@ public class OperationsJobsHandlerTest
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   OperationsJobsResponse jobStatus = response.bodyAsJson(OperationsJobsResponse.class);
                   assertThat(jobStatus.jobId()).isEqualTo(completedUuid);
-                  assertThat(jobStatus.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Completed);
+                  assertThat(jobStatus.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.COMPLETED);
                   assertThat(jobStatus.operation()).isEqualTo("testCompleted");
                   context.completeNow();
               }));
@@ -154,7 +154,7 @@ public class OperationsJobsHandlerTest
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   OperationsJobsResponse jobStatus = response.bodyAsJson(OperationsJobsResponse.class);
                   assertThat(jobStatus.jobId()).isEqualTo(failedUuid);
-                  assertThat(jobStatus.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Failed);
+                  assertThat(jobStatus.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.FAILED);
                   assertThat(jobStatus.operation()).isEqualTo("testFailed");
                   assertThat(jobStatus.reason()).isEqualTo("Simulated failure");
 
@@ -170,12 +170,12 @@ public class OperationsJobsHandlerTest
         {
             OperationsJobManager mockManager = mock(OperationsJobManager.class);
             OperationsJob runningMock = mock(OperationsJob.class);
-            when(runningMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.Running);
+            when(runningMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.RUNNING);
             OperationsJob completedMock = mock(OperationsJob.class);
-            when(completedMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.Completed);
+            when(completedMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.COMPLETED);
             when(completedMock.operation()).thenReturn("testCompleted");
             OperationsJob failedMock = mock(OperationsJob.class);
-            when(failedMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.Failed);
+            when(failedMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.FAILED);
             when(failedMock.operation()).thenReturn("testFailed");
             when(failedMock.failureReason()).thenReturn("Simulated failure");
 

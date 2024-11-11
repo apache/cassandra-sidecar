@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +46,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.response.ListOperationsJobsResponse;
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
 import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 import org.apache.cassandra.sidecar.job.OperationsJob;
 import org.apache.cassandra.sidecar.job.OperationsJobManager;
@@ -70,8 +70,8 @@ public class ListOperationsJobsHandlerTest
 
     static UUID runningUuid = UUID.randomUUID();
     static UUID pendingUuid = UUID.randomUUID();
-    static SampleOperationsJob running = new SampleOperationsJob(runningUuid, OperationsJobResult.OperationsJobStatus.Running);
-    static SampleOperationsJob pending = new SampleOperationsJob(pendingUuid, OperationsJobResult.OperationsJobStatus.Pending);
+    static SampleOperationsJob running = new SampleOperationsJob(runningUuid, OperationsJobResult.OperationsJobStatus.RUNNING);
+    static SampleOperationsJob pending = new SampleOperationsJob(pendingUuid, OperationsJobResult.OperationsJobStatus.PENDING);
 
     @BeforeEach
     void before() throws InterruptedException
@@ -133,19 +133,22 @@ public class ListOperationsJobsHandlerTest
         }
     }
 
-    static class SampleOperationsJob extends OperationsJob
+    /**
+     * Concrete test implementation of the OperationsJob to be used by handler tests
+     */
+    public static class SampleOperationsJob extends OperationsJob
     {
         public SampleOperationsJob()
         {
             super();
         }
 
-        protected SampleOperationsJob(UUID jobId, OperationsJobResult.OperationsJobStatus status)
+        public SampleOperationsJob(UUID jobId, OperationsJobResult.OperationsJobStatus status)
         {
             super(jobId, status);
         }
 
-        public Supplier<OperationsJobResult> jobOperationSupplier()
+        protected OperationsJobResult executeInternal() throws OperationsJobException
         {
             return null;
         }
@@ -155,7 +158,7 @@ public class ListOperationsJobsHandlerTest
             return "test";
         }
 
-        public boolean checkInflightJob()
+        public boolean isRunningDownstream()
         {
             return false;
         }

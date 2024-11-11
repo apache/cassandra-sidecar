@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.client;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.NoRetryPolicy;
@@ -495,7 +496,7 @@ public class RequestContext
          *
          * @return a reference to this Builder
          */
-        public Builder operationsJobsRequest(String jobId)
+        public Builder operationsJobsRequest(UUID jobId)
         {
             return request(new OperationsJobsRequest(jobId));
         }

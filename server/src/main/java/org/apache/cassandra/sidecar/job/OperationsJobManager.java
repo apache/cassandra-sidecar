@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.job;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Supplier;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -29,8 +29,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
 import org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+
+import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.RUNNING;
 
 /**
  * An abstraction of the management and tracking of long-running jobs running on the sidecar.
@@ -62,7 +65,7 @@ public class OperationsJobManager
     {
         return jobTracker.getJobsView().values()
                          .stream()
-                         .filter(j -> j.status() == OperationsJobStatus.Pending || j.status() == OperationsJobStatus.Running)
+                         .filter(j -> j.status() == OperationsJobStatus.PENDING || j.status() == RUNNING)
                          .collect(Collectors.toList());
     }
 
@@ -77,25 +80,49 @@ public class OperationsJobManager
     }
 
     /**
-     * Asynchronously submit (and lazily create, via the supplier) the job, if it is not currently being
+     * Asynchronously submit (and lazily create) the job, if it is not currently being
      * tracked and is not running downstream. The job is triggered on a separate internal thread-pool.
      * The job execution failure behavior is tracked within the {@link OperationsJob}.
-     * @param jobId job identifier
-     * @param jobSupplier supplier used to create an instance of the job
+     * @param headerJobId job identifier
+     * @param jobCreator function used to create an instance of the job based on the UUID parameter
      * @return the instance of the job that is either being tracked or was just submitted
      */
-    public OperationsJob trySubmitJob(UUID jobId, Supplier<OperationsJob> jobSupplier)
+    public OperationsJob trySubmitJob(UUID headerJobId, Function<UUID, OperationsJob> jobCreator)
     {
+        UUID computedJobId = (headerJobId == null) ? UUID.randomUUID() : headerJobId;
+        OperationsJob job = jobCreator.apply(computedJobId);
+        maybeProcessDownstreamRunningJob(headerJobId, job);
 
-        return jobTracker.computeIfAbsent(jobId, id -> {
-            OperationsJob job = jobSupplier.get();
-            LOGGER.info("Created job with ID: {}, operation: {}", job.jobId(), job.operation());
-            if (!job.checkInflightJob())
+        if (headerJobId != null && jobTracker.containsKey(headerJobId))
+        {
+            OperationsJob cachedJob = jobTracker.get(headerJobId);
+            LOGGER.warn("Stale cache entry as there is no downstream job with jobId: {}, operation:{}",
+                         cachedJob.jobId(), cachedJob.operation());
+        }
+
+        // New job is submitted for all cases when we do not have a corresponding downstream job
+        return jobTracker.computeIfAbsent(job.jobId(), j -> submitJob(job));
+    }
+
+    private void maybeProcessDownstreamRunningJob(UUID headerJobId, OperationsJob job)
+    {
+        if (job.isRunningDownstream())
+        {
+            UUID responseJobId = null;
+            OperationsJob cachedJob = (headerJobId != null) ? jobTracker.get(headerJobId) : null;
+
+            if (cachedJob != null && cachedJob.status() == RUNNING)
             {
-                LOGGER.info("Triggering downstream job with ID: {}, operation: {}", job.jobId(), job.operation());
-                executorPools.internal().runBlocking(() -> job.execute());
+                responseJobId = headerJobId;
             }
-            return job;
-        });
+            throw new OperationsJobException("Conflicting job running downstream", responseJobId);
+        }
+    }
+
+    private OperationsJob submitJob(OperationsJob job)
+    {
+        LOGGER.info("Triggering downstream job with ID: {}, operation: {}", job.jobId(), job.operation());
+        executorPools.internal().runBlocking(() -> job.execute());
+        return job;
     }
 }

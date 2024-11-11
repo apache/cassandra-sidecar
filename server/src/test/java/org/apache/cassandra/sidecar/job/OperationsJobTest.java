@@ -21,11 +21,11 @@ package org.apache.cassandra.sidecar.job;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
 import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,14 +36,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class OperationsJobTest
 {
 
-    public static OperationsJob createJobWithSupplier(Supplier<OperationsJobResult> supplier)
+    public static OperationsJob createJobWithStatus(OperationsJobResult.OperationsJobStatus jobStatus)
     {
-        return new OperationsJob(UUID.randomUUID())
+        return new OperationsJob(UUID.randomUUID(), jobStatus)
         {
             @Override
-            public Supplier<OperationsJobResult> jobOperationSupplier()
+            protected OperationsJobResult executeInternal() throws OperationsJobException
             {
-                return supplier;
+                return new OperationsJobResult(jobStatus);
             }
 
             public String operation()
@@ -51,7 +51,7 @@ public class OperationsJobTest
                 return "test";
             }
 
-            public boolean checkInflightJob()
+            public boolean isRunningDownstream()
             {
                 return false;
             }
@@ -61,11 +61,11 @@ public class OperationsJobTest
     @Test
     void testJobCompletion()
     {
-        OperationsJob job = createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed));
+        OperationsJob job = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
         Executors.newSingleThreadExecutor()
                  .submit(() -> job.execute());
         assertThat(job.isResultAvailable(5)).isTrue();
-        assertThat(job.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Completed);
+        assertThat(job.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.COMPLETED);
         assertThat(job.failureReason()).isEmpty();
     }
 
@@ -74,9 +74,9 @@ public class OperationsJobTest
     {
         OperationsJob failingJob = new OperationsJob(UUID.randomUUID())
         {
-            public Supplier<OperationsJobResult> jobOperationSupplier() throws Exception
+            protected OperationsJobResult executeInternal() throws OperationsJobException
             {
-                throw new Exception("Test Job failed");
+                throw new OperationsJobException("Test Job failed");
             }
 
             public String operation()
@@ -84,7 +84,7 @@ public class OperationsJobTest
                 return "test";
             }
 
-            public boolean checkInflightJob()
+            public boolean isRunningDownstream()
             {
                 return false;
             }
@@ -92,7 +92,7 @@ public class OperationsJobTest
         Executors.newSingleThreadExecutor().submit(() -> failingJob.execute());
 
         assertThat(failingJob.isResultAvailable(5)).isTrue();
-        assertThat(failingJob.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Failed);
+        assertThat(failingJob.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.FAILED);
         assertThat(failingJob.failureReason()).contains("Test Job failed");
     }
 
@@ -101,12 +101,10 @@ public class OperationsJobTest
     {
         OperationsJob delayedJob = new OperationsJob(UUID.randomUUID())
         {
-            public Supplier<OperationsJobResult> jobOperationSupplier()
+            protected OperationsJobResult executeInternal() throws OperationsJobException
             {
-                return () -> {
-                    Uninterruptibles.sleepUninterruptibly(6, TimeUnit.SECONDS);
-                    return new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed);
-                };
+                Uninterruptibles.sleepUninterruptibly(6, TimeUnit.SECONDS);
+                return new OperationsJobResult(OperationsJobResult.OperationsJobStatus.COMPLETED);
             }
 
             public String operation()
@@ -114,7 +112,7 @@ public class OperationsJobTest
                 return "test";
             }
 
-            public boolean checkInflightJob()
+            public boolean isRunningDownstream()
             {
                 return true;
             }
@@ -122,7 +120,7 @@ public class OperationsJobTest
 
         Executors.newSingleThreadExecutor().submit(() -> delayedJob.execute());
         assertThat(delayedJob.isResultAvailable(5)).isFalse();
-        assertThat(delayedJob.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Pending);
+        assertThat(delayedJob.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.PENDING);
         assertThat(delayedJob.failureReason()).isEmpty();
     }
 }

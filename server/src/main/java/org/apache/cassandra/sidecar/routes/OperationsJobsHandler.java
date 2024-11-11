@@ -52,6 +52,7 @@ public class OperationsJobsHandler extends AbstractHandler<Void>
         this.jobManager = jobManager;
     }
 
+    @Override
     protected Void extractParamsOrThrow(RoutingContext context)
     {
         return null;
@@ -68,7 +69,7 @@ public class OperationsJobsHandler extends AbstractHandler<Void>
                          {
                              String response = String.format("Unknown job with ID:%s. Please retry the operation.", jobUUID);
                              logger.info(response);
-                             context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, response));
+                             throw wrapHttpException(HttpResponseStatus.NOT_FOUND, response);
                          }
                          return job;
                      })
@@ -78,38 +79,38 @@ public class OperationsJobsHandler extends AbstractHandler<Void>
 
     private UUID validateJobIdParam(RoutingContext context)
     {
-        String jobId = context.pathParam(OPERATIONS_JOB_ID_PATH_PARAM.substring(1));
-        if (jobId == null)
+        String requestJobId = context.pathParam(OPERATIONS_JOB_ID_PATH_PARAM.substring(1));
+        if (requestJobId == null)
         {
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
                                     OPERATIONS_JOB_ID_PATH_PARAM + " is required but not supplied");
         }
 
-        UUID jobUUID;
+        UUID jobId;
         try
         {
-            jobUUID = UUID.fromString(jobId);
+            jobId = UUID.fromString(requestJobId);
         }
         catch (IllegalArgumentException e)
         {
-            String response = String.format("Invalid job ID provided :%s.", jobId);
+            String response = String.format("Invalid job ID provided :%s.", requestJobId);
             logger.info(response);
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, response);
         }
-        return jobUUID;
+        return jobId;
     }
 
     public void sendStatusBasedResponse(RoutingContext context, UUID jobId, OperationsJob job)
     {
         switch(job.status())
         {
-            case Completed:
-            case Failed:
+            case COMPLETED:
+            case FAILED:
                 context.response().setStatusCode(HttpResponseStatus.OK.code());
                 context.json(new OperationsJobsResponse(jobId, job.status(), job.operation(), job.failureReason()));
                 break;
-            case Pending:
-            case Running:
+            case PENDING:
+            case RUNNING:
                 context.response()
                        .setStatusCode(HttpResponseStatus.ACCEPTED.code())
                        .putHeader(OPERATIONS_JOB_HEADER_NAME, jobId.toString())

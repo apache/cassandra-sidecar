@@ -21,18 +21,23 @@ package org.apache.cassandra.sidecar.common.response;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 
 /**
  * Response structure of the operations jobs API
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class OperationsJobsResponse
 {
     private final UUID jobId;
     private final OperationsJobResult.OperationsJobStatus status;
     private final String operation;
     private final String reason;
+
 
     @JsonCreator
     public OperationsJobsResponse(@JsonProperty("jobId") UUID jobId,

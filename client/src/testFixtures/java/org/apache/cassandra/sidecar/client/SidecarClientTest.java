@@ -1282,10 +1282,10 @@ abstract class SidecarClientTest
                                 .setBody(jobStatusAsString);
         enqueue(response);
 
-        OperationsJobsResponse result = client.operationsJob(jobId.toString()).get(30, TimeUnit.SECONDS);
+        OperationsJobsResponse result = client.operationsJob(jobId).get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.jobId()).isEqualTo(jobId);
-        assertThat(result.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.Running);
+        assertThat(result.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.RUNNING);
         assertThat(result.operation()).isEqualTo("test");
         validateResponseServed(ApiEndpointsV1.OPERATIONS_JOBS_ROUTE.replaceAll(OPERATIONS_JOB_ID_PATH_PARAM, jobId.toString()));
     }

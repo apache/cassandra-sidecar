@@ -26,6 +26,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.response.ListOperationsJobsResponse;
+import org.apache.cassandra.sidecar.common.response.data.OperationsJobsEntry;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.job.OperationsJob;
 import org.apache.cassandra.sidecar.job.OperationsJobManager;
@@ -60,10 +61,10 @@ public class ListOperationsJobsHandler extends AbstractHandler<Void>
         List<OperationsJob> jobs = jobManager.allInflightJobs();
         ListOperationsJobsResponse listResponse = new ListOperationsJobsResponse();
         jobs.forEach(job ->
-                     listResponse.addJob(new ListOperationsJobsResponse.OperationsJobsResponse(job.jobId(),
-                                                                                               job.status().name(),
-                                                                                               job.failureReason(),
-                                                                                               job.operation())));
+                     listResponse.addJob(new OperationsJobsEntry(job.jobId(),
+                                                                 job.status().name(),
+                                                                 job.failureReason(),
+                                                                 job.operation())));
         context.response().setStatusCode(HttpResponseStatus.OK.code());
         context.json(listResponse);
     }

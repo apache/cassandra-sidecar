@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
 import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.apache.cassandra.sidecar.job.OperationsJobTest.createJobWithSupplier;
+import static org.apache.cassandra.sidecar.job.OperationsJobTest.createJobWithStatus;
 
 /**
  * Tests to validate job tracking
@@ -45,10 +46,33 @@ public class OperationsJobTrackerTest
     private OperationsJobTracker jobTracker;
     private static final int trackerSize = 3;
 
-    OperationsJob job1 = createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed));
-    OperationsJob job2 = createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed));
-    OperationsJob job3 = createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed));
-    OperationsJob job4 = createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed));
+    OperationsJob job1 = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
+    OperationsJob job2 = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
+    OperationsJob job3 = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
+    OperationsJob job4 = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
+
+    OperationsJob jobWithStaleCreationTime = new OperationsJob(UUID.randomUUID())
+    {
+        public String operation()
+        {
+            return "test";
+        }
+
+        public boolean isRunningDownstream()
+        {
+            return false;
+        }
+
+        public long creationTime()
+        {
+            return System.nanoTime() - TimeUnit.DAYS.toNanos(2);
+        }
+
+        protected OperationsJobResult executeInternal() throws OperationsJobException
+        {
+            return new OperationsJobResult(OperationsJobResult.OperationsJobStatus.COMPLETED);
+        }
+    };
 
     @BeforeEach
     void setUp()
@@ -115,7 +139,7 @@ public class OperationsJobTrackerTest
     }
 
     @Test
-    void testRemoveEldestEntryEviction()
+    void testNoEviction()
     {
         UUID key1 = UUID.randomUUID();
         UUID key2 = UUID.randomUUID();
@@ -127,8 +151,25 @@ public class OperationsJobTrackerTest
         jobTracker.put(key3, job3);
         jobTracker.put(key4, job4);
 
-        assertNull(jobTracker.get(key1));
-        assertNotNull(jobTracker.get(key2));
+        assertNotNull(jobTracker.get(key1));
+        assertNotNull(jobTracker.get(key4));
+    }
+
+    @Test
+    void testRemoveEldestEntryEvictionOnExpiry()
+    {
+        UUID key1 = UUID.randomUUID();
+        UUID key2 = UUID.randomUUID();
+        UUID key3 = UUID.randomUUID();
+        UUID key6 = UUID.randomUUID();
+
+        jobTracker.put(key6, jobWithStaleCreationTime);
+        jobTracker.put(key1, job1);
+        jobTracker.put(key2, job2);
+        jobTracker.put(key3, job3);
+
+        assertNotNull(jobTracker.get(key3));
+        assertNull(jobTracker.get(key6));
     }
 
     @Test
@@ -154,30 +195,11 @@ public class OperationsJobTrackerTest
         for (int i = 0; i < trackerSize; i++)
         {
             executorService.submit(() -> {
-                jobTracker.put(UUID.randomUUID(), createJobWithSupplier(() -> new OperationsJobResult(OperationsJobResult.OperationsJobStatus.Completed)));
+                jobTracker.put(UUID.randomUUID(), createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED));
             });
         }
         executorService.shutdown();
         executorService.awaitTermination(5, TimeUnit.SECONDS);
         assertEquals(trackerSize, jobTracker.size());
-    }
-
-
-    @Test
-    void testRemoveEldestEntryChecksMaxSize()
-    {
-        UUID key1 = UUID.randomUUID();
-        UUID key2 = UUID.randomUUID();
-        UUID key3 = UUID.randomUUID();
-        UUID key4 = UUID.randomUUID();
-
-        OperationsJobTracker jobTracker = new OperationsJobTracker(3);
-
-        jobTracker.putIfAbsent(key1, job1);
-        jobTracker.putIfAbsent(key2, job2);
-        jobTracker.putIfAbsent(key3, job3);
-        jobTracker.putIfAbsent(key4, job4);
-
-        assertFalse(jobTracker.getJobsView().containsKey(key1));
     }
 }

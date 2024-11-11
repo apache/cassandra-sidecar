@@ -28,10 +28,19 @@ public class OperationsJobResult
      * Encapsulates the states of the job lifecycle. All new jobs are in Pending state.
      */
     public enum OperationsJobStatus
-    { Pending, Running, Completed, Failed }
+    {
+        // Job was created in the sidecar and has not triggered execution on C*
+        PENDING,
+        // Job execution has been triggered on C*
+        RUNNING,
+        // Job has completed execution
+        COMPLETED,
+        // Job has failed execution
+        FAILED
+    }
 
-    private OperationsJobStatus status;
-    private String reason;
+    public final OperationsJobStatus status;
+    public final String reason;
 
     public OperationsJobResult(OperationsJobStatus status)
     {
@@ -43,26 +52,6 @@ public class OperationsJobResult
     {
         this.status = status;
         this.reason = reason;
-    }
-
-    /**
-     * Fetch the {@code JobStatus} of the job execution result.
-     *
-     * @return status of the job execution
-     */
-    public OperationsJobStatus status()
-    {
-        return status;
-    }
-
-    /**
-     * Fetch the failure reason of the job execution
-     *
-     * @return failure reason of the job execution
-     */
-    public String reason()
-    {
-        return reason;
     }
 }
 
