@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
+import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -39,10 +40,10 @@ class SystemAuthDatabaseAccessorTest
         SystemAuthDatabaseAccessor systemAuthDatabaseAccessor = new SystemAuthDatabaseAccessor(systemAuthSchema,
                                                                                                mockCqlSessionProvider);
         assertThatThrownBy(()  -> systemAuthDatabaseAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test"))
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(SchemaUnavailableException.class)
         .hasMessage("SystemAuthSchema was not prepared, values cannot be retrieved from table");
         assertThatThrownBy(systemAuthDatabaseAccessor::findAllIdentityToRoles)
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(SchemaUnavailableException.class)
         .hasMessage("SystemAuthSchema was not prepared, values cannot be retrieved from table");
     }
 }

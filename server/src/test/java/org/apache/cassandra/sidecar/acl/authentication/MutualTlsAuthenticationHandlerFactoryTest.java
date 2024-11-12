@@ -57,13 +57,13 @@ class MutualTlsAuthenticationHandlerFactoryTest
     }
 
     @Test
-    void TestNullParameters()
+    void testNullParameters()
     {
         testConfigError(null, "Parameters cannot be null for MutualTlsAuthenticationHandlerFactory");
     }
 
     @Test
-    void TestMissingParameters()
+    void testMissingParameters()
     {
         Map<String, String> missingValidatorParams = new HashMap<String, String>()
         {{
@@ -78,7 +78,7 @@ class MutualTlsAuthenticationHandlerFactoryTest
     }
 
     @Test
-    void TestUnrecognizedParameters()
+    void testUnrecognizedParameters()
     {
         Map<String, String> missingValidatorParams = new HashMap<String, String>()
         {{

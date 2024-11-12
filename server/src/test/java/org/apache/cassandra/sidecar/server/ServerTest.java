@@ -30,7 +30,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.inject.ConfigurationException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -41,6 +40,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -268,7 +268,7 @@ class ServerTest
     {
         assertThatThrownBy(() -> configureServer("config/sidecar_unrecognized_authenticator.yaml"))
         .hasCauseInstanceOf(RuntimeException.class)
-        .hasMessageContaining("Implementation for class UnrecognizedAuthenticationHandler has not been registered");
+        .hasMessageContaining("Implementation for class org.apache.cassandra.sidecar.acl.authentication.UnrecognizedAuthenticationHandler has not been registered");
     }
 
     Future<String> validateHealthEndpoint(String deploymentId)
