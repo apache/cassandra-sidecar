@@ -262,6 +262,15 @@ class ServerTest
         .hasMessageContaining("Invalid access control configuration. There are no configured authenticators");
     }
 
+    @Test
+    @DisplayName("Invalid access control config, unrecognized authentication handler set")
+    void unrecognizedAuthenticationHandlerSet()
+    {
+        assertThatThrownBy(() -> configureServer("config/sidecar_unrecognized_authenticator.yaml"))
+        .hasCauseInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Implementation for class UnrecognizedAuthenticationHandler has not been registered");
+    }
+
     Future<String> validateHealthEndpoint(String deploymentId)
     {
         LOGGER.info("Checking server health 127.0.0.1:{}/api/v1/__health", server.actualPort());

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.acl;
+package org.apache.cassandra.sidecar.acl.authentication;
 
 import java.io.File;
 import java.nio.file.Files;

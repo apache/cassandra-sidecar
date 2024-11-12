@@ -39,8 +39,8 @@ import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 @Singleton
 public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHandlerFactory
 {
-    private static final String CERTIFICATE_VALIDATOR_PARAM_KEY = "certificate_validator";
-    private static final String CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY = "certificate_identity_extractor";
+    protected static final String CERTIFICATE_VALIDATOR_PARAM_KEY = "certificate_validator";
+    protected static final String CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY = "certificate_identity_extractor";
     private final IdentityToRoleCache identityToRoleCache;
 
     @Inject
