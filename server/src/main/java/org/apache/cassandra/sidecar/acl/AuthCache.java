@@ -46,16 +46,15 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CAS
  */
 public abstract class AuthCache<K, V>
 {
-    protected static final Logger LOGGER = LoggerFactory.getLogger(AuthCache.class);
-    protected final String name;
-    protected final Vertx vertx;
-    protected final Function<K, V> loadFunction;
-    protected final Supplier<Map<K, V>> bulkLoadFunction;
-    protected final CacheConfiguration config;
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthCache.class);
+    private final String name;
+    private final Function<K, V> loadFunction;
+    private final Supplier<Map<K, V>> bulkLoadFunction;
+    private final CacheConfiguration config;
     private final TaskExecutorPool internalPool;
-
     // cache is null when AuthCache is disabled
-    protected volatile LoadingCache<K, V> cache;
+    private volatile LoadingCache<K, V> cache;
+    protected final Vertx vertx;
 
     protected AuthCache(String name,
                         Vertx vertx,
@@ -76,6 +75,14 @@ public abstract class AuthCache<K, V>
             this.cache = initCache();
             configureSidecarServerEventListener();
         }
+    }
+
+    /**
+     * @return Cache maintained by this AuthCache.
+     */
+    protected LoadingCache<K, V> cache()
+    {
+        return cache;
     }
 
     /**
@@ -126,15 +133,16 @@ public abstract class AuthCache<K, V>
     private void configureSidecarServerEventListener()
     {
         EventBus eventBus = vertx.eventBus();
-        eventBus.localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(),
-                               message -> internalPool.executeBlocking(() -> {
-                                   warm(config.warmupRetries());
-                                   return null;
-                               }));
+        eventBus.localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(), message -> warmUpAsync(config.warmupRetries()));
+    }
+
+    private void warmUpAsync(int availableRetries)
+    {
+        internalPool.runBlocking(() -> warmUp(availableRetries));
     }
 
     @VisibleForTesting
-    protected void warm(int availableRetries)
+    protected void warmUp(int availableRetries)
     {
         if (!config.enabled())
         {
@@ -155,10 +163,7 @@ public abstract class AuthCache<K, V>
         catch (Exception e)
         {
             LOGGER.warn("Unexpected error encountered during pre-warming of cache={} ", name, e);
-            vertx.setTimer(config.warmupRetryIntervalMillis(), t -> internalPool.executeBlocking(() -> {
-                warm(availableRetries - 1);
-                return null;
-            }));
+            vertx.setTimer(config.warmupRetryIntervalMillis(), t -> warmUp(availableRetries - 1));
         }
     }
 }

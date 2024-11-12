@@ -60,7 +60,7 @@ class CassandraIdentityExtractorTest
     void testExtractingIdentityWithRole() throws Exception
     {
         IdentityToRoleCache cache = identityRoleCache();
-        cache.warm(5);
+        cache.warmUp(5);
 
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.emptySet());
 
@@ -73,7 +73,7 @@ class CassandraIdentityExtractorTest
     void testExtractingIdentityWithoutRole() throws Exception
     {
         IdentityToRoleCache cache = identityRoleCache();
-        cache.warm(5);
+        cache.warmUp(5);
 
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.emptySet());
 

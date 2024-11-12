@@ -49,9 +49,9 @@ import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
-import org.apache.cassandra.sidecar.acl.authentication.AuthenticationProviderFactory;
-import org.apache.cassandra.sidecar.acl.authentication.AuthenticationProviderFactoryRegistry;
-import org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationProviderFactory;
+import org.apache.cassandra.sidecar.acl.authentication.AuthenticationHandlerFactory;
+import org.apache.cassandra.sidecar.acl.authentication.AuthenticationHandlerFactoryRegistry;
+import org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.adapters.cassandra41.Cassandra41Factory;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
@@ -192,10 +192,10 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public AuthenticationProviderFactoryRegistry authProviderFactoryRegistry(MutualTLSAuthenticationProviderFactory mTLSAuthProviderFactory)
+    public AuthenticationHandlerFactoryRegistry authNHandlerFactoryRegistry(MutualTlsAuthenticationHandlerFactory mTLSAuthHandlerFactory)
     {
-        AuthenticationProviderFactoryRegistry registry = new AuthenticationProviderFactoryRegistry();
-        registry.register(mTLSAuthProviderFactory);
+        AuthenticationHandlerFactoryRegistry registry = new AuthenticationHandlerFactoryRegistry();
+        registry.register(mTLSAuthHandlerFactory);
         return registry;
     }
 
@@ -203,7 +203,7 @@ public class MainModule extends AbstractModule
     @Singleton
     public ChainAuthHandler chainAuthHandler(Vertx vertx,
                                              SidecarConfiguration sidecarConfiguration,
-                                             AuthenticationProviderFactoryRegistry registry) throws ConfigurationException
+                                             AuthenticationHandlerFactoryRegistry registry) throws ConfigurationException
     {
         AccessControlConfiguration accessControlConfiguration = sidecarConfiguration.accessControlConfiguration();
         List<ParameterizedClassConfiguration> authList = accessControlConfiguration.authenticatorsConfiguration();
@@ -216,16 +216,14 @@ public class MainModule extends AbstractModule
         ChainAuthHandler chainAuthHandler = ChainAuthHandler.any();
         for (ParameterizedClassConfiguration config : authList)
         {
-            AuthenticationProviderFactory factory = registry.getFactory(config.className());
+            AuthenticationHandlerFactory factory = registry.getFactory(config.className());
 
             if (factory == null)
             {
                 throw new ConfigurationException(String.format("Implementation for class %s has not been registered",
                                                                config.className()));
             }
-
-            factory.validate(config.parameters());
-            chainAuthHandler.add(factory.initialize(vertx, accessControlConfiguration, config.parameters()));
+            chainAuthHandler.add(factory.create(vertx, accessControlConfiguration, config.namedParameters()));
         }
         return chainAuthHandler;
     }

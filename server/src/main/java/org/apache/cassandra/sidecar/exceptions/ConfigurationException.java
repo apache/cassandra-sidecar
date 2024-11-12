@@ -18,6 +18,10 @@
 
 package org.apache.cassandra.sidecar.exceptions;
 
+/**
+ * Exception thrown when an error occurs during configuration processing. It could be thrown when configuration is
+ * missing, invalid or not supported.
+ */
 public class ConfigurationException extends RuntimeException
 {
     public ConfigurationException(String message)

@@ -32,8 +32,7 @@ import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 @Singleton
 public class IdentityToRoleCache extends AuthCache<String, String>
 {
-    protected static final String NAME = "identity_to_role_cache";
-    protected final SystemAuthDatabaseAccessor systemAuthDatabaseAccessor;
+    private static final String NAME = "identity_to_role_cache";
 
     @Inject
     public IdentityToRoleCache(Vertx vertx,
@@ -47,11 +46,18 @@ public class IdentityToRoleCache extends AuthCache<String, String>
               systemAuthDatabaseAccessor::findRoleFromIdentity,
               systemAuthDatabaseAccessor::findAllIdentityToRoles,
               sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration());
-        this.systemAuthDatabaseAccessor = systemAuthDatabaseAccessor;
     }
 
     public boolean containsKey(String identity)
     {
-        return cache != null && get(identity) != null;
+        try
+        {
+            return cache() != null && get(identity) != null;
+        }
+        catch (IllegalStateException e)
+        {
+            // Returns false, since SystemAuthSchema is not prepared
+            return false;
+        }
     }
 }

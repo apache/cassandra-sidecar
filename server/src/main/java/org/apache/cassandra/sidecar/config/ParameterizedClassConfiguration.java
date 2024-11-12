@@ -22,10 +22,19 @@ import java.util.Map;
 
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Encapsulates configuration needed for creating class with given name and parameters.
+ */
 public interface ParameterizedClassConfiguration
 {
+    /**
+     * @return class name of class to be created with given configuration
+     */
     String className();
-    
+
+    /**
+     * @return parameters that will be used for creating an object of given class name
+     */
     @Nullable
-    Map<String, String> parameters();
+    Map<String, String> namedParameters();
 }

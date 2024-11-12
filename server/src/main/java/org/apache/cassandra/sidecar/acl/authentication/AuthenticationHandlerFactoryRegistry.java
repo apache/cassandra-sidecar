@@ -21,16 +21,19 @@ package org.apache.cassandra.sidecar.acl.authentication;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class AuthenticationProviderFactoryRegistry
+/**
+ * Registry for tracking different {@link AuthenticationHandlerFactory} implementations.
+ */
+public class AuthenticationHandlerFactoryRegistry
 {
-    private final Map<String, AuthenticationProviderFactory> registry = new ConcurrentHashMap<>();
+    private final Map<String, AuthenticationHandlerFactory> registry = new ConcurrentHashMap<>();
 
-    public void register(AuthenticationProviderFactory factory)
+    public void register(AuthenticationHandlerFactory factory)
     {
         registry.put(factory.getClass().getName(), factory);
     }
     
-    public AuthenticationProviderFactory getFactory(String className)
+    public AuthenticationHandlerFactory getFactory(String className)
     {
         return registry.get(className);
     }

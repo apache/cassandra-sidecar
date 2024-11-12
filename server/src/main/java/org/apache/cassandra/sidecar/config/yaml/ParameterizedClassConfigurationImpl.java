@@ -53,7 +53,7 @@ public class ParameterizedClassConfigurationImpl implements ParameterizedClassCo
 
     @Override
     @JsonProperty("parameters")
-    public @Nullable Map<String, String> parameters()
+    public @Nullable Map<String, String> namedParameters()
     {
         return parameters;
     }

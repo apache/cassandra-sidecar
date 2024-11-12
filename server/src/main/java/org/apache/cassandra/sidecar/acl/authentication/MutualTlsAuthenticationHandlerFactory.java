@@ -33,56 +33,59 @@ import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
+/**
+ * {@link AuthenticationHandlerFactory} implementation for {@link MutualTlsAuthenticationHandler}
+ */
 @Singleton
-public class MutualTLSAuthenticationProviderFactory implements AuthenticationProviderFactory
+public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHandlerFactory
 {
-    static final String CERTIFICATE_VALIDATOR_PARAM_KEY = "certificate_validator";
-    static final String CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY = "certificate_identity_extractor";
+    private static final String CERTIFICATE_VALIDATOR_PARAM_KEY = "certificate_validator";
+    private static final String CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY = "certificate_identity_extractor";
     private final IdentityToRoleCache identityToRoleCache;
 
     @Inject
-    public MutualTLSAuthenticationProviderFactory(IdentityToRoleCache identityToRoleCache)
+    public MutualTlsAuthenticationHandlerFactory(IdentityToRoleCache identityToRoleCache)
     {
         this.identityToRoleCache = identityToRoleCache;
     }
 
     @Override
+    public AuthenticationHandlerInternal create(Vertx vertx,
+                                                AccessControlConfiguration accessControlConfiguration,
+                                                Map<String, String> parameters) throws ConfigurationException
+    {
+        validate(parameters);
+        try
+        {
+            return createInternal(vertx, accessControlConfiguration, parameters);
+        }
+        catch (Exception exception)
+        {
+            throw new ConfigurationException("Error creating MutualTlsAuthenticationHandler, ", exception);
+        }
+    }
+
     public void validate(Map<String, String> parameters) throws ConfigurationException
     {
         if (parameters == null)
         {
-            throw new ConfigurationException("message");
+            throw new ConfigurationException("Parameters cannot be null for MutualTlsAuthenticationHandlerFactory");
         }
 
         if (!parameters.containsKey(CERTIFICATE_VALIDATOR_PARAM_KEY))
         {
-            throw new ConfigurationException("message");
+            throw new ConfigurationException(String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation", CERTIFICATE_VALIDATOR_PARAM_KEY));
         }
 
         if (!parameters.containsKey(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY))
         {
-            throw new ConfigurationException("message");
+            throw new ConfigurationException(String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation", CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
         }
     }
 
-    @Override
-    public AuthenticationHandlerInternal initialize(Vertx vertx,
-                                                    AccessControlConfiguration accessControlConfiguration,
-                                                    Map<String, String> parameters) throws ConfigurationException
-    {
-        try
-        {
-            return initializeInternal(vertx, accessControlConfiguration, parameters);
-        }
-        catch (Exception exception)
-        {
-            throw new ConfigurationException("message", exception);
-        }
-    }
-
-    private MutualTlsAuthenticationHandler initializeInternal(Vertx vertx,
-                                                              AccessControlConfiguration accessControlConfiguration,
-                                                              Map<String, String> parameters) throws Exception
+    private MutualTlsAuthenticationHandler createInternal(Vertx vertx,
+                                                          AccessControlConfiguration accessControlConfiguration,
+                                                          Map<String, String> parameters) throws Exception
     {
         CertificateValidator certificateValidator = (CertificateValidator) Class.forName(parameters.get(CERTIFICATE_VALIDATOR_PARAM_KEY)).newInstance();
         CertificateIdentityExtractor certificateIdentityExtractor;

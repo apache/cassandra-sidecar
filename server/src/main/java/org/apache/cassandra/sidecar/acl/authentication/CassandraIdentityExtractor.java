@@ -34,8 +34,8 @@ import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
  */
 public class CassandraIdentityExtractor extends SpiffeIdentityExtractor
 {
-    protected final IdentityToRoleCache identityToRoleCache;
-    protected final Set<String> adminIdentities;
+    private final IdentityToRoleCache identityToRoleCache;
+    private final Set<String> adminIdentities;
 
     public CassandraIdentityExtractor(IdentityToRoleCache identityToRoleCache,
                                       Set<String> adminIdentities)
