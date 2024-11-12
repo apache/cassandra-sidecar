@@ -21,7 +21,10 @@ package org.apache.cassandra.sidecar.routes.snapshots;
 import java.io.FileNotFoundException;
 import java.nio.file.NoSuchFileException;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -31,7 +34,10 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -39,6 +45,7 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.metrics.CacheStatsCounter;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.routes.data.SnapshotRequestParam;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -63,7 +70,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * <i>"testSnapshot"</i> snapshot for the <i>"ks"</i> keyspace and the <i>"tbl"</i> table
  */
 @Singleton
-public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
+public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> implements AccessProtected
 {
     private static final String INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM = "includeSecondaryIndexFiles";
     public static final String SNAPSHOT_CACHE_NAME = "snapshot_cache";
@@ -85,6 +92,13 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
         this.configuration = configuration;
         this.cacheConfiguration = configuration.sstableSnapshotConfiguration().snapshotListCacheConfiguration();
         this.cache = initializeCache(cacheConfiguration, sidecarMetrics.server().cache().snapshotCacheMetrics);
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        return ImmutableSet.of(SidecarActions.VIEW_SNAPSHOT.toAuthorization(resource));
     }
 
     /**

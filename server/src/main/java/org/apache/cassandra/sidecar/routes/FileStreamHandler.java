@@ -21,6 +21,9 @@ package org.apache.cassandra.sidecar.routes;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -28,7 +31,10 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -44,7 +50,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * Handler for sending out files.
  */
 @Singleton
-public class FileStreamHandler extends AbstractHandler<String>
+public class FileStreamHandler extends AbstractHandler<String> implements AccessProtected
 {
     public static final String FILE_PATH_CONTEXT_KEY = "fileToTransfer";
     private final FileStreamer fileStreamer;
@@ -56,6 +62,13 @@ public class FileStreamHandler extends AbstractHandler<String>
     {
         super(metadataFetcher, executorPools, null);
         this.fileStreamer = fileStreamer;
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        return ImmutableSet.of(SidecarActions.STREAM_SSTABLE.toAuthorization(resource));
     }
 
     @Override

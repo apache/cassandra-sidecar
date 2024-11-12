@@ -32,8 +32,10 @@ public final class ApiEndpointsV1
 
     public static final String NATIVE = "/native";
     public static final String JMX = "/jmx";
-    public static final String KEYSPACE_PATH_PARAM = ":keyspace";
-    public static final String TABLE_PATH_PARAM = ":table";
+    public static final String KEYSPACE = "keyspace";
+    public static final String TABLE = "table";
+    public static final String KEYSPACE_PATH_PARAM = ":" + KEYSPACE;
+    public static final String TABLE_PATH_PARAM = ":" + TABLE;
     public static final String SNAPSHOT_PATH_PARAM = ":snapshot";
     public static final String COMPONENT_PATH_PARAM = ":component";
     public static final String INDEX_PATH_PARAM = ":index";

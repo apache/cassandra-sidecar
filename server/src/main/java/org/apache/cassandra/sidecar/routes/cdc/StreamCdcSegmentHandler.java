@@ -20,7 +20,9 @@ package org.apache.cassandra.sidecar.routes.cdc;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,14 +33,18 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cdc.CdcLogCache;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.models.HttpResponse;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
@@ -54,7 +60,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * Provides REST endpoint for streaming cdc commit logs.
  */
 @Singleton
-public class StreamCdcSegmentHandler extends AbstractHandler<String>
+public class StreamCdcSegmentHandler extends AbstractHandler<String> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(StreamCdcSegmentHandler.class);
 
@@ -73,6 +79,13 @@ public class StreamCdcSegmentHandler extends AbstractHandler<String>
         this.fileStreamer = fileStreamer;
         this.cdcLogCache = cdcLogCache;
         this.serviceExecutorPool = executorPools.service();
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.CLUSTER.resource();
+        return ImmutableSet.of(SidecarActions.STREAM_CDC.toAuthorization(resource));
     }
 
     @Override

@@ -16,21 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.exceptions;
+package org.apache.cassandra.sidecar.acl.authorization;
+
+import io.vertx.ext.auth.authorization.Authorization;
 
 /**
- * Exception thrown when {@link org.apache.cassandra.sidecar.db.schema.TableSchema} is not prepared or expected
- * operations are unavailable.
+ * Represents an action that can be granted to a user on a resource or across resources.
  */
-public class SchemaUnavailableException extends RuntimeException
+public interface Action
 {
-    public SchemaUnavailableException(String message)
+    /**
+     * @return {@link Authorization}.
+     */
+    default Authorization toAuthorization()
     {
-        super(message);
+        return toAuthorization(null);
     }
 
-    public SchemaUnavailableException(String message, Throwable cause)
-    {
-        super(message, cause);
-    }
+    /**
+     * @return {@link Authorization} created for a resource
+     */
+    Authorization toAuthorization(String resource);
 }

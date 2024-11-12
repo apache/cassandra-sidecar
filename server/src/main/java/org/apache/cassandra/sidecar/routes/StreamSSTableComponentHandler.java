@@ -21,7 +21,10 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.nio.file.NoSuchFileException;
 import java.util.List;
+import java.util.Set;
 import javax.management.InstanceNotFoundException;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -29,7 +32,11 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.CassandraActions;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
@@ -48,7 +55,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * for the {@link FileStreamHandler} to stream the component back to the client
  */
 @Singleton
-public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTableComponentRequestParam>
+public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTableComponentRequestParam> implements AccessProtected
 {
     private final SnapshotPathBuilder snapshotPathBuilder;
 
@@ -60,6 +67,15 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     {
         super(metadataFetcher, executorPools, validator);
         this.snapshotPathBuilder = snapshotPathBuilder;
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        Authorization stream = SidecarActions.STREAM_SSTABLE.toAuthorization(resource);
+        Authorization select = CassandraActions.SELECT.toAuthorization(resource);
+        return ImmutableSet.of(stream, select);
     }
 
     @Override

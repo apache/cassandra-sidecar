@@ -22,8 +22,8 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Schema for getting information stored in system_auth keyspace.
@@ -32,8 +32,19 @@ import org.jetbrains.annotations.Nullable;
 public class SystemAuthSchema extends CassandraSystemTableSchema
 {
     private static final String IDENTITY_TO_ROLE_TABLE = "identity_to_role";
+
+    private static final String SELECT_ROLE_FROM_IDENTITY
+    = "SELECT role FROM system_auth.identity_to_role WHERE identity = ?";
+    private static final String GET_ALL_ROLES_AND_IDENTITIES = "SELECT * FROM system_auth.identity_to_role";
+    private static final String GET_SUPER_USER_STATUS = "SELECT * FROM system_auth.roles WHERE role = ?";
+    private static final String GET_ROLES = "SELECT * FROM system_auth.roles";
+    private static final String GET_ALL_ROLES_AND_PERMISSIONS = "SELECT * FROM system_auth.role_permissions";
+
     private PreparedStatement selectRoleFromIdentity;
     private PreparedStatement getAllRolesAndIdentities;
+    private PreparedStatement getSuperUserStatus;
+    private PreparedStatement getRoles;
+    private PreparedStatement getAllRolesAndPermissions;
 
     @Override
     protected String keyspaceName()
@@ -44,19 +55,42 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     @Override
     protected void prepareStatements(@NotNull Session session)
     {
+        getSuperUserStatus = prepare(getSuperUserStatus,
+                                     session,
+                                     GET_SUPER_USER_STATUS);
+
+        getRoles = prepare(getRoles,
+                           session,
+                           GET_ROLES);
+
+        getAllRolesAndPermissions = prepare(getAllRolesAndPermissions,
+                                            session,
+                                            GET_ALL_ROLES_AND_PERMISSIONS);
+
         KeyspaceMetadata keyspaceMetadata = session.getCluster().getMetadata().getKeyspace(keyspaceName());
         // identity_to_role table exists in Cassandra versions starting 5.x
         if (keyspaceMetadata == null || keyspaceMetadata.getTable(IDENTITY_TO_ROLE_TABLE) == null)
         {
+            logger.info("Auth table does not exist. Skip preparing. table={}/{}", keyspaceName(), IDENTITY_TO_ROLE_TABLE);
             return;
         }
         selectRoleFromIdentity = prepare(selectRoleFromIdentity,
                                          session,
-                                         CqlLiterals.SELECT_ROLE_FROM_IDENTITY);
+                                         SELECT_ROLE_FROM_IDENTITY);
 
         getAllRolesAndIdentities = prepare(getAllRolesAndIdentities,
                                            session,
-                                           CqlLiterals.GET_ALL_ROLES_AND_IDENTITIES);
+                                           GET_ALL_ROLES_AND_IDENTITIES);
+    }
+
+    @Override
+    protected void unprepareStatements()
+    {
+        selectRoleFromIdentity = null;
+        getAllRolesAndIdentities = null;
+        getAllRolesAndPermissions = null;
+        getSuperUserStatus = null;
+        getRoles = null;
     }
 
     @Override
@@ -66,21 +100,41 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
                                                 "tables in system_auth keyspace");
     }
 
-    @Nullable
+    @NotNull
     public PreparedStatement selectRoleFromIdentity()
     {
+        ensureSchemaAvailable();
         return selectRoleFromIdentity;
     }
 
-    @Nullable
+    @NotNull
     public PreparedStatement getAllRolesAndIdentities()
     {
+        ensureSchemaAvailable();
         return getAllRolesAndIdentities;
     }
 
-    private static class CqlLiterals
+    public PreparedStatement getAllRolesAndPermissions()
     {
-        static final String SELECT_ROLE_FROM_IDENTITY = "SELECT role FROM system_auth.identity_to_role WHERE identity = ?";
-        static final String GET_ALL_ROLES_AND_IDENTITIES = "SELECT * FROM system_auth.identity_to_role";
+        return getAllRolesAndPermissions;
+    }
+
+    public PreparedStatement getGetSuperUserStatus()
+    {
+        return getSuperUserStatus;
+    }
+
+    public PreparedStatement getRoles()
+    {
+        return getRoles;
+    }
+
+    @Override
+    protected void ensureSchemaAvailable() throws SchemaUnavailableException
+    {
+        if (selectRoleFromIdentity == null || getAllRolesAndIdentities == null)
+        {
+            throw new SchemaUnavailableException(keyspaceName(), IDENTITY_TO_ROLE_TABLE);
+        }
     }
 }

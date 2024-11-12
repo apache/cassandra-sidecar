@@ -19,7 +19,10 @@
 package org.apache.cassandra.sidecar.routes.restore;
 
 import java.nio.file.Paths;
+import java.util.Set;
 import javax.inject.Inject;
+
+import com.google.common.collect.ImmutableSet;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
@@ -27,7 +30,10 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -40,6 +46,7 @@ import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.restore.RestoreJobProgressTracker;
 import org.apache.cassandra.sidecar.restore.RestoreJobUtil;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -51,7 +58,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Provides a REST API for creating new {@link RestoreSlice} under a {@link RestoreJob}
  */
-public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceRequestPayload>
+public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceRequestPayload> implements AccessProtected
 {
     private static final int SERVER_ERROR_RESTORE_JOB_FAILED = 550;
     private final RestoreJobManagerGroup restoreJobManagerGroup;
@@ -67,6 +74,13 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobManagerGroup = restoreJobManagerGroup;
         this.restoreSliceDatabaseAccessor = restoreSliceDatabaseAccessor;
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        return ImmutableSet.of(SidecarActions.CREATE_RESTORE.toAuthorization(resource));
     }
 
     @Override

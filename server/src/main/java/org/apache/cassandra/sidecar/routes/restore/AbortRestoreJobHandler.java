@@ -18,19 +18,27 @@
 
 package org.apache.cassandra.sidecar.routes.restore;
 
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -44,7 +52,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * {@link org.apache.cassandra.sidecar.db.RestoreJob}
  */
 @Singleton
-public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobRequestPayload>
+public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobRequestPayload> implements AccessProtected
 {
     private static final AbortRestoreJobRequestPayload EMPTY_PAYLOAD = new AbortRestoreJobRequestPayload(null);
 
@@ -61,6 +69,13 @@ public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobReque
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
         this.metrics = metrics.server().restore();
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        return ImmutableSet.of(SidecarActions.ABORT_RESTORE.toAuthorization(resource));
     }
 
     @Override

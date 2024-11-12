@@ -19,20 +19,28 @@
 package org.apache.cassandra.sidecar.routes.cassandra;
 
 
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
  * Provides REST endpoint to get the configured settings of a cassandra node
  */
 @Singleton
-public class NodeSettingsHandler extends AbstractHandler<Void>
+public class NodeSettingsHandler extends AbstractHandler<Void> implements AccessProtected
 {
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -43,6 +51,13 @@ public class NodeSettingsHandler extends AbstractHandler<Void>
     NodeSettingsHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, null);
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.CLUSTER.resource();
+        return ImmutableSet.of(SidecarActions.VIEW_CLUSTER.toAuthorization(resource));
     }
 
     /**

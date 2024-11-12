@@ -18,17 +18,26 @@
 
 package org.apache.cassandra.sidecar.routes.restore;
 
+import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+
+import com.google.common.collect.ImmutableSet;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.OrAuthorization;
+import io.vertx.ext.auth.authorization.impl.OrAuthorizationImpl;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobSummaryResponsePayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -40,7 +49,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * Provides a REST API for providing summary of restore job maintained by Sidecar
  */
 @Singleton
-public class RestoreJobSummaryHandler extends AbstractHandler<String>
+public class RestoreJobSummaryHandler extends AbstractHandler<String> implements AccessProtected
 {
     @Inject
     public RestoreJobSummaryHandler(ExecutorPools executorPools,
@@ -48,6 +57,17 @@ public class RestoreJobSummaryHandler extends AbstractHandler<String>
                                     CassandraInputValidator validator)
     {
         super(instanceMetadataFetcher, executorPools, validator);
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        Authorization createRestore = SidecarActions.CREATE_RESTORE.toAuthorization(resource);
+        Authorization viewRestore = SidecarActions.VIEW_RESTORE.toAuthorization(resource);
+        OrAuthorization createOrView
+        = new OrAuthorizationImpl().addAuthorization(createRestore).addAuthorization(viewRestore);
+        return ImmutableSet.of(createOrView);
     }
 
     @Override

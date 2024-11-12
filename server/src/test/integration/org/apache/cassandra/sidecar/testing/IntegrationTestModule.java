@@ -170,10 +170,14 @@ public class IntegrationTestModule extends AbstractModule
         ParameterizedClassConfiguration mTLSConfig
         = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory",
                                                   params);
+        ParameterizedClassConfiguration rbacConfig
+        = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider",
+                                                  Collections.emptyMap());
         return new AccessControlConfigurationImpl(true,
                                                   Collections.singletonList(mTLSConfig),
+                                                  rbacConfig,
                                                   Collections.singleton(ADMIN_IDENTITY),
-                                                  new CacheConfigurationImpl());
+                                                  new CacheConfigurationImpl(1000, 100, true, 5, 1000));
     }
 
     class WrapperInstancesMetadata implements InstancesMetadata

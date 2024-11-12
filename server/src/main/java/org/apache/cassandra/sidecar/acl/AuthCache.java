@@ -30,6 +30,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -162,6 +163,10 @@ public abstract class AuthCache<K, V>
         try
         {
             cache.putAll(bulkLoadFunction.get());
+        }
+        catch (SchemaUnavailableException sue)
+        {
+            LOGGER.warn("Auth schema is unavailable. Skip warming up cache", sue);
         }
         catch (Exception e)
         {

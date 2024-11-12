@@ -190,4 +190,3 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
         session.execute("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
     }
 }
-

@@ -19,6 +19,9 @@
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
 import java.nio.file.NoSuchFileException;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.google.inject.Inject;
@@ -26,12 +29,16 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.routes.data.SSTableImportRequestParam;
 import org.apache.cassandra.sidecar.utils.CacheFactory;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -44,7 +51,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Imports SSTables, that have been previously uploaded, into Cassandra
  */
-public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestParam>
+public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestParam> implements AccessProtected
 {
     private final SSTableImporter importer;
     private final SSTableUploadsPathBuilder uploadPathBuilder;
@@ -73,6 +80,13 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
         this.importer = importer;
         this.uploadPathBuilder = uploadPathBuilder;
         this.cache = cacheFactory.ssTableImportCache();
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        return ImmutableSet.of(SidecarActions.IMPORT_SSTABLE.toAuthorization(resource));
     }
 
     /**

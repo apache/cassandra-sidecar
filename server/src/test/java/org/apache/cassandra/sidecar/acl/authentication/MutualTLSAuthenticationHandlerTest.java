@@ -309,7 +309,12 @@ class MutualTLSAuthenticationHandlerTest
 
 
             AccessControlConfiguration accessControlConfiguration
-            = new AccessControlConfigurationImpl(true, authenticatorsConfiguration(), Collections.singleton(ADMIN_IDENTITY), new CacheConfigurationImpl());
+            = new AccessControlConfigurationImpl(true,
+                                                 authenticatorsConfiguration(),
+                                                 new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider",
+                                                                                         Collections.emptyMap()),
+                                                 Collections.singleton(ADMIN_IDENTITY),
+                                                 new CacheConfigurationImpl());
 
             return super.abstractConfig(sslConfiguration, accessControlConfiguration);
         }

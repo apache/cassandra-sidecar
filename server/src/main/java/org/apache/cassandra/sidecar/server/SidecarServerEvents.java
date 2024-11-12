@@ -65,6 +65,12 @@ public enum SidecarServerEvents
     ON_CASSANDRA_CQL_DISCONNECTED,
 
     /**
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when {@link com.datastax.driver.core.Cluster} is closed.
+     * The event contains null message. The instance identifier will be passed as part of the message.
+     */
+    ON_CASSANDRA_DRIVER_CLOSED,
+
+    /**
      * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when all CQL connections
      * for the Sidecar-managed Cassandra instances are available.
      */

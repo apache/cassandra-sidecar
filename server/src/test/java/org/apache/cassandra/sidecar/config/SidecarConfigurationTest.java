@@ -337,6 +337,9 @@ class SidecarConfigurationTest
         .contains(entry("certificate_validator", "io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator"),
                   entry("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor"));
 
+        ParameterizedClassConfiguration authorizer = accessControlConfiguration.authorizerConfiguration();
+        assertThat(authorizer.className()).isEqualTo("org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider");
+
         assertThat(accessControlConfiguration.adminIdentities().size()).isEqualTo(2);
         assertThat(accessControlConfiguration.adminIdentities()).contains("spiffe://authorized/admin/identity1");
         assertThat(accessControlConfiguration.adminIdentities()).contains("spiffe://authorized/admin/identity2");

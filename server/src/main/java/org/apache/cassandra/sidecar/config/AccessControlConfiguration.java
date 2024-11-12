@@ -38,6 +38,11 @@ public interface AccessControlConfiguration
     List<ParameterizedClassConfiguration> authenticatorsConfiguration();
 
     /**
+     * @return configuration needed for setting up authorizer in Sidecar
+     */
+    ParameterizedClassConfiguration authorizerConfiguration();
+
+    /**
      * @return A {@code Set<String>} of administrative identities that are always authenticated and authorized
      */
     Set<String> adminIdentities();

@@ -308,6 +308,16 @@ class ServerTest
                               "UnrecognizedAuthenticationHandler has not been registered");
     }
 
+    @Test
+    @DisplayName("Invalid access control config, unrecognized authorization provider set")
+    void unrecognizedAuthorizationProviderSet()
+    {
+        assertThatThrownBy(() -> configureServer("config/sidecar_unrecognized_authorizer.yaml"))
+        .hasCauseInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Unrecognized authorization provider org.apache.cassandra.sidecar.acl." +
+                              "authorization.UnrecognizedAuthorizationProvider set");
+    }
+
     Future<String> validateHealthEndpoint(String deploymentId)
     {
         LOGGER.info("Checking server health 127.0.0.1:{}/api/v1/__health", server.actualPort());

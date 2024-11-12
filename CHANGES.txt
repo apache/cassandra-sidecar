@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add RBAC Authorization support in Sidecar (CASSSIDECAR-161)
  * Standardize configuration for duration units (CASSSIDECAR-186)
  * Adds sidecar endpoint for node decommissioning operation (CASSANDRASC-151)
  * Rename field in ListCdcSegmentsResponse (CASSSIDECAR-184)

@@ -18,7 +18,10 @@
 
 package org.apache.cassandra.sidecar.routes.restore;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Inject;
@@ -29,7 +32,12 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.OrAuthorization;
+import io.vertx.ext.auth.authorization.impl.OrAuthorizationImpl;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -38,6 +46,7 @@ import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -49,7 +58,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * Provides a REST API to update {@link RestoreJob}
  */
 @Singleton
-public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobRequestPayload>
+public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobRequestPayload> implements AccessProtected
 {
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
     private final RestoreMetrics metrics;
@@ -64,6 +73,17 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
         this.metrics = metrics.server().restore();
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        Authorization createRestore = SidecarActions.CREATE_RESTORE.toAuthorization(resource);
+        Authorization updateRestore = SidecarActions.UPDATE_RESTORE.toAuthorization(resource);
+        OrAuthorization createOrUpdate
+        = new OrAuthorizationImpl().addAuthorization(createRestore).addAuthorization(updateRestore);
+        return ImmutableSet.of(createOrUpdate);
     }
 
     @Override

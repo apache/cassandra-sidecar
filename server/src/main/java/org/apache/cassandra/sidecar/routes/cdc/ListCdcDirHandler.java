@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +37,10 @@ import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.data.CdcSegmentInfo;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -44,6 +48,7 @@ import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -57,7 +62,7 @@ import static org.apache.cassandra.sidecar.utils.CdcUtil.parseIndexFile;
  * Provides REST endpoint for listing commit logs in CDC directory.
  */
 @Singleton
-public class ListCdcDirHandler extends AbstractHandler<Void>
+public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ListCdcDirHandler.class);
     private final ServiceConfiguration config;
@@ -72,6 +77,13 @@ public class ListCdcDirHandler extends AbstractHandler<Void>
         super(metadataFetcher, executorPools, validator);
         this.config = config.serviceConfiguration();
         this.serviceExecutorPool = executorPools.service();
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.CLUSTER.resource();
+        return ImmutableSet.of(SidecarActions.VIEW_CDC.toAuthorization(resource));
     }
 
     @Override

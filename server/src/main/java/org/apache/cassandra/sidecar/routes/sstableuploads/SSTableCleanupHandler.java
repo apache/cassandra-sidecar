@@ -19,21 +19,28 @@
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
 import java.nio.file.NoSuchFileException;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
 
 /**
  * Manages cleaning up uploaded SSTables
  */
-public class SSTableCleanupHandler extends AbstractHandler<String>
+public class SSTableCleanupHandler extends AbstractHandler<String> implements AccessProtected
 {
     private static final String UPLOAD_ID_PARAM = "uploadId";
     private final SSTableUploadsPathBuilder uploadPathBuilder;
@@ -52,6 +59,13 @@ public class SSTableCleanupHandler extends AbstractHandler<String>
     {
         super(metadataFetcher, executorPools, null);
         this.uploadPathBuilder = uploadPathBuilder;
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        return ImmutableSet.of(SidecarActions.DELETE_UPLOAD.toAuthorization(resource));
     }
 
     /**

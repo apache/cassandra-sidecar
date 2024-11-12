@@ -19,16 +19,20 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.impl.PermissionBasedAuthorizationImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
-import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 
 /**
  * Database Accessor that queries cassandra to get information maintained under system_auth keyspace.
@@ -51,9 +55,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public String findRoleFromIdentity(String identity)
     {
-        ensureIdentityToRoleTableAccess();
-        BoundStatement statement = tableSchema.selectRoleFromIdentity()
-                                              .bind(identity);
+        BoundStatement statement = tableSchema.selectRoleFromIdentity().bind(identity);
         ResultSet result = execute(statement);
         Row row = result.one();
         return row != null ? row.getString("role") : null;
@@ -66,9 +68,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public Map<String, String> findAllIdentityToRoles()
     {
-        ensureIdentityToRoleTableAccess();
         BoundStatement statement = tableSchema.getAllRolesAndIdentities().bind();
-
         ResultSet resultSet = execute(statement);
         Map<String, String> results = new HashMap<>();
         for (Row row : resultSet)
@@ -78,11 +78,59 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
         return results;
     }
 
-    private void ensureIdentityToRoleTableAccess()
+    /**
+     * Queries Cassandra for all rows in system_auth.role_permissions table. Maps permissions of a role into
+     * {@link Authorization} and returns a {@code Map} of cassandra role to authorizations
+     *
+     * @return - {@code Map} contains role and granted authorizations
+     */
+    public Map<String, Set<Authorization>> getAllRolesAndPermissions()
     {
-        if (tableSchema.selectRoleFromIdentity() == null || tableSchema.getAllRolesAndIdentities() == null)
+        BoundStatement statement = tableSchema.getAllRolesAndPermissions().bind();
+        ResultSet result = execute(statement);
+        Map<String, Set<Authorization>> roleAuthorizations = new HashMap<>();
+        for (Row row : result)
         {
-            throw new SchemaUnavailableException("SystemAuthSchema was not prepared, values cannot be retrieved from table");
+            String role = row.getString("role");
+            String resource = row.getString("resource");
+            Set<Authorization> authorizations = row.getSet("permissions", String.class)
+                                                   .stream()
+                                                   .map(permission -> new PermissionBasedAuthorizationImpl(permission)
+                                                                      .setResource(resource))
+                                                   .collect(Collectors.toSet());
+            roleAuthorizations.computeIfAbsent(role, k -> new HashSet<>(authorizations)).addAll(authorizations);
         }
+        return roleAuthorizations;
+    }
+
+    /**
+     * Queries Cassandra for superuser status of a given role.
+     *
+     * @param role role in Cassandra
+     * @return {@code true} if given role is a superuser, {@code false} otherwise
+     */
+    public boolean isSuperUser(String role)
+    {
+        BoundStatement statement = tableSchema.getGetSuperUserStatus().bind(role);
+        ResultSet result = execute(statement);
+        Row row = result.one();
+        return row != null && row.getBool("is_superuser");
+    }
+
+    /**
+     * Queries Cassandra for all roles.
+     *
+     * @return - {@code Map} containing role, and their superuser status
+     */
+    public Map<String, Boolean> getRoles()
+    {
+        BoundStatement statement = tableSchema.getRoles().bind();
+        ResultSet result = execute(statement);
+        Map<String, Boolean> roles = new HashMap<>();
+        for (Row row : result)
+        {
+            roles.put(row.getString("role"), row.getBool("is_superuser"));
+        }
+        return roles;
     }
 }

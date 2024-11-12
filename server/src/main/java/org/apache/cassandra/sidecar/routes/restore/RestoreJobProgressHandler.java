@@ -17,13 +17,21 @@
 package org.apache.cassandra.sidecar.routes.restore;
 
 import java.util.List;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.OrAuthorization;
+import io.vertx.ext.auth.authorization.impl.OrAuthorizationImpl;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -31,6 +39,7 @@ import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelChecker;
 import org.apache.cassandra.sidecar.restore.RestoreJobProgress;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -43,7 +52,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * The response content can vary based on the {@link RestoreJobProgressFetchPolicy}
  */
 @Singleton
-public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgressFetchPolicy>
+public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgressFetchPolicy> implements AccessProtected
 {
     private final RestoreJobConsistencyLevelChecker consistencyLevelChecker;
 
@@ -62,6 +71,17 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     {
         super(metadataFetcher, executorPools, validator);
         this.consistencyLevelChecker = consistencyLevelChecker;
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        Authorization createRestore = SidecarActions.CREATE_RESTORE.toAuthorization(resource);
+        Authorization viewRestore = SidecarActions.VIEW_RESTORE.toAuthorization(resource);
+        OrAuthorization createOrView
+        = new OrAuthorizationImpl().addAuthorization(createRestore).addAuthorization(viewRestore);
+        return ImmutableSet.of(createOrView);
     }
 
     @Override

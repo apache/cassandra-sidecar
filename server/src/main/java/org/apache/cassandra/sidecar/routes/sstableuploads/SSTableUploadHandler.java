@@ -18,7 +18,10 @@
 
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.google.inject.Inject;
@@ -29,7 +32,10 @@ import io.vertx.core.Vertx;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.SSTableUploadResponse;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -40,6 +46,7 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceResourceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.UploadSSTableMetrics;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.routes.data.SSTableUploadRequestParam;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.DigestVerifier;
@@ -56,7 +63,7 @@ import static org.apache.cassandra.sidecar.utils.MetricUtils.parseSSTableCompone
  * Handler for managing uploaded SSTable components
  */
 @Singleton
-public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestParam>
+public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestParam> implements AccessProtected
 {
     private final FileSystem fs;
     private final SSTableUploadConfiguration configuration;
@@ -94,6 +101,13 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
         this.uploadPathBuilder = uploadPathBuilder;
         this.limiter = new ConcurrencyLimiter(configuration::concurrentUploadsLimit);
         this.digestVerifierFactory = digestVerifierFactory;
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        return ImmutableSet.of(SidecarActions.UPLOAD_SSTABLE.toAuthorization(resource));
     }
 
     /**
