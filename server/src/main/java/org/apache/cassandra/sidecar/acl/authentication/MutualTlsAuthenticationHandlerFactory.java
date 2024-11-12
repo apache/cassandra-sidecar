@@ -61,11 +61,11 @@ public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHand
         }
         catch (Exception exception)
         {
-            throw new ConfigurationException("Error creating MutualTlsAuthenticationHandler, ", exception);
+            throw new ConfigurationException("Error creating MutualTlsAuthenticationHandler", exception);
         }
     }
 
-    public void validate(Map<String, String> parameters) throws ConfigurationException
+    void validate(Map<String, String> parameters) throws ConfigurationException
     {
         if (parameters == null)
         {

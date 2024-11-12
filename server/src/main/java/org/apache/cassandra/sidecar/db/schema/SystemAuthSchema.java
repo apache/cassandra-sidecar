@@ -35,6 +35,7 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     private PreparedStatement selectRoleFromIdentity;
     private PreparedStatement getAllRolesAndIdentities;
 
+    @Override
     protected String keyspaceName()
     {
         return "system_auth";
@@ -58,6 +59,7 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
                                            CqlLiterals.getAllRolesAndIdentities());
     }
 
+    @Override
     protected String tableName()
     {
         throw new UnsupportedOperationException("SystemAuthSchema supports reading information from multiple " +

@@ -36,7 +36,7 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
     private static final boolean DEFAULT_ENABLED = false;
     private static final List<ParameterizedClassConfiguration> DEFAULT_AUTHENTICATORS_CONFIGURATION = Collections.emptyList();
     private static final Set<String> DEFAULT_ADMIN_IDENTITIES = Collections.emptySet();
-    private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION = new CacheConfigurationImpl(TimeUnit.HOURS.toMillis(2), 10_000);
+    private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION = new CacheConfigurationImpl(TimeUnit.HOURS.toMillis(2), 1_000);
 
     @JsonProperty(value = "enabled")
     protected final boolean enabled;

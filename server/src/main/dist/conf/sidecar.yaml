@@ -142,7 +142,7 @@ access_control:
   # Supports setting multiple authenticators, request is authenticated if it is authenticated by any of the
   # configured authenticators
   authenticators:
-    - class_name: org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationProviderFactory
+    - class_name: org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory
       parameters:
         # Certificate validator is used to validate details within a certificate, such as issuer organization,
         # issuer country, CNs, certificate expiry etc.
@@ -165,7 +165,7 @@ access_control:
   permission_cache:
     enabled: true
     expire_after_access_millis: 300000
-    maximum_size: 10000
+    maximum_size: 1000
     warmup_retries: 5
     warmup_retry_interval_millis: 2000
 
