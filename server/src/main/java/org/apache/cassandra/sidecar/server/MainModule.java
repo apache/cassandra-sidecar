@@ -207,6 +207,11 @@ public class MainModule extends AbstractModule
     {
         AccessControlConfiguration accessControlConfiguration = sidecarConfiguration.accessControlConfiguration();
         List<ParameterizedClassConfiguration> authList = accessControlConfiguration.authenticatorsConfiguration();
+        if (!accessControlConfiguration.enabled())
+        {
+            return ChainAuthHandler.any();
+        }
+
         if (authList == null || authList.isEmpty())
         {
             LOGGER.error("Access control was enabled, but there are no configured authenticators");
@@ -220,8 +225,8 @@ public class MainModule extends AbstractModule
 
             if (factory == null)
             {
-                throw new ConfigurationException(String.format("Implementation for class %s has not been registered",
-                                                               config.className()));
+                throw new RuntimeException(String.format("Implementation for class %s has not been registered",
+                                                         config.className()));
             }
             chainAuthHandler.add(factory.create(vertx, accessControlConfiguration, config.namedParameters()));
         }

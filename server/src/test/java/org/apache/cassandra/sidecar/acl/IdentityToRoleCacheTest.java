@@ -29,11 +29,13 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
@@ -158,6 +160,19 @@ class IdentityToRoleCacheTest
         assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isFalse();
         assertThat(identityToRoleCache.get("spiffe://cassandra/sidecar/test")).isNull();
         assertThat(identityToRoleCache.getAll().size()).isZero();
+    }
+
+    @Test
+    void testNoExceptionThrownWhenSchemaNotPrepared()
+    {
+        SystemAuthSchema systemAuthSchema = new SystemAuthSchema();
+        CQLSessionProvider mockCqlSessionProvider = mock(CQLSessionProvider.class);
+        SystemAuthDatabaseAccessor systemAuthDatabaseAccessor = new SystemAuthDatabaseAccessor(systemAuthSchema, mockCqlSessionProvider);
+
+        SidecarConfiguration mockConfig = mockConfig();
+
+        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(vertx, executorPools, mockConfig, systemAuthDatabaseAccessor);
+        assertThat(identityToRoleCache.containsKey("spiffe://cassandra/sidecar/test")).isFalse();
     }
 
     private SidecarConfiguration mockConfig()

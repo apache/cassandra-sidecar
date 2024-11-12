@@ -136,7 +136,7 @@ vertx:
 access_control:
   enabled: true
   authenticators:
-    - class_name: org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationProviderFactory
+    - class_name: org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationHandlerFactory
       parameters:
         certificate_validator: io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator
         certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor

@@ -330,7 +330,7 @@ class MutualTLSAuthenticationHandlerTest
                 }
             };
             ParameterizedClassConfiguration mTLSConfig
-            = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationProviderFactory",
+            = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory",
                                                       params);
             return Collections.singletonList(mTLSConfig);
         }
