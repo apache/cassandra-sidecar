@@ -163,7 +163,7 @@ public abstract class AuthCache<K, V>
         catch (Exception e)
         {
             LOGGER.warn("Unexpected error encountered during pre-warming of cache={} ", name, e);
-            vertx.setTimer(config.warmupRetryIntervalMillis(), t -> warmUp(availableRetries - 1));
+            vertx.setTimer(config.warmupRetryIntervalMillis(), t -> warmUpAsync(availableRetries - 1));
         }
     }
 }

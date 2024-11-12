@@ -28,6 +28,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
+import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 
 /**
  * Database Accessor that queries cassandra to get information maintained under system_auth keyspace.
@@ -81,7 +82,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
     {
         if (tableSchema.selectRoleFromIdentity() == null || tableSchema.getAllRolesAndIdentities() == null)
         {
-            throw new IllegalStateException("SystemAuthSchema was not prepared, values cannot be retrieved from table");
+            throw new SchemaUnavailableException("SystemAuthSchema was not prepared, values cannot be retrieved from table");
         }
     }
 }
