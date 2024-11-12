@@ -26,7 +26,7 @@ import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 /**
- * Factory class for {@link AuthenticationHandlerInternal}.
+ * Factory class for creating {@link AuthenticationHandlerInternal} instances.
  */
 public interface AuthenticationHandlerFactory
 {
@@ -34,7 +34,7 @@ public interface AuthenticationHandlerFactory
      * Creates instances of {@link AuthenticationHandlerInternal}. ChainAuthHandlerImpl in Vertx supports only
      * implementations of AuthenticationHandlerImpl. When ChainAuthHandlerImpl is fixed to handle generic
      * AuthenticationHandler implementations, we can update this method to return
-     * {@link io.vertx.ext.web.handler.AuthenticationHandler}.
+     * implementations of AuthenticationHandlerImpl.
      *
      * @param vertx                         instance of Vertx
      * @param accessControlConfiguration    Configuration for creating authentication handler

@@ -23,7 +23,8 @@ import java.util.Map;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Encapsulates configuration needed for creating class with given name and parameters.
+ * Encapsulates configuration needed for classes that can be initialized with a given class name using the
+ * configured optional parameters
  */
 public interface ParameterizedClassConfiguration
 {

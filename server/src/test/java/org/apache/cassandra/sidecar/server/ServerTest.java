@@ -30,6 +30,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.inject.ConfigurationException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -253,11 +254,12 @@ class ServerTest
     }
 
     @Test
-    @DisplayName("Invalid acccess control config, zero authenticators set")
+    @DisplayName("Invalid access control config, zero authenticators set")
     void invalidAccessControlConfig()
     {
         assertThatThrownBy(() -> configureServer("config/sidecar_invalid_accesscontrol_config.yaml"))
-        .isInstanceOf(RuntimeException.class);
+        .hasCauseInstanceOf(ConfigurationException.class)
+        .hasMessageContaining("Invalid access control configuration. There are no configured authenticators");
     }
 
     Future<String> validateHealthEndpoint(String deploymentId)

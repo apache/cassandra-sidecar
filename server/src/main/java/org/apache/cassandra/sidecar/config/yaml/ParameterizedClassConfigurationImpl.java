@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * {@inheritDoc}
+ */
 public class ParameterizedClassConfigurationImpl implements ParameterizedClassConfiguration
 {
     @JsonProperty("class_name")
@@ -44,6 +47,9 @@ public class ParameterizedClassConfigurationImpl implements ParameterizedClassCo
         this.parameters = parameters;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @JsonProperty("class_name")
     public String className()
@@ -51,6 +57,9 @@ public class ParameterizedClassConfigurationImpl implements ParameterizedClassCo
         return className;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @JsonProperty("parameters")
     public @Nullable Map<String, String> namedParameters()
