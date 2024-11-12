@@ -45,4 +45,20 @@ public interface DriverConfiguration
      * @return the local datacenter, or null if no local datacenter is specified.
      */
     String localDc();
+
+    /**
+     * @return the username used for connecting to the Cassandra instance
+     */
+    String username();
+
+    /**
+     * @return the password used for connecting to the Cassandra instance
+     */
+    String password();
+
+    /**
+     * @return Configuration such as keystore, truststore needed for establishing SSL/mTLS connection with
+     * Cassandra instance.
+     */
+    SslConfiguration sslConfiguration();
 }

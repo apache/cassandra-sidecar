@@ -41,16 +41,6 @@ public interface InstanceConfiguration
     int port();
 
     /**
-     * @return the username used for connecting to the Cassandra instance
-     */
-    String username();
-
-    /**
-     * @return the password used for connecting to the Cassandra instance
-     */
-    String password();
-
-    /**
      * @return a list of data directories of cassandra instance
      */
     List<String> dataDirs();

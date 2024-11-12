@@ -23,8 +23,6 @@ cassandra_instances:
   - id: 1
     host: localhost1
     port: 9042
-    username: cassandra
-    password: cassandra
     data_dirs:
       - ~/.ccm/test/node1/data0
     staging_dir: ~/.ccm/test/node1/sstable-staging
@@ -36,8 +34,6 @@ cassandra_instances:
   - id: 2
     host: localhost2
     port: 9042
-    username: cassandra
-    password: cassandra
     data_dirs:
       - ~/.ccm/test/node2/data0
     staging_dir: ~/.ccm/test/node2/sstable-staging
@@ -49,8 +45,6 @@ cassandra_instances:
   - id: 3
     host: localhost3
     port: 9042
-    username: cassandra
-    password: cassandra
     data_dirs:
       - ~/.ccm/test/node3/data0
     staging_dir: ~/.ccm/test/node3/sstable-staging
@@ -173,6 +167,18 @@ driver_parameters:
   contact_points:
     - "127.0.0.1:9042"
     - "127.0.0.2:9042"
+  username: cassandra
+  password: cassandra
+  ssl:
+    enabled:  false
+    keystore:
+      type: PKCS12
+      path: path/to/keystore.p12
+      password: password
+    truststore:
+      type: PKCS12
+      path: path/to/keystore.p12
+      password: password
   num_connections: 6
 #  local_dc: datacenter1
 

@@ -194,6 +194,18 @@ class SidecarConfigurationTest
                                                           new InetSocketAddress("127.0.0.2", 9042));
         assertThat(driverConfiguration.contactPoints()).isEqualTo(endpoints);
         assertThat(driverConfiguration.numConnections()).isEqualTo(6);
+        assertThat(driverConfiguration.username()).isEqualTo("cassandra");
+        assertThat(driverConfiguration.password()).isEqualTo("cassandra");
+        SslConfiguration sslConfiguration = driverConfiguration.sslConfiguration();
+        assertThat(sslConfiguration.enabled()).isTrue();
+        assertThat(sslConfiguration.isKeystoreConfigured()).isTrue();
+        assertThat(sslConfiguration.keystore().type()).isEqualTo("PKCS12");
+        assertThat(sslConfiguration.keystore().path()).isEqualTo("path/to/keystore.p12");
+        assertThat(sslConfiguration.keystore().password()).isEqualTo("password");
+        assertThat(sslConfiguration.isTrustStoreConfigured()).isTrue();
+        assertThat(sslConfiguration.truststore().type()).isEqualTo("PKCS12");
+        assertThat(sslConfiguration.truststore().path()).isEqualTo("path/to/keystore.p12");
+        assertThat(sslConfiguration.truststore().password()).isEqualTo("password");
     }
 
     @Test
@@ -331,8 +343,6 @@ class SidecarConfigurationTest
         assertThat(i1.id()).isEqualTo(0);
         assertThat(i1.host()).isEqualTo("localhost");
         assertThat(i1.port()).isEqualTo(9042);
-        assertThat(i1.username()).isEqualTo("cassandra");
-        assertThat(i1.password()).isEqualTo("cassandra");
         assertThat(i1.dataDirs()).containsExactly("/ccm/test/node1/data0", "/ccm/test/node1/data1");
         assertThat(i1.stagingDir()).isEqualTo("/ccm/test/node1/sstable-staging");
         assertThat(i1.jmxHost()).isEqualTo("127.0.0.1");
@@ -375,8 +385,6 @@ class SidecarConfigurationTest
         assertThat(i1.id()).isEqualTo(1);
         assertThat(i1.host()).isEqualTo("localhost1");
         assertThat(i1.port()).isEqualTo(9042);
-        assertThat(i1.username()).isEqualTo("cassandra");
-        assertThat(i1.password()).isEqualTo("cassandra");
         assertThat(i1.dataDirs()).containsExactly("/ccm/test/node1/data0", "/ccm/test/node1/data1");
         assertThat(i1.stagingDir()).isEqualTo("/ccm/test/node1/sstable-staging");
         assertThat(i1.jmxHost()).isEqualTo("127.0.0.1");
@@ -387,8 +395,6 @@ class SidecarConfigurationTest
         assertThat(i2.id()).isEqualTo(2);
         assertThat(i2.host()).isEqualTo("localhost2");
         assertThat(i2.port()).isEqualTo(9042);
-        assertThat(i2.username()).isEqualTo("cassandra");
-        assertThat(i2.password()).isEqualTo("cassandra");
         assertThat(i2.dataDirs()).containsExactly("/ccm/test/node2/data0", "/ccm/test/node2/data1");
         assertThat(i2.stagingDir()).isEqualTo("/ccm/test/node2/sstable-staging");
         assertThat(i2.jmxHost()).isEqualTo("127.0.0.1");
@@ -399,8 +405,6 @@ class SidecarConfigurationTest
         assertThat(i3.id()).isEqualTo(3);
         assertThat(i3.host()).isEqualTo("localhost3");
         assertThat(i3.port()).isEqualTo(9042);
-        assertThat(i3.username()).isEqualTo("cassandra");
-        assertThat(i3.password()).isEqualTo("cassandra");
         assertThat(i3.dataDirs()).containsExactly("/ccm/test/node3/data0", "/ccm/test/node3/data1");
         assertThat(i3.stagingDir()).isEqualTo("/ccm/test/node3/sstable-staging");
         assertThat(i3.jmxHost()).isEqualTo("127.0.0.1");

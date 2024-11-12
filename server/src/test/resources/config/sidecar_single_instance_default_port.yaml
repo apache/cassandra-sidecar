@@ -4,8 +4,6 @@
 cassandra:
   host: localhost
   port: 9042
-  username: cassandra
-  password: cassandra
   data_dirs:
     - /ccm/test/node1/data0
     - /ccm/test/node1/data1

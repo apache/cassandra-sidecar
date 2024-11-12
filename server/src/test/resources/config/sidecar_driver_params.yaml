@@ -2,5 +2,17 @@ driver_parameters:
   contact_points:
     - "127.0.0.1:9042"
     - "127.0.0.2:9042"
+  username: cassandra
+  password: cassandra
+  ssl:
+    enabled: true
+    keystore:
+      type: PKCS12
+      path: path/to/keystore.p12
+      password: password
+    truststore:
+      type: PKCS12
+      path: path/to/keystore.p12
+      password: password
   num_connections: 6
   local_dc: dc1

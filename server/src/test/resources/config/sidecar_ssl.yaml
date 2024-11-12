@@ -23,8 +23,6 @@ cassandra_instances:
   - id: 1
     host: localhost1
     port: 9042
-    username: cassandra
-    password: cassandra
     data_dirs:
       - /ccm/test/node1/data0
       - /ccm/test/node1/data1
@@ -37,8 +35,6 @@ cassandra_instances:
   - id: 2
     host: localhost2
     port: 9042
-    username: cassandra
-    password: cassandra
     data_dirs:
       - /ccm/test/node2/data0
       - /ccm/test/node2/data1
@@ -51,8 +47,6 @@ cassandra_instances:
   - id: 3
     host: localhost3
     port: 9042
-    username: cassandra
-    password: cassandra
     data_dirs:
       - /ccm/test/node3/data0
       - /ccm/test/node3/data1

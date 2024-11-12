@@ -49,6 +49,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
@@ -76,13 +77,15 @@ public class CassandraSidecarTestContext implements AutoCloseable
     public InstancesConfig instancesConfig;
     private List<JmxClient> jmxClients;
     private CQLSessionProvider sessionProvider;
+    private SslConfiguration sslConfiguration;
 
     private CassandraSidecarTestContext(Vertx vertx,
                                         AbstractCassandraTestContext abstractCassandraTestContext,
                                         SimpleCassandraVersion version,
                                         CassandraVersionProvider versionProvider,
                                         DnsResolver dnsResolver,
-                                        int numInstancesToManage)
+                                        int numInstancesToManage,
+                                        SslConfiguration sslConfiguration)
     {
         this.vertx = vertx;
         this.numInstancesToManage = numInstancesToManage;
@@ -91,12 +94,14 @@ public class CassandraSidecarTestContext implements AutoCloseable
         this.version = version;
         this.versionProvider = versionProvider;
         this.dnsResolver = dnsResolver;
+        this.sslConfiguration = sslConfiguration;
     }
 
     public static CassandraSidecarTestContext from(Vertx vertx,
                                                    AbstractCassandraTestContext cassandraTestContext,
                                                    DnsResolver dnsResolver,
-                                                   int numInstancesToManage)
+                                                   int numInstancesToManage,
+                                                   SslConfiguration sslConfiguration)
     {
         org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
         SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major,
@@ -108,7 +113,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                                versionParsed,
                                                versionProvider,
                                                dnsResolver,
-                                               numInstancesToManage);
+                                               numInstancesToManage,
+                                               sslConfiguration);
     }
 
     public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
@@ -231,7 +237,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
         List<InstanceConfig> configs = buildInstanceConfigs(cluster);
         List<InetSocketAddress> addresses = buildContactList(configs);
         sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
-                                                     0, SharedExecutorNettyOptions.INSTANCE);
+                                                     0, "cassandra", "cassandra",
+                                                     sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
         for (int i = 0; i < configs.size(); i++)
         {
             if (configs.get(i) == null)

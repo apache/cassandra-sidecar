@@ -48,6 +48,11 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
         this(path, password, DEFAULT_TYPE, DEFAULT_CHECK_INTERVAL_SECONDS);
     }
 
+    public KeyStoreConfigurationImpl(String path, String password, String type)
+    {
+        this(path, password, type, DEFAULT_CHECK_INTERVAL_SECONDS);
+    }
+
     public KeyStoreConfigurationImpl(String path, String password, String type, int checkIntervalInSeconds)
     {
         this.path = path;
