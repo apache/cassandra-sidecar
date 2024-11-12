@@ -85,7 +85,7 @@ class MutualTlsAuthenticationHandlerFactoryTest
             put(CERTIFICATE_VALIDATOR_PARAM_KEY, "UnrecognizedCertificateValidator");
             put(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY, "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
         }};
-        testConfigError(missingValidatorParams, String.format("Error creating MutualTlsAuthenticationHandler, ", CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
+        testConfigError(missingValidatorParams, String.format("Error creating MutualTlsAuthenticationHandler", CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
     }
 
     private void testConfigError(Map<String, String> parameters, String expectedErrMsg)
