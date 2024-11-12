@@ -24,6 +24,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
+import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 
 /**
  * Caches entries from system_auth.identity_to_role table. The table maps valid certificate identities to Cassandra
@@ -54,7 +55,7 @@ public class IdentityToRoleCache extends AuthCache<String, String>
         {
             return cache() != null && get(identity) != null;
         }
-        catch (IllegalStateException e)
+        catch (SchemaUnavailableException e)
         {
             // Returns false, since SystemAuthSchema is not prepared
             return false;

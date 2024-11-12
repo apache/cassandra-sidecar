@@ -303,7 +303,7 @@ class SidecarConfigurationTest
 
         List<ParameterizedClassConfiguration> authenticators = accessControlConfiguration.authenticatorsConfiguration();
         assertThat(authenticators).isNotNull().hasSize(1);
-        assertThat(authenticators.get(0).className()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationProviderFactory");
+        assertThat(authenticators.get(0).className()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationHandlerFactory");
         assertThat(authenticators.get(0).namedParameters())
         .contains(entry("certificate_validator", "io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator"),
                   entry("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor"));
