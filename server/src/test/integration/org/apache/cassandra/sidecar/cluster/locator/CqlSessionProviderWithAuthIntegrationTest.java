@@ -26,6 +26,7 @@ import com.datastax.driver.core.Session;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
@@ -76,34 +77,46 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     {
         cassandraContext.configureAndStartCluster(builder -> {
             builder.appendConfig(config -> config.set("client_encryption_options.enabled", "true")
-                                                 .set("client_encryption_options.require_client_auth", "true")
+                                                 .set("client_encryption_options.require_client_auth", "false")
                                                  .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
                                                  .set("client_encryption_options.keystore_password", serverKeystorePassword)
                                                  .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
                                                  .set("client_encryption_options.truststore_password", truststorePassword)
-                                                 .set("role_manager", "org.apache.cassandra.auth.CassandraRoleManager")
                                                  .set("permissions_validity", "0ms")
                                                  .set("roles_validity", "0ms"))
             ;
             if (withPassword)
             {
-                if (cassandraContext.version.major == 5)
-                {
-                    builder.appendConfig(config -> config.set("authenticator.class_name", "org.apache.cassandra.auth.PasswordAuthenticator"));
-                }
-                else
-                {
-                    builder.appendConfig(config -> config.set("authenticator", "org.apache.cassandra.auth.PasswordAuthenticator"));
-                }
+                setPasswordAuthenticator(cassandraContext, builder);
                 return;
             }
             if (withMTLS)
             {
-                builder.appendConfig(config -> config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
-                                                     .set("authenticator.parameters.validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator"));
+                setMTLSAuthenticator(builder);
             }
         });
     }
+
+    private void setPasswordAuthenticator(ConfigurableCassandraTestContext cassandraContext, UpgradeableCluster.Builder builder)
+    {
+        if (cassandraContext.version.major == 5)
+        {
+            builder.appendConfig(config -> config.set("authenticator.class_name", "PasswordAuthenticator")
+                                                 .set("role_manager.class_name", "CassandraRoleManager"));
+        }
+        else
+        {
+            builder.appendConfig(config -> config.set("authenticator", "PasswordAuthenticator")
+                                                 .set("role_manager", "CassandraRoleManager"));
+        }
+    }
+
+    private void setMTLSAuthenticator(UpgradeableCluster.Builder  builder)
+    {
+        builder.appendConfig(config -> config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
+                                             .set("authenticator.parameters.validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator"));
+    }
+
 
     private void runTest(int cassandraMajorVersion, VertxTestContext context, String expectedAuthenticationMode) throws Exception
     {

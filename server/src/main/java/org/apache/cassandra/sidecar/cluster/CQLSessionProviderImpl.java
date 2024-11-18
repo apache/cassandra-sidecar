@@ -225,7 +225,6 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
                      .addContactPointsWithPorts(contactPoints)
                      .withReconnectionPolicy(reconnectionPolicy)
                      .withoutMetrics()
-
                      .withLoadBalancingPolicy(lbp)
                      .withQueryOptions(queryOptions)
                      // tests can create a lot of these Cluster objects, to avoid creating HWTs and
@@ -238,9 +237,9 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
             }
             if (sslContext != null)
             {
-                RemoteEndpointAwareJdkSSLOptions sslOptions
-                = new RemoteEndpointAwareJdkSSLOptions.Builder().withSSLContext(sslContext).build();
-                builder.withSSL(sslOptions);
+//                RemoteEndpointAwareJdkSSLOptions sslOptions
+//                = new RemoteEndpointAwareJdkSSLOptions.Builder().withSSLContext(sslContext).build();
+//                builder.withSSL(sslOptions);
             }
 
             cluster = builder.build();
