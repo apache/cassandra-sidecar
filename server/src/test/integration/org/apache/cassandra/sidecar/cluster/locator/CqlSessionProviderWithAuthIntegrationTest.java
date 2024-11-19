@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.cluster.locator;
 
+import java.util.concurrent.TimeUnit;
+
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.Session;
@@ -46,15 +49,16 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(buildCluster = false)
     void testWithUsernamePassword(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
     {
-        configureAndStartCluster(cassandraContext, false, true, false);
+        configureAndStartCluster(cassandraContext, true, false, false);
         sidecarTestContext.refreshInstancesConfig();
+        Uninterruptibles.sleepUninterruptibly(40, TimeUnit.SECONDS);
         runTest(cassandraContext.version.major, context, "Password", false);
     }
 
     @CassandraIntegrationTest(buildCluster = false)
     void testWithSSLOnly(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
     {
-        configureAndStartCluster(cassandraContext, false, false, true);
+        configureAndStartCluster(cassandraContext, false, true, false);
         sidecarTestContext.setSslConfiguration(sslConfiguration());
         runTest(cassandraContext.version.major, context, "Unauthenticated", true);
     }
@@ -134,7 +138,7 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     {
         String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
         WebClient client = mTLSClient();
-        client.get(server.actualPort(), "127.0.0.1", testRoute)
+        client.get(server.actualPort(), "localhost", testRoute)
               .send(context.succeeding(response -> {
                   ConnectedClientStatsResponse clientStatsResponse = response.bodyAsJson(ConnectedClientStatsResponse.class);
                   assertThat(clientStatsResponse).isNotNull();
