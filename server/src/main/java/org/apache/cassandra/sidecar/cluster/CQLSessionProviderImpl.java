@@ -152,7 +152,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
             tmf.init(truststore);
 
             KeyManager[] km = kmf != null ? kmf.getKeyManagers() : null;
-            sslContext.init(km, tmf.getTrustManagers(), SECURE_RANDOM);
+            sslContext.init(km, tmf.getTrustManagers(), new SecureRandom());
             return sslContext;
         }
         catch (Exception e)
@@ -237,9 +237,9 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
             }
             if (sslContext != null)
             {
-//                RemoteEndpointAwareJdkSSLOptions sslOptions
-//                = new RemoteEndpointAwareJdkSSLOptions.Builder().withSSLContext(sslContext).build();
-//                builder.withSSL(sslOptions);
+                RemoteEndpointAwareJdkSSLOptions sslOptions
+                = new RemoteEndpointAwareJdkSSLOptions.Builder().withSSLContext(sslContext).build();
+                builder.withSSL(sslOptions);
             }
 
             cluster = builder.build();

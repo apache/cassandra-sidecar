@@ -29,6 +29,9 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
@@ -45,6 +48,19 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(buildCluster = false)
     void testWithUsernamePassword(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
     {
+        configureAndStartCluster(cassandraContext, true, false);
+        sidecarTestContext.refreshInstancesConfig();
+        runTest(cassandraContext.version.major, context, "Password");
+    }
+
+    @CassandraIntegrationTest(buildCluster = false)
+    void testWithUsernamePassword40(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
+    {
+        if (cassandraContext.version.major == 5)
+        {
+            context.completeNow();
+            return;
+        }
         configureAndStartCluster(cassandraContext, true, false);
         sidecarTestContext.refreshInstancesConfig();
         runTest(cassandraContext.version.major, context, "Password");
@@ -77,13 +93,12 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     {
         cassandraContext.configureAndStartCluster(builder -> {
             builder.appendConfig(config -> config.set("client_encryption_options.enabled", "true")
-                                                 .set("client_encryption_options.require_client_auth", "false")
+                                                 .set("client_encryption_options.optional", "true")
+                                                 .set("client_encryption_options.require_client_auth", "true")
                                                  .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
                                                  .set("client_encryption_options.keystore_password", serverKeystorePassword)
                                                  .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
-                                                 .set("client_encryption_options.truststore_password", truststorePassword)
-                                                 .set("permissions_validity", "0ms")
-                                                 .set("roles_validity", "0ms"))
+                                                 .set("client_encryption_options.truststore_password", truststorePassword))
             ;
             if (withPassword)
             {
@@ -99,16 +114,9 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
 
     private void setPasswordAuthenticator(ConfigurableCassandraTestContext cassandraContext, UpgradeableCluster.Builder builder)
     {
-        if (cassandraContext.version.major == 5)
-        {
-            builder.appendConfig(config -> config.set("authenticator.class_name", "PasswordAuthenticator")
-                                                 .set("role_manager.class_name", "CassandraRoleManager"));
-        }
-        else
-        {
             builder.appendConfig(config -> config.set("authenticator", "PasswordAuthenticator")
-                                                 .set("role_manager", "CassandraRoleManager"));
-        }
+                                                 .set("role_manager", "CassandraRoleManager")
+                                                 .set("authorizer", "CassandraAuthorizer"));
     }
 
     private void setMTLSAuthenticator(UpgradeableCluster.Builder  builder)
@@ -156,5 +164,14 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     {
         Session session = maybeGetSession();
         session.execute("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
+    }
+
+    private SslConfiguration clientSslConfig()
+    {
+        return SslConfigurationImpl.builder()
+                                   .enabled(true)
+                                   .keystore(new KeyStoreConfigurationImpl(clientKeystorePath.toAbsolutePath().toString(), clientKeystorePassword, "PKCS12"))
+                                   .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
+                                   .build();
     }
 }
