@@ -50,8 +50,8 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     void testWithUsernamePassword(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
     {
         configureAndStartCluster(cassandraContext, true, false, false);
-        sidecarTestContext.refreshInstancesConfig();
         Uninterruptibles.sleepUninterruptibly(40, TimeUnit.SECONDS);
+        sidecarTestContext.refreshInstancesConfig();
         runTest(cassandraContext.version.major, context, "Password", false);
     }
 
@@ -83,7 +83,7 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
         cassandraContext.configureAndStartCluster(builder -> {
             if (withPassword)
             {
-                setPasswordAuthenticator(builder);
+                setPasswordAuthenticator(cassandraContext, builder);
             }
             if (withSsl)
             {
@@ -96,11 +96,20 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
         });
     }
 
-    private void setPasswordAuthenticator(UpgradeableCluster.Builder builder)
+    private void setPasswordAuthenticator(ConfigurableCassandraTestContext cassandraContext, UpgradeableCluster.Builder builder)
     {
-        builder.appendConfig(config -> config.set("authenticator", "org.apache.cassandra.auth.PasswordAuthenticator")
-                                             .set("authorizer", "org.apache.cassandra.auth.CassandraAuthorizer")
-                                             .set("role_manager", "org.apache.cassandra.auth.CassandraRoleManager"));
+        if (cassandraContext.version.major == 4)
+        {
+            builder.appendConfig(config -> config.set("authenticator", "org.apache.cassandra.auth.PasswordAuthenticator")
+                                                 .set("authorizer", "org.apache.cassandra.auth.CassandraAuthorizer")
+                                                 .set("role_manager", "org.apache.cassandra.auth.CassandraRoleManager")
+                                                 .set("roles_validity_in_ms", "2000"));
+            return;
+        }
+        builder.appendConfig(config -> config.set("authenticator.class_name", "org.apache.cassandra.auth.PasswordAuthenticator")
+                                             .set("authorizer.class_name", "org.apache.cassandra.auth.CassandraAuthorizer")
+                                             .set("role_manager.class_name", "org.apache.cassandra.auth.CassandraRoleManager")
+                                             .set("roles_validity", "2000ms"));
     }
 
     private void setClientEncryptionOptions(UpgradeableCluster.Builder builder)
@@ -117,7 +126,10 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     private void setMTLSAuthenticator(UpgradeableCluster.Builder  builder)
     {
         builder.appendConfig(config -> config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
-                                             .set("authenticator.parameters.validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator"));
+                                             .set("authenticator.parameters.validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator")
+                                             .set("authorizer.class_name", "org.apache.cassandra.auth.CassandraAuthorizer")
+                                             .set("role_manager.class_name", "org.apache.cassandra.auth.CassandraRoleManager")
+                                             .set("roles_validity_in_ms", "2000"));
     }
 
 
