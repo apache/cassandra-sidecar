@@ -128,13 +128,8 @@ public abstract class IntegrationTestBase
         int clusterSize = cassandraTestContext.clusterSize();
         injector = Guice.createInjector(Modules.override(new MainModule()).with(integrationTestModule));
         vertx = injector.getInstance(Vertx.class);
-        SslConfiguration sslConfiguration = SslConfigurationImpl.builder()
-                                                                .enabled(true)
-                                                                .keystore(new KeyStoreConfigurationImpl(clientKeystorePath.toAbsolutePath().toString(), clientKeystorePassword, "PKCS12"))
-                                                                .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
-                                                                .build();
         sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
-                                                              getNumInstancesToManage(clusterSize), sslConfiguration);
+                                                              getNumInstancesToManage(clusterSize), null);
 
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
 

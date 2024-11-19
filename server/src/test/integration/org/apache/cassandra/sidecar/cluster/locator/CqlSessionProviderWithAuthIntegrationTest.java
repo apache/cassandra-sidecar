@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.cluster.locator;
 
-import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.Session;
@@ -48,17 +46,16 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(buildCluster = false)
     void testWithUsernamePassword(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
     {
-        configureAndStartCluster(cassandraContext, true, false);
-        sidecarTestContext.refreshInstancesConfig();
-        runTest(cassandraContext.version.major, context, "Password");
+        configureAndStartCluster(cassandraContext, true, false, false);
+        runTest(cassandraContext.version.major, context, "Password", false);
     }
 
     @CassandraIntegrationTest(buildCluster = false)
     void testWithSSLOnly(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
     {
-        configureAndStartCluster(cassandraContext, false, false);
-        sidecarTestContext.refreshInstancesConfig();
-        runTest(cassandraContext.version.major, context, "Unauthenticated");
+        configureAndStartCluster(cassandraContext, false, false, true);
+        sidecarTestContext.setSslConfiguration(sslConfiguration());
+        runTest(cassandraContext.version.major, context, "Unauthenticated", true);
     }
 
     @CassandraIntegrationTest(buildCluster = false)
@@ -70,27 +67,28 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
             context.completeNow();
             return;
         }
-        configureAndStartCluster(cassandraContext, false, true);
-        waitForSchemaReady(1, TimeUnit.MINUTES);
+        configureAndStartCluster(cassandraContext, false, true, true);
+        sidecarTestContext.setSslConfiguration(sslConfiguration());
         insertIdentityRole(ADMIN_IDENTITY, "cassandra-role");
-        runTest(cassandraContext.version.major, context, "Unauthenticated");
+        runTest(cassandraContext.version.major, context, "Unauthenticated", true);
     }
 
-    private void configureAndStartCluster(ConfigurableCassandraTestContext cassandraContext, boolean withPassword, boolean withMTLS)
+    private void configureAndStartCluster(ConfigurableCassandraTestContext cassandraContext, boolean withPassword, boolean withMTLS, boolean withSsl)
     {
         cassandraContext.configureAndStartCluster(builder -> {
-            builder.appendConfig(config -> config.set("client_encryption_options.enabled", "true")
-                                                 .set("client_encryption_options.optional", "false")
-                                                 .set("client_encryption_options.require_client_auth", "true")
-                                                 .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
-                                                 .set("client_encryption_options.keystore_password", serverKeystorePassword)
-                                                 .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
-                                                 .set("client_encryption_options.truststore_password", truststorePassword))
-            ;
+            if (withSsl)
+            {
+                builder.appendConfig(config -> config.set("client_encryption_options.enabled", "true")
+                                                     .set("client_encryption_options.require_client_auth", "true")
+                                                     .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
+                                                     .set("client_encryption_options.keystore_password", serverKeystorePassword)
+                                                     .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
+                                                     .set("client_encryption_options.truststore_password", truststorePassword))
+                ;
+            }
             if (withPassword)
             {
                 setPasswordAuthenticator(cassandraContext, builder);
-                return;
             }
             if (withMTLS)
             {
@@ -105,7 +103,7 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
         {
             builder.appendConfig(config -> config.set("authenticator.class_name", "PasswordAuthenticator")
                                                  .set("role_manager.class_name", "CassandraRoleManager")
-                                                 .set("authorizer", "CassandraAuthorizer"));
+                                                 .set("authorizer.class_name", "CassandraAuthorizer"));
             return;
         }
         builder.appendConfig(config -> config.set("authenticator", "PasswordAuthenticator")
@@ -120,20 +118,20 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     }
 
 
-    private void runTest(int cassandraMajorVersion, VertxTestContext context, String expectedAuthenticationMode) throws Exception
+    private void runTest(int cassandraMajorVersion, VertxTestContext context, String expectedAuthenticationMode, boolean checkSsl) throws Exception
     {
         // authentication mode was introduced after 4.0 version
         if (cassandraMajorVersion == 4)
         {
-            retrieveClientStats(context, null);
+            retrieveClientStats(context, null, checkSsl);
         }
         else
         {
-            retrieveClientStats(context, expectedAuthenticationMode);
+            retrieveClientStats(context, expectedAuthenticationMode, checkSsl);
         }
     }
 
-    private void retrieveClientStats(VertxTestContext context, String expectedAuthenticationMode) throws Exception
+    private void retrieveClientStats(VertxTestContext context, String expectedAuthenticationMode, boolean checkSsl) throws Exception
     {
         String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
         WebClient client = mTLSClient();
@@ -144,7 +142,10 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
 
                   for (ClientConnectionEntry entry : clientStatsResponse.clientConnections())
                   {
-                      assertThat(entry.sslEnabled()).isTrue();
+                      if (checkSsl)
+                      {
+                          assertThat(entry.sslEnabled()).isTrue();
+                      }
                       if (expectedAuthenticationMode != null)
                       {
                           assertThat(entry.authenticationMode()).isEqualTo(expectedAuthenticationMode);
@@ -154,13 +155,7 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
               }));
     }
 
-    private void insertIdentityRole(String identity, String role)
-    {
-        Session session = maybeGetSession();
-        session.execute("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
-    }
-
-    private SslConfiguration clientSslConfig()
+    private SslConfiguration sslConfiguration()
     {
         return SslConfigurationImpl.builder()
                                    .enabled(true)
@@ -168,4 +163,11 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
                                    .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
                                    .build();
     }
+
+    private void insertIdentityRole(String identity, String role)
+    {
+        Session session = maybeGetSession();
+        session.execute("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
+    }
 }
+

@@ -169,6 +169,12 @@ public class CassandraSidecarTestContext implements AutoCloseable
         refreshInstancesConfig();
     }
 
+    public void setSslConfiguration(SslConfiguration sslConfiguration)
+    {
+        this.sslConfiguration = sslConfiguration;
+        refreshInstancesConfig();
+    }
+
     public InstancesConfig instancesConfig()
     {
         if (instancesConfig == null)
