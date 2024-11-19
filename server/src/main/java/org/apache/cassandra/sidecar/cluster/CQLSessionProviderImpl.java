@@ -152,7 +152,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
             tmf.init(truststore);
 
             KeyManager[] km = kmf != null ? kmf.getKeyManagers() : null;
-            sslContext.init(km, tmf.getTrustManagers(), new SecureRandom());
+            sslContext.init(km, tmf.getTrustManagers(), SECURE_RANDOM);
             return sslContext;
         }
         catch (Exception e)

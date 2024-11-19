@@ -88,7 +88,7 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
             }
             if (withPassword)
             {
-                setPasswordAuthenticator(cassandraContext, builder);
+                setPasswordAuthenticator(builder);
             }
             if (withMTLS)
             {
@@ -97,15 +97,8 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
         });
     }
 
-    private void setPasswordAuthenticator(ConfigurableCassandraTestContext cassandraContext, UpgradeableCluster.Builder builder)
+    private void setPasswordAuthenticator(UpgradeableCluster.Builder builder)
     {
-        if (cassandraContext.version.major == 5)
-        {
-            builder.appendConfig(config -> config.set("authenticator.class_name", "PasswordAuthenticator")
-                                                 .set("role_manager.class_name", "CassandraRoleManager")
-                                                 .set("authorizer.class_name", "CassandraAuthorizer"));
-            return;
-        }
         builder.appendConfig(config -> config.set("authenticator", "PasswordAuthenticator")
                                              .set("role_manager", "CassandraRoleManager")
                                              .set("authorizer", "CassandraAuthorizer"));
