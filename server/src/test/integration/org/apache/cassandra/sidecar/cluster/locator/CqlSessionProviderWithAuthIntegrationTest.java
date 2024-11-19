@@ -54,19 +54,6 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest(buildCluster = false)
-    void testWithUsernamePassword40(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
-    {
-        if (cassandraContext.version.major == 5)
-        {
-            context.completeNow();
-            return;
-        }
-        configureAndStartCluster(cassandraContext, true, false);
-        sidecarTestContext.refreshInstancesConfig();
-        runTest(cassandraContext.version.major, context, "Password");
-    }
-
-    @CassandraIntegrationTest(buildCluster = false)
     void testWithSSLOnly(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
     {
         configureAndStartCluster(cassandraContext, false, false);
@@ -93,7 +80,7 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     {
         cassandraContext.configureAndStartCluster(builder -> {
             builder.appendConfig(config -> config.set("client_encryption_options.enabled", "true")
-                                                 .set("client_encryption_options.optional", "true")
+                                                 .set("client_encryption_options.optional", "false")
                                                  .set("client_encryption_options.require_client_auth", "true")
                                                  .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
                                                  .set("client_encryption_options.keystore_password", serverKeystorePassword)
@@ -114,9 +101,16 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
 
     private void setPasswordAuthenticator(ConfigurableCassandraTestContext cassandraContext, UpgradeableCluster.Builder builder)
     {
-            builder.appendConfig(config -> config.set("authenticator", "PasswordAuthenticator")
-                                                 .set("role_manager", "CassandraRoleManager")
+        if (cassandraContext.version.major == 5)
+        {
+            builder.appendConfig(config -> config.set("authenticator.class_name", "PasswordAuthenticator")
+                                                 .set("role_manager.class_name", "CassandraRoleManager")
                                                  .set("authorizer", "CassandraAuthorizer"));
+            return;
+        }
+        builder.appendConfig(config -> config.set("authenticator", "PasswordAuthenticator")
+                                             .set("role_manager", "CassandraRoleManager")
+                                             .set("authorizer", "CassandraAuthorizer"));
     }
 
     private void setMTLSAuthenticator(UpgradeableCluster.Builder  builder)
