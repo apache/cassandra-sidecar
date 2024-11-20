@@ -59,8 +59,12 @@ public class NamedMetric<T extends Metric>
         private final Function<String, T> metricCreator;
         private final List<Tag> tags = new ArrayList<>();
         private String domain;
-        private String name;
+        private String simpleName;
 
+        /**
+         * Construct the build with the function to create metric
+         * @param metricCreator function to create metric from the canonical name, which consists of the domain, tags and the simple name.
+         */
         public Builder(Function<String, T> metricCreator)
         {
             this.metricCreator = metricCreator;
@@ -78,14 +82,14 @@ public class NamedMetric<T extends Metric>
         }
 
         /**
-         * Sets {@code name} of metric.
+         * Sets the simple {@code name} of metric.
          *
-         * @param name metric name
+         * @param simpleName simply metric name
          * @return a reference to this Builder
          */
-        public Builder<T> withName(String name)
+        public Builder<T> withName(String simpleName)
         {
-            return update(b -> b.name = name);
+            return update(b -> b.simpleName = simpleName);
         }
 
         /**
@@ -124,7 +128,7 @@ public class NamedMetric<T extends Metric>
         {
             Objects.requireNonNull(metricCreator);
             Objects.requireNonNull(domain);
-            Objects.requireNonNull(name);
+            Objects.requireNonNull(simpleName);
 
             return new NamedMetric<>(this);
         }
@@ -133,7 +137,7 @@ public class NamedMetric<T extends Metric>
         {
             String domainPart = domain + '.';
             String combinedTags = !tags.isEmpty() ? combineTags() + '.' : "";
-            return domainPart + combinedTags + name;
+            return domainPart + combinedTags + simpleName;
         }
 
         private String combineTags()

@@ -87,6 +87,7 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
                         asyncResult -> {
                             RestoreJobProgressResponsePayload respBody = assertOKResponseAndExtractBody(asyncResult);
                             assertPendingProgressRespBody(respBody);
+                            assertThat(sidecarMetrics.server().restore().consistencyCheckTime.metric.getSnapshot().getValues()).hasSize(1);
                         });
     }
 
@@ -159,6 +160,7 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
                             assertThat(respBody.abortedRanges()).isNull();
                             // retrieving all 2 ranges back
                             assertThat(rangesRetrieved).isEqualTo(2);
+                            assertThat(sidecarMetrics.server().restore().consistencyCheckTime.metric.getSnapshot().getValues()).hasSize(1);
                         });
     }
 
@@ -183,6 +185,7 @@ class RestoreJobProgressHandlerTest extends BaseRestoreJobTests
                             assertThat(respBody.abortedRanges()).isNull();
                             // retrieving all 2 ranges back, while there are 3 ranges in total. One range is satisfied
                             assertThat(rangesRetrieved).isEqualTo(2);
+                            assertThat(sidecarMetrics.server().restore().consistencyCheckTime.metric.getSnapshot().getValues()).hasSize(1);
                         });
     }
 

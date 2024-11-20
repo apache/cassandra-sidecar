@@ -69,6 +69,7 @@ import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer;
 import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.restore.RestoreJobProgressTracker;
@@ -98,6 +99,7 @@ public abstract class BaseRestoreJobTests
     protected Vertx vertx;
     protected Server server;
     protected WebClient client;
+    protected SidecarMetrics sidecarMetrics;
     protected TestRestoreJobDatabaseAccessor testRestoreJobs;
     protected TestRestoreSliceDatabaseAccessor testRestoreSlices;
     protected TestRestoreRangeDatabaseAccessor testRestoreRanges;
@@ -114,6 +116,7 @@ public abstract class BaseRestoreJobTests
                                                                      .with(new TestModuleOverride())));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
+        sidecarMetrics = injector.getInstance(SidecarMetrics.class);
         client = WebClient.create(vertx, new WebClientOptions());
         testRestoreJobs = (TestRestoreJobDatabaseAccessor) injector.getInstance(RestoreJobDatabaseAccessor.class);
         testRestoreSlices = (TestRestoreSliceDatabaseAccessor) injector.getInstance(RestoreSliceDatabaseAccessor.class);

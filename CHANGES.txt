@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add metric to report consistency check duration (CASSSIDECAR-165)
  * Add mTLS Authentication in Sidecar (CASSANDRASC-156)
  * Fix dangling restore jobs (CASSANDRASC-155)
  * Remove duplicated AbstractSchema class (CASSANDRASC-154)

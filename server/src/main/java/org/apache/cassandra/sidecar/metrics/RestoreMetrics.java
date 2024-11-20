@@ -19,8 +19,10 @@
 package org.apache.cassandra.sidecar.metrics;
 
 import java.util.Objects;
+import java.util.function.Function;
 
 import com.codahale.metrics.DefaultSettableGauge;
+import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 
@@ -35,6 +37,7 @@ public class RestoreMetrics
     protected final MetricRegistry metricRegistry;
     public final NamedMetric<Timer> sliceReplicationTime;
     public final NamedMetric<Timer> jobCompletionTime;
+    public final NamedMetric<Timer> consistencyCheckTime;
     public final NamedMetric<DeltaGauge> successfulJobs;
     public final NamedMetric<DeltaGauge> failedJobs;
     public final NamedMetric<DefaultSettableGauge<Integer>> activeJobs;
@@ -46,39 +49,22 @@ public class RestoreMetrics
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        sliceReplicationTime
-        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("SliceReplicationTime").build();
-        jobCompletionTime
-        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("JobCompletionTime").build();
-        successfulJobs
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("SuccessfulJobs")
-                     .build();
-        failedJobs
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("FailedJobs")
-                     .build();
-        activeJobs
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
-                     .withDomain(DOMAIN)
-                     .withName("ActiveJobs")
-                     .build();
-        tokenRefreshed
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("TokenRefreshed")
-                     .build();
-        tokenUnauthorized
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("TokenUnauthorized")
-                     .build();
-        tokenExpired
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("TokenExpired")
-                     .build();
+        sliceReplicationTime = createMetric("SliceReplicationTime", metricRegistry::timer);
+        jobCompletionTime = createMetric("JobCompletionTime", metricRegistry::timer);
+        consistencyCheckTime = createMetric("ConsistencyCheckTime", metricRegistry::timer);
+        successfulJobs = createMetric("SuccessfulJobs", name -> metricRegistry.gauge(name, DeltaGauge::new));
+        failedJobs = createMetric("FailedJobs", name -> metricRegistry.gauge(name, DeltaGauge::new));
+        activeJobs = createMetric("ActiveJobs", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)));
+        tokenRefreshed = createMetric("TokenRefreshed", name -> metricRegistry.gauge(name, DeltaGauge::new));
+        tokenUnauthorized = createMetric("TokenUnauthorized", name -> metricRegistry.gauge(name, DeltaGauge::new));
+        tokenExpired = createMetric("TokenExpired",  name -> metricRegistry.gauge(name, DeltaGauge::new));
+    }
+
+    private <T extends Metric> NamedMetric<T> createMetric(String simpleName, Function<String, T> metricCreator)
+    {
+        return NamedMetric.builder(metricCreator)
+                          .withDomain(DOMAIN)
+                          .withName(simpleName)
+                          .build();
     }
 }

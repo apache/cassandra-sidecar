@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,9 @@ import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
+import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.StopWatch;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -67,18 +71,21 @@ public class RestoreJobConsistencyLevelChecker
     private final RestoreJobDiscoverer restoreJobDiscoverer;
     private final RestoreRangeDatabaseAccessor rangeDatabaseAccessor;
     private final TaskExecutorPool taskExecutorPool;
+    private final RestoreMetrics restoreMetrics;
     private volatile boolean firstTimeSinceImportReady = true;
 
     @Inject
     public RestoreJobConsistencyLevelChecker(RingTopologyRefresher ringTopologyRefresher,
                                              RestoreJobDiscoverer restoreJobDiscoverer,
                                              RestoreRangeDatabaseAccessor rangeDatabaseAccessor,
-                                             ExecutorPools executorPools)
+                                             ExecutorPools executorPools,
+                                             SidecarMetrics sidecarMetrics)
     {
         this.ringTopologyRefresher = ringTopologyRefresher;
         this.restoreJobDiscoverer = restoreJobDiscoverer;
         this.rangeDatabaseAccessor = rangeDatabaseAccessor;
         this.taskExecutorPool = executorPools.internal();
+        this.restoreMetrics = sidecarMetrics.server().restore();
     }
 
     public Future<RestoreJobProgress> check(RestoreJob restoreJob, RestoreJobProgressFetchPolicy fetchPolicy)
@@ -90,8 +97,10 @@ public class RestoreJobConsistencyLevelChecker
         RestoreJobProgressCollector collector = RestoreJobProgressCollectors.create(restoreJob, fetchPolicy);
         RestoreRangeStatus successCriteria = restoreJob.expectedNextRangeStatus();
         ConsistencyVerifier verifier = ConsistencyVerifiers.forConsistencyLevel(restoreJob.consistencyLevel, restoreJob.localDatacenter);
-        return ringTopologyRefresher.replicaByTokenRangeAsync(restoreJob)
-                                    .compose(topology -> findRangesAndConclude(restoreJob, successCriteria, topology, verifier, collector));
+        Future<RestoreJobProgress> future = ringTopologyRefresher
+                                            .replicaByTokenRangeAsync(restoreJob)
+                                            .compose(topology -> findRangesAndConclude(restoreJob, successCriteria, topology, verifier, collector));
+        return StopWatch.measureTimeTaken(future, durationNanos -> restoreMetrics.consistencyCheckTime.metric.update(durationNanos, TimeUnit.NANOSECONDS));
     }
 
     private Future<RestoreJobProgress> findRangesAndConclude(RestoreJob restoreJob,
