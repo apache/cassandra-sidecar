@@ -36,7 +36,7 @@ import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.jetbrains.annotations.VisibleForTesting;
 
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
 /**
  * Caches information needed for authenticating sidecar users.
@@ -133,7 +133,7 @@ public abstract class AuthCache<K, V>
     private void configureSidecarServerEventListener()
     {
         EventBus eventBus = vertx.eventBus();
-        eventBus.localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(), message -> warmUpAsync(config.warmupRetries()));
+        eventBus.localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(), message -> warmUpAsync(config.warmupRetries()));
     }
 
     private void warmUpAsync(int availableRetries)
@@ -159,6 +159,7 @@ public abstract class AuthCache<K, V>
         try
         {
             cache.putAll(bulkLoadFunction.get());
+            LOGGER.info("Warm up succeeded");
         }
         catch (Exception e)
         {

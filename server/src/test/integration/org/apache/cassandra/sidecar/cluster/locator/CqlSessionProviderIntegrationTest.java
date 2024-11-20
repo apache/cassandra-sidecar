@@ -34,6 +34,7 @@ import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import software.amazon.awssdk.utils.ImmutableMap;
 
 import static org.apache.cassandra.sidecar.testing.IntegrationTestModule.ADMIN_IDENTITY;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +44,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
  * Test for authenticated {@link org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl}
  */
 @ExtendWith(VertxExtension.class)
-class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
+class CqlSessionProviderIntegrationTest extends IntegrationTestBase
 {
     private static final int MIN_VERSION_WITH_MTLS = 5;
 
@@ -62,21 +63,16 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(buildCluster = false)
     void testWithSSLOnly(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
     {
-        // Test fails for 4.0, we see Protocol exception with client networking: org.apache.cassandra.transport.ProtocolException: Invalid or unsupported protocol version (22); supported versions are (3/v3, 4/v4, 5/v5, 6/v6-beta),
-        assumeThat(sidecarTestContext.version.major)
-        .withFailMessage("Test failing for 4.0, probably because of mismatch in protocol version")
-        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
-
         cassandraContext.configureAndStartCluster(builder -> {
-            builder.appendConfig(config -> config.set("client_encryption_options.enabled", "true")
-                                                 .set("client_encryption_options.protocol", "TLS")
-                                                 .set("client_encryption_options.require_client_auth", "false")
-                                                 .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
-                                                 .set("client_encryption_options.keystore_password", serverKeystorePassword));
+            builder.appendConfig(config ->
+                                 config.set("client_encryption_options", ImmutableMap.of("enabled", "true",
+                                                                                         "require_client_auth", "false",
+                                                                                         "keystore", serverKeystorePath.toAbsolutePath().toString(),
+                                                                                         "keystore_password", serverKeystorePassword)));
         });
         sidecarTestContext.setSslConfiguration(sslConfigWithTruststore());
         waitForSchemaReady(30, TimeUnit.SECONDS);
-        // we enable SSL only and do not set any authenticator, hence username is "anonymous"
+        // we enable only SSL and do not set any authenticator, hence username is "anonymous"
         retrieveClientStats(context, "anonymous", true);
     }
 
@@ -92,6 +88,7 @@ class CqlSessionProviderWithAuthIntegrationTest extends IntegrationTestBase
             builder.appendConfig(config -> config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
                                                  .set("authenticator.parameters.validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator")
                                                  .set("client_encryption_options.enabled", "true")
+                                                 .set("client_encryption_options.optional", "true")
 //                                                 .set("client_encryption_options.protocol", "TLS")
                                                  .set("client_encryption_options.require_client_auth", "true")
                                                  .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
