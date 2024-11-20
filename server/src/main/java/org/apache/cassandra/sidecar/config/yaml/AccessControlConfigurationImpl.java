@@ -67,7 +67,7 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     @JsonProperty
