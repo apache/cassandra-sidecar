@@ -65,6 +65,7 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
     {
         cassandraContext.configureAndStartCluster(builder -> {
             builder.appendConfig(config ->
+                                 // dot-separated options are not supported in 4.0
                                  config.set("client_encryption_options", ImmutableMap.of("enabled", "true",
                                                                                          "require_client_auth", "false",
                                                                                          "keystore", serverKeystorePath.toAbsolutePath().toString(),
@@ -89,7 +90,6 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
                                                  .set("authenticator.parameters.validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator")
                                                  .set("client_encryption_options.enabled", "true")
                                                  .set("client_encryption_options.optional", "true")
-//                                                 .set("client_encryption_options.protocol", "TLS")
                                                  .set("client_encryption_options.require_client_auth", "true")
                                                  .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
                                                  .set("client_encryption_options.keystore_password", serverKeystorePassword)
