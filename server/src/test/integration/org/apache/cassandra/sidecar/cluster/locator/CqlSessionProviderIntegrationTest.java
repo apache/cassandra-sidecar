@@ -128,30 +128,31 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
         String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
         WebClient client = mTLSClient();
         client.get(server.actualPort(), "127.0.0.1", testRoute)
-              .send(context.succeeding(response -> context.verify(() -> {
-                  ConnectedClientStatsResponse clientStatsResponse = response.bodyAsJson(ConnectedClientStatsResponse.class);
-                  assertThat(clientStatsResponse).isNotNull();
+              .send(context.succeeding(response -> {
+                  context.verify(() -> {
+                      ConnectedClientStatsResponse clientStatsResponse = response.bodyAsJson(ConnectedClientStatsResponse.class);
+                      assertThat(clientStatsResponse).isNotNull();
 
-                  for (ClientConnectionEntry entry : clientStatsResponse.clientConnections())
-                  {
-                      assertThat(entry.username()).isEqualTo(expectedUsername);
-                      if (checkSsl && entry.sslEnabled())
+                      boolean seeSslConnection = false;
+                      for (ClientConnectionEntry entry : clientStatsResponse.clientConnections())
                       {
-                          // We expect some connections to be non-SSL (i.e. for identity setup)
-                          // and some connections to be SSL (Sidecar connecting to the cluster)
-                          // so from the list of client connections we should see at least
-                          // two (regular+control) connections.
-                          context.completeNow();
-                          return;
+                          assertThat(entry.username()).isEqualTo(expectedUsername);
+                          if (checkSsl && entry.sslEnabled())
+                          {
+                              seeSslConnection = true;
+                              break;
+                          }
                       }
-                  }
-                  if (checkSsl)
-                  {
-                      context.failNow("Did not see any SSL connection");
-                      return;
-                  }
+                      // We expect some connections to be non-SSL (i.e. for identity setup)
+                      // and some connections to be SSL (Sidecar connecting to the cluster)
+                      // so from the list of client connections we should see at least
+                      // two (regular+control) connections.
+                      assertThat(seeSslConnection)
+                      .describedAs("Did not see any SSL connection")
+                      .isTrue();
+                  });
                   context.completeNow();
-              })));
+              }));
     }
 
     private void insertIdentityRole(String identity, String role)
