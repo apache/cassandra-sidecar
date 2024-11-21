@@ -31,11 +31,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
 import org.slf4j.Logger;
@@ -128,66 +128,6 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         this.nettyOptions = options;
         int maxDelayMs = configuration.healthCheckConfiguration().checkIntervalMillis();
         this.reconnectionPolicy = new ExponentialReconnectionPolicy(500, maxDelayMs);
-    }
-
-    private SSLContext createSslContext(SslConfiguration sslConfiguration)
-    {
-        if (sslConfiguration == null || !sslConfiguration.enabled())
-        {
-            return null;
-        }
-       validateSslConfig(sslConfiguration);
-
-        SSLContext sslContext;
-        try
-        {
-            sslContext = SSLContext.getInstance("TLS");
-
-            KeyManagerFactory kmf = null;
-            if (sslConfiguration.isKeystoreConfigured())
-            {
-                KeyStore keyStore = createKeystore(sslConfiguration.keystore());
-                kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-                kmf.init(keyStore, sslConfiguration.keystore().password().toCharArray());
-            }
-
-            KeyStore truststore = createKeystore(sslConfiguration.truststore());
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmf.init(truststore);
-
-            KeyManager[] km = kmf != null ? kmf.getKeyManagers() : null;
-            sslContext.init(km, tmf.getTrustManagers(), SECURE_RANDOM);
-            SSLParameters sslParameters = sslContext.getDefaultSSLParameters();
-            sslParameters.setProtocols(sslConfiguration.secureTransportProtocols().toArray(new String[0]));
-            return sslContext;
-        }
-        catch (Exception e)
-        {
-            throw new ConfigurationException("Error creating SSLContext for Cassandra connections", e);
-        }
-    }
-
-    private void validateSslConfig(SslConfiguration sslConfiguration)
-    {
-        if (!sslConfiguration.isTrustStoreConfigured())
-        {
-            throw new ConfigurationException("SSL configured for Cassandra connection, but truststore is missing");
-        }
-        if (sslConfiguration.clientAuth().equalsIgnoreCase("REQUIRED") && !sslConfiguration.isKeystoreConfigured())
-        {
-            throw new ConfigurationException("mutual TLS is configured for Cassandra connection, but keystore is missing");
-        }
-    }
-
-    private KeyStore createKeystore(KeyStoreConfiguration config)
-    throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException
-    {
-        KeyStore keystore = KeyStore.getInstance(config.type());
-        try (FileInputStream inputStream = new FileInputStream(config.path()))
-        {
-            keystore.load(inputStream, config.password().toCharArray());
-        }
-        return keystore;
     }
 
     static RuntimeException propagateCause(ExecutionException e)
@@ -311,6 +251,58 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         }
     }
 
+    private SSLContext createSslContext(SslConfiguration sslConfiguration)
+    {
+        if (sslConfiguration == null || !sslConfiguration.enabled())
+        {
+            return null;
+        }
+
+        SSLContext sslContext;
+        try
+        {
+            sslContext = SSLContext.getInstance("TLS");
+
+            KeyManagerFactory kmf = null;
+            if (sslConfiguration.isKeystoreConfigured())
+            {
+                KeyStore keyStore = createKeystore(sslConfiguration.keystore());
+                kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf.init(keyStore, sslConfiguration.keystore().password().toCharArray());
+            }
+
+            TrustManagerFactory tmf = null;
+            if (sslConfiguration.isTrustStoreConfigured())
+            {
+                KeyStore truststore = createKeystore(sslConfiguration.truststore());
+                tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                tmf.init(truststore);
+            }
+
+            KeyManager[] km = kmf != null ? kmf.getKeyManagers() : null;
+            TrustManager[] tm = tmf != null ? tmf.getTrustManagers() : null;
+            sslContext.init(km, tm, SECURE_RANDOM);
+            SSLParameters sslParameters = sslContext.getDefaultSSLParameters();
+            sslParameters.setProtocols(sslConfiguration.secureTransportProtocols().toArray(new String[0]));
+            return sslContext;
+        }
+        catch (Exception e)
+        {
+            throw new ConfigurationException("Error creating SSLContext for Cassandra connections", e);
+        }
+    }
+
+    private KeyStore createKeystore(KeyStoreConfiguration config)
+    throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException
+    {
+        KeyStore keystore = KeyStore.getInstance(config.type());
+        try (FileInputStream inputStream = new FileInputStream(config.path()))
+        {
+            keystore.load(inputStream, config.password().toCharArray());
+        }
+        return keystore;
+    }
+
     /**
      * {@link MtlsAuthProvider} is a custom AuthProvider. It is required when driver needs to connect to Cassandra with
      * mutual TLS.
@@ -325,16 +317,19 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
 
         private static class MutualTLSAuthenticator implements Authenticator
         {
+            @Override
             public byte[] initialResponse()
             {
-                return new byte[]{0, 0};
+                return new byte[]{ 0, 0 };
             }
 
+            @Override
             public byte[] evaluateChallenge(byte[] bytes)
             {
                 return null;
             }
 
+            @Override
             public void onAuthenticationSuccess(byte[] bytes)
             {
                 // no op

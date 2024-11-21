@@ -87,7 +87,8 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
 
         cassandraContext.configureAndStartCluster(builder -> {
             builder.appendConfig(config -> config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
-                                                 .set("authenticator.parameters", Collections.singletonMap("validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator"))
+                                                 .set("authenticator.parameters", Collections.singletonMap("validator_class_name",
+                                                                                                           "org.apache.cassandra.auth.SpiffeCertificateValidator"))
                                                  .set("role_manager", "CassandraRoleManager")
                                                  .set("authorizer", "CassandraAuthorizer")
                                                  .set("client_encryption_options.enabled", "true")
@@ -136,6 +137,10 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
                       assertThat(entry.username()).isEqualTo(expectedUsername);
                       if (checkSsl && entry.sslEnabled())
                       {
+                          // We expect some connections to be non-SSL (i.e. for identity setup)
+                          // and some connections to be SSL (Sidecar connecting to the cluster)
+                          // so from the list of client connections we should see at least
+                          // two (regular+control) connections.
                           context.completeNow();
                           return;
                       }

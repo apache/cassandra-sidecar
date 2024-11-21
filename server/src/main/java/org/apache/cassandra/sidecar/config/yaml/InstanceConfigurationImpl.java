@@ -74,15 +74,15 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
     }
 
     public InstanceConfigurationImpl(int id,
-                                        String host,
-                                        int port,
-                                        List<String> dataDirs,
-                                        String stagingDir,
-                                        String jmxHost,
-                                        int jmxPort,
-                                        boolean jmxSslEnabled,
-                                        String jmxRole,
-                                        String jmxRolePassword)
+                                     String host,
+                                     int port,
+                                     List<String> dataDirs,
+                                     String stagingDir,
+                                     String jmxHost,
+                                     int jmxPort,
+                                     boolean jmxSslEnabled,
+                                     String jmxRole,
+                                     String jmxRolePassword)
     {
         this.id = id;
         this.host = host;

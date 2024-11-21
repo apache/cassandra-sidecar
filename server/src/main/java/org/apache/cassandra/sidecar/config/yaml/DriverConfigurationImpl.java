@@ -56,11 +56,11 @@ public class DriverConfigurationImpl implements DriverConfiguration
     }
 
     public DriverConfigurationImpl(List<InetSocketAddress> contactPoints,
-                               String localDc,
-                               int numConnections,
-                               String username,
-                               String password,
-                               SslConfiguration sslConfiguration)
+                                   String localDc,
+                                   int numConnections,
+                                   String username,
+                                   String password,
+                                   SslConfiguration sslConfiguration)
     {
         this.contactPoints = contactPoints;
         this.localDc = localDc;
