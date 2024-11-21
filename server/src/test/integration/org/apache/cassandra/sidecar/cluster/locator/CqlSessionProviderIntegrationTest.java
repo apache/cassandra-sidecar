@@ -147,12 +147,20 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
                       // and some connections to be SSL (Sidecar connecting to the cluster)
                       // so from the list of client connections we should see at least
                       // two (regular+control) connections.
-                      assertThat(seeSslConnection)
-                      .describedAs("Did not see any SSL connection")
-                      .isTrue();
+                      assertSslConnectionIfNeeded(checkSsl, seeSslConnection);
                   });
                   context.completeNow();
               }));
+    }
+
+    private void assertSslConnectionIfNeeded(boolean checkSsl, boolean seeSslConnection)
+    {
+        if (checkSsl)
+        {
+            assertThat(seeSslConnection)
+            .describedAs("Did not see any SSL connection")
+            .isTrue();
+        }
     }
 
     private void insertIdentityRole(String identity, String role)

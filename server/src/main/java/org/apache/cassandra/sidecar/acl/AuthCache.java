@@ -133,6 +133,10 @@ public abstract class AuthCache<K, V>
     private void configureSidecarServerEventListener()
     {
         EventBus eventBus = vertx.eventBus();
+
+        // Initiating warmup at ON_SIDECAR_SCHEMA_INITIALIZED because load functions interact with the database.
+        // These functions may either directly execute CQL statements or use AbstractSchema. Therefore, it's preferable
+        // to wait for the schema to be ready, as it ensures CQL is also ready.
         eventBus.localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(), message -> warmUpAsync(config.warmupRetries()));
     }
 
