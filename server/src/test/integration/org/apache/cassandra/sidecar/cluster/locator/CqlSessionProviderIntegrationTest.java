@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.cluster.locator;
 
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,7 +60,6 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
         retrieveClientStats(context, "cassandra", false);
     }
 
-
     @CassandraIntegrationTest(buildCluster = false)
     void testWithSSLOnly(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
     {
@@ -87,20 +87,21 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
 
         cassandraContext.configureAndStartCluster(builder -> {
             builder.appendConfig(config -> config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
-                                                 .set("authenticator.parameters.validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator")
+                                                 .set("authenticator.parameters", Collections.singletonMap("validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator"))
+                                                 .set("role_manager", "CassandraRoleManager")
+                                                 .set("authorizer", "CassandraAuthorizer")
                                                  .set("client_encryption_options.enabled", "true")
                                                  .set("client_encryption_options.optional", "true")
                                                  .set("client_encryption_options.require_client_auth", "true")
+                                                 .set("client_encryption_options.require_endpoint_verification", "false")
                                                  .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
                                                  .set("client_encryption_options.keystore_password", serverKeystorePassword)
                                                  .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
                                                  .set("client_encryption_options.truststore_password", truststorePassword));
         });
-        sidecarTestContext.refreshInstancesConfig();
         waitForSchemaReady(30, TimeUnit.SECONDS);
-        insertIdentityRole(ADMIN_IDENTITY, "cassandra-role");
+        insertIdentityRole(ADMIN_IDENTITY, "cassandra");
         sidecarTestContext.setSslConfiguration(sslConfigWithKeystoreTruststore());
-        waitForSchemaReady(30, TimeUnit.SECONDS);
         retrieveClientStats(context, "cassandra", true);
     }
 
@@ -116,7 +117,7 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
     {
         return SslConfigurationImpl.builder()
                                    .enabled(true)
-                                   .truststore(new KeyStoreConfigurationImpl(clientKeystorePath.toAbsolutePath().toString(), clientKeystorePassword, "PKCS12"))
+                                   .keystore(new KeyStoreConfigurationImpl(clientKeystorePath.toAbsolutePath().toString(), clientKeystorePassword, "PKCS12"))
                                    .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
                                    .build();
     }
@@ -133,10 +134,16 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
                   for (ClientConnectionEntry entry : clientStatsResponse.clientConnections())
                   {
                       assertThat(entry.username()).isEqualTo(expectedUsername);
-                      if (checkSsl)
+                      if (checkSsl && entry.sslEnabled())
                       {
-                          assertThat(entry.sslEnabled()).isTrue();
+                          context.completeNow();
+                          return;
                       }
+                  }
+                  if (checkSsl)
+                  {
+                      context.failNow("Did not see any SSL connection");
+                      return;
                   }
                   context.completeNow();
               }));

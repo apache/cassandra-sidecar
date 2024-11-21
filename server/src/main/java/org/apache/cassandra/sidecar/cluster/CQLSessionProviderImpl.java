@@ -40,6 +40,8 @@ import javax.net.ssl.TrustManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.AuthProvider;
+import com.datastax.driver.core.Authenticator;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.NettyOptions;
 import com.datastax.driver.core.QueryOptions;
@@ -58,6 +60,7 @@ import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import com.datastax.driver.core.exceptions.AuthenticationException;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -231,15 +234,15 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
                      // event thread pools for each we have the override
                      .withNettyOptions(nettyOptions);
 
-            if (username != null && password != null)
-            {
-                builder.withCredentials(username, password);
-            }
             if (sslContext != null)
             {
                 RemoteEndpointAwareJdkSSLOptions sslOptions
                 = new RemoteEndpointAwareJdkSSLOptions.Builder().withSSLContext(sslContext).build();
-                builder.withSSL(sslOptions);
+                builder.withSSL(sslOptions).withAuthProvider(new MtlsAuthProvider());
+            }
+            else if (username != null && password != null)
+            {
+                builder.withCredentials(username, password);
             }
 
             cluster = builder.build();
@@ -296,6 +299,37 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
             catch (ExecutionException e)
             {
                 throw propagateCause(e);
+            }
+        }
+    }
+
+    /**
+     * {@link MtlsAuthProvider} is a custom AuthProvider. It is required when driver needs to connect to Cassandra with
+     * mutual TLS.
+     */
+    private static class MtlsAuthProvider implements AuthProvider
+    {
+        @Override
+        public Authenticator newAuthenticator(InetSocketAddress inetSocketAddress, String s) throws AuthenticationException
+        {
+            return new MutualTLSAuthenticator();
+        }
+
+        private static class MutualTLSAuthenticator implements Authenticator
+        {
+            public byte[] initialResponse()
+            {
+                return new byte[]{0, 0};
+            }
+
+            public byte[] evaluateChallenge(byte[] bytes)
+            {
+                return null;
+            }
+
+            public void onAuthenticationSuccess(byte[] bytes)
+            {
+                // no op
             }
         }
     }
