@@ -128,7 +128,7 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
         String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
         WebClient client = mTLSClient();
         client.get(server.actualPort(), "127.0.0.1", testRoute)
-              .send(context.succeeding(response -> {
+              .send(context.succeeding(response -> context.verify(() -> {
                   ConnectedClientStatsResponse clientStatsResponse = response.bodyAsJson(ConnectedClientStatsResponse.class);
                   assertThat(clientStatsResponse).isNotNull();
 
@@ -151,7 +151,7 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
                       return;
                   }
                   context.completeNow();
-              }));
+              })));
     }
 
     private void insertIdentityRole(String identity, String role)
