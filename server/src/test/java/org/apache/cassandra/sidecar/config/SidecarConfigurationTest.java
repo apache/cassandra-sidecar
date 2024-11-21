@@ -198,6 +198,7 @@ class SidecarConfigurationTest
         assertThat(driverConfiguration.password()).isEqualTo("cassandra");
         SslConfiguration sslConfiguration = driverConfiguration.sslConfiguration();
         assertThat(sslConfiguration.enabled()).isTrue();
+        assertThat(sslConfiguration.secureTransportProtocols().size()).isEqualTo(2);
         assertThat(sslConfiguration.isKeystoreConfigured()).isTrue();
         assertThat(sslConfiguration.keystore().type()).isEqualTo("PKCS12");
         assertThat(sslConfiguration.keystore().path()).isEqualTo("path/to/keystore.p12");

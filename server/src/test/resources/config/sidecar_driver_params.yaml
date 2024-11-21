@@ -6,6 +6,9 @@ driver_parameters:
   password: cassandra
   ssl:
     enabled: true
+    accepted_protocols:
+      - TLSv1.2
+      - TLSv1.3
     keystore:
       type: PKCS12
       path: path/to/keystore.p12

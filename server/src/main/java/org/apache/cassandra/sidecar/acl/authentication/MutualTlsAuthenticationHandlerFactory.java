@@ -74,12 +74,14 @@ public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHand
 
         if (!parameters.containsKey(CERTIFICATE_VALIDATOR_PARAM_KEY))
         {
-            throw new ConfigurationException(String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation", CERTIFICATE_VALIDATOR_PARAM_KEY));
+            throw new ConfigurationException(String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation",
+                                                           CERTIFICATE_VALIDATOR_PARAM_KEY));
         }
 
         if (!parameters.containsKey(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY))
         {
-            throw new ConfigurationException(String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation", CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
+            throw new ConfigurationException(String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation",
+                                                           CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
         }
     }
 

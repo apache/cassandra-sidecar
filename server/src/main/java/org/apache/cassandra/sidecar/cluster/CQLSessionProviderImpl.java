@@ -48,6 +48,7 @@ import com.datastax.driver.core.NettyOptions;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.RemoteEndpointAwareJdkSSLOptions;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.exceptions.AuthenticationException;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.DriverInternalError;
 import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
@@ -61,7 +62,6 @@ import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
-import com.datastax.driver.core.exceptions.AuthenticationException;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -172,6 +172,10 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         if (!sslConfiguration.isTrustStoreConfigured())
         {
             throw new ConfigurationException("SSL configured for Cassandra connection, but truststore is missing");
+        }
+        if (sslConfiguration.clientAuth().equalsIgnoreCase("REQUIRED") && !sslConfiguration.isKeystoreConfigured())
+        {
+            throw new ConfigurationException("mutual TLS is configured for Cassandra connection, but keystore is missing");
         }
     }
 

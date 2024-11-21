@@ -53,4 +53,25 @@ class CqlSessionProviderImplTest
         .isInstanceOf(ConfigurationException.class)
         .hasMessage("SSL configured for Cassandra connection, but truststore is missing");
     }
+
+    @Test
+    void testKeystoreRequiredForMTLSConnection()
+    {
+        SslConfiguration withoutTruststore = SslConfigurationImpl.builder()
+                                                                 .enabled(true)
+                                                                 .clientAuth("REQUIRED")
+                                                                 .truststore(new KeyStoreConfigurationImpl("/path", "password", "type"))
+                                                                 .build();
+        assertThatThrownBy(() -> new CQLSessionProviderImpl(Collections.emptyList(),
+                                                            Collections.emptyList(),
+                                                            0,
+                                                            "dc",
+                                                            0,
+                                                            null,
+                                                            null,
+                                                            withoutTruststore,
+                                                            null))
+        .isInstanceOf(ConfigurationException.class)
+        .hasMessage("mutual TLS is configured for Cassandra connection, but keystore is missing");
+    }
 }
