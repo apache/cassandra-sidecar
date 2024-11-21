@@ -159,7 +159,6 @@ public abstract class AuthCache<K, V>
         try
         {
             cache.putAll(bulkLoadFunction.get());
-            LOGGER.info("Warm up succeeded");
         }
         catch (Exception e)
         {

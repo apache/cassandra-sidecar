@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManagerFactory;
 
 import org.slf4j.Logger;
@@ -156,6 +157,8 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
 
             KeyManager[] km = kmf != null ? kmf.getKeyManagers() : null;
             sslContext.init(km, tmf.getTrustManagers(), SECURE_RANDOM);
+            SSLParameters sslParameters = sslContext.getDefaultSSLParameters();
+            sslParameters.setProtocols(sslConfiguration.secureTransportProtocols().toArray(new String[0]));
             return sslContext;
         }
         catch (Exception e)
@@ -238,7 +241,8 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
             {
                 RemoteEndpointAwareJdkSSLOptions sslOptions
                 = new RemoteEndpointAwareJdkSSLOptions.Builder().withSSLContext(sslContext).build();
-                builder.withSSL(sslOptions).withAuthProvider(new MtlsAuthProvider());
+                builder.withSSL(sslOptions)
+                       .withAuthProvider(new MtlsAuthProvider());
             }
             else if (username != null && password != null)
             {

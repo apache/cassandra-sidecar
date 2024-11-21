@@ -33,5 +33,5 @@
 
 
   <logger name="com.datastax.driver.core" level="ERROR" />
-  <logger name="com.datastax.driver.core.ControlConnection" level="ON" />
+  <logger name="com.datastax.driver.core.ControlConnection" level="OFF" />
 </configuration>
