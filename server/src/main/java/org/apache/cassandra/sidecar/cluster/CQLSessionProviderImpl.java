@@ -31,11 +31,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
 import org.slf4j.Logger;
@@ -46,7 +42,7 @@ import com.datastax.driver.core.Authenticator;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.NettyOptions;
 import com.datastax.driver.core.QueryOptions;
-import com.datastax.driver.core.RemoteEndpointAwareJdkSSLOptions;
+import com.datastax.driver.core.RemoteEndpointAwareNettySSLOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.AuthenticationException;
 import com.datastax.driver.core.exceptions.DriverException;
@@ -54,6 +50,8 @@ import com.datastax.driver.core.exceptions.DriverInternalError;
 import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.ReconnectionPolicy;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import org.apache.cassandra.sidecar.cluster.driver.SidecarLoadBalancingPolicy;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
@@ -81,7 +79,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     private final List<InetSocketAddress> localInstances;
     private final String username;
     private final String password;
-    private final SSLContext sslContext;
+    private final SslContext sslContext;
     private final DriverUtils driverUtils;
     @Nullable
     private volatile Session session;
@@ -181,16 +179,16 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
                      // event thread pools for each we have the override
                      .withNettyOptions(nettyOptions);
 
-            if (sslContext != null)
-            {
-                RemoteEndpointAwareJdkSSLOptions sslOptions
-                = new RemoteEndpointAwareJdkSSLOptions.Builder().withSSLContext(sslContext).build();
-                builder.withSSL(sslOptions)
-                       .withAuthProvider(new MtlsAuthProvider());
-            }
-            else if (username != null && password != null)
+            if (username != null && password != null)
             {
                 builder.withCredentials(username, password);
+            }
+            if (sslContext != null)
+            {
+                RemoteEndpointAwareNettySSLOptions sslOptions
+                = new RemoteEndpointAwareNettySSLOptions(sslContext);
+                builder.withSSL(sslOptions)
+                       .withAuthProvider(new MtlsAuthProvider());
             }
 
             cluster = builder.build();
@@ -251,44 +249,39 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         }
     }
 
-    private SSLContext createSslContext(SslConfiguration sslConfiguration)
+    private SslContext createSslContext(SslConfiguration sslConfiguration)
     {
         if (sslConfiguration == null || !sslConfiguration.enabled())
         {
             return null;
         }
 
-        SSLContext sslContext;
+        SslContextBuilder sslContextBuilder;
         try
         {
-            sslContext = SSLContext.getInstance("TLS");
+            sslContextBuilder = SslContextBuilder.forClient()
+                                                 .protocols(sslConfiguration.secureTransportProtocols());
 
-            KeyManagerFactory kmf = null;
             if (sslConfiguration.isKeystoreConfigured())
             {
                 KeyStore keyStore = createKeystore(sslConfiguration.keystore());
-                kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
                 kmf.init(keyStore, sslConfiguration.keystore().password().toCharArray());
+                sslContextBuilder.keyManager(kmf);
             }
 
-            TrustManagerFactory tmf = null;
             if (sslConfiguration.isTrustStoreConfigured())
             {
                 KeyStore truststore = createKeystore(sslConfiguration.truststore());
-                tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                 tmf.init(truststore);
+                sslContextBuilder.trustManager(tmf);
             }
-
-            KeyManager[] km = kmf != null ? kmf.getKeyManagers() : null;
-            TrustManager[] tm = tmf != null ? tmf.getTrustManagers() : null;
-            sslContext.init(km, tm, SECURE_RANDOM);
-            SSLParameters sslParameters = sslContext.getDefaultSSLParameters();
-            sslParameters.setProtocols(sslConfiguration.secureTransportProtocols().toArray(new String[0]));
-            return sslContext;
+            return sslContextBuilder.build();
         }
         catch (Exception e)
         {
-            throw new ConfigurationException("Error creating SSLContext for Cassandra connections", e);
+            throw new ConfigurationException("Error creating SsLContext for Cassandra connections", e);
         }
     }
 
