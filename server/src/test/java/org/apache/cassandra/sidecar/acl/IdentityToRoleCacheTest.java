@@ -38,7 +38,7 @@ import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -126,7 +126,7 @@ class IdentityToRoleCacheTest
     }
 
     @Test
-    void testCacheWarmingOnCqlReady()
+    void testCacheWarmingOnSchemaReady()
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test")).thenReturn("cassandra-role");
@@ -137,7 +137,7 @@ class IdentityToRoleCacheTest
         assertThat(identityToRoleCache.cache().asMap().size()).isZero();
 
         // warming cache
-        vertx.eventBus().publish(ON_ALL_CASSANDRA_CQL_READY.address(), new JsonObject());
+        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
 
         Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
 
