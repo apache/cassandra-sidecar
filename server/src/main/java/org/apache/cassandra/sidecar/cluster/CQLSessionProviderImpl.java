@@ -18,13 +18,14 @@
 
 package org.apache.cassandra.sidecar.cluster;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -70,16 +71,15 @@ import org.jetbrains.annotations.VisibleForTesting;
 public class CQLSessionProviderImpl implements CQLSessionProvider
 {
     private static final Logger logger = LoggerFactory.getLogger(CQLSessionProviderImpl.class);
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private final List<InetSocketAddress> contactPoints;
     private final int numConnections;
     private final String localDc;
+    private final SslConfiguration sslConfiguration;
     private final NettyOptions nettyOptions;
     private final ReconnectionPolicy reconnectionPolicy;
     private final List<InetSocketAddress> localInstances;
     private final String username;
     private final String password;
-    private final SslContext sslContext;
     private final DriverUtils driverUtils;
     @Nullable
     private volatile Session session;
@@ -101,7 +101,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         this.numConnections = numConnections;
         this.username = username;
         this.password = password;
-        this.sslContext = createSslContext(sslConfiguration);
+        this.sslConfiguration = sslConfiguration;
         this.nettyOptions = options;
         this.reconnectionPolicy = new ExponentialReconnectionPolicy(500, healthCheckFrequencyMillis);
         this.driverUtils = new DriverUtils();
@@ -121,7 +121,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         this.localDc = driverConfiguration.localDc();
         this.username = driverConfiguration.username();
         this.password = driverConfiguration.password();
-        this.sslContext = createSslContext(driverConfiguration.sslConfiguration());
+        this.sslConfiguration = driverConfiguration.sslConfiguration();
         this.numConnections = driverConfiguration.numConnections();
         this.nettyOptions = options;
         int maxDelayMs = configuration.healthCheckConfiguration().checkIntervalMillis();
@@ -179,16 +179,18 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
                      // event thread pools for each we have the override
                      .withNettyOptions(nettyOptions);
 
-            if (username != null && password != null)
-            {
-                builder.withCredentials(username, password);
-            }
+            SslContext sslContext = createSslContext(sslConfiguration);
             if (sslContext != null)
             {
                 RemoteEndpointAwareNettySSLOptions sslOptions
                 = new RemoteEndpointAwareNettySSLOptions(sslContext);
                 builder.withSSL(sslOptions)
                        .withAuthProvider(new MtlsAuthProvider());
+            }
+
+            if (username != null && password != null)
+            {
+                builder.withCredentials(username, password);
             }
 
             cluster = builder.build();
@@ -289,7 +291,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException
     {
         KeyStore keystore = KeyStore.getInstance(config.type());
-        try (FileInputStream inputStream = new FileInputStream(config.path()))
+        try (InputStream inputStream = Files.newInputStream(Paths.get(config.path())))
         {
             keystore.load(inputStream, config.password().toCharArray());
         }
