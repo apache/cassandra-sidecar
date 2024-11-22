@@ -38,14 +38,12 @@ import javax.net.ssl.TrustManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.AuthProvider;
-import com.datastax.driver.core.Authenticator;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.NettyOptions;
+import com.datastax.driver.core.PlainTextAuthProvider;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.RemoteEndpointAwareNettySSLOptions;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.exceptions.AuthenticationException;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.DriverInternalError;
 import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
@@ -184,13 +182,19 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
             {
                 RemoteEndpointAwareNettySSLOptions sslOptions
                 = new RemoteEndpointAwareNettySSLOptions(sslContext);
-                builder.withSSL(sslOptions)
-                       .withAuthProvider(new MtlsAuthProvider());
+                builder.withSSL(sslOptions);
             }
 
             if (username != null && password != null)
             {
                 builder.withCredentials(username, password);
+            }
+            // During mTLS connections, when client sends in keystore, we should have an AuthProvider passed along.
+            // hence we pass empty username and password in PlainTextAuthProvider here, in case user hasn't already
+            // configured username and password.
+            else if (sslConfiguration.isKeystoreConfigured())
+            {
+                builder.withAuthProvider(new PlainTextAuthProvider("", ""));
             }
 
             cluster = builder.build();
@@ -251,6 +255,11 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         }
     }
 
+    /**
+     * We configure the SslContext in the driver when establishing an SSL or mTLS connection with Cassandra. For an
+     * SSL connection, the driver only needs to provide the truststore, while Cassandra supplies its keystore for
+     * validation. In the case of an mTLS connection, both the keystore and truststore are configured on the driver side.
+     */
     private SslContext createSslContext(SslConfiguration sslConfiguration)
     {
         if (sslConfiguration == null || !sslConfiguration.enabled())
@@ -272,6 +281,8 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
                 sslContextBuilder.keyManager(kmf);
             }
 
+            // We set the truststore only if it is configured. For an SSL connection, if the truststore is required
+            // but the user has not provided one, the default Java truststore is used.
             if (sslConfiguration.isTrustStoreConfigured())
             {
                 KeyStore truststore = createKeystore(sslConfiguration.truststore());
@@ -296,39 +307,5 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
             keystore.load(inputStream, config.password().toCharArray());
         }
         return keystore;
-    }
-
-    /**
-     * {@link MtlsAuthProvider} is a custom AuthProvider. It is required when driver needs to connect to Cassandra with
-     * mutual TLS.
-     */
-    private static class MtlsAuthProvider implements AuthProvider
-    {
-        @Override
-        public Authenticator newAuthenticator(InetSocketAddress inetSocketAddress, String s) throws AuthenticationException
-        {
-            return new MutualTLSAuthenticator();
-        }
-
-        private static class MutualTLSAuthenticator implements Authenticator
-        {
-            @Override
-            public byte[] initialResponse()
-            {
-                return new byte[]{ 0, 0 };
-            }
-
-            @Override
-            public byte[] evaluateChallenge(byte[] bytes)
-            {
-                return null;
-            }
-
-            @Override
-            public void onAuthenticationSuccess(byte[] bytes)
-            {
-                // no op
-            }
-        }
     }
 }

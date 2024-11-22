@@ -77,6 +77,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
     public InstancesConfig instancesConfig;
     private List<JmxClient> jmxClients;
     private CQLSessionProvider sessionProvider;
+    private String username = "cassandra";
+    private String password = "cassandra";
     private SslConfiguration sslConfiguration;
 
     private CassandraSidecarTestContext(Vertx vertx,
@@ -169,6 +171,13 @@ public class CassandraSidecarTestContext implements AutoCloseable
         refreshInstancesConfig();
     }
 
+    public void setUsernamePassword(String username, String password)
+    {
+        this.username = username;
+        this.password = password;
+        refreshInstancesConfig();
+    }
+
     public void setSslConfiguration(SslConfiguration sslConfiguration)
     {
         this.sslConfiguration = sslConfiguration;
@@ -243,7 +252,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
         List<InstanceConfig> configs = buildInstanceConfigs(cluster);
         List<InetSocketAddress> addresses = buildContactList(configs);
         sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
-                                                     0, "cassandra", "cassandra",
+                                                     0, username, password,
                                                      sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
         for (int i = 0; i < configs.size(); i++)
         {

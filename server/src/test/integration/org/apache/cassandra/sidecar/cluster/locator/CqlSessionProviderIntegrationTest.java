@@ -71,10 +71,31 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
                                                                                          "keystore", serverKeystorePath.toAbsolutePath().toString(),
                                                                                          "keystore_password", serverKeystorePassword)));
         });
+        sidecarTestContext.setUsernamePassword(null, null);
         sidecarTestContext.setSslConfiguration(sslConfigWithTruststore());
         waitForSchemaReady(30, TimeUnit.SECONDS);
         // we enable only SSL and do not set any authenticator, hence username is "anonymous"
         retrieveClientStats(context, "anonymous", true);
+    }
+
+    @CassandraIntegrationTest(buildCluster = false)
+    void testWithSSLOnlyWithUsername(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
+    {
+        cassandraContext.configureAndStartCluster(builder -> {
+            builder.appendConfig(config -> config.set("authenticator", "org.apache.cassandra.auth.PasswordAuthenticator"));
+
+            builder.appendConfig(config ->
+                                 // dot-separated options are not supported in 4.0
+                                 config.set("client_encryption_options", ImmutableMap.of("enabled", "true",
+                                                                                         "require_client_auth", "false",
+                                                                                         "keystore", serverKeystorePath.toAbsolutePath().toString(),
+                                                                                         "keystore_password", serverKeystorePassword)));
+        });
+        sidecarTestContext.setUsernamePassword("cassandra", "cassandra");
+        sidecarTestContext.setSslConfiguration(sslConfigWithTruststore());
+        waitForSchemaReady(30, TimeUnit.SECONDS);
+        // we enable only SSL and do not set any authenticator, hence username is "anonymous"
+        retrieveClientStats(context, "cassandra", true);
     }
 
     @CassandraIntegrationTest(buildCluster = false)
