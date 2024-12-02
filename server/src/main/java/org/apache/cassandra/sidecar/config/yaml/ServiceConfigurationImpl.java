@@ -58,8 +58,12 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final int DEFAULT_ALLOWABLE_SKEW_IN_MINUTES = 60;
     private static final String SERVER_VERTICLE_INSTANCES_PROPERTY = "server_verticle_instances";
     private static final String OPERATIONS_JOB_TRACKER_SIZE_PROPERTY = "operations_job_tracker_size";
+    private static final String OPERATIONS_JOB_SYNC_RESPONSE_TIMEOUT_PROPERTY = "operations_job_sync_response_timeout";
     private static final int DEFAULT_SERVER_VERTICLE_INSTANCES = 1;
     private static final int DEFAULT_OPERATIONS_JOB_TRACKER_SIZE = 64;
+
+    private static final int DEFAULT_OPERATIONS_JOB_TRACKER_SYNC_RESPONSE_TIMEOUT = 5000;
+
     public static final String THROTTLE_PROPERTY = "throttle";
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
@@ -106,6 +110,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
 
     @JsonProperty(value = OPERATIONS_JOB_TRACKER_SIZE_PROPERTY, defaultValue = DEFAULT_OPERATIONS_JOB_TRACKER_SIZE + "")
     protected final int operationsJobTrackerSize;
+
+    @JsonProperty(value = OPERATIONS_JOB_SYNC_RESPONSE_TIMEOUT_PROPERTY, defaultValue = DEFAULT_OPERATIONS_JOB_TRACKER_SYNC_RESPONSE_TIMEOUT + "")
+    protected final int operationsJobSyncResponseTimeout;
 
     @JsonProperty(value = THROTTLE_PROPERTY)
     protected final ThrottleConfiguration throttleConfiguration;
@@ -158,6 +165,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         allowableSkewInMinutes = builder.allowableSkewInMinutes;
         serverVerticleInstances = builder.serverVerticleInstances;
         operationsJobTrackerSize = builder.operationsJobTrackerSize;
+        operationsJobSyncResponseTimeout = builder.operationsJobSyncResponseTimeout;
         throttleConfiguration = builder.throttleConfiguration;
         sstableUploadConfiguration = builder.sstableUploadConfiguration;
         sstableImportConfiguration = builder.sstableImportConfiguration;
@@ -257,6 +265,16 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public int operationsJobTrackerSize()
     {
         return operationsJobTrackerSize;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = OPERATIONS_JOB_SYNC_RESPONSE_TIMEOUT_PROPERTY)
+    public int operationsJobSyncResponseTimeout()
+    {
+        return operationsJobSyncResponseTimeout;
     }
 
     /**
@@ -369,6 +387,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected int allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
         protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
         protected int operationsJobTrackerSize = DEFAULT_OPERATIONS_JOB_TRACKER_SIZE;
+        protected int operationsJobSyncResponseTimeout = DEFAULT_OPERATIONS_JOB_TRACKER_SYNC_RESPONSE_TIMEOUT;
         protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
         protected SSTableUploadConfiguration sstableUploadConfiguration = new SSTableUploadConfigurationImpl();
         protected SSTableImportConfiguration sstableImportConfiguration = new SSTableImportConfigurationImpl();

@@ -18,25 +18,24 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.collect.ImmutableMap;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.COMPLETED;
 import static org.apache.cassandra.sidecar.job.OperationsJobTest.createJobWithStatus;
+
 
 /**
  * Tests to validate job tracking
@@ -45,13 +44,14 @@ public class OperationsJobTrackerTest
 {
     private OperationsJobTracker jobTracker;
     private static final int trackerSize = 3;
+    protected Vertx vertx = Vertx.vertx();
 
-    OperationsJob job1 = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
-    OperationsJob job2 = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
-    OperationsJob job3 = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
-    OperationsJob job4 = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
+    OperationsJob job1 = createJobWithStatus(COMPLETED);
+    OperationsJob job2 = createJobWithStatus(COMPLETED);
+    OperationsJob job3 = createJobWithStatus(COMPLETED);
+    OperationsJob job4 = createJobWithStatus(COMPLETED);
 
-    OperationsJob jobWithStaleCreationTime = new OperationsJob(UUID.randomUUID())
+    OperationsJob jobWithStaleCreationTime = new OperationsJob(vertx, UUID.randomUUID())
     {
         public String operation()
         {
@@ -68,15 +68,16 @@ public class OperationsJobTrackerTest
             return System.nanoTime() - TimeUnit.DAYS.toNanos(2);
         }
 
-        protected OperationsJobResult executeInternal() throws OperationsJobException
+        protected OperationsJobStatus executeInternal() throws OperationsJobException
         {
-            return new OperationsJobResult(OperationsJobResult.OperationsJobStatus.COMPLETED);
+            return COMPLETED;
         }
     };
 
     @BeforeEach
     void setUp()
     {
+        vertx = Vertx.vertx();
         jobTracker = new OperationsJobTracker(trackerSize);
     }
 
@@ -87,55 +88,17 @@ public class OperationsJobTrackerTest
         UUID key2 = UUID.randomUUID();
         jobTracker.put(key1, job1);
         jobTracker.put(key2, job2);
-        assertEquals(job1, jobTracker.get(key1));
-        assertEquals(job2, jobTracker.get(key2));
+        Assertions.assertEquals(job1, jobTracker.get(key1));
+        Assertions.assertEquals(job2, jobTracker.get(key2));
     }
 
     @Test
-    void testPutIfAbsent()
+    void testComputeIfAbsent()
     {
         UUID key1 = UUID.randomUUID();
         jobTracker.put(key1, job1);
-        jobTracker.putIfAbsent(key1, job3);
-        assertEquals(job1, jobTracker.get(key1));
-    }
-
-    @Test
-    void testRemove()
-    {
-        UUID key1 = UUID.randomUUID();
-        jobTracker.put(key1, job1);
-        jobTracker.remove(key1);
-        assertNull(jobTracker.get(key1));
-    }
-
-    @Test
-    void testClear()
-    {
-        UUID key1 = UUID.randomUUID();
-        UUID key2 = UUID.randomUUID();
-        jobTracker.put(key1, job1);
-        jobTracker.put(key2, job2);
-        jobTracker.clear();
-        assertTrue(jobTracker.isEmpty());
-    }
-
-    @Test
-    void testContainsKey()
-    {
-        UUID key1 = UUID.randomUUID();
-        jobTracker.put(key1, job1);
-        assertTrue(jobTracker.containsKey(key1));
-        assertFalse(jobTracker.containsKey(UUID.randomUUID()));
-    }
-
-    @Test
-    void testSizeAndIsEmpty()
-    {
-        assertTrue(jobTracker.isEmpty());
-        jobTracker.put(UUID.randomUUID(), job1);
-        assertEquals(1, jobTracker.size());
-        assertFalse(jobTracker.isEmpty());
+        jobTracker.computeIfAbsent(key1, v -> job3);
+        Assertions.assertEquals(job1, jobTracker.get(key1));
     }
 
     @Test
@@ -151,8 +114,8 @@ public class OperationsJobTrackerTest
         jobTracker.put(key3, job3);
         jobTracker.put(key4, job4);
 
-        assertNotNull(jobTracker.get(key1));
-        assertNotNull(jobTracker.get(key4));
+        Assertions.assertNotNull(jobTracker.get(key1));
+        Assertions.assertNotNull(jobTracker.get(key4));
     }
 
     @Test
@@ -163,13 +126,14 @@ public class OperationsJobTrackerTest
         UUID key3 = UUID.randomUUID();
         UUID key6 = UUID.randomUUID();
 
+        jobWithStaleCreationTime.setStatus(Future.succeededFuture(COMPLETED));
         jobTracker.put(key6, jobWithStaleCreationTime);
         jobTracker.put(key1, job1);
         jobTracker.put(key2, job2);
         jobTracker.put(key3, job3);
 
-        assertNotNull(jobTracker.get(key3));
-        assertNull(jobTracker.get(key6));
+        Assertions.assertNotNull(jobTracker.get(key3));
+        Assertions.assertNull(jobTracker.get(key6));
     }
 
     @Test
@@ -183,9 +147,9 @@ public class OperationsJobTrackerTest
         jobTracker.put(key1, job1);
         jobTracker.put(key2, job2);
 
-        ImmutableMap<UUID, OperationsJob> view = jobTracker.getJobsView();
-        assertEquals(2, view.size());
-        assertThrows(UnsupportedOperationException.class, () -> view.put(key3, job3));
+        Map<UUID, OperationsJob> view = jobTracker.getJobsView();
+        Assertions.assertEquals(2, view.size());
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> view.put(key3, job3));
     }
 
     @Test
@@ -195,11 +159,11 @@ public class OperationsJobTrackerTest
         for (int i = 0; i < trackerSize; i++)
         {
             executorService.submit(() -> {
-                jobTracker.put(UUID.randomUUID(), createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED));
+                jobTracker.put(UUID.randomUUID(), createJobWithStatus(COMPLETED));
             });
         }
         executorService.shutdown();
         executorService.awaitTermination(5, TimeUnit.SECONDS);
-        assertEquals(trackerSize, jobTracker.size());
+        Assertions.assertEquals(trackerSize, jobTracker.size());
     }
 }

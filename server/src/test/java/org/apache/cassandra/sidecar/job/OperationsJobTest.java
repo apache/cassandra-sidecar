@@ -19,12 +19,11 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
 import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 
@@ -35,17 +34,16 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class OperationsJobTest
 {
-
+    private static final Vertx vertx = Vertx.vertx();
     public static OperationsJob createJobWithStatus(OperationsJobResult.OperationsJobStatus jobStatus)
     {
-        return new OperationsJob(UUID.randomUUID(), jobStatus)
+        return new OperationsJob(vertx, UUID.randomUUID(), jobStatus)
         {
             @Override
-            protected OperationsJobResult executeInternal() throws OperationsJobException
+            protected OperationsJobResult.OperationsJobStatus executeInternal()
             {
-                return new OperationsJobResult(jobStatus);
+                return OperationsJobResult.OperationsJobStatus.COMPLETED;
             }
-
             public String operation()
             {
                 return "test";
@@ -62,21 +60,22 @@ public class OperationsJobTest
     void testJobCompletion()
     {
         OperationsJob job = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
-        Executors.newSingleThreadExecutor()
-                 .submit(() -> job.execute());
-        assertThat(job.isResultAvailable(5)).isTrue();
-        assertThat(job.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.COMPLETED);
-        assertThat(job.failureReason()).isEmpty();
+        Promise p = Promise.promise();
+        job.execute(p);
+        Future<OperationsJobResult.OperationsJobStatus> statusFuture = p.future();
+        assertThat(statusFuture.isComplete()).isTrue();
+        assertThat(statusFuture.result()).isEqualTo(OperationsJobResult.OperationsJobStatus.COMPLETED);
     }
 
     @Test
     void testJobFailed()
     {
-        OperationsJob failingJob = new OperationsJob(UUID.randomUUID())
+        String msg = "Test Job failed";
+        OperationsJob failingJob = new OperationsJob(vertx, UUID.randomUUID())
         {
-            protected OperationsJobResult executeInternal() throws OperationsJobException
+            protected OperationsJobResult.OperationsJobStatus executeInternal() throws OperationsJobException
             {
-                throw new OperationsJobException("Test Job failed");
+                throw new OperationsJobException(msg);
             }
 
             public String operation()
@@ -89,38 +88,13 @@ public class OperationsJobTest
                 return false;
             }
         };
-        Executors.newSingleThreadExecutor().submit(() -> failingJob.execute());
 
-        assertThat(failingJob.isResultAvailable(5)).isTrue();
-        assertThat(failingJob.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.FAILED);
-        assertThat(failingJob.failureReason()).contains("Test Job failed");
-    }
+        Promise p = Promise.promise();
+        failingJob.execute(p);
 
-    @Test
-    void testLongRunningJob()
-    {
-        OperationsJob delayedJob = new OperationsJob(UUID.randomUUID())
-        {
-            protected OperationsJobResult executeInternal() throws OperationsJobException
-            {
-                Uninterruptibles.sleepUninterruptibly(6, TimeUnit.SECONDS);
-                return new OperationsJobResult(OperationsJobResult.OperationsJobStatus.COMPLETED);
-            }
-
-            public String operation()
-            {
-                return "test";
-            }
-
-            public boolean isRunningDownstream()
-            {
-                return true;
-            }
-        };
-
-        Executors.newSingleThreadExecutor().submit(() -> delayedJob.execute());
-        assertThat(delayedJob.isResultAvailable(5)).isFalse();
-        assertThat(delayedJob.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.PENDING);
-        assertThat(delayedJob.failureReason()).isEmpty();
+        Future<OperationsJobResult.OperationsJobStatus> statusFuture = p.future();
+        assertThat(statusFuture.failed()).isTrue();
+        assertThat(statusFuture.cause().getClass()).isEqualTo(OperationsJobException.class);
+        assertThat(statusFuture.cause().getMessage()).isEqualTo(msg);
     }
 }

@@ -37,6 +37,8 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -156,7 +158,7 @@ public class OperationsJobsHandlerTest
                   assertThat(jobStatus.jobId()).isEqualTo(failedUuid);
                   assertThat(jobStatus.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.FAILED);
                   assertThat(jobStatus.operation()).isEqualTo("testFailed");
-                  assertThat(jobStatus.reason()).isEqualTo("Simulated failure");
+                   assertThat(jobStatus.reason()).isEqualTo("Test failed");
 
                   context.completeNow();
               }));
@@ -170,14 +172,14 @@ public class OperationsJobsHandlerTest
         {
             OperationsJobManager mockManager = mock(OperationsJobManager.class);
             OperationsJob runningMock = mock(OperationsJob.class);
-            when(runningMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.RUNNING);
+            Promise p = Promise.promise();
+            when(runningMock.status()).thenReturn(p.future());
             OperationsJob completedMock = mock(OperationsJob.class);
-            when(completedMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.COMPLETED);
+            when(completedMock.status()).thenReturn(Future.succeededFuture(OperationsJobResult.OperationsJobStatus.COMPLETED));
             when(completedMock.operation()).thenReturn("testCompleted");
             OperationsJob failedMock = mock(OperationsJob.class);
-            when(failedMock.status()).thenReturn(OperationsJobResult.OperationsJobStatus.FAILED);
+            when(failedMock.status()).thenReturn(Future.failedFuture("Test failed"));
             when(failedMock.operation()).thenReturn("testFailed");
-            when(failedMock.failureReason()).thenReturn("Simulated failure");
 
             when(mockManager.getJobIfExists(runningUuid)).thenReturn(runningMock);
             when(mockManager.getJobIfExists(completedUuid)).thenReturn(completedMock);

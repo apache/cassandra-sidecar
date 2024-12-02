@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import com.google.common.collect.ImmutableMap;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,213 +33,73 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Tracks and stores the results of long-running jobs running on the sidecar
  */
-public class OperationsJobTracker extends LinkedHashMap<UUID, OperationsJob>
+public class OperationsJobTracker
 {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(OperationsJobTracker.class);
-    int capacity;
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private final Map<UUID, OperationsJob> map;
 
     public OperationsJobTracker(int initialCapacity)
     {
-        super(initialCapacity);
-        this.capacity = initialCapacity;
+        map = Collections.synchronizedMap(new LinkedHashMap<UUID, OperationsJob>(initialCapacity)
+        {
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<UUID, OperationsJob> eldest)
+            {
+                // We have reached capacity and the oldest entry is either ready for cleanup or stale
+                if (map.size() > initialCapacity)
+                {
+                    if (eldest.getValue().status.isComplete() && System.nanoTime() - eldest.getValue().creationTime() > TimeUnit.DAYS.toNanos(1))
+                    {
+                        LOGGER.warn("Job tracker reached max size. Expiring job wth uuid={}, state={}, created={}",
+                                    eldest.getKey(), eldest.getValue().status());
+                        return true;
+                    }
+                    else
+                    {
+                        LOGGER.warn("Job tracker reached max size. Not evicting oldest job uuid={} status={}", eldest.getKey(), eldest.getValue().status());
+                        // TODO: Optionally trigger cleanup to fetch next oldest to evict
+                    }
+                }
+
+                return false;
+            }
+        });
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public OperationsJob put(UUID key, OperationsJob value)
+    public OperationsJob computeIfAbsent(UUID key, Function<UUID, OperationsJob> mappingFunction)
     {
-        lock.writeLock().lock();
-        try
-        {
-            return super.put(key, value);
-        }
-        finally
-        {
-            lock.writeLock().unlock();
-        }
+        return map.computeIfAbsent(key, mappingFunction);
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public OperationsJob putIfAbsent(UUID key, OperationsJob value)
+    public OperationsJob put(UUID key, OperationsJob job)
     {
-        lock.writeLock().lock();
-        try
-        {
-            return super.putIfAbsent(key, value);
-        }
-        finally
-        {
-            lock.writeLock().unlock();
-        }
+        return map.put(key, job);
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public void putAll(Map<? extends UUID, ? extends OperationsJob> m)
-    {
-        lock.writeLock().lock();
-        try
-        {
-            super.putAll(m);
-        }
-        finally
-        {
-            lock.writeLock().unlock();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public OperationsJob remove(Object key)
-    {
-        lock.writeLock().lock();
-        try
-        {
-            return super.remove(key);
-        }
-        finally
-        {
-            lock.writeLock().unlock();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void clear()
-    {
-        lock.writeLock().lock();
-        try
-        {
-            super.clear();
-        }
-        finally
-        {
-            lock.writeLock().unlock();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public OperationsJob get(Object key)
-    {
-        lock.readLock().lock();
-        try
-        {
-            return super.get(key);
-        }
-        finally
-        {
-            lock.readLock().unlock();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean containsKey(Object key)
-    {
-        lock.readLock().lock();
-        try
-        {
-            return super.containsKey(key);
-        }
-        finally
-        {
-            lock.readLock().unlock();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public int size()
     {
-        lock.readLock().lock();
-        try
-        {
-            return super.size();
-        }
-        finally
-        {
-            lock.readLock().unlock();
-        }
+        return map.size();
     }
+
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public boolean isEmpty()
+    public OperationsJob get(UUID key)
     {
-        lock.readLock().lock();
-        try
-        {
-            return super.isEmpty();
-        }
-        finally
-        {
-            lock.readLock().unlock();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Object clone()
-    {
-        lock.readLock().lock();
-        try
-        {
-            return super.clone();
-        }
-        finally
-        {
-            lock.readLock().unlock();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected boolean removeEldestEntry(Map.Entry<UUID, OperationsJob> eldest)
-    {
-
-        // We have reached capacity and the oldest entry is either ready for cleanup or stale
-        if (size() > capacity)
-        {
-            if (System.nanoTime() - eldest.getValue().creationTime() > TimeUnit.DAYS.toNanos(1))
-            {
-                LOGGER.warn("Job tracker reached max size. Expiring job wth uuid={}, state={}, created={}",
-                            eldest.getKey(), eldest.getValue().status());
-                return true;
-            }
-            else
-            {
-                LOGGER.warn("Job tracker reached max size. Not evicting oldest job uuid={} status={}", eldest.getKey(), eldest.getValue().status());
-                // TODO: Optionally trigger cleanup to fetch next oldest to evict
-            }
-        }
-
-        return false;
+        return map.get(key);
     }
 
 
@@ -251,16 +109,8 @@ public class OperationsJobTracker extends LinkedHashMap<UUID, OperationsJob>
      * @return an immutable copy of the underlying mapping
      */
     @NotNull
-    ImmutableMap<UUID, OperationsJob> getJobsView()
+    Map<UUID, OperationsJob> getJobsView()
     {
-        lock.readLock().lock();
-        try
-        {
-            return ImmutableMap.copyOf(this);
-        }
-        finally
-        {
-            lock.readLock().unlock();
-        }
+        return Collections.unmodifiableMap(map);
     }
 }

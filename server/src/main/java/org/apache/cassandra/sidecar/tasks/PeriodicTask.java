@@ -20,12 +20,10 @@ package org.apache.cassandra.sidecar.tasks;
 
 import java.util.concurrent.TimeUnit;
 
-import io.vertx.core.Promise;
-
 /**
  * An interface that defines a periodic task that will be executed during the lifecycle of Cassandra Sidecar
  */
-public interface PeriodicTask
+public interface PeriodicTask extends Task
 {
     /**
      * @return delay in the specified {@link #delayUnit()} for periodic task
@@ -57,18 +55,6 @@ public interface PeriodicTask
     }
 
     /**
-     * Defines the task body.
-     * The method can be considered as executing in a single thread.
-     *
-     * <br><b>NOTE:</b> the {@code promise} must be completed (as either succeeded or failed) at the end of the run.
-     * Failing to do so, the {@link PeriodicTaskExecutor} will not be able to schedule a new run.
-     * See {@link PeriodicTaskExecutor#executeInternal} for details.
-     *
-     * @param promise a promise when the execution completes
-     */
-    void execute(Promise<Void> promise);
-
-    /**
      * Register the periodic task executor at the task. By default, it is no-op.
      * If the reference to the executor is needed, the concrete {@link PeriodicTask} can implement this method
      *
@@ -86,23 +72,5 @@ public interface PeriodicTask
     default boolean shouldSkip()
     {
         return false;
-    }
-
-    /**
-     * Close any resources it opened.
-     * Implementation note: it is encouraged to handle the exceptions during close()
-     */
-    default void close()
-    {
-    }
-
-    /**
-     * @return descriptive name of the task. It prefers simple class name, if it is non-empty;
-     * otherwise, it returns the full class name
-     */
-    default String name()
-    {
-        String simpleName = this.getClass().getSimpleName();
-        return simpleName.isEmpty() ? this.getClass().getName() : simpleName;
     }
 }

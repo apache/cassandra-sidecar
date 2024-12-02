@@ -19,68 +19,69 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 import org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus;
+import org.apache.cassandra.sidecar.tasks.Task;
 
 /**
  * An abstract class representing a Operations job managed by the sidecar.
  *
  */
-public abstract class OperationsJob
+public abstract class OperationsJob implements Task
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(OperationsJob.class);
 
     protected UUID jobId;
-    protected OperationsJobStatus status;
+    protected Future<OperationsJobStatus> status;
     protected long creationTime;
 
-    protected String failureReason;
-    final CountDownLatch latch = new CountDownLatch(1);
+    private final Vertx vertx;
 
-    protected OperationsJob()
+    protected OperationsJob(Vertx vertx)
     {
+        this.vertx = vertx;
         this.creationTime = System.nanoTime();
+        Promise<OperationsJobStatus> promise = Promise.promise();
+        this.status = promise.future();
+
     }
     /**
      * Constructs a job with a unique UUID, in Pending state
      * @param jobId UUID representing the Job to be created
      */
-    protected OperationsJob(UUID jobId)
+    protected OperationsJob(Vertx vertx, UUID jobId)
     {
+        this.vertx = vertx;
         this.jobId = jobId;
-        this.status = OperationsJobStatus.PENDING;
+        Promise<OperationsJobStatus> promise = Promise.promise();
+        this.status = promise.future();
         this.creationTime = System.nanoTime();
-        this.failureReason = "";
     }
 
     @VisibleForTesting
-    protected OperationsJob(UUID jobId, OperationsJobStatus status)
+    protected OperationsJob(Vertx vertx, UUID jobId, OperationsJobStatus status)
     {
+        this.vertx = vertx;
         this.jobId = jobId;
-        this.status = status;
+        this.status = Future.succeededFuture(status);
         this.creationTime = System.nanoTime();
-        this.failureReason = "";
     }
 
-    public void setStatus(OperationsJobStatus status)
+    public void setStatus(Future<OperationsJobStatus> status)
     {
         this.status = status;
     }
-    public OperationsJobStatus status()
+    public Future<OperationsJobStatus> status()
     {
         return status;
-    }
-    public String failureReason()
-    {
-        return failureReason;
     }
 
     public UUID jobId()
@@ -97,9 +98,9 @@ public abstract class OperationsJob
      * Supplier specifying the functionality of the job to be triggered when the job is executed. Subclasses to
      * provide operation-specific implementations
      * @return a function with the operation implementation that returns a {@code JobResult}
-     * @throws Exception
+     * @throws OperationsJobException
      */
-    protected abstract OperationsJobResult executeInternal() throws OperationsJobException;
+    protected abstract OperationsJobStatus executeInternal() throws OperationsJobException;
 
     /**
      * Provide a meaningful name of the operation executed by the concrete subclass.
@@ -108,7 +109,7 @@ public abstract class OperationsJob
     public abstract String operation();
 
     /**
-     * Specifies the downstream operation to be performed to check if the job is running on the Cassandra node/cluster.
+     * Specifies the operation to be performed to check if the job is running on the Cassandra node/cluster.
      * This functionality is provided by the Job when it is asynchronously triggering the job via the {@code JobManager}
      * For synchronous jobs this should always return false.
      * @return true if the job is running downstream
@@ -118,45 +119,26 @@ public abstract class OperationsJob
     /**
      * Execute the job behavior as specified in the internal execution {@link #executeInternal()},
      * while tracking the status of the job's lifecycle.
+     *
+     * @return
      */
-    public final void execute()
+    public final void execute(Promise promise)
     {
+        OperationsJobStatus status;
         try
         {
             LOGGER.info("Executing job with ID: {}", jobId);
-            OperationsJobResult result = executeInternal();
-            status = result.status;
-            failureReason = result.reason;
+            // Blocking call to perform concrete job-specific execution, returning the status
+            status = executeInternal();
             LOGGER.debug("Job with ID: {} returned with status: {}", jobId, status);
+            promise.complete(status);
         }
         catch (Exception e)
         {
             String reason = (e.getCause() != null) ? e.getCause().getMessage() : e.getMessage();
             LOGGER.error("Failed to execute job {} with reason: {}", jobId, reason);
-            status = OperationsJobStatus.FAILED;
-            failureReason = reason;
-        }
-        finally
-        {
-            latch.countDown();
-        }
-    }
-
-    /**
-     * Returns if the job execution completes within the provided wait time (in seconds)
-     * @param waitSeconds no. of seconds to wait for the job execution to complete
-     * @return true if the job completed within the specified time
-     */
-    public boolean isResultAvailable(long waitSeconds)
-    {
-        try
-        {
-            return latch.await(waitSeconds, TimeUnit.SECONDS);
-        }
-        catch (final InterruptedException e)
-        {
-            Thread.currentThread().interrupt();
-            return false;
+//            LOGGER.error("Failing promise:" +promise.future().hashCode());
+            promise.fail(e);
         }
     }
 }

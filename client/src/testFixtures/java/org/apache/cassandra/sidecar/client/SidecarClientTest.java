@@ -1274,7 +1274,7 @@ abstract class SidecarClientTest
     public void testOperationsJobs() throws Exception
     {
         UUID jobId = UUID.randomUUID();
-        String jobStatusAsString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"Running\",\"operation\":\"test\"}";
+        String jobStatusAsString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"RUNNING\",\"operation\":\"test\"}";
 
         MockResponse response = new MockResponse()
                                 .setResponseCode(OK.code())
@@ -1294,7 +1294,7 @@ abstract class SidecarClientTest
     public void testlistOperationsJobs() throws Exception
     {
         UUID jobId = UUID.randomUUID();
-        String listJobsString = "{\"jobs\":[{\"jobId\":\"" + jobId + "\",\"status\":\"Running\",\"failureReason\":\"\",\"operation\":\"test\"}]}";
+        String listJobsString = "{\"jobs\":[{\"jobId\":\"" + jobId + "\",\"status\":\"RUNNING\",\"failureReason\":\"\",\"operation\":\"test\"}]}";
 
         MockResponse response = new MockResponse()
                                 .setResponseCode(OK.code())

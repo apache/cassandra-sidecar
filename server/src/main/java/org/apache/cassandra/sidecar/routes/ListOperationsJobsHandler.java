@@ -33,6 +33,8 @@ import org.apache.cassandra.sidecar.job.OperationsJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
+import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.RUNNING;
+
 /**
  * Handler for retrieving the all the jobs running on the sidecar
  */
@@ -62,8 +64,8 @@ public class ListOperationsJobsHandler extends AbstractHandler<Void>
         ListOperationsJobsResponse listResponse = new ListOperationsJobsResponse();
         jobs.forEach(job ->
                      listResponse.addJob(new OperationsJobsEntry(job.jobId(),
-                                                                 job.status().name(),
-                                                                 job.failureReason(),
+                                                                 RUNNING.toString(),
+                                                                 "",
                                                                  job.operation())));
         context.response().setStatusCode(HttpResponseStatus.OK.code());
         context.json(listResponse);

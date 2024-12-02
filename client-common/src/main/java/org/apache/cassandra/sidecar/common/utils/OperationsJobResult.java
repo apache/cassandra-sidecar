@@ -24,21 +24,6 @@ package org.apache.cassandra.sidecar.common.utils;
  */
 public class OperationsJobResult
 {
-    /**
-     * Encapsulates the states of the job lifecycle. All new jobs are in Pending state.
-     */
-    public enum OperationsJobStatus
-    {
-        // Job was created in the sidecar and has not triggered execution on C*
-        PENDING,
-        // Job execution has been triggered on C*
-        RUNNING,
-        // Job has completed execution
-        COMPLETED,
-        // Job has failed execution
-        FAILED
-    }
-
     public final OperationsJobStatus status;
     public final String reason;
 
@@ -52,6 +37,19 @@ public class OperationsJobResult
     {
         this.status = status;
         this.reason = reason;
+    }
+
+    /**
+     * Encapsulates the states of the job lifecycle. All new jobs are in Pending state.
+     */
+    public enum OperationsJobStatus
+    {
+        // Job execution has been triggered on C*
+        RUNNING,
+        // Job has completed execution
+        COMPLETED,
+        // Job has failed execution
+        FAILED
     }
 }
 

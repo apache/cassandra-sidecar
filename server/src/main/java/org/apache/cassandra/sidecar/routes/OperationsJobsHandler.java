@@ -26,6 +26,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.response.OperationsJobsResponse;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.job.OperationsJob;
 import org.apache.cassandra.sidecar.job.OperationsJobManager;
@@ -34,6 +35,8 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONS_JOB_ID_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.OPERATIONS_JOB_HEADER_NAME;
+import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.COMPLETED;
+import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.FAILED;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -102,20 +105,30 @@ public class OperationsJobsHandler extends AbstractHandler<Void>
 
     public void sendStatusBasedResponse(RoutingContext context, UUID jobId, OperationsJob job)
     {
-        switch(job.status())
+
+        if (job.status().isComplete())
         {
-            case COMPLETED:
-            case FAILED:
-                context.response().setStatusCode(HttpResponseStatus.OK.code());
-                context.json(new OperationsJobsResponse(jobId, job.status(), job.operation(), job.failureReason()));
-                break;
-            case PENDING:
-            case RUNNING:
-                context.response()
-                       .setStatusCode(HttpResponseStatus.ACCEPTED.code())
-                       .putHeader(OPERATIONS_JOB_HEADER_NAME, jobId.toString())
-                       .end();
-                break;
+            context.response().setStatusCode(HttpResponseStatus.OK.code());
+            OperationsJobResult.OperationsJobStatus status;
+            final String reason;
+            if (job.status().failed())
+            {
+                status = FAILED;
+                reason = job.status().cause().getMessage();
+            }
+            else
+            {
+                status = COMPLETED;
+                reason = "";
+            }
+            context.json(new OperationsJobsResponse(jobId, status, job.operation(), reason));
+        }
+        else
+        {
+            context.response()
+                   .setStatusCode(HttpResponseStatus.ACCEPTED.code())
+                   .putHeader(OPERATIONS_JOB_HEADER_NAME, jobId.toString())
+                   .end();
         }
     }
 }

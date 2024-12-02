@@ -19,28 +19,34 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
-import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
 import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.COMPLETED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -53,83 +59,100 @@ import static org.mockito.Mockito.when;
 public class OperationsJobManagerTest
 {
     @Mock
-    ExecutorPools mockPools;
+    OperationsJob mockJob;
 
     @Mock
-    OperationsJob mockJob;
+    SidecarConfiguration mockConfig;
+
+    protected Vertx vertx;
 
     @BeforeEach
     void setup()
     {
+        vertx = Vertx.vertx();
         MockitoAnnotations.openMocks(this);
-        TaskExecutorPool mockExecPool = mock(TaskExecutorPool.class);
-        when(mockPools.internal()).thenReturn(mockExecPool);
-        when(mockExecPool.runBlocking(any())).thenReturn(null);
+        ServiceConfiguration mockServiceConfig = mock(ServiceConfiguration.class);
+        when(mockConfig.serviceConfiguration()).thenReturn(mockServiceConfig);
+        when(mockServiceConfig.operationsJobSyncResponseTimeout()).thenReturn(5000);
     }
 
-    @ParameterizedTest(name = "UUID: {0}, status: {1}")
+    @ParameterizedTest(name = "{index} => HeaderJobId {0}")
     @MethodSource("inputParams")
-    void testWithNoDownstreamJob(String stringJobId, String stringStatus)
+    void testWithNoDownstreamJob(String jobId)
     {
-        UUID headerJobId = (stringJobId.isEmpty()) ? null :  UUID.fromString(stringJobId);
-        OperationsJobResult.OperationsJobStatus status = stringStatus.isEmpty() ? null : OperationsJobResult.OperationsJobStatus.valueOf(stringStatus);
+        UUID headerJobId = (jobId.isEmpty()) ? null :  UUID.fromString(jobId);
+        OperationsJobTracker tracker = new OperationsJobTracker(4);
+        ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+        OperationsJobManager manager = new OperationsJobManager(vertx, executorPools, mockConfig, tracker);
 
+        OperationsJob testJob = new OperationsJob(vertx, headerJobId)
+        {
+            public String operation()
+            {
+                return "test";
+            }
+
+            public boolean isRunningDownstream()
+            {
+                return false;
+            }
+
+            public long creationTime()
+            {
+                return System.nanoTime();
+            }
+
+            protected OperationsJobResult.OperationsJobStatus executeInternal() throws OperationsJobException
+            {
+                return COMPLETED;
+            }
+        };
+
+//        Function<UUID, OperationsJob> creator = (id) -> testJob;
+//        OperationsJob createdJob = creator.apply(headerJobId);
+        manager.trySubmitJob(headerJobId, testJob);
+        Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
+        assertThat(testJob.status().isComplete()).isTrue();
+        assertThat(testJob.status().result()).isEqualTo(COMPLETED);
+        if (headerJobId != null)
+        {
+            assertThat(tracker.get(headerJobId)).isNotNull();
+        }
+
+    }
+
+    @ParameterizedTest(name = "{index} => HeaderJobId {0}")
+    @MethodSource("inputParams")
+    void testWithRunningDownstreamJob(String jobId)
+    {
+        UUID headerJobId = (jobId.isEmpty()) ? null :  UUID.fromString(jobId);
         OperationsJobTracker tracker = new OperationsJobTracker(4);
         ExecutorPools mockPools = mock(ExecutorPools.class);
         TaskExecutorPool mockExecPool = mock(TaskExecutorPool.class);
         when(mockPools.internal()).thenReturn(mockExecPool);
         when(mockExecPool.runBlocking(any())).thenReturn(null);
-        OperationsJobManager manager = new OperationsJobManager(mockPools, tracker);
-
-        when(mockJob.isRunningDownstream()).thenReturn(false);
-        when(mockJob.status()).thenReturn(status);
-        if (status != null)
-        {
-            tracker.put(headerJobId, mockJob);
-        }
-
-        doNothing().when(mockJob).execute();
-        Function<UUID, OperationsJob> creator = (id) -> mockJob;
-        OperationsJob createdJob = creator.apply(headerJobId);
-        OperationsJob job = manager.trySubmitJob(headerJobId, creator);
-        assertThat(job).isEqualTo(createdJob);
-        if (status != null)
-        {
-            assertThat(tracker).containsKey(headerJobId);
-        }
-        else
-        {
-            assertThat(tracker).isNotEmpty();
-        }
-    }
-
-    @ParameterizedTest(name = "UUID: {0}, status: {1}")
-    @MethodSource("inputParams")
-    void testWithRunningDownstreamJob(String stringJobId, String stringStatus)
-    {
-        UUID headerJobId = (stringJobId.isEmpty()) ? null :  UUID.fromString(stringJobId);
-        OperationsJobResult.OperationsJobStatus status = stringStatus.isEmpty() ? null : OperationsJobResult.OperationsJobStatus.valueOf(stringStatus);
-        OperationsJobTracker tracker = new OperationsJobTracker(4);
-        ExecutorPools mockPools = mock(ExecutorPools.class);
-        TaskExecutorPool mockExecPool = mock(TaskExecutorPool.class);
-        when(mockPools.internal()).thenReturn(mockExecPool);
-        when(mockExecPool.runBlocking(any())).thenReturn(null);
-        OperationsJobManager manager = new OperationsJobManager(mockPools, tracker);
+        OperationsJobManager manager = new OperationsJobManager(vertx, mockPools, mockConfig, tracker);
 
         when(mockJob.isRunningDownstream()).thenReturn(true);
-        when(mockJob.status()).thenReturn(status);
-        if (headerJobId != null && status != null)
+        Promise unresolved = Promise.promise();
+        when(mockJob.status()).thenReturn(unresolved.future());
+        if (headerJobId != null)
         {
             tracker.put(headerJobId, mockJob);
         }
 
-        doNothing().when(mockJob).execute();
-        Function<UUID, OperationsJob> creator = (id) -> mockJob;
+        doAnswer(invocation -> {
+            Promise<OperationsJobResult.OperationsJobStatus> capturedPromise = invocation.getArgument(0);
+            capturedPromise.complete(COMPLETED);
+            return null;  // void return
+        }).when(mockJob).execute(any(Promise.class));
+
+//        Function<UUID, OperationsJob> creator = (id) -> mockJob;
         OperationsJobException ex = Assertions.assertThrows(OperationsJobException.class,
-                                                            () -> manager.trySubmitJob(headerJobId, creator));
+                                                            () -> manager.trySubmitJob(headerJobId, mockJob));
         assertThat(ex.getMessage()).isEqualTo("Conflicting job running downstream");
 
-        if (headerJobId == null || status == null || status != OperationsJobResult.OperationsJobStatus.RUNNING)
+        if (headerJobId == null)
         {
             assertThat(ex.getHeaderValue()).isEqualTo(null);
         }
@@ -137,16 +160,91 @@ public class OperationsJobManagerTest
         {
             assertThat(ex.getHeaderValue()).isEqualTo(headerJobId);
         }
+        unresolved.complete();
     }
 
-    static Collection<Object[]> inputParams()
+    @ParameterizedTest(name = "{index} => HeaderJobId {0}")
+    @MethodSource("inputParams")
+    void testWithLongRunningJob(String jobId)
+    {
+        UUID headerJobId = (jobId.isEmpty()) ? null :  UUID.fromString(jobId);
+
+        OperationsJobTracker tracker = new OperationsJobTracker(4);
+        ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+        OperationsJobManager manager = new OperationsJobManager(vertx, executorPools, mockConfig, tracker);
+
+        OperationsJob testJob = new OperationsJob(vertx, headerJobId)
+        {
+            public String operation()
+            {
+                return "test";
+            }
+
+            public boolean isRunningDownstream()
+            {
+                return false;
+            }
+
+            public long creationTime()
+            {
+                return System.nanoTime();
+            }
+
+            protected OperationsJobResult.OperationsJobStatus executeInternal() throws OperationsJobException
+            {
+                Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
+                return COMPLETED;
+            }
+        };
+
+        manager.trySubmitJob(headerJobId, testJob);
+        assertThat(testJob.status().isComplete()).isFalse();
+        if (headerJobId != null)
+        {
+            assertThat(tracker.get(headerJobId)).isNotNull();
+        }
+    }
+
+    @ParameterizedTest(name = "{index} => HeaderJobId {0}")
+    @MethodSource("inputParams")
+    void testWithFailingJob(String jobId)
+    {
+        UUID headerJobId = (jobId.isEmpty()) ? null :  UUID.fromString(jobId);
+
+        OperationsJobTracker tracker = new OperationsJobTracker(4);
+        ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+        OperationsJobManager manager = new OperationsJobManager(vertx, executorPools, mockConfig, tracker);
+
+        String msg = "Test Job failed";
+        OperationsJob failingJob = new OperationsJob(vertx, UUID.randomUUID())
+        {
+            protected OperationsJobResult.OperationsJobStatus executeInternal() throws OperationsJobException
+            {
+                throw new OperationsJobException(msg);
+            }
+
+            public String operation()
+            {
+                return "test";
+            }
+
+            public boolean isRunningDownstream()
+            {
+                return false;
+            }
+        };
+
+//        Function<UUID, OperationsJob> creator = (id) -> failingJob;
+        manager.trySubmitJob(headerJobId, failingJob);
+        Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
+        assertThat(failingJob.status().isComplete()).isTrue();
+        assertThat(failingJob.status().failed()).isTrue();
+        assertThat(tracker.get(headerJobId)).isNull();
+    }
+
+    static Stream<Arguments> inputParams()
     {
         List<String> uuidList = Arrays.asList("", UUID.randomUUID().toString());
-        List<String> statuses = Arrays.asList("",
-                                              OperationsJobResult.OperationsJobStatus.RUNNING.toString(),
-                                              OperationsJobResult.OperationsJobStatus.COMPLETED.toString());
-        List<List<String>> uuidsStatuses = Lists.cartesianProduct(uuidList, statuses);
-        return uuidsStatuses.stream().map(List::toArray).collect(Collectors.toList());
-
+        return uuidList.stream().map(Arguments::of);
     }
 }

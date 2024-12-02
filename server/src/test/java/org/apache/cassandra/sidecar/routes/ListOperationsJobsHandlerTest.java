@@ -47,7 +47,7 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.response.ListOperationsJobsResponse;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
+import org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus;
 import org.apache.cassandra.sidecar.job.OperationsJob;
 import org.apache.cassandra.sidecar.job.OperationsJobManager;
 import org.apache.cassandra.sidecar.server.MainModule;
@@ -69,9 +69,10 @@ public class ListOperationsJobsHandlerTest
     Server server;
 
     static UUID runningUuid = UUID.randomUUID();
-    static UUID pendingUuid = UUID.randomUUID();
-    static SampleOperationsJob running = new SampleOperationsJob(runningUuid, OperationsJobResult.OperationsJobStatus.RUNNING);
-    static SampleOperationsJob pending = new SampleOperationsJob(pendingUuid, OperationsJobResult.OperationsJobStatus.PENDING);
+    static UUID runningUuid2 = UUID.randomUUID();
+
+    static SampleOperationsJob running = new SampleOperationsJob(runningUuid);
+    static SampleOperationsJob running2 = new SampleOperationsJob(runningUuid2);
 
     @BeforeEach
     void before() throws InterruptedException
@@ -114,8 +115,8 @@ public class ListOperationsJobsHandlerTest
                   assertThat(listJobs).isNotNull();
                   assertThat(listJobs.jobs()).isNotNull();
                   assertThat(listJobs.jobs().size()).isEqualTo(2);
-                  assertThat(listJobs.jobs().get(0).jobId).isIn(runningUuid, pendingUuid);
-                  assertThat(listJobs.jobs().get(1).jobId).isIn(runningUuid, pendingUuid);
+                  assertThat(listJobs.jobs().get(0).jobId).isIn(runningUuid, runningUuid2);
+                  assertThat(listJobs.jobs().get(1).jobId).isIn(runningUuid, runningUuid2);
                   context.completeNow();
               }));
     }
@@ -126,7 +127,7 @@ public class ListOperationsJobsHandlerTest
         @Singleton
         public OperationsJobManager jobManager()
         {
-            List<OperationsJob> testJobs = Arrays.asList(running, pending);
+            List<OperationsJob> testJobs = Arrays.asList(running, running2);
             OperationsJobManager mockManager = mock(OperationsJobManager.class);
             when(mockManager.allInflightJobs()).thenReturn(testJobs);
             return mockManager;
@@ -140,15 +141,15 @@ public class ListOperationsJobsHandlerTest
     {
         public SampleOperationsJob()
         {
-            super();
+            super(Vertx.vertx());
         }
 
-        public SampleOperationsJob(UUID jobId, OperationsJobResult.OperationsJobStatus status)
+        public SampleOperationsJob(UUID jobId)
         {
-            super(jobId, status);
+            super(Vertx.vertx(), jobId);
         }
 
-        protected OperationsJobResult executeInternal() throws OperationsJobException
+        protected OperationsJobStatus executeInternal() throws OperationsJobException
         {
             return null;
         }

@@ -95,6 +95,12 @@ public interface ServiceConfiguration
     int operationsJobTrackerSize();
 
     /**
+     * @return the timeout (in seconds) for operational job sync response
+     */
+    int operationsJobSyncResponseTimeout();
+
+
+    /**
      * @return the throttling configuration
      */
     ThrottleConfiguration throttleConfiguration();
