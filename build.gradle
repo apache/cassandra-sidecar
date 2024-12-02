@@ -131,7 +131,7 @@ distributions {
     main {
         contents {
             from 'LICENSE.txt'
-            from 'server/src/main/dist'
+            from 'server/src/main/resources/dist'
         }
     }
 }
@@ -180,7 +180,7 @@ tasks.register('copyDist', Copy) {
 
 tasks.register('copyJolokia', Copy) {
     from configurations.jolokia
-    into "$projectDir/src/main/dist/agents"
+    into "$projectDir/server/src/main/resources/dist/agents"
 }
 
 // Lets clean distribution directories along with default build directories.

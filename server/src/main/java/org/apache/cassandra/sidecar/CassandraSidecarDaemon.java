@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar;
 
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
@@ -40,20 +41,9 @@ public class CassandraSidecarDaemon
 
     public static void main(String[] args)
     {
-        String yamlConfigurationPath = System.getProperty("sidecar.config", "file://./conf/config.yaml");
-
-        Path confPath;
-        try
-        {
-            confPath = Paths.get(new URI(yamlConfigurationPath));
-        }
-        catch (Throwable e)
-        {
-            throw new RuntimeException("Invalid URI: " + yamlConfigurationPath, e);
-        }
+        Path confPath = determineConfigPath();
 
         Server app = Guice.createInjector(new MainModule(confPath)).getInstance(Server.class);
-
         app.start().onSuccess(deploymentId -> Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (close(app))
             {
@@ -87,6 +77,56 @@ public class CassandraSidecarDaemon
             LOGGER.warn("Failed to stop Sidecar in 1 minute", ex);
         }
         return false;
+    }
+
+    private static Path determineConfigPath()
+    {
+        String yamlConfigurationPath = System.getProperty("sidecar.config");
+        Path confPath;
+        if (yamlConfigurationPath != null)
+        {
+            try
+            {
+                confPath = Paths.get(new URI(yamlConfigurationPath));
+            }
+            catch (Throwable e)
+            {
+                throw new IllegalArgumentException("Invalid URI: " + yamlConfigurationPath, e);
+            }
+            return ensurePathExists(confPath);
+        }
+
+        confPath = Paths.get("conf/sidecar.yaml");
+        if (Files.exists(confPath))
+        {
+            return confPath;
+        }
+
+        // Try to get the file from the resources directory as fallback
+        try
+        {
+            confPath = Paths.get(Thread.currentThread()
+                                       .getContextClassLoader()
+                                       .getResource("dist/conf/sidecar.yaml")
+                                       .toURI());
+        }
+        catch (Throwable e)
+        {
+            throw new RuntimeException("Unable to obtain resource: dist/conf/sidecar.yaml", e);
+        }
+
+        ensurePathExists(confPath);
+
+        return confPath;
+    }
+
+    private static Path ensurePathExists(Path confPath)
+    {
+        if (!Files.exists(confPath))
+        {
+            throw new IllegalArgumentException(String.format("Sidecar configuration file '%s' does not exist", confPath));
+        }
+        return confPath;
     }
 }
 
