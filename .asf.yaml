@@ -33,7 +33,8 @@ github:
     issues: false
     projects: false
   autolink_jira:
-    - CASSANDRASC
+    - CASSANDRASC # Old name
+    - CASSSIDECAR # New Apache project name
     - CASSANDRA
   protected_branches:
     trunk:
