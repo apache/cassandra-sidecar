@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * yaml configuration defaults to a file that doesn't exist (CASSSIDECAR-122)
  * Add advanced driver settings to allow taking in password or certificates for Cassandra connection (CASSSIDECAR-159)
  * Add metric to report consistency check duration (CASSSIDECAR-165)
  * Add mTLS Authentication in Sidecar (CASSANDRASC-156)
