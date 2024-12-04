@@ -18,9 +18,24 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.Vertx;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.codec.BodyCodec;
+
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
@@ -28,6 +43,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  */
 class CassandraSidecarDaemonTest
 {
+    static final String[] NO_ARGS = {};
+
     @BeforeEach
     void setup()
     {
@@ -39,7 +56,7 @@ class CassandraSidecarDaemonTest
     {
         System.setProperty("sidecar.config", "file://./invalid/URI");
 
-        assertThatIllegalArgumentException().isThrownBy(() -> CassandraSidecarDaemon.main(null))
+        assertThatIllegalArgumentException().isThrownBy(() -> CassandraSidecarDaemon.main(NO_ARGS))
                                             .withMessage("Invalid URI: file://./invalid/URI");
     }
 
@@ -48,7 +65,91 @@ class CassandraSidecarDaemonTest
     {
         System.setProperty("sidecar.config", "file:///tmp/file/does/not/exist.yaml");
 
-        assertThatIllegalArgumentException().isThrownBy(() -> CassandraSidecarDaemon.main(null))
+        assertThatIllegalArgumentException().isThrownBy(() -> CassandraSidecarDaemon.main(NO_ARGS))
                                             .withMessage("Sidecar configuration file '/tmp/file/does/not/exist.yaml' does not exist");
+    }
+
+    @Test
+    void testSuccessfulStartup() throws Exception
+    {
+        Path path = Paths.get("src/main/dist/conf/sidecar.yaml");
+        assertThat(path).exists();
+
+        System.setProperty("sidecar.config", path.toUri().toString());
+        CassandraSidecarDaemon.main(NO_ARGS);
+
+        WebClient client = WebClient.create(Vertx.vertx());
+        HttpResponse<String> response = client.get(9043, "localhost", "/api/v1/__health")
+                                              .as(BodyCodec.string())
+                                              .send()
+                                              .toCompletionStage()
+                                              .toCompletableFuture()
+                                              .get(10, TimeUnit.SECONDS);
+        assertThat(response.statusCode()).isEqualTo(OK.code());
+        assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+    }
+
+
+    @Test
+    void testSuccessfulStartupWithDefaultPath() throws Exception
+    {
+        Path path = Paths.get("src/main/dist/conf/sidecar.yaml");
+        assertThat(path).exists();
+
+        // First ensure startup fails because the conf file does not exist
+        assertThatIllegalArgumentException().isThrownBy(() -> CassandraSidecarDaemon.main(NO_ARGS))
+                                            .withMessageMatching("Sidecar configuration file '.*/conf/sidecar.yaml' does not exist");
+
+        // Now let's copy the file to the expected location
+        Path targetFile = Paths.get("conf/sidecar.yaml");
+        List<Path> createdParents = null;
+
+        try
+        {
+            createdParents = createParents(targetFile.toAbsolutePath());
+            Files.copy(path.toAbsolutePath(), targetFile.toAbsolutePath());
+
+            CassandraSidecarDaemon.main(NO_ARGS);
+
+            WebClient client = WebClient.create(Vertx.vertx());
+            HttpResponse<String> response = client.get(9043, "localhost", "/api/v1/__health")
+                                                  .as(BodyCodec.string())
+                                                  .send()
+                                                  .toCompletionStage()
+                                                  .toCompletableFuture()
+                                                  .get(10, TimeUnit.SECONDS);
+            assertThat(response.statusCode()).isEqualTo(OK.code());
+            assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+        }
+        finally
+        {
+            Files.deleteIfExists(targetFile);
+
+            if (createdParents != null)
+            {
+                for (Path createdParent : createdParents)
+                {
+                    Files.deleteIfExists(createdParent);
+                }
+            }
+        }
+    }
+
+    static List<Path> createParents(Path file) throws IOException
+    {
+        List<Path> createdParents = new ArrayList<>();
+        Path directory = file.getParent();
+        if (directory == null)
+        {
+            return createdParents;
+        }
+
+        while (directory != null && !Files.exists(directory))
+        {
+            createdParents.add(directory);
+            directory = directory.getParent();
+        }
+        Files.createDirectories(file.getParent());
+        return createdParents;
     }
 }
