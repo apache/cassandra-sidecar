@@ -76,17 +76,24 @@ class CassandraSidecarDaemonTest
         assertThat(path).exists();
 
         System.setProperty("sidecar.config", path.toUri().toString());
-        CassandraSidecarDaemon.main(NO_ARGS);
+        try
+        {
+            CassandraSidecarDaemon.main(NO_ARGS);
 
-        WebClient client = WebClient.create(Vertx.vertx());
-        HttpResponse<String> response = client.get(9043, "localhost", "/api/v1/__health")
-                                              .as(BodyCodec.string())
-                                              .send()
-                                              .toCompletionStage()
-                                              .toCompletableFuture()
-                                              .get(10, TimeUnit.SECONDS);
-        assertThat(response.statusCode()).isEqualTo(OK.code());
-        assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+            WebClient client = WebClient.create(Vertx.vertx());
+            HttpResponse<String> response = client.get(9043, "localhost", "/api/v1/__health")
+                                                  .as(BodyCodec.string())
+                                                  .send()
+                                                  .toCompletionStage()
+                                                  .toCompletableFuture()
+                                                  .get(10, TimeUnit.SECONDS);
+            assertThat(response.statusCode()).isEqualTo(OK.code());
+            assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+        }
+        finally
+        {
+            CassandraSidecarDaemon.close(CassandraSidecarDaemon.APP);
+        }
     }
 
     @Test
@@ -122,6 +129,7 @@ class CassandraSidecarDaemonTest
         }
         finally
         {
+            CassandraSidecarDaemon.close(CassandraSidecarDaemon.APP);
             Files.deleteIfExists(targetFile);
 
             if (createdParents != null)

@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Guice;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Main class for initiating the Cassandra sidecar
@@ -38,12 +39,15 @@ import org.apache.cassandra.sidecar.server.Server;
 public class CassandraSidecarDaemon
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraSidecarDaemon.class);
+    @VisibleForTesting
+    static Server APP;
 
     public static void main(String[] args)
     {
         Path confPath = determineConfigPath();
 
         Server app = Guice.createInjector(new MainModule(confPath)).getInstance(Server.class);
+        APP = app;
         app.start().onSuccess(deploymentId -> Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (close(app))
             {
@@ -62,7 +66,8 @@ public class CassandraSidecarDaemon
      * @param app the server
      * @return {@code true} if the server shutdown successfully, {@code false} otherwise
      */
-    private static boolean close(Server app)
+    @VisibleForTesting
+    static boolean close(Server app)
     {
         try
         {
