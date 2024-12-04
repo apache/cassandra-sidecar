@@ -81,8 +81,8 @@ public class CassandraSidecarDaemon
 
     private static Path determineConfigPath()
     {
-        String yamlConfigurationPath = System.getProperty("sidecar.config");
         Path confPath;
+        String yamlConfigurationPath = System.getProperty("sidecar.config");
         if (yamlConfigurationPath != null)
         {
             try
@@ -93,38 +93,20 @@ public class CassandraSidecarDaemon
             {
                 throw new IllegalArgumentException("Invalid URI: " + yamlConfigurationPath, e);
             }
-            return ensurePathExists(confPath);
         }
-
-        confPath = Paths.get("conf/sidecar.yaml");
-        if (Files.exists(confPath))
+        else
         {
-            return confPath;
+            confPath = Paths.get("conf/sidecar.yaml");
         }
-
-        // Try to get the file from the resources directory as fallback
-        try
-        {
-            confPath = Paths.get(Thread.currentThread()
-                                       .getContextClassLoader()
-                                       .getResource("dist/conf/sidecar.yaml")
-                                       .toURI());
-        }
-        catch (Throwable e)
-        {
-            throw new RuntimeException("Unable to obtain resource: dist/conf/sidecar.yaml", e);
-        }
-
-        ensurePathExists(confPath);
-
-        return confPath;
+        return ensurePathExists(confPath);
     }
 
     private static Path ensurePathExists(Path confPath)
     {
         if (!Files.exists(confPath))
         {
-            throw new IllegalArgumentException(String.format("Sidecar configuration file '%s' does not exist", confPath));
+            throw new IllegalArgumentException(String.format("Sidecar configuration file '%s' does not exist",
+                                                             confPath.toAbsolutePath()));
         }
         return confPath;
     }
