@@ -33,6 +33,7 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
+import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -92,7 +93,7 @@ class CassandraSidecarDaemonTest
         }
         finally
         {
-            CassandraSidecarDaemon.close(CassandraSidecarDaemon.runningApplication);
+            maybeStopCassandraSidecar();
         }
     }
 
@@ -129,7 +130,7 @@ class CassandraSidecarDaemonTest
         }
         finally
         {
-            CassandraSidecarDaemon.close(CassandraSidecarDaemon.runningApplication);
+            maybeStopCassandraSidecar();
             Files.deleteIfExists(targetFile);
 
             if (createdParents != null)
@@ -139,6 +140,15 @@ class CassandraSidecarDaemonTest
                     Files.deleteIfExists(createdParent);
                 }
             }
+        }
+    }
+
+    static void maybeStopCassandraSidecar()
+    {
+        Server runningApplication = CassandraSidecarDaemon.runningApplication;
+        if (runningApplication != null)
+        {
+            CassandraSidecarDaemon.close(runningApplication);
         }
     }
 
