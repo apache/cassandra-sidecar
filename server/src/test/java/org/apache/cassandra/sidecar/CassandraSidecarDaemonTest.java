@@ -89,7 +89,6 @@ class CassandraSidecarDaemonTest
         assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
     }
 
-
     @Test
     void testSuccessfulStartupWithDefaultPath() throws Exception
     {

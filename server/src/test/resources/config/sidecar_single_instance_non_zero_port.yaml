@@ -16,7 +16,7 @@ cassandra:
 
 sidecar:
   host: 0.0.0.0
-  port: 9043
+  port: 9046
   request_idle_timeout_millis: 300000 # this field expects integer value
   request_timeout_millis: 300000
   tcp_keep_alive: false

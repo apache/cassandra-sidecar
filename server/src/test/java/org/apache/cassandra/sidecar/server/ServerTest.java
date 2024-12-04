@@ -200,7 +200,7 @@ class ServerTest
     @DisplayName("Updating traffic shaping options with non-zero listen port should succeed")
     void updateTrafficShapingOptionsWithNonZeroListenPort()
     {
-        configureServer("config/sidecar_single_instance_default_port.yaml");
+        configureServer("config/sidecar_single_instance_non_zero_port.yaml");
 
         assertThatNoException().isThrownBy(() -> {
             server.start().toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
