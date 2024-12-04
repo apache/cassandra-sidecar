@@ -92,7 +92,7 @@ class CassandraSidecarDaemonTest
         }
         finally
         {
-            CassandraSidecarDaemon.close(CassandraSidecarDaemon.APP);
+            CassandraSidecarDaemon.close(CassandraSidecarDaemon.runningApplication);
         }
     }
 
@@ -129,7 +129,7 @@ class CassandraSidecarDaemonTest
         }
         finally
         {
-            CassandraSidecarDaemon.close(CassandraSidecarDaemon.APP);
+            CassandraSidecarDaemon.close(CassandraSidecarDaemon.runningApplication);
             Files.deleteIfExists(targetFile);
 
             if (createdParents != null)

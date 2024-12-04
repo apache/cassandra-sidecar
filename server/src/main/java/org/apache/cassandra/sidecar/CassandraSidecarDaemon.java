@@ -40,14 +40,14 @@ public class CassandraSidecarDaemon
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraSidecarDaemon.class);
     @VisibleForTesting
-    static Server APP;
+    static Server runningApplication;
 
     public static void main(String[] args)
     {
         Path confPath = determineConfigPath();
 
         Server app = Guice.createInjector(new MainModule(confPath)).getInstance(Server.class);
-        APP = app;
+        runningApplication = app;
         app.start().onSuccess(deploymentId -> Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (close(app))
             {
