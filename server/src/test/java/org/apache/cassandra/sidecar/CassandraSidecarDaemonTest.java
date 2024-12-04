@@ -138,18 +138,19 @@ class CassandraSidecarDaemonTest
     static List<Path> createParents(Path file) throws IOException
     {
         List<Path> createdParents = new ArrayList<>();
-        Path directory = file.getParent();
-        if (directory == null)
+        Path parentDirectory = file.getParent();
+        if (parentDirectory == null)
         {
             return createdParents;
         }
+        Path directory = parentDirectory;
 
         while (directory != null && !Files.exists(directory))
         {
             createdParents.add(directory);
             directory = directory.getParent();
         }
-        Files.createDirectories(file.getParent());
+        Files.createDirectories(parentDirectory);
         return createdParents;
     }
 }
