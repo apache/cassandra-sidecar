@@ -73,7 +73,7 @@ class CassandraSidecarDaemonTest
     @Test
     void testSuccessfulStartup() throws Exception
     {
-        Path path = Paths.get("src/main/dist/conf/sidecar.yaml");
+        Path path = Paths.get("../conf/sidecar.yaml");
         assertThat(path).exists();
 
         System.setProperty("sidecar.config", path.toUri().toString());
@@ -100,7 +100,7 @@ class CassandraSidecarDaemonTest
     @Test
     void testSuccessfulStartupWithDefaultPath() throws Exception
     {
-        Path path = Paths.get("src/main/dist/conf/sidecar.yaml");
+        Path path = Paths.get("../conf/sidecar.yaml");
         assertThat(path).exists();
 
         // First ensure startup fails because the conf file does not exist
