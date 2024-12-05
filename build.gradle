@@ -131,7 +131,14 @@ distributions {
     main {
         contents {
             from 'LICENSE.txt'
-            from 'server/src/main/dist'
+            // Include the "agents" directory in the distribution
+            from('agents') {
+                into('agents')
+            }
+            // Include the "conf" directory in the distribution
+            from('conf') {
+                into('conf')
+            }
         }
     }
 }
@@ -174,23 +181,29 @@ tasks.named('idea').configure {
 // Lets copy the distributions from build/install directory to /bin and /lib
 // directories to be aligned with C* distribution format
 tasks.register('copyDist', Copy) {
-    from "$buildDir/install/$applicationName"
     into "$projectDir"
+
+    into("bin") {
+        from "$buildDir/install/$applicationName/bin"
+    }
+    into("lib") {
+        from "$buildDir/install/$applicationName/lib"
+    }
 }
 
 tasks.register('copyJolokia', Copy) {
     from configurations.jolokia
-    into "$projectDir/server/src/main/dist/agents"
+    into "$projectDir/agents/"
 }
 
 // Lets clean distribution directories along with default build directories.
 clean.doLast {
-    ["agents", "bin", "conf", "lib"].each {
+    ["agents", "bin", "lib"].each {
         println "Deleting directory $projectDir/$it"
         delete "$projectDir/$it"
     }
-    println "Deleting generated docs $projectDir/src/main/resources/docs"
-    delete "$projectDir/src/main/resources/docs"
+    println "Deleting generated docs $projectDir/server/src/main/resources/docs"
+    delete "$projectDir/server/src/main/resources/docs"
 }
 
 subprojects {
@@ -288,7 +301,8 @@ rat {
 }
 
 // copyDist gets called on every build
-copyDist.dependsOn installDist, copyJolokia
+installDist.dependsOn copyJolokia
+copyDist.dependsOn installDist
 check.dependsOn codeCheckTasks
 build.dependsOn copyDist, copyJolokia, copyDocs
 run.dependsOn build
