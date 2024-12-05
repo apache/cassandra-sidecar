@@ -192,8 +192,11 @@ tasks.register('copyDist', Copy) {
 }
 
 tasks.register('copyJolokia', Copy) {
-    from configurations.jolokia
-    into "$projectDir/agents/"
+    into "$projectDir"
+
+    into("agents") {
+        from configurations.jolokia
+    }
 }
 
 // Lets clean distribution directories along with default build directories.
