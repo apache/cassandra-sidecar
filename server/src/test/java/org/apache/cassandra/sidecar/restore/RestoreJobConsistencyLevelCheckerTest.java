@@ -32,12 +32,15 @@ import org.apache.cassandra.sidecar.cluster.ConsistencyVerifiers;
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
+import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaInfo;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
+import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 
 import static org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelChecker.concludeOneRangeUnsafe;
+import static org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelChecker.concludeRangesUnsafe;
 import static org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelChecker.replicaSetForRangeUnsafe;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -166,6 +169,23 @@ class RestoreJobConsistencyLevelCheckerTest
         range = range.unbuild().replicaStatus(replicaStatus).build();
         assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
         .isEqualTo(ConsistencyVerificationResult.FAILED);
+    }
+
+    @Test
+    void testConcludeRangesIgnoreDiscardedRanges()
+    {
+        RestoreRange range = RestoreRangeTest.createTestRange(1, 10);
+        range.discard();
+        RestoreJobProgressCollector collectAll = RestoreJobProgressCollectors.create(mock(RestoreJob.class),
+                                                                                     RestoreJobProgressFetchPolicy.ALL_FAILED_AND_PENDING);
+        concludeRangesUnsafe(Collections.singletonList(range),
+                             mock(TokenRangeReplicasResponse.class),
+                             mock(ConsistencyVerifier.class), RestoreRangeStatus.STAGED,
+                             collectAll);
+        RestoreJobProgress progress = collectAll.toRestoreJobProgress();
+        assertThat(progress.allRanges())
+        .describedAs("No range is collect since the only range is discarded")
+        .isEmpty();
     }
 
     private Map<String, List<String>> replicaByDc(int dcCount, int replicasPerDc)

@@ -36,7 +36,6 @@ import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
-import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
@@ -74,7 +73,6 @@ class RestoreJobDiscovererTest
     private final RestoreSliceDatabaseAccessor mockSliceAccessor = mock(RestoreSliceDatabaseAccessor.class);
     private final RestoreRangeDatabaseAccessor mockRangeAccessor = mock(RestoreRangeDatabaseAccessor.class);
     private final RestoreJobManagerGroup mockManagers = mock(RestoreJobManagerGroup.class);
-    private final LocalTokenRangesProvider rangesProvider = mock(LocalTokenRangesProvider.class);
     private final PeriodicTaskExecutor executor = mock(PeriodicTaskExecutor.class);
     private final SidecarSchema sidecarSchema = mock(SidecarSchema.class);
     private SidecarMetrics metrics;
@@ -93,7 +91,6 @@ class RestoreJobDiscovererTest
                                         mockSliceAccessor,
                                         mockRangeAccessor,
                                         () -> mockManagers,
-                                        rangesProvider,
                                         null,
                                         null,
                                         metrics);

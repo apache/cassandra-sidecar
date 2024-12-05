@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -112,9 +113,19 @@ public class RestoreJobManager
      */
     void updateRestoreJob(RestoreJob restoreJob)
     {
-        RestoreJobProgressTracker tracker = jobs.computeIfAbsent(restoreJob.jobId,
-                                                                 id -> new RestoreJobProgressTracker(restoreJob, processor, instanceMetadata));
+        RestoreJobProgressTracker tracker = progressTracker(restoreJob);
         tracker.updateRestoreJob(restoreJob);
+    }
+
+    /**
+     * Discard the {@link RestoreRange} of the {@link RestoreJob} if they match the predicate
+     * @param restoreJob restore job to find out the restore ranges
+     * @param rangePredicate predicate to check whether restore range should be discarded
+     */
+    void discardRangeIf(RestoreJob restoreJob, Predicate<RestoreRange> rangePredicate)
+    {
+        RestoreJobProgressTracker tracker = progressTracker(restoreJob);
+        tracker.discardRangeIf(rangePredicate);
     }
 
     /**

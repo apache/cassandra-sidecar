@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Adapt to cluster topology change for restore jobs (CASSSIDECAR-185)
  * Fix PeriodicTaskExecutor double execution due to race from reschedule (CASSSIDECAR-210)
  * Upgrade Netty to 4.1.118.Final and Vert.x to 4.5.13 Version (CASSSIDECAR-207)
  * Fix missing field for INDEX_STATUS in GossipInfo (CASSSIDECAR-195)

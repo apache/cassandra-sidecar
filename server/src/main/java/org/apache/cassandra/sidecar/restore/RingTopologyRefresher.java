@@ -18,13 +18,20 @@
 
 package org.apache.cassandra.sidecar.restore;
 
+import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import javax.annotation.concurrent.ThreadSafe;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,39 +41,53 @@ import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.common.server.utils.StringUtils;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Refreshes the Cassandra ring topology fetched via JMX periodically
+ * // TODO: this class can be generalized to serve other Sidecar components that need to be aware of topology and topology change
  */
 @Singleton
-public class RingTopologyRefresher implements PeriodicTask
+public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProvider
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(RingTopologyRefresher.class);
 
     private final InstanceMetadataFetcher metadataFetcher;
     private final ReplicaByTokenRangePerKeyspace replicaByTokenRangePerKeyspace;
     private final RestoreJobConfiguration restoreJobConfiguration;
+    private final TaskExecutorPool executorPool;
+    private final Map<String, Set<RingTopologyChangeListener>> listenersByKeyspace = new ConcurrentHashMap<>();
 
     @Inject
     public RingTopologyRefresher(InstanceMetadataFetcher metadataFetcher,
-                                 SidecarConfiguration config)
+                                 SidecarConfiguration config,
+                                 ExecutorPools executorPools)
     {
         this.metadataFetcher = metadataFetcher;
         this.restoreJobConfiguration = config.restoreJobConfiguration();
-        this.replicaByTokenRangePerKeyspace = new ReplicaByTokenRangePerKeyspace();
+        this.replicaByTokenRangePerKeyspace = new ReplicaByTokenRangePerKeyspace(this::dispatchRingTopologyChangeAsync);
+        this.executorPool = executorPools.internal();
     }
 
     @Override
@@ -81,27 +102,173 @@ public class RingTopologyRefresher implements PeriodicTask
         return replicaByTokenRangePerKeyspace.isEmpty() ? ScheduleDecision.SKIP : ScheduleDecision.EXECUTE;
     }
 
+    /**
+     * Execute the periodic task to refresh the topology layout for all registered keyspaces
+     *
+     * <p>It is synchronized as there is potential contention from {@link #localTokenRanges(String)}
+     * @param promise a promise when the execution completes
+     */
     @Override
-    public void execute(Promise<Void> promise)
+    public synchronized void execute(Promise<Void> promise)
     {
         prepareAndFetch(this::loadAll);
         promise.tryComplete();
     }
 
-    public void register(RestoreJob restoreJob)
+    public Set<UUID> allRestoreJobsOfKeyspace(String keyspace)
     {
-        replicaByTokenRangePerKeyspace.register(restoreJob);
+        return replicaByTokenRangePerKeyspace.jobsByKeyspace.get(keyspace);
     }
 
-    public void unregister(RestoreJob restoreJob)
+    public void register(RestoreJob restoreJob, RingTopologyChangeListener listener)
     {
-        replicaByTokenRangePerKeyspace.unregister(restoreJob);
+        replicaByTokenRangePerKeyspace.register(restoreJob);
+        addRingTopologyChangeListener(restoreJob.keyspaceName, listener);
+    }
+
+    public void unregister(RestoreJob restoreJob, RingTopologyChangeListener listener)
+    {
+        boolean allRemoved = replicaByTokenRangePerKeyspace.unregister(restoreJob);
+        if (allRemoved)
+        {
+            removeRingTopologyChangeListener(restoreJob.keyspaceName, listener);
+        }
+    }
+
+    public void addRingTopologyChangeListener(String keyspace, RingTopologyChangeListener listener)
+    {
+        listenersByKeyspace.compute(keyspace, (k, v) -> {
+            Set<RingTopologyChangeListener> listeners = v == null ? ConcurrentHashMap.newKeySet() : v;
+            listeners.add(listener);
+            return listeners;
+        });
+    }
+
+    public void removeRingTopologyChangeListener(String keyspace, RingTopologyChangeListener listener)
+    {
+        listenersByKeyspace.computeIfPresent(keyspace, (k, v) -> {
+            v.remove(listener);
+            return v.isEmpty() ? null : v;
+        });
     }
 
     @Nullable
     public TokenRangeReplicasResponse cachedReplicaByTokenRange(RestoreJob restoreJob)
     {
         return replicaByTokenRangePerKeyspace.forRestoreJob(restoreJob);
+    }
+
+    /**
+     * Fetch the latest topology view
+     * <p>It is synchronized when force refreshing as there is potential contention from {@link #execute(Promise)}
+     *
+     * @param keyspace keyspace to determine replication
+     * @param forceRefresh whether refresh the topology view forcibly or not
+     * @return token ranges of the local Cassandra instances or an empty map of nothing is found
+     */
+    @Override
+    public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace, boolean forceRefresh)
+    {
+        TokenRangeReplicasResponse topology;
+        if (forceRefresh) // fetch the latest topology and load into cache
+        {
+            synchronized (this)
+            {
+                topology = prepareAndFetch((storageOperations, nodeSettings) -> {
+                    String partitioner = nodeSettings.partitioner();
+                    return replicaByTokenRangePerKeyspace.loadOne(keyspace, k -> storageOperations.tokenRangeReplicas(new Name(keyspace), partitioner));
+                });
+            }
+        }
+        else // get the cached value
+        {
+            topology = replicaByTokenRangePerKeyspace.topologyOfKeyspace(keyspace);
+        }
+
+        // nothing is fetched
+        return calculateLocalTokenRanges(metadataFetcher, topology);
+    }
+
+    // todo: refactor to a utility class _when_ refactoring TokenRangeReplicasResponse data structure (separate out server and http data representations)
+    @NotNull
+    public static Map<Integer, Set<TokenRange>> calculateLocalTokenRanges(InstanceMetadataFetcher metadataFetcher, TokenRangeReplicasResponse topology)
+    {
+        if (topology == null)
+        {
+            return Collections.emptyMap();
+        }
+
+        List<InstanceMetadata> allInstances = metadataFetcher.allInstances();
+        Map<String, InstanceMetadata> localEndpointsToMetadata = new HashMap<>(allInstances.size());
+        for (InstanceMetadata instanceMetadata : allInstances)
+        {
+            populateEndpointToMetadata(instanceMetadata, localEndpointsToMetadata);
+        }
+
+        Map<Integer, Set<TokenRange>> localTokenRanges = new HashMap<>(localEndpointsToMetadata.size());
+        for (TokenRangeReplicasResponse.ReplicaInfo ri : topology.writeReplicas())
+        {
+            TokenRange range = new TokenRange(Token.from(ri.start()), Token.from(ri.end()));
+            for (List<String> instanceOfDc : ri.replicasByDatacenter().values())
+            {
+                for (String instanceEndpoint : instanceOfDc)
+                {
+                    // skip the non-local nodes
+                    if (!localEndpointsToMetadata.containsKey(instanceEndpoint))
+                    {
+                        continue;
+                    }
+
+                    InstanceMetadata instanceMetadata = localEndpointsToMetadata.get(instanceEndpoint);
+                    localTokenRanges.compute(instanceMetadata.id(), (key, value) -> {
+                        if (value == null)
+                        {
+                            value = new HashSet<>();
+                        }
+                        value.add(range);
+                        return value;
+                    });
+                }
+            }
+        }
+        // merge the connected ranges
+        for (Integer instanceId : localTokenRanges.keySet())
+        {
+            localTokenRanges.computeIfPresent(instanceId, (id, ranges) -> mergeTokenRanges(ranges));
+        }
+        return localTokenRanges;
+    }
+
+    static Set<TokenRange> mergeTokenRanges(@NotNull Set<TokenRange> ranges)
+    {
+        Set<TokenRange> result = new HashSet<>();
+        Iterator<TokenRange> sorted = ranges.stream()
+                                            .sorted(Comparator.comparing(TokenRange::start)
+                                                              .thenComparing(TokenRange::end))
+                                            .iterator();
+        TokenRange last = null;
+        while (sorted.hasNext())
+        {
+            TokenRange current = sorted.next();
+            if (last == null)
+            {
+                last = current;
+            }
+            else if (last.connectsWith(current))
+            {
+                last = new TokenRange(last.start(), current.end());
+            }
+            else
+            {
+                result.add(last);
+                last = current;
+            }
+        }
+        if (last != null)
+        {
+            result.add(last);
+        }
+        return result;
     }
 
     /**
@@ -139,18 +306,46 @@ public class RingTopologyRefresher implements PeriodicTask
         });
     }
 
+    private void dispatchRingTopologyChangeAsync(String keyspace, TokenRangeReplicasResponse oldTopology, TokenRangeReplicasResponse newTopology)
+    {
+        // Dispatch onRingTopologyChanged in another thread as it might block
+        // This method cannot block, since it is invoked by org.apache.cassandra.sidecar.restore.RingTopologyRefresher.ReplicaByTokenRangePerKeyspace.loadOne
+        // in the `compute` lambda.
+        listenersByKeyspace.getOrDefault(keyspace, Collections.emptySet()).forEach(listener -> {
+            executorPool.runBlocking(() -> listener.onRingTopologyChanged(keyspace, oldTopology, newTopology));
+        });
+    }
+
+    private static void populateEndpointToMetadata(InstanceMetadata instanceMetadata, Map<String, InstanceMetadata> localEndpointsToMetadata)
+    {
+        try
+        {
+            InetSocketAddress endpoint = instanceMetadata.delegate().localStorageBroadcastAddress();
+            localEndpointsToMetadata.put(StringUtils.cassandraFormattedHostAndPort(endpoint), instanceMetadata);
+        }
+        catch (CassandraUnavailableException cue)
+        {
+            LOGGER.debug("Ignore this instance. Cassandra is unavailable", cue);
+        }
+    }
+
     /**
      * Core data class of the {@link RingTopologyRefresher}.
      * It groups the ReplicaByTokenRange by keyspace and provides cache capability
-     * <p>
-     * Not thread-safe; only accessed within the single-threaded execution of RingTopologyRefresher
      */
+    @ThreadSafe
     static class ReplicaByTokenRangePerKeyspace
     {
-        private final Set<UUID> allJobs = new HashSet<>();
-        private final Map<String, Set<UUID>> jobsByKeyspace = new HashMap<>();
-        private final Map<String, TokenRangeReplicasResponse> mapping = new HashMap<>();
-        private final Map<String, Promise<TokenRangeReplicasResponse>> promises = new HashMap<>();
+        private final Set<UUID> allJobs = ConcurrentHashMap.newKeySet();
+        private final Map<String, Set<UUID>> jobsByKeyspace = new ConcurrentHashMap<>();
+        private final Map<String, TokenRangeReplicasResponse> mapping = new ConcurrentHashMap<>();
+        private final Map<String, Promise<TokenRangeReplicasResponse>> promises = new ConcurrentHashMap<>();
+        private final RingTopologyChangeListener asyncDispatcher;
+
+        ReplicaByTokenRangePerKeyspace(@NotNull RingTopologyChangeListener asyncDispatcher)
+        {
+            this.asyncDispatcher = asyncDispatcher;
+        }
 
         boolean isEmpty()
         {
@@ -160,19 +355,30 @@ public class RingTopologyRefresher implements PeriodicTask
         // returns keyspace name
         String register(RestoreJob restoreJob)
         {
-            allJobs.add(restoreJob.jobId);
+            // the job is already registered
+            if (!allJobs.add(restoreJob.jobId))
+            {
+                return restoreJob.keyspaceName;
+            }
+
             jobsByKeyspace.compute(restoreJob.keyspaceName, (ks, jobs) -> {
-                Set<UUID> jobsSet = jobs == null ? new HashSet<>() : jobs;
+                Set<UUID> jobsSet = jobs == null ? ConcurrentHashMap.newKeySet() : jobs;
                 jobsSet.add(restoreJob.jobId);
                 return jobsSet;
             });
             return restoreJob.keyspaceName;
         }
 
-        void unregister(RestoreJob restoreJob)
+        /**
+         * Unregister a restore job
+         *
+         * @param restoreJob restore job to unregister
+         * @return true when all jobs of the same keyspace are removed; false otherwise
+         */
+        boolean unregister(RestoreJob restoreJob)
         {
             boolean containsJob = allJobs.remove(restoreJob.jobId);
-            if (containsJob)
+            if (containsJob) // enter this block only once per jobId
             {
                 Set<UUID> jobIdsByKeyspace = jobsByKeyspace.get(restoreJob.keyspaceName);
                 if (jobIdsByKeyspace == null
@@ -180,15 +386,17 @@ public class RingTopologyRefresher implements PeriodicTask
                     || !jobIdsByKeyspace.remove(restoreJob.jobId))
                 {
                     LOGGER.warn("Unable to find the restore job id to unregister. jobId={}", restoreJob.jobId);
-                    return;
+                    return true;
                 }
 
                 if (!jobIdsByKeyspace.isEmpty())
                 {
                     // do not remove mapping if there are still jobs of the keyspace
-                    return;
+                    return false;
                 }
 
+                // Multiple threads could reach here and run the following code to remove entries from maps
+                // The removal is idempotent. It is fine to run the code multiple times.
                 LOGGER.info("All jobs of the keyspace are unregistered. keyspace={}", restoreJob.keyspaceName);
                 jobsByKeyspace.remove(restoreJob.keyspaceName);
                 mapping.remove(restoreJob.keyspaceName);
@@ -200,6 +408,7 @@ public class RingTopologyRefresher implements PeriodicTask
                               "jobId=" + restoreJob.jobId + " keyspace=" + restoreJob.keyspaceName);
                 }
             }
+            return true;
         }
 
         // returns the future of TokenRangeReplicasResponse for the restore job
@@ -223,16 +432,16 @@ public class RingTopologyRefresher implements PeriodicTask
         {
             // loop through the unique names
             Set<String> distinctKeyspaces = jobsByKeyspace.keySet();
-            distinctKeyspaces.forEach(keyspace -> loadEach(keyspace, loader));
+            distinctKeyspaces.forEach(keyspace -> loadOne(keyspace, loader));
         }
 
-        // suppress any Exception when loading topology of each keyspace and continue
-        void loadEach(String keyspace, Function<String, TokenRangeReplicasResponse> loader)
+        // suppress any Exception when loading topology of each keyspace and continue; returns null if fails to load
+        TokenRangeReplicasResponse loadOne(String keyspace, Function<String, TokenRangeReplicasResponse> loader)
         {
             try
             {
                 TokenRangeReplicasResponse topology = loader.apply(keyspace);
-                mapping.compute(keyspace, (key, existing) -> {
+                return mapping.compute(keyspace, (key, existing) -> {
                     if (existing == null)
                     {
                         // fulfill promise after retrieving the initial topology
@@ -241,6 +450,7 @@ public class RingTopologyRefresher implements PeriodicTask
                             promise.tryComplete(topology);
                             return promise;
                         });
+                        asyncDispatcher.onRingTopologyChanged(keyspace, null, topology);
                         return topology;
                     }
                     else if (existing.writeReplicas().equals(topology.writeReplicas()))
@@ -251,19 +461,27 @@ public class RingTopologyRefresher implements PeriodicTask
                     else
                     {
                         LOGGER.info("Ring topology of keyspace is changed. keyspace={}", keyspace);
+                        asyncDispatcher.onRingTopologyChanged(keyspace, existing, topology);
                         return topology;
                     }
                 });
             }
-            catch (Exception ex)
+            catch (Throwable cause)
             {
-                LOGGER.warn("Failure during load topology for keyspace. keyspace={}", keyspace, ex);
+                LOGGER.warn("Failure during load topology for keyspace. keyspace={}", keyspace, cause);
                 promises.computeIfPresent(keyspace, (k, promise) -> {
-                    promise.tryFail(new IllegalStateException("Failed to load topology for keyspace: " + keyspace, ex));
+                    promise.tryFail(new IllegalStateException("Failed to load topology for keyspace: " + keyspace, cause));
                     // return null to remove the promise
                     return null;
                 });
             }
+            return null;
+        }
+
+        @Nullable
+        TokenRangeReplicasResponse topologyOfKeyspace(String keyspace)
+        {
+            return mapping.get(keyspace);
         }
 
         @VisibleForTesting

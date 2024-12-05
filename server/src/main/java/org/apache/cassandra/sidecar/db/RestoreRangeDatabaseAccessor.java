@@ -19,7 +19,9 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.datastax.driver.core.BoundStatement;
@@ -31,6 +33,8 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
+import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.DISCARDED;
+
 /**
  * {@link RestoreSliceDatabaseAccessor} is a data accessor to Cassandra.
  * It encapsulates the CRUD operations for restore_range table
@@ -38,6 +42,8 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 @Singleton
 public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRangesSchema>
 {
+    private static final Map<String, String> DISCARD_MARKER = Collections.singletonMap(DISCARDED.name(), DISCARDED.name());
+
     private final SidecarSchema sidecarSchema;
 
     @Inject
@@ -70,8 +76,12 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
     {
         sidecarSchema.ensureInitialized();
 
+        Map<String, String> statusTextByReplica = range.isDiscarded()
+                                                  ? DISCARD_MARKER
+                                                  : range.statusTextByReplica();
+
         BoundStatement statement = tableSchema.updateStatus()
-                                              .bind(range.statusTextByReplica(),
+                                              .bind(statusTextByReplica,
                                                     range.jobId(),
                                                     range.bucketId(),
                                                     range.startToken(),

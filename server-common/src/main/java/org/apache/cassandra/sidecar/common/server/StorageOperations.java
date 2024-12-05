@@ -32,7 +32,6 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * An interface that defines interactions with the storage system in Cassandra.
- * TODO: relocate to server-common
  */
 public interface StorageOperations
 {
@@ -62,6 +61,8 @@ public interface StorageOperations
      * @param keyspace keyspace to check the data ownership; Cassandra selects a keyspace if null value is passed.
      * @return ring view
      * @throws UnknownHostException when hostname of peer Cassandra nodes cannot be resolved
+     *
+     * TODO: refactor. Do not return http response payload object from this layer.
      */
     RingResponse ring(@Nullable Name keyspace) throws UnknownHostException;
 
@@ -71,6 +72,8 @@ public interface StorageOperations
      * @param keyspace    the keyspace in the Cassandra database
      * @param partitioner token partitioner used for token assignment
      * @return token range to read and write replica mappings
+     *
+     * TODO: refactor. Do not return http response payload object from this layer.
      */
     TokenRangeReplicasResponse tokenRangeReplicas(@NotNull Name keyspace,
                                                   @NotNull String partitioner);

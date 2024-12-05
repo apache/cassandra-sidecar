@@ -232,7 +232,7 @@ public class JoiningTestMultiDC extends JoiningBaseTest
             // We intercept the bootstrap of nodes (7-12) to validate token ranges
             if (nodeNumber > 6)
             {
-                BootstrapBBUtils.installSetBoostrapStateIntercepter(cl, BBHelperDoubleClusterMultiDC.class);
+                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperDoubleClusterMultiDC.class);
             }
         }
 

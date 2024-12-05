@@ -29,6 +29,9 @@ import org.apache.cassandra.sidecar.common.utils.Preconditions;
  */
 public enum RestoreRangeStatus
 {
+    /**
+     * Data of the restore range is imported into Cassandra
+     */
     SUCCEEDED,
     /**
      * Failed is caused by any unrecoverable exception during processing the range
@@ -38,8 +41,18 @@ public enum RestoreRangeStatus
      * Aborted is caused by controller command
      */
     ABORTED,
-    STAGED(SUCCEEDED, FAILED, ABORTED),
-    CREATED(STAGED, FAILED, ABORTED);
+    /**
+     * Discarded is a special terminal status, which is caused by losing the token range due to Cassandra cluster topology change
+     */
+    DISCARDED,
+    /**
+     * Data of the restore range is staged on local disk
+     */
+    STAGED(SUCCEEDED, FAILED, ABORTED, DISCARDED),
+    /**
+     * Restore range is created to be processed
+     */
+    CREATED(STAGED, FAILED, ABORTED, DISCARDED);
 
     // Do not use EnumSet, since validTargetStatuses is assigned on constructing and enums are not available yet.
     private final Set<RestoreRangeStatus> validTargetStatusSet;

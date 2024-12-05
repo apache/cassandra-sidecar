@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.response.data.RestoreRangeJson;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
 import org.apache.cassandra.sidecar.common.server.utils.StringUtils;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
@@ -118,6 +119,7 @@ public class RestoreRange
     private boolean hasImported = false;
     private int downloadAttempt = 0;
     private volatile boolean isCancelled = false;
+    private volatile boolean discarded = false;
 
     public static RestoreRange from(Row row)
     {
@@ -154,6 +156,7 @@ public class RestoreRange
         this.owner = builder.owner;
         this.statusByReplica = new HashMap<>(builder.statusByReplica);
         this.tracker = builder.tracker;
+        this.discarded = builder.discarded;
     }
 
     public Builder unbuild()
@@ -252,6 +255,17 @@ public class RestoreRange
     public void cancel()
     {
         isCancelled = true;
+    }
+
+    public void discard()
+    {
+        discarded = true;
+        cancel();
+    }
+
+    public boolean isDiscarded()
+    {
+        return discarded;
     }
 
     /**
@@ -383,6 +397,11 @@ public class RestoreRange
     public BigInteger endToken()
     {
         return this.endToken;
+    }
+
+    public TokenRange tokenRange()
+    {
+        return new TokenRange(startToken, endToken);
     }
 
     public Map<String, RestoreRangeStatus> statusByReplica()
@@ -529,6 +548,7 @@ public class RestoreRange
         private String uploadId;
         private Map<String, RestoreRangeStatus> statusByReplica = Collections.emptyMap();
         private RestoreJobProgressTracker tracker = null;
+        private boolean discarded;
 
         private Builder()
         {
@@ -549,6 +569,7 @@ public class RestoreRange
             this.endToken = range.endToken;
             this.statusByReplica = Collections.unmodifiableMap(range.statusByReplica);
             this.tracker = range.tracker;
+            this.discarded = range.discarded;
         }
 
         public Builder jobId(UUID jobId)
@@ -613,6 +634,13 @@ public class RestoreRange
 
         public Builder replicaStatus(Map<String, RestoreRangeStatus> statusByReplica)
         {
+            for (RestoreRangeStatus status : statusByReplica.values())
+            {
+                if (status == RestoreRangeStatus.DISCARDED)
+                {
+                    return discard();
+                }
+            }
             return update(b -> b.statusByReplica = new HashMap<>(statusByReplica));
         }
 
@@ -621,6 +649,11 @@ public class RestoreRange
             Map<String, RestoreRangeStatus> map = new HashMap<>(statusTextByReplica.size());
             statusTextByReplica.forEach((k, v) -> map.put(k, RestoreRangeStatus.valueOf(v)));
             return replicaStatus(map);
+        }
+
+        public Builder discard()
+        {
+            return update(b -> b.discarded = true);
         }
 
         public Builder restoreJobProgressTracker(RestoreJobProgressTracker tracker)

@@ -125,12 +125,15 @@ public class RestoreProcessor implements PeriodicTask
      *
      * @param range restore range to be removed
      */
-    void remove(RestoreRange range)
+    void discardAndRemove(RestoreRange range)
     {
         if (isClosed)
             return;
 
         workQueue.remove(range);
+        range.discard();
+        // update the range async
+        pool.runBlocking(() -> rangeDatabaseAccessor.updateStatus(range));
     }
 
     @Override
@@ -283,7 +286,12 @@ public class RestoreProcessor implements PeriodicTask
     private Function<Throwable, Future<Void>> taskFailureHandler(RestoreRange range)
     {
         return cause -> {
-            if (cause instanceof RestoreJobException && ((RestoreJobException) cause).retryable())
+            if (range.isDiscarded())
+            {
+                // for discarded ranges, we simply do not re-queue them.
+                LOGGER.debug("RestoreRange is discarded. sliceKey={}", range.sliceKey());
+            }
+            else if (cause instanceof RestoreJobException && ((RestoreJobException) cause).retryable())
             {
                 LOGGER.warn("Slice failed with recoverable failure. sliceKey={}", range.sliceKey(), cause);
                 // re-enqueue the retryable failed slice
@@ -312,7 +320,7 @@ public class RestoreProcessor implements PeriodicTask
     }
 
     @VisibleForTesting
-    int activeSlices()
+    int activeRanges()
     {
         return workQueue.activeRangesCount();
     }
@@ -324,7 +332,7 @@ public class RestoreProcessor implements PeriodicTask
     }
 
     @VisibleForTesting
-    int pendingStartSlices()
+    int pendingStartRanges()
     {
         return workQueue.size();
     }

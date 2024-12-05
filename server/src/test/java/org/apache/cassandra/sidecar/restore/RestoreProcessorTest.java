@@ -28,15 +28,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
-import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
@@ -46,8 +43,9 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceRestoreMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
-import org.mockito.Mockito;
 
+import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
+import static org.apache.cassandra.sidecar.restore.RestoreRangeTask.failOnCancelled;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -92,14 +90,16 @@ class RestoreProcessorTest
         int concurrency = TestModule.RESTORE_MAX_CONCURRENCY;
         periodicTaskExecutor.schedule(processor);
 
-        assertThat(processor.activeSlices()).isZero();
+        assertThat(processor.activeRanges()).isZero();
 
         CountDownLatch latch = new CountDownLatch(1);
 
         int total = concurrency * 3;
         for (int i = 0; i < total; i++)
         {
-            processor.submit(mockSlowRestoreRange(latch));
+            RestoreRange range = mockSlowRestoreRange(latch);
+            range.completeImportPhase(); // complete prematurely for testing purpose
+            processor.submit(range);
         }
 
         InstanceRestoreMetrics instanceRestoreMetrics = instanceMetrics().restore();
@@ -114,7 +114,7 @@ class RestoreProcessorTest
             assertThat(instanceRestoreMetrics.pendingSliceCount.metric.getValue())
             .isLessThanOrEqualTo(total - concurrency);
 
-            assertThat(processor.activeSlices()).isEqualTo(concurrency);
+            assertThat(processor.activeRanges()).isEqualTo(concurrency);
         });
 
         // slices start to succeed
@@ -122,7 +122,7 @@ class RestoreProcessorTest
 
         // it never grows beyond `concurrency`
         loopAssert(3, () -> {
-            assertThat(processor.activeSlices())
+            assertThat(processor.activeRanges())
             .describedAs("Active slice count should be in the range of (0, concurrency]")
             .isLessThanOrEqualTo(concurrency)
             .isPositive();
@@ -131,7 +131,7 @@ class RestoreProcessorTest
         // the active slices should be back to 0
         // and the pending slices should be back to 0
         loopAssert(3, () -> {
-            assertThat(processor.activeSlices()).isZero();
+            assertThat(processor.activeRanges()).isZero();
             assertThat(instanceRestoreMetrics.sliceImportQueueLength.metric.getValue()).isZero();
             assertThat(instanceRestoreMetrics.pendingSliceCount.metric.getValue()).isZero();
         });
@@ -150,19 +150,19 @@ class RestoreProcessorTest
         when(sidecarSchema.isInitialized()).thenReturn(false);
 
         assertThat(processor.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
-        assertThat(processor.activeSlices()).isZero();
+        assertThat(processor.activeRanges()).isZero();
 
         CountDownLatch latch = new CountDownLatch(1);
         processor.submit(mockSlowRestoreRange(latch));
-        assertThat(processor.activeSlices())
+        assertThat(processor.activeRanges())
         .describedAs("No slice should be active because executions are skipped")
         .isZero();
 
         // Make slice completable. But since all executions are skipped, the active slice should remain as 1
         latch.countDown();
         loopAssert(3, () -> {
-            assertThat(processor.pendingStartSlices()).isOne();
-            assertThat(processor.activeSlices()).isZero();
+            assertThat(processor.pendingStartRanges()).isOne();
+            assertThat(processor.activeRanges()).isZero();
         });
     }
 
@@ -220,7 +220,41 @@ class RestoreProcessorTest
         assertThatThrownBy(() -> range.trackerUnsafe().trySubmit(range))
         .isExactlyInstanceOf(RestoreJobFatalException.class)
         .hasMessageContaining("Restore range is cancelled.");
+    }
 
+    @Test
+    void testDiscardPendingRange()
+    {
+        RestoreRange range = RestoreRangeTest.createTestRange();
+        processor.submit(range);
+        assertThat(processor.pendingStartRanges()).isOne();
+        processor.discardAndRemove(range);
+        assertThat(processor.pendingStartRanges()).isZero();
+        assertThat(range.isDiscarded()).isTrue();
+    }
+
+    @Test
+    void testDiscardStartedRange()
+    {
+        CountDownLatch readyToFinish = new CountDownLatch(1);
+        RestoreRange range = mockSlowRestoreRange(readyToFinish);
+        processor.submit(range);
+        processor.execute(Promise.promise());
+        assertThat(processor.activeRanges()).isOne();
+        assertThat(processor.activeTasks()).isOne();
+        processor.discardAndRemove(range);
+        assertThat(processor.activeRanges())
+        .describedAs("The range is being processed already, we wait for it to fail " +
+                     "and discard in org.apache.cassandra.sidecar.restore.RestoreProcessor.taskFailureHandler")
+        .isOne();
+        assertThat(range.isDiscarded())
+        .describedAs("The range should be marked as discarded")
+        .isTrue();
+        readyToFinish.countDown();
+        loopAssert(3, () -> {
+            assertThat(processor.activeRanges()).isZero();
+            assertThat(processor.activeTasks()).isZero();
+        });
     }
 
     private InstanceMetrics instanceMetrics()
@@ -245,7 +279,8 @@ class RestoreProcessorTest
             public void handle(Promise<RestoreRange> promise)
             {
                 Uninterruptibles.awaitUninterruptibly(latch);
-                promise.complete(range);
+                failOnCancelled(range, range)
+                .onComplete(promise);
             }
 
             @Override
@@ -265,17 +300,9 @@ class RestoreProcessorTest
 
     private RestoreRange mockRestoreRange()
     {
-        RestoreRange range = mock(RestoreRange.class, Mockito.RETURNS_DEEP_STUBS);
-        when(range.jobId()).thenReturn(UUIDs.timeBased());
-        when(range.canProduceTask()).thenReturn(true);
-        when(range.owner().id()).thenReturn(1);
-        when(range.sliceKey()).thenReturn("SliceKey");
+        RestoreRange mockRange = RestoreRangeTest.createTestRange();
+        RestoreRange range = spy(mockRange);
         when(range.owner().metrics()).thenReturn(instanceMetrics());
-        RestoreJob job = RestoreJob.builder()
-                                   .jobStatus(RestoreJobStatus.CREATED)
-                                   .build();
-        when(range.job()).thenReturn(job);
-        when(range.hasImported()).thenReturn(true);
         return range;
     }
 }

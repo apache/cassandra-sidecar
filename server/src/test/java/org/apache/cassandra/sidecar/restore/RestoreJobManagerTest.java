@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -39,6 +40,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -54,15 +56,18 @@ import org.apache.cassandra.sidecar.server.MainModule;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class RestoreJobManagerTest
 {
+    private static final int jobRecencyDays = 1;
     private RestoreJobManager manager;
     private Vertx vertx;
     private ExecutorPools executorPools;
-    private static final int jobRecencyDays = 1;
+    private RestoreProcessor processor;
 
     @TempDir
     private Path testDir;
@@ -73,7 +78,7 @@ class RestoreJobManagerTest
         Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
         vertx = injector.getInstance(Vertx.class);
         executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
-        RestoreProcessor processor = mock(RestoreProcessor.class);
+        processor = mock(RestoreProcessor.class);
         InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
         when(instanceMetadata.stagingDir()).thenReturn(testDir.toString());
 
@@ -243,6 +248,46 @@ class RestoreJobManagerTest
             .describedAs("Should have 5 files intact")
             .hasSize(5);
         });
+    }
+
+    @Test
+    void testDiscardRanges() throws Exception
+    {
+        // set up the mock for discardAndRemove; invoke discard on the input restore range
+        doAnswer(invocation -> {
+            RestoreRange input = invocation.getArgument(0, RestoreRange.class);
+            input.discard();
+            return null;
+        })
+        .when(processor).discardAndRemove(any(RestoreRange.class));
+        RestoreRange template = getTestRange();
+        RestoreJob job = template.job();
+        RestoreRange rangeToDiscard = template.unbuild()
+                                              .startToken(BigInteger.valueOf(0))
+                                              .endToken(BigInteger.valueOf(10))
+                                              .build();
+        RestoreRange rangeToKeep = template.unbuild()
+                                           .startToken(BigInteger.valueOf(100))
+                                           .endToken(BigInteger.valueOf(110))
+                                           .build();
+        assertThat(manager.progressTrackerUnsafe(job).rangesForTesting())
+        .describedAs("No range is submitted yet")
+        .hasSize(0);
+        assertThat(manager.trySubmit(rangeToDiscard, job))
+        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
+        assertThat(manager.trySubmit(rangeToKeep, job))
+        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
+
+        assertThat(manager.progressTrackerUnsafe(job).rangesForTesting())
+        .describedAs("There are two ranges submitted")
+        .hasSize(2);
+        // (0, 10] overlaps with (-10, 50]; but (100, 110] does not
+        manager.discardRangeIf(job, range -> range.tokenRange().overlaps(new TokenRange(-10, 50)));
+        assertThat(manager.progressTrackerUnsafe(job).rangesForTesting())
+        .describedAs("One of the two ranges should be discarded")
+        .hasSize(1);
+        assertThat(rangeToDiscard.isDiscarded()).isTrue();
+        assertThat(rangeToKeep.isDiscarded()).isFalse();
     }
 
     private RestoreRange getTestRange()

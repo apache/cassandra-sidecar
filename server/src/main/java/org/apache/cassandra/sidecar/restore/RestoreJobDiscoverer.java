@@ -19,17 +19,19 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +52,7 @@ import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
@@ -64,7 +67,7 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
  * {@link RestoreJobDiscoverer} handles background restore job discovery and handling it according to job status
  */
 @Singleton
-public class RestoreJobDiscoverer implements PeriodicTask
+public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeListener
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJobDiscoverer.class);
 
@@ -91,7 +94,6 @@ public class RestoreJobDiscoverer implements PeriodicTask
                                 RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor,
                                 RestoreRangeDatabaseAccessor restoreRangeDatabaseAccessor,
                                 Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
-                                LocalTokenRangesProvider cachedLocalTokenRanges,
                                 InstanceMetadataFetcher instanceMetadataFetcher,
                                 RingTopologyRefresher ringTopologyRefresher,
                                 SidecarMetrics metrics)
@@ -102,7 +104,6 @@ public class RestoreJobDiscoverer implements PeriodicTask
              restoreSliceDatabaseAccessor,
              restoreRangeDatabaseAccessor,
              restoreJobManagerGroupProvider,
-             cachedLocalTokenRanges,
              instanceMetadataFetcher,
              ringTopologyRefresher,
              metrics);
@@ -115,7 +116,6 @@ public class RestoreJobDiscoverer implements PeriodicTask
                          RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor,
                          RestoreRangeDatabaseAccessor restoreRangeDatabaseAccessor,
                          Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
-                         LocalTokenRangesProvider cachedLocalTokenRanges,
                          InstanceMetadataFetcher instanceMetadataFetcher,
                          RingTopologyRefresher ringTopologyRefresher,
                          SidecarMetrics metrics)
@@ -127,9 +127,9 @@ public class RestoreJobDiscoverer implements PeriodicTask
         this.restoreRangeDatabaseAccessor = restoreRangeDatabaseAccessor;
         this.jobDiscoveryRecencyDays = restoreJobConfig.jobDiscoveryMinimumRecencyDays();
         this.restoreJobManagerGroupSingleton = restoreJobManagerGroupProvider;
-        this.localTokenRangesProvider = cachedLocalTokenRanges;
         this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.ringTopologyRefresher = ringTopologyRefresher;
+        this.localTokenRangesProvider = ringTopologyRefresher;
         this.metrics = metrics.server().restore();
         this.jobIdsByDay = new JobIdsByDay();
     }
@@ -240,6 +240,77 @@ public class RestoreJobDiscoverer implements PeriodicTask
         this.periodicTaskExecutor = executor;
     }
 
+    @Override
+    public void onRingTopologyChanged(String keyspace, TokenRangeReplicasResponse oldTopology, TokenRangeReplicasResponse newTopology)
+    {
+        if (oldTopology == null)
+        {
+            LOGGER.debug("Received RingTopologyChanged notification for new topology discovered. " +
+                         "It is already handled inline at findSlicesAndSubmit. Exiting early. " +
+                         "keyspace={}", keyspace);
+            return;
+        }
+
+        Map<Integer, Set<TokenRange>> localRangesFromOld = RingTopologyRefresher.calculateLocalTokenRanges(instanceMetadataFetcher, oldTopology);
+        Map<Integer, Set<TokenRange>> localRangesFromNew = RingTopologyRefresher.calculateLocalTokenRanges(instanceMetadataFetcher, newTopology);
+        if (Objects.equals(localRangesFromOld, localRangesFromNew))
+        {
+            LOGGER.debug("Local token ranges derived from both topology are the same. No need to update restore ranges.");
+            return;
+        }
+
+        // Populate the lostRanges and the gainedRanges
+        // For each lost range, we want to cancel the RestoreRange that covers it
+        // For each gained range, we want to create the RestoreRange
+        Map<Integer, Set<TokenRange>> lostRanges = new HashMap<>(localRangesFromNew.size());
+        Map<Integer, Set<TokenRange>> gainedRanges = new HashMap<>(localRangesFromNew.size());
+        for (Integer instanceId : Sets.union(localRangesFromOld.keySet(), localRangesFromNew.keySet()))
+        {
+            Set<TokenRange> rangesFromOld = localRangesFromOld.get(instanceId);
+            Set<TokenRange> rangesFromNew = localRangesFromNew.get(instanceId);
+            Preconditions.checkState(rangesFromNew != null || rangesFromOld != null,
+                                     "Token ranges of instance: " + instanceId + " do not exist in both old and new");
+            if (rangesFromOld == null) // new node
+            {
+                gainedRanges.put(instanceId, rangesFromNew);
+            }
+            else if (rangesFromNew == null) // removed node
+            {
+                lostRanges.put(instanceId, rangesFromOld);
+            }
+            else // both new and old ranges exist and they differs
+            {
+                // ranges that are no longer in the new topology are lost
+                lostRanges.put(instanceId, Sets.difference(rangesFromOld, rangesFromNew));
+                // ranges that are new in the new topology are gained
+                gainedRanges.put(instanceId, Sets.difference(rangesFromNew, rangesFromOld));
+            }
+        }
+
+        Set<UUID> jobIds = ringTopologyRefresher.allRestoreJobsOfKeyspace(keyspace);
+        for (UUID jobId : jobIds)
+        {
+            RestoreJob restoreJob = restoreJobDatabaseAccessor.find(jobId);
+            if (restoreJob == null)
+            {
+                continue;
+            }
+
+            try
+            {
+                // First, discard all the restore ranges that cover the lost ranges
+                lostRanges.forEach((instanceId, ranges) -> discardRestoreRangeIf(restoreJob, instanceId, ranges));
+                // Next, submit the RestoreRanges from the newly gained ranges
+                gainedRanges.forEach((instanceId, ranges) -> findSlicesOfCassandraNodeAndSubmit(restoreJob, instanceId, ranges));
+            }
+            catch (Exception e)
+            {
+                // log the warning and continue to process other jobs
+                LOGGER.warn("Unexpected exception when adjusting restore job ranges. jobId={}", jobId, e);
+            }
+        }
+    }
+
     private void processOneJob(RestoreJob job, RestoreJobManagerGroup restoreJobManagers, RunContext context)
     {
         if (jobIdsByDay.shouldLogJob(job))
@@ -249,31 +320,21 @@ public class RestoreJobDiscoverer implements PeriodicTask
 
         switch (job.status)
         {
+            case STAGED:
+                // unset the flag, so that it can re-discover the slices when the job status changes to a ready status
+                jobIdsByDay.unsetSlicesDiscovered(job); // no break by design
             case CREATED:
             case STAGE_READY:
-            case STAGED:
             case IMPORT_READY:
                 if (job.hasExpired(context.nowMillis))
                 {
-                    context.expiredJobs += 1;
-                    boolean aborted = abortJob(job);
-                    if (aborted)
-                    {
-                        // finalize the job once aborted; otherwise retry in the next periodic task run
-                        context.abortedJobs += 1;
-                        finalizeJob(restoreJobManagers, job);
-                    }
+                    abortExpiredJob(job, restoreJobManagers, context);
                     break; // do not proceed further if the job has expired
                 }
                 // find the oldest non-completed job
                 context.earliestInDays = Math.max(context.earliestInDays, delta(context.today, job.createdAt));
                 restoreJobManagers.updateRestoreJob(job);
-                if (job.isManagedBySidecar())
-                {
-                    ringTopologyRefresher.register(job);
-                    // todo: potential exceedingly number of queries
-                    findSlicesAndSubmit(job);
-                }
+                processSidecarManagedJobMaybe(job);
                 inflightJobsCount += 1;
                 break;
             case FAILED:
@@ -286,25 +347,64 @@ public class RestoreJobDiscoverer implements PeriodicTask
         }
     }
 
+    private void abortExpiredJob(RestoreJob job, RestoreJobManagerGroup restoreJobManagers, RunContext context)
+    {
+        context.expiredJobs += 1;
+        boolean aborted = abortJob(job);
+        if (aborted)
+        {
+            // finalize the job once aborted; otherwise retry in the next periodic task run
+            context.abortedJobs += 1;
+            finalizeJob(restoreJobManagers, job);
+        }
+    }
+
+    private void processSidecarManagedJobMaybe(RestoreJob job)
+    {
+        if (!job.isManagedBySidecar())
+        {
+            return;
+        }
+
+        // Only force refresh topology for the first time in each stage
+        // RestoreJobDiscoverer is registered as a RingTopologyListener to receive future topology changed notifications, if any
+        ringTopologyRefresher.register(job, this);
+        if (shouldFindSlicesAndSubmit(job))
+        {
+            findSlicesAndSubmit(job, true);
+            // Mark the flag. It prevents finding slices (which is expensive) until the flag is unset.
+            jobIdsByDay.markSlicesDiscovered(job);
+        }
+    }
+
+    private boolean shouldFindSlicesAndSubmit(RestoreJob job)
+    {
+        return (job.status == RestoreJobStatus.STAGE_READY || job.status == RestoreJobStatus.IMPORT_READY)
+               && !jobIdsByDay.isSliceDiscovered(job);
+    }
+
     private void finalizeJob(RestoreJobManagerGroup restoreJobManagers, RestoreJob job)
     {
         restoreJobManagers.removeJobInternal(job);
         if (job.isManagedBySidecar())
         {
-            ringTopologyRefresher.unregister(job);
+            ringTopologyRefresher.unregister(job, this);
         }
     }
 
     // find all slices of the job that should be downloaded to the local instances,
     // according to the cluster token ownership
-    private void findSlicesAndSubmit(RestoreJob restoreJob)
+    private void findSlicesAndSubmit(RestoreJob restoreJob, boolean forceRefresh)
     {
-        localTokenRangesProvider.localTokenRanges(restoreJob.keyspaceName)
-                                .forEach((key, ranges) -> {
-                                    int instanceId = key;
-                                    InstanceMetadata instance = instanceMetadataFetcher.instance(instanceId);
-                                    ranges.forEach(range -> findSlicesOfRangeAndSubmit(instance, restoreJob, range));
-                                });
+        localTokenRangesProvider.localTokenRanges(restoreJob.keyspaceName, forceRefresh)
+                                .forEach((instanceId, ranges) -> findSlicesOfCassandraNodeAndSubmit(restoreJob, instanceId, ranges));
+    }
+
+    // find all slices according to the Cassandra node denoted by the instanceId and the token ranges
+    private void findSlicesOfCassandraNodeAndSubmit(RestoreJob restoreJob, int instanceId, Set<TokenRange> ranges)
+    {
+        InstanceMetadata instance = instanceMetadataFetcher.instance(instanceId);
+        ranges.forEach(range -> findSlicesOfRangeAndSubmit(instance, restoreJob, range));
     }
 
     // try to submit the slice.
@@ -316,33 +416,36 @@ public class RestoreJobDiscoverer implements PeriodicTask
         restoreSliceDatabaseAccessor
         .selectByJobByBucketByTokenRange(restoreJob, bucketId, range)
         .forEach(slice -> {
-            // set the owner instance, which is not read from database
-            TokenRangeReplicasResponse topology = ringTopologyRefresher.cachedReplicaByTokenRange(restoreJob);
-            List<RestoreRange> splits = slice.splitMaybe(topology)
-                                             .stream()
-                                             .map(s -> {
-                                                 String uploadId = RestoreJobUtil.generateUniqueUploadId(s.jobId(), s.sliceId());
-                                                 return RestoreRange.builderFromSlice(s)
-                                                                    .ownerInstance(instance)
-                                                                    .stageDirectory(Paths.get(instance.stagingDir()), uploadId)
-                                                                    .build();
-                                             })
-                                             .collect(Collectors.toList());
-            RestoreJobManagerGroup managerGroup = restoreJobManagerGroupSingleton.get();
-            for (RestoreRange split : splits)
+            // Check if the slice needs to be trimmed/split
+            RestoreSlice trimmed = slice.trimMaybe(range);
+            String uploadId = RestoreJobUtil.generateUniqueUploadId(trimmed.jobId(), trimmed.sliceId());
+            RestoreRange restoreRange = RestoreRange.builderFromSlice(trimmed)
+                                                    // set the owner instance, which is not read from database
+                                                    .ownerInstance(instance)
+                                                    .stageDirectory(Paths.get(instance.stagingDir()), uploadId)
+                                                    .build();
+            RestoreJobProgressTracker.Status status = submit(instance, restoreJob, restoreRange);
+            if (status == RestoreJobProgressTracker.Status.CREATED)
             {
-                RestoreJobProgressTracker.Status status = submit(instance, managerGroup, restoreJob, split);
-                if (status == RestoreJobProgressTracker.Status.CREATED)
-                {
-                    restoreRangeDatabaseAccessor.create(split);
-                }
+                restoreRangeDatabaseAccessor.create(restoreRange);
             }
         });
     }
 
-    private RestoreJobProgressTracker.Status submit(InstanceMetadata instance, RestoreJobManagerGroup managerGroup,
-                                                    RestoreJob job, RestoreRange range)
+    private void discardRestoreRangeIf(RestoreJob restoreJob, int instanceId, Set<TokenRange> ranges)
     {
+        InstanceMetadata instance = instanceMetadataFetcher.instance(instanceId);
+        RestoreJobManagerGroup managerGroup = restoreJobManagerGroupSingleton.get();
+        for (TokenRange range : ranges)
+        {
+            managerGroup.discardRangeIf(instance, restoreJob, restoreRange -> restoreRange.tokenRange().overlaps(range));
+        }
+    }
+
+    private RestoreJobProgressTracker.Status submit(InstanceMetadata instance, RestoreJob job, RestoreRange range)
+    {
+        RestoreJobManagerGroup managerGroup = restoreJobManagerGroupSingleton.get();
+
         try
         {
             return managerGroup.trySubmit(instance, range, job);
@@ -381,6 +484,8 @@ public class RestoreJobDiscoverer implements PeriodicTask
     static class JobIdsByDay
     {
         private final Map<Integer, Map<UUID, RestoreJobStatus>> jobsByDay = new HashMap<>();
+        // tracks the jobIds that have their slices already discovered
+        private final Map<Integer, Set<UUID>> sliceDiscoveredJobsByDay = new HashMap<>();
         private final Set<Integer> discoveredDays = new HashSet<>(); // contains the days of the jobs seen from the current round of discovery
 
         /**
@@ -393,11 +498,44 @@ public class RestoreJobDiscoverer implements PeriodicTask
          */
         boolean shouldLogJob(RestoreJob job)
         {
-            int day = job.createdAt.getDaysSinceEpoch();
-            discoveredDays.add(day);
+            int day = populateDiscoveredDay(job);
             Map<UUID, RestoreJobStatus> jobs = jobsByDay.computeIfAbsent(day, key -> new HashMap<>());
             RestoreJobStatus oldStatus = jobs.put(job.jobId, job.status);
             return oldStatus == null || job.status == RestoreJobStatus.CREATED || oldStatus != job.status;
+        }
+
+        void markSlicesDiscovered(RestoreJob job)
+        {
+            int day = populateDiscoveredDay(job);
+            sliceDiscoveredJobsByDay.compute(day, (key, value) -> {
+                if (value == null)
+                {
+                    value = new HashSet<>();
+                }
+                value.add(job.jobId);
+                return value;
+            });
+        }
+
+        boolean isSliceDiscovered(RestoreJob job)
+        {
+            int day = populateDiscoveredDay(job);
+            return sliceDiscoveredJobsByDay.getOrDefault(day, Collections.emptySet())
+                                           .contains(job.jobId);
+        }
+
+        void unsetSlicesDiscovered(RestoreJob job)
+        {
+            int day = populateDiscoveredDay(job);
+            sliceDiscoveredJobsByDay.compute(day, (key, value) -> {
+               if (value == null)
+               {
+                   return null;
+               }
+
+               value.remove(job.jobId);
+               return value;
+            });
         }
 
         void cleanupMaybe()
@@ -405,6 +543,13 @@ public class RestoreJobDiscoverer implements PeriodicTask
             // remove all the jobIds of the days that are not discovered
             jobsByDay.keySet().removeIf(day -> !discoveredDays.contains(day));
             discoveredDays.clear();
+        }
+
+        private int populateDiscoveredDay(RestoreJob job)
+        {
+            int day = job.createdAt.getDaysSinceEpoch();
+            discoveredDays.add(day);
+            return day;
         }
 
         @VisibleForTesting

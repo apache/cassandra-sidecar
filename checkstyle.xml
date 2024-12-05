@@ -287,7 +287,9 @@ page at http://checkstyle.sourceforge.net/config.html -->
             some other variants which we don't publicized to promote consistency).
             -->
             <property name="reliefPattern"
-                      value="fall through|Fall through|fallthru|Fallthru|falls through|Falls through|fallthrough|Fallthrough|No break|NO break|no break|continue on" />
+                      value="fall through|Fall through|fallthru|Fallthru|falls through
+                      |Falls through|fallthrough|Fallthrough|No break|NO break|no break
+                      |continue on|no break by design" />
             <property name="severity" value="error" />
         </module>
 

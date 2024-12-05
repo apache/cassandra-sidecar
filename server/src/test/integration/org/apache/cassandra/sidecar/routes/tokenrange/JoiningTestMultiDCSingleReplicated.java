@@ -161,7 +161,7 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
             // We intercept the bootstrap of nodes (11,12) to validate token ranges
             if (nodeNumber > 10)
             {
-                BootstrapBBUtils.installSetBoostrapStateIntercepter(cl, BBHelperMultiDC.class);
+                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperMultiDC.class);
             }
         }
 

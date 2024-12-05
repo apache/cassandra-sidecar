@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.routes.tokenrange;
+package org.apache.cassandra.sidecar.testing;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.cassandra.distributed.api.TokenSupplier;
@@ -39,10 +40,10 @@ public class TestTokenSupplier
      * @param numTokensPerNode no. tokens allocated to each node (this is always 1 if there are no vnodes)
      * @return The token supplier that vends the tokens
      */
-    static TokenSupplier evenlyDistributedTokens(int numNodesPerDC, int newNodesPerDC, int numDcs, int numTokensPerNode)
+    public static TokenSupplier evenlyDistributedTokens(int numNodesPerDC, int newNodesPerDC, int numDcs, int numTokensPerNode)
     {
         // Use token count using initial node count to first assign tokens to nodes
-        long totalTokens = (long) (numNodesPerDC) * numDcs * numTokensPerNode;
+        long totalTokens = (long) numNodesPerDC * numDcs * numTokensPerNode;
         // Similar to Cassandra TokenSupplier, the increment is doubled to account for all tokens from MIN - MAX.
         // For multi-DC, since neighboring nodes from different DCs have consecutive tokens, the increment is
         // broadened by a factor of numDcs.
@@ -55,7 +56,7 @@ public class TestTokenSupplier
 
 
         // Initial value of the first new node
-        BigInteger value  = new BigInteger(tokens[0 + (numDcs - 1)].get(0));
+        BigInteger value = new BigInteger(tokens[numDcs - 1].get(0));
         BigInteger subIncrement = increment.divide(BigInteger.valueOf(2));
 
         int nodeId = (int) totalTokens + 1;
@@ -75,6 +76,16 @@ public class TestTokenSupplier
         }
 
         return (nodeIdx) -> tokens[nodeIdx - 1];
+    }
+
+    /**
+     * Statically allocated tokens, one per node.
+     * @param tokens array of tokens to use
+     * @return TokenSupplier to vend tokens
+     */
+    public static TokenSupplier staticTokens(long... tokens)
+    {
+        return nodeIndex -> Collections.singletonList(String.valueOf(tokens[nodeIndex - 1]));
     }
 
     private static List<String>[] allocateExistingNodeTokens(int numNodesPerDC,

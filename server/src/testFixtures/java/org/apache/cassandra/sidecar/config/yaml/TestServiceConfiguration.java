@@ -35,7 +35,7 @@ public class TestServiceConfiguration extends ServiceConfigurationImpl
     public static Builder builder()
     {
         return ServiceConfigurationImpl.builder()
-                                       .host("127.0.0.1")
+                                       .host("0.0.0.0")
                                        .port(0); // let the test find an available port
     }
 }

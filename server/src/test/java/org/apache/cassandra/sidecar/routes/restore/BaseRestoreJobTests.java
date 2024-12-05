@@ -361,9 +361,9 @@ public abstract class BaseRestoreJobTests
         {
             Supplier<TokenRangeReplicasResponse> topologySupplier;
 
-            public TestRingTopologyRefresher(InstanceMetadataFetcher metadataFetcher, SidecarConfiguration config)
+            public TestRingTopologyRefresher(InstanceMetadataFetcher metadataFetcher, SidecarConfiguration config, ExecutorPools executorPools)
             {
-                super(metadataFetcher, config);
+                super(metadataFetcher, config, executorPools);
             }
 
             @Override
@@ -416,9 +416,11 @@ public abstract class BaseRestoreJobTests
 
         @Provides
         @Singleton
-        public RingTopologyRefresher ringTopologyRefresher(InstanceMetadataFetcher metadataFetcher, SidecarConfiguration configuration)
+        public RingTopologyRefresher ringTopologyRefresher(InstanceMetadataFetcher metadataFetcher,
+                                                           SidecarConfiguration configuration,
+                                                           ExecutorPools executorPools)
         {
-            return new TestRingTopologyRefresher(metadataFetcher, configuration);
+            return new TestRingTopologyRefresher(metadataFetcher, configuration, executorPools);
         }
     }
 }

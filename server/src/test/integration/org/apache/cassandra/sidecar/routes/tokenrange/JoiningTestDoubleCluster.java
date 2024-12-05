@@ -176,7 +176,7 @@ public class JoiningTestDoubleCluster extends JoiningBaseTest
             // We intercept the bootstrap of the new nodes (6-10) to validate token ranges
             if (nodeNumber > 5)
             {
-                BootstrapBBUtils.installSetBoostrapStateIntercepter(cl, BBHelperDoubleClusterSize.class);
+                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperDoubleClusterSize.class);
             }
         }
 

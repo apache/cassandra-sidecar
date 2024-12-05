@@ -148,7 +148,7 @@ public class JoiningTestMultipleNodes extends JoiningBaseTest
             // We intercept the joining of nodes (4, 5) to validate token ranges
             if (nodeNumber > 3)
             {
-                BootstrapBBUtils.installSetBoostrapStateIntercepter(cl, BBHelperMultipleJoiningNodes.class);
+                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperMultipleJoiningNodes.class);
             }
         }
 

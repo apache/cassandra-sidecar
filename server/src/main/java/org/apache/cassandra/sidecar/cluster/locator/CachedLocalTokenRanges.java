@@ -78,7 +78,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
     }
 
     @Override
-    public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace)
+    public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace, boolean forceRefresh)
     {
         List<InstanceMetadata> localInstances = instancesMetadata.instances();
 

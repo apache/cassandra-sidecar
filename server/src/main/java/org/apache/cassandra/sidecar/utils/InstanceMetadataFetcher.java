@@ -133,6 +133,12 @@ public class InstanceMetadataFetcher
         return instancesMetadata.instances();
     }
 
+    public List<InstanceMetadata> allInstances()
+    {
+        ensureInstancesMetadataConfigured();
+        return instancesMetadata.instances();
+    }
+
     private void ensureInstancesMetadataConfigured()
     {
         if (instancesMetadata.instances().isEmpty())

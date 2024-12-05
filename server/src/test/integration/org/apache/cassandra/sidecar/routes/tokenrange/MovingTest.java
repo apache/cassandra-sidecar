@@ -23,36 +23,24 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Range;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.dynamic.ClassFileLocator;
-import net.bytebuddy.dynamic.TypeResolutionStrategy;
-import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
-import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import net.bytebuddy.pool.TypePool;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.TokenSupplier;
+import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
+import org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperMovingNode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
-
-import static net.bytebuddy.matcher.ElementMatchers.named;
 
 /**
  * Node movement scenarios integration tests for token range replica mapping endpoint with the in-jvm dtest framework.
  */
 @ExtendWith(VertxExtension.class)
-class MovingTest extends MovingBaseTest
+public class MovingTest extends MovingBaseTest
 {
 
     @CassandraIntegrationTest(nodesPerDc = 5, network = true, buildCluster = false)
@@ -67,7 +55,7 @@ class MovingTest extends MovingBaseTest
                                                                                 1);
 
         UpgradeableCluster cluster = cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withInstanceInitializer(BBHelperMovingNode::install);
+            builder.withInstanceInitializer((cl, num) -> BBHelperMovingNode.install(cl, num, MOVING_NODE_IDX));
             builder.withTokenSupplier(tokenSupplier);
         });
 
@@ -127,46 +115,5 @@ class MovingTest extends MovingBaseTest
                 put("datacenter1", mapping);
             }
         };
-    }
-
-    /**
-     * ByteBuddy Helper for a single moving node
-     */
-    public static class BBHelperMovingNode
-    {
-        static CountDownLatch transientStateStart = new CountDownLatch(1);
-        static CountDownLatch transientStateEnd = new CountDownLatch(1);
-
-        public static void install(ClassLoader cl, Integer nodeNumber)
-        {
-            // Moving the 5th node in the test case
-            if (nodeNumber == MOVING_NODE_IDX)
-            {
-                TypePool typePool = TypePool.Default.of(cl);
-                TypeDescription description = typePool.describe("org.apache.cassandra.service.RangeRelocator")
-                                                      .resolve();
-                new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                               .method(named("stream"))
-                               .intercept(MethodDelegation.to(BBHelperMovingNode.class))
-                               // Defer class loading until all dependencies are loaded
-                               .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
-                               .load(cl, ClassLoadingStrategy.Default.INJECTION);
-            }
-        }
-
-        @SuppressWarnings("unused")
-        public static Future<?> stream(@SuperCall Callable<Future<?>> orig) throws Exception
-        {
-            Future<?> res = orig.call();
-            transientStateStart.countDown();
-            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-            return res;
-        }
-
-        public static void reset()
-        {
-            transientStateStart = new CountDownLatch(1);
-            transientStateEnd = new CountDownLatch(1);
-        }
     }
 }

@@ -40,6 +40,7 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
+import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 
@@ -150,7 +151,7 @@ class ReplacementTest extends ReplacementBaseTest
             // We intercept the bootstrap of the replacement (6th) node to validate token ranges
             if (nodeNumber == 6)
             {
-                BootstrapBBUtils.installSetBoostrapStateIntercepter(cl, BBHelperReplacementsNode.class);
+                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperReplacementsNode.class);
             }
         }
 

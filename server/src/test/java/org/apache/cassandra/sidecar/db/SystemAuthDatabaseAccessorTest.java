@@ -22,8 +22,8 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
-import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;

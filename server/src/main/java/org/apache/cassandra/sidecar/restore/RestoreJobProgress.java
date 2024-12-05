@@ -18,6 +18,7 @@ package org.apache.cassandra.sidecar.restore;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
@@ -28,6 +29,7 @@ import org.apache.cassandra.sidecar.common.response.data.RestoreRangeJson;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Represents the progress of a {@link RestoreJob}
@@ -104,6 +106,22 @@ public class RestoreJobProgress
         }
 
         return message + " Current job status: " + jobStatus;
+    }
+
+    @VisibleForTesting
+    public List<RestoreRange> allRanges()
+    {
+        List<RestoreRange> result = new ArrayList<>();
+        Consumer<List<RestoreRange>> addAllIgnoreNull = list -> {
+            if (list != null)
+            {
+                result.addAll(list);
+            }
+        };
+        addAllIgnoreNull.accept(failedRanges);
+        addAllIgnoreNull.accept(pendingRanges);
+        addAllIgnoreNull.accept(succeededRanges);
+        return result;
     }
 
     static class Builder implements DataObjectBuilder<Builder, RestoreJobProgress>

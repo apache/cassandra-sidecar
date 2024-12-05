@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.ABORTED;
 import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.CREATED;
+import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.DISCARDED;
 import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.FAILED;
 import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.STAGED;
 import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.SUCCEEDED;
@@ -37,9 +38,11 @@ class RestoreRangeStatusTest
     {
         assertAdvanceTo(CREATED, FAILED);
         assertAdvanceTo(CREATED, ABORTED);
+        assertAdvanceTo(CREATED, DISCARDED);
         assertAdvanceTo(CREATED, STAGED);
         assertAdvanceTo(STAGED, FAILED);
         assertAdvanceTo(STAGED, ABORTED);
+        assertAdvanceTo(STAGED, DISCARDED);
         assertAdvanceTo(STAGED, SUCCEEDED);
     }
 
@@ -56,7 +59,10 @@ class RestoreRangeStatusTest
               { STAGED, STAGED },
               { SUCCEEDED, FAILED },
               { FAILED, SUCCEEDED },
-              { FAILED, ABORTED }
+              { FAILED, ABORTED },
+              { DISCARDED, CREATED },
+              { DISCARDED, STAGED },
+              { DISCARDED, SUCCEEDED },
             })
         .forEach(testCase -> {
             assertThatThrownBy(() -> testCase[0].advanceTo(testCase[1]))

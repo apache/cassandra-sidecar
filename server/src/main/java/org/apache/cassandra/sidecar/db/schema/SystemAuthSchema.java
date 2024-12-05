@@ -22,7 +22,7 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
+import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -56,7 +56,7 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
         // identity_to_role table exists in Cassandra versions starting 5.x
         if (keyspaceMetadata == null || keyspaceMetadata.getTable(IDENTITY_TO_ROLE_TABLE) == null)
         {
-            logger.info("Auth table does not exist. Skip preparing. table={}.{}", keyspaceName(), IDENTITY_TO_ROLE_TABLE);
+            logger.info("system_auth.identity_to_role does not exist. Skip preparing. table={}.{}", keyspaceName(), IDENTITY_TO_ROLE_TABLE);
             return;
         }
         roleFromIdentity = prepare(roleFromIdentity, session, "SELECT role FROM system_auth.identity_to_role WHERE identity = ?");
@@ -103,8 +103,7 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     {
         if (roleFromIdentity == null || allRolesAndIdentities == null)
         {
-            throw new SchemaUnavailableException(String.format("Table %s.%s does not exist",
-                                                               keyspaceName(), IDENTITY_TO_ROLE_TABLE));
+            throw new SchemaUnavailableException(keyspaceName(), IDENTITY_TO_ROLE_TABLE);
         }
     }
 }

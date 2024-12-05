@@ -44,6 +44,8 @@ import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.pool.TypePool;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.TokenSupplier;
+import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
+import org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperLeavingNode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 import org.apache.cassandra.utils.Shared;
@@ -61,13 +63,13 @@ class LeavingTest extends LeavingBaseTest
     void retrieveMappingWithKeyspaceLeavingNode(VertxTestContext context,
                                                 ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {
-        BBHelperSingleLeavingNode.reset();
+        BBHelperLeavingNode.reset();
         runLeavingTestScenario(context,
                                cassandraTestContext,
                                1,
-                               BBHelperSingleLeavingNode::install,
-                               BBHelperSingleLeavingNode.transientStateStart,
-                               BBHelperSingleLeavingNode.transientStateEnd,
+                               (cl, nodeNum) -> BBHelperLeavingNode.install(cl, nodeNum, 5),
+                               BBHelperLeavingNode.transientStateStart,
+                               BBHelperLeavingNode.transientStateEnd,
                                generateExpectedRangeMappingSingleLeavingNode());
     }
 
@@ -257,47 +259,6 @@ class LeavingTest extends LeavingBaseTest
                 put("datacenter1", mapping);
             }
         };
-    }
-
-    /**
-     * ByteBuddy Helper for a single leaving node
-     */
-    public static class BBHelperSingleLeavingNode
-    {
-        static CountDownLatch transientStateStart = new CountDownLatch(1);
-        static CountDownLatch transientStateEnd = new CountDownLatch(1);
-
-        public static void install(ClassLoader cl, Integer nodeNumber)
-        {
-            // Test case involves 5 node cluster with 1 leaving node
-            // We intercept the shutdown of the leaving node (5) to validate token ranges
-            if (nodeNumber == 5)
-            {
-                TypePool typePool = TypePool.Default.of(cl);
-                TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")
-                                                      .resolve();
-                new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                               .method(named("unbootstrap"))
-                               .intercept(MethodDelegation.to(BBHelperSingleLeavingNode.class))
-                               // Defer class loading until all dependencies are loaded
-                               .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
-                               .load(cl, ClassLoadingStrategy.Default.INJECTION);
-            }
-        }
-
-        @SuppressWarnings("unused")
-        public static void unbootstrap(@SuperCall Callable<?> orig) throws Exception
-        {
-            transientStateStart.countDown();
-            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-            orig.call();
-        }
-
-        public static void reset()
-        {
-            transientStateStart = new CountDownLatch(1);
-            transientStateEnd = new CountDownLatch(1);
-        }
     }
 
     /**

@@ -29,6 +29,17 @@ import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 public interface LocalTokenRangesProvider
 {
     /**
+     * Similar to {@link #localTokenRanges(String, boolean)}, but always refresh forcibly.
+     *
+     * @param keyspace keyspace to determine replication
+     * @return token ranges of the local Cassandra instances or an empty map of nothing is found
+     */
+    default Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace)
+    {
+        return localTokenRanges(keyspace, true);
+    }
+
+    /**
      * Calculate the token ranges owned and replicated to the local Cassandra instance(s).
      * When Sidecar is paired with multiple Cassandra instance, the ranges of each Cassandra instance is captured
      * in the form of map, where the key is the instance id and the value is the ranges of the Cassandra instance.
@@ -36,7 +47,8 @@ public interface LocalTokenRangesProvider
      * When Sidecar is paired with a single Cassandra instance, the result map has a single entry.
      *
      * @param keyspace keyspace to determine replication
+     * @param forceRefresh whether force refreshing is requested or not
      * @return token ranges of the local Cassandra instances or an empty map of nothing is found
      */
-    Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace);
+    Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace, boolean forceRefresh);
 }

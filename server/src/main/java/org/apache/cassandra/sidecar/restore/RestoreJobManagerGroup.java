@@ -20,6 +20,10 @@ package org.apache.cassandra.sidecar.restore;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -40,6 +44,8 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 @Singleton
 public class RestoreJobManagerGroup
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJobManagerGroup.class);
+
     private final RestoreJobConfiguration restoreJobConfig;
     // instance id --> RestoreJobManager
     private final Map<Integer, RestoreJobManager> managerGroup = new ConcurrentHashMap<>();
@@ -112,6 +118,28 @@ public class RestoreJobManagerGroup
             throw new IllegalStateException("Cannot update with a restore job in final status");
         }
         managerGroup.values().forEach(manager -> manager.updateRestoreJob(restoreJob));
+    }
+
+    /**
+     * Discard the ranges that are matching the range predicate
+     * @param instanceMetadata the cassandra instance to discard the restore range from
+     * @param restoreJob the restore job instance
+     * @param rangePredicate the predicate to tell whether a range should be discarded
+     */
+    void discardRangeIf(InstanceMetadata instanceMetadata, RestoreJob restoreJob, Predicate<RestoreRange> rangePredicate)
+    {
+        if (restoreJob.status.isFinal())
+        {
+            throw new IllegalStateException("Cannot remove ranges from a restore job in final status");
+        }
+        RestoreJobManager manager = managerGroup.get(instanceMetadata.id());
+        if (manager == null)
+        {
+            LOGGER.debug("No RestoreJobManager found for Cassandra instance. No ranges to discard. instanceId={}",
+                          instanceMetadata.id());
+            return;
+        }
+        manager.discardRangeIf(restoreJob, rangePredicate);
     }
 
     /**

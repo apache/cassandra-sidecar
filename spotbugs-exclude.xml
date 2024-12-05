@@ -120,4 +120,18 @@
         <Class name="org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher" />
     </Match>
 
+    <Match>
+        <Bug pattern="SF_SWITCH_FALLTHROUGH" />
+        <Class name="org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer" /><!-- on break by design -->
+    </Match>
+
+    <Match>
+        <Bug pattern="MS_CANNOT_BE_FINAL" />
+        <Or>
+            <Class name="org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperMovingNode" /><!-- Test code -->
+            <Class name="org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperJoiningNode" /><!-- Test code -->
+            <Class name="org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperLeavingNode" /><!-- Test code -->
+        </Or>
+    </Match>
+
 </FindBugsFilter>

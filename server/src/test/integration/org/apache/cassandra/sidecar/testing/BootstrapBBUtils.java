@@ -38,7 +38,7 @@ public class BootstrapBBUtils
      * Note that the test class _must_ define the `setBootstrapState` method in order for the installed intercepter to be effective.
      * See {@code ReplacementTest.BBHelperReplacementsNode} for example
      */
-    public static void installSetBoostrapStateIntercepter(ClassLoader cl, Class<?> interceptor)
+    public static void installSetBoostrapStateInterceptor(ClassLoader cl, Class<?> interceptor)
     {
         TypePool typePool = TypePool.Default.of(cl);
         TypeDescription description = typePool.describe("org.apache.cassandra.db.SystemKeyspace")

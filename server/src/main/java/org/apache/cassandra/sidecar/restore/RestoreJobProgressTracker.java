@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,7 @@ import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * In-memory only tracker that tracks the progress of the slices in a restore job.
@@ -81,14 +83,20 @@ public class RestoreJobProgressTracker
         return status;
     }
 
-    void removeRange(RestoreRange range)
+    /**
+     * Discard the {@link RestoreRange} if it matches the predicate
+     * @param predicate check whether a {@link RestoreRange} should be discarded
+     */
+    void discardRangeIf(Predicate<RestoreRange> predicate)
     {
-        Status status = ranges.remove(range);
-
-        if (status != null)
-        {
-            processor.remove(range);
-        }
+        ranges.keySet().removeIf(range -> {
+            boolean shouldDiscard = predicate.test(range);
+            if (shouldDiscard)
+            {
+                processor.discardAndRemove(range);
+            }
+            return shouldDiscard;
+        });
     }
 
     void updateRestoreJob(@NotNull RestoreJob restoreJob)
@@ -170,8 +178,14 @@ public class RestoreJobProgressTracker
         }
     }
 
+    @VisibleForTesting // do not call in production code
+    Map<RestoreRange, Status> rangesForTesting()
+    {
+        return ranges;
+    }
+
     /**
-     * Enum holds possible statues of {@link RestoreSlice}
+     * Task status of {@link RestoreRangeTask}
      */
     public enum Status
     {

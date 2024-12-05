@@ -40,6 +40,9 @@ test {
         html.setRequired(true)
         html.getOutputLocation().set(destDir)
     }
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
 }
 
 configurations {

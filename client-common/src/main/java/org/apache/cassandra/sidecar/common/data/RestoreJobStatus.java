@@ -23,13 +23,36 @@ package org.apache.cassandra.sidecar.common.data;
  */
 public enum RestoreJobStatus
 {
+    /**
+     * The external controller creates the RestoreJob
+     */
     CREATED,
+    /**
+     * The external controller updates the status of the RestoreJob to STAGE_READY.
+     * It indicates that all relevant slices of the RestoreJob have been uploaded and ready to consume.
+     */
     STAGE_READY,
+    /**
+     * All relevant slices are staged and the staged data satisfies the consistency requirement of the RestoreJob.
+     * The external controller updates the status of the RestoreJob to STAGED.
+     */
     STAGED,
+    /**
+     * The external controller updates the status of the RestoreJob to IMPORT_READY
+     * It indicates that all staged data now are ready to be imported into Cassandra.
+     */
     IMPORT_READY,
     @Deprecated // replaced by ABORTED
     FAILED,
+    /**
+     * The external controller aborts the RestoreJob due to some failure, e.g. consistency not satisfied, timeout, etc.
+     * The RestoreJob can also be aborted by Sidecar, if and only if, the external controller fails to renew the lease for certain long duration.
+     * Such RestoreJobs are aborted due to expiry.
+     */
     ABORTED,
+    /**
+     * The external controller marks the RestoreJob as succeeded.
+     */
     SUCCEEDED;
 
     public boolean isFinal()

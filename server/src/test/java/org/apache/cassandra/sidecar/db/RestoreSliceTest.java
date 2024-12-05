@@ -19,17 +19,13 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.utils.UUIDs;
-import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
-import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaInfo;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -87,48 +83,20 @@ class RestoreSliceTest
     void testNoSplit()
     {
         RestoreSlice slice = createTestingSlice(UUIDs.timeBased(), "slice-id", 0L, 10L);
-        List<RestoreSlice> result = slice.splitMaybe(null);
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0)).isSameAs(slice);
-
-        TokenRangeReplicasResponse topology = mock(TokenRangeReplicasResponse.class);
-        when(topology.writeReplicas()).thenReturn(Collections.singletonList(new ReplicaInfo("-10", "10", null)));
-        // range in topology fully encloses the slice
-        result = slice.splitMaybe(topology);
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0)).isSameAs(slice);
+        RestoreSlice result = slice.trimMaybe(new TokenRange(-10L, 10L));
+        assertThat(result)
+        .describedAs("No trim is done when fully enclosed by the local token range")
+        .isSameAs(slice);
     }
 
     @Test
     void testSplitNoOverlap()
     {
         RestoreSlice slice = createTestingSlice(UUIDs.timeBased(), "slice-id", 0L, 10L);
-        TokenRangeReplicasResponse topology = mock(TokenRangeReplicasResponse.class);
-        when(topology.writeReplicas()).thenReturn(Collections.singletonList(new ReplicaInfo("100", "110", null)));
         // (0, 10] does not overlap with (100, 110]
-        assertThatThrownBy(() -> slice.splitMaybe(topology))
+        assertThatThrownBy(() -> slice.trimMaybe(new TokenRange(100L, 110L)))
         .isExactlyInstanceOf(IllegalStateException.class)
-        .hasMessage("Token range of the slice is not found in the write replicas. slice range: (0, 10]");
-    }
-
-    @Test
-    void testSplitIntoMultiple()
-    {
-        RestoreSlice slice = createTestingSlice(UUIDs.timeBased(), "slice-id", 2L, 25L);
-        TokenRangeReplicasResponse topology = mock(TokenRangeReplicasResponse.class);
-        ReplicaInfo r1 = new ReplicaInfo("-10", "10", null);
-        ReplicaInfo r2 = new ReplicaInfo("10", "20", null);
-        ReplicaInfo r3 = new ReplicaInfo("20", "30", null);
-        ReplicaInfo r4 = new ReplicaInfo("30", "40", null);
-        when(topology.writeReplicas()).thenReturn(Arrays.asList(r1, r2, r3, r4));
-        List<RestoreSlice> result = slice.splitMaybe(topology);
-        assertThat(result).hasSize(3);
-        assertThat(result.get(0).startToken()).isEqualTo(BigInteger.valueOf(2L));
-        assertThat(result.get(0).endToken()).isEqualTo(BigInteger.valueOf(10L));
-        assertThat(result.get(1).startToken()).isEqualTo(BigInteger.valueOf(10L));
-        assertThat(result.get(1).endToken()).isEqualTo(BigInteger.valueOf(20L));
-        assertThat(result.get(2).startToken()).isEqualTo(BigInteger.valueOf(20L));
-        assertThat(result.get(2).endToken()).isEqualTo(BigInteger.valueOf(25L));
+        .hasMessage("Token range of the slice does not overlap with the local token range. slice_range: TokenRange(0, 10], local_range: TokenRange(100, 110]");
     }
 
     public static RestoreSlice createTestingSlice(RestoreJob restoreJob, String sliceId, long startToken, long endToken)

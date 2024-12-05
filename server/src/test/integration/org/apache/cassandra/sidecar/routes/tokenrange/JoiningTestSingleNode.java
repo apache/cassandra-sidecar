@@ -23,18 +23,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Range;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import org.apache.cassandra.db.SystemKeyspace;
-import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
+import org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperJoiningNode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 
@@ -52,12 +47,14 @@ public class JoiningTestSingleNode extends JoiningBaseTest
     void retrieveMappingWithJoiningNode(VertxTestContext context,
                                         ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {
-        BBHelperSingleJoiningNode.reset();
+        BBHelperJoiningNode.reset();
         runJoiningTestScenario(context,
                                cassandraTestContext,
-                               BBHelperSingleJoiningNode::install,
-                               BBHelperSingleJoiningNode.transientStateStart,
-                               BBHelperSingleJoiningNode.transientStateEnd,
+                               // Test case involves 5 node cluster with 1 joining node
+                               // We intercept the bootstrap of the joining node (6) to validate token ranges
+                               (cl, num) -> BBHelperJoiningNode.install(cl, num, 6),
+                               BBHelperJoiningNode.transientStateStart,
+                               BBHelperJoiningNode.transientStateEnd,
                                generateExpectedRangeMappingSingleJoiningNode());
     }
 
@@ -97,41 +94,5 @@ public class JoiningTestSingleNode extends JoiningBaseTest
                 put("datacenter1", mapping);
             }
         };
-    }
-
-    /**
-     * ByteBuddy helper for a single joining node
-     */
-    public static class BBHelperSingleJoiningNode
-    {
-        static CountDownLatch transientStateStart = new CountDownLatch(1);
-        static CountDownLatch transientStateEnd = new CountDownLatch(1);
-
-        public static void install(ClassLoader cl, Integer nodeNumber)
-        {
-            // Test case involves 3 node cluster with 1 joining node
-            // We intercept the bootstrap of the leaving node (4) to validate token ranges
-            if (nodeNumber == 6)
-            {
-                BootstrapBBUtils.installSetBoostrapStateIntercepter(cl, BBHelperSingleJoiningNode.class);
-            }
-        }
-
-        public static void setBootstrapState(SystemKeyspace.BootstrapState state, @SuperCall Callable<Void> orig) throws Exception
-        {
-            if (state == SystemKeyspace.BootstrapState.COMPLETED)
-            {
-                // trigger bootstrap start and wait until bootstrap is ready from test
-                transientStateStart.countDown();
-                awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-            }
-            orig.call();
-        }
-
-        public static void reset()
-        {
-            transientStateStart = new CountDownLatch(1);
-            transientStateEnd = new CountDownLatch(1);
-        }
     }
 }

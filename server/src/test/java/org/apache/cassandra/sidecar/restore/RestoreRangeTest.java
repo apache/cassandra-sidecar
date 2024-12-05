@@ -40,6 +40,7 @@ import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
+import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.DISCARDED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -145,6 +146,15 @@ public class RestoreRangeTest
         assertThat(restoreRangeJson.bucket()).isEqualTo(range.sliceBucket());
         assertThat(restoreRangeJson.startToken()).isEqualTo(range.startToken());
         assertThat(restoreRangeJson.endToken()).isEqualTo(range.endToken());
+    }
+
+    @Test
+    void testBuildFromDiscarded()
+    {
+        RestoreRange range = createTestRange();
+        assertThat(range.isDiscarded()).isFalse();
+        range = range.unbuild().replicaStatus(Collections.singletonMap("any", DISCARDED)).build();
+        assertThat(range.isDiscarded()).isTrue();
     }
 
     private void assertFailedHandler(RestoreRange range, RestoreRangeHandler handler, String containsErrorMessage)

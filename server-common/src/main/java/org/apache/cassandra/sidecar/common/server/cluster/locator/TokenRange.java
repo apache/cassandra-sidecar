@@ -146,12 +146,11 @@ public class TokenRange
 
     /**
      * Two ranges are overlapping when their intersection is non-empty. For example,
+     * <p>Ranges {@code (0, 3]} and {@code (1, 4]} are overlapping. The intersection is {@code (1, 3]}
+     * <p>Ranges {@code (0, 3]} and {@code (5, 7]} are not overlapping, as there is no intersection
+     * <p>Ranges {@code (0, 3]} and {@code (3, 5]} are not overlapping, as the intersection {@code (3, 3]} is empty
      *
-     * Ranges (0, 3] and (1, 4] are overlapping. The intersection is (1, 3]
-     * Ranges (0, 3] and (5, 7] are not overlapping, as there is no intersection
-     * Ranges (0, 3] and (3, 5] are not overlapping, as the intersection (3, 3] is empty
-     *
-     * Note that the semantics is different from {@link Range#isConnected(Range)}
+     * <p>Note that the semantics is different from {@link Range#isConnected(Range)}
      *
      * @return true if this range overlaps with the other range; otherwise, false
      */
@@ -159,6 +158,22 @@ public class TokenRange
     {
         return this.range.lowerEndpoint().compareTo(other.range.upperEndpoint()) < 0
                && other.range.lowerEndpoint().compareTo(this.range.upperEndpoint()) < 0;
+    }
+
+    /**
+     * Two ranges are connects with each other when 1) they overlap or 2) their ends are connected.
+     * <p>For 1), refer to {@link #overlaps(TokenRange)}
+     * <p>For 2), see the following examples. The ranges {@code (0, 3]} and {@code (3, 5]} are connected.
+     * The ranges {@code (0, 3]} and {@code (4, 6]} are not connected.
+     *
+     * <p> Note that it is implemented using {@link Range#isConnected(Range)}
+     *
+     * @param other the other range to check
+     * @return true if this range connects with the other range; otherwise, false
+     */
+    public boolean connectsWith(TokenRange other)
+    {
+        return this.range.isConnected(other.range);
     }
 
     /**
@@ -201,5 +216,13 @@ public class TokenRange
     public int hashCode()
     {
         return range.hashCode();
+    }
+
+    @Override
+    public String toString()
+    {
+        return "TokenRange(" +
+               range.lowerEndpoint().toBigInteger() + ", " +
+               range.upperEndpoint().toBigInteger() + ']';
     }
 }

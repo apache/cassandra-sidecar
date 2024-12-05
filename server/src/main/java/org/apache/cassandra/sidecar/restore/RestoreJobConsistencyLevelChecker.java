@@ -154,6 +154,13 @@ public class RestoreJobConsistencyLevelChecker
     {
         for (RestoreRange range : ranges)
         {
+            if (range.isDiscarded())
+            {
+                LOGGER.debug("RestoreRange is discarded. Ignore the range for consistency check. jobId={} sliceKey={}",
+                             range.jobId(), range.sliceKey());
+                continue;
+            }
+
             if (!collector.canCollectMore())
             {
                 return;
@@ -256,6 +263,16 @@ public class RestoreJobConsistencyLevelChecker
                                                                 RestoreRange range)
     {
         return concludeOneRange(topology, verifier, successCriteria, range);
+    }
+
+    @VisibleForTesting
+    static void concludeRangesUnsafe(List<RestoreRange> ranges,
+                                     TokenRangeReplicasResponse topology,
+                                     ConsistencyVerifier verifier,
+                                     RestoreRangeStatus successCriteria,
+                                     RestoreJobProgressCollector collector)
+    {
+        concludeRanges(ranges, topology, verifier, successCriteria, collector);
     }
 
     @VisibleForTesting

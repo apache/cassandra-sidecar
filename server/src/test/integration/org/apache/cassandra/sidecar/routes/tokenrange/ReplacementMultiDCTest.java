@@ -170,7 +170,7 @@ class ReplacementMultiDCTest extends ReplacementBaseTest
             // We intercept the bootstrap of the replacement nodes to validate token ranges
             if (nodeNumber > 10)
             {
-                BootstrapBBUtils.installSetBoostrapStateIntercepter(cl, BBHelperReplacementsMultiDC.class);
+                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperReplacementsMultiDC.class);
             }
         }
 

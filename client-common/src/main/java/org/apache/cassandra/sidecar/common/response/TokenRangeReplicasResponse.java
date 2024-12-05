@@ -83,7 +83,9 @@ public class TokenRangeReplicasResponse
      */
     public static class ReplicaInfo
     {
+        // exclusive
         private final String start;
+        // inclusive
         private final String end;
         private final Map<String, List<String>> replicasByDatacenter;
 
@@ -97,7 +99,7 @@ public class TokenRangeReplicasResponse
         }
 
         /**
-         * @return the start value of the token range
+         * @return the start value of the token range, exclusive
          */
         @JsonProperty("start")
         public String start()
@@ -106,7 +108,7 @@ public class TokenRangeReplicasResponse
         }
 
         /**
-         * @return the end value of the token range
+         * @return the end value of the token range, inclusive
          */
         @JsonProperty("end")
         public String end()

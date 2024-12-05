@@ -77,7 +77,7 @@ public class RestoreRangesSchema extends TableSchema implements ExecuteOnCluster
                              "  slice_id text," +
                              "  slice_bucket text," +
                              "  slice_key text," +
-                             "  status_by_replica map<text, text>," +
+                             "  status_by_replica map<text, text>," + // key is the replica; value is the status
                              "  PRIMARY KEY ((job_id, bucket_id), start_token, end_token)" +
                              ") WITH default_time_to_live = %s",
                              keyspaceConfig.keyspace(), TABLE_NAME, tableTtl.toSeconds());
