@@ -22,8 +22,8 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Schema for getting information stored in system_auth keyspace.
@@ -48,6 +48,7 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
         // identity_to_role table exists in Cassandra versions starting 5.x
         if (keyspaceMetadata == null || keyspaceMetadata.getTable(IDENTITY_TO_ROLE_TABLE) == null)
         {
+            logger.info("Auth table does not exist. Skip preparing. table={}/{}", keyspaceName(), IDENTITY_TO_ROLE_TABLE);
             return;
         }
         selectRoleFromIdentity = prepare(selectRoleFromIdentity,
@@ -60,22 +61,40 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     }
 
     @Override
+    protected void unprepareStatements()
+    {
+        selectRoleFromIdentity = null;
+        getAllRolesAndIdentities = null;
+    }
+
+    @Override
     protected String tableName()
     {
         throw new UnsupportedOperationException("SystemAuthSchema supports reading information from multiple " +
                                                 "tables in system_auth keyspace");
     }
 
-    @Nullable
+    @NotNull
     public PreparedStatement selectRoleFromIdentity()
     {
+        ensureSchemaAvailable();
         return selectRoleFromIdentity;
     }
 
-    @Nullable
+    @NotNull
     public PreparedStatement getAllRolesAndIdentities()
     {
+        ensureSchemaAvailable();
         return getAllRolesAndIdentities;
+    }
+
+    @Override
+    protected void ensureSchemaAvailable() throws SchemaUnavailableException
+    {
+        if (selectRoleFromIdentity == null || getAllRolesAndIdentities == null)
+        {
+            throw new SchemaUnavailableException(keyspaceName(), IDENTITY_TO_ROLE_TABLE);
+        }
     }
 
     private static class CqlLiterals

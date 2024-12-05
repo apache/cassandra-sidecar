@@ -69,12 +69,14 @@ class MutualTlsAuthenticationHandlerFactoryTest
         {{
             put(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY, "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
         }};
-        testConfigError(missingValidatorParams, String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation", CERTIFICATE_VALIDATOR_PARAM_KEY));
+        testConfigError(missingValidatorParams, String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation",
+                                                              CERTIFICATE_VALIDATOR_PARAM_KEY));
         Map<String, String> missingExtractorParams = new HashMap<String, String>()
         {{
             put(CERTIFICATE_VALIDATOR_PARAM_KEY, "io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator");
         }};
-        testConfigError(missingExtractorParams, String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation", CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
+        testConfigError(missingExtractorParams, String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation",
+                                                              CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
     }
 
     @Test

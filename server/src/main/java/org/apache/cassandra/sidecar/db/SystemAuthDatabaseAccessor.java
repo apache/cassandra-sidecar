@@ -28,7 +28,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
-import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 
 /**
  * Database Accessor that queries cassandra to get information maintained under system_auth keyspace.
@@ -51,9 +50,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public String findRoleFromIdentity(String identity)
     {
-        ensureIdentityToRoleTableAccess();
-        BoundStatement statement = tableSchema.selectRoleFromIdentity()
-                                              .bind(identity);
+        BoundStatement statement = tableSchema.selectRoleFromIdentity().bind(identity);
         ResultSet result = execute(statement);
         Row row = result.one();
         return row != null ? row.getString("role") : null;
@@ -66,9 +63,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public Map<String, String> findAllIdentityToRoles()
     {
-        ensureIdentityToRoleTableAccess();
         BoundStatement statement = tableSchema.getAllRolesAndIdentities().bind();
-
         ResultSet resultSet = execute(statement);
         Map<String, String> results = new HashMap<>();
         for (Row row : resultSet)
@@ -76,13 +71,5 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
             results.put(row.getString("identity"), row.getString("role"));
         }
         return results;
-    }
-
-    private void ensureIdentityToRoleTableAccess()
-    {
-        if (tableSchema.selectRoleFromIdentity() == null || tableSchema.getAllRolesAndIdentities() == null)
-        {
-            throw new SchemaUnavailableException("SystemAuthSchema was not prepared, values cannot be retrieved from table");
-        }
     }
 }

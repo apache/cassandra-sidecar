@@ -467,10 +467,12 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public CQLSessionProvider cqlSessionProvider(Vertx vertx, SidecarConfiguration sidecarConfiguration,
+    public CQLSessionProvider cqlSessionProvider(Vertx vertx,
+                                                 SidecarConfiguration sidecarConfiguration,
                                                  DriverUtils driverUtils)
     {
-        CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(sidecarConfiguration,
+        CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(vertx,
+                                                                               sidecarConfiguration,
                                                                                NettyOptions.DEFAULT_INSTANCE,
                                                                                driverUtils);
         vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());

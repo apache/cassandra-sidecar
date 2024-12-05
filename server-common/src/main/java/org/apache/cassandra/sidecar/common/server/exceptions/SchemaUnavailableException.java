@@ -16,21 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.exceptions;
+package org.apache.cassandra.sidecar.common.server.exceptions;
 
 /**
- * Exception thrown when {@link org.apache.cassandra.sidecar.db.schema.TableSchema} is not prepared or expected
- * operations are unavailable.
+ * Exception thrown when {@link org.apache.cassandra.sidecar.db.schema.TableSchema} does not exist.
+ * For instance, the connected Cassandra no longer has such table
  */
 public class SchemaUnavailableException extends RuntimeException
 {
-    public SchemaUnavailableException(String message)
+    public SchemaUnavailableException(String keyspace, String table)
     {
-        super(message);
+        super(makeErrorMessage(keyspace, table));
     }
 
-    public SchemaUnavailableException(String message, Throwable cause)
+    private static String makeErrorMessage(String keyspace, String table)
     {
-        super(message, cause);
+        return "Table " + keyspace + '/' + table + " does not exist";
     }
 }

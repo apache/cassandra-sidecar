@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationExceptio
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_DRIVER_CLOSED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
@@ -50,7 +51,7 @@ public class SidecarSchema
     private final ExecutorPools executorPools;
     private final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
     private final SidecarInternalKeyspace sidecarInternalKeyspace;
-    private final AtomicLong initializationTimerId = new AtomicLong(-1L);
+    private final AtomicLong initializationTimerId = new AtomicLong(Long.MIN_VALUE);
     private final CQLSessionProvider cqlSessionProvider;
     private final SchemaMetrics metrics;
 
@@ -69,22 +70,21 @@ public class SidecarSchema
         this.sidecarInternalKeyspace = sidecarInternalKeyspace;
         this.cqlSessionProvider = cqlSessionProvider;
         this.metrics = metrics;
-        if (this.schemaKeyspaceConfiguration.isEnabled())
-        {
-            configureSidecarServerEventListeners();
-        }
-        else
-        {
-            LOGGER.info("Sidecar schema is disabled!");
-        }
+        configureSidecarServerEventListenersMaybe();
     }
 
-    private void configureSidecarServerEventListeners()
+    private void configureSidecarServerEventListenersMaybe()
     {
-        EventBus eventBus = vertx.eventBus();
+        if (!this.schemaKeyspaceConfiguration.isEnabled())
+        {
+            LOGGER.info("Sidecar schema is disabled!");
+            return;
+        }
 
+        EventBus eventBus = vertx.eventBus();
         eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), message -> startSidecarSchemaInitializer());
-        eventBus.localConsumer(ON_SERVER_STOP.address(), message -> cancelTimer(initializationTimerId.get()));
+        eventBus.localConsumer(ON_SERVER_STOP.address(), message -> reset());
+        eventBus.localConsumer(ON_CASSANDRA_DRIVER_CLOSED.address(), message -> reset());
     }
 
     @VisibleForTesting
@@ -94,7 +94,7 @@ public class SidecarSchema
             return;
 
         // schedule one initializer exactly
-        if (!initializationTimerId.compareAndSet(-1L, 0L))
+        if (!initializationTimerId.compareAndSet(Long.MIN_VALUE, -1))
         {
             LOGGER.debug("Skipping starting the sidecar schema initializer because there is an initialization " +
                          "in progress with timerId={}", initializationTimerId);
@@ -120,12 +120,11 @@ public class SidecarSchema
         }
     }
 
-    protected synchronized void initialize(long timerId)
+    private synchronized void initialize(long timerId)
     {
         // it should not happen since the callback is only scheduled when isEnabled == true
         if (!schemaKeyspaceConfiguration.isEnabled())
         {
-            LOGGER.debug("Sidecar schema is not enabled");
             return;
         }
 
@@ -166,18 +165,36 @@ public class SidecarSchema
         }
     }
 
-    protected synchronized void cancelTimer(long timerId)
+    private synchronized void reset()
+    {
+        if (!schemaKeyspaceConfiguration.isEnabled() || !isInitialized)
+        {
+            return;
+        }
+
+        LOGGER.info("Resetting schema and nullify prepared statements");
+
+        cancelTimer(initializationTimerId.get());
+        initializationTimerId.set(Long.MIN_VALUE);
+        sidecarInternalKeyspace.reset();
+        isInitialized = false;
+    }
+
+    private synchronized void cancelTimer(long timerId)
     {
         // invalid timerId; nothing to cancel
         if (timerId < 0)
         {
             return;
         }
-        initializationTimerId.compareAndSet(timerId, -1L);
-        executorPools.internal().cancelTimer(timerId);
+
+        if (initializationTimerId.compareAndSet(timerId, -1L))
+        {
+            executorPools.internal().cancelTimer(timerId);
+        }
     }
 
-    protected void reportSidecarSchemaInitialized()
+    private void reportSidecarSchemaInitialized()
     {
         vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), "SidecarSchema initialized");
     }

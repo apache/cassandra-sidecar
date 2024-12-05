@@ -26,6 +26,7 @@ import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
+import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.jetbrains.annotations.NotNull;
 
@@ -41,6 +42,17 @@ public abstract class AbstractSchema
     {
         initialized = initialized || initializeInternal(session);
         return initialized;
+    }
+
+    public synchronized void reset()
+    {
+        initialized = false;
+        unprepareStatements();
+    }
+
+    protected void ensureSchemaAvailable() throws SchemaUnavailableException
+    {
+        // no-op
     }
 
     protected PreparedStatement prepare(PreparedStatement cached, Session session, String cqlLiteral)
@@ -69,12 +81,15 @@ public abstract class AbstractSchema
         }
 
         prepareStatements(session);
+        logger.info("{} is initialized!", this.getClass().getSimpleName());
         return true;
     }
 
     protected abstract String keyspaceName();
 
     protected abstract void prepareStatements(@NotNull Session session);
+
+    protected abstract void unprepareStatements();
 
     protected abstract boolean exists(@NotNull Metadata metadata);
 

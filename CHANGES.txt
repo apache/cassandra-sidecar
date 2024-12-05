@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Reprepare statements when sidecar reconnects to Cassandra (CASSSIDECAR-170)
  * Adding support for CDC APIs into sidecar client (CASSSIDECAR-172)
  * Stopping Sidecar can take a long time (CASSSIDECAR-178)
  * Add support for operational job management of long-running node operations (CASSSIDECAR-150)

@@ -108,8 +108,8 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
 
         cassandraContext.configureAndStartCluster(builder -> {
             builder.appendConfig(config -> config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
-                                                 .set("authenticator.parameters", Collections.singletonMap("validator_class_name",
-                                                                                                           "org.apache.cassandra.auth.SpiffeCertificateValidator"))
+                                                 .set("authenticator.parameters",
+                                                      Collections.singletonMap("validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator"))
                                                  .set("role_manager", "CassandraRoleManager")
                                                  .set("authorizer", "CassandraAuthorizer")
                                                  .set("client_encryption_options.enabled", "true")

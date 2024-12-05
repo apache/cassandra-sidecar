@@ -188,7 +188,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
     {
         if (instancesConfig == null)
         {
-            refreshInstancesConfig();
+            return refreshInstancesConfig();
         }
         return this.instancesConfig;
     }
@@ -197,6 +197,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
     {
         // clean-up any open sessions or client resources
         close();
+        closeSessionProvider();
         setInstancesConfig();
         return this.instancesConfig;
     }
@@ -251,7 +252,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
         jmxClients = new ArrayList<>();
         List<InstanceConfig> configs = buildInstanceConfigs(cluster);
         List<InetSocketAddress> addresses = buildContactList(configs);
-        sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
+        sessionProvider = new CQLSessionProviderImpl(vertx, addresses, addresses, 500, null,
                                                      0, username, password,
                                                      sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
         for (int i = 0; i < configs.size(); i++)

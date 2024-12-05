@@ -59,6 +59,14 @@ public class RestoreRangesSchema extends TableSchema
     }
 
     @Override
+    protected void unprepareStatements()
+    {
+        insert = null;
+        findAll = null;
+        update = null;
+    }
+
+    @Override
     protected String tableName()
     {
         return TABLE_NAME;

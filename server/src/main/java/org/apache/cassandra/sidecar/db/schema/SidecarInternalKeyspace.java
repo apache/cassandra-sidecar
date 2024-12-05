@@ -57,8 +57,23 @@ public class SidecarInternalKeyspace extends AbstractSchema
         tableSchemas.add(schema);
     }
 
+    public synchronized void reset()
+    {
+        // reset itself and all the table schemas it holds
+        super.reset();
+        for (AbstractSchema schema : tableSchemas)
+        {
+            schema.reset();
+        }
+    }
+
     @Override
     protected void prepareStatements(@NotNull Session session)
+    {
+    }
+
+    @Override
+    protected void unprepareStatements()
     {
     }
 
