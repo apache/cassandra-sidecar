@@ -178,19 +178,6 @@ tasks.named('idea').configure {
     dependsOn copyIdeaSettings
 }
 
-// Lets copy the distributions from build/install directory to /bin and /lib
-// directories to be aligned with C* distribution format
-tasks.register('copyDist', Copy) {
-    into "$projectDir"
-
-    into("bin") {
-        from "$buildDir/install/$applicationName/bin"
-    }
-    into("lib") {
-        from "$buildDir/install/$applicationName/lib"
-    }
-}
-
 tasks.register('copyJolokia', Copy) {
     into "$projectDir"
 
@@ -201,7 +188,7 @@ tasks.register('copyJolokia', Copy) {
 
 // Lets clean distribution directories along with default build directories.
 clean.doLast {
-    ["agents", "bin", "lib"].each {
+    ["agents"].each {
         println "Deleting directory $projectDir/$it"
         delete "$projectDir/$it"
     }
@@ -303,11 +290,9 @@ rat {
     reportDir.set(file("build/reports/rat"))
 }
 
-// copyDist gets called on every build
 installDist.dependsOn copyJolokia
-copyDist.dependsOn installDist
 check.dependsOn codeCheckTasks
-build.dependsOn copyDist, copyJolokia, copyDocs
+build.dependsOn copyJolokia, copyDocs
 run.dependsOn build
 
 tasks.named('rat').configure {
