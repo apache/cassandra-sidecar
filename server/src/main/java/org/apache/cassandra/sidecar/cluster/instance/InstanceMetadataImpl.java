@@ -56,7 +56,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
                                    .map(FileUtils::maybeResolveHomeDirectory)
                                    .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
         stagingDir = FileUtils.maybeResolveHomeDirectory(builder.stagingDir);
-        cdcDir = builder().cdcDir;
+        cdcDir = FileUtils.maybeResolveHomeDirectory(builder.cdcDir);
         delegate = builder.delegate;
         metrics = builder.metrics;
     }
