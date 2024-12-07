@@ -119,8 +119,6 @@ public abstract class OperationalJob implements Task
     /**
      * Execute the job behavior as specified in the internal execution {@link #executeInternal()},
      * while tracking the status of the job's lifecycle.
-     *
-     * @return
      */
     public final void execute(Promise promise)
     {
