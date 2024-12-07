@@ -87,7 +87,7 @@ import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
-import org.apache.cassandra.sidecar.job.OperationsJobTracker;
+import org.apache.cassandra.sidecar.job.OperationalJobTracker;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
@@ -100,8 +100,8 @@ import org.apache.cassandra.sidecar.routes.DiskSpaceProtectionHandler;
 import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.GossipInfoHandler;
 import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
-import org.apache.cassandra.sidecar.routes.ListOperationsJobsHandler;
-import org.apache.cassandra.sidecar.routes.OperationsJobsHandler;
+import org.apache.cassandra.sidecar.routes.ListOperationalJobsHandler;
+import org.apache.cassandra.sidecar.routes.OperationalJobsHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
@@ -272,8 +272,8 @@ public class MainModule extends AbstractModule
                               CreateRestoreSliceHandler createRestoreSliceHandler,
                               RestoreJobProgressHandler restoreJobProgressHandler,
                               ConnectedClientStatsHandler connectedClientStatsHandler,
-                              OperationsJobsHandler operationsJobsHandler,
-                              ListOperationsJobsHandler listOperationsJobsHandler,
+                              OperationalJobsHandler operationalJobsHandler,
+                              ListOperationalJobsHandler listOperationalJobsHandler,
                               ErrorHandler errorHandler)
     {
         Router router = Router.router(vertx);
@@ -367,11 +367,11 @@ public class MainModule extends AbstractModule
         router.get(ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE)
               .handler(connectedClientStatsHandler);
 
-        router.get(ApiEndpointsV1.OPERATIONS_JOBS_ROUTE)
-              .handler(operationsJobsHandler);
+        router.get(ApiEndpointsV1.OPERATIONAL_JOBS_ROUTE)
+              .handler(operationalJobsHandler);
 
-        router.get(ApiEndpointsV1.LIST_OPERATIONS_JOBS_ROUTE)
-              .handler(listOperationsJobsHandler);
+        router.get(ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE)
+              .handler(listOperationalJobsHandler);
 
         router.get(ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE)
               .handler(ringHandler);
@@ -672,9 +672,9 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public OperationsJobTracker jobTracker(SidecarConfiguration configuration)
+    public OperationalJobTracker jobTracker(SidecarConfiguration configuration)
     {
-        return new OperationsJobTracker(configuration.serviceConfiguration().operationsJobTrackerSize());
+        return new OperationalJobTracker(configuration.serviceConfiguration().operationalJobTrackerSize());
     }
 
     /**

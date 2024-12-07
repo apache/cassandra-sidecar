@@ -35,5 +35,5 @@ public final class SidecarHttpHeaderNames
     /**
      * {@code "cassandra-operations-job-uuid"}
      */
-    public static final String OPERATIONS_JOB_HEADER_NAME = "cassandra-operations-jobid";
+    public static final String OPERATIONAL_JOBS_HEADER_NAME = "cassandra-operations-jobid";
 }

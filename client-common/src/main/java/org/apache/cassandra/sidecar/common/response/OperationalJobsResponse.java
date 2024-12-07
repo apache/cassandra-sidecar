@@ -24,26 +24,26 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
+import org.apache.cassandra.sidecar.common.utils.OperationalJobResult;
 
 /**
- * Response structure of the operations jobs API
+ * Response structure of the operational jobs API
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class OperationsJobsResponse
+public class OperationalJobsResponse
 {
     private final UUID jobId;
-    private final OperationsJobResult.OperationsJobStatus status;
+    private final OperationalJobResult.OperationalJobStatus status;
     private final String operation;
     private final String reason;
 
 
     @JsonCreator
-    public OperationsJobsResponse(@JsonProperty("jobId") UUID jobId,
-                                  @JsonProperty("jobStatus") OperationsJobResult.OperationsJobStatus status,
-                                  @JsonProperty("operation") String operation,
-                                  @JsonProperty("reason") String reason)
+    public OperationalJobsResponse(@JsonProperty("jobId") UUID jobId,
+                                   @JsonProperty("jobStatus") OperationalJobResult.OperationalJobStatus status,
+                                   @JsonProperty("operation") String operation,
+                                   @JsonProperty("reason") String reason)
     {
         this.jobId = jobId;
         this.status = status;
@@ -52,7 +52,7 @@ public class OperationsJobsResponse
     }
 
     /**
-     * @return job id of operations job
+     * @return job id of operational job
      */
     @JsonProperty("jobId")
     public UUID jobId()
@@ -64,7 +64,7 @@ public class OperationsJobsResponse
      * @return status of the job
      */
     @JsonProperty("jobStatus")
-    public OperationsJobResult.OperationsJobStatus status()
+    public OperationalJobResult.OperationalJobStatus status()
     {
         return status;
     }

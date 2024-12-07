@@ -45,11 +45,11 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
-import org.apache.cassandra.sidecar.common.response.ListOperationsJobsResponse;
-import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus;
-import org.apache.cassandra.sidecar.job.OperationsJob;
-import org.apache.cassandra.sidecar.job.OperationsJobManager;
+import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus;
+import org.apache.cassandra.sidecar.job.OperationalJob;
+import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -59,27 +59,27 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for the {@link ListOperationsJobsHandler}
+ * Tests for the {@link ListOperationalJobsHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class ListOperationsJobsHandlerTest
+public class ListOperationalJobsHandlerTest
 {
-    static final Logger LOGGER = LoggerFactory.getLogger(ListOperationsJobsHandlerTest.class);
+    static final Logger LOGGER = LoggerFactory.getLogger(ListOperationalJobsHandlerTest.class);
     Vertx vertx;
     Server server;
 
     static UUID runningUuid = UUID.randomUUID();
     static UUID runningUuid2 = UUID.randomUUID();
 
-    static SampleOperationsJob running = new SampleOperationsJob(runningUuid);
-    static SampleOperationsJob running2 = new SampleOperationsJob(runningUuid2);
+    static SampleOperationalJob running = new SampleOperationalJob(runningUuid);
+    static SampleOperationalJob running2 = new SampleOperationalJob(runningUuid2);
 
     @BeforeEach
     void before() throws InterruptedException
     {
         Injector injector;
         Module testOverride = Modules.override(new TestModule())
-                                     .with(new ListOperationsJobsHandlerTest.ListJobsTestModule());
+                                     .with(new ListOperationalJobsHandlerTest.ListJobsTestModule());
         injector = Guice.createInjector(Modules.override(new MainModule())
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
@@ -111,7 +111,7 @@ public class ListOperationsJobsHandlerTest
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
-                  ListOperationsJobsResponse listJobs = response.bodyAsJson(ListOperationsJobsResponse.class);
+                  ListOperationalJobsResponse listJobs = response.bodyAsJson(ListOperationalJobsResponse.class);
                   assertThat(listJobs).isNotNull();
                   assertThat(listJobs.jobs()).isNotNull();
                   assertThat(listJobs.jobs().size()).isEqualTo(2);
@@ -125,31 +125,31 @@ public class ListOperationsJobsHandlerTest
     {
         @Provides
         @Singleton
-        public OperationsJobManager jobManager()
+        public OperationalJobManager jobManager()
         {
-            List<OperationsJob> testJobs = Arrays.asList(running, running2);
-            OperationsJobManager mockManager = mock(OperationsJobManager.class);
+            List<OperationalJob> testJobs = Arrays.asList(running, running2);
+            OperationalJobManager mockManager = mock(OperationalJobManager.class);
             when(mockManager.allInflightJobs()).thenReturn(testJobs);
             return mockManager;
         }
     }
 
     /**
-     * Concrete test implementation of the OperationsJob to be used by handler tests
+     * Concrete test implementation of the OperationalJob to be used by handler tests
      */
-    public static class SampleOperationsJob extends OperationsJob
+    public static class SampleOperationalJob extends OperationalJob
     {
-        public SampleOperationsJob()
+        public SampleOperationalJob()
         {
             super(Vertx.vertx());
         }
 
-        public SampleOperationsJob(UUID jobId)
+        public SampleOperationalJob(UUID jobId)
         {
             super(Vertx.vertx(), jobId);
         }
 
-        protected OperationsJobStatus executeInternal() throws OperationsJobException
+        protected OperationalJobStatus executeInternal() throws OperationalJobException
         {
             return null;
         }

@@ -33,8 +33,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.common.utils.OperationalJobResult;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -43,7 +43,7 @@ import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.COMPLETED;
+import static org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus.COMPLETED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -56,10 +56,10 @@ import static org.mockito.Mockito.when;
  * 2) Cached job (null (not in cache), Completed/Failed job, Running job), and
  * 3) Request UUID (null (no header), UUID)
  */
-public class OperationsJobManagerTest
+public class OperationalJobManagerTest
 {
     @Mock
-    OperationsJob mockJob;
+    OperationalJob mockJob;
 
     @Mock
     SidecarConfiguration mockConfig;
@@ -73,7 +73,7 @@ public class OperationsJobManagerTest
         MockitoAnnotations.openMocks(this);
         ServiceConfiguration mockServiceConfig = mock(ServiceConfiguration.class);
         when(mockConfig.serviceConfiguration()).thenReturn(mockServiceConfig);
-        when(mockServiceConfig.operationsJobSyncResponseTimeout()).thenReturn(5000);
+        when(mockServiceConfig.operationalJobSyncResponseTimeoutMillis()).thenReturn(5000);
     }
 
     @ParameterizedTest(name = "{index} => HeaderJobId {0}")
@@ -81,11 +81,11 @@ public class OperationsJobManagerTest
     void testWithNoDownstreamJob(String jobId)
     {
         UUID headerJobId = (jobId.isEmpty()) ? null :  UUID.fromString(jobId);
-        OperationsJobTracker tracker = new OperationsJobTracker(4);
+        OperationalJobTracker tracker = new OperationalJobTracker(4);
         ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
-        OperationsJobManager manager = new OperationsJobManager(vertx, executorPools, mockConfig, tracker);
+        OperationalJobManager manager = new OperationalJobManager(vertx, executorPools, mockConfig, tracker);
 
-        OperationsJob testJob = new OperationsJob(vertx, headerJobId)
+        OperationalJob testJob = new OperationalJob(vertx, headerJobId)
         {
             public String operation()
             {
@@ -102,14 +102,12 @@ public class OperationsJobManagerTest
                 return System.nanoTime();
             }
 
-            protected OperationsJobResult.OperationsJobStatus executeInternal() throws OperationsJobException
+            protected OperationalJobResult.OperationalJobStatus executeInternal() throws OperationalJobException
             {
                 return COMPLETED;
             }
         };
 
-//        Function<UUID, OperationsJob> creator = (id) -> testJob;
-//        OperationsJob createdJob = creator.apply(headerJobId);
         manager.trySubmitJob(headerJobId, testJob);
         Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
         assertThat(testJob.status().isComplete()).isTrue();
@@ -126,12 +124,12 @@ public class OperationsJobManagerTest
     void testWithRunningDownstreamJob(String jobId)
     {
         UUID headerJobId = (jobId.isEmpty()) ? null :  UUID.fromString(jobId);
-        OperationsJobTracker tracker = new OperationsJobTracker(4);
+        OperationalJobTracker tracker = new OperationalJobTracker(4);
         ExecutorPools mockPools = mock(ExecutorPools.class);
         TaskExecutorPool mockExecPool = mock(TaskExecutorPool.class);
         when(mockPools.internal()).thenReturn(mockExecPool);
         when(mockExecPool.runBlocking(any())).thenReturn(null);
-        OperationsJobManager manager = new OperationsJobManager(vertx, mockPools, mockConfig, tracker);
+        OperationalJobManager manager = new OperationalJobManager(vertx, mockPools, mockConfig, tracker);
 
         when(mockJob.isRunningDownstream()).thenReturn(true);
         Promise unresolved = Promise.promise();
@@ -142,14 +140,13 @@ public class OperationsJobManagerTest
         }
 
         doAnswer(invocation -> {
-            Promise<OperationsJobResult.OperationsJobStatus> capturedPromise = invocation.getArgument(0);
+            Promise<OperationalJobResult.OperationalJobStatus> capturedPromise = invocation.getArgument(0);
             capturedPromise.complete(COMPLETED);
             return null;  // void return
         }).when(mockJob).execute(any(Promise.class));
 
-//        Function<UUID, OperationsJob> creator = (id) -> mockJob;
-        OperationsJobException ex = Assertions.assertThrows(OperationsJobException.class,
-                                                            () -> manager.trySubmitJob(headerJobId, mockJob));
+        OperationalJobException ex = Assertions.assertThrows(OperationalJobException.class,
+                                                             () -> manager.trySubmitJob(headerJobId, mockJob));
         assertThat(ex.getMessage()).isEqualTo("Conflicting job running downstream");
 
         if (headerJobId == null)
@@ -169,11 +166,11 @@ public class OperationsJobManagerTest
     {
         UUID headerJobId = (jobId.isEmpty()) ? null :  UUID.fromString(jobId);
 
-        OperationsJobTracker tracker = new OperationsJobTracker(4);
+        OperationalJobTracker tracker = new OperationalJobTracker(4);
         ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
-        OperationsJobManager manager = new OperationsJobManager(vertx, executorPools, mockConfig, tracker);
+        OperationalJobManager manager = new OperationalJobManager(vertx, executorPools, mockConfig, tracker);
 
-        OperationsJob testJob = new OperationsJob(vertx, headerJobId)
+        OperationalJob testJob = new OperationalJob(vertx, headerJobId)
         {
             public String operation()
             {
@@ -190,7 +187,7 @@ public class OperationsJobManagerTest
                 return System.nanoTime();
             }
 
-            protected OperationsJobResult.OperationsJobStatus executeInternal() throws OperationsJobException
+            protected OperationalJobResult.OperationalJobStatus executeInternal() throws OperationalJobException
             {
                 Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
                 return COMPLETED;
@@ -211,16 +208,16 @@ public class OperationsJobManagerTest
     {
         UUID headerJobId = (jobId.isEmpty()) ? null :  UUID.fromString(jobId);
 
-        OperationsJobTracker tracker = new OperationsJobTracker(4);
+        OperationalJobTracker tracker = new OperationalJobTracker(4);
         ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
-        OperationsJobManager manager = new OperationsJobManager(vertx, executorPools, mockConfig, tracker);
+        OperationalJobManager manager = new OperationalJobManager(vertx, executorPools, mockConfig, tracker);
 
         String msg = "Test Job failed";
-        OperationsJob failingJob = new OperationsJob(vertx, UUID.randomUUID())
+        OperationalJob failingJob = new OperationalJob(vertx, UUID.randomUUID())
         {
-            protected OperationsJobResult.OperationsJobStatus executeInternal() throws OperationsJobException
+            protected OperationalJobResult.OperationalJobStatus executeInternal() throws OperationalJobException
             {
-                throw new OperationsJobException(msg);
+                throw new OperationalJobException(msg);
             }
 
             public String operation()
@@ -234,7 +231,6 @@ public class OperationsJobManagerTest
             }
         };
 
-//        Function<UUID, OperationsJob> creator = (id) -> failingJob;
         manager.trySubmitJob(headerJobId, failingJob);
         Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
         assertThat(failingJob.status().isComplete()).isTrue();

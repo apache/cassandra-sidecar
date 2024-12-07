@@ -51,10 +51,10 @@ import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestP
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
-import org.apache.cassandra.sidecar.common.response.ListOperationsJobsResponse;
+import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
-import org.apache.cassandra.sidecar.common.response.OperationsJobsResponse;
+import org.apache.cassandra.sidecar.common.response.OperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
@@ -596,23 +596,23 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     }
 
     /**
-     * Executes the operations job request using the default retry policy and configured selection policy
+     * Executes the operational job request using the default retry policy and configured selection policy
      *
      * @return a completable future of the node settings
      */
-    public CompletableFuture<OperationsJobsResponse> operationsJob(UUID jobId)
+    public CompletableFuture<OperationalJobsResponse> operationalJobs(UUID jobId)
     {
-        return executor.executeRequestAsync(requestBuilder().operationsJobsRequest(jobId).build());
+        return executor.executeRequestAsync(requestBuilder().operationalJobsRequest(jobId).build());
     }
 
     /**
-     * Executes the list operations jobs request using the default retry policy and configured selection policy
+     * Executes the list operational jobs request using the default retry policy and configured selection policy
      *
      * @return a completable future of the jobs list
      */
-    public CompletableFuture<ListOperationsJobsResponse> listOperationsJobs()
+    public CompletableFuture<ListOperationalJobsResponse> listOperationalJobs()
     {
-        return executor.executeRequestAsync(requestBuilder().listOperationsJobsRequest().build());
+        return executor.executeRequestAsync(requestBuilder().listOperationalJobsRequest().build());
     }
 
 

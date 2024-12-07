@@ -24,25 +24,25 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.common.utils.OperationalJobResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests to validate the Job APIs
  */
-public class OperationsJobTest
+public class OperationalJobTest
 {
     private static final Vertx vertx = Vertx.vertx();
-    public static OperationsJob createJobWithStatus(OperationsJobResult.OperationsJobStatus jobStatus)
+    public static OperationalJob createJobWithStatus(OperationalJobResult.OperationalJobStatus jobStatus)
     {
-        return new OperationsJob(vertx, UUID.randomUUID(), jobStatus)
+        return new OperationalJob(vertx, UUID.randomUUID(), jobStatus)
         {
             @Override
-            protected OperationsJobResult.OperationsJobStatus executeInternal()
+            protected OperationalJobResult.OperationalJobStatus executeInternal()
             {
-                return OperationsJobResult.OperationsJobStatus.COMPLETED;
+                return OperationalJobResult.OperationalJobStatus.COMPLETED;
             }
             public String operation()
             {
@@ -59,23 +59,23 @@ public class OperationsJobTest
     @Test
     void testJobCompletion()
     {
-        OperationsJob job = createJobWithStatus(OperationsJobResult.OperationsJobStatus.COMPLETED);
+        OperationalJob job = createJobWithStatus(OperationalJobResult.OperationalJobStatus.COMPLETED);
         Promise p = Promise.promise();
         job.execute(p);
-        Future<OperationsJobResult.OperationsJobStatus> statusFuture = p.future();
+        Future<OperationalJobResult.OperationalJobStatus> statusFuture = p.future();
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result()).isEqualTo(OperationsJobResult.OperationsJobStatus.COMPLETED);
+        assertThat(statusFuture.result()).isEqualTo(OperationalJobResult.OperationalJobStatus.COMPLETED);
     }
 
     @Test
     void testJobFailed()
     {
         String msg = "Test Job failed";
-        OperationsJob failingJob = new OperationsJob(vertx, UUID.randomUUID())
+        OperationalJob failingJob = new OperationalJob(vertx, UUID.randomUUID())
         {
-            protected OperationsJobResult.OperationsJobStatus executeInternal() throws OperationsJobException
+            protected OperationalJobResult.OperationalJobStatus executeInternal() throws OperationalJobException
             {
-                throw new OperationsJobException(msg);
+                throw new OperationalJobException(msg);
             }
 
             public String operation()
@@ -92,9 +92,9 @@ public class OperationsJobTest
         Promise p = Promise.promise();
         failingJob.execute(p);
 
-        Future<OperationsJobResult.OperationsJobStatus> statusFuture = p.future();
+        Future<OperationalJobResult.OperationalJobStatus> statusFuture = p.future();
         assertThat(statusFuture.failed()).isTrue();
-        assertThat(statusFuture.cause().getClass()).isEqualTo(OperationsJobException.class);
+        assertThat(statusFuture.cause().getClass()).isEqualTo(OperationalJobException.class);
         assertThat(statusFuture.cause().getMessage()).isEqualTo(msg);
     }
 }

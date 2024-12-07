@@ -22,30 +22,30 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.response.data.OperationsJobsEntry;
+import org.apache.cassandra.sidecar.common.response.data.OperationalJobsEntry;
 
 /**
- * Response structure of the list operations jobs API
+ * Response structure of the list operational jobs API
  */
-public class ListOperationsJobsResponse
+public class ListOperationalJobsResponse
 {
-    private final List<OperationsJobsEntry> jobs;
+    private final List<OperationalJobsEntry> jobs;
 
     /**
-     * Constructs a {@link ListOperationsJobsResponse} object.
+     * Constructs a {@link ListOperationalJobsResponse} object.
      */
-    public ListOperationsJobsResponse()
+    public ListOperationalJobsResponse()
     {
         this.jobs = new ArrayList<>();
     }
 
-    public void addJob(OperationsJobsEntry job)
+    public void addJob(OperationalJobsEntry job)
     {
         jobs.add(job);
     }
 
     @JsonProperty("jobs")
-    public List<OperationsJobsEntry> jobs()
+    public List<OperationalJobsEntry> jobs()
     {
         return jobs;
     }

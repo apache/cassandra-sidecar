@@ -25,27 +25,27 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.common.response.ListOperationsJobsResponse;
-import org.apache.cassandra.sidecar.common.response.data.OperationsJobsEntry;
+import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
+import org.apache.cassandra.sidecar.common.response.data.OperationalJobsEntry;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.job.OperationsJob;
-import org.apache.cassandra.sidecar.job.OperationsJobManager;
+import org.apache.cassandra.sidecar.job.OperationalJob;
+import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.RUNNING;
+import static org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus.RUNNING;
 
 /**
  * Handler for retrieving the all the jobs running on the sidecar
  */
-public class ListOperationsJobsHandler extends AbstractHandler<Void>
+public class ListOperationalJobsHandler extends AbstractHandler<Void>
 {
-    private final OperationsJobManager jobManager;
+    private final OperationalJobManager jobManager;
     @Inject
-    public ListOperationsJobsHandler(InstanceMetadataFetcher metadataFetcher,
-                                     ExecutorPools executorPools,
-                                     CassandraInputValidator validator,
-                                     OperationsJobManager jobManager)
+    public ListOperationalJobsHandler(InstanceMetadataFetcher metadataFetcher,
+                                      ExecutorPools executorPools,
+                                      CassandraInputValidator validator,
+                                      OperationalJobManager jobManager)
     {
         super(metadataFetcher, executorPools, validator);
         this.jobManager = jobManager;
@@ -60,13 +60,13 @@ public class ListOperationsJobsHandler extends AbstractHandler<Void>
     @Override
     protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
     {
-        List<OperationsJob> jobs = jobManager.allInflightJobs();
-        ListOperationsJobsResponse listResponse = new ListOperationsJobsResponse();
+        List<OperationalJob> jobs = jobManager.allInflightJobs();
+        ListOperationalJobsResponse listResponse = new ListOperationalJobsResponse();
         jobs.forEach(job ->
-                     listResponse.addJob(new OperationsJobsEntry(job.jobId(),
-                                                                 RUNNING.toString(),
-                                                                 "",
-                                                                 job.operation())));
+                     listResponse.addJob(new OperationalJobsEntry(job.jobId(),
+                                                                  RUNNING.toString(),
+                                                                  "",
+                                                                  job.operation())));
         context.response().setStatusCode(HttpResponseStatus.OK.code());
         context.json(listResponse);
     }

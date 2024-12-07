@@ -30,8 +30,8 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus;
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -40,11 +40,11 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
  * An abstraction of the management and tracking of long-running jobs running on the sidecar.
  */
 @Singleton
-public class OperationsJobManager
+public class OperationalJobManager
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(OperationsJobManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OperationalJobManager.class);
 
-    private final OperationsJobTracker jobTracker;
+    private final OperationalJobTracker jobTracker;
     private final ExecutorPools executorPools;
     private final Vertx vertx;
     private final ServiceConfiguration config;
@@ -54,7 +54,7 @@ public class OperationsJobManager
      * @param executorPools
      */
     @Inject
-    public OperationsJobManager(Vertx vertx, ExecutorPools executorPools, SidecarConfiguration config, OperationsJobTracker jobTracker)
+    public OperationalJobManager(Vertx vertx, ExecutorPools executorPools, SidecarConfiguration config, OperationalJobTracker jobTracker)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -66,7 +66,7 @@ public class OperationsJobManager
      * Fetches the inflight jobs being tracked on the sidecar
      * @return instances of the jobs that are in pending or running states
      */
-    public List<OperationsJob> allInflightJobs()
+    public List<OperationalJob> allInflightJobs()
     {
         return jobTracker.getJobsView().values()
                          .stream()
@@ -79,7 +79,7 @@ public class OperationsJobManager
      * @param jobId identifier of the job
      * @return instance of the job or null
      */
-    public OperationsJob getJobIfExists(UUID jobId)
+    public OperationalJob getJobIfExists(UUID jobId)
     {
         return jobTracker.get(jobId);
     }
@@ -87,17 +87,17 @@ public class OperationsJobManager
     /**
      * Asynchronously submit (and lazily create) the job, if it is not currently being
      * tracked and is not running downstream. The job is triggered on a separate internal thread-pool.
-     * The job execution failure behavior is tracked within the {@link OperationsJob}.
+     * The job execution failure behavior is tracked within the {@link OperationalJob}.
      * @param headerJobId job identifier
      * @param job function used to create an instance of the job based on the UUID parameter
      */
-    public void trySubmitJob(UUID headerJobId, OperationsJob job)
+    public void trySubmitJob(UUID headerJobId, OperationalJob job)
     {
         maybeProcessDownstreamRunningJob(headerJobId, job);
 
         if (headerJobId != null)
         {
-            OperationsJob cachedJob = jobTracker.get(headerJobId);
+            OperationalJob cachedJob = jobTracker.get(headerJobId);
             if (cachedJob != null)
             {
                 LOGGER.warn("Stale cache entry as there is no downstream job with jobId: {}, operation:{}",
@@ -107,64 +107,48 @@ public class OperationsJobManager
 
         // New job is submitted for all cases when we do not have a corresponding downstream job
         jobTracker.computeIfAbsent(job.jobId(), j -> {
-            Future<OperationsJobStatus> status = submitJob(job);
-            LOGGER.info("Future isComplete:" + status.isComplete());
-//            LOGGER.error("Future isComplete promise:" +status.hashCode());
+            Future<OperationalJobStatus> status = submitJob(job);
             return job;
         });
     }
 
-    private void maybeProcessDownstreamRunningJob(UUID headerJobId, OperationsJob job)
+    private void maybeProcessDownstreamRunningJob(UUID headerJobId, OperationalJob job)
     {
         if (job.isRunningDownstream())
         {
             UUID responseJobId = null;
-            OperationsJob cachedJob = (headerJobId != null) ? jobTracker.get(headerJobId) : null;
-
-            // TODO: Future holds no value until complete => we check for completeness instead of RUNNING
-            // cachedJob.status().result() == RUNNING
-            // When we have a cached job with the header jobId
+            OperationalJob cachedJob = (headerJobId != null) ? jobTracker.get(headerJobId) : null;
             if (cachedJob != null && !cachedJob.status().isComplete())
             {
                 responseJobId = headerJobId;
             }
-            throw new OperationsJobException("Conflicting job running downstream", responseJobId);
+            throw new OperationalJobException("Conflicting job running downstream", responseJobId);
         }
     }
 
-    // Result of submit() is cached => needs to be future of status, so we can poll from main thread
-    private Future<OperationsJobStatus> submitJob(OperationsJob job)
+    private Future<OperationalJobStatus> submitJob(OperationalJob job)
     {
-        long timeoutMillis = config.operationsJobSyncResponseTimeout();
+        long timeoutMillis = config.operationalJobSyncResponseTimeoutMillis();
         Future<Void> timerFuture = Future.future(promise ->
                                                  vertx.setTimer(timeoutMillis, id -> promise.complete())
         );
 
         LOGGER.info("Triggering downstream job with ID: {}, operation: {}", job.jobId(), job.operation());
-        Future<OperationsJobStatus> actualFuture = executorPools.internal().executeBlocking(p -> job.execute(p), false);
+        Future<OperationalJobStatus> actualFuture = executorPools.internal().executeBlocking(p -> job.execute(p), false);
 
         job.setStatus(actualFuture);
-//        LOGGER.info("Failed?: "+actualFuture.failed());
-//        LOGGER.error("Failed? promise:" +actualFuture.hashCode());
 
         return actualFuture.failed() ? actualFuture : Future.any(timerFuture.map(v -> false), actualFuture)
                      .compose(cf -> {
-                         // Determine which future completed first
-                         // TODO: Can be merged
-                         if (cf.succeeded() && cf.resultAt(0) != null)
+                         if (cf.succeeded() && (cf.resultAt(0) != null || cf.resultAt(1) != null))
                          {
-                             LOGGER.info("Timed out waiting for response");
-                             return actualFuture;
-                         }
-                         else if (cf.succeeded() && cf.resultAt(1) != null)
-                         {
-                             LOGGER.info("Execution succeeded within time limit");
+                             LOGGER.info("Timed out waiting for response for job {}", job.jobId);
                              return actualFuture;
                          }
                          else
                          {
                              LOGGER.error("Unexpected failure executing the job: {}", job.jobId, cf.cause());
-                             return Future.failedFuture("Unexpected failure");
+                             return Future.failedFuture(cf.cause());
                          }
                      });
     }

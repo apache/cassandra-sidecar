@@ -22,18 +22,18 @@ package org.apache.cassandra.sidecar.common.utils;
  * Holder class for the results of a job execution. Captures the job status and reason
  * as a result of performing the downstream operation.
  */
-public class OperationsJobResult
+public class OperationalJobResult
 {
-    public final OperationsJobStatus status;
+    public final OperationalJobStatus status;
     public final String reason;
 
-    public OperationsJobResult(OperationsJobStatus status)
+    public OperationalJobResult(OperationalJobStatus status)
     {
         this.status = status;
         this.reason = "";
     }
 
-    public OperationsJobResult(OperationsJobStatus status, String reason)
+    public OperationalJobResult(OperationalJobStatus status, String reason)
     {
         this.status = status;
         this.reason = reason;
@@ -42,7 +42,7 @@ public class OperationsJobResult
     /**
      * Encapsulates the states of the job lifecycle. All new jobs are in Pending state.
      */
-    public enum OperationsJobStatus
+    public enum OperationalJobStatus
     {
         // Job execution has been triggered on C*
         RUNNING,

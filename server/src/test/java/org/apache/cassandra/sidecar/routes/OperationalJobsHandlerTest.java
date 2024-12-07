@@ -45,10 +45,10 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
-import org.apache.cassandra.sidecar.common.response.OperationsJobsResponse;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
-import org.apache.cassandra.sidecar.job.OperationsJob;
-import org.apache.cassandra.sidecar.job.OperationsJobManager;
+import org.apache.cassandra.sidecar.common.response.OperationalJobsResponse;
+import org.apache.cassandra.sidecar.common.utils.OperationalJobResult;
+import org.apache.cassandra.sidecar.job.OperationalJob;
+import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -60,10 +60,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for the {@link OperationsJobsHandler}
+ * Tests for the {@link OperationalJobsHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class OperationsJobsHandlerTest
+public class OperationalJobsHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(GossipInfoHandlerTest.class);
     Vertx vertx;
@@ -78,7 +78,7 @@ public class OperationsJobsHandlerTest
     {
         Injector injector;
         Module testOverride = Modules.override(new TestModule())
-                                     .with(new OperationsJobsHandlerTestModule());
+                                     .with(new OperationalJobsHandlerTestModule());
         injector = Guice.createInjector(Modules.override(new MainModule())
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
@@ -137,9 +137,9 @@ public class OperationsJobsHandlerTest
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
-                  OperationsJobsResponse jobStatus = response.bodyAsJson(OperationsJobsResponse.class);
+                  OperationalJobsResponse jobStatus = response.bodyAsJson(OperationalJobsResponse.class);
                   assertThat(jobStatus.jobId()).isEqualTo(completedUuid);
-                  assertThat(jobStatus.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.COMPLETED);
+                  assertThat(jobStatus.status()).isEqualTo(OperationalJobResult.OperationalJobStatus.COMPLETED);
                   assertThat(jobStatus.operation()).isEqualTo("testCompleted");
                   context.completeNow();
               }));
@@ -154,9 +154,9 @@ public class OperationsJobsHandlerTest
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
-                  OperationsJobsResponse jobStatus = response.bodyAsJson(OperationsJobsResponse.class);
+                  OperationalJobsResponse jobStatus = response.bodyAsJson(OperationalJobsResponse.class);
                   assertThat(jobStatus.jobId()).isEqualTo(failedUuid);
-                  assertThat(jobStatus.status()).isEqualTo(OperationsJobResult.OperationsJobStatus.FAILED);
+                  assertThat(jobStatus.status()).isEqualTo(OperationalJobResult.OperationalJobStatus.FAILED);
                   assertThat(jobStatus.operation()).isEqualTo("testFailed");
                    assertThat(jobStatus.reason()).isEqualTo("Test failed");
 
@@ -164,20 +164,20 @@ public class OperationsJobsHandlerTest
               }));
     }
 
-    static class OperationsJobsHandlerTestModule extends AbstractModule
+    static class OperationalJobsHandlerTestModule extends AbstractModule
     {
         @Provides
         @Singleton
-        public OperationsJobManager jobManager()
+        public OperationalJobManager jobManager()
         {
-            OperationsJobManager mockManager = mock(OperationsJobManager.class);
-            OperationsJob runningMock = mock(OperationsJob.class);
+            OperationalJobManager mockManager = mock(OperationalJobManager.class);
+            OperationalJob runningMock = mock(OperationalJob.class);
             Promise p = Promise.promise();
             when(runningMock.status()).thenReturn(p.future());
-            OperationsJob completedMock = mock(OperationsJob.class);
-            when(completedMock.status()).thenReturn(Future.succeededFuture(OperationsJobResult.OperationsJobStatus.COMPLETED));
+            OperationalJob completedMock = mock(OperationalJob.class);
+            when(completedMock.status()).thenReturn(Future.succeededFuture(OperationalJobResult.OperationalJobStatus.COMPLETED));
             when(completedMock.operation()).thenReturn("testCompleted");
-            OperationsJob failedMock = mock(OperationsJob.class);
+            OperationalJob failedMock = mock(OperationalJob.class);
             when(failedMock.status()).thenReturn(Future.failedFuture("Test failed"));
             when(failedMock.operation()).thenReturn("testFailed");
 

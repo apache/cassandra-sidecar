@@ -25,31 +25,31 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.common.response.OperationsJobsResponse;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult;
+import org.apache.cassandra.sidecar.common.response.OperationalJobsResponse;
+import org.apache.cassandra.sidecar.common.utils.OperationalJobResult;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.job.OperationsJob;
-import org.apache.cassandra.sidecar.job.OperationsJobManager;
+import org.apache.cassandra.sidecar.job.OperationalJob;
+import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONS_JOB_ID_PATH_PARAM;
-import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.OPERATIONS_JOB_HEADER_NAME;
-import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.COMPLETED;
-import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.FAILED;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.OPERATIONAL_JOBS_HEADER_NAME;
+import static org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus.COMPLETED;
+import static org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus.FAILED;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Handler for retrieving the status of async operations jobs running on the sidecar
+ * Handler for retrieving the status of async operational jobs running on the sidecar
  */
-public class OperationsJobsHandler extends AbstractHandler<Void>
+public class OperationalJobsHandler extends AbstractHandler<Void>
 {
-    private final OperationsJobManager jobManager;
+    private final OperationalJobManager jobManager;
     @Inject
-    public OperationsJobsHandler(InstanceMetadataFetcher metadataFetcher,
-                                 ExecutorPools executorPools,
-                                 CassandraInputValidator validator,
-                                 OperationsJobManager jobManager)
+    public OperationalJobsHandler(InstanceMetadataFetcher metadataFetcher,
+                                  ExecutorPools executorPools,
+                                  CassandraInputValidator validator,
+                                  OperationalJobManager jobManager)
     {
         super(metadataFetcher, executorPools, validator);
         this.jobManager = jobManager;
@@ -67,7 +67,7 @@ public class OperationsJobsHandler extends AbstractHandler<Void>
         UUID jobUUID = validateJobIdParam(context);
 
         executorPools.service().executeBlocking(() -> {
-                         OperationsJob job = jobManager.getJobIfExists(jobUUID);
+                         OperationalJob job = jobManager.getJobIfExists(jobUUID);
                          if (job == null)
                          {
                              String response = String.format("Unknown job with ID:%s. Please retry the operation.", jobUUID);
@@ -82,11 +82,11 @@ public class OperationsJobsHandler extends AbstractHandler<Void>
 
     private UUID validateJobIdParam(RoutingContext context)
     {
-        String requestJobId = context.pathParam(OPERATIONS_JOB_ID_PATH_PARAM.substring(1));
+        String requestJobId = context.pathParam(OPERATIONAL_JOB_ID_PATH_PARAM.substring(1));
         if (requestJobId == null)
         {
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    OPERATIONS_JOB_ID_PATH_PARAM + " is required but not supplied");
+                                    OPERATIONAL_JOB_ID_PATH_PARAM + " is required but not supplied");
         }
 
         UUID jobId;
@@ -103,13 +103,13 @@ public class OperationsJobsHandler extends AbstractHandler<Void>
         return jobId;
     }
 
-    public void sendStatusBasedResponse(RoutingContext context, UUID jobId, OperationsJob job)
+    public void sendStatusBasedResponse(RoutingContext context, UUID jobId, OperationalJob job)
     {
 
         if (job.status().isComplete())
         {
             context.response().setStatusCode(HttpResponseStatus.OK.code());
-            OperationsJobResult.OperationsJobStatus status;
+            OperationalJobResult.OperationalJobStatus status;
             final String reason;
             if (job.status().failed())
             {
@@ -121,13 +121,13 @@ public class OperationsJobsHandler extends AbstractHandler<Void>
                 status = COMPLETED;
                 reason = "";
             }
-            context.json(new OperationsJobsResponse(jobId, status, job.operation(), reason));
+            context.json(new OperationalJobsResponse(jobId, status, job.operation(), reason));
         }
         else
         {
             context.response()
                    .setStatusCode(HttpResponseStatus.ACCEPTED.code())
-                   .putHeader(OPERATIONS_JOB_HEADER_NAME, jobId.toString())
+                   .putHeader(OPERATIONAL_JOBS_HEADER_NAME, jobId.toString())
                    .end();
         }
     }

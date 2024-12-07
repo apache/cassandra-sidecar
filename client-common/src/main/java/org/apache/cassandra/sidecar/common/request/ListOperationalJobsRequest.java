@@ -20,19 +20,19 @@ package org.apache.cassandra.sidecar.common.request;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-import org.apache.cassandra.sidecar.common.response.ListOperationsJobsResponse;
+import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 
 /**
- * Represents a request to retrieve the list of async operations jobs
+ * Represents a request to retrieve the list of async operational jobs
  */
-public class ListOperationsJobsRequest extends JsonRequest<ListOperationsJobsResponse>
+public class ListOperationalJobsRequest extends JsonRequest<ListOperationalJobsResponse>
 {
     /**
-     * Constructs a request to retrieve the list of running operations jobs
+     * Constructs a request to retrieve the list of running operational jobs
      */
-    public ListOperationsJobsRequest()
+    public ListOperationalJobsRequest()
     {
-        super(ApiEndpointsV1.LIST_OPERATIONS_JOBS_ROUTE);
+        super(ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE);
     }
 
     /**

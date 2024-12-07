@@ -30,28 +30,28 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus;
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus;
 
-import static org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus.COMPLETED;
-import static org.apache.cassandra.sidecar.job.OperationsJobTest.createJobWithStatus;
+import static org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus.COMPLETED;
+import static org.apache.cassandra.sidecar.job.OperationalJobTest.createJobWithStatus;
 
 
 /**
  * Tests to validate job tracking
  */
-public class OperationsJobTrackerTest
+public class OperationalJobTrackerTest
 {
-    private OperationsJobTracker jobTracker;
+    private OperationalJobTracker jobTracker;
     private static final int trackerSize = 3;
     protected Vertx vertx = Vertx.vertx();
 
-    OperationsJob job1 = createJobWithStatus(COMPLETED);
-    OperationsJob job2 = createJobWithStatus(COMPLETED);
-    OperationsJob job3 = createJobWithStatus(COMPLETED);
-    OperationsJob job4 = createJobWithStatus(COMPLETED);
+    OperationalJob job1 = createJobWithStatus(COMPLETED);
+    OperationalJob job2 = createJobWithStatus(COMPLETED);
+    OperationalJob job3 = createJobWithStatus(COMPLETED);
+    OperationalJob job4 = createJobWithStatus(COMPLETED);
 
-    OperationsJob jobWithStaleCreationTime = new OperationsJob(vertx, UUID.randomUUID())
+    OperationalJob jobWithStaleCreationTime = new OperationalJob(vertx, UUID.randomUUID())
     {
         public String operation()
         {
@@ -68,7 +68,7 @@ public class OperationsJobTrackerTest
             return System.nanoTime() - TimeUnit.DAYS.toNanos(2);
         }
 
-        protected OperationsJobStatus executeInternal() throws OperationsJobException
+        protected OperationalJobStatus executeInternal() throws OperationalJobException
         {
             return COMPLETED;
         }
@@ -78,7 +78,7 @@ public class OperationsJobTrackerTest
     void setUp()
     {
         vertx = Vertx.vertx();
-        jobTracker = new OperationsJobTracker(trackerSize);
+        jobTracker = new OperationalJobTracker(trackerSize);
     }
 
     @Test
@@ -147,7 +147,7 @@ public class OperationsJobTrackerTest
         jobTracker.put(key1, job1);
         jobTracker.put(key2, job2);
 
-        Map<UUID, OperationsJob> view = jobTracker.getJobsView();
+        Map<UUID, OperationalJob> view = jobTracker.getJobsView();
         Assertions.assertEquals(2, view.size());
         Assertions.assertThrows(UnsupportedOperationException.class, () -> view.put(key3, job3));
     }

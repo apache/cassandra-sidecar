@@ -16,33 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.response.data;
+package org.apache.cassandra.sidecar.common.request;
 
 import java.util.UUID;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import io.netty.handler.codec.http.HttpMethod;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.response.OperationalJobsResponse;
 
 /**
- * Structure of the operations job instance within the list operations jobs API response
+ * Represents a request to retrieve the status of a async operational job
  */
-public class OperationsJobsEntry
+public class OperationalJobsRequest extends JsonRequest<OperationalJobsResponse>
 {
-    public final UUID jobId;
-    public final String status;
-    public final String failureReason;
-    public final String operation;
 
     /**
-     * Constructs a {@link OperationsJobsEntry} object.
+     * Constructs a request to retrieve status for a specified operational job
      */
-    public OperationsJobsEntry(@JsonProperty("jobId") UUID jobId,
-                               @JsonProperty("status") String status,
-                               @JsonProperty("failureReason") String failureReason,
-                               @JsonProperty("operation") String operation)
+    public OperationalJobsRequest(UUID jobId)
     {
-        this.jobId = jobId;
-        this.status = status;
-        this.failureReason = failureReason;
-        this.operation = operation;
+        super(ApiEndpointsV1.OPERATIONAL_JOBS_ROUTE
+              .replaceAll(ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public HttpMethod method()
+    {
+        return HttpMethod.GET;
     }
 }

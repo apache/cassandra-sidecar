@@ -33,20 +33,20 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Tracks and stores the results of long-running jobs running on the sidecar
  */
-public class OperationsJobTracker
+public class OperationalJobTracker
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(OperationsJobTracker.class);
-    private final Map<UUID, OperationsJob> map;
+    private static final Logger LOGGER = LoggerFactory.getLogger(OperationalJobTracker.class);
+    private final Map<UUID, OperationalJob> map;
 
-    public OperationsJobTracker(int initialCapacity)
+    public OperationalJobTracker(int initialCapacity)
     {
-        map = Collections.synchronizedMap(new LinkedHashMap<UUID, OperationsJob>(initialCapacity)
+        map = Collections.synchronizedMap(new LinkedHashMap<UUID, OperationalJob>(initialCapacity)
         {
             /**
              * {@inheritDoc}
              */
             @Override
-            protected boolean removeEldestEntry(Map.Entry<UUID, OperationsJob> eldest)
+            protected boolean removeEldestEntry(Map.Entry<UUID, OperationalJob> eldest)
             {
                 // We have reached capacity and the oldest entry is either ready for cleanup or stale
                 if (map.size() > initialCapacity)
@@ -72,7 +72,7 @@ public class OperationsJobTracker
     /**
      * {@inheritDoc}
      */
-    public OperationsJob computeIfAbsent(UUID key, Function<UUID, OperationsJob> mappingFunction)
+    public OperationalJob computeIfAbsent(UUID key, Function<UUID, OperationalJob> mappingFunction)
     {
         return map.computeIfAbsent(key, mappingFunction);
     }
@@ -80,7 +80,7 @@ public class OperationsJobTracker
     /**
      * {@inheritDoc}
      */
-    public OperationsJob put(UUID key, OperationsJob job)
+    public OperationalJob put(UUID key, OperationalJob job)
     {
         return map.put(key, job);
     }
@@ -97,7 +97,7 @@ public class OperationsJobTracker
     /**
      * {@inheritDoc}
      */
-    public OperationsJob get(UUID key)
+    public OperationalJob get(UUID key)
     {
         return map.get(key);
     }
@@ -109,7 +109,7 @@ public class OperationsJobTracker
      * @return an immutable copy of the underlying mapping
      */
     @NotNull
-    Map<UUID, OperationsJob> getJobsView()
+    Map<UUID, OperationalJob> getJobsView()
     {
         return Collections.unmodifiableMap(map);
     }

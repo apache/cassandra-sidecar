@@ -27,29 +27,29 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.common.server.exceptions.OperationsJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationsJobResult.OperationsJobStatus;
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus;
 import org.apache.cassandra.sidecar.tasks.Task;
 
 /**
- * An abstract class representing a Operations job managed by the sidecar.
+ * An abstract class representing a Operational job managed by the sidecar.
  *
  */
-public abstract class OperationsJob implements Task
+public abstract class OperationalJob implements Task
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(OperationsJob.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OperationalJob.class);
 
     protected UUID jobId;
-    protected Future<OperationsJobStatus> status;
+    protected Future<OperationalJobStatus> status;
     protected long creationTime;
 
     private final Vertx vertx;
 
-    protected OperationsJob(Vertx vertx)
+    protected OperationalJob(Vertx vertx)
     {
         this.vertx = vertx;
         this.creationTime = System.nanoTime();
-        Promise<OperationsJobStatus> promise = Promise.promise();
+        Promise<OperationalJobStatus> promise = Promise.promise();
         this.status = promise.future();
 
     }
@@ -57,17 +57,17 @@ public abstract class OperationsJob implements Task
      * Constructs a job with a unique UUID, in Pending state
      * @param jobId UUID representing the Job to be created
      */
-    protected OperationsJob(Vertx vertx, UUID jobId)
+    protected OperationalJob(Vertx vertx, UUID jobId)
     {
         this.vertx = vertx;
         this.jobId = jobId;
-        Promise<OperationsJobStatus> promise = Promise.promise();
+        Promise<OperationalJobStatus> promise = Promise.promise();
         this.status = promise.future();
         this.creationTime = System.nanoTime();
     }
 
     @VisibleForTesting
-    protected OperationsJob(Vertx vertx, UUID jobId, OperationsJobStatus status)
+    protected OperationalJob(Vertx vertx, UUID jobId, OperationalJobStatus status)
     {
         this.vertx = vertx;
         this.jobId = jobId;
@@ -75,11 +75,11 @@ public abstract class OperationsJob implements Task
         this.creationTime = System.nanoTime();
     }
 
-    public void setStatus(Future<OperationsJobStatus> status)
+    public void setStatus(Future<OperationalJobStatus> status)
     {
         this.status = status;
     }
-    public Future<OperationsJobStatus> status()
+    public Future<OperationalJobStatus> status()
     {
         return status;
     }
@@ -98,9 +98,9 @@ public abstract class OperationsJob implements Task
      * Supplier specifying the functionality of the job to be triggered when the job is executed. Subclasses to
      * provide operation-specific implementations
      * @return a function with the operation implementation that returns a {@code JobResult}
-     * @throws OperationsJobException
+     * @throws OperationalJobException
      */
-    protected abstract OperationsJobStatus executeInternal() throws OperationsJobException;
+    protected abstract OperationalJobStatus executeInternal() throws OperationalJobException;
 
     /**
      * Provide a meaningful name of the operation executed by the concrete subclass.
@@ -124,7 +124,7 @@ public abstract class OperationsJob implements Task
      */
     public final void execute(Promise promise)
     {
-        OperationsJobStatus status;
+        OperationalJobStatus status;
         try
         {
             LOGGER.info("Executing job with ID: {}", jobId);
@@ -137,7 +137,6 @@ public abstract class OperationsJob implements Task
         {
             String reason = (e.getCause() != null) ? e.getCause().getMessage() : e.getMessage();
             LOGGER.error("Failed to execute job {} with reason: {}", jobId, reason);
-//            LOGGER.error("Failing promise:" +promise.future().hashCode());
             promise.fail(e);
         }
     }

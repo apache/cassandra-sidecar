@@ -90,14 +90,14 @@ public interface ServiceConfiguration
     int serverVerticleInstances();
 
     /**
-     * @return the size of the operations job tracker LRU cache
+     * @return the size of the operational job tracker LRU cache
      */
-    int operationsJobTrackerSize();
+    int operationalJobTrackerSize();
 
     /**
      * @return the timeout (in seconds) for operational job sync response
      */
-    int operationsJobSyncResponseTimeout();
+    int operationalJobSyncResponseTimeoutMillis();
 
 
     /**
