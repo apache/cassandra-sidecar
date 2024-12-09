@@ -27,80 +27,64 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.codahale.metrics.MetricRegistry;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class InstanceMetadataImplTest
 {
 
+    private static final int ID = 123;
+    private static final String HOST = "testhost";
+    private static final int PORT = 12345;
+    private static final String DATA_DIR_1 = "test/data/data1";
+    private static final String DATA_DIR_2 = "test/data/data2";
+    private static final String CDC_DIR = "cdc_dir";
+    private static final String STAGING_DIR = "staging_dir";
+    private static final MetricRegistry METRIC_REGISTRY = new MetricRegistry();
+
     @TempDir
     Path tempDir;
-
 
     @Test
     void testConstructor()
     {
-        int id = 123;
-        String host = "testhost";
-        int port = 12345;
         String rootDir = tempDir.toString();
-        List<String> dataDirs = new ArrayList<>();
-        dataDirs.add(rootDir + "/test/data/data1");
-        dataDirs.add(rootDir + "/test/data/data2");
-        String cdcDir = rootDir + "/cdc_dir";
-        String stagingDir = rootDir + "/staging_dir";
-        MetricRegistry metricRegistry = new MetricRegistry();
 
-        InstanceMetadataImpl metadata = InstanceMetadataImpl.builder()
-                                                            .id(id)
-                                                            .host(host)
-                                                            .port(port)
-                                                            .dataDirs(dataDirs)
-                                                            .cdcDir(cdcDir)
-                                                            .stagingDir(stagingDir)
-                                                            .metricRegistry(metricRegistry)
-                                                            .build();
+        InstanceMetadataImpl metadata = getInstanceMetadataBuilder(rootDir).build();
 
-        assertEquals(id, metadata.id());
-        assertEquals(host, metadata.host());
-        assertEquals(port, metadata.port());
-        assertEquals(dataDirs, metadata.dataDirs());
-        assertEquals(cdcDir, metadata.cdcDir());
-        assertEquals(stagingDir, metadata.stagingDir());
+        assertThat(metadata.id()).isEqualTo(ID);
+        assertThat(metadata.host()).isEqualTo(HOST);
+        assertThat(metadata.port()).isEqualTo(PORT);
+        assertThat(metadata.dataDirs()).contains(rootDir + "/" + DATA_DIR_1, rootDir + "/" + DATA_DIR_2);
+        assertThat(metadata.cdcDir()).isEqualTo(rootDir + "/" + CDC_DIR);
+        assertThat(metadata.stagingDir()).isEqualTo(rootDir + "/" + STAGING_DIR);
     }
 
     @Test
     void testConstructorWithHomeDirPaths()
     {
-        int id = 123;
-        String host = "testhost";
-        int port = 12345;
         String rootDir = "~";
-        String dataDir1 = "test/data/data1";
-        String dataDir2 = "test/data/data2";
-        List<String> dataDirs = new ArrayList<>();
-        dataDirs.add(rootDir + "/" + dataDir1);
-        dataDirs.add(rootDir + "/" + dataDir2);
-        String cdcDir = "cdc_dir";
-        String stagingDir = "staging_dir";
-        MetricRegistry metricRegistry = new MetricRegistry();
-
         String homeDir = System.getProperty("user.home");
 
-        InstanceMetadataImpl metadata = InstanceMetadataImpl.builder()
-                                                            .id(id)
-                                                            .host(host)
-                                                            .port(port)
-                                                            .dataDirs(dataDirs)
-                                                            .cdcDir(rootDir + "/" + cdcDir)
-                                                            .stagingDir(rootDir + "/" + stagingDir)
-                                                            .metricRegistry(metricRegistry)
-                                                            .build();
+        InstanceMetadataImpl metadata = getInstanceMetadataBuilder(rootDir).build();
 
-        List<String> expectedDataDirs = new ArrayList<>();
-        expectedDataDirs.add(homeDir + "/" + dataDir1);
-        expectedDataDirs.add(homeDir + "/" + dataDir2);
-        assertEquals(expectedDataDirs, metadata.dataDirs());
-        assertEquals(homeDir + "/" + cdcDir, metadata.cdcDir());
-        assertEquals(homeDir + "/" + stagingDir, metadata.stagingDir());
+        assertThat(metadata.dataDirs()).contains(homeDir + "/" + DATA_DIR_1, homeDir + "/" + DATA_DIR_2);
+        assertThat(metadata.cdcDir()).isEqualTo(homeDir + "/" + CDC_DIR);
+        assertThat(metadata.stagingDir()).isEqualTo(homeDir + "/" + STAGING_DIR);
+    }
+
+    InstanceMetadataImpl.Builder getInstanceMetadataBuilder(String rootDir)
+    {
+        List<String> dataDirs = new ArrayList<>();
+        dataDirs.add(rootDir + "/" + DATA_DIR_1);
+        dataDirs.add(rootDir + "/" + DATA_DIR_2);
+
+        return InstanceMetadataImpl.builder()
+                                   .id(ID)
+                                   .host(HOST)
+                                   .port(PORT)
+                                   .dataDirs(dataDirs)
+                                   .cdcDir(rootDir + "/" + CDC_DIR)
+                                   .stagingDir(rootDir + "/" + STAGING_DIR)
+                                   .metricRegistry(METRIC_REGISTRY);
     }
 }
