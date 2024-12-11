@@ -27,13 +27,13 @@ import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 /**
  * Represents a request to retrieve the status of a async operational job
  */
-public class OperationalJobsRequest extends JsonRequest<OperationalJobResponse>
+public class OperationalJobRequest extends JsonRequest<OperationalJobResponse>
 {
 
     /**
      * Constructs a request to retrieve status for a specified operational job
      */
-    public OperationalJobsRequest(UUID jobId)
+    public OperationalJobRequest(UUID jobId)
     {
         super(ApiEndpointsV1.OPERATIONAL_JOB_ROUTE
               .replaceAll(ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()));

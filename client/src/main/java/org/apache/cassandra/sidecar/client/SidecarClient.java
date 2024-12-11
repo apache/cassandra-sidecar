@@ -602,7 +602,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<OperationalJobResponse> operationalJobs(UUID jobId)
     {
-        return executor.executeRequestAsync(requestBuilder().operationalJobsRequest(jobId).build());
+        return executor.executeRequestAsync(requestBuilder().operationalJobRequest(jobId).build());
     }
 
     /**

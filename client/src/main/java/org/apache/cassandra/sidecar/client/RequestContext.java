@@ -39,7 +39,7 @@ import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListOperationalJobsRequest;
 import org.apache.cassandra.sidecar.common.request.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
-import org.apache.cassandra.sidecar.common.request.OperationalJobsRequest;
+import org.apache.cassandra.sidecar.common.request.OperationalJobRequest;
 import org.apache.cassandra.sidecar.common.request.Request;
 import org.apache.cassandra.sidecar.common.request.RingRequest;
 import org.apache.cassandra.sidecar.common.request.SSTableComponentRequest;
@@ -491,14 +491,14 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link OperationalJobsRequest} and returns a reference to this Builder
+         * Sets the {@code request} to be a {@link OperationalJobRequest} and returns a reference to this Builder
          * enabling method chaining.
          *
          * @return a reference to this Builder
          */
-        public Builder operationalJobsRequest(UUID jobId)
+        public Builder operationalJobRequest(UUID jobId)
         {
-            return request(new OperationalJobsRequest(jobId));
+            return request(new OperationalJobRequest(jobId));
         }
 
         /**
