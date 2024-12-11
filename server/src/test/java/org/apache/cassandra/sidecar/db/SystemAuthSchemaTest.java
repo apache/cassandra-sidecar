@@ -48,7 +48,7 @@ class SystemAuthSchemaTest
         when(mockSession.getCluster()).thenReturn(mockCluster);
 
         SystemAuthSchema systemAuthSchema = new SystemAuthSchema();
-        systemAuthSchema.initialize(mockSession);
+        systemAuthSchema.initialize(mockSession, ignored -> true);
         assertThat(systemAuthSchema.selectRoleFromIdentity()).isNull();
         assertThat(systemAuthSchema.getAllRolesAndIdentities()).isNull();
     }

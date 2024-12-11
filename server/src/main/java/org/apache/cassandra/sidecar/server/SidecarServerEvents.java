@@ -87,6 +87,18 @@ public enum SidecarServerEvents
      * initialized.
      */
     ON_SIDECAR_SCHEMA_INITIALIZED,
+
+    /**
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the Sidecar instance
+     * has claimed the cluster-wide lease.
+     */
+    ON_SIDECAR_GLOBAL_LEASE_CLAIMED,
+
+    /**
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the Sidecar instance
+     * has lost the cluster-wide lease.
+     */
+    ON_SIDECAR_GLOBAL_LEASE_LOST,
     ;
 
     public String address()

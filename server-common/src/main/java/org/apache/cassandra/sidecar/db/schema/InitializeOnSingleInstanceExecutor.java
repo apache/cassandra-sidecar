@@ -16,28 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.testing;
+package org.apache.cassandra.sidecar.db.schema;
 
 /**
- * Works with {@link TestVersionSupplier}
+ * Marker interface that defines that a schema must only be initialized on the single Sidecar instance executor
  */
-public class TestVersion
+public interface InitializeOnSingleInstanceExecutor
 {
-    private final String version;
-
-    public TestVersion(String version)
-    {
-        this.version = version;
-    }
-
-    public String version()
-    {
-        return version;
-    }
-
-    @Override
-    public String toString()
-    {
-        return version;
-    }
 }

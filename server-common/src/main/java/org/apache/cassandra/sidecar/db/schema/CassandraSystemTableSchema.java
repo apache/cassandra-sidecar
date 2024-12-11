@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
+import java.util.function.Predicate;
+
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +36,8 @@ public abstract class CassandraSystemTableSchema extends TableSchema
     }
 
     @Override
-    protected boolean initializeInternal(@NotNull Session session)
+    protected boolean initializeInternal(@NotNull Session session,
+                                         @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
         prepareStatements(session);
         return true;

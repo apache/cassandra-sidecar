@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
+import java.util.function.Predicate;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,9 +39,9 @@ public abstract class AbstractSchema
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     private boolean initialized = false;
 
-    public synchronized boolean initialize(@NotNull Session session)
+    public synchronized boolean initialize(@NotNull Session session, @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
-        initialized = initialized || initializeInternal(session);
+        initialized = initialized || initializeInternal(session, shouldCreateSchema);
         return initialized;
     }
 
@@ -48,23 +50,32 @@ public abstract class AbstractSchema
         return cached == null ? session.prepare(cqlLiteral).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM) : cached;
     }
 
-    protected boolean initializeInternal(@NotNull Session session)
+    protected boolean initializeInternal(@NotNull Session session,
+                                         @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
         if (!exists(session.getCluster().getMetadata()))
         {
-            try
+            if (shouldCreateSchema.test(this))
             {
-                ResultSet res = session.execute(createSchemaStatement());
-                if (!res.getExecutionInfo().isSchemaInAgreement())
+                try
                 {
-                    logger.warn("Schema is not yet in agreement.");
-                    return false;
+                    ResultSet res = session.execute(createSchemaStatement());
+                    if (!res.getExecutionInfo().isSchemaInAgreement())
+                    {
+                        logger.warn("Schema is not yet in agreement.");
+                        return false;
+                    }
+                }
+                catch (Exception exception)
+                {
+                    String schemaName = this.getClass().getSimpleName();
+                    throw new SidecarSchemaModificationException("Failed to modify schema for " + schemaName, exception);
                 }
             }
-            catch (Exception exception)
+            else
             {
-                String schemaName = this.getClass().getSimpleName();
-                throw new SidecarSchemaModificationException("Failed to modify schema for " + schemaName, exception);
+                // We wait until the schema is created by the single instance executor for example
+                return false;
             }
         }
 
@@ -72,11 +83,26 @@ public abstract class AbstractSchema
         return true;
     }
 
+    /**
+     * @return the name of the Cassandra keyspace
+     */
     protected abstract String keyspaceName();
 
+    /**
+     * Prepares the statements needed during the lifecycle of the application
+     *
+     * @param session the CQL session
+     */
     protected abstract void prepareStatements(@NotNull Session session);
 
+    /**
+     * @param metadata the cluster metadata
+     * @return {@code true} if the schema already exists in the database, {@code false} otherwise
+     */
     protected abstract boolean exists(@NotNull Metadata metadata);
 
+    /**
+     * @return the statement to create the schema
+     */
     protected abstract String createSchemaStatement();
 }

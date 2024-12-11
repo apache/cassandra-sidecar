@@ -1,0 +1,89 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.cassandra.sidecar.db;
+
+import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.ResultSet;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.db.schema.SidecarLeaseSchema;
+import org.jetbrains.annotations.VisibleForTesting;
+
+/**
+ * Encapsulates database access operations for the Sidecar Lease election process
+ */
+@Singleton
+public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseSchema>
+{
+    @Inject
+    @VisibleForTesting
+    public SidecarLeaseDatabaseAccessor(SidecarLeaseSchema tableSchema, CQLSessionProvider sessionProvider)
+    {
+        super(tableSchema, sessionProvider);
+    }
+
+    /**
+     * Attempts to obtain the lease, returning the result of the claim
+     *
+     * @param owner the owner performing the claim
+     * @return the results of performing the lease claim
+     */
+    public LeaseClaimResult claimLease(String owner)
+    {
+        BoundStatement statement = tableSchema.claimLeaseStatement().bind(owner);
+        ResultSet resultSet = execute(statement);
+        return LeaseClaimResult.from(resultSet, owner);
+    }
+
+    /**
+     * Attempts to extend the existing lease, returning the result of the attempt
+     *
+     * @param owner the owner performing the claim
+     * @return the results of performing the lease extension
+     */
+    public LeaseClaimResult extendLease(String owner)
+    {
+        BoundStatement statement = tableSchema.extendLeaseStatement().bind(owner, owner);
+        ResultSet resultSet = execute(statement);
+        return LeaseClaimResult.from(resultSet, owner);
+    }
+
+    /**
+     * Captures the results of claiming lease for a given Sidecar owner
+     */
+    public static class LeaseClaimResult
+    {
+        public final boolean leaseAcquired;
+        public final String existingOwner;
+
+        LeaseClaimResult(boolean leaseAcquired, String existingOwner)
+        {
+            this.leaseAcquired = leaseAcquired;
+            this.existingOwner = existingOwner;
+        }
+
+        static LeaseClaimResult from(ResultSet resultSet, String owner)
+        {
+            return resultSet.wasApplied()
+                   ? new LeaseClaimResult(true, owner)
+                   : new LeaseClaimResult(false, resultSet.one().getString("owner"));
+        }
+    }
+}

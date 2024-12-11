@@ -86,7 +86,7 @@ public class TestTokenSupplier
         List<String>[] tokens = new List[(numNodesPerDC + newNodesPerDC) * numDcs];
         for (int i = 0; i < ((numNodesPerDC + newNodesPerDC) * numDcs); ++i)
         {
-            tokens[i] = new ArrayList(numTokensPerNode);
+            tokens[i] = new ArrayList<>(numTokensPerNode);
         }
 
         BigInteger value = BigInteger.valueOf(Long.MIN_VALUE + 1);

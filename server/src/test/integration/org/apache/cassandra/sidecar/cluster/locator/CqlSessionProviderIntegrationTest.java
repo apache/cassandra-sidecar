@@ -106,21 +106,21 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
         .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
         .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
-        cassandraContext.configureAndStartCluster(builder -> {
-            builder.appendConfig(config -> config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
-                                                 .set("authenticator.parameters", Collections.singletonMap("validator_class_name",
-                                                                                                           "org.apache.cassandra.auth.SpiffeCertificateValidator"))
-                                                 .set("role_manager", "CassandraRoleManager")
-                                                 .set("authorizer", "CassandraAuthorizer")
-                                                 .set("client_encryption_options.enabled", "true")
-                                                 .set("client_encryption_options.optional", "true")
-                                                 .set("client_encryption_options.require_client_auth", "true")
-                                                 .set("client_encryption_options.require_endpoint_verification", "false")
-                                                 .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
-                                                 .set("client_encryption_options.keystore_password", serverKeystorePassword)
-                                                 .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
-                                                 .set("client_encryption_options.truststore_password", truststorePassword));
-        });
+        cassandraContext.configureAndStartCluster(builder -> builder.appendConfig(config -> {
+            config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
+                  .set("authenticator.parameters", Collections.singletonMap("validator_class_name",
+                                                                            "org.apache.cassandra.auth.SpiffeCertificateValidator"))
+                  .set("role_manager", "CassandraRoleManager")
+                  .set("authorizer", "CassandraAuthorizer")
+                  .set("client_encryption_options.enabled", "true")
+                  .set("client_encryption_options.optional", "true")
+                  .set("client_encryption_options.require_client_auth", "true")
+                  .set("client_encryption_options.require_endpoint_verification", "false")
+                  .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
+                  .set("client_encryption_options.keystore_password", serverKeystorePassword)
+                  .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
+                  .set("client_encryption_options.truststore_password", truststorePassword);
+        }));
         waitForSchemaReady(30, TimeUnit.SECONDS);
         insertIdentityRole(ADMIN_IDENTITY, "cassandra");
         sidecarTestContext.setSslConfiguration(sslConfigWithKeystoreTruststore());

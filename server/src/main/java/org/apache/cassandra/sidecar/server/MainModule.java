@@ -80,10 +80,16 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.coordination.BestEffortSingleInstanceExecutor;
+import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
+import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
+import org.apache.cassandra.sidecar.coordination.TokenZeroElectorateMembership;
+import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
+import org.apache.cassandra.sidecar.db.schema.SidecarLeaseSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
@@ -124,6 +130,7 @@ import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableCleanupHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
 import org.apache.cassandra.sidecar.routes.validations.ValidateTableExistenceHandler;
+import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -134,6 +141,7 @@ import org.apache.cassandra.sidecar.utils.XXHash32Provider;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.API_V1_ALL_ROUTES;
 import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
 /**
  * Provides main binding for more complex Guice dependencies
@@ -623,7 +631,9 @@ public class MainModule extends AbstractModule
                                        RestoreSlicesSchema restoreSlicesSchema,
                                        RestoreRangesSchema restoreRangesSchema,
                                        SystemAuthSchema systemAuthSchema,
-                                       SidecarMetrics metrics)
+                                       SidecarLeaseSchema sidecarLeaseSchema,
+                                       SidecarMetrics metrics,
+                                       SingleInstanceExecutor singleInstanceExecutor)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
@@ -631,9 +641,10 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreRangesSchema);
         sidecarInternalKeyspace.registerTableSchema(systemAuthSchema);
+        sidecarInternalKeyspace.registerTableSchema(sidecarLeaseSchema);
         SchemaMetrics schemaMetrics = metrics.server().schema();
         return new SidecarSchema(vertx, executorPools, configuration,
-                                 sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
+                                 sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics, singleInstanceExecutor);
     }
 
     @Provides
@@ -667,6 +678,35 @@ public class MainModule extends AbstractModule
     public LocalTokenRangesProvider localTokenRangesProvider(InstancesConfig instancesConfig, DnsResolver dnsResolver)
     {
         return new CachedLocalTokenRanges(instancesConfig, dnsResolver);
+    }
+
+    @Provides
+    @Singleton
+    public ElectorateMembership electorateMembership(InstancesConfig instancesConfig,
+                                                     CQLSessionProvider cqlSessionProvider,
+                                                     SidecarConfiguration sidecarConfiguration)
+    {
+        return new TokenZeroElectorateMembership(instancesConfig, cqlSessionProvider, sidecarConfiguration);
+    }
+
+    @Provides
+    @Singleton
+    public SingleInstanceExecutor singleInstanceExecutor(Vertx vertx,
+                                                         ExecutorPools executorPools,
+                                                         ElectorateMembership electorateMembership,
+                                                         SidecarLeaseDatabaseAccessor accessor,
+                                                         ServiceConfiguration serviceConfiguration,
+                                                         PeriodicTaskExecutor periodicTaskExecutor)
+    {
+        BestEffortSingleInstanceExecutor executor = new BestEffortSingleInstanceExecutor(vertx,
+                                                                                         executorPools,
+                                                                                         serviceConfiguration,
+                                                                                         electorateMembership,
+                                                                                         accessor);
+        vertx.eventBus().localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(), ignored -> {
+            periodicTaskExecutor.schedule(executor);
+        });
+        return executor;
     }
 
     /**

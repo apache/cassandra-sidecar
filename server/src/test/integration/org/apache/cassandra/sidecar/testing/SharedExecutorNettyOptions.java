@@ -33,7 +33,7 @@ import io.netty.util.Timer;
  * of tests within a test run. It intentionally does not close these resources when the Cassandra Driver's
  * cluster is closed, so they can be reused for the next test.
  */
-class SharedExecutorNettyOptions extends NettyOptions
+public class SharedExecutorNettyOptions extends NettyOptions
 {
     private SharedExecutorNettyOptions()
     {

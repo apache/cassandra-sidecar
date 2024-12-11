@@ -35,7 +35,6 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.impl.AbstractClusterUtils;
-import org.apache.cassandra.distributed.impl.InstanceConfig;
 import org.apache.cassandra.distributed.shared.JMXUtil;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.adapters.cassandra41.Cassandra41Factory;
@@ -128,7 +127,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                .build();
     }
 
-    private static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
+    public static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
     {
         try
         {
@@ -249,7 +248,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
         UpgradeableCluster cluster = cluster();
         List<InstanceMetadata> metadata = new ArrayList<>();
         jmxClients = new ArrayList<>();
-        List<InstanceConfig> configs = buildInstanceConfigs(cluster);
+        List<IInstanceConfig> configs = buildInstanceConfigs(cluster);
         List<InetSocketAddress> addresses = buildContactList(configs);
         sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
                                                      0, username, password,
@@ -305,7 +304,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
         return new InstancesConfigImpl(metadata, dnsResolver);
     }
 
-    private List<InetSocketAddress> buildContactList(List<InstanceConfig> configs)
+    private static List<InetSocketAddress> buildContactList(List<IInstanceConfig> configs)
     {
         // Always return the complete list of addresses even if the cluster isn't yet that large
         // this way, we populate the entire local instance list
@@ -317,7 +316,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
     }
 
     @NotNull
-    private List<InstanceConfig> buildInstanceConfigs(UpgradeableCluster cluster)
+    private List<IInstanceConfig> buildInstanceConfigs(UpgradeableCluster cluster)
     {
         int nodes = numInstancesToManage == -1 ? cluster.size() : numInstancesToManage;
         return IntStream.range(1, nodes + 1)

@@ -73,7 +73,7 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
             return unwrapRange(start, end, partitioner, replicaSet);
         }
 
-        LOGGER.info("Generating replica-map for range: {} - {} : Replicaset: {}", start, end, replicaSet);
+        LOGGER.debug("Generating replica-map for range: {} - {} : Replicaset: {}", start, end, replicaSet);
         return Collections.singletonList(new TokenRangeReplicas(start, end, partitioner, replicaSet));
     }
 

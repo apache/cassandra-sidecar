@@ -27,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
  * {@link RestoreRangesSchema} holds all prepared statements needed for talking to Cassandra for various actions
  * related to restore progress tracking in terms of each token range
  */
-public class RestoreRangesSchema extends TableSchema
+public class RestoreRangesSchema extends TableSchema implements InitializeOnSingleInstanceExecutor
 {
     private static final String TABLE_NAME = "restore_range_v1";
 

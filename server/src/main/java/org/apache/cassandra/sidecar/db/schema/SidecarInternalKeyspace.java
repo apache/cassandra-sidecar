@@ -18,12 +18,12 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -33,12 +33,11 @@ import org.jetbrains.annotations.NotNull;
  * {@link org.apache.cassandra.sidecar.db.RestoreJob} table and {@link org.apache.cassandra.sidecar.db.RestoreSlice}
  * table
  */
-@Singleton
 public class SidecarInternalKeyspace extends AbstractSchema
 {
     private final SchemaKeyspaceConfiguration keyspaceConfig;
     private final boolean isEnabled;
-    private final Set<TableSchema> tableSchemas = new HashSet<>();
+    private final Set<TableSchema> tableSchemas = ConcurrentHashMap.newKeySet();
 
     public SidecarInternalKeyspace(SidecarConfiguration config)
     {
@@ -46,7 +45,7 @@ public class SidecarInternalKeyspace extends AbstractSchema
         this.isEnabled = keyspaceConfig.isEnabled();
     }
 
-    public synchronized void registerTableSchema(TableSchema schema)
+    public void registerTableSchema(TableSchema schema)
     {
         if (!isEnabled)
         {
@@ -69,13 +68,14 @@ public class SidecarInternalKeyspace extends AbstractSchema
     }
 
     @Override
-    protected boolean initializeInternal(@NotNull Session session)
+    protected boolean initializeInternal(@NotNull Session session,
+                                         @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
-        super.initializeInternal(session);
+        super.initializeInternal(session, shouldCreateSchema);
 
         for (AbstractSchema schema : tableSchemas)
         {
-            if (!schema.initialize(session))
+            if (!schema.initialize(session, shouldCreateSchema))
                 return false;
         }
 

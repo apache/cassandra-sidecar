@@ -111,7 +111,7 @@ public class TokenRangeReplicaProvider
                                                            KeyspaceToRangeMappingFunc rangeMappingSupplier)
     {
         Map<List<String>, List<String>> rangeMappings = rangeMappingSupplier.apply(keyspace);
-        LOGGER.debug(rangeType + " token range mappings for keyspace={}, rangeMappings={}", keyspace, rangeMappings);
+        LOGGER.debug("{} token range mappings for keyspace={}, rangeMappings={}", rangeType, keyspace, rangeMappings);
         return transformRangeMappings(rangeMappings, partitioner);
     }
 

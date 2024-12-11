@@ -28,7 +28,7 @@ import org.jetbrains.annotations.NotNull;
  * related to {@link org.apache.cassandra.sidecar.db.RestoreSlice} like inserting a new restore slice,
  * updating status of a slice, finding restore slices and more
  */
-public class RestoreSlicesSchema extends TableSchema
+public class RestoreSlicesSchema extends TableSchema implements InitializeOnSingleInstanceExecutor
 {
     private static final String RESTORE_SLICE_TABLE_NAME = "restore_slice_v3";
 

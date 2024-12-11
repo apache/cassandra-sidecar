@@ -52,11 +52,11 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
         }
         selectRoleFromIdentity = prepare(selectRoleFromIdentity,
                                          session,
-                                         CqlLiterals.selectRoleFromIdentity());
+                                         CqlLiterals.SELECT_ROLE_FROM_IDENTITY);
 
         getAllRolesAndIdentities = prepare(getAllRolesAndIdentities,
                                            session,
-                                           CqlLiterals.getAllRolesAndIdentities());
+                                           CqlLiterals.GET_ALL_ROLES_AND_IDENTITIES);
     }
 
     @Override
@@ -80,14 +80,7 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
 
     private static class CqlLiterals
     {
-        static String selectRoleFromIdentity()
-        {
-            return "SELECT role FROM system_auth.identity_to_role WHERE identity = ?";
-        }
-
-        static String getAllRolesAndIdentities()
-        {
-            return "SELECT * FROM system_auth.identity_to_role;";
-        }
+        static final String SELECT_ROLE_FROM_IDENTITY = "SELECT role FROM system_auth.identity_to_role WHERE identity = ?";
+        static final String GET_ALL_ROLES_AND_IDENTITIES = "SELECT * FROM system_auth.identity_to_role";
     }
 }

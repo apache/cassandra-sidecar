@@ -16,28 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.testing;
+package org.apache.cassandra.sidecar.coordination;
 
 /**
- * Works with {@link TestVersionSupplier}
+ * An interface that defines if the local Sidecar instance should participate during the choosing of a single
+ * instance executor process.
  */
-public class TestVersion
+public interface ElectorateMembership
 {
-    private final String version;
-
-    public TestVersion(String version)
-    {
-        this.version = version;
-    }
-
-    public String version()
-    {
-        return version;
-    }
-
-    @Override
-    public String toString()
-    {
-        return version;
-    }
+    /**
+     * @return {@code true} if the local Sidecar instance should participate in the process,
+     * {@code false} otherwise
+     */
+    boolean shouldParticipate();
 }

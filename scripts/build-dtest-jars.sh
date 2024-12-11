@@ -19,9 +19,9 @@
 
 set -xe
 CANDIDATE_BRANCHES=(
-  "cassandra-4.0:1f79c8492528f01bcc5f88951a1cc9e0d7265c54"
-  "cassandra-4.1:725655dda2776fef35567496a6e331102eb7610d"
-  "cassandra-5.0:f19dd0bb1309c35535876e8f0f996ad2b76adda5"
+  "cassandra-4.0:659558c980c67a80287ca7ccdfc8a70b1a56b7e2"
+  "cassandra-4.1:c44008e9e4ac06ea25bb63384a6777c0c1b8b41a"
+  "cassandra-5.0:1655578ae8f9de00393d923edbefe6bab0414153"
   # note the trunk hash cannot be advanced beyond ae0842372ff6dd1437d026f82968a3749f555ff4 (TCM), which breaks integration test
   "trunk:2a5e1b77c9f8a205dbec1afdea3f4ed1eaf6a4eb"
 )

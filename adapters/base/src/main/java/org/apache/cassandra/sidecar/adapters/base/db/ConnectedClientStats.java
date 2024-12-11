@@ -76,9 +76,9 @@ public class ConnectedClientStats
         return (row.getColumnDefinitions().contains(fieldName)) ? row.getString(fieldName) : null;
     }
 
-    public Map getMapFieldIfExists(@NotNull Row row, String fieldName)
+    public Map<String, String> getMapFieldIfExists(@NotNull Row row, String fieldName)
     {
-        if ((row.getColumnDefinitions().contains(fieldName)))
+        if (row.getColumnDefinitions().contains(fieldName))
         {
             return row.getMap(fieldName, String.class, String.class);
         }

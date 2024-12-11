@@ -16,28 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.testing;
+package org.apache.cassandra.sidecar.tasks;
+
+import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
 
 /**
- * Works with {@link TestVersionSupplier}
+ * A marker interface that defines a periodic task that will be executed during the lifecycle of Cassandra Sidecar
+ * iff when the Cassandra Sidecar instance is determined to be a single instance executor as defined by the
+ * {@link SingleInstanceExecutor} process.
  */
-public class TestVersion
+public interface PeriodicTaskOnSingleInstanceExecutor extends PeriodicTask
 {
-    private final String version;
-
-    public TestVersion(String version)
-    {
-        this.version = version;
-    }
-
-    public String version()
-    {
-        return version;
-    }
-
-    @Override
-    public String toString()
-    {
-        return version;
-    }
 }

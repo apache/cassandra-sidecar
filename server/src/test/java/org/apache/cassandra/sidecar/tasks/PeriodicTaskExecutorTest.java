@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.tasks;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -29,6 +30,9 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
+import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
+import org.jetbrains.annotations.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,11 +41,38 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class PeriodicTaskExecutorTest
 {
+    private static final @Nullable SingleInstanceExecutor NON_EXECUTOR = new SingleInstanceExecutor()
+    {
+        @Override
+        public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
+        {
+        }
+
+        @Override
+        public boolean isLocalSidecarSingleInstanceExecutor()
+        {
+            return false;
+        }
+    };
+    private static final @Nullable SingleInstanceExecutor CHOSEN_EXECUTOR = new SingleInstanceExecutor()
+    {
+        @Override
+        public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
+        {
+        }
+
+        @Override
+        public boolean isLocalSidecarSingleInstanceExecutor()
+        {
+            return true;
+        }
+    };
+    Vertx vertx = Vertx.vertx();
+    ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+
     @Test
     void testLoopFailure()
     {
-        Vertx vertx = Vertx.vertx();
-        ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         PeriodicTaskExecutor taskExecutor = new PeriodicTaskExecutor(executorPools);
 
         int totalFailures = 5;
@@ -76,5 +107,70 @@ class PeriodicTaskExecutorTest
         Uninterruptibles.awaitUninterruptibly(closeLatch);
         assertThat(isClosed.get()).isTrue();
         assertThat(failuresCount.get()).isEqualTo(totalFailures);
+    }
+
+    @Test
+    void testPeriodicTaskOnNonLeader()
+    {
+        CountDownLatch latch = new CountDownLatch(1);
+        SimulatedTask taskThatRunsOnNonLeader = new SimulatedTask(latch);
+        PeriodicTaskExecutor taskExecutorNonLeader = new PeriodicTaskExecutor(executorPools, NON_EXECUTOR);
+
+        taskExecutorNonLeader.schedule(taskThatRunsOnNonLeader);
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();
+        assertThat(taskThatRunsOnNonLeader.executionCount.get()).isEqualTo(0);
+    }
+
+    @Test
+    void testPeriodicTaskOnLeader()
+    {
+        CountDownLatch latch = new CountDownLatch(1);
+        SimulatedTask taskThatRunsOnLeader = new SimulatedTask(latch);
+        PeriodicTaskExecutor taskExecutorLeader = new PeriodicTaskExecutor(executorPools, CHOSEN_EXECUTOR);
+
+        taskExecutorLeader.schedule(taskThatRunsOnLeader);
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();
+        assertThat(taskThatRunsOnLeader.executionCount.get()).isEqualTo(5);
+    }
+
+    static class SimulatedTask implements PeriodicTaskOnSingleInstanceExecutor
+    {
+        final AtomicInteger executionCount = new AtomicInteger(0);
+        final AtomicInteger shouldSkipCount = new AtomicInteger(0);
+        private final CountDownLatch latch;
+
+        SimulatedTask(CountDownLatch latch)
+        {
+            this.latch = latch;
+        }
+
+        @Override
+        public long initialDelay()
+        {
+            return 0;
+        }
+
+        @Override
+        public long delay()
+        {
+            return 1;
+        }
+
+        @Override
+        public boolean shouldSkip()
+        {
+            if (shouldSkipCount.incrementAndGet() == 5)
+            {
+                latch.countDown();
+            }
+            return false;
+        }
+
+        @Override
+        public void execute(Promise<Void> promise)
+        {
+            executionCount.incrementAndGet();
+            promise.complete();
+        }
     }
 }

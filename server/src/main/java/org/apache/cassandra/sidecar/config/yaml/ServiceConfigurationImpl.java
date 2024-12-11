@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
+import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
@@ -71,6 +72,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     private static final String TRAFFIC_SHAPING_PROPERTY = "traffic_shaping";
     private static final String SCHEMA = "schema";
     private static final String CDC = "cdc";
+    private static final String COORDINATION = "coordination";
     protected static final Map<String, WorkerPoolConfiguration> DEFAULT_WORKER_POOLS_CONFIGURATION
     = Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
     {{
@@ -139,6 +141,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = CDC)
     protected final CdcConfiguration cdcConfiguration;
 
+    @JsonProperty(value = COORDINATION)
+    protected final CoordinationConfiguration coordinationConfiguration;
+
     /**
      * Constructs a new {@link ServiceConfigurationImpl} with the default values
      */
@@ -173,6 +178,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         trafficShapingConfiguration = builder.trafficShapingConfiguration;
         schemaKeyspaceConfiguration = builder.schemaKeyspaceConfiguration;
         cdcConfiguration = builder.cdcConfiguration;
+        coordinationConfiguration = builder.coordinationConfiguration;
     }
 
     /**
@@ -366,6 +372,13 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         return cdcConfiguration;
     }
 
+    @Override
+    @JsonProperty(value = COORDINATION)
+    public CoordinationConfiguration coordinationConfiguration()
+    {
+        return coordinationConfiguration;
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -396,6 +409,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected TrafficShapingConfiguration trafficShapingConfiguration = new TrafficShapingConfigurationImpl();
         protected SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = new SchemaKeyspaceConfigurationImpl();
         protected CdcConfiguration cdcConfiguration = new CdcConfigurationImpl();
+        protected CoordinationConfiguration coordinationConfiguration = new CoordinationConfigurationImpl();
 
         private Builder()
         {
@@ -619,6 +633,18 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         public Builder cdcConfiguration(CdcConfiguration configuration)
         {
             return update(b -> b.cdcConfiguration = configuration);
+        }
+
+        /**
+         * Sets the {@code coordinationConfiguration} and returns a reference to this Builder enabling method
+         * chaining.
+         *
+         * @param coordinationConfiguration the {@code coordinationConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder coordinationConfiguration(CoordinationConfiguration coordinationConfiguration)
+        {
+            return update(b -> b.coordinationConfiguration = coordinationConfiguration);
         }
 
         /**

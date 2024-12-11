@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -51,8 +51,8 @@ public class MetricRegistryFactory
     public MetricRegistryFactory(String globalRegistryName, List<MetricFilter> inclusions, List<MetricFilter> exclusions)
     {
         this.globalRegistryName = globalRegistryName;
-        this.inclusions = new ArrayList<>(inclusions);
-        this.exclusions = new ArrayList<>(exclusions);
+        this.inclusions = Collections.unmodifiableList(inclusions);
+        this.exclusions = Collections.unmodifiableList(exclusions);
     }
 
     public MetricRegistry getOrCreate()

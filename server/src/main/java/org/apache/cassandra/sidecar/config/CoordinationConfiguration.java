@@ -16,28 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.testing;
+package org.apache.cassandra.sidecar.config;
 
 /**
- * Works with {@link TestVersionSupplier}
+ * Configuration relevant to the coordination functionality of Sidecar
  */
-public class TestVersion
+public interface CoordinationConfiguration
 {
-    private final String version;
+    /**
+     * @return {@code true} when the single instance executor process is enabled, {@code false} otherwise
+     */
+    boolean singleInstanceExecutorProcessEnabled();
 
-    public TestVersion(String version)
-    {
-        this.version = version;
-    }
+    /**
+     * @return the frequency of the best-effort single instance executor process in milliseconds
+     */
+    long singleInstanceExecutorFrequencyMillis();
 
-    public String version()
-    {
-        return version;
-    }
-
-    @Override
-    public String toString()
-    {
-        return version;
-    }
+    /**
+     * @return the initial delay for the best-effort single instance executor process in milliseconds after the
+     * schema initialization completed
+     */
+    long singleInstanceExecutorInitialDelayMillis();
 }

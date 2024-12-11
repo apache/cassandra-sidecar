@@ -343,6 +343,21 @@ class SidecarConfigurationTest
         assertThat(permissionCacheConfiguration.warmupRetryIntervalMillis()).isEqualTo(2000);
     }
 
+    @Test
+    void testCoordinationConfiguration() throws Exception
+    {
+        Path yamlPath = yaml("config/sidecar_coordination.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+        ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
+        assertThat(serviceConfiguration).isNotNull();
+
+        CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
+        assertThat(coordinationConfiguration).isNotNull();
+        assertThat(coordinationConfiguration.singleInstanceExecutorProcessEnabled()).isFalse();
+        assertThat(coordinationConfiguration.singleInstanceExecutorFrequencyMillis()).isEqualTo(20_000L);
+        assertThat(coordinationConfiguration.singleInstanceExecutorInitialDelayMillis()).isEqualTo(5_000L);
+    }
+
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
     {
         assertThat(config.cassandraInstances()).isNotNull().hasSize(1);
@@ -479,6 +494,13 @@ class SidecarConfigurationTest
         assertThat(snapshotConfig.snapshotListCacheConfiguration().enabled()).isTrue();
         assertThat(snapshotConfig.snapshotListCacheConfiguration().maximumSize()).isEqualTo(450);
         assertThat(snapshotConfig.snapshotListCacheConfiguration().expireAfterAccessMillis()).isEqualTo(350);
+
+        // Validate default configuration
+        CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
+        assertThat(coordinationConfiguration).isNotNull();
+        assertThat(coordinationConfiguration.singleInstanceExecutorProcessEnabled()).isTrue();
+        assertThat(coordinationConfiguration.singleInstanceExecutorFrequencyMillis()).isEqualTo(60_000L);
+        assertThat(coordinationConfiguration.singleInstanceExecutorInitialDelayMillis()).isEqualTo(1_000L);
     }
 
     private void validateHealthCheckConfigurationFromYaml(HealthCheckConfiguration config)
@@ -497,7 +519,8 @@ class SidecarConfigurationTest
                                                                           "system",
                                                                           "system_auth",
                                                                           "system_views",
-                                                                          "system_virtual_schema");
+                                                                          "system_virtual_schema",
+                                                                          "sidecar_internal");
         assertThat(config.allowedPatternForName()).isEqualTo("[a-zA-Z][a-zA-Z0-9_]{0,47}");
         assertThat(config.allowedPatternForQuotedName()).isEqualTo("[a-zA-Z_0-9]{1,48}");
         assertThat(config.allowedPatternForComponentName())

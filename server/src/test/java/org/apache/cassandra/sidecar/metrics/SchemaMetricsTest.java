@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,12 +129,12 @@ public class SchemaMetricsTest
                                            SidecarMetrics metrics)
         {
             SidecarInternalKeyspace sidecarInternalKeyspace = mock(SidecarInternalKeyspace.class);
-            when(sidecarInternalKeyspace.initialize(any()))
+            when(sidecarInternalKeyspace.initialize(any(), any()))
             .thenThrow(new SidecarSchemaModificationException("Simulated failure",
                                                               new RuntimeException("Simulated exception")));
             SchemaMetrics schemaMetrics = metrics.server().schema();
             return new SidecarSchema(vertx, executorPools, configuration,
-                                     sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics);
+                                     sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics, null);
         }
     }
 }

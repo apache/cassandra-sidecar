@@ -41,7 +41,7 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
     public UpgradeableCluster configureAndStartCluster(Consumer<UpgradeableCluster.Builder> configurator)
     {
         configurator.accept(builder);
-        cluster = CassandraTestTemplate.retriableStartCluster(builder, 3);
+        cluster = CassandraTestTemplate.retryableStartCluster(builder, 3);
         return cluster;
     }
 

@@ -26,7 +26,6 @@ cassandra_instances:
     data_dirs:
       - ~/.ccm/test/node1/data0
     staging_dir: ~/.ccm/test/node1/sstable-staging
-    cdc_dir: ~/.ccm/test/node1/cdc_raw
     jmx_host: 127.0.0.1
     jmx_port: 7100
     jmx_ssl_enabled: false
@@ -38,7 +37,6 @@ cassandra_instances:
     data_dirs:
       - ~/.ccm/test/node2/data0
     staging_dir: ~/.ccm/test/node2/sstable-staging
-    cdc_dir: ~/.ccm/test/node2/cdc_raw
     jmx_host: 127.0.0.1
     jmx_port: 7200
     jmx_ssl_enabled: false
@@ -50,7 +48,6 @@ cassandra_instances:
     data_dirs:
       - ~/.ccm/test/node3/data0
     staging_dir: ~/.ccm/test/node3/sstable-staging
-    cdc_dir: ~/.ccm/test/node3/cdc_raw
     jmx_host: 127.0.0.1
     jmx_port: 7300
     jmx_ssl_enabled: false
@@ -89,8 +86,6 @@ sidecar:
     snapshot_list_cache:
       expire_after_access_millis: 7200000 # 2 hours
       maximum_size: 10000
-  cdc:
-    segment_hardlink_cache_expiry_in_secs: 300 # 5 mins
   worker_pools:
     service:
       name: "sidecar-worker-pool"
@@ -109,12 +104,9 @@ sidecar:
     replication_strategy: SimpleStrategy
     replication_factor: 1
   coordination:
-    # Whether the process to determine a best-effort single instance executor is enabled or not
-    single_instance_executor_process_enabled: true
-    # The initial delay for the best-effort single instance executor process in milliseconds
-    single_instance_executor_initial_delay_millis: 1000
-    # The frequency of the best-effort single instance executor process in milliseconds
-    single_instance_executor_frequency_millis: 60000
+    single_instance_executor_process_enabled: false
+    single_instance_executor_initial_delay_millis: 5000
+    single_instance_executor_frequency_millis: 20000
 
 vertx:
   filesystem_options:

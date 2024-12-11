@@ -130,7 +130,7 @@ startScripts {
 }
 
 run {
-    def confFile = "file:" + File.separator + File.separator + "$projectDir/conf/sidecar.yaml"
+    def confFile = System.getProperty("sidecar.config", "file:" + File.separator + File.separator + "$projectDir/conf/sidecar.yaml")
     println "Sidecar configuration file $confFile"
     jvmArgs = ["-Dsidecar.logdir=./logs",
                "-Dsidecar.config=" + confFile,

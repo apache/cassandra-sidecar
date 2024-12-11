@@ -32,6 +32,9 @@ import io.vertx.core.Promise;
 import io.vertx.core.impl.ConcurrentHashSet;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
+import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * This class manages the scheduling and execution of {@link PeriodicTask}s.
@@ -44,11 +47,20 @@ public class PeriodicTaskExecutor implements Closeable
     private final Map<PeriodicTaskKey, Long> timerIds = new ConcurrentHashMap<>();
     private final Set<PeriodicTaskKey> activeTasks = new ConcurrentHashSet<>();
     private final TaskExecutorPool internalPool;
+    @Nullable
+    private final SingleInstanceExecutor singleInstanceExecutor;
 
-    @Inject
+    @VisibleForTesting
     public PeriodicTaskExecutor(ExecutorPools executorPools)
     {
+        this(executorPools, null);
+    }
+
+    @Inject
+    public PeriodicTaskExecutor(ExecutorPools executorPools, @Nullable SingleInstanceExecutor singleInstanceExecutor)
+    {
         this.internalPool = executorPools.internal();
+        this.singleInstanceExecutor = singleInstanceExecutor;
     }
 
     /**
@@ -124,7 +136,7 @@ public class PeriodicTaskExecutor implements Closeable
     private void executeInternal(PeriodicTaskKey key)
     {
         PeriodicTask periodicTask = key.task;
-        if (periodicTask.shouldSkip())
+        if (shouldSkip(periodicTask))
         {
             LOGGER.trace("Skip executing task. task={}", periodicTask.name());
             return;
@@ -149,6 +161,28 @@ public class PeriodicTaskExecutor implements Closeable
         }
 
         promise.future().onComplete(res -> activeTasks.remove(key));
+    }
+
+    /**
+     * Determines whether the task should be skipped.
+     *
+     * @param periodicTask the task
+     * @return {@code true} if the task should be skipped, {@code false} otherwise
+     */
+    protected boolean shouldSkip(PeriodicTask periodicTask)
+    {
+        if (periodicTask.shouldSkip())
+        {
+            return true;
+        }
+
+        if (singleInstanceExecutor != null && periodicTask instanceof PeriodicTaskOnSingleInstanceExecutor)
+        {
+            // we skip PeriodicTasks that run on leader when the
+            // local sidecar is NOT elected as a leader
+            return !singleInstanceExecutor.isLocalSidecarSingleInstanceExecutor();
+        }
+        return false;
     }
 
     // A simple wrapper that implements equals and hashcode,

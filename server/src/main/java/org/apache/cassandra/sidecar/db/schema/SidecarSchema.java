@@ -31,8 +31,10 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -53,6 +55,7 @@ public class SidecarSchema
     private final AtomicLong initializationTimerId = new AtomicLong(-1L);
     private final CQLSessionProvider cqlSessionProvider;
     private final SchemaMetrics metrics;
+    private final SingleInstanceExecutor singleInstanceExecutor;
 
     private boolean isInitialized = false;
 
@@ -61,7 +64,8 @@ public class SidecarSchema
                          SidecarConfiguration config,
                          SidecarInternalKeyspace sidecarInternalKeyspace,
                          CQLSessionProvider cqlSessionProvider,
-                         SchemaMetrics metrics)
+                         SchemaMetrics metrics,
+                         SingleInstanceExecutor singleInstanceExecutor)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -69,6 +73,7 @@ public class SidecarSchema
         this.sidecarInternalKeyspace = sidecarInternalKeyspace;
         this.cqlSessionProvider = cqlSessionProvider;
         this.metrics = metrics;
+        this.singleInstanceExecutor = singleInstanceExecutor;
         if (this.schemaKeyspaceConfiguration.isEnabled())
         {
             configureSidecarServerEventListeners();
@@ -145,7 +150,7 @@ public class SidecarSchema
 
         try
         {
-            isInitialized = sidecarInternalKeyspace.initialize(session);
+            isInitialized = sidecarInternalKeyspace.initialize(session, this::shouldCreateSchema);
 
             if (isInitialized())
             {
@@ -180,5 +185,24 @@ public class SidecarSchema
     protected void reportSidecarSchemaInitialized()
     {
         vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), "SidecarSchema initialized");
+    }
+
+    /**
+     * Returns true when the schema should be created by this Sidecar instance. This currently
+     * depends on whether the election of single instance executor process is available, and
+     * the schemas are of type {@link InitializeOnSingleInstanceExecutor}, and the local Sidecar
+     * is a single instance executor. For all other types of schemas or if the election of leader
+     * process is unavailable we initialize the schemas.
+     *
+     * @param schema the schema to test
+     * @return {@code true} if the schema should be created by this Sidecar instance, {@code false} otherwise
+     */
+    protected boolean shouldCreateSchema(@Nullable AbstractSchema schema)
+    {
+        if (singleInstanceExecutor != null && schema instanceof InitializeOnSingleInstanceExecutor)
+        {
+            return singleInstanceExecutor.isLocalSidecarSingleInstanceExecutor();
+        }
+        return true;
     }
 }

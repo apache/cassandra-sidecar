@@ -100,6 +100,10 @@ sidecar:
   jmx:
     max_retries: 42
     retry_delay_millis: 1234
+  coordination:
+    single_instance_executor_process_enabled: true
+    single_instance_executor_initial_delay_millis: 1000
+    single_instance_executor_frequency_millis: 60000
 
 vertx:
   filesystem_options:
@@ -157,6 +161,7 @@ cassandra_input_validation:
     - system_auth
     - system_views
     - system_virtual_schema
+    - sidecar_internal
   allowed_chars_for_directory: "[a-zA-Z][a-zA-Z0-9_]{0,47}"
   allowed_chars_for_quoted_name: "[a-zA-Z_0-9]{1,48}"
   allowed_chars_for_component_name: "[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)"
