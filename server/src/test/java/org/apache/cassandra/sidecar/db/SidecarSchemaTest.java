@@ -21,13 +21,10 @@ package org.apache.cassandra.sidecar.db;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,13 +52,14 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
+import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.stubbing.Answer;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -77,15 +75,15 @@ public class SidecarSchemaTest
 {
     private static final Logger logger = LoggerFactory.getLogger(SidecarSchemaTest.class);
     public static final String DEFAULT_SIDECAR_SCHEMA_KEYSPACE_NAME = "sidecar_internal";
-    private static List<String> interceptedExecStmts = new ArrayList<>();
-    private static List<String> interceptedPrepStmts = new ArrayList<>();
+    private static final List<String> interceptedExecStmts = new ArrayList<>();
+    private static final List<String> interceptedPrepStmts = new ArrayList<>();
 
     private Vertx vertx;
     private SidecarSchema sidecarSchema;
     Server server;
 
     @BeforeEach
-    public void setUp() throws InterruptedException
+    void setUp() throws InterruptedException
     {
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(Modules.override(new TestModule())
@@ -102,7 +100,7 @@ public class SidecarSchemaTest
     }
 
     @AfterEach
-    public void tearDown() throws InterruptedException
+    void tearDown() throws InterruptedException
     {
         interceptedExecStmts.clear();
         interceptedPrepStmts.clear();
@@ -132,18 +130,15 @@ public class SidecarSchemaTest
                 Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
             }
 
-            assertEquals(4, interceptedExecStmts.size());
-            assertTrue(interceptedExecStmts.get(0).contains("CREATE KEYSPACE IF NOT EXISTS sidecar_internal"),
-                       "Create keyspace should be executed the first");
-            assertTrue(hasElementContains(interceptedExecStmts,
-                                          "CREATE TABLE IF NOT EXISTS sidecar_internal.restore_job_v4"),
-                       "Create table should be executed for job table");
-            assertTrue(hasElementContains(interceptedExecStmts,
-                                          "CREATE TABLE IF NOT EXISTS sidecar_internal.restore_slice_v3"),
-                       "Create table should be executed for slice table");
-            assertTrue(hasElementContains(interceptedExecStmts,
-                                          "CREATE TABLE IF NOT EXISTS sidecar_internal.restore_range_v1"),
-                       "Create table should be executed for range table");
+            assertThat(interceptedExecStmts.size()).isEqualTo(5);
+            assertThat(interceptedExecStmts.get(0)).as("Create keyspace should be executed the first")
+                                                   .contains("CREATE KEYSPACE IF NOT EXISTS sidecar_internal");
+            assertThat(interceptedExecStmts).as("Create table should be executed for job table")
+                                            .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.restore_job_v4"));
+            assertThat(interceptedExecStmts).as("Create table should be executed for slice table")
+                                            .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.restore_slice_v3"));
+            assertThat(interceptedExecStmts).as("Create table should be executed for range table")
+                                            .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.restore_range_v1"));
 
             List<String> expectedPrepStatements = Arrays.asList(
             "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  keyspace_name,  table_name,  " +
@@ -181,17 +176,19 @@ public class SidecarSchemaTest
             "FROM sidecar_internal.restore_range_v1 WHERE job_id = ? AND bucket_id = ? ALLOW FILTERING",
 
             "UPDATE sidecar_internal.restore_range_v1 SET status_by_replica = status_by_replica + ? " +
-            "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?"
+            "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?",
+
+            "INSERT INTO sidecar_internal.sidecar_lease_v1 (name,owner) " +
+            "VALUES ('single_sidecar_instance_executor',?) IF NOT EXISTS",
+
+            "UPDATE sidecar_internal.sidecar_lease_v1 SET owner = ? " +
+            "WHERE name = 'single_sidecar_instance_executor' IF owner = ?"
             );
 
-            Set<String> expected = new HashSet<>(expectedPrepStatements);
-            Set<String> actual = new HashSet<>(interceptedPrepStmts);
-            Set<String> notInExpected = Sets.difference(actual, expected);
-            assertEquals(expected.size(), actual.size(), "Number of prepared statements should match");
-            assertTrue(notInExpected.isEmpty(),
-                       "Found the following statements that are not contained in expected: " + notInExpected);
+            assertThat(interceptedPrepStmts).as("Intercepted statements match expected statements")
+                                            .containsExactlyInAnyOrderElementsOf(expectedPrepStatements);
 
-            assertTrue(sidecarSchema.isInitialized());
+            assertThat(sidecarSchema.isInitialized()).as("Schema is successfully initialized").isTrue();
             context.completeNow();
         });
     }
@@ -267,17 +264,25 @@ public class SidecarSchemaTest
             when(instancesConfig.instanceFromId(anyInt())).thenReturn(instanceMeta);
             return instancesConfig;
         }
-    }
 
-    private boolean hasElementContains(List<String> list, String substring)
-    {
-        for (String s : list)
+        @Provides
+        @Singleton
+        public SingleInstanceExecutor singleInstanceExecutor()
         {
-            if (s.contains(substring))
+            return new SingleInstanceExecutor()
             {
-                return true;
-            }
+                @Override
+                public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
+                {
+                    // DO NOTHING
+                }
+
+                @Override
+                public boolean isLocalSidecarSingleInstanceExecutor()
+                {
+                    return true;
+                }
+            };
         }
-        return false;
     }
 }
