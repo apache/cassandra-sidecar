@@ -40,15 +40,15 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Handler for retrieving the status of async operational jobs running on the sidecar
  */
-public class OperationalJobsHandler extends AbstractHandler<Void>
+public class OperationalJobHandler extends AbstractHandler<Void>
 {
     private final OperationalJobManager jobManager;
 
     @Inject
-    public OperationalJobsHandler(InstanceMetadataFetcher metadataFetcher,
-                                  ExecutorPools executorPools,
-                                  CassandraInputValidator validator,
-                                  OperationalJobManager jobManager)
+    public OperationalJobHandler(InstanceMetadataFetcher metadataFetcher,
+                                 ExecutorPools executorPools,
+                                 CassandraInputValidator validator,
+                                 OperationalJobManager jobManager)
     {
         super(metadataFetcher, executorPools, validator);
         this.jobManager = jobManager;
@@ -104,16 +104,17 @@ public class OperationalJobsHandler extends AbstractHandler<Void>
     public void sendStatusBasedResponse(RoutingContext context, UUID jobId, OperationalJob job)
     {
         OperationalJobStatus status = job.status();
-        if (status.isCompleted())
+        String reason = null;
+        switch(status)
         {
-            context.response().setStatusCode(HttpResponseStatus.OK.code());
+            case SUCCEEDED:
+                context.response().setStatusCode(HttpResponseStatus.OK.code()); break;
+            case CREATED:
+            case RUNNING:
+                context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code()); break;
+            case FAILED:
+                reason = job.asyncResult().cause().getMessage();
         }
-        else
-        {
-            context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code());
-        }
-
-        String reason = status == FAILED ? job.asyncResult().cause().getMessage() : null;
         context.json(new OperationalJobResponse(jobId, status, job.name(), reason));
     }
 }

@@ -60,10 +60,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for the {@link OperationalJobsHandler}
+ * Tests for the {@link OperationalJobHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class OperationalJobsHandlerTest
+public class OperationalJobHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(GossipInfoHandlerTest.class);
     Vertx vertx;
@@ -106,7 +106,7 @@ public class OperationalJobsHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String uuid = UUIDs.timeBased().toString();
-        String testRoute = "/api/v1/cassandra/operations/jobs/" + uuid;
+        String testRoute = "/api/v1/cassandra/operational-jobs/" + uuid;
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
               .send(context.succeeding(response -> {
@@ -119,7 +119,7 @@ public class OperationalJobsHandlerTest
     void testGetJobStatusRunningJob(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/operations/jobs/" + runningUuid;
+        String testRoute = "/api/v1/cassandra/operational-jobs/" + runningUuid;
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_ACCEPTED)
               .send(context.succeeding(response -> {
@@ -132,7 +132,7 @@ public class OperationalJobsHandlerTest
     void testGetJobStatusCompletedJob(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/operations/jobs/" + completedUuid;
+        String testRoute = "/api/v1/cassandra/operational-jobs/" + completedUuid;
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
@@ -149,7 +149,7 @@ public class OperationalJobsHandlerTest
     void testGetJobStatusFailedJob(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/operations/jobs/" + failedUuid;
+        String testRoute = "/api/v1/cassandra/operational-jobs/" + failedUuid;
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
@@ -173,14 +173,15 @@ public class OperationalJobsHandlerTest
             OperationalJobManager mockManager = mock(OperationalJobManager.class);
             OperationalJob runningMock = mock(OperationalJob.class);
             Promise<Void> p = Promise.promise();
+            when(runningMock.status()).thenReturn(OperationalJobStatus.RUNNING);
             when(runningMock.asyncResult()).thenReturn(p.future());
             OperationalJob completedMock = mock(OperationalJob.class);
             when(completedMock.status()).thenReturn(OperationalJobStatus.SUCCEEDED);
-            when(completedMock.name()).thenReturn("fooOperation");
+            when(completedMock.name()).thenReturn("testCompleted");
             OperationalJob failedMock = mock(OperationalJob.class);
             when(failedMock.status()).thenReturn(OperationalJobStatus.FAILED);
             when(failedMock.asyncResult()).thenReturn(Future.failedFuture("Test failed"));
-            when(failedMock.name()).thenReturn("barOperation");
+            when(failedMock.name()).thenReturn("testFailed");
 
             when(mockManager.getJobIfExists(runningUuid)).thenReturn(runningMock);
             when(mockManager.getJobIfExists(completedUuid)).thenReturn(completedMock);

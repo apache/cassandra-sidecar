@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -67,8 +68,8 @@ public class ListOperationalJobsHandlerTest
     Vertx vertx;
     Server server;
 
-    static UUID runningUuid = UUID.randomUUID();
-    static UUID runningUuid2 = UUID.randomUUID();
+    static UUID runningUuid = UUIDs.timeBased();
+    static UUID runningUuid2 = UUIDs.timeBased();
 
     static SampleOperationalJob running = new SampleOperationalJob(runningUuid);
     static SampleOperationalJob running2 = new SampleOperationalJob(runningUuid2);
@@ -105,7 +106,7 @@ public class ListOperationalJobsHandlerTest
     void testListJobs(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/operations/jobs";
+        String testRoute = "/api/v1/cassandra/operational-jobs";
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
