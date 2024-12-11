@@ -52,7 +52,6 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
-import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
 import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.server.MainModule;
