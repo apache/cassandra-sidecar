@@ -261,12 +261,6 @@ public abstract class IntegrationTestBase
         throw rte;
     }
 
-    protected void closeNativeThenReconnect()
-    {
-        sidecarTestContext.close();
-        maybeGetSession();
-    }
-
     private String generateRfString(Map<String, Integer> dcToRf)
     {
         return dcToRf.entrySet().stream().map(e -> String.format("'%s':%d", e.getKey(), e.getValue()))

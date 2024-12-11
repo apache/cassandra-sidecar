@@ -39,7 +39,7 @@ class ReprepareStatementsOnReconnectionIntTest extends IntegrationTestBase
         waitForSchemaReady(10, TimeUnit.SECONDS);
         assertThatNoException().isThrownBy(() -> accessor.selectByJobByBucketByTokenRange(testJob, (short) 0, range));
 
-        closeNativeThenReconnect();
+        sidecarTestContext.refreshInstancesConfig();
 
         waitForSchemaReady(10, TimeUnit.SECONDS);
         assertThatNoException().isThrownBy(() -> accessor.selectByJobByBucketByTokenRange(testJob, (short) 0, range));
