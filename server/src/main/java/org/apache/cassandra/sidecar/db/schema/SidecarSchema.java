@@ -55,7 +55,7 @@ public class SidecarSchema
     private final CQLSessionProvider cqlSessionProvider;
     private final SchemaMetrics metrics;
 
-    private boolean isInitialized = false;
+    private volatile boolean isInitialized = false;
 
     public SidecarSchema(Vertx vertx,
                          ExecutorPools executorPools,
@@ -120,7 +120,7 @@ public class SidecarSchema
         }
     }
 
-    private synchronized void initialize(long timerId)
+    private void initialize(long timerId)
     {
         // it should not happen since the callback is only scheduled when isEnabled == true
         if (!schemaKeyspaceConfiguration.isEnabled())
@@ -165,7 +165,7 @@ public class SidecarSchema
         }
     }
 
-    private synchronized void reset()
+    private void reset()
     {
         if (!schemaKeyspaceConfiguration.isEnabled() || !isInitialized)
         {
@@ -180,7 +180,7 @@ public class SidecarSchema
         isInitialized = false;
     }
 
-    private synchronized void cancelTimer(long timerId)
+    private void cancelTimer(long timerId)
     {
         // invalid timerId; nothing to cancel
         if (timerId < 0)
