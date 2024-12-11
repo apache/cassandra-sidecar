@@ -58,12 +58,10 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final int DEFAULT_ALLOWABLE_SKEW_IN_MINUTES = 60;
     private static final String SERVER_VERTICLE_INSTANCES_PROPERTY = "server_verticle_instances";
     private static final String OPERATIONAL_JOB_TRACKER_SIZE_PROPERTY = "operations_job_tracker_size";
-    private static final String OPERATIONAL_JOB_SYNC_RESPONSE_TIMEOUT_PROPERTY = "operations_job_sync_response_timeout";
+    private static final String OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_MILLIS_PROPERTY = "operations_job_sync_response_timeout";
     private static final int DEFAULT_SERVER_VERTICLE_INSTANCES = 1;
     private static final int DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE = 64;
-
-    private static final int DEFAULT_OPERATIONAL_JOB_TRACKER_SYNC_RESPONSE_TIMEOUT_MILLIS = 5000;
-
+    private static final long DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_MILLIS = TimeUnit.SECONDS.toMillis(5);
     public static final String THROTTLE_PROPERTY = "throttle";
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
@@ -108,11 +106,12 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = SERVER_VERTICLE_INSTANCES_PROPERTY, defaultValue = DEFAULT_SERVER_VERTICLE_INSTANCES + "")
     protected final int serverVerticleInstances;
 
+    // TODO: remove all defaultValue. It is not active. It is misleading to have the annotation field.
     @JsonProperty(value = OPERATIONAL_JOB_TRACKER_SIZE_PROPERTY, defaultValue = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE + "")
     protected final int operationalJobTrackerSize;
 
-    @JsonProperty(value = OPERATIONAL_JOB_SYNC_RESPONSE_TIMEOUT_PROPERTY, defaultValue = DEFAULT_OPERATIONAL_JOB_TRACKER_SYNC_RESPONSE_TIMEOUT_MILLIS + "")
-    protected final int operationalJobSyncResponseTimeoutMillis;
+    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_MILLIS_PROPERTY)
+    protected final long operationalJobExecutionMaxWaitTimeMillis;
 
     @JsonProperty(value = THROTTLE_PROPERTY)
     protected final ThrottleConfiguration throttleConfiguration;
@@ -165,7 +164,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         allowableSkewInMinutes = builder.allowableSkewInMinutes;
         serverVerticleInstances = builder.serverVerticleInstances;
         operationalJobTrackerSize = builder.operationalJobTrackerSize;
-        operationalJobSyncResponseTimeoutMillis = builder.operationalJobSyncResponseTimeout;
+        operationalJobExecutionMaxWaitTimeMillis = builder.operationalJobExecutionMaxWaitTimeMillis;
         throttleConfiguration = builder.throttleConfiguration;
         sstableUploadConfiguration = builder.sstableUploadConfiguration;
         sstableImportConfiguration = builder.sstableImportConfiguration;
@@ -271,10 +270,10 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = OPERATIONAL_JOB_SYNC_RESPONSE_TIMEOUT_PROPERTY)
-    public int operationalJobSyncResponseTimeoutMillis()
+    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_MILLIS_PROPERTY)
+    public long operationalJobExecutionMaxWaitTimeInMillis()
     {
-        return operationalJobSyncResponseTimeoutMillis;
+        return operationalJobExecutionMaxWaitTimeMillis;
     }
 
     /**
@@ -387,7 +386,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected int allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
         protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
         protected int operationalJobTrackerSize = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE;
-        protected int operationalJobSyncResponseTimeout = DEFAULT_OPERATIONAL_JOB_TRACKER_SYNC_RESPONSE_TIMEOUT_MILLIS;
+        protected long operationalJobExecutionMaxWaitTimeMillis = DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_MILLIS;
         protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
         protected SSTableUploadConfiguration sstableUploadConfiguration = new SSTableUploadConfigurationImpl();
         protected SSTableImportConfiguration sstableImportConfiguration = new SSTableImportConfigurationImpl();
@@ -507,7 +506,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         {
             return update(b -> b.operationalJobTrackerSize = operationalJobTrackerSize);
         }
-
 
         /**
          * Sets the {@code throttleConfiguration} and returns a reference to this Builder enabling method chaining.

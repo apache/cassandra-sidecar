@@ -367,7 +367,7 @@ public class MainModule extends AbstractModule
         router.get(ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE)
               .handler(connectedClientStatsHandler);
 
-        router.get(ApiEndpointsV1.OPERATIONAL_JOBS_ROUTE)
+        router.get(ApiEndpointsV1.OPERATIONAL_JOB_ROUTE)
               .handler(operationalJobsHandler);
 
         router.get(ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE)

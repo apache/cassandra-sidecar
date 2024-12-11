@@ -19,11 +19,13 @@
 package org.apache.cassandra.sidecar.tasks;
 
 import io.vertx.core.Promise;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * An interface that defines a task that will be executed during the lifecycle of Cassandra Sidecar
+ *  * An interface that defines a task that will be executed during the lifecycle of Cassandra Sidecar
+ * @param <T>
  */
-public interface Task
+public interface Task<T>
 {
     /**
      * Defines the task body.
@@ -34,7 +36,13 @@ public interface Task
      *
      * @param promise a promise when the execution completes
      */
-    void execute(Promise<Void> promise);
+    void execute(Promise<T> promise);
+
+    /**
+     * @return the result of task execution. Null is returned if there is no result
+     */
+    @Nullable
+    T result();
 
     /**
      * Close any resources it opened.

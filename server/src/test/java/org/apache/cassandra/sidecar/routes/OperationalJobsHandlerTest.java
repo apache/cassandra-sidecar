@@ -26,10 +26,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -45,8 +45,8 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
-import org.apache.cassandra.sidecar.common.response.OperationalJobsResponse;
-import org.apache.cassandra.sidecar.common.utils.OperationalJobResult;
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
+import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.job.OperationalJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.server.MainModule;
@@ -69,9 +69,9 @@ public class OperationalJobsHandlerTest
     Vertx vertx;
     Server server;
 
-    static UUID runningUuid = UUID.randomUUID();
-    static UUID completedUuid = UUID.randomUUID();
-    static UUID failedUuid = UUID.randomUUID();
+    static UUID runningUuid = UUIDs.timeBased();
+    static UUID completedUuid = UUIDs.timeBased();
+    static UUID failedUuid = UUIDs.timeBased();
 
     @BeforeEach
     void before() throws InterruptedException
@@ -105,7 +105,7 @@ public class OperationalJobsHandlerTest
     void testGetJobStatusNonExistentJob(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String uuid = UUID.randomUUID().toString();
+        String uuid = UUIDs.timeBased().toString();
         String testRoute = "/api/v1/cassandra/operations/jobs/" + uuid;
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)
@@ -137,9 +137,9 @@ public class OperationalJobsHandlerTest
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
-                  OperationalJobsResponse jobStatus = response.bodyAsJson(OperationalJobsResponse.class);
+                  OperationalJobResponse jobStatus = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(jobStatus.jobId()).isEqualTo(completedUuid);
-                  assertThat(jobStatus.status()).isEqualTo(OperationalJobResult.OperationalJobStatus.COMPLETED);
+                  assertThat(jobStatus.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
                   assertThat(jobStatus.operation()).isEqualTo("testCompleted");
                   context.completeNow();
               }));
@@ -154,11 +154,11 @@ public class OperationalJobsHandlerTest
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
-                  OperationalJobsResponse jobStatus = response.bodyAsJson(OperationalJobsResponse.class);
+                  OperationalJobResponse jobStatus = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(jobStatus.jobId()).isEqualTo(failedUuid);
-                  assertThat(jobStatus.status()).isEqualTo(OperationalJobResult.OperationalJobStatus.FAILED);
+                  assertThat(jobStatus.status()).isEqualTo(OperationalJobStatus.FAILED);
                   assertThat(jobStatus.operation()).isEqualTo("testFailed");
-                   assertThat(jobStatus.reason()).isEqualTo("Test failed");
+                  assertThat(jobStatus.reason()).isEqualTo("Test failed");
 
                   context.completeNow();
               }));
@@ -172,14 +172,15 @@ public class OperationalJobsHandlerTest
         {
             OperationalJobManager mockManager = mock(OperationalJobManager.class);
             OperationalJob runningMock = mock(OperationalJob.class);
-            Promise p = Promise.promise();
-            when(runningMock.status()).thenReturn(p.future());
+            Promise<Void> p = Promise.promise();
+            when(runningMock.asyncResult()).thenReturn(p.future());
             OperationalJob completedMock = mock(OperationalJob.class);
-            when(completedMock.status()).thenReturn(Future.succeededFuture(OperationalJobResult.OperationalJobStatus.COMPLETED));
-            when(completedMock.operation()).thenReturn("testCompleted");
+            when(completedMock.status()).thenReturn(OperationalJobStatus.SUCCEEDED);
+            when(completedMock.name()).thenReturn("fooOperation");
             OperationalJob failedMock = mock(OperationalJob.class);
-            when(failedMock.status()).thenReturn(Future.failedFuture("Test failed"));
-            when(failedMock.operation()).thenReturn("testFailed");
+            when(failedMock.status()).thenReturn(OperationalJobStatus.FAILED);
+            when(failedMock.asyncResult()).thenReturn(Future.failedFuture("Test failed"));
+            when(failedMock.name()).thenReturn("barOperation");
 
             when(mockManager.getJobIfExists(runningUuid)).thenReturn(runningMock);
             when(mockManager.getJobIfExists(completedUuid)).thenReturn(completedMock);

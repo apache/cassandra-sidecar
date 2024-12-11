@@ -22,14 +22,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.response.data.OperationalJobsEntry;
 
 /**
  * Response structure of the list operational jobs API
  */
 public class ListOperationalJobsResponse
 {
-    private final List<OperationalJobsEntry> jobs;
+    private final List<OperationalJobResponse> jobs;
 
     /**
      * Constructs a {@link ListOperationalJobsResponse} object.
@@ -39,13 +38,13 @@ public class ListOperationalJobsResponse
         this.jobs = new ArrayList<>();
     }
 
-    public void addJob(OperationalJobsEntry job)
+    public void addJob(OperationalJobResponse job)
     {
         jobs.add(job);
     }
 
     @JsonProperty("jobs")
-    public List<OperationalJobsEntry> jobs()
+    public List<OperationalJobResponse> jobs()
     {
         return jobs;
     }

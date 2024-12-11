@@ -16,19 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.http;
+package org.apache.cassandra.sidecar.exceptions;
+
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 
 /**
- * Custom header names for sidecar
+ * When the operational job to be submitted is conflicting with another one that is running on Cassandra
  */
-public final class SidecarHttpHeaderNames
+public class OperationalJobConflictException extends OperationalJobException
 {
-    /**
-     * {@code "cassandra-content-xxhash32"}
-     */
-    public static final String CONTENT_XXHASH32 = "cassandra-content-xxhash32";
-    /**
-     * {@code "cassandra-content-xxhash32-seed"}
-     */
-    public static final String CONTENT_XXHASH32_SEED = "cassandra-content-xxhash32-seed";
+    public OperationalJobConflictException(String message)
+    {
+        super(message);
+    }
 }

@@ -22,12 +22,12 @@ import java.util.UUID;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-import org.apache.cassandra.sidecar.common.response.OperationalJobsResponse;
+import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 
 /**
  * Represents a request to retrieve the status of a async operational job
  */
-public class OperationalJobsRequest extends JsonRequest<OperationalJobsResponse>
+public class OperationalJobsRequest extends JsonRequest<OperationalJobResponse>
 {
 
     /**
@@ -35,7 +35,7 @@ public class OperationalJobsRequest extends JsonRequest<OperationalJobsResponse>
      */
     public OperationalJobsRequest(UUID jobId)
     {
-        super(ApiEndpointsV1.OPERATIONAL_JOBS_ROUTE
+        super(ApiEndpointsV1.OPERATIONAL_JOB_ROUTE
               .replaceAll(ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()));
     }
 

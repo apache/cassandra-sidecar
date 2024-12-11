@@ -21,20 +21,11 @@ package org.apache.cassandra.sidecar.job;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
 import javax.inject.Inject;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.Singleton;
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
+import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
 
 /**
  * An abstraction of the management and tracking of long-running jobs running on the sidecar.
@@ -42,24 +33,16 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 @Singleton
 public class OperationalJobManager
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(OperationalJobManager.class);
-
     private final OperationalJobTracker jobTracker;
-    private final ExecutorPools executorPools;
-    private final Vertx vertx;
-    private final ServiceConfiguration config;
 
     /**
      * Creates a manager instance with a default sized job-tracker.
-     * @param executorPools
+     * @param jobTracker
      */
     @Inject
-    public OperationalJobManager(Vertx vertx, ExecutorPools executorPools, SidecarConfiguration config, OperationalJobTracker jobTracker)
+    public OperationalJobManager(OperationalJobTracker jobTracker)
     {
-        this.vertx = vertx;
-        this.executorPools = executorPools;
         this.jobTracker = jobTracker;
-        this.config = config.serviceConfiguration();
     }
 
     /**
@@ -70,7 +53,7 @@ public class OperationalJobManager
     {
         return jobTracker.getJobsView().values()
                          .stream()
-                         .filter(j -> !j.status().isComplete())
+                         .filter(j -> !j.asyncResult().isComplete())
                          .collect(Collectors.toList());
     }
 
@@ -85,71 +68,29 @@ public class OperationalJobManager
     }
 
     /**
-     * Asynchronously submit (and lazily create) the job, if it is not currently being
-     * tracked and is not running downstream. The job is triggered on a separate internal thread-pool.
+     * Try to submit the job to execute asynchronously, if it is not currently being
+     * tracked and not running. The job is triggered on a separate internal thread-pool.
      * The job execution failure behavior is tracked within the {@link OperationalJob}.
-     * @param headerJobId job identifier
-     * @param job function used to create an instance of the job based on the UUID parameter
+     *
+     * @param job OperationalJob instance to submit
+     * @return OperationalJob instance that is submitted
+     * @throws OperationalJobConflictException when the same operational job is already running on Cassandra
      */
-    public void trySubmitJob(UUID headerJobId, OperationalJob job)
+    public OperationalJob trySubmitJob(OperationalJob job) throws OperationalJobConflictException
     {
-        maybeProcessDownstreamRunningJob(headerJobId, job);
-
-        if (headerJobId != null)
-        {
-            OperationalJob cachedJob = jobTracker.get(headerJobId);
-            if (cachedJob != null)
-            {
-                LOGGER.warn("Stale cache entry as there is no downstream job with jobId: {}, operation:{}",
-                            cachedJob.jobId(), cachedJob.operation());
-            }
-        }
+        checkConflict(job);
 
         // New job is submitted for all cases when we do not have a corresponding downstream job
-        jobTracker.computeIfAbsent(job.jobId(), j -> {
-            Future<OperationalJobStatus> status = submitJob(job);
-            return job;
-        });
+        return jobTracker.computeIfAbsent(job.jobId, jobId -> job);
     }
 
-    private void maybeProcessDownstreamRunningJob(UUID headerJobId, OperationalJob job)
+    private void checkConflict(OperationalJob job) throws OperationalJobConflictException
     {
-        if (job.isRunningDownstream())
+        // The job is not yet submitted (and running), but its status indicates that there is an identical job running on Cassandra already
+        // In this case, this job submission is rejected.
+        if (job.status() == OperationalJobStatus.RUNNING)
         {
-            UUID responseJobId = null;
-            OperationalJob cachedJob = (headerJobId != null) ? jobTracker.get(headerJobId) : null;
-            if (cachedJob != null && !cachedJob.status().isComplete())
-            {
-                responseJobId = headerJobId;
-            }
-            throw new OperationalJobException("Conflicting job running downstream", responseJobId);
+            throw new OperationalJobConflictException("The same operational job is already running on Cassandra. operationName='" + job.name() + '\'');
         }
-    }
-
-    private Future<OperationalJobStatus> submitJob(OperationalJob job)
-    {
-        long timeoutMillis = config.operationalJobSyncResponseTimeoutMillis();
-        Future<Void> timerFuture = Future.future(promise ->
-                                                 vertx.setTimer(timeoutMillis, id -> promise.complete())
-        );
-
-        LOGGER.info("Triggering downstream job with ID: {}, operation: {}", job.jobId(), job.operation());
-        Future<OperationalJobStatus> actualFuture = executorPools.internal().executeBlocking(p -> job.execute(p), false);
-
-        job.setStatus(actualFuture);
-
-        return actualFuture.failed() ? actualFuture : Future.any(timerFuture.map(v -> false), actualFuture)
-                     .compose(cf -> {
-                         if (cf.succeeded() && (cf.resultAt(0) != null || cf.resultAt(1) != null))
-                         {
-                             LOGGER.info("Timed out waiting for response for job {}", job.jobId);
-                             return actualFuture;
-                         }
-                         else
-                         {
-                             LOGGER.error("Unexpected failure executing the job: {}", job.jobId, cf.cause());
-                             return Future.failedFuture(cf.cause());
-                         }
-                     });
     }
 }

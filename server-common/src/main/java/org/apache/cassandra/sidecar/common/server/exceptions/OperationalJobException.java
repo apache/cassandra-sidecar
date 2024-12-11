@@ -18,28 +18,35 @@
 
 package org.apache.cassandra.sidecar.common.server.exceptions;
 
-import java.util.UUID;
+import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 
 /**
  * Exception thrown when a operational job conflict is detected
  */
 public class OperationalJobException extends RuntimeException
 {
-    private final UUID headerValue;
-    public OperationalJobException(String message, UUID jobId)
+    public static OperationalJobException wraps(Throwable throwable)
     {
-        super(message);
-        this.headerValue = jobId;
+        // extract the OperationalJobException from the stacktrace, if exists
+        // otherwise, wraps the throwable as OperationalJobException
+        OperationalJobException oje = ThrowableUtils.getCause(throwable, OperationalJobException.class);
+        if (oje != null)
+        {
+            return oje;
+        }
+        else
+        {
+            return new OperationalJobException(throwable.getMessage(), throwable);
+        }
     }
 
     public OperationalJobException(String message)
     {
         super(message);
-        this.headerValue = null;
     }
 
-    public UUID getHeaderValue()
+    public OperationalJobException(String message, Throwable cause)
     {
-        return headerValue;
+        super(message, cause);
     }
 }

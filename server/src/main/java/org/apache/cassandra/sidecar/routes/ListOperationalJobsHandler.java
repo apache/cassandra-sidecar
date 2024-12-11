@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.util.List;
 import javax.inject.Inject;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -26,14 +25,13 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
-import org.apache.cassandra.sidecar.common.response.data.OperationalJobsEntry;
+import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.job.OperationalJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus.RUNNING;
+import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 
 /**
  * Handler for retrieving the all the jobs running on the sidecar
@@ -60,13 +58,11 @@ public class ListOperationalJobsHandler extends AbstractHandler<Void>
     @Override
     protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
     {
-        List<OperationalJob> jobs = jobManager.allInflightJobs();
         ListOperationalJobsResponse listResponse = new ListOperationalJobsResponse();
-        jobs.forEach(job ->
-                     listResponse.addJob(new OperationalJobsEntry(job.jobId(),
-                                                                  RUNNING.toString(),
-                                                                  "",
-                                                                  job.operation())));
+        jobManager.allInflightJobs()
+                  .stream()
+                  .map(job -> new OperationalJobResponse(job.jobId, RUNNING, job.name(), ""))
+                  .forEach(listResponse::addJob);
         context.response().setStatusCode(HttpResponseStatus.OK.code());
         context.json(listResponse);
     }

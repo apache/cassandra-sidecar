@@ -16,19 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.http;
+package org.apache.cassandra.sidecar.common.data;
 
 /**
- * Custom header names for sidecar
+ * Encapsulates the states of the job lifecycle.
+ * Operational jobs are the ones running on Cassandra, e.g. decommission, etc.
  */
-public final class SidecarHttpHeaderNames
+public enum OperationalJobStatus
 {
-    /**
-     * {@code "cassandra-content-xxhash32"}
-     */
-    public static final String CONTENT_XXHASH32 = "cassandra-content-xxhash32";
-    /**
-     * {@code "cassandra-content-xxhash32-seed"}
-     */
-    public static final String CONTENT_XXHASH32_SEED = "cassandra-content-xxhash32-seed";
+    // The operational job is created
+    CREATED,
+    // The operational job is running on Cassandra
+    RUNNING,
+    // The operational job succeeds
+    SUCCEEDED,
+    // The operational job fails
+    FAILED;
+
+    public boolean isCompleted()
+    {
+        return this == SUCCEEDED || this == FAILED;
+    }
 }

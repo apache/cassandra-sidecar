@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * An interface that defines a periodic task that will be executed during the lifecycle of Cassandra Sidecar
  */
-public interface PeriodicTask extends Task
+public interface PeriodicTask extends Task<Void>
 {
     /**
      * @return delay in the specified {@link #delayUnit()} for periodic task
@@ -72,5 +72,11 @@ public interface PeriodicTask extends Task
     default boolean shouldSkip()
     {
         return false;
+    }
+
+    @Override
+    default Void result()
+    {
+        throw new UnsupportedOperationException("No result is expected from a Periodic task");
     }
 }

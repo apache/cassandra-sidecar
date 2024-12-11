@@ -47,7 +47,6 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus;
 import org.apache.cassandra.sidecar.job.OperationalJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.server.MainModule;
@@ -115,8 +114,8 @@ public class ListOperationalJobsHandlerTest
                   assertThat(listJobs).isNotNull();
                   assertThat(listJobs.jobs()).isNotNull();
                   assertThat(listJobs.jobs().size()).isEqualTo(2);
-                  assertThat(listJobs.jobs().get(0).jobId).isIn(runningUuid, runningUuid2);
-                  assertThat(listJobs.jobs().get(1).jobId).isIn(runningUuid, runningUuid2);
+                  assertThat(listJobs.jobs().get(0).jobId()).isIn(runningUuid, runningUuid2);
+                  assertThat(listJobs.jobs().get(1).jobId()).isIn(runningUuid, runningUuid2);
                   context.completeNow();
               }));
     }
@@ -139,29 +138,19 @@ public class ListOperationalJobsHandlerTest
      */
     public static class SampleOperationalJob extends OperationalJob
     {
-        public SampleOperationalJob()
+        /**
+         * Constructs a job with a unique UUID, in Pending state
+         *
+         * @param jobId UUID representing the Job to be created
+         */
+        protected SampleOperationalJob(UUID jobId)
         {
-            super(Vertx.vertx());
+            super(jobId);
         }
 
-        public SampleOperationalJob(UUID jobId)
+        @Override
+        protected void executeInternal() throws OperationalJobException
         {
-            super(Vertx.vertx(), jobId);
-        }
-
-        protected OperationalJobStatus executeInternal() throws OperationalJobException
-        {
-            return null;
-        }
-
-        public String operation()
-        {
-            return "test";
-        }
-
-        public boolean isRunningDownstream()
-        {
-            return false;
         }
     }
 }

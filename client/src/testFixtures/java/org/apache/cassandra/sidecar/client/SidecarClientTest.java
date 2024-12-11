@@ -59,6 +59,7 @@ import org.apache.cassandra.sidecar.client.request.RequestExecutorTest;
 import org.apache.cassandra.sidecar.client.retry.RetryAction;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
@@ -72,7 +73,7 @@ import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
-import org.apache.cassandra.sidecar.common.response.OperationalJobsResponse;
+import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
@@ -82,7 +83,6 @@ import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
-import org.apache.cassandra.sidecar.common.utils.OperationalJobResult;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
@@ -1282,12 +1282,12 @@ abstract class SidecarClientTest
                                 .setBody(jobStatusAsString);
         enqueue(response);
 
-        OperationalJobsResponse result = client.operationalJobs(jobId).get(30, TimeUnit.SECONDS);
+        OperationalJobResponse result = client.operationalJobs(jobId).get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.jobId()).isEqualTo(jobId);
-        assertThat(result.status()).isEqualTo(OperationalJobResult.OperationalJobStatus.RUNNING);
+        assertThat(result.status()).isEqualTo(OperationalJobStatus.RUNNING);
         assertThat(result.operation()).isEqualTo("test");
-        validateResponseServed(ApiEndpointsV1.OPERATIONAL_JOBS_ROUTE.replaceAll(OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()));
+        validateResponseServed(ApiEndpointsV1.OPERATIONAL_JOB_ROUTE.replaceAll(OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()));
     }
 
     @Test
@@ -1305,7 +1305,7 @@ abstract class SidecarClientTest
         ListOperationalJobsResponse result = client.listOperationalJobs().get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.jobs()).isNotNull();
-        assertThat(result.jobs().get(0).jobId).isEqualTo(jobId);
+        assertThat(result.jobs().get(0).jobId()).isEqualTo(jobId);
         validateResponseServed(ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE);
     }
 

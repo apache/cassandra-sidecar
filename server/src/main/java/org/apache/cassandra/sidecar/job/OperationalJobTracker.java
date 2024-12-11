@@ -29,12 +29,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Tracks and stores the results of long-running jobs running on the sidecar
  */
 public class OperationalJobTracker
 {
+    public static final long ONE_DAY_TTL = TimeUnit.DAYS.toMillis(1); // todo: consider making it configurable
+
     private static final Logger LOGGER = LoggerFactory.getLogger(OperationalJobTracker.class);
     private final Map<UUID, OperationalJob> map;
 
@@ -51,15 +54,17 @@ public class OperationalJobTracker
                 // We have reached capacity and the oldest entry is either ready for cleanup or stale
                 if (map.size() > initialCapacity)
                 {
-                    if (eldest.getValue().status.isComplete() && System.nanoTime() - eldest.getValue().creationTime() > TimeUnit.DAYS.toNanos(1))
+                    OperationalJob job = eldest.getValue();
+                    if (job.status().isCompleted() && job.isStale(System.currentTimeMillis(), ONE_DAY_TTL))
                     {
-                        LOGGER.warn("Job tracker reached max size. Expiring job wth uuid={}, state={}, created={}",
-                                    eldest.getKey(), eldest.getValue().status());
+                        LOGGER.debug("Expiring completed and stale job due to job tracker has reached max size. jobId={} status={} createdAt={}",
+                                    job.jobId, job.status(), job.creationTime());
                         return true;
                     }
                     else
                     {
-                        LOGGER.warn("Job tracker reached max size. Not evicting oldest job uuid={} status={}", eldest.getKey(), eldest.getValue().status());
+                        LOGGER.warn("Job tracker reached max size, but the eldest job is not completed yet. " +
+                                    "Not evicting. jobId={} status={}", job.jobId, job.status());
                         // TODO: Optionally trigger cleanup to fetch next oldest to evict
                     }
                 }
@@ -69,39 +74,15 @@ public class OperationalJobTracker
         });
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public OperationalJob computeIfAbsent(UUID key, Function<UUID, OperationalJob> mappingFunction)
     {
         return map.computeIfAbsent(key, mappingFunction);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public OperationalJob put(UUID key, OperationalJob job)
-    {
-        return map.put(key, job);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int size()
-    {
-        return map.size();
-    }
-
-
-    /**
-     * {@inheritDoc}
-     */
     public OperationalJob get(UUID key)
     {
         return map.get(key);
     }
-
 
     /**
      * Returns an immutable copy of the underlying map, to provide a consistent view of the map, minimizing contention
@@ -112,5 +93,17 @@ public class OperationalJobTracker
     Map<UUID, OperationalJob> getJobsView()
     {
         return Collections.unmodifiableMap(map);
+    }
+
+    @VisibleForTesting
+    OperationalJob put(OperationalJob job)
+    {
+        return map.put(job.jobId, job);
+    }
+
+    @VisibleForTesting
+    int size()
+    {
+        return map.size();
     }
 }

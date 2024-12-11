@@ -18,24 +18,26 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
+import com.datastax.driver.core.utils.UUIDs;
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
-import org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus;
 
-import static org.apache.cassandra.sidecar.common.utils.OperationalJobResult.OperationalJobStatus.COMPLETED;
-import static org.apache.cassandra.sidecar.job.OperationalJobTest.createJobWithStatus;
-
+import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
+import static org.apache.cassandra.sidecar.job.OperationalJobTest.createOperationalJob;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests to validate job tracking
@@ -44,126 +46,114 @@ public class OperationalJobTrackerTest
 {
     private OperationalJobTracker jobTracker;
     private static final int trackerSize = 3;
-    protected Vertx vertx = Vertx.vertx();
 
-    OperationalJob job1 = createJobWithStatus(COMPLETED);
-    OperationalJob job2 = createJobWithStatus(COMPLETED);
-    OperationalJob job3 = createJobWithStatus(COMPLETED);
-    OperationalJob job4 = createJobWithStatus(COMPLETED);
+    OperationalJob job1 = createOperationalJob(SUCCEEDED);
+    OperationalJob job2 = createOperationalJob(SUCCEEDED);
+    OperationalJob job3 = createOperationalJob(SUCCEEDED);
+    OperationalJob job4 = createOperationalJob(SUCCEEDED);
 
-    OperationalJob jobWithStaleCreationTime = new OperationalJob(vertx, UUID.randomUUID())
+    long twoDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2);
+    OperationalJob jobWithStaleCreationTime = new OperationalJob(UUIDs.startOf(twoDaysAgo))
     {
-        public String operation()
+        @Override
+        protected void executeInternal() throws OperationalJobException
         {
-            return "test";
         }
 
-        public boolean isRunningDownstream()
+        @Override
+        public OperationalJobStatus status()
         {
-            return false;
-        }
-
-        public long creationTime()
-        {
-            return System.nanoTime() - TimeUnit.DAYS.toNanos(2);
-        }
-
-        protected OperationalJobStatus executeInternal() throws OperationalJobException
-        {
-            return COMPLETED;
+            return SUCCEEDED;
         }
     };
 
     @BeforeEach
     void setUp()
     {
-        vertx = Vertx.vertx();
         jobTracker = new OperationalJobTracker(trackerSize);
     }
 
     @Test
     void testPutAndGet()
     {
-        UUID key1 = UUID.randomUUID();
-        UUID key2 = UUID.randomUUID();
-        jobTracker.put(key1, job1);
-        jobTracker.put(key2, job2);
-        Assertions.assertEquals(job1, jobTracker.get(key1));
-        Assertions.assertEquals(job2, jobTracker.get(key2));
+        jobTracker.put(job1);
+        jobTracker.put(job2);
+        assertThat(jobTracker.get(job1.jobId)).isSameAs(job1);
+        assertThat(jobTracker.get(job2.jobId)).isSameAs(job2);
     }
 
     @Test
     void testComputeIfAbsent()
     {
-        UUID key1 = UUID.randomUUID();
-        jobTracker.put(key1, job1);
-        jobTracker.computeIfAbsent(key1, v -> job3);
-        Assertions.assertEquals(job1, jobTracker.get(key1));
+        jobTracker.put(job1);
+        OperationalJob job = jobTracker.computeIfAbsent(job1.jobId, v -> job3);
+        assertThat(job).isNotSameAs(job3);
+        assertThat(job).isSameAs(job1);
+        assertThat(jobTracker.get(job1.jobId)).isSameAs(job1);
     }
 
     @Test
     void testNoEviction()
     {
-        UUID key1 = UUID.randomUUID();
-        UUID key2 = UUID.randomUUID();
-        UUID key3 = UUID.randomUUID();
-        UUID key4 = UUID.randomUUID();
+        jobTracker.put(job1);
+        jobTracker.put(job2);
+        jobTracker.put(job3);
+        jobTracker.put(job4);
 
-        jobTracker.put(key1, job1);
-        jobTracker.put(key2, job2);
-        jobTracker.put(key3, job3);
-        jobTracker.put(key4, job4);
-
-        Assertions.assertNotNull(jobTracker.get(key1));
-        Assertions.assertNotNull(jobTracker.get(key4));
+        assertThat(jobTracker.size())
+        .describedAs("Although the tracker initial size is 3, no job is evicted since all jobs are still running")
+        .isEqualTo(4);
+        assertThat(jobTracker.get(job1.jobId)).isNotNull();
+        assertThat(jobTracker.get(job2.jobId)).isNotNull();
+        assertThat(jobTracker.get(job3.jobId)).isNotNull();
+        assertThat(jobTracker.get(job4.jobId)).isNotNull();
     }
 
     @Test
     void testRemoveEldestEntryEvictionOnExpiry()
     {
-        UUID key1 = UUID.randomUUID();
-        UUID key2 = UUID.randomUUID();
-        UUID key3 = UUID.randomUUID();
-        UUID key6 = UUID.randomUUID();
+        jobTracker.put(jobWithStaleCreationTime);
+        jobTracker.put(job1);
+        jobTracker.put(job2);
+        jobTracker.put(job3);
 
-        jobWithStaleCreationTime.setStatus(Future.succeededFuture(COMPLETED));
-        jobTracker.put(key6, jobWithStaleCreationTime);
-        jobTracker.put(key1, job1);
-        jobTracker.put(key2, job2);
-        jobTracker.put(key3, job3);
-
-        Assertions.assertNotNull(jobTracker.get(key3));
-        Assertions.assertNull(jobTracker.get(key6));
+        assertThat(jobTracker.size()).isEqualTo(3);
+        assertThat(jobTracker.get(job1.jobId)).isNotNull();
+        assertThat(jobTracker.get(job2.jobId)).isNotNull();
+        assertThat(jobTracker.get(job3.jobId)).isNotNull();
+        assertThat(jobTracker.get(jobWithStaleCreationTime.jobId)).isNull();
     }
 
     @Test
     void testGetViewImmutable()
     {
-        UUID key1 = UUID.randomUUID();
-        UUID key2 = UUID.randomUUID();
-        UUID key3 = UUID.randomUUID();
-
         // Test the immutable view returned by getView
-        jobTracker.put(key1, job1);
-        jobTracker.put(key2, job2);
+        jobTracker.put(job1);
+        jobTracker.put(job2);
 
         Map<UUID, OperationalJob> view = jobTracker.getJobsView();
-        Assertions.assertEquals(2, view.size());
-        Assertions.assertThrows(UnsupportedOperationException.class, () -> view.put(key3, job3));
+        assertThat(view.size()).isEqualTo(2);
+        assertThatThrownBy(() -> view.put(job3.jobId, job3))
+        .isExactlyInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
-    void testConcurrentAccess() throws InterruptedException
+    void testConcurrentAccess() throws Exception
     {
+        int one = 1;
+        long pastTimestamp = System.currentTimeMillis() - OperationalJobTracker.ONE_DAY_TTL - 1000L;
+        OperationalJobTracker tracker = new OperationalJobTracker(one);
         ExecutorService executorService = Executors.newFixedThreadPool(trackerSize);
-        for (int i = 0; i < trackerSize; i++)
-        {
-            executorService.submit(() -> {
-                jobTracker.put(UUID.randomUUID(), createJobWithStatus(COMPLETED));
-            });
-        }
+        List<OperationalJob> sortedJobs = IntStream.range(0, trackerSize + 10)
+                                                   .boxed()
+                                                   .map(i -> createOperationalJob(UUIDs.startOf(pastTimestamp + i), SUCCEEDED))
+                                                   .collect(Collectors.toList());
+        sortedJobs.forEach(tracker::put);
         executorService.shutdown();
         executorService.awaitTermination(5, TimeUnit.SECONDS);
-        Assertions.assertEquals(trackerSize, jobTracker.size());
+        assertThat(tracker.size()).isEqualTo(one);
+        assertThat(tracker.getJobsView().values().iterator().next())
+        .describedAs("Only the last job is kept")
+        .isSameAs(sortedJobs.get(sortedJobs.size() - 1));
     }
 }

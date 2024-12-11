@@ -54,7 +54,7 @@ import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
-import org.apache.cassandra.sidecar.common.response.OperationalJobsResponse;
+import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
@@ -600,7 +600,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      *
      * @return a completable future of the node settings
      */
-    public CompletableFuture<OperationalJobsResponse> operationalJobs(UUID jobId)
+    public CompletableFuture<OperationalJobResponse> operationalJobs(UUID jobId)
     {
         return executor.executeRequestAsync(requestBuilder().operationalJobsRequest(jobId).build());
     }
