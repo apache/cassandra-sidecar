@@ -131,8 +131,8 @@ class TokenZeroElectorateMembershipIntegrationTest
         {
             cluster.schemaChange(String.format("CREATE KEYSPACE ks_dc0_%d WITH REPLICATION={'class':'NetworkTopologyStrategy','%s':%d}", rf, dc0, rf));
             // introduce delay until schema change information propagates
-            sleepUninterruptibly(1, TimeUnit.SECONDS);
-            assertMembership(memberships, rf, dc0);
+            sleepUninterruptibly(10, TimeUnit.SECONDS);
+            assertMembership(memberships, rf);
         }
 
         // Now let's create keyspaces with RF 1-3 replicated in DC2 and validate
@@ -141,20 +141,20 @@ class TokenZeroElectorateMembershipIntegrationTest
         {
             cluster.schemaChange(String.format("CREATE KEYSPACE ks_dc1_%d WITH REPLICATION={'class':'NetworkTopologyStrategy','%s':%d}", rf, dc1, rf));
             // introduce delay until schema change information propagates
-            sleepUninterruptibly(1, TimeUnit.SECONDS);
-            assertMembership(memberships, rf + 3, dc0, dc1);
+            sleepUninterruptibly(10, TimeUnit.SECONDS);
+            assertMembership(memberships, rf + 3);
         }
 
         // Now let's create a keyspace with RF=3 replicated across both DCs
         cluster.schemaChange("CREATE KEYSPACE ks_all_3 WITH REPLICATION={'class':'NetworkTopologyStrategy','replication_factor':3}");
         // introduce delay until schema change information propagates
-        sleepUninterruptibly(1, TimeUnit.SECONDS);
+        sleepUninterruptibly(10, TimeUnit.SECONDS);
         // We expect the same instances in the existing keyspaces to own token 0 as the new keyspace
         // so a total of 6 instances own token 0, 3 on each DC.
-        assertMembership(memberships, 6, dc0, dc1);
+        assertMembership(memberships, 6);
     }
 
-    static void assertMembership(List<TokenZeroElectorateMembership> memberships, int expectedElectorateSize, String... expectedDCs)
+    static void assertMembership(List<TokenZeroElectorateMembership> memberships, int expectedElectorateSize)
     {
         int localElectorateCount = 0;
         for (TokenZeroElectorateMembership membership : memberships)
@@ -165,7 +165,6 @@ class TokenZeroElectorateMembershipIntegrationTest
                 localElectorateCount++;
             }
         }
-
         assertThat(localElectorateCount).as("We expect %s instances of TokenZeroElectorateMembership to participate in the election", expectedElectorateSize)
                                         .isEqualTo(expectedElectorateSize);
     }
