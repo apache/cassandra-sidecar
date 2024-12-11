@@ -46,7 +46,12 @@ public class SidecarLeaseSchema extends TableSchema
     @Inject
     public SidecarLeaseSchema(SidecarConfiguration configuration)
     {
-        this.keyspaceConfig = configuration.serviceConfiguration().schemaKeyspaceConfiguration();
+        this(configuration.serviceConfiguration().schemaKeyspaceConfiguration());
+    }
+
+    public SidecarLeaseSchema(SchemaKeyspaceConfiguration keyspaceConfig)
+    {
+        this.keyspaceConfig = keyspaceConfig;
     }
 
     /**
