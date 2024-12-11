@@ -269,20 +269,7 @@ public class SidecarSchemaTest
         @Singleton
         public SingleInstanceExecutor singleInstanceExecutor()
         {
-            return new SingleInstanceExecutor()
-            {
-                @Override
-                public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
-                {
-                    // DO NOTHING
-                }
-
-                @Override
-                public boolean isLocalSidecarSingleInstanceExecutor()
-                {
-                    return true;
-                }
-            };
+            return SingleInstanceExecutor.ALWAYS_SCHEDULE_EXECUTOR;
         }
     }
 }

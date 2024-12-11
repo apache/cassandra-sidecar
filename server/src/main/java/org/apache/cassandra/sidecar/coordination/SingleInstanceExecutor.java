@@ -25,6 +25,19 @@ package org.apache.cassandra.sidecar.coordination;
  */
 public interface SingleInstanceExecutor
 {
+    SingleInstanceExecutor ALWAYS_SCHEDULE_EXECUTOR = new SingleInstanceExecutor()
+    {
+        @Override
+        public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
+        {
+        }
+
+        @Override
+        public boolean isLocalSidecarSingleInstanceExecutor()
+        {
+            return true;
+        }
+    };
     /**
      * A process that determines the single instance executor.
      *
