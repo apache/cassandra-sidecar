@@ -41,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tests to validate the Job APIs
  */
-public class OperationalJobTest
+class OperationalJobTest
 {
     private final TaskExecutorPool executorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
 

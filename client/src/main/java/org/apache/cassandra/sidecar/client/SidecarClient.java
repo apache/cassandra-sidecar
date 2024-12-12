@@ -584,37 +584,47 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     }
 
     /**
-     * Executes the connected client stats request using the default retry policy and configured selection policy
+     * Executes the connected client stats request using the default retry policy and provided {@code instance}.
      *
+     * @param instance the instance where the request will be executed
      * @return a completable future of the connected client stats
      */
-    public CompletableFuture<ConnectedClientStatsResponse> connectedClientStats()
+    public CompletableFuture<ConnectedClientStatsResponse> connectedClientStats(SidecarInstance instance)
     {
-        return executeRequestAsync(requestBuilder()
-                                   .connectedClientStatsRequest()
-                                   .build());
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .connectedClientStatsRequest()
+                                            .build());
     }
 
     /**
-     * Executes the operational job request using the default retry policy and configured selection policy
+     * Executes the operational job request using the default retry policy and provided {@code instance}.
      *
-     * @return a completable future of the node settings
+     * @param instance the instance where the request will be executed
+     * @param jobId    the unique operational job identifier
+     * @return a completable future of the operational job response
      */
-    public CompletableFuture<OperationalJobResponse> operationalJobs(UUID jobId)
+    public CompletableFuture<OperationalJobResponse> operationalJobs(SidecarInstance instance, UUID jobId)
     {
-        return executor.executeRequestAsync(requestBuilder().operationalJobRequest(jobId).build());
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .operationalJobRequest(jobId)
+                                            .build());
     }
 
     /**
-     * Executes the list operational jobs request using the default retry policy and configured selection policy
+     * Executes the list operational jobs request using the default retry policy and provided {@code instance}.
      *
-     * @return a completable future of the jobs list
+     * @param instance the instance where the request will be executed
+     * @return a completable future of the list of operational jobs
      */
-    public CompletableFuture<ListOperationalJobsResponse> listOperationalJobs()
+    public CompletableFuture<ListOperationalJobsResponse> listOperationalJobs(SidecarInstance instance)
     {
-        return executor.executeRequestAsync(requestBuilder().listOperationalJobsRequest().build());
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .listOperationalJobsRequest()
+                                            .build());
     }
-
 
     /**
      * Returns a copy of the request builder with the default parameters configured for the client.

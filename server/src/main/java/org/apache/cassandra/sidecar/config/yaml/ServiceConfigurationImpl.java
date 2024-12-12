@@ -106,7 +106,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = SERVER_VERTICLE_INSTANCES_PROPERTY, defaultValue = DEFAULT_SERVER_VERTICLE_INSTANCES + "")
     protected final int serverVerticleInstances;
 
-    // TODO: remove all defaultValue. It is not active. It is misleading to have the annotation field.
     @JsonProperty(value = OPERATIONAL_JOB_TRACKER_SIZE_PROPERTY, defaultValue = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE + "")
     protected final int operationalJobTrackerSize;
 
@@ -505,6 +504,18 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         public Builder operationalJobTrackerSize(int operationalJobTrackerSize)
         {
             return update(b -> b.operationalJobTrackerSize = operationalJobTrackerSize);
+        }
+
+        /**
+         * Sets the {@code operationalJobExecutionMaxWaitTimeMillis} and returns a reference to this Builder
+         * enabling method chaining.
+         *
+         * @param operationalJobExecutionMaxWaitTimeMillis the {@code operationalJobExecutionMaxWaitTimeMillis} to set
+         * @return a reference to this Builder
+         */
+        public Builder operationalJobExecutionMaxWaitTimeMillis(int operationalJobExecutionMaxWaitTimeMillis)
+        {
+            return update(b -> b.operationalJobExecutionMaxWaitTimeMillis = operationalJobExecutionMaxWaitTimeMillis);
         }
 
         /**

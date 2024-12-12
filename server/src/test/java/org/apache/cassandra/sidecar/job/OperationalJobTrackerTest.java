@@ -42,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Tests to validate job tracking
  */
-public class OperationalJobTrackerTest
+class OperationalJobTrackerTest
 {
     private OperationalJobTracker jobTracker;
     private static final int trackerSize = 3;

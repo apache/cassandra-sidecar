@@ -62,7 +62,7 @@ import static org.mockito.Mockito.when;
  * Tests for the {@link ListOperationalJobsHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class ListOperationalJobsHandlerTest
+class ListOperationalJobsHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(ListOperationalJobsHandlerTest.class);
     Vertx vertx;

@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.common.server.exceptions;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 
 /**
- * Exception thrown when a operational job conflict is detected
+ * Exception thrown when an operational job conflict is detected
  */
 public class OperationalJobException extends RuntimeException
 {

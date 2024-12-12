@@ -38,6 +38,7 @@ public class ListOperationalJobsRequest extends JsonRequest<ListOperationalJobsR
     /**
      * {@inheritDoc}
      */
+    @Override
     public HttpMethod method()
     {
         return HttpMethod.GET;

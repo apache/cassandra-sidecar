@@ -512,7 +512,6 @@ public class RequestContext
             return request(LIST_JOBS_REQUEST);
         }
 
-
         /**
          * Sets the {@code retryPolicy} to be an
          * {@link org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy} configured with

@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.routes;
 
 import javax.inject.Inject;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
@@ -39,6 +38,7 @@ import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNN
 public class ListOperationalJobsHandler extends AbstractHandler<Void>
 {
     private final OperationalJobManager jobManager;
+
     @Inject
     public ListOperationalJobsHandler(InstanceMetadataFetcher metadataFetcher,
                                       ExecutorPools executorPools,
@@ -61,9 +61,8 @@ public class ListOperationalJobsHandler extends AbstractHandler<Void>
         ListOperationalJobsResponse listResponse = new ListOperationalJobsResponse();
         jobManager.allInflightJobs()
                   .stream()
-                  .map(job -> new OperationalJobResponse(job.jobId, RUNNING, job.name(), ""))
+                  .map(job -> new OperationalJobResponse(job.jobId, RUNNING, job.name(), null))
                   .forEach(listResponse::addJob);
-        context.response().setStatusCode(HttpResponseStatus.OK.code());
         context.json(listResponse);
     }
 }

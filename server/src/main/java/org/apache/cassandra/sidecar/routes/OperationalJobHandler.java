@@ -34,7 +34,6 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM;
-import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -63,7 +62,7 @@ public class OperationalJobHandler extends AbstractHandler<Void>
     @Override
     public void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
     {
-        UUID jobId = validateJobIdParam(context);
+        UUID jobId = validatedJobIdParam(context);
         executorPools.service()
                      .executeBlocking(() -> {
                          OperationalJob job = jobManager.getJobIfExists(jobId);
@@ -79,7 +78,7 @@ public class OperationalJobHandler extends AbstractHandler<Void>
                      .onSuccess(job -> sendStatusBasedResponse(context, jobId, job));
     }
 
-    private UUID validateJobIdParam(RoutingContext context)
+    UUID validatedJobIdParam(RoutingContext context)
     {
         String requestJobId = context.pathParam(OPERATIONAL_JOB_ID_PATH_PARAM.substring(1));
         if (requestJobId == null)
@@ -105,15 +104,19 @@ public class OperationalJobHandler extends AbstractHandler<Void>
     {
         OperationalJobStatus status = job.status();
         String reason = null;
-        switch(status)
+        switch (status)
         {
             case SUCCEEDED:
-                context.response().setStatusCode(HttpResponseStatus.OK.code()); break;
+                context.response().setStatusCode(HttpResponseStatus.OK.code());
+                break;
             case CREATED:
             case RUNNING:
-                context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code()); break;
+                context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code());
+                break;
             case FAILED:
+                context.response().setStatusCode(HttpResponseStatus.OK.code());
                 reason = job.asyncResult().cause().getMessage();
+                break;
         }
         context.json(new OperationalJobResponse(jobId, status, job.name(), reason));
     }

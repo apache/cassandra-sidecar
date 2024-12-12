@@ -87,7 +87,6 @@ import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
-import org.apache.cassandra.sidecar.job.OperationalJobTracker;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
@@ -668,13 +667,6 @@ public class MainModule extends AbstractModule
     public LocalTokenRangesProvider localTokenRangesProvider(InstancesConfig instancesConfig, DnsResolver dnsResolver)
     {
         return new CachedLocalTokenRanges(instancesConfig, dnsResolver);
-    }
-
-    @Provides
-    @Singleton
-    public OperationalJobTracker jobTracker(SidecarConfiguration configuration)
-    {
-        return new OperationalJobTracker(configuration.serviceConfiguration().operationalJobTrackerSize());
     }
 
     /**

@@ -28,18 +28,28 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Tracks and stores the results of long-running jobs running on the sidecar
  */
+@Singleton
 public class OperationalJobTracker
 {
     public static final long ONE_DAY_TTL = TimeUnit.DAYS.toMillis(1); // todo: consider making it configurable
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OperationalJobTracker.class);
     private final Map<UUID, OperationalJob> map;
+
+    @Inject
+    public OperationalJobTracker(ServiceConfiguration serviceConfiguration)
+    {
+        this(serviceConfiguration.operationalJobTrackerSize());
+    }
 
     public OperationalJobTracker(int initialCapacity)
     {
@@ -58,7 +68,7 @@ public class OperationalJobTracker
                     if (job.status().isCompleted() && job.isStale(System.currentTimeMillis(), ONE_DAY_TTL))
                     {
                         LOGGER.debug("Expiring completed and stale job due to job tracker has reached max size. jobId={} status={} createdAt={}",
-                                    job.jobId, job.status(), job.creationTime());
+                                     job.jobId, job.status(), job.creationTime());
                         return true;
                     }
                     else

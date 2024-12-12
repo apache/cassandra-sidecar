@@ -49,6 +49,7 @@ public abstract class OperationalJob implements Task<Void>
 
     /**
      * Constructs a job with a unique UUID, in Pending state
+     *
      * @param jobId UUID representing the Job to be created
      */
     protected OperationalJob(UUID jobId)
@@ -83,6 +84,7 @@ public abstract class OperationalJob implements Task<Void>
 
     /**
      * Determine whether the operational job is stale by considering both the referenceTimestampInMillis and the ttlInMillis
+     *
      * @return true if the job's life duration has exceeded ttlInMillis; otherwise, false
      */
     public boolean isStale(long referenceTimestampInMillis, long ttlInMillis)
@@ -141,8 +143,9 @@ public abstract class OperationalJob implements Task<Void>
      * The call-site should handle the possible failed future with {@link TimeoutException} from this method.
      *
      * @param executorPool executor pool to run the timer
-     * @param waitTime maximum time to wait before returning
-     * @return the async result or a failed future of {@link OperationalJobException} with the cause {@link TimeoutException} after exceeding the wait time
+     * @param waitTime     maximum time to wait before returning
+     * @return the async result or a failed future of {@link OperationalJobException} with the cause
+     * {@link TimeoutException} after exceeding the wait time
      */
     public Future<Void> asyncResult(TaskExecutorPool executorPool, Duration waitTime)
     {
@@ -157,7 +160,8 @@ public abstract class OperationalJob implements Task<Void>
         executorPool.setTimer(waitTime.toMillis(), d -> maxWaitTimePromise.tryComplete(true)); // complete with true, meaning timeout
         resultFut.onComplete(res -> maxWaitTimePromise.tryComplete(false)); // complete with false, meaning not timeout
         Future<Boolean> maxWaitTimeFut = maxWaitTimePromise.future();
-        // Completes as soon as any future succeeds, or when all futures fail. Note that maxWaitTimePromise is closed as soon as resultFut completes
+        // Completes as soon as any future succeeds, or when all futures fail. Note that maxWaitTimePromise is
+        // closed as soon as resultFut completes
         return Future.any(maxWaitTimeFut, resultFut)
                      // We want to return the result when applicable, of course.
                      // If this lambda below is evaluated, both futures are completed;
@@ -175,6 +179,7 @@ public abstract class OperationalJob implements Task<Void>
 
     /**
      * OperationalJob body. The implementation is executed in a blocking manner.
+     *
      * @throws OperationalJobException OperationalJobException that wraps job failure
      */
     protected abstract void executeInternal() throws OperationalJobException;
@@ -184,7 +189,7 @@ public abstract class OperationalJob implements Task<Void>
      * while tracking the status of the job's lifecycle.
      */
     @Override
-    public final void execute(Promise<Void> promise)
+    public void execute(Promise<Void> promise)
     {
         isExecuting = true;
         LOGGER.info("Executing job. jobId={}", jobId);

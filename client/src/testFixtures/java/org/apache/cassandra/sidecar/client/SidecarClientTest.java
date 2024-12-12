@@ -1282,12 +1282,18 @@ abstract class SidecarClientTest
                                 .setBody(jobStatusAsString);
         enqueue(response);
 
-        OperationalJobResponse result = client.operationalJobs(jobId).get(30, TimeUnit.SECONDS);
-        assertThat(result).isNotNull();
-        assertThat(result.jobId()).isEqualTo(jobId);
-        assertThat(result.status()).isEqualTo(OperationalJobStatus.RUNNING);
-        assertThat(result.operation()).isEqualTo("test");
-        validateResponseServed(ApiEndpointsV1.OPERATIONAL_JOB_ROUTE.replaceAll(OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()));
+        for (MockWebServer server : servers)
+        {
+            SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
+            OperationalJobResponse result = client.operationalJobs(sidecarInstance, jobId).get(30, TimeUnit.SECONDS);
+            assertThat(result).isNotNull();
+            assertThat(result.jobId()).isEqualTo(jobId);
+            assertThat(result.status()).isEqualTo(OperationalJobStatus.RUNNING);
+            assertThat(result.operation()).isEqualTo("test");
+            validateResponseServed(server,
+                                   ApiEndpointsV1.OPERATIONAL_JOB_ROUTE.replaceAll(OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()),
+                                   req -> { });
+        }
     }
 
     @Test
@@ -1300,13 +1306,18 @@ abstract class SidecarClientTest
                                 .setResponseCode(OK.code())
                                 .setHeader("content-type", "application/json")
                                 .setBody(listJobsString);
+
         enqueue(response);
 
-        ListOperationalJobsResponse result = client.listOperationalJobs().get(30, TimeUnit.SECONDS);
-        assertThat(result).isNotNull();
-        assertThat(result.jobs()).isNotNull();
-        assertThat(result.jobs().get(0).jobId()).isEqualTo(jobId);
-        validateResponseServed(ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE);
+        for (MockWebServer server : servers)
+        {
+            SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
+            ListOperationalJobsResponse result = client.listOperationalJobs(sidecarInstance).get(30, TimeUnit.SECONDS);
+            assertThat(result).isNotNull();
+            assertThat(result.jobs()).isNotNull();
+            assertThat(result.jobs().get(0).jobId()).isEqualTo(jobId);
+            validateResponseServed(server, ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE, req -> { });
+        }
     }
 
     @Test
@@ -1459,28 +1470,33 @@ abstract class SidecarClientTest
 
         MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(connectedClientStatsResponseAsString);
         enqueue(response);
-        ConnectedClientStatsResponse result = client.connectedClientStats().get();
 
-        assertThat(result).isNotNull();
-        assertThat(result.clientConnections()).isNotNull().hasSize(1);
-        assertThat(result.totalConnectedClients()).isNotNull().isEqualTo(1);
-        assertThat(result.connectionsByUser()).isNotNull().containsKey("anonymous");
-        ClientConnectionEntry entry = result.clientConnections().iterator().next();
-        assertThat(entry.address()).isEqualTo("127.0.0.1");
-        assertThat(entry.port()).isEqualTo(54628);
-        assertThat(entry.sslEnabled()).isEqualTo(false);
-        assertThat(entry.sslCipherSuite()).isEqualTo("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
-        assertThat(entry.sslProtocol()).isEqualTo("TLSv1.2");
-        assertThat(entry.protocolVersion()).isEqualTo("5");
-        assertThat(entry.username()).isEqualTo("anonymous");
-        assertThat(entry.requestCount()).isEqualTo(39);
-        assertThat(entry.driverName()).isEqualTo("DataStax Java Driver");
-        assertThat(entry.driverVersion()).isEqualTo("3.11.3");
-        assertThat(entry.keyspaceName()).isEqualTo("test");
-        assertThat(entry.authenticationMode()).isEqualTo("MutualTls");
-        assertThat(entry.authenticationMetadata()).containsKey("identity");
-        assertThat(entry.clientOptions()).containsKeys("CQL_VERSION", "DRIVER_NAME", "DRIVER_VERSION");
-        validateResponseServed(ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE);
+        for (MockWebServer server : servers)
+        {
+            SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
+            ConnectedClientStatsResponse result = client.connectedClientStats(sidecarInstance).get();
+
+            assertThat(result).isNotNull();
+            assertThat(result.clientConnections()).isNotNull().hasSize(1);
+            assertThat(result.totalConnectedClients()).isNotNull().isEqualTo(1);
+            assertThat(result.connectionsByUser()).isNotNull().containsKey("anonymous");
+            ClientConnectionEntry entry = result.clientConnections().iterator().next();
+            assertThat(entry.address()).isEqualTo("127.0.0.1");
+            assertThat(entry.port()).isEqualTo(54628);
+            assertThat(entry.sslEnabled()).isEqualTo(false);
+            assertThat(entry.sslCipherSuite()).isEqualTo("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
+            assertThat(entry.sslProtocol()).isEqualTo("TLSv1.2");
+            assertThat(entry.protocolVersion()).isEqualTo("5");
+            assertThat(entry.username()).isEqualTo("anonymous");
+            assertThat(entry.requestCount()).isEqualTo(39);
+            assertThat(entry.driverName()).isEqualTo("DataStax Java Driver");
+            assertThat(entry.driverVersion()).isEqualTo("3.11.3");
+            assertThat(entry.keyspaceName()).isEqualTo("test");
+            assertThat(entry.authenticationMode()).isEqualTo("MutualTls");
+            assertThat(entry.authenticationMetadata()).containsKey("identity");
+            assertThat(entry.clientOptions()).containsKeys("CQL_VERSION", "DRIVER_NAME", "DRIVER_VERSION");
+            validateResponseServed(server, ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE, req -> { });
+        }
     }
 
     private void enqueue(MockResponse response)
@@ -1502,16 +1518,26 @@ abstract class SidecarClientTest
     {
         for (MockWebServer server : servers)
         {
-            if (server.getRequestCount() > 0)
+            if (validateResponseServed(server, expectedEndpointPath, serverReceivedRequestVerifier))
             {
-                assertThat(server.getRequestCount()).isEqualTo(1);
-                RecordedRequest request = server.takeRequest();
-                serverReceivedRequestVerifier.accept(request);
-                assertThat(request.getPath()).isEqualTo(expectedEndpointPath);
                 return;
             }
         }
         fail("The request was not served by any of the provided servers");
+    }
+
+    private boolean validateResponseServed(MockWebServer server, String expectedEndpointPath, Consumer<RecordedRequest> serverReceivedRequestVerifier)
+    throws InterruptedException
+    {
+        if (server.getRequestCount() > 0)
+        {
+            assertThat(server.getRequestCount()).isEqualTo(1);
+            RecordedRequest request = server.takeRequest();
+            serverReceivedRequestVerifier.accept(request);
+            assertThat(request.getPath()).isEqualTo(expectedEndpointPath);
+            return true;
+        }
+        return false;
     }
 
     private InputStream resourceInputStream(String name)

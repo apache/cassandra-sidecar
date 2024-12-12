@@ -24,13 +24,21 @@ package org.apache.cassandra.sidecar.common.data;
  */
 public enum OperationalJobStatus
 {
-    // The operational job is created
+    /**
+     * The operational job is created
+     */
     CREATED,
-    // The operational job is running on Cassandra
+    /**
+     * The operational job is running on Cassandra
+     */
     RUNNING,
-    // The operational job succeeds
+    /**
+     * The operational job succeeds
+     */
     SUCCEEDED,
-    // The operational job fails
+    /**
+     * The operational job fails
+     */
     FAILED;
 
     public boolean isCompleted()

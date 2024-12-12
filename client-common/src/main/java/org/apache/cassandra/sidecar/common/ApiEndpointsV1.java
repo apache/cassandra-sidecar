@@ -40,7 +40,7 @@ public final class ApiEndpointsV1
     public static final String UPLOAD_ID_PATH_PARAM = ":uploadId";
     public static final String JOB_ID_PATH_PARAM = ":jobId";
 
-    public static final String OPERATIONAL_JOB_ID_PATH_PARAM = ":opsJobId";
+    public static final String OPERATIONAL_JOB_ID_PATH_PARAM = ":operationId";
 
     public static final String PER_KEYSPACE = "/keyspaces/" + KEYSPACE_PATH_PARAM;
     public static final String PER_TABLE = "/tables/" + TABLE_PATH_PARAM;

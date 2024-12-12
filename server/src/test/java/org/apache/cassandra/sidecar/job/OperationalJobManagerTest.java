@@ -46,11 +46,14 @@ import static org.mockito.Mockito.when;
 
 /**
  * Tests to validate the Job submission behavior for scenarios which are a combination of values for
- * 1) Downstream job existence,
- * 2) Cached job (null (not in cache), Completed/Failed job, Running job), and
- * 3) Request UUID (null (no header), UUID)
+ *
+ * <ul>
+ * <ol> 1) Downstream job existence,</ol>
+ * <ol> 2) Cached job (null (not in cache), Completed/Failed job, Running job), and</ol>
+ * <ol> 3) Request UUID (null (no header), UUID)</ol>
+ * </ul>
  */
-public class OperationalJobManagerTest
+class OperationalJobManagerTest
 {
     @Mock
     SidecarConfiguration mockConfig;

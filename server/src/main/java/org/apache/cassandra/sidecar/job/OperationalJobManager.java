@@ -37,7 +37,8 @@ public class OperationalJobManager
 
     /**
      * Creates a manager instance with a default sized job-tracker.
-     * @param jobTracker
+     *
+     * @param jobTracker the tracker for the operational jobs
      */
     @Inject
     public OperationalJobManager(OperationalJobTracker jobTracker)
@@ -47,6 +48,7 @@ public class OperationalJobManager
 
     /**
      * Fetches the inflight jobs being tracked on the sidecar
+     *
      * @return instances of the jobs that are in pending or running states
      */
     public List<OperationalJob> allInflightJobs()
@@ -59,6 +61,7 @@ public class OperationalJobManager
 
     /**
      * Fetch the job using its UUID
+     *
      * @param jobId identifier of the job
      * @return instance of the job or null
      */
