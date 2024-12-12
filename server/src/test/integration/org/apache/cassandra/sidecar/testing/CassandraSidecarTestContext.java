@@ -244,6 +244,16 @@ public class CassandraSidecarTestContext implements AutoCloseable
         }
     }
 
+    public CQLSessionProviderImpl buildNewCqlSessionProvider()
+    {
+        UpgradeableCluster cluster = cluster();
+        List<InstanceConfig> configs = buildInstanceConfigs(cluster);
+        List<InetSocketAddress> addresses = buildContactList(configs);
+        return new CQLSessionProviderImpl(vertx, addresses, addresses, 500, null,
+                                          0, username, password,
+                                          sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
+    }
+
     private InstancesConfig buildInstancesConfig(CassandraVersionProvider versionProvider,
                                                  DnsResolver dnsResolver)
     {
