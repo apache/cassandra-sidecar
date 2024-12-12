@@ -34,6 +34,7 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM;
+import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -103,21 +104,16 @@ public class OperationalJobHandler extends AbstractHandler<Void>
     public void sendStatusBasedResponse(RoutingContext context, UUID jobId, OperationalJob job)
     {
         OperationalJobStatus status = job.status();
-        String reason = null;
-        switch (status)
+        if (status.isCompleted())
         {
-            case SUCCEEDED:
-                context.response().setStatusCode(HttpResponseStatus.OK.code());
-                break;
-            case CREATED:
-            case RUNNING:
-                context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code());
-                break;
-            case FAILED:
-                context.response().setStatusCode(HttpResponseStatus.OK.code());
-                reason = job.asyncResult().cause().getMessage();
-                break;
+            context.response().setStatusCode(HttpResponseStatus.OK.code());
         }
+        else
+        {
+            context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code());
+        }
+
+        String reason = status == FAILED ? job.asyncResult().cause().getMessage() : null;
         context.json(new OperationalJobResponse(jobId, status, job.name(), reason));
     }
 }
