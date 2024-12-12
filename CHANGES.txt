@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Stopping Sidecar can take a long time (CASSSIDECAR-178)
  * Add support for operational job management of long-running node operations (CASSSIDECAR-150)
  * CDC directory not initialized properly in InstanceMetadata (CASSSIDECAR-171)
  * yaml configuration defaults to a file that doesn't exist (CASSSIDECAR-122)

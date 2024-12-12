@@ -46,6 +46,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SSLOptions;
 import io.vertx.core.net.TrafficShapingOptions;
 import io.vertx.ext.web.Router;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
@@ -150,7 +151,7 @@ public class Server
      *
      * @return a future completed with the result
      */
-    public Future<Void> close()
+    public Future<CompositeFuture> close()
     {
         LOGGER.info("Stopping Cassandra Sidecar");
         deployedServerVerticles.clear();
@@ -161,13 +162,41 @@ public class Server
         periodicTaskExecutor.close(periodicTaskExecutorPromise);
         closingFutures.add(periodicTaskExecutorPromise.future());
 
-        instancesConfig.instances()
-                       .forEach(instance ->
-                                closingFutures.add(executorPools.internal()
-                                                                .runBlocking(() -> instance.delegate().close())));
+        instancesConfig.instances().forEach(instance -> {
+            Promise<Void> closingFutureForInstance = Promise.promise();
+            executorPools.internal()
+                         .runBlocking(() -> {
+                             try
+                             {
+                                 CassandraAdapterDelegate delegate = instance.delegate();
+                                 if (delegate != null)
+                                 {
+                                     delegate.close();
+                                 }
+                             }
+                             catch (Exception e)
+                             {
+                                 LOGGER.error("Failed to close delegate", e);
+                                 closingFutureForInstance.tryFail(e);
+                             }
+                             finally
+                             {
+                                 closingFutureForInstance.tryComplete(null);
+                             }
+                         });
+            closingFutures.add(closingFutureForInstance.future());
+        });
+
         return Future.all(closingFutures)
-                     .compose(v1 -> executorPools.close())
-                     .onComplete(v -> vertx.close())
+                     .andThen(v1 -> {
+                         LOGGER.debug("Closing executor pools");
+                         executorPools.close();
+                     })
+                     .andThen(v -> {
+                         LOGGER.debug("Closing vertx");
+                         vertx.close();
+                     })
+                     .onFailure(t -> LOGGER.error("Failed to gracefully shutdown Cassandra Sidecar", t))
                      .onSuccess(f -> LOGGER.info("Successfully stopped Cassandra Sidecar"));
     }
 

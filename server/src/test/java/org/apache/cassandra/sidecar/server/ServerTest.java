@@ -211,6 +211,42 @@ class ServerTest
     }
 
     @Test
+    @DisplayName("Server should stop immediately when there port is already in use")
+    void stopImmediatelyWhenPortIsInUse(VertxTestContext context)
+    {
+        long attemptStartTimeMillis = System.currentTimeMillis();
+        server.start()
+              // simulate a bind exception due to address already in use
+              .compose(deploymentId -> Future.failedFuture(new java.net.BindException("Address already in use")))
+              .onComplete(context.failing(result -> {
+
+                  try
+                  {
+                      server.close()
+                            .toCompletionStage()
+                            .toCompletableFuture()
+                            .get(1, TimeUnit.MINUTES);
+                  }
+                  catch (Exception e)
+                  {
+                      context.failNow(e);
+                      return;
+                  }
+
+                  long elapsedTimeMillis = System.currentTimeMillis() - attemptStartTimeMillis;
+                  if (elapsedTimeMillis < TimeUnit.SECONDS.toMillis(10))
+                  {
+                      context.completeNow();
+                  }
+                  else
+                  {
+                      context.failNow("Expected server close to take less than 10000 millis, " +
+                                      "but it took " + elapsedTimeMillis + " millis");
+                  }
+              }));
+    }
+
+    @Test
     @DisplayName("Update should fail with null options")
     void updatingTrafficShapingOptionsWithNull(VertxTestContext context)
     {
