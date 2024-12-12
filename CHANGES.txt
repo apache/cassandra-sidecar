@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add support for operational job management of long-running node operations (CASSSIDECAR-150)
  * CDC directory not initialized properly in InstanceMetadata (CASSSIDECAR-171)
  * yaml configuration defaults to a file that doesn't exist (CASSSIDECAR-122)
  * Add advanced driver settings to allow taking in password or certificates for Cassandra connection (CASSSIDECAR-159)
@@ -115,4 +116,3 @@
  * Add support for SSL and bindable address (CASSANDRA-15030)
  * Autogenerate API docs for sidecar (CASSANDRA-15028)
  * C* Management process (CASSANDRA-14395)
- * Add support for operational job management of long-running node operations (CASSSIDECAR-150)
