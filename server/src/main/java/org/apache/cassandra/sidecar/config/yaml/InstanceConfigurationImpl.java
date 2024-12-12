@@ -47,6 +47,18 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
     @JsonProperty("cdc_dir")
     protected final String cdcDir;
 
+    @JsonProperty("commitlog_dir")
+    protected final String commitlogDir;
+
+    @JsonProperty("hints_dir")
+    protected final String hintsDir;
+
+    @JsonProperty("saved_caches_dir")
+    protected final String savedCachesDir;
+
+    @JsonProperty("local_system_data_file_dir")
+    protected final String localSystemDataFileDir;
+
     @JsonProperty("jmx_host")
     protected final String jmxHost;
 
@@ -64,17 +76,21 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
 
     public InstanceConfigurationImpl()
     {
-        this.id = 0;
-        this.host = null;
-        this.port = 9042;
-        this.dataDirs = null;
-        this.stagingDir = null;
-        this.cdcDir = null;
-        this.jmxHost = null;
-        this.jmxPort = 0;
-        this.jmxSslEnabled = false;
-        this.jmxRole = null;
-        this.jmxRolePassword = null;
+        this(0,
+             null,
+             9042,
+             null,
+             null,
+             null,
+             null,
+             null,
+             null,
+             null,
+             null,
+             0,
+             false,
+             null,
+             null);
     }
 
     public InstanceConfigurationImpl(int id,
@@ -83,6 +99,10 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
                                      List<String> dataDirs,
                                      String stagingDir,
                                      String cdcDir,
+                                     String commitlogDir,
+                                     String hintsDir,
+                                     String savedCachesDir,
+                                     String localSystemDataFileDir,
                                      String jmxHost,
                                      int jmxPort,
                                      boolean jmxSslEnabled,
@@ -92,9 +112,13 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
         this.id = id;
         this.host = host;
         this.port = port;
-        this.dataDirs = Collections.unmodifiableList(dataDirs);
+        this.dataDirs = dataDirs == null ? null : Collections.unmodifiableList(dataDirs);
         this.stagingDir = stagingDir;
         this.cdcDir = cdcDir;
+        this.commitlogDir = commitlogDir;
+        this.hintsDir = hintsDir;
+        this.savedCachesDir = savedCachesDir;
+        this.localSystemDataFileDir = localSystemDataFileDir;
         this.jmxHost = jmxHost;
         this.jmxPort = jmxPort;
         this.jmxSslEnabled = jmxSslEnabled;
@@ -150,6 +174,46 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
     public String stagingDir()
     {
         return stagingDir;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty("commitlog_dir")
+    public String commitlogDir()
+    {
+        return commitlogDir;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty("hints_dir")
+    public String hintsDir()
+    {
+        return hintsDir;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty("saved_caches_dir")
+    public String savedCachesDir()
+    {
+        return savedCachesDir;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty("local_system_data_file_dir")
+    public String localSystemDataFileDir()
+    {
+        return localSystemDataFileDir;
     }
 
     /**

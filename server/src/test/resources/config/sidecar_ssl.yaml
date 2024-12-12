@@ -27,6 +27,10 @@ cassandra_instances:
       - /ccm/test/node1/data0
       - /ccm/test/node1/data1
     staging_dir: /ccm/test/node1/sstable-staging
+    commitlog_dir: /ccm/test/node1/commitlog
+    hints_dir: /ccm/test/node1/hints
+    saved_caches_dir: /ccm/test/node1/saved_caches
+    local_system_data_file_dir: /ccm/test/node1/local_system_data
     jmx_host: 127.0.0.1
     jmx_port: 7100
     jmx_ssl_enabled: false
@@ -39,6 +43,10 @@ cassandra_instances:
       - /ccm/test/node2/data0
       - /ccm/test/node2/data1
     staging_dir: /ccm/test/node2/sstable-staging
+    commitlog_dir: /ccm/test/node2/commitlog
+    hints_dir: /ccm/test/node2/hints
+    saved_caches_dir: /ccm/test/node2/saved_caches
+    local_system_data_file_dir: /ccm/test/node2/local_system_data
     jmx_host: 127.0.0.1
     jmx_port: 7200
     jmx_ssl_enabled: false
@@ -51,6 +59,10 @@ cassandra_instances:
       - /ccm/test/node3/data0
       - /ccm/test/node3/data1
     staging_dir: /ccm/test/node3/sstable-staging
+    commitlog_dir: /ccm/test/node3/commitlog
+    hints_dir: /ccm/test/node3/hints
+    saved_caches_dir: /ccm/test/node3/saved_caches
+    local_system_data_file_dir: /ccm/test/node3/local_system_data
     jmx_host: 127.0.0.1
     jmx_port: 7300
     jmx_ssl_enabled: false

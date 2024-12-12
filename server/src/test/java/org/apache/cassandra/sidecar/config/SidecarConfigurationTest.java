@@ -429,6 +429,10 @@ class SidecarConfigurationTest
         assertThat(i1.jmxHost()).isEqualTo("127.0.0.1");
         assertThat(i1.jmxPort()).isEqualTo(7100);
         assertThat(i1.jmxSslEnabled()).isFalse();
+        assertThat(i1.commitlogDir()).isEqualTo("/ccm/test/node1/commitlog");
+        assertThat(i1.hintsDir()).isEqualTo("/ccm/test/node1/hints");
+        assertThat(i1.savedCachesDir()).isEqualTo("/ccm/test/node1/saved_caches");
+        assertThat(i1.localSystemDataFileDir()).isEqualTo("/ccm/test/node1/local_system_data");
 
         // instance 2
         assertThat(i2.id()).isEqualTo(2);
@@ -439,6 +443,10 @@ class SidecarConfigurationTest
         assertThat(i2.jmxHost()).isEqualTo("127.0.0.1");
         assertThat(i2.jmxPort()).isEqualTo(7200);
         assertThat(i2.jmxSslEnabled()).isFalse();
+        assertThat(i2.commitlogDir()).isEqualTo("/ccm/test/node2/commitlog");
+        assertThat(i2.hintsDir()).isEqualTo("/ccm/test/node2/hints");
+        assertThat(i2.savedCachesDir()).isEqualTo("/ccm/test/node2/saved_caches");
+        assertThat(i2.localSystemDataFileDir()).isEqualTo("/ccm/test/node2/local_system_data");
 
         // instance 3
         assertThat(i3.id()).isEqualTo(3);
@@ -449,6 +457,10 @@ class SidecarConfigurationTest
         assertThat(i3.jmxHost()).isEqualTo("127.0.0.1");
         assertThat(i3.jmxPort()).isEqualTo(7300);
         assertThat(i3.jmxSslEnabled()).isFalse();
+        assertThat(i3.commitlogDir()).isEqualTo("/ccm/test/node3/commitlog");
+        assertThat(i3.hintsDir()).isEqualTo("/ccm/test/node3/hints");
+        assertThat(i3.savedCachesDir()).isEqualTo("/ccm/test/node3/saved_caches");
+        assertThat(i3.localSystemDataFileDir()).isEqualTo("/ccm/test/node3/local_system_data");
 
         // service configuration
         validateServiceConfigurationFromYaml(config.serviceConfiguration());

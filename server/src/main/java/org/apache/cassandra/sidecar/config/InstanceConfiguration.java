@@ -51,6 +51,26 @@ public interface InstanceConfiguration
     String stagingDir();
 
     /**
+     * @return commitlog directory of cassandra instance
+     */
+    String commitlogDir();
+
+    /**
+     * @return hints directory of cassandra instance
+     */
+    String hintsDir();
+
+    /**
+     * @return saved caches directory of cassandra instance
+     */
+    String savedCachesDir();
+
+    /**
+     * @return local system data file directory of cassandra instance
+     */
+    String localSystemDataFileDir();
+
+    /**
      * @return cdc directory of the cassandra instance
      */
     String cdcDir();

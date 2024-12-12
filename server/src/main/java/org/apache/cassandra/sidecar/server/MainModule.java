@@ -922,6 +922,10 @@ public class MainModule extends AbstractModule
                                    .dataDirs(cassandraInstance.dataDirs())
                                    .stagingDir(cassandraInstance.stagingDir())
                                    .cdcDir(cassandraInstance.cdcDir())
+                                   .commitlogDir(cassandraInstance.commitlogDir())
+                                   .hintsDir(cassandraInstance.hintsDir())
+                                   .savedCachesDir(cassandraInstance.savedCachesDir())
+                                   .localSystemDataFileDir(cassandraInstance.localSystemDataFileDir())
                                    .delegate(delegate)
                                    .metricRegistry(instanceSpecificRegistry)
                                    .build();

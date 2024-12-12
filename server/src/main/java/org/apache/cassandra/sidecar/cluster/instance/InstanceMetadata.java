@@ -24,6 +24,7 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Metadata of an instance
@@ -65,6 +66,26 @@ public interface InstanceMetadata
      * @throws CassandraUnavailableException when the Cassandra service is unavailable
      */
     @NotNull CassandraAdapterDelegate delegate() throws CassandraUnavailableException;
+
+    /**
+     * @return commitlog directory of the cassandra instance
+     */
+    @Nullable String commitlogDir();
+
+    /**
+     * @return hints directory of the cassandra instance
+     */
+    @Nullable String hintsDir();
+
+    /**
+     * @return saved caches directory of the cassandra instance
+     */
+    @Nullable String savedCachesDir();
+
+    /**
+     * @return local system data file directory of the cassandra instance
+     */
+    @Nullable String localSystemDataFileDir();
 
     /**
      * @return {@link InstanceMetrics} metrics specific for the Cassandra instance

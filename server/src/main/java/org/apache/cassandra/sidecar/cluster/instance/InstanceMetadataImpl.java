@@ -47,6 +47,10 @@ public class InstanceMetadataImpl implements InstanceMetadata
     private final List<String> dataDirs;
     private final String stagingDir;
     private final String cdcDir;
+    private final String commitlogDir;
+    private final String hintsDir;
+    private final String savedCachesDir;
+    private final String localSystemDataFileDir;
     @Nullable
     private final CassandraAdapterDelegate delegate;
     private final InstanceMetrics metrics;
@@ -61,6 +65,10 @@ public class InstanceMetadataImpl implements InstanceMetadata
                                    .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
         stagingDir = FileUtils.maybeResolveHomeDirectory(builder.stagingDir);
         cdcDir = FileUtils.maybeResolveHomeDirectory(builder.cdcDir);
+        commitlogDir = FileUtils.maybeResolveHomeDirectory(builder.commitlogDir);
+        hintsDir = FileUtils.maybeResolveHomeDirectory(builder.hintsDir);
+        savedCachesDir = FileUtils.maybeResolveHomeDirectory(builder.savedCachesDir);
+        localSystemDataFileDir = FileUtils.maybeResolveHomeDirectory(builder.localSystemDataFileDir);
         delegate = builder.delegate;
         metrics = builder.metrics;
     }
@@ -112,6 +120,29 @@ public class InstanceMetadataImpl implements InstanceMetadata
         return delegate;
     }
 
+    public @Nullable String commitlogDir()
+    {
+        return commitlogDir;
+    }
+
+    @Override
+    public @Nullable String hintsDir()
+    {
+        return hintsDir;
+    }
+
+    @Override
+    public @Nullable String savedCachesDir()
+    {
+        return savedCachesDir;
+    }
+
+    @Override
+    public @Nullable String localSystemDataFileDir()
+    {
+        return localSystemDataFileDir;
+    }
+
     @Override
     @NotNull
     public InstanceMetrics metrics()
@@ -145,6 +176,10 @@ public class InstanceMetadataImpl implements InstanceMetadata
         protected List<String> dataDirs;
         protected String stagingDir;
         protected String cdcDir;
+        protected String commitlogDir;
+        protected String hintsDir;
+        protected String savedCachesDir;
+        protected String localSystemDataFileDir;
         protected CassandraAdapterDelegate delegate;
         protected MetricRegistry metricRegistry;
         protected InstanceMetrics metrics;
@@ -161,6 +196,10 @@ public class InstanceMetadataImpl implements InstanceMetadata
             dataDirs = new ArrayList<>(instanceMetadata.dataDirs);
             stagingDir = instanceMetadata.stagingDir;
             cdcDir = instanceMetadata.cdcDir;
+            commitlogDir = instanceMetadata.commitlogDir;
+            hintsDir = instanceMetadata.hintsDir;
+            savedCachesDir = instanceMetadata.savedCachesDir;
+            localSystemDataFileDir = instanceMetadata.localSystemDataFileDir;
             delegate = instanceMetadata.delegate;
             metrics = instanceMetadata.metrics;
         }
@@ -235,6 +274,50 @@ public class InstanceMetadataImpl implements InstanceMetadata
         public Builder cdcDir(String cdcDir)
         {
             return update(b -> b.cdcDir = cdcDir);
+        }
+
+        /**
+         * Sets the {@code commitlogDir} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param commitlogDir the {@code commitlogDir} to set
+         * @return a reference to this Builder
+         */
+        public Builder commitlogDir(String commitlogDir)
+        {
+            return update(b -> b.commitlogDir = commitlogDir);
+        }
+
+        /**
+         * Sets the {@code hintsDir} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param hintsDir the {@code hintsDir} to set
+         * @return a reference to this Builder
+         */
+        public Builder hintsDir(String hintsDir)
+        {
+            return update(b -> b.hintsDir = hintsDir);
+        }
+
+        /**
+         * Sets the {@code savedCachesDir} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param savedCachesDir the {@code savedCachesDir} to set
+         * @return a reference to this Builder
+         */
+        public Builder savedCachesDir(String savedCachesDir)
+        {
+            return update(b -> b.savedCachesDir = savedCachesDir);
+        }
+
+        /**
+         * Sets the {@code localSystemDataFileDir} and return a reference to this Builder enabling method chaining.
+         *
+         * @param localSystemDataFileDir the {@code localSystemDataFileDir} to set
+         * @return a reference to this Builder
+         */
+        public Builder localSystemDataFileDir(String localSystemDataFileDir)
+        {
+            return update(b -> b.localSystemDataFileDir = localSystemDataFileDir);
         }
 
         /**

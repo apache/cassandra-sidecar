@@ -39,6 +39,10 @@ class InstanceMetadataImplTest
     private static final String DATA_DIR_2 = "test/data/data2";
     private static final String CDC_DIR = "cdc_dir";
     private static final String STAGING_DIR = "staging_dir";
+    private static final String COMMITLOG_DIR = "commitlog";
+    private static final String HINTS_DIR = "hints";
+    private static final String SAVED_CACHES_DIR = "saved_caches";
+    private static final String LOCAL_SYSTEM_DATA_FILE_DIR = "local_system_data";
     private static final MetricRegistry METRIC_REGISTRY = new MetricRegistry();
 
     @TempDir
@@ -57,6 +61,10 @@ class InstanceMetadataImplTest
         assertThat(metadata.dataDirs()).contains(rootDir + "/" + DATA_DIR_1, rootDir + "/" + DATA_DIR_2);
         assertThat(metadata.cdcDir()).isEqualTo(rootDir + "/" + CDC_DIR);
         assertThat(metadata.stagingDir()).isEqualTo(rootDir + "/" + STAGING_DIR);
+        assertThat(metadata.commitlogDir()).isEqualTo(rootDir + "/" + COMMITLOG_DIR);
+        assertThat(metadata.hintsDir()).isEqualTo(rootDir + "/" + HINTS_DIR);
+        assertThat(metadata.savedCachesDir()).isEqualTo(rootDir + "/" + SAVED_CACHES_DIR);
+        assertThat(metadata.localSystemDataFileDir()).isEqualTo(rootDir + "/" + LOCAL_SYSTEM_DATA_FILE_DIR);
     }
 
     @Test
@@ -70,6 +78,38 @@ class InstanceMetadataImplTest
         assertThat(metadata.dataDirs()).contains(homeDir + "/" + DATA_DIR_1, homeDir + "/" + DATA_DIR_2);
         assertThat(metadata.cdcDir()).isEqualTo(homeDir + "/" + CDC_DIR);
         assertThat(metadata.stagingDir()).isEqualTo(homeDir + "/" + STAGING_DIR);
+        assertThat(metadata.commitlogDir()).isEqualTo(homeDir + "/" + COMMITLOG_DIR);
+        assertThat(metadata.hintsDir()).isEqualTo(homeDir + "/" + HINTS_DIR);
+        assertThat(metadata.savedCachesDir()).isEqualTo(homeDir + "/" + SAVED_CACHES_DIR);
+        assertThat(metadata.localSystemDataFileDir()).isEqualTo(homeDir + "/" + LOCAL_SYSTEM_DATA_FILE_DIR);
+    }
+
+    @Test
+    void testConstructorOptionalDirs()
+    {
+        // Some directories of Cassandra like commitlog_dir, hints_dir, saved_caches_dir and
+        // local_system_data_file_dir are not required to specified in sidecar configuration
+        // to use the majority of features in sidecar. User should be able to initialize InstanceMetadata
+        // even when these directories are not specified in sidecar configuration.
+        String rootDir = tempDir.toString();
+
+        InstanceMetadataImpl metadata = getInstanceMetadataBuilder(rootDir)
+                                        .commitlogDir(null)
+                                        .hintsDir(null)
+                                        .savedCachesDir(null)
+                                        .localSystemDataFileDir(null)
+                                        .build();
+
+        assertThat(metadata.id()).isEqualTo(ID);
+        assertThat(metadata.host()).isEqualTo(HOST);
+        assertThat(metadata.port()).isEqualTo(PORT);
+        assertThat(metadata.dataDirs()).contains(rootDir + "/" + DATA_DIR_1, rootDir + "/" + DATA_DIR_2);
+        assertThat(metadata.cdcDir()).isEqualTo(rootDir + "/" + CDC_DIR);
+        assertThat(metadata.stagingDir()).isEqualTo(rootDir + "/" + STAGING_DIR);
+        assertThat(metadata.commitlogDir()).isEqualTo(null);
+        assertThat(metadata.hintsDir()).isEqualTo(null);
+        assertThat(metadata.savedCachesDir()).isEqualTo(null);
+        assertThat(metadata.localSystemDataFileDir()).isEqualTo(null);
     }
 
     InstanceMetadataImpl.Builder getInstanceMetadataBuilder(String rootDir)
@@ -85,6 +125,10 @@ class InstanceMetadataImplTest
                                    .dataDirs(dataDirs)
                                    .cdcDir(rootDir + "/" + CDC_DIR)
                                    .stagingDir(rootDir + "/" + STAGING_DIR)
+                                   .commitlogDir(rootDir + "/" + COMMITLOG_DIR)
+                                   .hintsDir(rootDir + "/" + HINTS_DIR)
+                                   .savedCachesDir(rootDir + "/" + SAVED_CACHES_DIR)
+                                   .localSystemDataFileDir(rootDir + "/" + LOCAL_SYSTEM_DATA_FILE_DIR)
                                    .metricRegistry(METRIC_REGISTRY);
     }
 }
