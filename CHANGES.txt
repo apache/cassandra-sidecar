@@ -115,3 +115,4 @@
  * Add support for SSL and bindable address (CASSANDRA-15030)
  * Autogenerate API docs for sidecar (CASSANDRA-15028)
  * C* Management process (CASSANDRA-14395)
+ * Add support for operational job management of long-running node operations (CASSSIDECAR-150)
