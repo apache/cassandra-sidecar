@@ -30,10 +30,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
-import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
-import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
 import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutorTest;
-import org.jetbrains.annotations.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
