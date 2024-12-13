@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Mechanism to have a reduced number of Sidecar instances run operations (CASSSIDECAR-174)
  * Adding support for CDC APIs into sidecar client (CASSSIDECAR-172)
  * Stopping Sidecar can take a long time (CASSSIDECAR-178)
  * Add support for operational job management of long-running node operations (CASSSIDECAR-150)
