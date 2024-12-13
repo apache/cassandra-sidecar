@@ -120,7 +120,7 @@ public class TokenZeroElectorateMembership implements ElectorateMembership
                 continue;
             }
 
-            String localInstanceHostAndPort = StringUtils.hostAddress(address);
+            String localInstanceHostAndPort = StringUtils.cassandraFormattedHostAndPort(address);
             for (String userKeyspace : userKeyspaces)
             {
                 TokenRangeReplicasResponse tokenRangeReplicas = operations.tokenRangeReplicas(new Name(userKeyspace), nodeSettings.partitioner());

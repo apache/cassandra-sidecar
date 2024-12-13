@@ -32,6 +32,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
 import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
+import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutorTest;
 import org.jetbrains.annotations.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,19 +42,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class PeriodicTaskExecutorTest
 {
-    private static final @Nullable SingleInstanceExecutor NEVER_SCHEDULE_EXECUTOR = new SingleInstanceExecutor()
-    {
-        @Override
-        public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
-        {
-        }
-
-        @Override
-        public boolean isLocalSidecarSingleInstanceExecutor()
-        {
-            return false;
-        }
-    };
     Vertx vertx = Vertx.vertx();
     ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
 
@@ -101,7 +89,8 @@ class PeriodicTaskExecutorTest
     {
         CountDownLatch latch = new CountDownLatch(1);
         SimulatedTask taskThatRunsOnNonLeader = new SimulatedTask(latch);
-        PeriodicTaskExecutor taskExecutorNonLeader = new PeriodicTaskExecutor(executorPools, NEVER_SCHEDULE_EXECUTOR);
+        PeriodicTaskExecutor taskExecutorNonLeader = new PeriodicTaskExecutor(executorPools,
+                                                                              SingleInstanceExecutorTest.NEVER_SCHEDULE_EXECUTOR);
 
         taskExecutorNonLeader.schedule(taskThatRunsOnNonLeader);
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();
@@ -114,7 +103,7 @@ class PeriodicTaskExecutorTest
         CountDownLatch latch = new CountDownLatch(1);
         SimulatedTask taskThatRunsOnLeader = new SimulatedTask(latch);
         PeriodicTaskExecutor taskExecutorLeader = new PeriodicTaskExecutor(executorPools,
-                                                                           SingleInstanceExecutor.ALWAYS_SCHEDULE_EXECUTOR);
+                                                                           SingleInstanceExecutorTest.ALWAYS_SCHEDULE_EXECUTOR);
 
         taskExecutorLeader.schedule(taskThatRunsOnLeader);
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();

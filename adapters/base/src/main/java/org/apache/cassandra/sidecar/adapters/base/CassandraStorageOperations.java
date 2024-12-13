@@ -125,7 +125,8 @@ public class CassandraStorageOperations implements StorageOperations
         requireNonNull(table, "table must be non-null");
         try
         {
-            initializeStorageOps().takeSnapshot(tag, options, keyspace + "." + table);
+            jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                     .takeSnapshot(tag, options, keyspace + "." + table);
         }
         catch (IOException e)
         {
@@ -161,7 +162,8 @@ public class CassandraStorageOperations implements StorageOperations
         LOGGER.debug("Table is not supported by Cassandra JMX endpoints. " +
                      "Clearing snapshot with tag={} and keyspace={}; table={} is ignored", tag, keyspace, table);
         String[] keyspaces = { keyspace };
-        initializeStorageOps().clearSnapshot(tag, keyspaces);
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .clearSnapshot(tag, keyspaces);
     }
 
     /**
@@ -195,7 +197,8 @@ public class CassandraStorageOperations implements StorageOperations
             // a new CassandraAdapterDelegate will be constructed and this value will get repopulated
             // once accessed, if there were any changes to the data file locations for the Cassandra
             // process, Sidecar will get the correct list of data directories.
-            String[] allDataFileLocations = initializeStorageOps().getAllDataFileLocations();
+            String[] allDataFileLocations = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                                                     .getAllDataFileLocations();
             dataFileLocations = Collections.unmodifiableList(Arrays.asList(allDataFileLocations));
         }
         return dataFileLocations;
@@ -207,12 +210,7 @@ public class CassandraStorageOperations implements StorageOperations
     {
         requireNonNull(keyspace, "keyspace must be non-null");
         requireNonNull(table, "table must be non-null");
-        initializeStorageOps().forceKeyspaceCleanup(concurrency, keyspace, table);
-    }
-
-    protected StorageJmxOperations initializeStorageOps()
-    {
-        return new GossipDependentStorageJmxOperations(jmxClient.proxy(StorageJmxOperations.class,
-                                                                       STORAGE_SERVICE_OBJ_NAME));
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .forceKeyspaceCleanup(concurrency, keyspace, table);
     }
 }

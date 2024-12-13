@@ -71,18 +71,18 @@ public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseS
     public static class LeaseClaimResult
     {
         public final boolean leaseAcquired;
-        public final String existingOwner;
+        public final String currentOwner;
 
-        LeaseClaimResult(boolean leaseAcquired, String existingOwner)
+        LeaseClaimResult(boolean leaseAcquired, String currentOwner)
         {
             this.leaseAcquired = leaseAcquired;
-            this.existingOwner = existingOwner;
+            this.currentOwner = currentOwner;
         }
 
-        static LeaseClaimResult from(ResultSet resultSet, String owner)
+        static LeaseClaimResult from(ResultSet resultSet, String newOwner)
         {
             return resultSet.wasApplied()
-                   ? new LeaseClaimResult(true, owner)
+                   ? new LeaseClaimResult(true, newOwner)
                    : new LeaseClaimResult(false, resultSet.one().getString("owner"));
         }
     }

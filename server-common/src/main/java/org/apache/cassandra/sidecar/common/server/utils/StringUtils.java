@@ -38,7 +38,7 @@ public class StringUtils
      * the Cassandra server
      */
     @SuppressWarnings("UnstableApiUsage")
-    public static String hostAddress(InetSocketAddress address)
+    public static String cassandraFormattedHostAndPort(InetSocketAddress address)
     {
         return HostAndPort.fromParts(address.getAddress().getHostAddress(), address.getPort()).toString();
     }

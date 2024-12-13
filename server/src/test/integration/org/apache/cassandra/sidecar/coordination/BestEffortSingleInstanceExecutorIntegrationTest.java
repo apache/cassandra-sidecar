@@ -112,8 +112,8 @@ class BestEffortSingleInstanceExecutorIntegrationTest
         Object[][] currentLeaderQueryResult = queryCurrentLeaders(cluster);
         // Search for the leader
         BestEffortSingleInstanceExecutor currentLeader = getCurrentLeader(electionInProcess);
-        assertThat(currentLeader.owner()).as("Expected owner to be %s but it %s", currentLeaderQueryResult[0][1], currentLeader.owner())
-                                         .isEqualTo(currentLeaderQueryResult[0][1]);
+        assertThat(currentLeader.sidecarHostId()).as("Expected owner to be %s but it %s", currentLeaderQueryResult[0][1], currentLeader.sidecarHostId())
+                                                 .isEqualTo(currentLeaderQueryResult[0][1]);
 
         // Now simulate the case where the current leader forgets that it is the current leader
         // The current leader must be able to recover the leadership information
@@ -167,9 +167,9 @@ class BestEffortSingleInstanceExecutorIntegrationTest
         assertThat(currentLeaders).as("Existing leader is part of the leaders")
                                   .anyMatch(leader -> leader == currentLeader);
         assertThat(currentLeaders).as("New leader is also part of the leaders")
-                                  .anyMatch(leader -> leader.owner().equals(newLeaderQueryResult1[0][1]));
-        assertThat(currentLeader.owner()).as("New leader is not the same as the previous leader")
-                                         .isNotEqualTo(newLeaderQueryResult1[0][1]);
+                                  .anyMatch(leader -> leader.sidecarHostId().equals(newLeaderQueryResult1[0][1]));
+        assertThat(currentLeader.sidecarHostId()).as("New leader is not the same as the previous leader")
+                                                 .isNotEqualTo(newLeaderQueryResult1[0][1]);
 
         // Re-enable binary on the original leader, the original leader
         // will learn that it is no longer a leader.

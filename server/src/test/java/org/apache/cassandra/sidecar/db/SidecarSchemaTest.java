@@ -53,6 +53,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
+import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutorTest;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
@@ -268,7 +269,7 @@ public class SidecarSchemaTest
         @Singleton
         public SingleInstanceExecutor singleInstanceExecutor()
         {
-            return SingleInstanceExecutor.ALWAYS_SCHEDULE_EXECUTOR;
+            return SingleInstanceExecutorTest.ALWAYS_SCHEDULE_EXECUTOR;
         }
     }
 }

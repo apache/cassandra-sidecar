@@ -141,27 +141,11 @@ public class BestEffortSingleInstanceExecutor implements SingleInstanceExecutor,
         boolean wasCurrentExecutor = isLocalSidecarSingleInstanceExecutor;
         Boolean isCurrentExecutor = null;
 
-        String owner = owner();
-        LOGGER.debug("Starting selection for owner={}", owner);
+        String sidecarHostId = sidecarHostId();
+        LOGGER.debug("Starting selection for sidecarHostId={}", sidecarHostId);
         if (wasCurrentExecutor)
         {
-            SidecarLeaseDatabaseAccessor.LeaseClaimResult result = null;
-            try
-            {
-                LOGGER.debug("Attempting to extend lease for owner={}", owner);
-                result = accessor.extendLease(owner);
-            }
-            catch (CASWriteUnknownException | NoHostAvailableException e)
-            {
-                LOGGER.debug("Unable to claim lease for owner={}", owner, e);
-            }
-            catch (Exception e)
-            {
-                LOGGER.error("Unable to extend lease for owner={}", owner, e);
-            }
-
-            isCurrentExecutor = determineIfIsCurrentLeaseHolder(isCurrentExecutor, result, owner);
-            LOGGER.debug("Extend lease for owner={} result={}", owner, isCurrentExecutor);
+            isCurrentExecutor = executeLeaseAction(sidecarHostId, isCurrentExecutor);
         }
 
         if (isCurrentExecutor == null || !isCurrentExecutor)
@@ -169,22 +153,49 @@ public class BestEffortSingleInstanceExecutor implements SingleInstanceExecutor,
             SidecarLeaseDatabaseAccessor.LeaseClaimResult result = null;
             try
             {
-                LOGGER.debug("Attempting to claim lease for owner={}", owner);
-                result = accessor.claimLease(owner);
+                LOGGER.debug("Attempting to claim lease for sidecarHostId={}", sidecarHostId);
+                result = accessor.claimLease(sidecarHostId);
             }
             catch (CASWriteUnknownException | NoHostAvailableException e)
             {
-                LOGGER.debug("Unable to claim lease for owner={}", owner, e);
+                LOGGER.debug("Unable to claim lease for sidecarHostId={}", sidecarHostId, e);
             }
             catch (Exception e)
             {
-                LOGGER.error("Unable to claim lease for owner={}", owner, e);
+                LOGGER.error("Unable to claim lease for sidecarHostId={}", sidecarHostId, e);
             }
 
-            isCurrentExecutor = determineIfIsCurrentLeaseHolder(isCurrentExecutor, result, owner);
-            LOGGER.debug("Claim lease for owner={} result={}", owner, isCurrentExecutor);
+            isCurrentExecutor = determineIfIsCurrentLeaseHolder(isCurrentExecutor, result, sidecarHostId);
+            LOGGER.debug("Claim lease for sidecarHostId={} result={}", sidecarHostId, isCurrentExecutor);
         }
 
+        maybeNotifyResults(isCurrentExecutor, sidecarHostId, wasCurrentExecutor);
+    }
+
+    private Boolean executeLeaseAction(String sidecarHostId, Boolean isCurrentExecutor)
+    {
+        SidecarLeaseDatabaseAccessor.LeaseClaimResult result = null;
+        try
+        {
+            LOGGER.debug("Attempting to extend lease for sidecarHostId={}", sidecarHostId);
+            result = accessor.extendLease(sidecarHostId);
+        }
+        catch (CASWriteUnknownException | NoHostAvailableException e)
+        {
+            LOGGER.debug("Unable to claim lease for sidecarHostId={}", sidecarHostId, e);
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Unable to extend lease for sidecarHostId={}", sidecarHostId, e);
+        }
+
+        isCurrentExecutor = determineIfIsCurrentLeaseHolder(isCurrentExecutor, result, sidecarHostId);
+        LOGGER.debug("Extend lease for sidecarHostId={} result={}", sidecarHostId, isCurrentExecutor);
+        return isCurrentExecutor;
+    }
+
+    private void maybeNotifyResults(Boolean isCurrentExecutor, String owner, boolean wasCurrentExecutor)
+    {
         if (isCurrentExecutor == null)
         {
             LOGGER.debug("Unable to perform lease election for owner={}", owner);
@@ -220,32 +231,31 @@ public class BestEffortSingleInstanceExecutor implements SingleInstanceExecutor,
     }
 
     protected Boolean determineIfIsCurrentLeaseHolder(Boolean isCurrentLeaseHolder,
-                                                   SidecarLeaseDatabaseAccessor.LeaseClaimResult result,
-                                                   String owner)
+                                                      SidecarLeaseDatabaseAccessor.LeaseClaimResult result,
+                                                      String sidecarHostId)
     {
-        if (result != null)
+        if (result == null)
         {
-            if (result.leaseAcquired)
-            {
-                return true;
-            }
-            else
-            {
-                // For the case where the current Sidecar was a lease-holder but the information was lost from
-                // the in-memory process (i.e. Sidecar restarted) but the information is still persisted
-                // in the database, so we recover the state from the database
-                return owner.equals(result.existingOwner);
-            }
+            return isCurrentLeaseHolder;
         }
-        return isCurrentLeaseHolder;
+
+        if (result.leaseAcquired)
+        {
+            return true;
+        }
+
+        // For the case where the current Sidecar was a lease-holder but the information was lost from
+        // the in-memory process (i.e. Sidecar restarted) but the information is still persisted
+        // in the database, so we recover the state from the database
+        return sidecarHostId.equals(result.currentOwner);
     }
 
     /**
-     * Returns the configured host ID for Sidecar.
+     * Returns a unique identifier for the Sidecar instance.
      *
-     * @return the configured host ID for Sidecar
+     * @return a unique identifier for the Sidecar instance
      */
-    protected String owner()
+    protected String sidecarHostId()
     {
         return config.hostId();
     }

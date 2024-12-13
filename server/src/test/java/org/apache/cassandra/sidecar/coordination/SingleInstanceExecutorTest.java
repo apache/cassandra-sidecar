@@ -19,22 +19,35 @@
 package org.apache.cassandra.sidecar.coordination;
 
 /**
- * Defines an interface to choose a single Sidecar instance that will run certain types of operations that need to
- * run on a limited subset of Sidecar instances. In most cases there will be a single Sidecar instance chosen as
- * the executor.
+ * Test helpers for {@link SingleInstanceExecutor}
  */
-public interface SingleInstanceExecutor
+public class SingleInstanceExecutorTest
 {
-    /**
-     * A process that determines the single instance executor.
-     *
-     * @param electorateMembership determines eligibility to participate in the determination of the single instance
-     *                             executor
-     */
-    void determineSingleInstanceExecutor(ElectorateMembership electorateMembership);
+    public static final SingleInstanceExecutor ALWAYS_SCHEDULE_EXECUTOR = new SingleInstanceExecutor()
+    {
+        @Override
+        public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
+        {
+        }
 
-    /**
-     * @return {@code true} if the local Sidecar instance is a single instance executor, {@code false} otherwise
-     */
-    boolean isLocalSidecarSingleInstanceExecutor();
+        @Override
+        public boolean isLocalSidecarSingleInstanceExecutor()
+        {
+            return true;
+        }
+    };
+
+    public static final SingleInstanceExecutor NEVER_SCHEDULE_EXECUTOR = new SingleInstanceExecutor()
+    {
+        @Override
+        public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
+        {
+        }
+
+        @Override
+        public boolean isLocalSidecarSingleInstanceExecutor()
+        {
+            return false;
+        }
+    };
 }
