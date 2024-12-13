@@ -42,27 +42,27 @@ public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseS
     /**
      * Attempts to obtain the lease, returning the result of the claim
      *
-     * @param owner the owner performing the claim
+     * @param leaseClaimer the identifier of the instances attempting to claim the lease
      * @return the results of performing the lease claim
      */
-    public LeaseClaimResult claimLease(String owner)
+    public LeaseClaimResult claimLease(String leaseClaimer)
     {
-        BoundStatement statement = tableSchema.claimLeaseStatement().bind(owner);
+        BoundStatement statement = tableSchema.claimLeaseStatement().bind(leaseClaimer);
         ResultSet resultSet = execute(statement);
-        return LeaseClaimResult.from(resultSet, owner);
+        return LeaseClaimResult.from(resultSet, leaseClaimer);
     }
 
     /**
      * Attempts to extend the existing lease, returning the result of the attempt
      *
-     * @param owner the owner performing the claim
+     * @param currentOwner the current owner extending the lease
      * @return the results of performing the lease extension
      */
-    public LeaseClaimResult extendLease(String owner)
+    public LeaseClaimResult extendLease(String currentOwner)
     {
-        BoundStatement statement = tableSchema.extendLeaseStatement().bind(owner, owner);
+        BoundStatement statement = tableSchema.extendLeaseStatement().bind(currentOwner, currentOwner);
         ResultSet resultSet = execute(statement);
-        return LeaseClaimResult.from(resultSet, owner);
+        return LeaseClaimResult.from(resultSet, currentOwner);
     }
 
     /**

@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
+import java.util.function.Function;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,52 +147,39 @@ public class BestEffortSingleInstanceExecutor implements SingleInstanceExecutor,
         LOGGER.debug("Starting selection for sidecarHostId={}", sidecarHostId);
         if (wasCurrentExecutor)
         {
-            isCurrentExecutor = executeLeaseAction(sidecarHostId, isCurrentExecutor);
+            isCurrentExecutor = executeLeaseAction("extend", sidecarHostId, accessor::extendLease, isCurrentExecutor);
         }
 
         if (isCurrentExecutor == null || !isCurrentExecutor)
         {
-            SidecarLeaseDatabaseAccessor.LeaseClaimResult result = null;
-            try
-            {
-                LOGGER.debug("Attempting to claim lease for sidecarHostId={}", sidecarHostId);
-                result = accessor.claimLease(sidecarHostId);
-            }
-            catch (CASWriteUnknownException | NoHostAvailableException e)
-            {
-                LOGGER.debug("Unable to claim lease for sidecarHostId={}", sidecarHostId, e);
-            }
-            catch (Exception e)
-            {
-                LOGGER.error("Unable to claim lease for sidecarHostId={}", sidecarHostId, e);
-            }
-
-            isCurrentExecutor = determineIfIsCurrentLeaseHolder(isCurrentExecutor, result, sidecarHostId);
-            LOGGER.debug("Claim lease for sidecarHostId={} result={}", sidecarHostId, isCurrentExecutor);
+            isCurrentExecutor = executeLeaseAction("claim", sidecarHostId, accessor::claimLease, isCurrentExecutor);
         }
 
         maybeNotifyResults(isCurrentExecutor, sidecarHostId, wasCurrentExecutor);
     }
 
-    private Boolean executeLeaseAction(String sidecarHostId, Boolean isCurrentExecutor)
+    Boolean executeLeaseAction(String actionName,
+                               String sidecarHostId,
+                               Function<String, SidecarLeaseDatabaseAccessor.LeaseClaimResult> actionFn,
+                               Boolean isCurrentExecutor)
     {
         SidecarLeaseDatabaseAccessor.LeaseClaimResult result = null;
         try
         {
-            LOGGER.debug("Attempting to extend lease for sidecarHostId={}", sidecarHostId);
-            result = accessor.extendLease(sidecarHostId);
+            LOGGER.debug("Attempting to {} lease for sidecarHostId={}", actionName, sidecarHostId);
+            result = actionFn.apply(sidecarHostId);
         }
         catch (CASWriteUnknownException | NoHostAvailableException e)
         {
-            LOGGER.debug("Unable to claim lease for sidecarHostId={}", sidecarHostId, e);
+            LOGGER.debug("Unable to {} lease for sidecarHostId={}", actionName, sidecarHostId, e);
         }
         catch (Exception e)
         {
-            LOGGER.error("Unable to extend lease for sidecarHostId={}", sidecarHostId, e);
+            LOGGER.error("Unable to {} lease for sidecarHostId={}", actionName, sidecarHostId, e);
         }
 
         isCurrentExecutor = determineIfIsCurrentLeaseHolder(isCurrentExecutor, result, sidecarHostId);
-        LOGGER.debug("Extend lease for sidecarHostId={} result={}", sidecarHostId, isCurrentExecutor);
+        LOGGER.debug("{} lease for sidecarHostId={} result={}", actionName, sidecarHostId, isCurrentExecutor);
         return isCurrentExecutor;
     }
 
