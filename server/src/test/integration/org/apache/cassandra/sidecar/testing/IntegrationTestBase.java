@@ -195,6 +195,11 @@ public abstract class IntegrationTestBase
         return -1;
     }
 
+    protected void testWithClient(Consumer<WebClient> tester)
+    {
+        testWithClient(true, tester);
+    }
+
     protected void testWithClient(VertxTestContext context, Consumer<WebClient> tester) throws Exception
     {
         testWithClient(context, true, tester);
@@ -204,6 +209,14 @@ public abstract class IntegrationTestBase
                                   boolean waitForCluster,
                                   Consumer<WebClient> tester)
     throws Exception
+    {
+        testWithClient(waitForCluster, tester);
+         // wait until the test completes
+        assertThat(context.awaitCompletion(2, TimeUnit.MINUTES)).isTrue();
+    }
+
+    protected void testWithClient(boolean waitForCluster,
+                                  Consumer<WebClient> tester)
     {
         CassandraAdapterDelegate delegate = sidecarTestContext.instancesMetadata()
                                                               .instanceFromId(1)
@@ -223,9 +236,6 @@ public abstract class IntegrationTestBase
                 }
             });
         }
-
-        // wait until the test completes
-        assertThat(context.awaitCompletion(2, TimeUnit.MINUTES)).isTrue();
     }
 
     protected void createTestKeyspace()

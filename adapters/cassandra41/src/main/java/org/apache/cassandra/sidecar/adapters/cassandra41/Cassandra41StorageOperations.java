@@ -20,6 +20,9 @@ package org.apache.cassandra.sidecar.adapters.cassandra41;
 
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.cassandra.sidecar.adapters.base.CassandraStorageOperations;
 import org.apache.cassandra.sidecar.adapters.base.RingProvider;
 import org.apache.cassandra.sidecar.adapters.base.TokenRangeReplicaProvider;
@@ -34,6 +37,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public class Cassandra41StorageOperations extends CassandraStorageOperations
 {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra41StorageOperations.class);
     /**
      * Creates a new instance with the provided {@link JmxClient} and {@link DnsResolver}
      *

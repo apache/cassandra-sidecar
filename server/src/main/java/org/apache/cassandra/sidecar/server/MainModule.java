@@ -106,6 +106,7 @@ import org.apache.cassandra.sidecar.routes.FileStreamHandler;
 import org.apache.cassandra.sidecar.routes.GossipInfoHandler;
 import org.apache.cassandra.sidecar.routes.JsonErrorHandler;
 import org.apache.cassandra.sidecar.routes.ListOperationalJobsHandler;
+import org.apache.cassandra.sidecar.routes.NodeDecommissionHandler;
 import org.apache.cassandra.sidecar.routes.OperationalJobHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
@@ -280,6 +281,7 @@ public class MainModule extends AbstractModule
                               ConnectedClientStatsHandler connectedClientStatsHandler,
                               OperationalJobHandler operationalJobHandler,
                               ListOperationalJobsHandler listOperationalJobsHandler,
+                              NodeDecommissionHandler nodeDecommissionHandler,
                               ErrorHandler errorHandler)
     {
         Router router = Router.router(vertx);
@@ -378,6 +380,9 @@ public class MainModule extends AbstractModule
 
         router.get(ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE)
               .handler(listOperationalJobsHandler);
+
+        router.put(ApiEndpointsV1.NODE_DECOMMISSION_ROUTE)
+              .handler(nodeDecommissionHandler);
 
         router.get(ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE)
               .handler(ringHandler);

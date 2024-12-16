@@ -20,16 +20,19 @@ package org.apache.cassandra.sidecar.job;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
@@ -65,16 +68,17 @@ public class OperationalJobTracker
                 if (map.size() > initialCapacity)
                 {
                     OperationalJob job = eldest.getValue();
-                    if (job.status().isCompleted() && job.isStale(System.currentTimeMillis(), ONE_DAY_TTL))
+                    OperationalJobStatus status = job.status();
+                    if (status.isCompleted() && job.isStale(System.currentTimeMillis(), ONE_DAY_TTL))
                     {
                         LOGGER.debug("Expiring completed and stale job due to job tracker has reached max size. jobId={} status={} createdAt={}",
-                                     job.jobId, job.status(), job.creationTime());
+                                     job.jobId, status, job.creationTime());
                         return true;
                     }
                     else
                     {
                         LOGGER.warn("Job tracker reached max size, but the eldest job is not completed yet. " +
-                                    "Not evicting. jobId={} status={}", job.jobId, job.status());
+                                    "Not evicting. jobId={} status={}", job.jobId, status);
                         // TODO: Optionally trigger cleanup to fetch next oldest to evict
                     }
                 }
@@ -100,9 +104,24 @@ public class OperationalJobTracker
      * @return an immutable copy of the underlying mapping
      */
     @NotNull
-    Map<UUID, OperationalJob> getJobsView()
+    Map<UUID, OperationalJob> jobsView()
     {
         return Collections.unmodifiableMap(map);
+    }
+
+    /**
+     * Filters the inflight (created or running) jobs matching the job name from the jobsView
+     * @return list of inflight jobs being tracked
+     */
+    @NotNull
+    List<OperationalJob> inflightJobsByOperation(String operation)
+    {
+        return jobsView().values()
+                         .stream()
+                         .filter(j -> (j.name().equals(operation)) &&
+                                      (j.status() == OperationalJobStatus.RUNNING ||
+                                       j.status() == OperationalJobStatus.CREATED))
+                         .collect(Collectors.toList());
     }
 
     @VisibleForTesting

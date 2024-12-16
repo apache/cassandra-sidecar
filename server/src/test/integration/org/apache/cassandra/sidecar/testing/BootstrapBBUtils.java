@@ -50,4 +50,20 @@ public class BootstrapBBUtils
                        .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
                        .load(cl, ClassLoadingStrategy.Default.INJECTION);
     }
+
+    public static void installDecommissionIntercepter(ClassLoader cl, Class<?> interceptor)
+    {
+
+        // "org.apache.cassandra.service.StorageService"  "operationMode"
+        //  "org.apache.cassandra.tcm.sequences.InProgressSequences" "isLeave"
+        TypePool typePool = TypePool.Default.of(cl);
+        TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")
+                                              .resolve();
+        new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
+                       .method(named("operationMode"))
+                       .intercept(MethodDelegation.to(interceptor))
+                       // Defer class loading until all dependencies are loaded
+                       .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
+                       .load(cl, ClassLoadingStrategy.Default.INJECTION);
+    }
 }

@@ -27,13 +27,12 @@ import org.junit.jupiter.api.Test;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
-import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
-import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
@@ -55,26 +54,29 @@ import static org.mockito.Mockito.when;
  */
 class OperationalJobManagerTest
 {
-    @Mock
-    SidecarConfiguration mockConfig;
+//    @Mock
+//    SidecarConfiguration mockConfig;
 
     protected Vertx vertx;
+
+    protected ExecutorPools executorPool;
 
     @BeforeEach
     void setup()
     {
         vertx = Vertx.vertx();
+        executorPool = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         MockitoAnnotations.openMocks(this);
-        ServiceConfiguration mockServiceConfig = mock(ServiceConfiguration.class);
-        when(mockConfig.serviceConfiguration()).thenReturn(mockServiceConfig);
-        when(mockServiceConfig.operationalJobExecutionMaxWaitTimeInMillis()).thenReturn(5000L);
+//        ServiceConfiguration mockServiceConfig = mock(ServiceConfiguration.class);
+//        when(mockConfig.serviceConfiguration()).thenReturn(mockServiceConfig);
+//        when(mockServiceConfig.operationalJobExecutionMaxWaitTimeInMillis()).thenReturn(5000L);
     }
 
     @Test
     void testWithNoDownstreamJob()
     {
         OperationalJobTracker tracker = new OperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker);
+        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
 
         OperationalJob testJob = OperationalJobTest.createOperationalJob(SUCCEEDED);
         manager.trySubmitJob(testJob);
@@ -93,7 +95,7 @@ class OperationalJobManagerTest
         TaskExecutorPool mockExecPool = mock(TaskExecutorPool.class);
         when(mockPools.internal()).thenReturn(mockExecPool);
         when(mockExecPool.runBlocking(any())).thenReturn(null);
-        OperationalJobManager manager = new OperationalJobManager(tracker);
+        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
         assertThatThrownBy(() -> manager.trySubmitJob(runningJob))
         .isExactlyInstanceOf(OperationalJobConflictException.class)
         .hasMessage("The same operational job is already running on Cassandra. operationName='Operation X'");
@@ -105,7 +107,7 @@ class OperationalJobManagerTest
         UUID jobId = UUIDs.timeBased();
 
         OperationalJobTracker tracker = new OperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker);
+        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
 
         OperationalJob testJob = OperationalJobTest.createOperationalJob(jobId, Duration.ofSeconds(10));
 
@@ -123,13 +125,18 @@ class OperationalJobManagerTest
         UUID jobId = UUIDs.timeBased();
 
         OperationalJobTracker tracker = new OperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker);
+        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
 
         String msg = "Test Job failed";
         OperationalJob failingJob = new OperationalJob(jobId)
         {
+            public boolean isRunningOnCassandra()
+            {
+                return false;
+            }
+
             @Override
-            protected void executeInternal() throws OperationalJobException
+            protected OperationalJobStatus executeInternal() throws OperationalJobException
             {
                 throw new OperationalJobException(msg);
             }

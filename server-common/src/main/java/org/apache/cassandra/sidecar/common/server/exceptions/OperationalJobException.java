@@ -36,7 +36,8 @@ public class OperationalJobException extends RuntimeException
         }
         else
         {
-            return new OperationalJobException(throwable.getMessage(), throwable);
+            String msg = throwable.getCause() != null ? throwable.getCause().getMessage() : throwable.getMessage();
+            return new OperationalJobException(msg, throwable);
         }
     }
 

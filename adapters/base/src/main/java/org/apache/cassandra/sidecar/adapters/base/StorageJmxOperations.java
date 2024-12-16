@@ -159,4 +159,16 @@ public interface StorageJmxOperations
      * @throws InterruptedException it does not really throw but declared in MBean
      */
     int forceKeyspaceCleanup(int jobs, String keyspaceName, String... tables) throws IOException, ExecutionException, InterruptedException;
+
+    /**
+     * Triggers the node decommission operation
+     * @param force force decommission, bypassing RF checks, when this flag is set
+     */
+    void decommission(boolean force) throws IllegalStateException, IllegalArgumentException, UnsupportedOperationException;
+
+    /**
+     * Fetch the operation-mode of the node
+     * @return string representation of theoperation-mode
+     */
+    String getOperationMode();
 }

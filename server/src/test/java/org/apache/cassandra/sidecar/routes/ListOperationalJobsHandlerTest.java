@@ -46,6 +46,7 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.job.OperationalJob;
@@ -149,9 +150,15 @@ class ListOperationalJobsHandlerTest
             super(jobId);
         }
 
-        @Override
-        protected void executeInternal() throws OperationalJobException
+        public boolean isRunningOnCassandra()
         {
+            return false;
+        }
+
+        @Override
+        protected OperationalJobStatus executeInternal() throws OperationalJobException
+        {
+            return OperationalJobStatus.RUNNING;
         }
     }
 }

@@ -75,6 +75,7 @@ import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.common.response.NodeDecommissionResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
@@ -1322,6 +1323,25 @@ abstract class SidecarClientTest
             assertThat(result.jobs().get(0).jobId()).isEqualTo(jobId);
             validateResponseServed(server, ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE, req -> { });
         }
+    }
+
+    @Test
+    public void testNodeDecommission() throws Exception
+    {
+        UUID jobId = UUID.randomUUID();
+        String nodeDecommissionString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"SUCCEEDED\",\"instance\":\"127.0.0.1\"}";
+
+        MockResponse response = new MockResponse()
+                                .setResponseCode(OK.code())
+                                .setHeader("content-type", "application/json")
+                                .setBody(nodeDecommissionString);
+        enqueue(response);
+
+        NodeDecommissionResponse result = client.nodeDecommission().get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.instance()).isEqualTo("127.0.0.1");
+        assertThat(result.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        validateResponseServed(ApiEndpointsV1.NODE_DECOMMISSION_ROUTE);
     }
 
     @Test

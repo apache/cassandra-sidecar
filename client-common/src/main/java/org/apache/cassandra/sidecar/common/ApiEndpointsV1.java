@@ -126,6 +126,7 @@ public final class ApiEndpointsV1
     public static final String LIST_OPERATIONAL_JOBS_ROUTE = API_V1 + CASSANDRA + OPERATIONAL_JOBS;
     public static final String OPERATIONAL_JOB_ROUTE = API_V1 + CASSANDRA + PER_OPERATIONAL_JOB;
 
+    public static final String NODE_DECOMMISSION_ROUTE = API_V1 + CASSANDRA + "/node/decommission";
     private ApiEndpointsV1()
     {
         throw new IllegalStateException(getClass() + " is a constants container and shall not be instantiated");

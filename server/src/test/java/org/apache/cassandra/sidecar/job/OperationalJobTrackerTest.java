@@ -31,8 +31,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
-import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
-import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
 import static org.apache.cassandra.sidecar.job.OperationalJobTest.createOperationalJob;
@@ -53,19 +51,7 @@ class OperationalJobTrackerTest
     OperationalJob job4 = createOperationalJob(SUCCEEDED);
 
     long twoDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2);
-    OperationalJob jobWithStaleCreationTime = new OperationalJob(UUIDs.startOf(twoDaysAgo))
-    {
-        @Override
-        protected void executeInternal() throws OperationalJobException
-        {
-        }
-
-        @Override
-        public OperationalJobStatus status()
-        {
-            return SUCCEEDED;
-        }
-    };
+    OperationalJob jobWithStaleCreationTime = createOperationalJob(UUIDs.startOf(twoDaysAgo), SUCCEEDED);
 
     @BeforeEach
     void setUp()
@@ -131,7 +117,7 @@ class OperationalJobTrackerTest
         jobTracker.put(job1);
         jobTracker.put(job2);
 
-        Map<UUID, OperationalJob> view = jobTracker.getJobsView();
+        Map<UUID, OperationalJob> view = jobTracker.jobsView();
         assertThat(view.size()).isEqualTo(2);
         assertThatThrownBy(() -> view.put(job3.jobId, job3))
         .isExactlyInstanceOf(UnsupportedOperationException.class);
@@ -152,7 +138,7 @@ class OperationalJobTrackerTest
         executorService.shutdown();
         executorService.awaitTermination(5, TimeUnit.SECONDS);
         assertThat(tracker.size()).isEqualTo(one);
-        assertThat(tracker.getJobsView().values().iterator().next())
+        assertThat(tracker.jobsView().values().iterator().next())
         .describedAs("Only the last job is kept")
         .isSameAs(sortedJobs.get(sortedJobs.size() - 1));
     }

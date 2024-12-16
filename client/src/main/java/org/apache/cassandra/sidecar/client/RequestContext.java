@@ -38,6 +38,7 @@ import org.apache.cassandra.sidecar.common.request.GossipInfoRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListOperationalJobsRequest;
 import org.apache.cassandra.sidecar.common.request.ListSnapshotFilesRequest;
+import org.apache.cassandra.sidecar.common.request.NodeDecommissionRequest;
 import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
 import org.apache.cassandra.sidecar.common.request.OperationalJobRequest;
 import org.apache.cassandra.sidecar.common.request.Request;
@@ -76,6 +77,7 @@ public class RequestContext
     protected static final RingRequest RING_REQUEST = new RingRequest();
     protected static final GossipInfoRequest GOSSIP_INFO_REQUEST = new GossipInfoRequest();
     protected static final ListOperationalJobsRequest LIST_JOBS_REQUEST = new ListOperationalJobsRequest();
+    protected static final NodeDecommissionRequest NODE_DECOMMISSION_REQUEST = new NodeDecommissionRequest();
     protected static final RetryPolicy DEFAULT_RETRY_POLICY = new NoRetryPolicy();
     protected static final RetryPolicy DEFAULT_EXPONENTIAL_BACKOFF_RETRY_POLICY =
     new ExponentialBackoffRetryPolicy(10, 500L, 60_000L);
@@ -510,6 +512,17 @@ public class RequestContext
         public Builder listOperationalJobsRequest()
         {
             return request(LIST_JOBS_REQUEST);
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link NodeDecommissionRequest} and returns a reference to this Builder
+         * enabling method chaining.
+         *
+         * @return a reference to this Builder
+         */
+        public Builder nodeDecommissionRequest()
+        {
+            return request(NODE_DECOMMISSION_REQUEST);
         }
 
         /**

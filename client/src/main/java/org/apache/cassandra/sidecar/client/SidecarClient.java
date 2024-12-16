@@ -56,6 +56,7 @@ import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.common.response.NodeDecommissionResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
@@ -662,6 +663,16 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                             .singleInstanceSelectionPolicy(instance)
                                             .listOperationalJobsRequest()
                                             .build());
+    }
+
+    /**
+     * Executes the node decommission request using the default retry policy and configured selection policy
+     *
+     * @return a completable future of the jobs list
+     */
+    public CompletableFuture<NodeDecommissionResponse> nodeDecommission()
+    {
+        return executor.executeRequestAsync(requestBuilder().nodeDecommissionRequest().build());
     }
 
     /**

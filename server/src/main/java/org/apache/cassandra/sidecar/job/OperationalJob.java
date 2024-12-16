@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.job;
 
 import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +43,7 @@ public abstract class OperationalJob implements Task<Void>
     // use v1 time-based uuid
     public final UUID jobId;
 
-    private final Promise<Void> executionPromise;
+    private final Promise<OperationalJobStatus> executionPromise;
     private volatile boolean isExecuting = false;
 
     /**
@@ -96,11 +95,17 @@ public abstract class OperationalJob implements Task<Void>
     }
 
     /**
+     * The concrete-job-specific implementation to determine if the job is running on the Cassandra node.
+     * @return true if the job is running on the Cassandra node. For example, node decommission is tracked by the
+     * operationMode exposed from Cassandra.
+     */
+    public abstract boolean isRunningOnCassandra();
+
+
+    /**
      * Determines the status of the job. OperationalJob subclasses could choose to override the method.
      * <p>
      * For long-lived jobs, the implementations should return the {@link OperationalJobStatus#RUNNING} status intelligently.
-     * The condition of {@link OperationalJobStatus#RUNNING} is implementation-specific.
-     * For example, node decommission is tracked by the operationMode exposed from Cassandra.
      * If the operationMode is LEAVING, the corresponding OperationalJob is {@link OperationalJobStatus#RUNNING}.
      * In this case, even if the OperationalJobStatus determined from this method is {@link OperationalJobStatus#CREATED},
      * the concrete implementation can override and return {@link OperationalJobStatus#RUNNING}.
@@ -112,8 +117,9 @@ public abstract class OperationalJob implements Task<Void>
      */
     public OperationalJobStatus status()
     {
-        Future<Void> fut = asyncResult();
-        if (!isExecuting)
+        Future<OperationalJobStatus> fut = asyncResult();
+        // Jobs that are created and yet to be picked up by the executor thread
+        if (!isExecuting && !fut.isComplete())
         {
             return OperationalJobStatus.CREATED;
         }
@@ -127,11 +133,12 @@ public abstract class OperationalJob implements Task<Void>
         }
         else
         {
-            return OperationalJobStatus.SUCCEEDED;
+            // When the future is complete, return the status from the job execution
+            return fut.result();
         }
     }
 
-    public Future<Void> asyncResult()
+    public Future<OperationalJobStatus> asyncResult()
     {
         return executionPromise.future();
     }
@@ -140,16 +147,16 @@ public abstract class OperationalJob implements Task<Void>
      * Get the async result with waiting for at most the specified wait time
      * <p>
      * Note: This call does not block the calling thread.
-     * The call-site should handle the possible failed future with {@link TimeoutException} from this method.
      *
      * @param executorPool executor pool to run the timer
      * @param waitTime     maximum time to wait before returning
-     * @return the async result or a failed future of {@link OperationalJobException} with the cause
-     * {@link TimeoutException} after exceeding the wait time
+     * @return a future that ia either the result of the configured timeout based on {@code waitTime} or the async
+     * result. A succeeded future here, represents either a timeout or the result of the job and a failure is
+     * represented by an exception thrown by the job execution, within the configured timeout.
      */
-    public Future<Void> asyncResult(TaskExecutorPool executorPool, Duration waitTime)
+    public Future<OperationalJobStatus> asyncResult(TaskExecutorPool executorPool, Duration waitTime)
     {
-        Future<Void> resultFut = asyncResult();
+        Future<OperationalJobStatus> resultFut = asyncResult();
         if (resultFut.isComplete())
         {
             return resultFut;
@@ -163,9 +170,8 @@ public abstract class OperationalJob implements Task<Void>
         // Completes as soon as any future succeeds, or when all futures fail. Note that maxWaitTimePromise is
         // closed as soon as resultFut completes
         return Future.any(maxWaitTimeFut, resultFut)
-                     // We want to return the result when applicable, of course.
-                     // If this lambda below is evaluated, both futures are completed;
-                     // Depending on whether timeout flag is set, it either throws or complete with result
+                     // If this lambda below is evaluated, either one of the futures have completed;
+                     // In either case, the future corresponding to the job execution is returned
                      .compose(f -> {
                          boolean isTimeout = maxWaitTimeFut.result();
                          if (isTimeout)
@@ -182,7 +188,7 @@ public abstract class OperationalJob implements Task<Void>
      *
      * @throws OperationalJobException OperationalJobException that wraps job failure
      */
-    protected abstract void executeInternal() throws OperationalJobException;
+    protected abstract OperationalJobStatus executeInternal() throws OperationalJobException;
 
     /**
      * Execute the job behavior as specified in the internal execution {@link #executeInternal()},
@@ -193,11 +199,38 @@ public abstract class OperationalJob implements Task<Void>
     {
         isExecuting = true;
         LOGGER.info("Executing job. jobId={}", jobId);
-        promise.future().onComplete(executionPromise);
+
+        promise.future().onComplete(res -> {
+            if (res.succeeded()) {
+                try {
+                    OperationalJobStatus result = executeInternal();
+                    executionPromise.tryComplete(result); // Complete p2 with the result
+                    promise.tryComplete();  // Complete the original promise
+                    if (LOGGER.isDebugEnabled())
+                    {
+                        LOGGER.debug("Complete job execution. jobId={} status={}", jobId, status());
+                    }
+                } catch (Throwable e) {
+                    executionPromise.tryFail(e);          // Fail p2 if an exception occurs
+                    promise.tryFail(e);     // Fail the original promise
+                }
+            } else {
+                Throwable cause = res.cause();
+                executionPromise.tryFail(cause);          // Propagate the failure to p2
+                promise.tryFail(cause);     // Propagate the failure to the original promise
+            }
+        });
+
+
+
+
+
+
         try
         {
             // Blocking call to perform concrete job-specific execution, returning the status
-            executeInternal();
+            OperationalJobStatus result = executeInternal();
+            executionPromise.tryComplete(result);
             promise.tryComplete();
             if (LOGGER.isDebugEnabled())
             {
@@ -208,7 +241,12 @@ public abstract class OperationalJob implements Task<Void>
         {
             OperationalJobException oje = OperationalJobException.wraps(e);
             LOGGER.error("Job execution failed. jobId={} reason='{}'", jobId, oje.getMessage(), oje);
+            executionPromise.tryFail(oje);
             promise.tryFail(oje);
+        }
+        finally
+        {
+            isExecuting = false;
         }
     }
 }

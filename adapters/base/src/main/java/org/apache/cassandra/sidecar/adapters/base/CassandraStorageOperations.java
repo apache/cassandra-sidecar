@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
@@ -212,5 +213,39 @@ public class CassandraStorageOperations implements StorageOperations
         requireNonNull(table, "table must be non-null");
         jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
                  .forceKeyspaceCleanup(concurrency, keyspace, table);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isDecommissioning()
+    {
+        StorageJmxOperations ssProxy = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);
+        String nodeOperationMode = ssProxy.getOperationMode();
+        // The following check is equivalent to the operation-mode checks within Cassandra to determine if a
+        // decommission operation is in progress
+        return nodeOperationMode.equals("LEAVING") || nodeOperationMode.equals("DECOMMISSION_FAILED");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public OperationalJobStatus decommission(boolean force)
+    {
+        StorageJmxOperations ssProxy = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);
+        String mode = ssProxy.getOperationMode();
+        switch(mode)
+        {
+            case "LEAVING":
+            case "DECOMMISSION_FAILED":
+                return OperationalJobStatus.RUNNING;
+            case "DECOMMISSIONED":
+                return OperationalJobStatus.SUCCEEDED;
+        }
+
+        ssProxy.decommission(force);
+        return OperationalJobStatus.SUCCEEDED;
     }
 }

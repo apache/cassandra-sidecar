@@ -55,8 +55,14 @@ class OperationalJobTest
         return new OperationalJob(jobId)
         {
             @Override
-            protected void executeInternal() throws OperationalJobException
+            protected OperationalJobStatus executeInternal() throws OperationalJobException
             {
+                return jobStatus;
+            }
+
+            public boolean isRunningOnCassandra()
+            {
+                return jobStatus == OperationalJobStatus.RUNNING;
             }
 
             @Override
@@ -83,7 +89,13 @@ class OperationalJobTest
         return new OperationalJob(jobId)
         {
             @Override
-            protected void executeInternal() throws OperationalJobException
+            public boolean isRunningOnCassandra()
+            {
+                return false;
+            }
+
+            @Override
+            protected OperationalJobStatus executeInternal() throws OperationalJobException
             {
                 if (jobDuration != null)
                 {
@@ -94,6 +106,7 @@ class OperationalJobTest
                 {
                     throw jobFailure;
                 }
+                return OperationalJobStatus.SUCCEEDED;
             }
 
             @Override
@@ -123,7 +136,13 @@ class OperationalJobTest
         OperationalJob failingJob = new OperationalJob(UUIDs.timeBased())
         {
             @Override
-            protected void executeInternal() throws OperationalJobException
+            public boolean isRunningOnCassandra()
+            {
+                return false;
+            }
+
+            @Override
+            protected OperationalJobStatus executeInternal() throws OperationalJobException
             {
                 throw new OperationalJobException(msg);
             }
@@ -150,7 +169,7 @@ class OperationalJobTest
         OperationalJob longRunning = createOperationalJob(UUIDs.timeBased(), Duration.ofMillis(500L));
         executorPool.executeBlocking(longRunning::execute);
         Duration waitTime = Duration.ofSeconds(2);
-        Future<Void> result = longRunning.asyncResult(executorPool, waitTime);
+        Future<OperationalJobStatus> result = longRunning.asyncResult(executorPool, waitTime);
         // it should finish in around 500 ms.
         loopAssert(1, () -> assertThat(result.succeeded()).isTrue());
     }
@@ -162,7 +181,7 @@ class OperationalJobTest
         OperationalJob longButFailedJob = createOperationalJob(UUIDs.timeBased(), Duration.ofMillis(500L), jobFailure);
         executorPool.executeBlocking(longButFailedJob::execute);
         Duration waitTime = Duration.ofSeconds(2);
-        Future<Void> result = longButFailedJob.asyncResult(executorPool, waitTime);
+        Future<OperationalJobStatus> result = longButFailedJob.asyncResult(executorPool, waitTime);
         // it should finish in around 500 ms.
         loopAssert(1, () -> {
             assertThat(result.failed()).isTrue();
@@ -176,7 +195,7 @@ class OperationalJobTest
         OperationalJob longRunning = createOperationalJob(UUIDs.timeBased(), Duration.ofMillis(5000L));
         executorPool.executeBlocking(longRunning::execute);
         Duration waitTime = Duration.ofMillis(200L);
-        Future<Void> result = longRunning.asyncResult(executorPool, waitTime);
+        Future<OperationalJobStatus> result = longRunning.asyncResult(executorPool, waitTime);
         loopAssert(1, () -> {
             // the composite future is completed in 200ms. The operational job is still running, so the isExecuting should return true too.
             assertThat(result.succeeded()).isTrue();

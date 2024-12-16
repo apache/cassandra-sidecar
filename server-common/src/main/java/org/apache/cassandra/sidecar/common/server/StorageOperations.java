@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.data.Name;
@@ -102,4 +103,17 @@ public interface StorageOperations
     {
         outOfRangeDataCleanup(keyspace, table, 1);
     }
+
+    /**
+     * Checks if a node decommission operation is in-progress
+     * @return true if a decommission operation is in-progress
+     */
+    boolean isDecommissioning();
+
+    /**
+     * Triggers the node decommission operation
+     * @param force force decommission, bypassing RF checks, when this flag is set
+     * @return result of the decommission job execution
+     */
+    OperationalJobStatus decommission(boolean force);
 }

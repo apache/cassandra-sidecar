@@ -24,7 +24,9 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
+import io.vertx.core.Promise;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
 
 /**
@@ -35,15 +37,18 @@ public class OperationalJobManager
 {
     private final OperationalJobTracker jobTracker;
 
+    private final TaskExecutorPool internalExecutorPool;
+
     /**
      * Creates a manager instance with a default sized job-tracker.
      *
      * @param jobTracker the tracker for the operational jobs
      */
     @Inject
-    public OperationalJobManager(OperationalJobTracker jobTracker)
+    public OperationalJobManager(OperationalJobTracker jobTracker, ExecutorPools executorPools)
     {
         this.jobTracker = jobTracker;
+        this.internalExecutorPool = executorPools.internal();
     }
 
     /**
@@ -53,7 +58,7 @@ public class OperationalJobManager
      */
     public List<OperationalJob> allInflightJobs()
     {
-        return jobTracker.getJobsView().values()
+        return jobTracker.jobsView().values()
                          .stream()
                          .filter(j -> !j.asyncResult().isComplete())
                          .collect(Collectors.toList());
@@ -76,22 +81,33 @@ public class OperationalJobManager
      * The job execution failure behavior is tracked within the {@link OperationalJob}.
      *
      * @param job OperationalJob instance to submit
-     * @return OperationalJob instance that is submitted
      * @throws OperationalJobConflictException when the same operational job is already running on Cassandra
      */
-    public OperationalJob trySubmitJob(OperationalJob job) throws OperationalJobConflictException
+    public void trySubmitJob(OperationalJob job) throws OperationalJobConflictException
     {
         checkConflict(job);
 
         // New job is submitted for all cases when we do not have a corresponding downstream job
-        return jobTracker.computeIfAbsent(job.jobId, jobId -> job);
+        jobTracker.computeIfAbsent(job.jobId, jobId -> {
+            internalExecutorPool.executeBlocking(() -> {
+                job.execute(Promise.promise());
+                return null;
+            });
+            return job;
+        });
     }
 
+    /**
+     * Checks the job tracker for existing inflight jobs with the same operation before checking downstream for
+     * corresponding running job on the Cassandra node as a conflict of the job being submitted.
+     * @param job instance of the job to check conflicts for
+     * @throws OperationalJobConflictException when a conflicting inflight job is found
+     */
     private void checkConflict(OperationalJob job) throws OperationalJobConflictException
     {
-        // The job is not yet submitted (and running), but its status indicates that there is an identical job running on Cassandra already
-        // In this case, this job submission is rejected.
-        if (job.status() == OperationalJobStatus.RUNNING)
+        // If there are no tracked running jobs for same operation, then we confirm downstream
+        // Downstream check is done in most cases - by design
+        if (!jobTracker.inflightJobsByOperation(job.name()).isEmpty() || job.isRunningOnCassandra())
         {
             throw new OperationalJobConflictException("The same operational job is already running on Cassandra. operationName='" + job.name() + '\'');
         }
