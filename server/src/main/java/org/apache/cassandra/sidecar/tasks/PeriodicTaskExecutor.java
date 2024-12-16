@@ -32,7 +32,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.impl.ConcurrentHashSet;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
-import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
+import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -48,7 +48,7 @@ public class PeriodicTaskExecutor implements Closeable
     private final Set<PeriodicTaskKey> activeTasks = new ConcurrentHashSet<>();
     private final TaskExecutorPool internalPool;
     @Nullable
-    private final SingleInstanceExecutor singleInstanceExecutor;
+    private final ConditionalExecutor conditionalExecutor;
 
     @VisibleForTesting
     public PeriodicTaskExecutor(ExecutorPools executorPools)
@@ -57,10 +57,10 @@ public class PeriodicTaskExecutor implements Closeable
     }
 
     @Inject
-    public PeriodicTaskExecutor(ExecutorPools executorPools, @Nullable SingleInstanceExecutor singleInstanceExecutor)
+    public PeriodicTaskExecutor(ExecutorPools executorPools, @Nullable ConditionalExecutor conditionalExecutor)
     {
         this.internalPool = executorPools.internal();
-        this.singleInstanceExecutor = singleInstanceExecutor;
+        this.conditionalExecutor = conditionalExecutor;
     }
 
     /**
@@ -176,11 +176,11 @@ public class PeriodicTaskExecutor implements Closeable
             return true;
         }
 
-        if (singleInstanceExecutor != null && periodicTask instanceof PeriodicTaskOnSingleInstanceExecutor)
+        if (conditionalExecutor != null && periodicTask instanceof PeriodicTaskOnSingleInstanceExecutor)
         {
             // we skip PeriodicTasks that run on leader when the
             // local sidecar is NOT elected as a leader
-            return !singleInstanceExecutor.isLocalSidecarSingleInstanceExecutor();
+            return !conditionalExecutor.shouldExecuteOnLocalInstance();
         }
         return false;
     }

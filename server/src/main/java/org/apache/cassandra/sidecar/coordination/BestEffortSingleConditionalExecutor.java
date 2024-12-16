@@ -32,6 +32,8 @@ import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
+import org.apache.cassandra.sidecar.metrics.CoordinationMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -53,22 +55,24 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
  * cluster, so operations that they perform must be safe to be performed by one or more
  * Sidecar instances.
  */
-public class BestEffortSingleInstanceExecutor implements SingleInstanceExecutor, PeriodicTask
+public class BestEffortSingleConditionalExecutor implements ConditionalExecutor, PeriodicTask
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(BestEffortSingleInstanceExecutor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BestEffortSingleConditionalExecutor.class);
     private final ElectorateMembership electorateMembership;
     private final SidecarLeaseDatabaseAccessor accessor;
+    private final CoordinationMetrics metrics;
     private final ServiceConfiguration config;
     private final CoordinationConfiguration coordinationConfiguration;
     private final Vertx vertx;
     private final TaskExecutorPool internalPool;
     private volatile boolean isLocalSidecarSingleInstanceExecutor = false;
 
-    public BestEffortSingleInstanceExecutor(Vertx vertx,
-                                            ExecutorPools executorPools,
-                                            ServiceConfiguration serviceConfiguration,
-                                            ElectorateMembership electorateMembership,
-                                            SidecarLeaseDatabaseAccessor accessor)
+    public BestEffortSingleConditionalExecutor(Vertx vertx,
+                                               ExecutorPools executorPools,
+                                               ServiceConfiguration serviceConfiguration,
+                                               ElectorateMembership electorateMembership,
+                                               SidecarLeaseDatabaseAccessor accessor,
+                                               SidecarMetrics metrics)
     {
         this.vertx = vertx;
         this.internalPool = executorPools.internal();
@@ -76,13 +80,14 @@ public class BestEffortSingleInstanceExecutor implements SingleInstanceExecutor,
         this.coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
         this.electorateMembership = electorateMembership;
         this.accessor = accessor;
+        this.metrics = metrics.server().coordinationMetrics();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean isLocalSidecarSingleInstanceExecutor()
+    public boolean shouldExecuteOnLocalInstance()
     {
         return isLocalSidecarSingleInstanceExecutor;
     }
@@ -130,8 +135,7 @@ public class BestEffortSingleInstanceExecutor implements SingleInstanceExecutor,
         internalPool.runBlocking(() -> determineSingleInstanceExecutor(electorateMembership));
     }
 
-    @Override
-    public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
+    protected void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
     {
         boolean shouldParticipate = electorateMembership.shouldParticipate();
         LOGGER.debug("Sidecar instance shouldParticipate={} in the selection", shouldParticipate);
@@ -156,6 +160,7 @@ public class BestEffortSingleInstanceExecutor implements SingleInstanceExecutor,
         }
 
         maybeNotifyResults(isCurrentExecutor, sidecarHostId, wasCurrentExecutor);
+        updateMetrics();
     }
 
     Boolean executeLeaseAction(String actionName,
@@ -183,7 +188,7 @@ public class BestEffortSingleInstanceExecutor implements SingleInstanceExecutor,
         return isCurrentExecutor;
     }
 
-    private void maybeNotifyResults(Boolean isCurrentExecutor, String owner, boolean wasCurrentExecutor)
+    void maybeNotifyResults(Boolean isCurrentExecutor, String owner, boolean wasCurrentExecutor)
     {
         if (isCurrentExecutor == null)
         {
@@ -217,6 +222,15 @@ public class BestEffortSingleInstanceExecutor implements SingleInstanceExecutor,
                 LOGGER.debug("Cluster-wide lease has been extended by owner={}", owner);
             }
         }
+    }
+
+    void updateMetrics()
+    {
+        if (isLocalSidecarSingleInstanceExecutor)
+        {
+            metrics.leaseHolderTracker.metric.update(1);
+        }
+        metrics.bestEffortSingleInstanceExecutorParticipant.metric.update(1);
     }
 
     protected Boolean determineIfIsCurrentLeaseHolder(Boolean isCurrentLeaseHolder,

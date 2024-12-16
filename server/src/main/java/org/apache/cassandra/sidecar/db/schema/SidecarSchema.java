@@ -31,7 +31,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
+import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
 import org.jetbrains.annotations.Nullable;
@@ -55,7 +55,7 @@ public class SidecarSchema
     private final AtomicLong initializationTimerId = new AtomicLong(-1L);
     private final CQLSessionProvider cqlSessionProvider;
     private final SchemaMetrics metrics;
-    private final SingleInstanceExecutor singleInstanceExecutor;
+    private final ConditionalExecutor conditionalExecutor;
 
     private boolean isInitialized = false;
 
@@ -65,7 +65,7 @@ public class SidecarSchema
                          SidecarInternalKeyspace sidecarInternalKeyspace,
                          CQLSessionProvider cqlSessionProvider,
                          SchemaMetrics metrics,
-                         SingleInstanceExecutor singleInstanceExecutor)
+                         ConditionalExecutor conditionalExecutor)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -73,7 +73,7 @@ public class SidecarSchema
         this.sidecarInternalKeyspace = sidecarInternalKeyspace;
         this.cqlSessionProvider = cqlSessionProvider;
         this.metrics = metrics;
-        this.singleInstanceExecutor = singleInstanceExecutor;
+        this.conditionalExecutor = conditionalExecutor;
         if (this.schemaKeyspaceConfiguration.isEnabled())
         {
             configureSidecarServerEventListeners();
@@ -199,9 +199,9 @@ public class SidecarSchema
      */
     protected boolean shouldCreateSchema(@Nullable AbstractSchema schema)
     {
-        if (singleInstanceExecutor != null && schema instanceof InitializeOnSingleInstanceExecutor)
+        if (conditionalExecutor != null && schema instanceof InitializeOnSingleInstanceExecutor)
         {
-            return singleInstanceExecutor.isLocalSidecarSingleInstanceExecutor();
+            return conditionalExecutor.shouldExecuteOnLocalInstance();
         }
         return true;
     }

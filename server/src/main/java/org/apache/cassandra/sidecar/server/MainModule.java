@@ -80,9 +80,9 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.coordination.BestEffortSingleInstanceExecutor;
+import org.apache.cassandra.sidecar.coordination.BestEffortSingleConditionalExecutor;
 import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
-import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
+import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
 import org.apache.cassandra.sidecar.coordination.TokenZeroElectorateMembership;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
@@ -633,7 +633,7 @@ public class MainModule extends AbstractModule
                                        SystemAuthSchema systemAuthSchema,
                                        SidecarLeaseSchema sidecarLeaseSchema,
                                        SidecarMetrics metrics,
-                                       SingleInstanceExecutor singleInstanceExecutor)
+                                       ConditionalExecutor conditionalExecutor)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
@@ -644,7 +644,7 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(sidecarLeaseSchema);
         SchemaMetrics schemaMetrics = metrics.server().schema();
         return new SidecarSchema(vertx, executorPools, configuration,
-                                 sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics, singleInstanceExecutor);
+                                 sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics, conditionalExecutor);
     }
 
     @Provides
@@ -691,21 +691,22 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SingleInstanceExecutor singleInstanceExecutor(Vertx vertx,
-                                                         ExecutorPools executorPools,
-                                                         ElectorateMembership electorateMembership,
-                                                         SidecarLeaseDatabaseAccessor accessor,
-                                                         ServiceConfiguration serviceConfiguration,
-                                                         PeriodicTaskExecutor periodicTaskExecutor)
+    public ConditionalExecutor singleInstanceExecutor(Vertx vertx,
+                                                      ExecutorPools executorPools,
+                                                      ElectorateMembership electorateMembership,
+                                                      SidecarLeaseDatabaseAccessor accessor,
+                                                      ServiceConfiguration serviceConfiguration,
+                                                      PeriodicTaskExecutor periodicTaskExecutor,
+                                                      SidecarMetrics metrics)
     {
-        BestEffortSingleInstanceExecutor executor = new BestEffortSingleInstanceExecutor(vertx,
-                                                                                         executorPools,
-                                                                                         serviceConfiguration,
-                                                                                         electorateMembership,
-                                                                                         accessor);
-        vertx.eventBus().localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(), ignored -> {
-            periodicTaskExecutor.schedule(executor);
-        });
+        BestEffortSingleConditionalExecutor executor = new BestEffortSingleConditionalExecutor(vertx,
+                                                                                               executorPools,
+                                                                                               serviceConfiguration,
+                                                                                               electorateMembership,
+                                                                                               accessor,
+                                                                                               metrics);
+        vertx.eventBus().localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(),
+                                       ignored -> periodicTaskExecutor.schedule(executor));
         return executor;
     }
 

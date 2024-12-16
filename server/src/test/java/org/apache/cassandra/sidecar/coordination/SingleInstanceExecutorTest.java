@@ -19,11 +19,11 @@
 package org.apache.cassandra.sidecar.coordination;
 
 /**
- * Test helpers for {@link SingleInstanceExecutor}
+ * Test helpers for {@link ConditionalExecutor}
  */
 public class SingleInstanceExecutorTest
 {
-    public static final SingleInstanceExecutor ALWAYS_SCHEDULE_EXECUTOR = new SingleInstanceExecutor()
+    public static final ConditionalExecutor ALWAYS_SCHEDULE_EXECUTOR = new ConditionalExecutor()
     {
         @Override
         public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
@@ -31,13 +31,13 @@ public class SingleInstanceExecutorTest
         }
 
         @Override
-        public boolean isLocalSidecarSingleInstanceExecutor()
+        public boolean shouldExecuteOnLocalInstance()
         {
             return true;
         }
     };
 
-    public static final SingleInstanceExecutor NEVER_SCHEDULE_EXECUTOR = new SingleInstanceExecutor()
+    public static final ConditionalExecutor NEVER_SCHEDULE_EXECUTOR = new ConditionalExecutor()
     {
         @Override
         public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
@@ -45,7 +45,7 @@ public class SingleInstanceExecutorTest
         }
 
         @Override
-        public boolean isLocalSidecarSingleInstanceExecutor()
+        public boolean shouldExecuteOnLocalInstance()
         {
             return false;
         }

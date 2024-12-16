@@ -58,7 +58,7 @@ import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.testing.TestVersion;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static org.apache.cassandra.sidecar.coordination.BestEffortSingleInstanceExecutorIntegrationTest.buildContactList;
+import static org.apache.cassandra.sidecar.coordination.BestEffortSingleConditionalExecutorIntegrationTest.buildContactList;
 import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.cassandraVersionProvider;
 import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.tryGetIntConfig;
 import static org.assertj.core.api.Assertions.assertThat;

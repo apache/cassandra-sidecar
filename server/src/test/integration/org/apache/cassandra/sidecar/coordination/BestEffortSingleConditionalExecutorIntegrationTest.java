@@ -66,9 +66,9 @@ import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.t
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
-class BestEffortSingleInstanceExecutorIntegrationTest
+class BestEffortSingleConditionalExecutorIntegrationTest
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(BestEffortSingleInstanceExecutorIntegrationTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BestEffortSingleConditionalExecutorIntegrationTest.class);
     static final SchemaKeyspaceConfiguration CONFIG = SchemaKeyspaceConfigurationImpl.builder().build();
     public static final int CONCURRENT_ELECTION_PROCESSES = 12;
     final List<CQLSessionProvider> sessionProviderList = new ArrayList<>();
@@ -103,27 +103,27 @@ class BestEffortSingleInstanceExecutorIntegrationTest
         // The following simulates that we have 1 Sidecar instance managing
         // 1 Cassandra instance. All Sidecar instances participate in the
         // election.
-        List<BestEffortSingleInstanceExecutor> electionInProcess = buildElectionProcess(cluster);
+        List<BestEffortSingleConditionalExecutor> electionInProcess = buildElectionProcess(cluster);
         ExecutorService pool = Executors.newFixedThreadPool(electionInProcess.size());
         assertThat(electionInProcess).as("There are no leaders when the process has not run yet")
-                                     .allMatch(e -> !e.isLocalSidecarSingleInstanceExecutor());
+                                     .allMatch(e -> !e.shouldExecuteOnLocalInstance());
 
         runElection(pool, electionInProcess);
         Object[][] currentLeaderQueryResult = queryCurrentLeaders(cluster);
         // Search for the leader
-        BestEffortSingleInstanceExecutor currentLeader = getCurrentLeader(electionInProcess);
+        BestEffortSingleConditionalExecutor currentLeader = getCurrentLeader(electionInProcess);
         assertThat(currentLeader.sidecarHostId()).as("Expected owner to be %s but it %s", currentLeaderQueryResult[0][1], currentLeader.sidecarHostId())
                                                  .isEqualTo(currentLeaderQueryResult[0][1]);
 
         // Now simulate the case where the current leader forgets that it is the current leader
         // The current leader must be able to recover the leadership information
         currentLeader.resetExecutor();
-        assertThat(electionInProcess).as("There are no leaders").allMatch(e -> !e.isLocalSidecarSingleInstanceExecutor());
+        assertThat(electionInProcess).as("There are no leaders").allMatch(e -> !e.shouldExecuteOnLocalInstance());
 
         loopAssert(3, () -> {
             runElection(pool, electionInProcess);
             Object[][] newLeaderQueryResult = queryCurrentLeaders(cluster);
-            BestEffortSingleInstanceExecutor newLeader = getCurrentLeader(electionInProcess);
+            BestEffortSingleConditionalExecutor newLeader = getCurrentLeader(electionInProcess);
             assertThat(newLeader).as("Leader is expected to be the same since we are only recovering persisted state").isSameAs(currentLeader);
             assertThat(currentLeaderQueryResult[0][0]).as("Timestamps are expected to be the same since we are only recovering persisted state")
                                                       .isEqualTo(newLeaderQueryResult[0][0]);
@@ -148,7 +148,7 @@ class BestEffortSingleInstanceExecutorIntegrationTest
         runElection(pool, electionInProcess);
 
         // Search for the leader
-        BestEffortSingleInstanceExecutor newLeader = getCurrentLeader(electionInProcess);
+        BestEffortSingleConditionalExecutor newLeader = getCurrentLeader(electionInProcess);
         assertThat(newLeader).as("Leader is expected to be the same since the entry exists in the database")
                              .isSameAs(currentLeader);
 
@@ -161,7 +161,7 @@ class BestEffortSingleInstanceExecutorIntegrationTest
         runElection(pool, electionInProcess);
 
         Object[][] newLeaderQueryResult1 = queryCurrentLeaders(cluster);
-        List<BestEffortSingleInstanceExecutor> currentLeaders = getCurrentLeaders(electionInProcess);
+        List<BestEffortSingleConditionalExecutor> currentLeaders = getCurrentLeaders(electionInProcess);
         assertThat(currentLeaders).as("2 leaders are expected when binary is disabled for the original leader")
                                   .hasSize(2);
         assertThat(currentLeaders).as("Existing leader is part of the leaders")
@@ -177,13 +177,13 @@ class BestEffortSingleInstanceExecutorIntegrationTest
 
         loopAssert(3, () -> {
             runElection(pool, electionInProcess);
-            List<BestEffortSingleInstanceExecutor> leaders = getCurrentLeaders(electionInProcess);
+            List<BestEffortSingleConditionalExecutor> leaders = getCurrentLeaders(electionInProcess);
             assertThat(leaders).as("After binary is re-enabled, the previous leader learns it has lost the leadership")
                                .hasSize(1);
         });
     }
 
-    private void runElection(ExecutorService pool, List<BestEffortSingleInstanceExecutor> electionInProcess)
+    private void runElection(ExecutorService pool, List<BestEffortSingleConditionalExecutor> electionInProcess)
     {
         int electorateSize = electionInProcess.size();
         CountDownLatch latch = new CountDownLatch(electorateSize);
@@ -226,10 +226,10 @@ class BestEffortSingleInstanceExecutorIntegrationTest
         LOGGER.info("Creating table with DDL: {}", tableSchema.createSchemaStatement());
     }
 
-    List<BestEffortSingleInstanceExecutor> buildElectionProcess(AbstractCluster<?> cluster)
+    List<BestEffortSingleConditionalExecutor> buildElectionProcess(AbstractCluster<?> cluster)
     {
         List<InetSocketAddress> address = buildContactList(cluster.get(1));
-        List<BestEffortSingleInstanceExecutor> processes = new ArrayList<>();
+        List<BestEffortSingleConditionalExecutor> processes = new ArrayList<>();
         Set<String> hostIdSet = new HashSet<>();
         for (int i = 0; i < CONCURRENT_ELECTION_PROCESSES; i++)
         {
@@ -240,7 +240,12 @@ class BestEffortSingleInstanceExecutorIntegrationTest
             DisconnectableCQLSessionProvider cqlSessionProvider = buildCqlSession(address);
             cqlSessionProviderList.add(cqlSessionProvider);
             SidecarLeaseDatabaseAccessor accessor = buildAccessor(cqlSessionProvider);
-            processes.add(new BestEffortSingleInstanceExecutor(vertx, createdSharedTestPool(vertx), serviceConfiguration, null, accessor));
+            processes.add(new BestEffortSingleConditionalExecutor(vertx,
+                                                                  createdSharedTestPool(vertx),
+                                                                  serviceConfiguration,
+                                                                  null,
+                                                                  accessor,
+                                                                  ));
         }
         return processes;
     }
@@ -272,13 +277,13 @@ class BestEffortSingleInstanceExecutorIntegrationTest
                                                                tryGetIntConfig(config, "native_transport_port", 9042)));
     }
 
-    static int simulateDisableBinaryOfLeader(List<BestEffortSingleInstanceExecutor> electionInProcess,
+    static int simulateDisableBinaryOfLeader(List<BestEffortSingleConditionalExecutor> electionInProcess,
                                              List<DisconnectableCQLSessionProvider> cqlSessionProviderList)
     {
         for (int i = 0; i < electionInProcess.size(); i++)
         {
-            BestEffortSingleInstanceExecutor l = electionInProcess.get(i);
-            if (l.isLocalSidecarSingleInstanceExecutor())
+            BestEffortSingleConditionalExecutor l = electionInProcess.get(i);
+            if (l.shouldExecuteOnLocalInstance())
             {
                 DisconnectableCQLSessionProvider sessionProvider = cqlSessionProviderList.get(i);
                 sessionProvider.disconnect();
@@ -297,19 +302,19 @@ class BestEffortSingleInstanceExecutorIntegrationTest
         assertThat(sessionProvider.get()).as("Enabled binary on instance %s", disabledInstanceNum).isNotNull();
     }
 
-    static BestEffortSingleInstanceExecutor getCurrentLeader(List<BestEffortSingleInstanceExecutor> electionInProcess)
+    static BestEffortSingleConditionalExecutor getCurrentLeader(List<BestEffortSingleConditionalExecutor> electionInProcess)
     {
-        List<BestEffortSingleInstanceExecutor> currentLeaders = getCurrentLeaders(electionInProcess);
+        List<BestEffortSingleConditionalExecutor> currentLeaders = getCurrentLeaders(electionInProcess);
         assertThat(currentLeaders).as("There is more than one leader, this is unexpected in the simulation").hasSize(1);
         return currentLeaders.get(0);
     }
 
-    static List<BestEffortSingleInstanceExecutor> getCurrentLeaders(List<BestEffortSingleInstanceExecutor> electionInProcess)
+    static List<BestEffortSingleConditionalExecutor> getCurrentLeaders(List<BestEffortSingleConditionalExecutor> electionInProcess)
     {
-        List<BestEffortSingleInstanceExecutor> leaders = new ArrayList<>();
-        for (BestEffortSingleInstanceExecutor l : electionInProcess)
+        List<BestEffortSingleConditionalExecutor> leaders = new ArrayList<>();
+        for (BestEffortSingleConditionalExecutor l : electionInProcess)
         {
-            if (l.isLocalSidecarSingleInstanceExecutor())
+            if (l.shouldExecuteOnLocalInstance())
             {
                 leaders.add(l);
             }

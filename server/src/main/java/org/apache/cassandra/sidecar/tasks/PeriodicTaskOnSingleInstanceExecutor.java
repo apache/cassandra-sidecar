@@ -18,12 +18,12 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
-import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
+import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
 
 /**
  * A marker interface that defines a periodic task that will be executed during the lifecycle of Cassandra Sidecar
  * iff when the Cassandra Sidecar instance is determined to be a single instance executor as defined by the
- * {@link SingleInstanceExecutor} process.
+ * {@link ConditionalExecutor} process.
  */
 public interface PeriodicTaskOnSingleInstanceExecutor extends PeriodicTask
 {

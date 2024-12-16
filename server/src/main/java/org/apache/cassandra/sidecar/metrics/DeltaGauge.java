@@ -29,7 +29,7 @@ import com.codahale.metrics.Metric;
  */
 public class DeltaGauge implements Gauge<Long>, Metric
 {
-    private AtomicLong count;
+    private final AtomicLong count;
 
     public DeltaGauge()
     {

@@ -40,7 +40,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutor;
+import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
 import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutorTest;
 import org.apache.cassandra.sidecar.db.SidecarSchemaTest;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
@@ -141,7 +141,7 @@ class SchemaMetricsTest
 
         @Provides
         @Singleton
-        public SingleInstanceExecutor singleInstanceExecutor()
+        public ConditionalExecutor singleInstanceExecutor()
         {
             return SingleInstanceExecutorTest.ALWAYS_SCHEDULE_EXECUTOR;
         }
