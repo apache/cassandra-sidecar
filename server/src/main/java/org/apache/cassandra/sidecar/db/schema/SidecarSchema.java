@@ -77,7 +77,7 @@ public class SidecarSchema
     {
         if (!this.schemaKeyspaceConfiguration.isEnabled())
         {
-            LOGGER.info("Sidecar schema is disabled!");
+            LOGGER.info("Sidecar schema is disabled. Skip configuring the sidecar event listeners");
             return;
         }
 
