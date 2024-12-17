@@ -202,6 +202,12 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
 
             if (!wasCurrentExecutor || leaseExpired())
             {
+                if (leaseExpired())
+                {
+                    LOGGER.info("Giving up lease for sidecarHostId={} leaseAcquired={} leaseExpired={}",
+                                sidecarHostId, leaseTime, leaseExpirationTime());
+                }
+
                 determination = ExecutionDetermination.INDETERMINATE;
                 leaseTime = null;
             }
@@ -242,8 +248,12 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
 
     private boolean leaseExpired()
     {
-        return leaseTime != null
-               && leaseTime.plus(config.schemaKeyspaceConfiguration().leaseSchemaTTLSeconds(), ChronoUnit.SECONDS).isBefore(Instant.now());
+        return leaseTime != null && leaseExpirationTime().isBefore(Instant.now());
+    }
+
+    private Instant leaseExpirationTime()
+    {
+        return leaseTime.plus(config.schemaKeyspaceConfiguration().leaseSchemaTTLSeconds(), ChronoUnit.SECONDS);
     }
 
     void updateMetrics()

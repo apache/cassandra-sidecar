@@ -98,7 +98,8 @@ public class SidecarLeaseSchema extends TableSchema
     {
         return String.format("CREATE TABLE IF NOT EXISTS %s.%s ("
                              + "name text PRIMARY KEY,"
-                             + "owner text)",
+                             + "owner text) "
+                             + "WITH gc_grace_seconds = 86400",
                              keyspaceName(), tableName());
     }
 
