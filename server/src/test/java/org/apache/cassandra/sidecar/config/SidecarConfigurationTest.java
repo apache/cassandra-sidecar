@@ -224,6 +224,7 @@ class SidecarConfigurationTest
         assertThat(configuration.replicationFactor()).isEqualTo(3);
         assertThat(configuration.createReplicationStrategyString())
         .isEqualTo("{'class':'SimpleStrategy', 'replication_factor':'3'}");
+        assertThat(configuration.leaseSchemaTTLSeconds()).isEqualTo(120);
     }
 
     @Test
