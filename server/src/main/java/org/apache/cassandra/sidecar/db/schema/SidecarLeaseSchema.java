@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import java.util.concurrent.TimeUnit;
-
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -44,9 +42,9 @@ public class SidecarLeaseSchema extends TableSchema
     private PreparedStatement extendLease;
 
     @Inject
-    public SidecarLeaseSchema(SidecarConfiguration configuration)
+    public SidecarLeaseSchema(ServiceConfiguration configuration)
     {
-        this(configuration.serviceConfiguration().schemaKeyspaceConfiguration());
+        this(configuration.schemaKeyspaceConfiguration());
     }
 
     public SidecarLeaseSchema(SchemaKeyspaceConfiguration keyspaceConfig)
@@ -79,12 +77,16 @@ public class SidecarLeaseSchema extends TableSchema
     @VisibleForTesting
     public void prepareStatements(@NotNull Session session)
     {
+        // TODO: revisit decision to make TTL a bind parameter instead of burning into the prepared statement
+        //       which means it cannot be changed dynamically during the lifetime of the Sidecar process.
         claimLease = prepare(claimLease, session,
-                             String.format("INSERT INTO %s.%s (name,owner) VALUES ('single_sidecar_instance_executor',?) IF NOT EXISTS",
-                                           keyspaceName(), tableName()));
+                             String.format("INSERT INTO %s.%s (name,owner) VALUES ('single_sidecar_instance_executor',?) " +
+                                           "IF NOT EXISTS USING TTL %d",
+                                           keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTLSeconds()));
         extendLease = prepare(extendLease, session,
-                              String.format("UPDATE %s.%s SET owner = ? WHERE name = 'single_sidecar_instance_executor' IF owner = ?",
-                                            keyspaceName(), tableName()));
+                              String.format("UPDATE %s.%s USING TTL %d SET owner = ? " +
+                                            "WHERE name = 'single_sidecar_instance_executor' IF owner = ?",
+                                            keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTLSeconds()));
     }
 
     /**
@@ -96,9 +98,8 @@ public class SidecarLeaseSchema extends TableSchema
     {
         return String.format("CREATE TABLE IF NOT EXISTS %s.%s ("
                              + "name text PRIMARY KEY,"
-                             + "owner text) "
-                             + "WITH default_time_to_live = %d",
-                             keyspaceName(), tableName(), TimeUnit.MINUTES.toSeconds(10));
+                             + "owner text)",
+                             keyspaceName(), tableName());
     }
 
     public PreparedStatement claimLeaseStatement()

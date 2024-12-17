@@ -201,7 +201,7 @@ public class SidecarSchema
     {
         if (conditionalExecutor != null && schema instanceof InitializeOnSingleInstanceExecutor)
         {
-            return conditionalExecutor.shouldExecuteOnLocalInstance();
+            return conditionalExecutor.executionDetermination().shouldExecuteOnLocalInstance();
         }
         return true;
     }

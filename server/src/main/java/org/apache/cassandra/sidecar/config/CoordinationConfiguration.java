@@ -18,24 +18,16 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import java.util.Map;
+
 /**
  * Configuration relevant to the coordination functionality of Sidecar
  */
 public interface CoordinationConfiguration
 {
     /**
-     * @return {@code true} when the single instance executor process is enabled, {@code false} otherwise
+     * @return configuration parameters for the {@link org.apache.cassandra.sidecar.coordination.ConditionalExecutor}
+     * implementation
      */
-    boolean singleInstanceExecutorProcessEnabled();
-
-    /**
-     * @return the frequency of the best-effort single instance executor process in milliseconds
-     */
-    long singleInstanceExecutorFrequencyMillis();
-
-    /**
-     * @return the initial delay for the best-effort single instance executor process in milliseconds after the
-     * schema initialization completed
-     */
-    long singleInstanceExecutorInitialDelayMillis();
+    Map<String, String> conditionalExecutorParameters();
 }

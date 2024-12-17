@@ -18,7 +18,8 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Collections;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
@@ -28,60 +29,26 @@ import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
  */
 public class CoordinationConfigurationImpl implements CoordinationConfiguration
 {
-    public static final boolean DEFAULT_SINGLE_INSTANCE_EXECUTOR_PROCESS_ENABLED = true;
-    public static final long DEFAULT_SINGLE_INSTANCE_EXECUTOR_FREQUENCY_MILLIS = TimeUnit.MINUTES.toMillis(1);
-    public static final long DEFAULT_SINGLE_INSTANCE_EXECUTOR_INITIAL_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(1);
-
-    @JsonProperty("single_instance_executor_process_enabled")
-    public boolean singleInstanceExecutorProcessEnabled;
-    @JsonProperty("single_instance_executor_frequency_millis")
-    public long singleInstanceExecutorFrequencyMillis;
-    @JsonProperty("single_instance_executor_initial_delay_millis")
-    public long singleInstanceExecutorInitialDelayMillis;
+    @JsonProperty("conditional_executor_parameters")
+    private final Map<String, String> conditionalExecutorParameters;
 
     public CoordinationConfigurationImpl()
     {
-        this(DEFAULT_SINGLE_INSTANCE_EXECUTOR_PROCESS_ENABLED,
-             DEFAULT_SINGLE_INSTANCE_EXECUTOR_INITIAL_DELAY_MILLIS,
-             DEFAULT_SINGLE_INSTANCE_EXECUTOR_FREQUENCY_MILLIS);
+        this(Collections.emptyMap());
     }
 
-    public CoordinationConfigurationImpl(boolean singleInstanceExecutorProcessEnabled,
-                                         long singleInstanceExecutorInitialDelayMillis,
-                                         long singleInstanceExecutorFrequencyMillis)
+    public CoordinationConfigurationImpl(Map<String, String> conditionalExecutorParameters)
     {
-        this.singleInstanceExecutorProcessEnabled = singleInstanceExecutorProcessEnabled;
-        this.singleInstanceExecutorInitialDelayMillis = singleInstanceExecutorInitialDelayMillis;
-        this.singleInstanceExecutorFrequencyMillis = singleInstanceExecutorFrequencyMillis;
+        this.conditionalExecutorParameters = conditionalExecutorParameters;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty("single_instance_executor_process_enabled")
-    public boolean singleInstanceExecutorProcessEnabled()
+    @JsonProperty("conditional_executor_parameters")
+    public Map<String, String> conditionalExecutorParameters()
     {
-        return singleInstanceExecutorProcessEnabled;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    @JsonProperty("single_instance_executor_frequency_millis")
-    public long singleInstanceExecutorFrequencyMillis()
-    {
-        return singleInstanceExecutorFrequencyMillis;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    @JsonProperty("single_instance_executor_initial_delay_millis")
-    public long singleInstanceExecutorInitialDelayMillis()
-    {
-        return singleInstanceExecutorInitialDelayMillis;
+        return conditionalExecutorParameters;
     }
 }

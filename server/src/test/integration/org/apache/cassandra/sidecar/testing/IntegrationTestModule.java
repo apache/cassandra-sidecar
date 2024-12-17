@@ -48,7 +48,7 @@ import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
-import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutorTest;
+import org.apache.cassandra.sidecar.coordination.TestConditionalExecutors;
 import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -152,7 +152,7 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public ConditionalExecutor singleInstanceExecutor()
     {
-        return SingleInstanceExecutorTest.ALWAYS_SCHEDULE_EXECUTOR;
+        return TestConditionalExecutors.ALWAYS_EXECUTE;
     }
 
     private AccessControlConfiguration accessControlConfiguration()

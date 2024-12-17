@@ -136,10 +136,21 @@ public class PeriodicTaskExecutor implements Closeable
     private void executeInternal(PeriodicTaskKey key)
     {
         PeriodicTask periodicTask = key.task;
-        if (shouldSkip(periodicTask))
+
+        switch (determineExecution(periodicTask))
         {
-            LOGGER.trace("Skip executing task. task={}", periodicTask.name());
-            return;
+            case DO_NOT_EXECUTE:
+                LOGGER.trace("Skip executing task. task={}", periodicTask.name());
+                return;
+
+            case EXECUTE:
+                break;
+
+            case INDETERMINATE:
+            default:
+                LOGGER.debug("Unable to determine execution for this task, rescheduling. task={}", periodicTask.name());
+                reschedule(periodicTask);
+                break;
         }
 
         if (!activeTasks.add(key))
@@ -164,25 +175,23 @@ public class PeriodicTaskExecutor implements Closeable
     }
 
     /**
-     * Determines whether the task should be skipped.
+     * Determines whether the task should run.
      *
      * @param periodicTask the task
-     * @return {@code true} if the task should be skipped, {@code false} otherwise
+     * @return the result of the determination
      */
-    protected boolean shouldSkip(PeriodicTask periodicTask)
+    protected ExecutionDetermination determineExecution(PeriodicTask periodicTask)
     {
         if (periodicTask.shouldSkip())
         {
-            return true;
+            return ExecutionDetermination.DO_NOT_EXECUTE;
         }
 
         if (conditionalExecutor != null && periodicTask instanceof PeriodicTaskOnSingleInstanceExecutor)
         {
-            // we skip PeriodicTasks that run on leader when the
-            // local sidecar is NOT elected as a leader
-            return !conditionalExecutor.shouldExecuteOnLocalInstance();
+            return conditionalExecutor.executionDetermination();
         }
-        return false;
+        return ExecutionDetermination.EXECUTE;
     }
 
     // A simple wrapper that implements equals and hashcode,

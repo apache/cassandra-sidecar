@@ -18,15 +18,16 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
+import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
+
 /**
- * Defines an interface to choose a single Sidecar instance that will run certain types of operations that need to
- * run on a limited subset of Sidecar instances. In most cases there will be a single Sidecar instance chosen as
- * the executor.
+ * Defines an interface to determine whether the current Sidecar instance should execute certain types of
+ * operations that need to run on a limited subset of Sidecar instances.
  */
 public interface ConditionalExecutor
 {
     /**
-     * @return {@code true} if the local Sidecar instance is a single instance executor, {@code false} otherwise
+     * @return a {@link ExecutionDetermination} based on the implementation of the {@link ConditionalExecutor}
      */
-    boolean shouldExecuteOnLocalInstance();
+    ExecutionDetermination executionDetermination();
 }

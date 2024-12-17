@@ -72,13 +72,13 @@ public class ServerMetricsImpl implements ServerMetrics
     }
 
     @Override
-    public CacheMetrics cacheMetrics()
+    public CacheMetrics cache()
     {
         return cacheMetrics;
     }
 
     @Override
-    public CoordinationMetrics coordinationMetrics()
+    public CoordinationMetrics coordination()
     {
         return coordinationMetrics;
     }

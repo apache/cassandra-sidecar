@@ -53,7 +53,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
-import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutorTest;
+import org.apache.cassandra.sidecar.coordination.TestConditionalExecutors;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
@@ -179,9 +179,9 @@ public class SidecarSchemaTest
             "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?",
 
             "INSERT INTO sidecar_internal.sidecar_lease_v1 (name,owner) " +
-            "VALUES ('single_sidecar_instance_executor',?) IF NOT EXISTS",
+            "VALUES ('single_sidecar_instance_executor',?) IF NOT EXISTS USING TTL 120",
 
-            "UPDATE sidecar_internal.sidecar_lease_v1 SET owner = ? " +
+            "UPDATE sidecar_internal.sidecar_lease_v1 USING TTL 120 SET owner = ? " +
             "WHERE name = 'single_sidecar_instance_executor' IF owner = ?"
             );
 
@@ -269,7 +269,7 @@ public class SidecarSchemaTest
         @Singleton
         public ConditionalExecutor singleInstanceExecutor()
         {
-            return SingleInstanceExecutorTest.ALWAYS_SCHEDULE_EXECUTOR;
+            return TestConditionalExecutors.ALWAYS_EXECUTE;
         }
     }
 }

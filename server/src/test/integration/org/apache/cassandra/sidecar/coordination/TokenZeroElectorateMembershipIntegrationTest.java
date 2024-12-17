@@ -81,8 +81,8 @@ class TokenZeroElectorateMembershipIntegrationTest
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         when(mockInstancesConfig.instances()).thenReturn(Collections.emptyList());
         ElectorateMembership membership = new TokenZeroElectorateMembership(mockInstancesConfig, null, CONFIG);
-        assertThat(membership.shouldParticipate()).as("When no local instances are managed by Sidecar, we can't determine participation")
-                                                  .isFalse();
+        assertThat(membership.isMember()).as("When no local instances are managed by Sidecar, we can't determine participation")
+                                         .isFalse();
     }
 
     @Test
@@ -92,8 +92,8 @@ class TokenZeroElectorateMembershipIntegrationTest
         when(mockInstancesConfig.instances()).thenReturn(Collections.singletonList(mock(InstanceMetadata.class)));
         CQLSessionProvider mockCQLSessionProvider = mock(CQLSessionProvider.class);
         ElectorateMembership membership = new TokenZeroElectorateMembership(mockInstancesConfig, mockCQLSessionProvider, CONFIG);
-        assertThat(membership.shouldParticipate()).as("When the CQL connection is unavailable, we can't determine participation")
-                                                  .isFalse();
+        assertThat(membership.isMember()).as("When the CQL connection is unavailable, we can't determine participation")
+                                         .isFalse();
     }
 
     @ParameterizedTest(name = "{index} => version {0}")
@@ -159,7 +159,7 @@ class TokenZeroElectorateMembershipIntegrationTest
         int localElectorateCount = 0;
         for (TokenZeroElectorateMembership membership : memberships)
         {
-            boolean shouldParticipate = membership.shouldParticipate();
+            boolean shouldParticipate = membership.isMember();
             if (shouldParticipate)
             {
                 localElectorateCount++;

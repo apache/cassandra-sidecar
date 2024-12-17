@@ -30,24 +30,24 @@ public class CoordinationMetrics
     /**
      * Keeps track of the lease-holder(s)
      */
-    public final NamedMetric<DeltaGauge> leaseHolderTracker;
+    public final NamedMetric<DeltaGauge> leaseHolders;
     /**
      * Keeps track of the number of instances participating in the selection of
      * the best-effort single instance executor
      */
-    public final NamedMetric<DeltaGauge> bestEffortSingleInstanceExecutorParticipant;
+    public final NamedMetric<DeltaGauge> participants;
 
     public CoordinationMetrics(MetricRegistry metricRegistry)
     {
-        String bestEffortSingleInstanceExecutorDomain = DOMAIN + ".BestEffortSingleInstanceExecutor";
-        leaseHolderTracker
+        String bestEffortSingleConditionalExecutorDomain = DOMAIN + ".BestEffortSingleConditionalExecutor";
+        leaseHolders
         = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(bestEffortSingleInstanceExecutorDomain)
+                     .withDomain(bestEffortSingleConditionalExecutorDomain)
                      .withName("LeaseHolder")
                      .build();
-        bestEffortSingleInstanceExecutorParticipant
+        participants
         = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(bestEffortSingleInstanceExecutorDomain)
+                     .withDomain(bestEffortSingleConditionalExecutorDomain)
                      .withName("Participant")
                      .build();
     }

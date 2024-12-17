@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.coordination;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -64,19 +65,82 @@ public class TokenZeroElectorateMembership implements ElectorateMembership
      * {@inheritDoc}
      */
     @Override
-    public boolean shouldParticipate()
+    public boolean isMember()
+    {
+        List<String> userKeyspaces = maybeCollectUserKeyspaces();
+        if (userKeyspaces.isEmpty())
+        {
+            return false;
+        }
+
+        for (String userKeyspace : userKeyspaces)
+        {
+            TokenRangeReplicasResponse tokenRangeReplicas = null;
+            for (InstanceMetadata instance : instancesConfig.instances())
+            {
+                CassandraAdapterDelegate delegate = instance.delegate();
+                if (delegate == null)
+                {
+                    LOGGER.debug("Delegate is unavailable for instance={}", instance);
+                    continue;
+                }
+
+                StorageOperations operations = delegate.storageOperations();
+                NodeSettings nodeSettings = delegate.nodeSettings();
+                if (operations == null || nodeSettings == null)
+                {
+                    LOGGER.debug("Storage Operations / Node Settings are unavailable for instance={}", instance);
+                    continue;
+                }
+
+                InetSocketAddress address = delegate.localStorageBroadcastAddress();
+                if (address == null)
+                {
+                    LOGGER.warn("Unable to determine local storage broadcast address for instance={}", instance);
+                    continue;
+                }
+
+                String localInstanceHostAndPort = StringUtils.cassandraFormattedHostAndPort(address);
+                if (tokenRangeReplicas == null)
+                {
+                    // Token range replicas should be the same across all instances assuming the view of the ring
+                    // is the same for all instances, so we just get it once, as this could be an expensive call
+                    tokenRangeReplicas = operations.tokenRangeReplicas(new Name(userKeyspace), nodeSettings.partitioner());
+                }
+
+                if (instanceOwnsTokenZero(localInstanceHostAndPort, tokenRangeReplicas))
+                {
+                    // if any of the keyspaces owns token zero we add the instance, there's
+                    // no need to check the other keyspaces as this instance is eligible
+                    // return early
+                    return true;
+                }
+            }
+        }
+
+        // This local Sidecar does not manage any Cassandra instances that owns token 0 for user keyspaces
+        return false;
+    }
+
+    /**
+     * Performs pre-checks ensuring local instances are configured; an active session to the database is present;
+     * and collects the user keyspaces available in Cassandra.
+     *
+     * @return the list of user keyspaces if available, or an empty list if it is unable to retrieve the user keyspaces
+     */
+    List<String> maybeCollectUserKeyspaces()
     {
         if (instancesConfig.instances().isEmpty())
         {
             LOGGER.warn("There are no local Cassandra instances managed by this Sidecar");
-            return false;
+            return Collections.emptyList();
         }
 
         Session activeSession = cqlSessionProvider.get();
         if (activeSession == null)
         {
             LOGGER.warn("There is no active session to Cassandra");
-            return false;
+            return Collections.emptyList();
         }
 
         List<String> userKeyspaces = new ArrayList<>();
@@ -93,49 +157,9 @@ public class TokenZeroElectorateMembership implements ElectorateMembership
         if (userKeyspaces.isEmpty())
         {
             LOGGER.warn("No user keyspaces found");
-            return false;
         }
 
-        for (InstanceMetadata instance : instancesConfig.instances())
-        {
-            CassandraAdapterDelegate delegate = instance.delegate();
-            if (delegate == null)
-            {
-                LOGGER.debug("Delegate is unavailable for instance={}", instance);
-                continue;
-            }
-
-            StorageOperations operations = delegate.storageOperations();
-            NodeSettings nodeSettings = delegate.nodeSettings();
-            if (operations == null || nodeSettings == null)
-            {
-                LOGGER.debug("Storage Operations / Node Settings are unavailable for instance={}", instance);
-                continue;
-            }
-
-            InetSocketAddress address = delegate.localStorageBroadcastAddress();
-            if (address == null)
-            {
-                LOGGER.warn("Unable to determine local storage broadcast address for instance={}", instance);
-                continue;
-            }
-
-            String localInstanceHostAndPort = StringUtils.cassandraFormattedHostAndPort(address);
-            for (String userKeyspace : userKeyspaces)
-            {
-                TokenRangeReplicasResponse tokenRangeReplicas = operations.tokenRangeReplicas(new Name(userKeyspace), nodeSettings.partitioner());
-                if (instanceOwnsTokenZero(localInstanceHostAndPort, tokenRangeReplicas))
-                {
-                    // if any of the keyspaces owns token zero we add the instance, there's
-                    // no need to check the other keyspaces as this instance is eligible
-                    // return early
-                    return true;
-                }
-            }
-        }
-
-        // This local Sidecar does not manage any Cassandra instances that owns token 0 for user keyspaces
-        return false;
+        return userKeyspaces;
     }
 
     /**

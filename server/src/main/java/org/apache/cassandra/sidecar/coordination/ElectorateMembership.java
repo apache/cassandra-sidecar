@@ -25,8 +25,7 @@ package org.apache.cassandra.sidecar.coordination;
 public interface ElectorateMembership
 {
     /**
-     * @return {@code true} if the local Sidecar instance should participate in the process,
-     * {@code false} otherwise
+     * @return {@code true} if the local Sidecar instance is a member of the electorate, {@code false} otherwise
      */
-    boolean shouldParticipate();
+    boolean isMember();
 }

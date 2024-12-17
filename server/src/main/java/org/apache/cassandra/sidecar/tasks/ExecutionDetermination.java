@@ -16,40 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.config;
+package org.apache.cassandra.sidecar.tasks;
 
 /**
- * Configuration for sidecar schema creation
+ * Determines whether executions can proceed, be skipped, or the state is indeterminate
+ * and an action can be taken based on the indeterminate state (i.e. rescheduling a {@link PeriodicTask}).
  */
-public interface SchemaKeyspaceConfiguration
+public enum ExecutionDetermination
 {
     /**
-     * @return boolean indicating if schema creation is enabled
+     * The execution can proceed.
      */
-    boolean isEnabled();
+    EXECUTE,
 
     /**
-     * @return keyspace name for sidecar schema
+     * The execution will be skipped.
      */
-    String keyspace();
+    DO_NOT_EXECUTE,
 
     /**
-     * @return replication strategy for sidecar schema
+     * It is not possible to determine whether the execution should proceed or be skipped.
      */
-    String replicationStrategy();
+    INDETERMINATE;
 
-    /**
-     * @return replication factor for sidecar schema
-     */
-    int replicationFactor();
-
-    /**
-     * @return the TTL in seconds used to insert entries into the sidecar_lease schema
-     */
-    long leaseSchemaTTLSeconds();
-
-    default String createReplicationStrategyString()
+    public boolean shouldExecuteOnLocalInstance()
     {
-        return String.format("{'class':'%s', 'replication_factor':'%s'}", replicationStrategy(), replicationFactor());
+        return this == EXECUTE;
     }
 }

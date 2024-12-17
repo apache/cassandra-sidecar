@@ -18,6 +18,10 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -29,11 +33,11 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
-import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.CoordinationMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -44,7 +48,7 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
  * A best-effort process where 0 or more instance executors can be chosen from the electorate.
  * The electorate is expected to be a small subset of the entirety of Sidecar instances.
  *
- * <p>There will be situations where multiple members of the electorate will
+ * <p>There will be situations where multiple members of the electorate may
  * be acting as executors, for example in cases where we have:
  * <ul>
  *     <li>Network partitions
@@ -61,11 +65,12 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
     private final ElectorateMembership electorateMembership;
     private final SidecarLeaseDatabaseAccessor accessor;
     private final CoordinationMetrics metrics;
+    private final Parameters parameters;
     private final ServiceConfiguration config;
-    private final CoordinationConfiguration coordinationConfiguration;
     private final Vertx vertx;
     private final TaskExecutorPool internalPool;
-    private volatile boolean isLocalSidecarSingleInstanceExecutor = false;
+    private volatile Instant leaseTime;
+    private volatile ExecutionDetermination determination = ExecutionDetermination.INDETERMINATE;
 
     public BestEffortSingleConditionalExecutor(Vertx vertx,
                                                ExecutorPools executorPools,
@@ -76,20 +81,20 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
     {
         this.vertx = vertx;
         this.internalPool = executorPools.internal();
+        this.parameters = Parameters.from(serviceConfiguration.coordinationConfiguration().conditionalExecutorParameters());
         this.config = serviceConfiguration;
-        this.coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
         this.electorateMembership = electorateMembership;
         this.accessor = accessor;
-        this.metrics = metrics.server().coordinationMetrics();
+        this.metrics = metrics.server().coordination();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean shouldExecuteOnLocalInstance()
+    public ExecutionDetermination executionDetermination()
     {
-        return isLocalSidecarSingleInstanceExecutor;
+        return determination;
     }
 
     /**
@@ -104,7 +109,7 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
             // so skip when the feature is not enabled
             return true;
         }
-        return !coordinationConfiguration.singleInstanceExecutorProcessEnabled();
+        return !parameters.isEnabled();
     }
 
     /**
@@ -113,7 +118,7 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
     @Override
     public long initialDelay()
     {
-        return coordinationConfiguration.singleInstanceExecutorInitialDelayMillis();
+        return parameters.initialDelayMillis();
     }
 
     /**
@@ -122,7 +127,7 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
     @Override
     public long delay()
     {
-        return coordinationConfiguration.singleInstanceExecutorFrequencyMillis();
+        return parameters.delayMillis();
     }
 
     @Override
@@ -132,19 +137,20 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
         promise.complete();
 
         // runs the election process based on the electorate membership
-        internalPool.runBlocking(() -> determineSingleInstanceExecutor(electorateMembership));
+        internalPool.runBlocking(() -> determineSingleConditionalExecutor(electorateMembership));
     }
 
-    protected void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
+    protected void determineSingleConditionalExecutor(ElectorateMembership electorateMembership)
     {
-        boolean shouldParticipate = electorateMembership.shouldParticipate();
+        boolean shouldParticipate = electorateMembership.isMember();
         LOGGER.debug("Sidecar instance shouldParticipate={} in the selection", shouldParticipate);
         if (!shouldParticipate)
         {
+            determination = ExecutionDetermination.DO_NOT_EXECUTE;
             return;
         }
 
-        boolean wasCurrentExecutor = isLocalSidecarSingleInstanceExecutor;
+        boolean wasCurrentExecutor = determination.shouldExecuteOnLocalInstance();
         Boolean isCurrentExecutor = null;
 
         String sidecarHostId = sidecarHostId();
@@ -188,49 +194,65 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
         return isCurrentExecutor;
     }
 
-    void maybeNotifyResults(Boolean isCurrentExecutor, String owner, boolean wasCurrentExecutor)
+    void maybeNotifyResults(Boolean isCurrentExecutor, String sidecarHostId, boolean wasCurrentExecutor)
     {
         if (isCurrentExecutor == null)
         {
-            LOGGER.debug("Unable to perform lease election for owner={}", owner);
+            LOGGER.debug("Unable to perform lease election for sidecarHostId={}", sidecarHostId);
 
-//            if (wasCurrentExecutor)
-//            {
-            // TODO : do we give up lease after some period of time? ie TTL which is 10 minutes?
-//            }
+            if (!wasCurrentExecutor || leaseExpired())
+            {
+                determination = ExecutionDetermination.INDETERMINATE;
+                leaseTime = null;
+            }
         }
         else
         {
+            if (isCurrentExecutor)
+            {
+                leaseTime = Instant.now();
+                determination = ExecutionDetermination.EXECUTE;
+            }
+            else
+            {
+                leaseTime = null;
+                determination = ExecutionDetermination.DO_NOT_EXECUTE;
+            }
+
             if (wasCurrentExecutor && !isCurrentExecutor)
             {
-                LOGGER.info("Cluster-wide lease has been lost by owner={}", owner);
-                isLocalSidecarSingleInstanceExecutor = isCurrentExecutor;
+                LOGGER.info("Cluster-wide lease has been lost by sidecarHostId={}", sidecarHostId);
                 // notify lease has been lost
-                vertx.eventBus().publish(ON_SIDECAR_GLOBAL_LEASE_LOST.address(), owner);
+                vertx.eventBus().publish(ON_SIDECAR_GLOBAL_LEASE_LOST.address(), sidecarHostId);
             }
 
             if (!wasCurrentExecutor && isCurrentExecutor)
             {
-                LOGGER.info("Cluster-wide lease has been claimed by owner={}", owner);
-                isLocalSidecarSingleInstanceExecutor = isCurrentExecutor;
+                LOGGER.info("Cluster-wide lease has been claimed by sidecarHostId={}", sidecarHostId);
                 // notify lease has been gained
-                vertx.eventBus().publish(ON_SIDECAR_GLOBAL_LEASE_CLAIMED.address(), owner);
+                vertx.eventBus().publish(ON_SIDECAR_GLOBAL_LEASE_CLAIMED.address(), sidecarHostId);
             }
 
             if (LOGGER.isDebugEnabled() && wasCurrentExecutor && isCurrentExecutor)
             {
-                LOGGER.debug("Cluster-wide lease has been extended by owner={}", owner);
+                LOGGER.debug("Cluster-wide lease has been extended by sidecarHostId={}", sidecarHostId);
             }
         }
     }
 
+    private boolean leaseExpired()
+    {
+        return leaseTime != null
+               && leaseTime.plus(config.schemaKeyspaceConfiguration().leaseSchemaTTLSeconds(), ChronoUnit.SECONDS).isBefore(Instant.now());
+    }
+
     void updateMetrics()
     {
-        if (isLocalSidecarSingleInstanceExecutor)
+        if (determination.shouldExecuteOnLocalInstance())
         {
-            metrics.leaseHolderTracker.metric.update(1);
+            metrics.leaseHolders.metric.update(1);
         }
-        metrics.bestEffortSingleInstanceExecutorParticipant.metric.update(1);
+        metrics.participants.metric.update(1);
     }
 
     protected Boolean determineIfIsCurrentLeaseHolder(Boolean isCurrentLeaseHolder,
@@ -269,6 +291,77 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
     @VisibleForTesting
     void resetExecutor()
     {
-        isLocalSidecarSingleInstanceExecutor = false;
+        determination = ExecutionDetermination.INDETERMINATE;
+    }
+
+    /**
+     * Configuration parameters for the {@link BestEffortSingleConditionalExecutor}
+     */
+    public static class Parameters
+    {
+        public static final boolean DEFAULT_ENABLED = true;
+        public static final long DEFAULT_FREQUENCY_MILLIS = TimeUnit.MINUTES.toMillis(1);
+        public static final long MINIMUM_FREQUENCY_MILLIS = TimeUnit.SECONDS.toMillis(30);
+        public static final long DEFAULT_INITIAL_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(1);
+
+        private final Map<String, String> conditionalExecutorParameters;
+
+        public Parameters(Map<String, String> conditionalExecutorParameters)
+        {
+            this.conditionalExecutorParameters = conditionalExecutorParameters;
+        }
+
+        public static Parameters from(Map<String, String> conditionalExecutorParameters)
+        {
+            return new Parameters(conditionalExecutorParameters);
+        }
+
+        public boolean isEnabled()
+        {
+            String value = conditionalExecutorParameters.get("is_enabled");
+            if ("true".equalsIgnoreCase(value))
+                return true;
+            if ("false".equalsIgnoreCase(value))
+                return false;
+            return DEFAULT_ENABLED;
+        }
+
+        public long initialDelayMillis()
+        {
+            return getConfigurationOrDefault("initial_delay_millis", 0, DEFAULT_INITIAL_DELAY_MILLIS);
+        }
+
+        public long delayMillis()
+        {
+            return getConfigurationOrDefault("frequency_millis", MINIMUM_FREQUENCY_MILLIS, DEFAULT_FREQUENCY_MILLIS);
+        }
+
+        private long getConfigurationOrDefault(String configurationName, long minimumValue, long defaultValue)
+        {
+            String stringValue = conditionalExecutorParameters.get(configurationName);
+            long value = defaultValue;
+            try
+            {
+                value = Long.parseLong(stringValue);
+            }
+            catch (NumberFormatException exception)
+            {
+                LOGGER.warn("Ignoring invalid {} configuration '{}' for BestEffortSingleConditionalExecutor",
+                            configurationName, stringValue);
+                return value;
+            }
+
+            if (value >= minimumValue)
+            {
+                return value;
+            }
+            else
+            {
+                LOGGER.warn("Ignoring {} configuration value '{}' for BestEffortSingleConditionalExecutor " +
+                            "which is less than the required minimum of '{}'",
+                            configurationName, value, minimumValue);
+                return minimumValue;
+            }
+        }
     }
 }

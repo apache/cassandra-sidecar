@@ -30,7 +30,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
-import org.apache.cassandra.sidecar.coordination.SingleInstanceExecutorTest;
+import org.apache.cassandra.sidecar.coordination.TestConditionalExecutors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -87,7 +87,7 @@ class PeriodicTaskExecutorTest
         CountDownLatch latch = new CountDownLatch(1);
         SimulatedTask taskThatRunsOnNonLeader = new SimulatedTask(latch);
         PeriodicTaskExecutor taskExecutorNonLeader = new PeriodicTaskExecutor(executorPools,
-                                                                              SingleInstanceExecutorTest.NEVER_SCHEDULE_EXECUTOR);
+                                                                              TestConditionalExecutors.NEVER_EXECUTE);
 
         taskExecutorNonLeader.schedule(taskThatRunsOnNonLeader);
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();
@@ -100,7 +100,7 @@ class PeriodicTaskExecutorTest
         CountDownLatch latch = new CountDownLatch(1);
         SimulatedTask taskThatRunsOnLeader = new SimulatedTask(latch);
         PeriodicTaskExecutor taskExecutorLeader = new PeriodicTaskExecutor(executorPools,
-                                                                           SingleInstanceExecutorTest.ALWAYS_SCHEDULE_EXECUTOR);
+                                                                           TestConditionalExecutors.ALWAYS_EXECUTE);
 
         taskExecutorLeader.schedule(taskThatRunsOnLeader);
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();

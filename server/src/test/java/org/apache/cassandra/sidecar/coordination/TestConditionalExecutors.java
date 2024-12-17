@@ -18,36 +18,20 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
+import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
+
 /**
- * Test helpers for {@link ConditionalExecutor}
+ * {@link ConditionalExecutor ConditionalExecutors} used for testing purposes
  */
-public class SingleInstanceExecutorTest
+public class TestConditionalExecutors
 {
-    public static final ConditionalExecutor ALWAYS_SCHEDULE_EXECUTOR = new ConditionalExecutor()
-    {
-        @Override
-        public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
-        {
-        }
+    /**
+     * An executor that will always schedule
+     */
+    public static final ConditionalExecutor ALWAYS_EXECUTE = () -> ExecutionDetermination.EXECUTE;
 
-        @Override
-        public boolean shouldExecuteOnLocalInstance()
-        {
-            return true;
-        }
-    };
-
-    public static final ConditionalExecutor NEVER_SCHEDULE_EXECUTOR = new ConditionalExecutor()
-    {
-        @Override
-        public void determineSingleInstanceExecutor(ElectorateMembership electorateMembership)
-        {
-        }
-
-        @Override
-        public boolean shouldExecuteOnLocalInstance()
-        {
-            return false;
-        }
-    };
+    /**
+     * An executor that will never schedule
+     */
+    public static final ConditionalExecutor NEVER_EXECUTE = () -> ExecutionDetermination.DO_NOT_EXECUTE;
 }

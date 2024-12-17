@@ -88,7 +88,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
         this.builder = builder;
         this.configuration = configuration;
         this.cacheConfiguration = configuration.sstableSnapshotConfiguration().snapshotListCacheConfiguration();
-        this.cache = initializeCache(cacheConfiguration, sidecarMetrics.server().cacheMetrics().snapshotCacheMetrics);
+        this.cache = initializeCache(cacheConfiguration, sidecarMetrics.server().cache().snapshotCacheMetrics);
     }
 
     /**

@@ -31,6 +31,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.coordination.BestEffortSingleConditionalExecutor;
 import org.assertj.core.api.Condition;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
@@ -353,9 +354,11 @@ class SidecarConfigurationTest
 
         CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
         assertThat(coordinationConfiguration).isNotNull();
-        assertThat(coordinationConfiguration.singleInstanceExecutorProcessEnabled()).isFalse();
-        assertThat(coordinationConfiguration.singleInstanceExecutorFrequencyMillis()).isEqualTo(20_000L);
-        assertThat(coordinationConfiguration.singleInstanceExecutorInitialDelayMillis()).isEqualTo(5_000L);
+        BestEffortSingleConditionalExecutor.Parameters params
+        = BestEffortSingleConditionalExecutor.Parameters.from(coordinationConfiguration.conditionalExecutorParameters());
+        assertThat(params.isEnabled()).isFalse();
+        assertThat(params.initialDelayMillis()).isEqualTo(5_000L);
+        assertThat(params.delayMillis()).isEqualTo(31_000L);
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
@@ -498,9 +501,11 @@ class SidecarConfigurationTest
         // Validate default configuration
         CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
         assertThat(coordinationConfiguration).isNotNull();
-        assertThat(coordinationConfiguration.singleInstanceExecutorProcessEnabled()).isTrue();
-        assertThat(coordinationConfiguration.singleInstanceExecutorFrequencyMillis()).isEqualTo(60_000L);
-        assertThat(coordinationConfiguration.singleInstanceExecutorInitialDelayMillis()).isEqualTo(1_000L);
+        BestEffortSingleConditionalExecutor.Parameters params
+        = BestEffortSingleConditionalExecutor.Parameters.from(coordinationConfiguration.conditionalExecutorParameters());
+        assertThat(params.isEnabled()).isTrue();
+        assertThat(params.delayMillis()).isEqualTo(60_000L);
+        assertThat(params.initialDelayMillis()).isEqualTo(1_000L);
     }
 
     private void validateHealthCheckConfigurationFromYaml(HealthCheckConfiguration config)

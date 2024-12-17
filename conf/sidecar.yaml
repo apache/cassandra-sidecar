@@ -108,13 +108,20 @@ sidecar:
     keyspace: sidecar_internal
     replication_strategy: SimpleStrategy
     replication_factor: 1
+    # The TTL in seconds used to insert entries into the sidecar_lease schema
+    lease_schema_ttl_sec: 120
   coordination:
-    # Whether the process to determine a best-effort single instance executor is enabled or not
-    single_instance_executor_process_enabled: true
-    # The initial delay for the best-effort single instance executor process in milliseconds
-    single_instance_executor_initial_delay_millis: 1000
-    # The frequency of the best-effort single instance executor process in milliseconds
-    single_instance_executor_frequency_millis: 60000
+    # Captures configuration parameters for the conditional executor implementation
+    conditional_executor_parameters:
+      # Whether the process is enabled
+      is_enabled: true
+      # The initial delay for the best-effort single conditional executor process in milliseconds
+      # The minimum value for the initial delay is 0
+      initial_delay_millis: 1000
+      # The frequency of the best-effort single conditional executor process in milliseconds
+      # The minimum value allowed for the best-effort single conditional executor implementation is
+      # 30,000 milliseconds (30 seconds)
+      frequency_millis: 60000
 
 vertx:
   filesystem_options:

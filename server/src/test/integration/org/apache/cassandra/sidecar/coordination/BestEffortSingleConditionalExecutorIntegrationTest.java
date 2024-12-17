@@ -30,6 +30,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -54,6 +55,10 @@ import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarLeaseSchema;
+import org.apache.cassandra.sidecar.metrics.CoordinationMetrics;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.testing.TestVersion;
 import org.jetbrains.annotations.Nullable;
@@ -63,17 +68,19 @@ import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterrup
 import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.tryGetIntConfig;
+import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class BestEffortSingleConditionalExecutorIntegrationTest
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(BestEffortSingleConditionalExecutorIntegrationTest.class);
     static final SchemaKeyspaceConfiguration CONFIG = SchemaKeyspaceConfigurationImpl.builder().build();
-    public static final int CONCURRENT_ELECTION_PROCESSES = 12;
+    public static final int CONCURRENT_PROCESSES = 12;
     final List<CQLSessionProvider> sessionProviderList = new ArrayList<>();
     final Vertx vertx = Vertx.vertx();
-    final List<DisconnectableCQLSessionProvider> cqlSessionProviderList = new ArrayList<>();
 
     @ParameterizedTest(name = "{index} => version {0}")
     @MethodSource("org.apache.cassandra.testing.TestVersionSupplier#testVersions")
@@ -93,113 +100,143 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         {
             // initialize internal sidecar schema for testing
             initializeSchemas(cluster, new SidecarLeaseSchema(CONFIG));
-            // Run different scenarios for leader election
-            simulateElection(cluster);
+            // Run different scenarios for selection of best-effort single conditional executor
+            simulate(cluster);
         }
     }
 
-    private void simulateElection(AbstractCluster<?> cluster)
+    private void simulate(AbstractCluster<?> cluster)
     {
         // The following simulates that we have 1 Sidecar instance managing
         // 1 Cassandra instance. All Sidecar instances participate in the
-        // election.
-        List<BestEffortSingleConditionalExecutor> electionInProcess = buildElectionProcess(cluster);
-        ExecutorService pool = Executors.newFixedThreadPool(electionInProcess.size());
-        assertThat(electionInProcess).as("There are no leaders when the process has not run yet")
-                                     .allMatch(e -> !e.shouldExecuteOnLocalInstance());
+        // simulation.
+        List<TestInstanceWrapper> simulatedInstances = buildSimulatedInstances(cluster);
+        ExecutorService pool = Executors.newFixedThreadPool(simulatedInstances.size());
+        assertThat(simulatedInstances).as("There are no lease holders when the process has not run yet")
+                                      .allMatch(e -> !e.executor.executionDetermination().shouldExecuteOnLocalInstance());
 
-        runElection(pool, electionInProcess);
-        Object[][] currentLeaderQueryResult = queryCurrentLeaders(cluster);
-        // Search for the leader
-        BestEffortSingleConditionalExecutor currentLeader = getCurrentLeader(electionInProcess);
-        assertThat(currentLeader.sidecarHostId()).as("Expected owner to be %s but it %s", currentLeaderQueryResult[0][1], currentLeader.sidecarHostId())
-                                                 .isEqualTo(currentLeaderQueryResult[0][1]);
-
-        // Now simulate the case where the current leader forgets that it is the current leader
-        // The current leader must be able to recover the leadership information
-        currentLeader.resetExecutor();
-        assertThat(electionInProcess).as("There are no leaders").allMatch(e -> !e.shouldExecuteOnLocalInstance());
-
+        AtomicReference<Object[][]> currentLeaseHolderQueryResult = new AtomicReference<>();
+        AtomicReference<BestEffortSingleConditionalExecutor> currentLeaseHolder = new AtomicReference<>();
         loopAssert(3, () -> {
-            runElection(pool, electionInProcess);
-            Object[][] newLeaderQueryResult = queryCurrentLeaders(cluster);
-            BestEffortSingleConditionalExecutor newLeader = getCurrentLeader(electionInProcess);
-            assertThat(newLeader).as("Leader is expected to be the same since we are only recovering persisted state").isSameAs(currentLeader);
-            assertThat(currentLeaderQueryResult[0][0]).as("Timestamps are expected to be the same since we are only recovering persisted state")
-                                                      .isEqualTo(newLeaderQueryResult[0][0]);
+            runLeaseAcquireProcess(pool, simulatedInstances);
+            Object[][] resultSet = queryCurrentLeaseHolders(cluster);
+            currentLeaseHolderQueryResult.set(resultSet);
+            // Search for the lease-holder
+            BestEffortSingleConditionalExecutor holder = getCurrentLeaseHolder(simulatedInstances);
+            currentLeaseHolder.set(holder);
+            assertThat(currentLeaseHolder.get().sidecarHostId()).as("Expecting lease holder to match the entry in the database")
+                                                                .isEqualTo(resultSet[0][1]);
+            validateMetrics(simulatedInstances, 1);
         });
 
-        // Now let's simulate the case where the leader will extend its lease
-        // we will see different write timestamps
-        runElection(pool, electionInProcess);
-        Object[][] extendedLeaseLeaderQueryResult = queryCurrentLeaders(cluster);
-        assertThat(currentLeaderQueryResult[0][0]).as("Timestamps are NOT expected to be the same after a lease extension")
-                                                  .isNotEqualTo(extendedLeaseLeaderQueryResult[0][0]);
-        assertThat(currentLeaderQueryResult[0][1]).as("But the owner remains the same")
-                                                  .isEqualTo(extendedLeaseLeaderQueryResult[0][1]);
-
-        int disabledInstanceNum = simulateDisableBinaryOfLeader(electionInProcess, cqlSessionProviderList);
-        assertThat(disabledInstanceNum).as("Disabling binary of the current leader")
-                                       .isGreaterThanOrEqualTo(0)
-                                       .isLessThan(electionInProcess.size());
-
-        // Run a new election process where we would expect the existing leader to
-        // retain leadership until TTL elapses
-        runElection(pool, electionInProcess);
-
-        // Search for the leader
-        BestEffortSingleConditionalExecutor newLeader = getCurrentLeader(electionInProcess);
-        assertThat(newLeader).as("Leader is expected to be the same since the entry exists in the database")
-                             .isSameAs(currentLeader);
-
-        // simulate a TTL by deleting the table entry
-        removeLeaderFromDatabase(cluster);
-
-        // Run a new election process where we expect a different leader
-        // to be elected since the current leader doesn't have db connectivity.
-        // We should have 2 elected leaders
-        runElection(pool, electionInProcess);
-
-        Object[][] newLeaderQueryResult1 = queryCurrentLeaders(cluster);
-        List<BestEffortSingleConditionalExecutor> currentLeaders = getCurrentLeaders(electionInProcess);
-        assertThat(currentLeaders).as("2 leaders are expected when binary is disabled for the original leader")
-                                  .hasSize(2);
-        assertThat(currentLeaders).as("Existing leader is part of the leaders")
-                                  .anyMatch(leader -> leader == currentLeader);
-        assertThat(currentLeaders).as("New leader is also part of the leaders")
-                                  .anyMatch(leader -> leader.sidecarHostId().equals(newLeaderQueryResult1[0][1]));
-        assertThat(currentLeader.sidecarHostId()).as("New leader is not the same as the previous leader")
-                                                 .isNotEqualTo(newLeaderQueryResult1[0][1]);
-
-        // Re-enable binary on the original leader, the original leader
-        // will learn that it is no longer a leader.
-        simulateEnableBinaryOnInstance(cqlSessionProviderList, disabledInstanceNum);
+        // Now simulate the case where the current lease-holder forgets that it is the current executor
+        // The current lease-holder must be able to recover the information from the database.
+        currentLeaseHolder.get().resetExecutor();
+        assertThat(simulatedInstances).as("No instances are expected as we've just reset the existing lease holder information")
+                                      .allMatch(e -> !e.executor.executionDetermination().shouldExecuteOnLocalInstance());
 
         loopAssert(3, () -> {
-            runElection(pool, electionInProcess);
-            List<BestEffortSingleConditionalExecutor> leaders = getCurrentLeaders(electionInProcess);
-            assertThat(leaders).as("After binary is re-enabled, the previous leader learns it has lost the leadership")
-                               .hasSize(1);
+            runLeaseAcquireProcess(pool, simulatedInstances);
+            Object[][] newLeaseHolderQueryResult = queryCurrentLeaseHolders(cluster);
+            BestEffortSingleConditionalExecutor newLeaseHolder = getCurrentLeaseHolder(simulatedInstances);
+            assertThat(newLeaseHolder).as("Lease-holder is expected to be the same since we are only recovering persisted state")
+                                      .isSameAs(currentLeaseHolder.get());
+            assertThat(currentLeaseHolderQueryResult.get()[0][0]).as("Timestamps are expected to be the same since we are only recovering persisted state")
+                                                                 .isEqualTo(newLeaseHolderQueryResult[0][0]);
+            validateMetrics(simulatedInstances, 1);
+        });
+
+        loopAssert(3, () -> {
+            // Now let's simulate the case where the lease-holder will extend its lease
+            // we will see different write timestamps
+            runLeaseAcquireProcess(pool, simulatedInstances);
+            Object[][] extendedLeaseQueryResult = queryCurrentLeaseHolders(cluster);
+            assertThat(currentLeaseHolderQueryResult.get()[0][0]).as("Timestamps are NOT expected to be the same after a lease extension")
+                                                                 .isNotEqualTo(extendedLeaseQueryResult[0][0]);
+            assertThat(currentLeaseHolderQueryResult.get()[0][1]).as("But the owner remains the same")
+                                                                 .isEqualTo(extendedLeaseQueryResult[0][1]);
+            validateMetrics(simulatedInstances, 1);
+        });
+
+        int disabledInstanceNum = simulateDisableBinaryOfLeaseHolder(simulatedInstances);
+        assertThat(disabledInstanceNum).as("Disabling binary of the current lease-holder")
+                                       .isGreaterThanOrEqualTo(0)
+                                       .isLessThan(simulatedInstances.size());
+
+        loopAssert(3, () -> {
+            // Run a new process to acquire the lease where we would expect the existing lease-holder to
+            // retain the lease until TTL elapses
+            runLeaseAcquireProcess(pool, simulatedInstances);
+
+            // Search for the lease-holder
+            BestEffortSingleConditionalExecutor newLeaseHolder = getCurrentLeaseHolder(simulatedInstances);
+            assertThat(newLeaseHolder).as("Lease holder is expected to be the same since the entry exists in the database")
+                                      .isSameAs(currentLeaseHolder.get());
+            validateMetrics(simulatedInstances, 1);
+        });
+
+        // simulate a TTL by deleting the table entry
+        removeLeaseHolderFromDatabase(cluster);
+
+        loopAssert(3, () -> {
+            // Run a new process where we expect a different lease-holder to be
+            // elected since the current lease-holder doesn't have db connectivity.
+            // We should have 2 instances be executors
+            runLeaseAcquireProcess(pool, simulatedInstances);
+
+            Object[][] newLeaseHolderQueryResult1 = queryCurrentLeaseHolders(cluster);
+            List<TestInstanceWrapper> currentLeaseHolderInstances = getCurrentLeaseHolderInstances(simulatedInstances);
+            assertThat(currentLeaseHolderInstances).as("2 instances are expected when binary is disabled for the original lease-holder")
+                                                   .hasSize(2);
+            assertThat(currentLeaseHolderInstances).as("Existing lease-holder is part of the selected instances")
+                                                   .anyMatch(l -> l.executor == currentLeaseHolder.get());
+            assertThat(currentLeaseHolderInstances).as("New lease-holder is also part of the selected instances")
+                                                   .anyMatch(l -> l.executor.sidecarHostId().equals(newLeaseHolderQueryResult1[0][1]));
+            assertThat(currentLeaseHolder.get().sidecarHostId()).as("New lease-holder is not the same as the previous lease-holder")
+                                                                .isNotEqualTo(newLeaseHolderQueryResult1[0][1]);
+            validateMetrics(simulatedInstances, 2);
+        });
+
+        // Re-enable binary on the original lease-holder. The original lease-holder
+        // will learn that it is no longer the owner of the lease.
+        simulateEnableBinaryOnInstance(simulatedInstances, disabledInstanceNum);
+
+        loopAssert(3, () -> {
+            runLeaseAcquireProcess(pool, simulatedInstances);
+            List<TestInstanceWrapper> instances = getCurrentLeaseHolderInstances(simulatedInstances);
+            assertThat(instances).as("After binary is re-enabled, the previous lease-holder learns it has lost the lease")
+                                 .hasSize(1);
+            validateMetrics(simulatedInstances, 1);
         });
     }
 
-    private void runElection(ExecutorService pool, List<BestEffortSingleConditionalExecutor> electionInProcess)
+    private void validateMetrics(List<TestInstanceWrapper> simulatedInstances, int expectedLeaseHolderCount)
     {
-        int electorateSize = electionInProcess.size();
+        // Validate metrics, metrics instance is shared so we check on any instance
+        CoordinationMetrics coordinationMetrics = simulatedInstances.get(0).metrics.server().coordination();
+        assertThat(coordinationMetrics.participants.metric.getValue()).as("Everyone participates in this simulation")
+                                                                      .isEqualTo(CONCURRENT_PROCESSES);
+        assertThat(coordinationMetrics.leaseHolders.metric.getValue()).as("We only have %s lease-holder(s)", expectedLeaseHolderCount)
+                                                                      .isEqualTo(expectedLeaseHolderCount);
+    }
+
+    private void runLeaseAcquireProcess(ExecutorService pool, List<TestInstanceWrapper> simulatedInstances)
+    {
+        int electorateSize = simulatedInstances.size();
         CountDownLatch latch = new CountDownLatch(electorateSize);
-        CountDownLatch electionCompletedLatch = new CountDownLatch(electorateSize);
+        CountDownLatch completedLatch = new CountDownLatch(electorateSize);
         for (int i = 0; i < electorateSize; i++)
         {
             int finalI = i;
             pool.submit(() -> {
                 try
                 {
-                    // Invoke election roughly at the same time
+                    // Invoke process roughly at the same time
                     latch.countDown();
                     latch.await();
 
-                    // Execute will run the election process
-                    electionInProcess.get(finalI).determineSingleInstanceExecutor(() -> true);
+                    // Every instance will try to run determineSingleInstanceExecutor at roughly the same time
+                    simulatedInstances.get(finalI).executor.determineSingleConditionalExecutor(() -> true);
                 }
                 catch (InterruptedException e)
                 {
@@ -207,11 +244,11 @@ class BestEffortSingleConditionalExecutorIntegrationTest
                 }
                 finally
                 {
-                    electionCompletedLatch.countDown();
+                    completedLatch.countDown();
                 }
             });
         }
-        assertThat(awaitUninterruptibly(electionCompletedLatch, 1, TimeUnit.MINUTES)).isTrue();
+        assertThat(awaitUninterruptibly(completedLatch, 1, TimeUnit.MINUTES)).isTrue();
     }
 
     void initializeSchemas(AbstractCluster<?> cluster, SidecarLeaseSchema tableSchema)
@@ -226,28 +263,38 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         LOGGER.info("Creating table with DDL: {}", tableSchema.createSchemaStatement());
     }
 
-    List<BestEffortSingleConditionalExecutor> buildElectionProcess(AbstractCluster<?> cluster)
+    List<TestInstanceWrapper> buildSimulatedInstances(AbstractCluster<?> cluster)
     {
         List<InetSocketAddress> address = buildContactList(cluster.get(1));
-        List<BestEffortSingleConditionalExecutor> processes = new ArrayList<>();
+        List<TestInstanceWrapper> processes = new ArrayList<>();
         Set<String> hostIdSet = new HashSet<>();
-        for (int i = 0; i < CONCURRENT_ELECTION_PROCESSES; i++)
+        SidecarMetrics metrics = buildMetrics();
+        for (int i = 0; i < CONCURRENT_PROCESSES; i++)
         {
             // unique service configuration every time to ensure we have
             // different UUIDs for hostId
             ServiceConfiguration serviceConfiguration = new TestServiceConfigurationImpl();
             assertThat(hostIdSet.add(serviceConfiguration.hostId())).isTrue();
             DisconnectableCQLSessionProvider cqlSessionProvider = buildCqlSession(address);
-            cqlSessionProviderList.add(cqlSessionProvider);
             SidecarLeaseDatabaseAccessor accessor = buildAccessor(cqlSessionProvider);
-            processes.add(new BestEffortSingleConditionalExecutor(vertx,
-                                                                  createdSharedTestPool(vertx),
-                                                                  serviceConfiguration,
-                                                                  null,
-                                                                  accessor,
-                                                                  ));
+
+            BestEffortSingleConditionalExecutor executor =
+            new BestEffortSingleConditionalExecutor(vertx,
+                                                    createdSharedTestPool(vertx),
+                                                    serviceConfiguration,
+                                                    null,
+                                                    accessor,
+                                                    metrics);
+            processes.add(new TestInstanceWrapper(cqlSessionProvider, executor, metrics));
         }
         return processes;
+    }
+
+    private SidecarMetrics buildMetrics()
+    {
+        MetricRegistryFactory mockRegistryFactory = mock(MetricRegistryFactory.class);
+        when(mockRegistryFactory.getOrCreate()).thenReturn(registry());
+        return new SidecarMetricsImpl(mockRegistryFactory, null);
     }
 
     DisconnectableCQLSessionProvider buildCqlSession(List<InetSocketAddress> address)
@@ -277,15 +324,14 @@ class BestEffortSingleConditionalExecutorIntegrationTest
                                                                tryGetIntConfig(config, "native_transport_port", 9042)));
     }
 
-    static int simulateDisableBinaryOfLeader(List<BestEffortSingleConditionalExecutor> electionInProcess,
-                                             List<DisconnectableCQLSessionProvider> cqlSessionProviderList)
+    static int simulateDisableBinaryOfLeaseHolder(List<TestInstanceWrapper> simulatedInstances)
     {
-        for (int i = 0; i < electionInProcess.size(); i++)
+        for (int i = 0; i < simulatedInstances.size(); i++)
         {
-            BestEffortSingleConditionalExecutor l = electionInProcess.get(i);
-            if (l.shouldExecuteOnLocalInstance())
+            TestInstanceWrapper instance = simulatedInstances.get(i);
+            if (instance.executor.executionDetermination().shouldExecuteOnLocalInstance())
             {
-                DisconnectableCQLSessionProvider sessionProvider = cqlSessionProviderList.get(i);
+                DisconnectableCQLSessionProvider sessionProvider = instance.sessionProvider;
                 sessionProvider.disconnect();
                 assertThat(sessionProvider.get()).as("Simulating disable binary of instance %s", (i + 1)).isNull();
                 return i;
@@ -294,36 +340,35 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         return -1;
     }
 
-    static void simulateEnableBinaryOnInstance(List<DisconnectableCQLSessionProvider> cqlSessionProviderList,
-                                               int disabledInstanceNum)
+    static void simulateEnableBinaryOnInstance(List<TestInstanceWrapper> allSimulatedInstances, int disabledInstanceNum)
     {
-        DisconnectableCQLSessionProvider sessionProvider = cqlSessionProviderList.get(disabledInstanceNum);
+        DisconnectableCQLSessionProvider sessionProvider = allSimulatedInstances.get(disabledInstanceNum).sessionProvider;
         sessionProvider.reconnect();
         assertThat(sessionProvider.get()).as("Enabled binary on instance %s", disabledInstanceNum).isNotNull();
     }
 
-    static BestEffortSingleConditionalExecutor getCurrentLeader(List<BestEffortSingleConditionalExecutor> electionInProcess)
+    static BestEffortSingleConditionalExecutor getCurrentLeaseHolder(List<TestInstanceWrapper> allSimulatedInstances)
     {
-        List<BestEffortSingleConditionalExecutor> currentLeaders = getCurrentLeaders(electionInProcess);
-        assertThat(currentLeaders).as("There is more than one leader, this is unexpected in the simulation").hasSize(1);
-        return currentLeaders.get(0);
+        List<TestInstanceWrapper> currentInstances = getCurrentLeaseHolderInstances(allSimulatedInstances);
+        assertThat(currentInstances).as("There is more than one executor. This is unexpected in the simulation").hasSize(1);
+        return currentInstances.get(0).executor;
     }
 
-    static List<BestEffortSingleConditionalExecutor> getCurrentLeaders(List<BestEffortSingleConditionalExecutor> electionInProcess)
+    static List<TestInstanceWrapper> getCurrentLeaseHolderInstances(List<TestInstanceWrapper> allSimulatedInstances)
     {
-        List<BestEffortSingleConditionalExecutor> leaders = new ArrayList<>();
-        for (BestEffortSingleConditionalExecutor l : electionInProcess)
+        List<TestInstanceWrapper> instances = new ArrayList<>();
+        for (TestInstanceWrapper instance : allSimulatedInstances)
         {
-            if (l.shouldExecuteOnLocalInstance())
+            if (instance.executor.executionDetermination().shouldExecuteOnLocalInstance())
             {
-                leaders.add(l);
+                instances.add(instance);
             }
         }
-        assertThat(leaders).as("Expected to have at least one leader").isNotNull();
-        return leaders;
+        assertThat(instances).as("Expected to have at least one instance").isNotNull();
+        return instances;
     }
 
-    static Object[][] queryCurrentLeaders(AbstractCluster<?> cluster)
+    static Object[][] queryCurrentLeaseHolders(AbstractCluster<?> cluster)
     {
         Object[][] result =
         cluster.getFirstRunningInstance()
@@ -335,24 +380,24 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         return result;
     }
 
-    void removeLeaderFromDatabase(AbstractCluster<?> cluster)
+    void removeLeaseHolderFromDatabase(AbstractCluster<?> cluster)
     {
-        LOGGER.info("Removing current leader from the database");
+        LOGGER.info("Removing current lease-holder from the database");
         for (int retry = 1; retry <= 20; retry++)
         {
             try
             {
                 cluster.schemaChangeIgnoringStoppedInstances("DELETE FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'single_sidecar_instance_executor'");
-                LOGGER.info("Successfully removed current leader from the database");
+                LOGGER.info("Successfully removed current lease-holder from database");
                 return;
             }
             catch (Exception e)
             {
-                LOGGER.error("Error removing leader after {} attempts", retry, e);
+                LOGGER.error("Error removing lease-holder after {} attempts", retry, e);
                 sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
             }
         }
-        fail("Unable to remove current leader from database");
+        fail("Unable to remove current lease-holder from database");
     }
 
     /**
@@ -408,6 +453,25 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         public void close()
         {
             delegate.close();
+        }
+    }
+
+    /**
+     * An object that encapsulates objects related to the same simulated Sidecar instance for testing purposes
+     */
+    static class TestInstanceWrapper
+    {
+        final DisconnectableCQLSessionProvider sessionProvider;
+        final BestEffortSingleConditionalExecutor executor;
+        final SidecarMetrics metrics;
+
+        TestInstanceWrapper(DisconnectableCQLSessionProvider sessionProvider,
+                            BestEffortSingleConditionalExecutor executor,
+                            SidecarMetrics metrics)
+        {
+            this.sessionProvider = sessionProvider;
+            this.executor = executor;
+            this.metrics = metrics;
         }
     }
 }
