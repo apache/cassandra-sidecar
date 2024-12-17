@@ -32,7 +32,7 @@ public enum ExecutionDetermination
     /**
      * The execution will be skipped.
      */
-    DO_NOT_EXECUTE,
+    SKIP_EXECUTION,
 
     /**
      * It is not possible to determine whether the execution should proceed or be skipped.

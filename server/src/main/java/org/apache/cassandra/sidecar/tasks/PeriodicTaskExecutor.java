@@ -139,7 +139,7 @@ public class PeriodicTaskExecutor implements Closeable
 
         switch (determineExecution(periodicTask))
         {
-            case DO_NOT_EXECUTE:
+            case SKIP_EXECUTION:
                 LOGGER.trace("Skip executing task. task={}", periodicTask.name());
                 return;
 
@@ -184,7 +184,7 @@ public class PeriodicTaskExecutor implements Closeable
     {
         if (periodicTask.shouldSkip())
         {
-            return ExecutionDetermination.DO_NOT_EXECUTE;
+            return ExecutionDetermination.SKIP_EXECUTION;
         }
 
         if (conditionalExecutor != null && periodicTask instanceof PeriodicTaskOnSingleInstanceExecutor)

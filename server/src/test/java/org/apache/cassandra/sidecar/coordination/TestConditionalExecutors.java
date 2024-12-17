@@ -33,5 +33,5 @@ public class TestConditionalExecutors
     /**
      * An executor that will never schedule
      */
-    public static final ConditionalExecutor NEVER_EXECUTE = () -> ExecutionDetermination.DO_NOT_EXECUTE;
+    public static final ConditionalExecutor NEVER_EXECUTE = () -> ExecutionDetermination.SKIP_EXECUTION;
 }

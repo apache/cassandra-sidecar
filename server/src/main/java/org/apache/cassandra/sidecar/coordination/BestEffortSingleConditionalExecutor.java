@@ -146,7 +146,7 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
         LOGGER.debug("Sidecar instance shouldParticipate={} in the selection", shouldParticipate);
         if (!shouldParticipate)
         {
-            determination = ExecutionDetermination.DO_NOT_EXECUTE;
+            determination = ExecutionDetermination.SKIP_EXECUTION;
             return;
         }
 
@@ -216,7 +216,7 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
             else
             {
                 leaseTime = null;
-                determination = ExecutionDetermination.DO_NOT_EXECUTE;
+                determination = ExecutionDetermination.SKIP_EXECUTION;
             }
 
             if (wasCurrentExecutor && !isCurrentExecutor)
