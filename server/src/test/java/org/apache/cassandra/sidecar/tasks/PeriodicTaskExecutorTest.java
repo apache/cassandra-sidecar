@@ -30,6 +30,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
 import org.apache.cassandra.sidecar.coordination.TestConditionalExecutors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -82,35 +83,69 @@ class PeriodicTaskExecutorTest
     }
 
     @Test
-    void testPeriodicTaskOnNonLeader()
+    void testPeriodicTaskOnNonExecutor()
     {
         CountDownLatch latch = new CountDownLatch(1);
-        SimulatedTask taskThatRunsOnNonLeader = new SimulatedTask(latch);
-        PeriodicTaskExecutor taskExecutorNonLeader = new PeriodicTaskExecutor(executorPools,
-                                                                              TestConditionalExecutors.NEVER_EXECUTE);
+        SimulatedTask taskThatRunsOnNonExecutor = new SimulatedTask(latch);
+        PeriodicTaskExecutor taskExecutorNeverExecute = new PeriodicTaskExecutor(executorPools,
+                                                                                 TestConditionalExecutors.NEVER_EXECUTE);
 
-        taskExecutorNonLeader.schedule(taskThatRunsOnNonLeader);
+        taskExecutorNeverExecute.schedule(taskThatRunsOnNonExecutor);
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();
-        assertThat(taskThatRunsOnNonLeader.executionCount.get()).isEqualTo(0);
+        assertThat(taskThatRunsOnNonExecutor.executionCount.get()).isEqualTo(0);
+        assertThat(taskThatRunsOnNonExecutor.initialDelayCount.get()).isEqualTo(1);
     }
 
     @Test
-    void testPeriodicTaskOnLeader()
+    void testPeriodicTaskOnExecutor()
     {
         CountDownLatch latch = new CountDownLatch(1);
-        SimulatedTask taskThatRunsOnLeader = new SimulatedTask(latch);
-        PeriodicTaskExecutor taskExecutorLeader = new PeriodicTaskExecutor(executorPools,
-                                                                           TestConditionalExecutors.ALWAYS_EXECUTE);
+        SimulatedTask taskThatRunsOnExecutor = new SimulatedTask(latch);
+        PeriodicTaskExecutor taskExecutorAlwaysExecute = new PeriodicTaskExecutor(executorPools,
+                                                                                  TestConditionalExecutors.ALWAYS_EXECUTE);
 
-        taskExecutorLeader.schedule(taskThatRunsOnLeader);
+        taskExecutorAlwaysExecute.schedule(taskThatRunsOnExecutor);
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();
-        assertThat(taskThatRunsOnLeader.executionCount.get()).isEqualTo(5);
+        assertThat(taskThatRunsOnExecutor.executionCount.get()).isEqualTo(5);
+        assertThat(taskThatRunsOnExecutor.initialDelayCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    void testPeriodicTaskIsRescheduledWhenIndeterminate()
+    {
+        CountDownLatch latch = new CountDownLatch(1);
+        SimulatedTask taskThatRunsOnExecutor = new SimulatedTask(latch);
+
+        PeriodicTaskExecutor taskExecutor = new PeriodicTaskExecutor(executorPools, new FirstIndeterminateThenExecuteExecutor());
+        taskExecutor.schedule(taskThatRunsOnExecutor);
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();
+        assertThat(taskThatRunsOnExecutor.executionCount.get()).isEqualTo(5);
+        // Task gets rescheduled on the INDETERMINATE state, so we expect the initial delay
+        // to be called twice, on the first scheduling, and when rescheduling with the indeterminate state
+        assertThat(taskThatRunsOnExecutor.initialDelayCount.get()).isEqualTo(2);
+    }
+
+    static class FirstIndeterminateThenExecuteExecutor implements ConditionalExecutor
+    {
+        boolean firstExecution = true;
+
+        @Override
+        public ExecutionDetermination executionDetermination()
+        {
+            if (firstExecution)
+            {
+                firstExecution = false;
+                return ExecutionDetermination.INDETERMINATE;
+            }
+            return ExecutionDetermination.EXECUTE;
+        }
     }
 
     static class SimulatedTask implements PeriodicTaskOnSingleInstanceExecutor
     {
         final AtomicInteger executionCount = new AtomicInteger(0);
         final AtomicInteger shouldSkipCount = new AtomicInteger(0);
+        final AtomicInteger initialDelayCount = new AtomicInteger(0);
         private final CountDownLatch latch;
 
         SimulatedTask(CountDownLatch latch)
@@ -121,6 +156,7 @@ class PeriodicTaskExecutorTest
         @Override
         public long initialDelay()
         {
+            initialDelayCount.incrementAndGet();
             return 0;
         }
 

@@ -41,7 +41,7 @@ class BestEffortSingleConditionalExecutorParametersTest
         assertThat(params.initialDelayMillis()).as("Wait 1 second before starting the process by default").isEqualTo(1_000L);
     }
 
-    @DisplayName("Ensures that is_enabled cannot be configured with an invalid string value")
+    @DisplayName("Ensures that is_enabled returns the default value when an invalid string value is configured")
     @Test
     void testInvalidIsEnabledConfiguration()
     {

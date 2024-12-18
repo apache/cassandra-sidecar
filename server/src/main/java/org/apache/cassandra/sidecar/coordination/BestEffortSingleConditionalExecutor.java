@@ -281,7 +281,10 @@ public class BestEffortSingleConditionalExecutor implements ConditionalExecutor,
 
         // For the case where the current Sidecar was a lease-holder but the information was lost from
         // the in-memory process (i.e. Sidecar restarted) but the information is still persisted
-        // in the database, so we recover the state from the database
+        // in the database, so we recover the state from the database. Currently, the implementation
+        // relies on the sidecarHostId, which is a unique UUID generated during cluster start-up.
+        // For this feature to survive Sidecar restarts we need a more deterministic way to specify
+        // the sidecar host ID.
         return sidecarHostId.equals(result.currentOwner);
     }
 

@@ -18,11 +18,13 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,59 +69,68 @@ public class TokenZeroElectorateMembership implements ElectorateMembership
     @Override
     public boolean isMember()
     {
-        List<String> userKeyspaces = maybeCollectUserKeyspaces();
-        if (userKeyspaces.isEmpty())
+        String userKeyspace = maybeGetUserKeyspace();
+        if (userKeyspace == null)
         {
             return false;
         }
 
-        for (String userKeyspace : userKeyspaces)
+        Set<String> localInstancesHostsAndPorts = collectLocalInstancesHostsAndPorts();
+        if (localInstancesHostsAndPorts.isEmpty())
         {
-            TokenRangeReplicasResponse tokenRangeReplicas = null;
-            for (InstanceMetadata instance : instancesConfig.instances())
-            {
-                CassandraAdapterDelegate delegate = instance.delegate();
-                if (delegate == null)
-                {
-                    LOGGER.debug("Delegate is unavailable for instance={}", instance);
-                    continue;
-                }
-
-                StorageOperations operations = delegate.storageOperations();
-                NodeSettings nodeSettings = delegate.nodeSettings();
-                if (operations == null || nodeSettings == null)
-                {
-                    LOGGER.debug("Storage Operations / Node Settings are unavailable for instance={}", instance);
-                    continue;
-                }
-
-                InetSocketAddress address = delegate.localStorageBroadcastAddress();
-                if (address == null)
-                {
-                    LOGGER.warn("Unable to determine local storage broadcast address for instance={}", instance);
-                    continue;
-                }
-
-                String localInstanceHostAndPort = StringUtils.cassandraFormattedHostAndPort(address);
-                if (tokenRangeReplicas == null)
-                {
-                    // Token range replicas should be the same across all instances assuming the view of the ring
-                    // is the same for all instances, so we just get it once, as this could be an expensive call
-                    tokenRangeReplicas = operations.tokenRangeReplicas(new Name(userKeyspace), nodeSettings.partitioner());
-                }
-
-                if (instanceOwnsTokenZero(localInstanceHostAndPort, tokenRangeReplicas))
-                {
-                    // if any of the keyspaces owns token zero we add the instance, there's
-                    // no need to check the other keyspaces as this instance is eligible
-                    // return early
-                    return true;
-                }
-            }
+            // Unable to retrieve local instances, maybe all Cassandra connections are down?
+            return false;
         }
 
-        // This local Sidecar does not manage any Cassandra instances that owns token 0 for user keyspaces
-        return false;
+        StorageOperations operations = firstAvailableOperationFromDelegate(CassandraAdapterDelegate::storageOperations);
+        NodeSettings nodeSettings = firstAvailableOperationFromDelegate(CassandraAdapterDelegate::nodeSettings);
+
+        if (operations == null || nodeSettings == null)
+        {
+            // not expected, but for completeness
+            return false;
+        }
+
+        TokenRangeReplicasResponse tokenRangeReplicas = operations.tokenRangeReplicas(new Name(userKeyspace), nodeSettings.partitioner());
+        return anyInstanceOwnsTokenZero(tokenRangeReplicas, localInstancesHostsAndPorts);
+    }
+
+    Set<String> collectLocalInstancesHostsAndPorts()
+    {
+        Set<String> result = new HashSet<>();
+        for (InstanceMetadata instance : instancesConfig.instances())
+        {
+            CassandraAdapterDelegate delegate = instance.delegate();
+            if (delegate == null)
+            {
+                LOGGER.debug("Delegate is unavailable for instance={}", instance);
+                continue;
+            }
+
+            InetSocketAddress address = delegate.localStorageBroadcastAddress();
+            if (address == null)
+            {
+                LOGGER.warn("Unable to determine local storage broadcast address for instance={}", instance);
+                continue;
+            }
+
+            result.add(StringUtils.cassandraFormattedHostAndPort(address));
+        }
+        return result;
+    }
+
+    <O> O firstAvailableOperationFromDelegate(Function<CassandraAdapterDelegate, O> mapper)
+    {
+        for (InstanceMetadata instance : instancesConfig.instances())
+        {
+            CassandraAdapterDelegate delegate = instance.delegate();
+            O applied = delegate == null ? null : mapper.apply(delegate);
+            if (applied != null)
+            {
+                return applied;
+            }
+        }
+        return null;
     }
 
     /**
@@ -128,60 +139,60 @@ public class TokenZeroElectorateMembership implements ElectorateMembership
      *
      * @return the list of user keyspaces if available, or an empty list if it is unable to retrieve the user keyspaces
      */
-    List<String> maybeCollectUserKeyspaces()
+    String maybeGetUserKeyspace()
     {
         if (instancesConfig.instances().isEmpty())
         {
             LOGGER.warn("There are no local Cassandra instances managed by this Sidecar");
-            return Collections.emptyList();
+            return null;
         }
 
         Session activeSession = cqlSessionProvider.get();
         if (activeSession == null)
         {
             LOGGER.warn("There is no active session to Cassandra");
-            return Collections.emptyList();
+            return null;
         }
 
-        List<String> userKeyspaces = new ArrayList<>();
         Set<String> forbiddenKeyspaces = configuration.cassandraInputValidationConfiguration().forbiddenKeyspaces();
-        for (KeyspaceMetadata keyspace : activeSession.getCluster().getMetadata().getKeyspaces())
-        {
-            String keyspaceName = keyspace.getName();
-            if (!forbiddenKeyspaces.contains(keyspaceName))
-            {
-                userKeyspaces.add(keyspaceName);
-            }
-        }
+        String sidecarKeyspaceName = configuration.serviceConfiguration().schemaKeyspaceConfiguration().keyspace();
 
-        if (userKeyspaces.isEmpty())
-        {
-            LOGGER.warn("No user keyspaces found");
-        }
-
-        return userKeyspaces;
+        return activeSession.getCluster().getMetadata().getKeyspaces().stream()
+                            .filter(keyspace -> !forbiddenKeyspaces.contains(keyspace.getName()))
+                            // Sort by the keyspace with the highest replication factor
+                            // and then sort by the keyspace name to guarantee in the
+                            // sorting order across all Sidecar instances
+                            .sorted(Comparator.comparingInt(this::replicationFactor)
+                                              .reversed()
+                                              .thenComparing(KeyspaceMetadata::getName))
+                            .map(KeyspaceMetadata::getName)
+                            .findFirst()
+                            .orElse(sidecarKeyspaceName);
     }
 
     /**
-     * @param localInstanceHostAndPort local instance IP and port
-     * @param tokenRangeReplicas       the token range replicas for a keyspace
-     * @return {@code true} if the local instance is a replica of token zero for a single keyspace, {@code false}
-     * otherwise
+     * @param tokenRangeReplicas         the token range replicas for a keyspace
+     * @param localInstancesHostAndPorts local instance(s) IP(s) and port(s)
+     * @return {@code true} if any of the local instances is a replica of token zero for a single keyspace,
+     * {@code false} otherwise
      */
-    boolean instanceOwnsTokenZero(String localInstanceHostAndPort, TokenRangeReplicasResponse tokenRangeReplicas)
+    boolean anyInstanceOwnsTokenZero(TokenRangeReplicasResponse tokenRangeReplicas, Set<String> localInstancesHostAndPorts)
     {
         return tokenRangeReplicas.readReplicas()
                                  .stream()
                                  // only returns replicas that contain token zero
-                                 .filter(this::containsTokenZero)
+                                 .filter(this::replicaOwnsTokenZero)
                                  // and then see if any of the replicas matches the
                                  // local instance's host and port
                                  .anyMatch(replicaInfo -> {
                                      for (List<String> replicas : replicaInfo.replicasByDatacenter().values())
                                      {
-                                         if (replicas.contains(localInstanceHostAndPort))
+                                         for (String replica : replicas)
                                          {
-                                             return true;
+                                             if (localInstancesHostAndPorts.contains(replica))
+                                             {
+                                                 return true;
+                                             }
                                          }
                                      }
                                      return false;
@@ -192,10 +203,24 @@ public class TokenZeroElectorateMembership implements ElectorateMembership
      * @param replicaInfo the replica info
      * @return {@code true} if the replica info owns token zero, {@code false} otherwise
      */
-    boolean containsTokenZero(TokenRangeReplicasResponse.ReplicaInfo replicaInfo)
+    boolean replicaOwnsTokenZero(TokenRangeReplicasResponse.ReplicaInfo replicaInfo)
     {
-        long start = Long.parseLong(replicaInfo.start());
-        long end = Long.parseLong(replicaInfo.end());
-        return start <= 0L && end >= 0L;
+        BigInteger start = new BigInteger(replicaInfo.start());
+        BigInteger end = new BigInteger(replicaInfo.end());
+        // start is exclusive; end is inclusive
+        return start.compareTo(BigInteger.ZERO) < 0 && end.compareTo(BigInteger.ZERO) >= 0;
+    }
+
+    private int replicationFactor(KeyspaceMetadata metadata)
+    {
+        int replicationFactor = 0;
+        for (String value : metadata.getReplication().values())
+        {
+            if (isInteger(value))
+            {
+                replicationFactor += parsed(value);
+            }
+        }
+        return replicationFactor;
     }
 }

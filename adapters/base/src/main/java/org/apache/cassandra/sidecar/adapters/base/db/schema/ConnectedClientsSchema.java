@@ -41,6 +41,7 @@ public class ConnectedClientsSchema extends CassandraSystemTableSchema
         return KEYSPACE_NAME;
     }
 
+    @Override
     public void prepareStatements(@NotNull Session session)
     {
         statsStatement = prepare(statsStatement, session, statsStatement());
