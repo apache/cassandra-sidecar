@@ -20,10 +20,8 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.List;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.impl.AuthorizationHandlerImpl;
 
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
@@ -55,10 +53,6 @@ public class AuthorizationWithAdminBypassHandler extends AuthorizationHandlerImp
         }
 
         List<String> identities = extractIdentities(ctx.user());
-        if (identities.isEmpty())
-        {
-            throw new HttpException(HttpResponseStatus.FORBIDDEN.code(), "Client identities are missing");
-        }
 
         // Admin identities bypass route specific authorization checks
         if (identities.stream().anyMatch(adminIdentityResolver::isAdmin))

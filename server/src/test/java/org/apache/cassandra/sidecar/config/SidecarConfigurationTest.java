@@ -394,11 +394,15 @@ class SidecarConfigurationTest
         assertThat(accessControlConfiguration.enabled()).isTrue();
 
         List<ParameterizedClassConfiguration> authenticators = accessControlConfiguration.authenticatorsConfiguration();
-        assertThat(authenticators).isNotNull().hasSize(1);
+        assertThat(authenticators).isNotNull().hasSize(2);
         assertThat(authenticators.get(0).className()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationHandlerFactory");
         assertThat(authenticators.get(0).namedParameters())
         .contains(entry("certificate_validator", "io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator"),
                   entry("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor"));
+        assertThat(authenticators.get(1).className()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerFactory");
+        assertThat(authenticators.get(1).namedParameters())
+        .contains(entry("site", "https://authorization.com"),
+                  entry("client_id", "recognized_client_id"));
 
         ParameterizedClassConfiguration authorizer = accessControlConfiguration.authorizerConfiguration();
         assertThat(authorizer.className()).isEqualTo("org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider");

@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -28,9 +27,8 @@ import io.vertx.core.Handler;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.AuthorizationProvider;
-import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
-import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
+import static org.apache.cassandra.sidecar.utils.AuthUtils.extractCassandraRoles;
 
 /**
  * Provides authorizations based on user's role. Extracts permissions user holds from Cassandra's
@@ -39,13 +37,10 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
  */
 public class RoleBasedAuthorizationProvider implements AuthorizationProvider
 {
-    private final IdentityToRoleCache identityToRoleCache;
     private final RoleAuthorizationsCache roleAuthorizationsCache;
 
-    public RoleBasedAuthorizationProvider(IdentityToRoleCache identityToRoleCache,
-                                          RoleAuthorizationsCache roleAuthorizationsCache)
+    public RoleBasedAuthorizationProvider(RoleAuthorizationsCache roleAuthorizationsCache)
     {
-        this.identityToRoleCache = identityToRoleCache;
         this.roleAuthorizationsCache = roleAuthorizationsCache;
     }
 
@@ -64,29 +59,28 @@ public class RoleBasedAuthorizationProvider implements AuthorizationProvider
     @Override
     public Future<Void> getAuthorizations(User user)
     {
-        List<String> identities = extractIdentities(user);
+        List<String> roles = extractCassandraRoles(user);
 
-        if (identities.isEmpty())
+        if (roles.isEmpty())
         {
-            return Future.failedFuture("Missing client identities");
+            return Future.failedFuture("No cassandra roles found associated with the user");
         }
 
-        Set<Authorization> authorizations = new HashSet<>();
-        for (String identity : identities)
+        for (String role : roles)
         {
-            String role = identityToRoleCache.get(identity);
             if (role == null)
             {
                 continue;
             }
+
+            String authorizationId = getId();
+            Set<Authorization> authorizations = roleAuthorizationsCache.getAuthorizations(role);
             // when entries in cache are not found, null is returned. We can not add null in user.authorizations()
-            Set<Authorization> roleAuthorizations = roleAuthorizationsCache.getAuthorizations(role);
-            if (roleAuthorizations != null)
+            if (authorizations != null)
             {
-                authorizations.addAll(roleAuthorizations);
+                user.authorizations().add(authorizationId, authorizations);
             }
         }
-        user.authorizations().add(getId(), authorizations);
         return Future.succeededFuture();
     }
 }

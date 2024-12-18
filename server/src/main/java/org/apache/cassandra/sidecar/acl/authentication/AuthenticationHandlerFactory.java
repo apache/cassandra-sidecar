@@ -32,9 +32,9 @@ public interface AuthenticationHandlerFactory
 {
     /**
      * Creates instances of {@link AuthenticationHandlerInternal}. ChainAuthHandlerImpl in Vertx supports only
-     * implementations of AuthenticationHandlerImpl. When ChainAuthHandlerImpl is fixed to handle generic
+     * implementations of AuthenticationHandlerInternal. When ChainAuthHandlerImpl is fixed to handle generic
      * AuthenticationHandler implementations, we can update this method to return
-     * implementations of AuthenticationHandlerImpl.
+     * implementations of AuthenticationHandler.
      *
      * @param vertx                         instance of Vertx
      * @param accessControlConfiguration    Configuration for creating authentication handler

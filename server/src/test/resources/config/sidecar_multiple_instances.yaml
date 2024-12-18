@@ -154,6 +154,10 @@ access_control:
       parameters:
         certificate_validator: io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator
         certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor
+    - class_name: org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerFactory
+      parameters:
+        site: https://authorization.com
+        client_id: recognized_client_id
   authorizer:
     - class_name: org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider
   admin_identities:

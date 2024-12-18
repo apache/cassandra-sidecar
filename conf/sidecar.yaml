@@ -175,6 +175,10 @@ access_control:
   enabled: false
   # Supports setting multiple authenticators, request is authenticated if it is authenticated by any of the
   # configured authenticators
+  # Out of the box, Cassandra Sidecar provides following authenticator provider factories
+  # org.apache.cassandra.sidecar.acl.authentication.{MutualTlsAuthenticationHandlerFactory, JwtAuthenticationHandlerFactory}.
+  # - MutualTlsAuthenticationHandlerFactory  allows authenticating based on user certificates
+  # - JwtAuthenticationHandlerFactory        allows authenticating with user JWT tokens
   authenticators:
     - class_name: org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory
       parameters:
@@ -193,6 +197,16 @@ access_control:
         #
         # other options are, io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor.
         certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor
+      # JwtAuthenticationHandlerFactory adds support to authenticate users with their JWT tokens. It also includes
+      # supports for OpenID discovery.
+    - class_name: org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerFactory
+      parameters:
+        # Site for sidecar to dynamically retrieve the configuration information of an OpenID provider, without
+        # having to manually configure settings like issuer etc.
+        site: https://authorization.com
+        # Client Id is a unique identifier assigned by OpenID provider. It is used to identity applications/users
+        # trying to connect.
+        client_id: recognized_client_id
   authorizer:
     # Authorization backend, implementing io.vertx.ext.auth.authorization.AuthorizationProvider; used to
     # provide permissions a user holds.

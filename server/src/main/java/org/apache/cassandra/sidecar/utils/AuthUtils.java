@@ -26,11 +26,16 @@ import java.util.List;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
 
+import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
+
 /**
  * Class with utility methods for Authentication and Authorization.
  */
 public class AuthUtils
 {
+    public static final String CASSANDRA_ROLES_ATTRIBUTE_NAME = "cassandra_roles";
+    public static final String CASSANDRA_ROLE_SPLITTER = ",";
+
     /**
      * Extracts a list of identities a user holds from their principal.
      *
@@ -61,5 +66,24 @@ public class AuthUtils
             identities.addAll(Arrays.asList(parts));
         }
         return Collections.unmodifiableList(identities);
+    }
+
+    /**
+     * Extracts a list of cassandra roles associated with given user.
+     *
+     * @param user User representation in Vertx
+     * @return {@code List} of cassandra roles associated with user
+     */
+    public static List<String> extractCassandraRoles(User user)
+    {
+        String cassandraRoles = user.attributes().getString(CASSANDRA_ROLES_ATTRIBUTE_NAME);
+
+        if (isNullOrEmpty(cassandraRoles))
+        {
+            return List.of();
+        }
+
+        String[] roles = cassandraRoles.split(CASSANDRA_ROLE_SPLITTER);
+        return Arrays.asList(roles);
     }
 }

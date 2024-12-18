@@ -57,6 +57,9 @@ import io.vertx.ext.web.handler.TimeoutHandler;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.acl.authentication.AuthenticationHandlerFactory;
 import org.apache.cassandra.sidecar.acl.authentication.AuthenticationHandlerFactoryRegistry;
+import org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerFactory;
+import org.apache.cassandra.sidecar.acl.authentication.JwtRoleProcessor;
+import org.apache.cassandra.sidecar.acl.authentication.JwtRoleProcessorImpl;
 import org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory;
 import org.apache.cassandra.sidecar.acl.authorization.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider;
@@ -243,10 +246,19 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public AuthenticationHandlerFactoryRegistry authNHandlerFactoryRegistry(MutualTlsAuthenticationHandlerFactory mTLSAuthHandlerFactory)
+    public JwtRoleProcessor roleProcessor(IdentityToRoleCache identityToRoleCache)
+    {
+        return new JwtRoleProcessorImpl(identityToRoleCache);
+    }
+
+    @Provides
+    @Singleton
+    public AuthenticationHandlerFactoryRegistry authNHandlerFactoryRegistry(MutualTlsAuthenticationHandlerFactory mTLSAuthHandlerFactory,
+                                                                            JwtAuthenticationHandlerFactory jwtAuthHandlerFactory)
     {
         AuthenticationHandlerFactoryRegistry registry = new AuthenticationHandlerFactoryRegistry();
         registry.register(mTLSAuthHandlerFactory);
+        registry.register(jwtAuthHandlerFactory);
         return registry;
     }
 
@@ -287,7 +299,6 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     public AuthorizationProvider authorizationProvider(SidecarConfiguration sidecarConfiguration,
-                                                       IdentityToRoleCache identityToRoleCache,
                                                        RoleAuthorizationsCache roleAuthorizationsCache)
     {
         AccessControlConfiguration accessControlConfiguration = sidecarConfiguration.accessControlConfiguration();
@@ -308,7 +319,7 @@ public class MainModule extends AbstractModule
         }
         if (config.className().equalsIgnoreCase(RoleBasedAuthorizationProvider.class.getName()))
         {
-            return new RoleBasedAuthorizationProvider(identityToRoleCache, roleAuthorizationsCache);
+            return new RoleBasedAuthorizationProvider(roleAuthorizationsCache);
         }
         throw new ConfigurationException("Unrecognized authorization provider " + config.className() + " set");
     }

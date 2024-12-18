@@ -101,6 +101,6 @@ public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHand
             certificateIdentityExtractor = new SpiffeIdentityExtractor();
         }
         MutualTlsAuthentication mTLSAuthProvider = new MutualTlsAuthenticationImpl(vertx, certificateValidator, certificateIdentityExtractor);
-        return new MutualTlsAuthenticationHandler(mTLSAuthProvider);
+        return new MutualTlsAuthenticationHandler(mTLSAuthProvider, identityToRoleCache);
     }
 }

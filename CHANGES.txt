@@ -1,5 +1,6 @@
 0.1.0
 -----
+ * Add JWT Authentication support in Sidecar (CASSSIDECAR-160)
  * Add Token Ring Peer Health monitor (CASSSIDECAR-206)
  * Config APIs for storing CDC/Kafka configs for CDC feature (CASSSIDECAR-211)
  * Add sidecar endpoint to retrieve table stats (CASSSIDECAR-215)
