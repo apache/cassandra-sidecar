@@ -31,8 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Session;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -53,7 +51,6 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
  * lexicographic sort order. If no user keyspaces are created, the internal sidecar
  * keyspace will be used.
  */
-@Singleton
 public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements ElectorateMembership
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(MostReplicatedKeyspaceTokenZeroElectorateMembership.class);
@@ -61,7 +58,6 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
     private final CQLSessionProvider cqlSessionProvider;
     private final SidecarConfiguration configuration;
 
-    @Inject
     public MostReplicatedKeyspaceTokenZeroElectorateMembership(InstancesConfig instancesConfig,
                                                                CQLSessionProvider cqlSessionProvider,
                                                                SidecarConfiguration sidecarConfiguration)

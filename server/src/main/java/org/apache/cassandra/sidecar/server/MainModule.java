@@ -83,6 +83,7 @@ import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTask;
 import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
+import org.apache.cassandra.sidecar.coordination.MostReplicatedKeyspaceTokenZeroElectorateMembership;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
@@ -677,6 +678,15 @@ public class MainModule extends AbstractModule
     public LocalTokenRangesProvider localTokenRangesProvider(InstancesConfig instancesConfig, DnsResolver dnsResolver)
     {
         return new CachedLocalTokenRanges(instancesConfig, dnsResolver);
+    }
+
+    @Provides
+    @Singleton
+    public ElectorateMembership electorateMembership(InstancesConfig instancesConfig,
+                                                     CQLSessionProvider cqlSessionProvider,
+                                                     SidecarConfiguration configuration)
+    {
+        return new MostReplicatedKeyspaceTokenZeroElectorateMembership(instancesConfig, cqlSessionProvider, configuration);
     }
 
     @Provides
