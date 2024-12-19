@@ -33,7 +33,7 @@ import io.vertx.core.impl.ConcurrentHashSet;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
-import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseHolderOnly;
+import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -192,7 +192,7 @@ public class PeriodicTaskExecutor implements Closeable
             return ExecutionDetermination.SKIP_EXECUTION;
         }
 
-        if (periodicTask instanceof ExecuteOnClusterLeaseHolderOnly)
+        if (periodicTask instanceof ExecuteOnClusterLeaseholderOnly)
         {
             return clusterLease.executionDetermination();
         }

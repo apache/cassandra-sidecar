@@ -699,15 +699,15 @@ public class MainModule extends AbstractModule
                                                        ClusterLease clusterLease,
                                                        SidecarMetrics metrics)
     {
-        ClusterLeaseClaimTask executor = new ClusterLeaseClaimTask(vertx,
-                                                                   serviceConfiguration,
-                                                                   electorateMembership,
-                                                                   accessor,
-                                                                   clusterLease,
-                                                                   metrics);
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(vertx,
+                                                               serviceConfiguration,
+                                                               electorateMembership,
+                                                               accessor,
+                                                               clusterLease,
+                                                               metrics);
         vertx.eventBus().localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(),
-                                       ignored -> periodicTaskExecutor.schedule(executor));
-        return executor;
+                                       ignored -> periodicTaskExecutor.schedule(task));
+        return task;
     }
 
     /**

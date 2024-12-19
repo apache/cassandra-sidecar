@@ -45,9 +45,10 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
 
 /**
  * A best-effort process to determine a single Sidecar instance that holds
- * a cluster-wide lease. The number of Sidecar instances attempting to claim
- * the lease is determined by the {@link ElectorateMembership}.
- * The electorate is expected to be a small subset of the entirety of Sidecar instances.
+ * a cluster-wide lease. The Sidecar instances attempting to claim the lease
+ * is determined by the {@link ElectorateMembership}.
+ * The electorate is expected to be a small subset of the entirety of Sidecar
+ * instances.
  *
  * <p>There will be situations where multiple members of the electorate may
  * claim the cluster lease, for example in cases where we have:
@@ -64,7 +65,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterLeaseClaimTask.class);
 
-    private static final long MINIMUM_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(30);
+    static final long MINIMUM_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(30);
     private final ElectorateMembership electorateMembership;
     private final SidecarLeaseDatabaseAccessor accessor;
     private final ClusterLease clusterLease;
@@ -72,7 +73,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
     private final PeriodicTaskConfiguration periodicTaskConfiguration;
     private final ServiceConfiguration config;
     private final Vertx vertx;
-    private volatile String currentLeaseHolder;
+    private volatile String currentLeaseholder;
     private volatile Instant leaseTime;
 
     public ClusterLeaseClaimTask(Vertx vertx,
@@ -154,10 +155,10 @@ public class ClusterLeaseClaimTask implements PeriodicTask
     protected void runClaimProcess()
     {
         String sidecarHostId = sidecarHostId();
-        boolean wasLeaseHolder = isCurrentLeaseHolder(sidecarHostId);
+        boolean wasLeaseholder = isCurrentLeaseholder(sidecarHostId);
         tryToClaimClusterLease(sidecarHostId);
-        updateClusterLease(sidecarHostId, wasLeaseHolder);
-        maybeNotify(sidecarHostId, wasLeaseHolder);
+        updateClusterLease(sidecarHostId, wasLeaseholder);
+        maybeNotify(sidecarHostId, wasLeaseholder);
         updateMetrics();
     }
 
@@ -165,15 +166,15 @@ public class ClusterLeaseClaimTask implements PeriodicTask
     {
         LOGGER.debug("Starting selection for sidecarHostId={}", sidecarHostId);
 
-        if (isCurrentLeaseHolder(sidecarHostId))
+        if (isCurrentLeaseholder(sidecarHostId))
         {
-            currentLeaseHolder = executeLeaseAction("extend", sidecarHostId, accessor::extendLease);
+            currentLeaseholder = executeLeaseAction("extend", sidecarHostId, accessor::extendLease);
         }
         else
         {
             // always try to claim the lease, because we don't know when the leaseholder will
             // give up the lease
-            currentLeaseHolder = executeLeaseAction("claim", sidecarHostId, accessor::claimLease);
+            currentLeaseholder = executeLeaseAction("claim", sidecarHostId, accessor::claimLease);
         }
     }
 
@@ -198,23 +199,23 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         return null; // owner is unknown
     }
 
-    protected void updateClusterLease(String sidecarHostId, boolean wasLeaseHolder)
+    protected void updateClusterLease(String sidecarHostId, boolean wasLeaseholder)
     {
-        if (currentLeaseHolder == null)
+        // When the lease operation failed, the currentLeaseholder field will be null.
+        // This means that we are not able to determine who the leaseholder is.
+        // However, if we are the leaseholder, we want to preserve that information
+        // unless the lease expires, in which case we set the cluster lease to
+        // the indeterminate state.
+        if (currentLeaseholder == null)
         {
             boolean leaseExpired = leaseExpired();
-            if (wasLeaseHolder && !leaseExpired)
+            if (wasLeaseholder && !leaseExpired)
             {
                 // do not extend the lease time here because leaseholder is not resolved in this run
-                currentLeaseHolder = sidecarHostId;
-                LOGGER.info("Lease will expire on {}. Assume the current leaseholder, even though no leaseholder is resolved from this run",
-                            leaseExpirationTime());
+                currentLeaseholder = sidecarHostId;
+                LOGGER.debug("Lease will expire on {}. Assume the current leaseholder, even though no leaseholder is resolved from this run",
+                             leaseExpirationTime());
             }
-            // When the lease operation failed, the currentLeaseHolder will be null
-            // This means that we are not able to determine who the leaseholder is.
-            // However, if we are the leaseholder, we want to preserve that information
-            // unless the lease expires, in which case we set the cluster lease to
-            // the indeterminate state.
             else
             {
                 if (leaseExpired)
@@ -229,7 +230,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
             return;
         }
 
-        if (isCurrentLeaseHolder(sidecarHostId))
+        if (isCurrentLeaseholder(sidecarHostId))
         {
             leaseTime = Instant.now();
             clusterLease.setExecutionDetermination(ExecutionDetermination.EXECUTE);
@@ -243,7 +244,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
 
     protected void maybeNotify(String sidecarHostId, boolean wasLeaseHolder)
     {
-        boolean isCurrentLeaseHolder = isCurrentLeaseHolder(sidecarHostId);
+        boolean isCurrentLeaseHolder = isCurrentLeaseholder(sidecarHostId);
         // lease has been lost
         if (wasLeaseHolder && !isCurrentLeaseHolder)
         {
@@ -269,7 +270,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
     {
         if (clusterLease.isClaimedByLocalSidecar())
         {
-            metrics.leaseHolders.metric.update(1);
+            metrics.leaseholders.metric.update(1);
         }
         metrics.participants.metric.update(1);
     }
@@ -294,7 +295,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         return config.hostId();
     }
 
-    private boolean isCurrentLeaseHolder(String sidecarHostId)
+    private boolean isCurrentLeaseholder(String sidecarHostId)
     {
         // For the case where the current Sidecar was a lease-holder but the information was lost from
         // the in-memory process (i.e. Sidecar restarted) but the information is still persisted
@@ -302,16 +303,16 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         // relies on the sidecarHostId, which is a unique UUID generated during cluster start-up.
         // For this feature to survive Sidecar restarts we need a more deterministic way to specify
         // the sidecar host ID.
-        return Objects.equals(sidecarHostId, currentLeaseHolder);
+        return Objects.equals(sidecarHostId, currentLeaseholder);
     }
 
     /**
      * Resets the leaseholder information for testing purposes
      */
     @VisibleForTesting
-    void resetLeaseHolder()
+    void resetLeaseholder()
     {
-        currentLeaseHolder = null;
+        currentLeaseholder = null;
         leaseTime = null;
         clusterLease.setExecutionDetermination(ExecutionDetermination.INDETERMINATE);
     }

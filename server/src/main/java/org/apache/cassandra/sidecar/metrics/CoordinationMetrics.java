@@ -30,7 +30,7 @@ public class CoordinationMetrics
     /**
      * Keeps track of the lease-holder(s)
      */
-    public final NamedMetric<DeltaGauge> leaseHolders;
+    public final NamedMetric<DeltaGauge> leaseholders;
     /**
      * Keeps track of the number of instances participating in the selection of
      * the best-effort single instance executor
@@ -39,15 +39,15 @@ public class CoordinationMetrics
 
     public CoordinationMetrics(MetricRegistry metricRegistry)
     {
-        String bestEffortSingleConditionalExecutorDomain = DOMAIN + ".BestEffortSingleConditionalExecutor";
-        leaseHolders
+        String domain = DOMAIN + ".ClusterLeaseClaim";
+        leaseholders
         = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(bestEffortSingleConditionalExecutorDomain)
-                     .withName("LeaseHolder")
+                     .withDomain(domain)
+                     .withName("Leaseholder")
                      .build();
         participants
         = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(bestEffortSingleConditionalExecutorDomain)
+                     .withDomain(domain)
                      .withName("Participant")
                      .build();
     }

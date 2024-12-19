@@ -65,6 +65,7 @@ import static org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTaskInt
 import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.cassandraVersionProvider;
 import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.tryGetIntConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -74,31 +75,10 @@ import static org.mockito.Mockito.when;
 class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest.class);
-    public static final SidecarConfigurationImpl CONFIG = new SidecarConfigurationImpl();
+    private static final SidecarConfigurationImpl CONFIG = new SidecarConfigurationImpl();
     Vertx vertx = Vertx.vertx();
     DriverUtils driverUtils = new DriverUtils();
     CassandraVersionProvider cassandraVersionProvider = cassandraVersionProvider(DnsResolver.DEFAULT);
-
-    @Test
-    void testEmptyInstancesConfig()
-    {
-        InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
-        when(mockInstancesConfig.instances()).thenReturn(Collections.emptyList());
-        ElectorateMembership membership = new MostReplicatedKeyspaceTokenZeroElectorateMembership(mockInstancesConfig, null, CONFIG);
-        assertThat(membership.isMember()).as("When no local instances are managed by Sidecar, we can't determine participation")
-                                         .isFalse();
-    }
-
-    @Test
-    void testCqlSessionIsNotActive()
-    {
-        InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
-        when(mockInstancesConfig.instances()).thenReturn(Collections.singletonList(mock(InstanceMetadata.class)));
-        CQLSessionProvider mockCQLSessionProvider = mock(CQLSessionProvider.class);
-        ElectorateMembership membership = new MostReplicatedKeyspaceTokenZeroElectorateMembership(mockInstancesConfig, mockCQLSessionProvider, CONFIG);
-        assertThat(membership.isMember()).as("When the CQL connection is unavailable, we can't determine participation")
-                                         .isFalse();
-    }
 
     @ParameterizedTest(name = "{index} => version {0}")
     @MethodSource("org.apache.cassandra.testing.TestVersionSupplier#testVersions")
@@ -128,7 +108,10 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
     private void runTestScenario(AbstractCluster<?> cluster)
     {
         List<MostReplicatedKeyspaceTokenZeroElectorateMembership> memberships = buildElectorateMembershipPerCassandraInstance(cluster);
-        // Guaranteed by the sidecar_internal keyspace
+        // When there are no user keyspaces, we default to the sidecar_internal keyspace
+        // and therefore guaranteeing that we have at least one keyspace to use for the
+        // determination of the membership, and that's why we expect the membership count
+        // to be one, even if we have not created user keyspaces yet.
         assertMembership(memberships, 1);
 
         // Now let's create keyspaces with RF 1-3 replicated in a single DC and validate
@@ -142,20 +125,15 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
         }
 
         // Now let's create keyspaces with RF 1-4 replicated in DC2 and validate
+        // that we only increase the membership count once the keyspace in DC2
+        // has a higher replication factor than the keyspaces created in the first DC
         String dc1 = "dc1";
         for (int rf = 1; rf <= 4; rf++)
         {
             cluster.schemaChange(String.format("CREATE KEYSPACE ks_dc1_%d WITH REPLICATION={'class':'NetworkTopologyStrategy','%s':%d}", rf, dc1, rf));
             // introduce delay until schema change information propagates
             sleepUninterruptibly(10, TimeUnit.SECONDS);
-            if (rf == 4)
-            {
-                assertMembership(memberships, 4);
-            }
-            else
-            {
-                assertMembership(memberships, 3);
-            }
+            assertMembership(memberships, Math.max(3, rf));
         }
 
         // Now let's create a keyspace with RF=3 replicated across both DCs

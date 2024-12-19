@@ -136,37 +136,37 @@ class ClusterLeaseClaimTaskIntegrationTest
         assertThat(simulatedInstances).as("And the state for all of them is indeterminate")
                                       .allMatch(e -> e.clusterLease.executionDetermination() == ExecutionDetermination.INDETERMINATE);
 
-        AtomicReference<Object[][]> currentLeaseHolderQueryResult = new AtomicReference<>();
-        AtomicReference<TestInstanceWrapper> currentLeaseHolder = new AtomicReference<>();
+        AtomicReference<Object[][]> currentLeaseholderQueryResult = new AtomicReference<>();
+        AtomicReference<TestInstanceWrapper> currentLeaseholder = new AtomicReference<>();
         loopAssert(3, () -> {
             runLeaseAcquireProcess(pool, simulatedInstances);
-            Object[][] resultSet = queryCurrentLeaseHolders(cluster);
-            currentLeaseHolderQueryResult.set(resultSet);
+            Object[][] resultSet = queryCurrentLeaseholders(cluster);
+            currentLeaseholderQueryResult.set(resultSet);
             // Search for the leaseholder
-            TestInstanceWrapper holder = getCurrentLeaseHolder(simulatedInstances);
-            currentLeaseHolder.set(holder);
-            assertThat(currentLeaseHolder.get().clusterLeaseClaimTask.sidecarHostId()).as("Expecting leaseholder to match the entry in the database")
+            TestInstanceWrapper holder = getCurrentLeaseholder(simulatedInstances);
+            currentLeaseholder.set(holder);
+            assertThat(currentLeaseholder.get().clusterLeaseClaimTask.sidecarHostId()).as("Expecting leaseholder to match the entry in the database")
                                                                                       .isEqualTo(resultSet[0][1]);
             validateMetrics(simulatedInstances, 1);
         });
 
         // Now simulate the case where the current leaseholder forgets this information.
         // The current leaseholder must be able to recover the information from the persisted state.
-        currentLeaseHolder.get().clusterLeaseClaimTask.resetLeaseHolder();
+        currentLeaseholder.get().clusterLeaseClaimTask.resetLeaseholder();
         assertThat(simulatedInstances).as("No instances are expected as we've just reset the existing leaseholder information")
                                       .allMatch(e -> !e.clusterLease.isClaimedByLocalSidecar());
-        assertThat(currentLeaseHolder.get().clusterLease.executionDetermination())
+        assertThat(currentLeaseholder.get().clusterLease.executionDetermination())
         .as("And the state for the current leaseholder is indeterminate")
         .isEqualTo(ExecutionDetermination.INDETERMINATE);
 
         loopAssert(3, () -> {
             runLeaseAcquireProcess(pool, simulatedInstances);
-            Object[][] newLeaseHolderQueryResult = queryCurrentLeaseHolders(cluster);
-            TestInstanceWrapper newLeaseHolder = getCurrentLeaseHolder(simulatedInstances);
-            assertThat(newLeaseHolder.clusterLeaseClaimTask).as("leaseholder is expected to be the same since we are only recovering persisted state")
-                                                            .isSameAs(currentLeaseHolder.get().clusterLeaseClaimTask);
-            assertThat(currentLeaseHolderQueryResult.get()[0][0]).as("Timestamps are expected to be the same since we are only recovering persisted state")
-                                                                 .isEqualTo(newLeaseHolderQueryResult[0][0]);
+            Object[][] newLeaseholderQueryResult = queryCurrentLeaseholders(cluster);
+            TestInstanceWrapper newLeaseholder = getCurrentLeaseholder(simulatedInstances);
+            assertThat(newLeaseholder.clusterLeaseClaimTask).as("leaseholder is expected to be the same since we are only recovering persisted state")
+                                                            .isSameAs(currentLeaseholder.get().clusterLeaseClaimTask);
+            assertThat(currentLeaseholderQueryResult.get()[0][0]).as("Timestamps are expected to be the same since we are only recovering persisted state")
+                                                                 .isEqualTo(newLeaseholderQueryResult[0][0]);
             validateMetrics(simulatedInstances, 1);
         });
 
@@ -174,10 +174,10 @@ class ClusterLeaseClaimTaskIntegrationTest
             // Now let's simulate the case where the leaseholder will extend its lease
             // we will see different write timestamps
             runLeaseAcquireProcess(pool, simulatedInstances);
-            Object[][] extendedLeaseQueryResult = queryCurrentLeaseHolders(cluster);
-            assertThat(currentLeaseHolderQueryResult.get()[0][0]).as("Timestamps are NOT expected to be the same after a lease extension")
+            Object[][] extendedLeaseQueryResult = queryCurrentLeaseholders(cluster);
+            assertThat(currentLeaseholderQueryResult.get()[0][0]).as("Timestamps are NOT expected to be the same after a lease extension")
                                                                  .isNotEqualTo(extendedLeaseQueryResult[0][0]);
-            assertThat(currentLeaseHolderQueryResult.get()[0][1]).as("But the owner remains the same")
+            assertThat(currentLeaseholderQueryResult.get()[0][1]).as("But the owner remains the same")
                                                                  .isEqualTo(extendedLeaseQueryResult[0][1]);
             validateMetrics(simulatedInstances, 1);
         });
@@ -193,9 +193,9 @@ class ClusterLeaseClaimTaskIntegrationTest
             runLeaseAcquireProcess(pool, simulatedInstances);
 
             // Search for the leaseholder
-            TestInstanceWrapper newLeaseHolder = getCurrentLeaseHolder(simulatedInstances);
+            TestInstanceWrapper newLeaseHolder = getCurrentLeaseholder(simulatedInstances);
             assertThat(newLeaseHolder.clusterLeaseClaimTask).as("Leaseholder is expected to be the same since the entry exists in the database")
-                                                            .isSameAs(currentLeaseHolder.get().clusterLeaseClaimTask);
+                                                            .isSameAs(currentLeaseholder.get().clusterLeaseClaimTask);
             validateMetrics(simulatedInstances, 1);
         });
 
@@ -208,15 +208,15 @@ class ClusterLeaseClaimTaskIntegrationTest
             // We should have 2 instances be executors
             runLeaseAcquireProcess(pool, simulatedInstances);
 
-            Object[][] newLeaseHolderQueryResult1 = queryCurrentLeaseHolders(cluster);
+            Object[][] newLeaseHolderQueryResult1 = queryCurrentLeaseholders(cluster);
             List<TestInstanceWrapper> currentLeaseHolderInstances = getCurrentLeaseHolderInstances(simulatedInstances);
             assertThat(currentLeaseHolderInstances).as("2 instances are expected when binary is disabled for the original leaseholder")
                                                    .hasSize(2);
             assertThat(currentLeaseHolderInstances).as("Existing leaseholder is part of the selected instances")
-                                                   .anyMatch(l -> l.clusterLeaseClaimTask == currentLeaseHolder.get().clusterLeaseClaimTask);
+                                                   .anyMatch(l -> l.clusterLeaseClaimTask == currentLeaseholder.get().clusterLeaseClaimTask);
             assertThat(currentLeaseHolderInstances).as("New leaseholder is also part of the selected instances")
                                                    .anyMatch(l -> l.clusterLeaseClaimTask.sidecarHostId().equals(newLeaseHolderQueryResult1[0][1]));
-            assertThat(currentLeaseHolder.get().clusterLeaseClaimTask.sidecarHostId()).as("New leaseholder is not the same as the previous leaseholder")
+            assertThat(currentLeaseholder.get().clusterLeaseClaimTask.sidecarHostId()).as("New leaseholder is not the same as the previous leaseholder")
                                                                                       .isNotEqualTo(newLeaseHolderQueryResult1[0][1]);
             validateMetrics(simulatedInstances, 2);
         });
@@ -234,7 +234,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         });
 
         // Now let's actually wait for the TTL to expire and ensure the leaseholder gives up the lease
-        TestInstanceWrapper leaseHolder = getCurrentLeaseHolder(simulatedInstances);
+        TestInstanceWrapper leaseHolder = getCurrentLeaseholder(simulatedInstances);
         assertThat(leaseHolder).as("First find out who the leaseholder is").isNotNull();
         // then disable binary
         simulateDisableBinaryOfLeaseHolder(simulatedInstances);
@@ -250,7 +250,8 @@ class ClusterLeaseClaimTaskIntegrationTest
                 int ttlSeconds = Math.max(1, maybeDetermineTTL(cluster));
                 LOGGER.info("TTL is {} seconds", ttlSeconds);
                 // wait for the leaseholder to give the lease
-                // TTL is 5 seconds, so we sleep 1 second between runs
+                // query the TTL value and sleep for that amount of time
+                // before attempting again
                 sleepUninterruptibly(ttlSeconds, TimeUnit.SECONDS);
             }
             else break;
@@ -277,7 +278,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         CoordinationMetrics coordinationMetrics = simulatedInstances.get(0).metrics.server().coordination();
         assertThat(coordinationMetrics.participants.metric.getValue()).as("Everyone participates in this simulation")
                                                                       .isEqualTo(CONCURRENT_PROCESSES);
-        assertThat(coordinationMetrics.leaseHolders.metric.getValue()).as("We only have %s leaseholder(s)", expectedLeaseHolderCount)
+        assertThat(coordinationMetrics.leaseholders.metric.getValue()).as("We only have %s leaseholder(s)", expectedLeaseHolderCount)
                                                                       .isEqualTo(expectedLeaseHolderCount);
     }
 
@@ -340,14 +341,13 @@ class ClusterLeaseClaimTaskIntegrationTest
             SidecarLeaseDatabaseAccessor accessor = buildAccessor(cqlSessionProvider);
 
             ClusterLease clusterLease = new ClusterLease();
-            ClusterLeaseClaimTask executor =
-            new ClusterLeaseClaimTask(vertx,
-                                      serviceConfiguration,
-                                      null,
-                                      accessor,
-                                      clusterLease,
-                                      metrics);
-            processes.add(new TestInstanceWrapper(cqlSessionProvider, executor, clusterLease, metrics));
+            ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(vertx,
+                                                                   serviceConfiguration,
+                                                                   null,
+                                                                   accessor,
+                                                                   clusterLease,
+                                                                   metrics);
+            processes.add(new TestInstanceWrapper(cqlSessionProvider, task, clusterLease, metrics));
         }
         return processes;
     }
@@ -409,10 +409,10 @@ class ClusterLeaseClaimTaskIntegrationTest
         assertThat(sessionProvider.get()).as("Enabled binary on instance %s", disabledInstanceNum).isNotNull();
     }
 
-    static TestInstanceWrapper getCurrentLeaseHolder(List<TestInstanceWrapper> allSimulatedInstances)
+    static TestInstanceWrapper getCurrentLeaseholder(List<TestInstanceWrapper> allSimulatedInstances)
     {
         List<TestInstanceWrapper> currentInstances = getCurrentLeaseHolderInstances(allSimulatedInstances);
-        assertThat(currentInstances).as("There is more than one executor. This is unexpected in the simulation").hasSize(1);
+        assertThat(currentInstances).as("There is more than one leaseholder. This is unexpected in the simulation").hasSize(1);
         return currentInstances.get(0);
     }
 
@@ -435,7 +435,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         SimpleQueryResult result
         = cluster.getFirstRunningInstance()
                  .coordinator()
-                 .executeWithResult("SELECT ttl(owner) FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'single_sidecar_instance_executor'",
+                 .executeWithResult("SELECT ttl(owner) FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'cluster_lease_holder'",
                                     ConsistencyLevel.LOCAL_QUORUM);
         return result.hasNext() ? result.next().getInteger(0) : 0;
     }
@@ -449,12 +449,12 @@ class ClusterLeaseClaimTaskIntegrationTest
         return StreamSupport.stream(rows.spliterator(), false).count();
     }
 
-    static Object[][] queryCurrentLeaseHolders(AbstractCluster<?> cluster)
+    static Object[][] queryCurrentLeaseholders(AbstractCluster<?> cluster)
     {
         Object[][] result =
         cluster.getFirstRunningInstance()
                .coordinator()
-               .execute("SELECT writetime(owner), owner FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'single_sidecar_instance_executor'",
+               .execute("SELECT writetime(owner), owner FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'cluster_lease_holder'",
                         ConsistencyLevel.LOCAL_QUORUM);
         assertThat(result).isNotNull();
         assertThat(result).hasDimensions(1, 2);
@@ -468,7 +468,8 @@ class ClusterLeaseClaimTaskIntegrationTest
         {
             try
             {
-                cluster.schemaChangeIgnoringStoppedInstances("DELETE FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'single_sidecar_instance_executor'");
+                cluster.getFirstRunningInstance().coordinator().execute("DELETE FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'cluster_lease_holder'",
+                                                                        ConsistencyLevel.QUORUM);
                 LOGGER.info("Successfully removed current leaseholder from database");
                 return;
             }

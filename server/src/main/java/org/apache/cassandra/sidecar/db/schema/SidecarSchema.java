@@ -32,7 +32,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
-import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseHolderOnly;
+import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
 
@@ -189,7 +189,7 @@ public class SidecarSchema
 
     /**
      * Returns {@code true} when the schema should be created by this Sidecar instance. For schemas
-     * of type {@link ExecuteOnClusterLeaseHolderOnly}, the schema creation is conditioned to whether
+     * of type {@link ExecuteOnClusterLeaseholderOnly}, the schema creation is conditioned to whether
      * the local Sidecar instance has claimed the cluster-wide lease. For all other types of schemas,
      * the schemas will be created.
      *
@@ -198,7 +198,7 @@ public class SidecarSchema
      */
     protected boolean shouldCreateSchema(AbstractSchema schema)
     {
-        if (schema instanceof ExecuteOnClusterLeaseHolderOnly)
+        if (schema instanceof ExecuteOnClusterLeaseholderOnly)
         {
             return clusterLease.isClaimedByLocalSidecar();
         }

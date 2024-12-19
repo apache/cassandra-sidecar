@@ -179,10 +179,10 @@ public class SidecarSchemaTest
             "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?",
 
             "INSERT INTO sidecar_internal.sidecar_lease_v1 (name,owner) " +
-            "VALUES ('single_sidecar_instance_executor',?) IF NOT EXISTS USING TTL 120",
+            "VALUES ('cluster_lease_holder',?) IF NOT EXISTS USING TTL 120",
 
             "UPDATE sidecar_internal.sidecar_lease_v1 USING TTL 120 SET owner = ? " +
-            "WHERE name = 'single_sidecar_instance_executor' IF owner = ?"
+            "WHERE name = 'cluster_lease_holder' IF owner = ?"
             );
 
             assertThat(interceptedPrepStmts).as("Intercepted statements match expected statements")

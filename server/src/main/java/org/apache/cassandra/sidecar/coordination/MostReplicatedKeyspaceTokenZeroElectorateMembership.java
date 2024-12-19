@@ -90,6 +90,12 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
         }
 
         String userKeyspace = highestReplicationFactorKeyspace();
+        if (userKeyspace == null)
+        {
+            // pre-checks failed
+            return false;
+        }
+
         TokenRangeReplicasResponse tokenRangeReplicas = operations.tokenRangeReplicas(new Name(userKeyspace), nodeSettings.partitioner());
         return anyInstanceOwnsTokenZero(tokenRangeReplicas, localInstancesHostsAndPorts);
     }
@@ -163,7 +169,7 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
                             // Sort by the keyspace with the highest replication factor
                             // and then sort by the keyspace name to guarantee in the
                             // sorting order across all Sidecar instances
-                            .sorted(Comparator.comparingInt(this::replicationFactor)
+                            .sorted(Comparator.comparingInt(this::aggregateReplicationFactor)
                                               .reversed()
                                               .thenComparing(KeyspaceMetadata::getName))
                             .map(KeyspaceMetadata::getName)
@@ -216,7 +222,7 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
      * @param keyspace the keyspace
      * @return the aggregate replication factor for the {@link KeyspaceMetadata keyspace}
      */
-    int replicationFactor(KeyspaceMetadata keyspace)
+    int aggregateReplicationFactor(KeyspaceMetadata keyspace)
     {
         int replicationFactor = 0;
         for (String value : keyspace.getReplication().values())

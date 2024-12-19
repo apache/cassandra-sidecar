@@ -80,12 +80,12 @@ public class SidecarLeaseSchema extends TableSchema
         // TODO: revisit decision to make TTL a bind parameter instead of burning into the prepared statement
         //       which means it cannot be changed dynamically during the lifetime of the Sidecar process.
         claimLease = prepare(claimLease, session,
-                             String.format("INSERT INTO %s.%s (name,owner) VALUES ('single_sidecar_instance_executor',?) " +
+                             String.format("INSERT INTO %s.%s (name,owner) VALUES ('cluster_lease_holder',?) " +
                                            "IF NOT EXISTS USING TTL %d",
                                            keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTLSeconds()));
         extendLease = prepare(extendLease, session,
                               String.format("UPDATE %s.%s USING TTL %d SET owner = ? " +
-                                            "WHERE name = 'single_sidecar_instance_executor' IF owner = ?",
+                                            "WHERE name = 'cluster_lease_holder' IF owner = ?",
                                             keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTLSeconds()));
     }
 

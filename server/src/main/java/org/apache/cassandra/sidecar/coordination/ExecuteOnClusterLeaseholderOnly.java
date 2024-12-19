@@ -22,6 +22,6 @@ package org.apache.cassandra.sidecar.coordination;
  * A marker interface that defines an operation should be executed on the local Sidecar instance iff
  * the local Sidecar instance is the cluster leaseholder.
  */
-public interface ExecuteOnClusterLeaseHolderOnly
+public interface ExecuteOnClusterLeaseholderOnly
 {
 }

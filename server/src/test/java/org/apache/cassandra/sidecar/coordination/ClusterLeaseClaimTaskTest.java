@@ -32,6 +32,7 @@ import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 
+import static org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTask.MINIMUM_DELAY_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
@@ -120,11 +121,12 @@ class ClusterLeaseClaimTaskTest
     void testCannotConfigureDelayLessThanMinimum()
     {
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
-        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().executeIntervalMillis()).thenReturn(20_000L);
+        long lessThanMinimum = MINIMUM_DELAY_MILLIS - 1L;
+        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().executeIntervalMillis()).thenReturn(lessThanMinimum);
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), mockServiceConfiguration, mock(ElectorateMembership.class),
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
-        assertThat(task.delay()).as("The minimum is guaranteed").isEqualTo(30_000L);
+        assertThat(task.delay()).as("The minimum is guaranteed").isEqualTo(MINIMUM_DELAY_MILLIS);
     }
 
     private ServiceConfiguration mockConfiguration(boolean schemaConfigurationEnabled, boolean featureEnabled)

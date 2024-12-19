@@ -32,7 +32,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
-import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseHolderOnly;
+import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -153,7 +153,7 @@ class PeriodicTaskExecutorTest
         }
     }
 
-    static class SimulatedTask implements PeriodicTask, ExecuteOnClusterLeaseHolderOnly
+    static class SimulatedTask implements PeriodicTask, ExecuteOnClusterLeaseholderOnly
     {
         final AtomicInteger executionCount = new AtomicInteger(0);
         final AtomicInteger shouldSkipCount = new AtomicInteger(0);
