@@ -182,7 +182,7 @@ class ClusterLeaseClaimTaskIntegrationTest
             validateMetrics(simulatedInstances, 1);
         });
 
-        int disabledInstanceNum = simulateDisableBinaryOfLeaseHolder(simulatedInstances);
+        int disabledInstanceNum = simulateDisableBinaryOfLeaseholder(simulatedInstances);
         assertThat(disabledInstanceNum).as("Disabling binary of the current leaseholder")
                                        .isGreaterThanOrEqualTo(0)
                                        .isLessThan(simulatedInstances.size());
@@ -193,14 +193,14 @@ class ClusterLeaseClaimTaskIntegrationTest
             runLeaseAcquireProcess(pool, simulatedInstances);
 
             // Search for the leaseholder
-            TestInstanceWrapper newLeaseHolder = getCurrentLeaseholder(simulatedInstances);
-            assertThat(newLeaseHolder.clusterLeaseClaimTask).as("Leaseholder is expected to be the same since the entry exists in the database")
+            TestInstanceWrapper newLeaseholder = getCurrentLeaseholder(simulatedInstances);
+            assertThat(newLeaseholder.clusterLeaseClaimTask).as("Leaseholder is expected to be the same since the entry exists in the database")
                                                             .isSameAs(currentLeaseholder.get().clusterLeaseClaimTask);
             validateMetrics(simulatedInstances, 1);
         });
 
         // simulate a TTL by deleting the table entry
-        removeLeaseHolderFromDatabase(cluster);
+        removeLeaseholderFromDatabase(cluster);
 
         loopAssert(3, () -> {
             // Run a new process where we expect a different leaseholder to be
@@ -208,16 +208,16 @@ class ClusterLeaseClaimTaskIntegrationTest
             // We should have 2 instances be executors
             runLeaseAcquireProcess(pool, simulatedInstances);
 
-            Object[][] newLeaseHolderQueryResult1 = queryCurrentLeaseholders(cluster);
-            List<TestInstanceWrapper> currentLeaseHolderInstances = getCurrentLeaseHolderInstances(simulatedInstances);
-            assertThat(currentLeaseHolderInstances).as("2 instances are expected when binary is disabled for the original leaseholder")
+            Object[][] newLeaseholderQueryResult1 = queryCurrentLeaseholders(cluster);
+            List<TestInstanceWrapper> currentLeaseholderInstances = getCurrentLeaseholderInstances(simulatedInstances);
+            assertThat(currentLeaseholderInstances).as("2 instances are expected when binary is disabled for the original leaseholder")
                                                    .hasSize(2);
-            assertThat(currentLeaseHolderInstances).as("Existing leaseholder is part of the selected instances")
+            assertThat(currentLeaseholderInstances).as("Existing leaseholder is part of the selected instances")
                                                    .anyMatch(l -> l.clusterLeaseClaimTask == currentLeaseholder.get().clusterLeaseClaimTask);
-            assertThat(currentLeaseHolderInstances).as("New leaseholder is also part of the selected instances")
-                                                   .anyMatch(l -> l.clusterLeaseClaimTask.sidecarHostId().equals(newLeaseHolderQueryResult1[0][1]));
+            assertThat(currentLeaseholderInstances).as("New leaseholder is also part of the selected instances")
+                                                   .anyMatch(l -> l.clusterLeaseClaimTask.sidecarHostId().equals(newLeaseholderQueryResult1[0][1]));
             assertThat(currentLeaseholder.get().clusterLeaseClaimTask.sidecarHostId()).as("New leaseholder is not the same as the previous leaseholder")
-                                                                                      .isNotEqualTo(newLeaseHolderQueryResult1[0][1]);
+                                                                                      .isNotEqualTo(newLeaseholderQueryResult1[0][1]);
             validateMetrics(simulatedInstances, 2);
         });
 
@@ -227,23 +227,23 @@ class ClusterLeaseClaimTaskIntegrationTest
 
         loopAssert(3, () -> {
             runLeaseAcquireProcess(pool, simulatedInstances);
-            List<TestInstanceWrapper> instances = getCurrentLeaseHolderInstances(simulatedInstances);
+            List<TestInstanceWrapper> instances = getCurrentLeaseholderInstances(simulatedInstances);
             assertThat(instances).as("After binary is re-enabled, the previous leaseholder learns it has lost the lease")
                                  .hasSize(1);
             validateMetrics(simulatedInstances, 1);
         });
 
         // Now let's actually wait for the TTL to expire and ensure the leaseholder gives up the lease
-        TestInstanceWrapper leaseHolder = getCurrentLeaseholder(simulatedInstances);
-        assertThat(leaseHolder).as("First find out who the leaseholder is").isNotNull();
+        TestInstanceWrapper leaseholder = getCurrentLeaseholder(simulatedInstances);
+        assertThat(leaseholder).as("First find out who the leaseholder is").isNotNull();
         // then disable binary
-        simulateDisableBinaryOfLeaseHolder(simulatedInstances);
+        simulateDisableBinaryOfLeaseholder(simulatedInstances);
 
         ExecutionDetermination executionDetermination = null;
         for (int i = 0; i < 20; i++)
         {
-            leaseHolder.clusterLeaseClaimTask.runClaimProcess();
-            executionDetermination = leaseHolder.clusterLease.executionDetermination();
+            leaseholder.clusterLeaseClaimTask.runClaimProcess();
+            executionDetermination = leaseholder.clusterLease.executionDetermination();
 
             if (executionDetermination != ExecutionDetermination.INDETERMINATE)
             {
@@ -272,14 +272,14 @@ class ClusterLeaseClaimTaskIntegrationTest
         fail("Data was not TTL'd in the database");
     }
 
-    private void validateMetrics(List<TestInstanceWrapper> simulatedInstances, int expectedLeaseHolderCount)
+    private void validateMetrics(List<TestInstanceWrapper> simulatedInstances, int expectedLeaseholderCount)
     {
         // Validate metrics, metrics instance is shared so we check on any instance
         CoordinationMetrics coordinationMetrics = simulatedInstances.get(0).metrics.server().coordination();
         assertThat(coordinationMetrics.participants.metric.getValue()).as("Everyone participates in this simulation")
                                                                       .isEqualTo(CONCURRENT_PROCESSES);
-        assertThat(coordinationMetrics.leaseholders.metric.getValue()).as("We only have %s leaseholder(s)", expectedLeaseHolderCount)
-                                                                      .isEqualTo(expectedLeaseHolderCount);
+        assertThat(coordinationMetrics.leaseholders.metric.getValue()).as("We only have %s leaseholder(s)", expectedLeaseholderCount)
+                                                                      .isEqualTo(expectedLeaseholderCount);
     }
 
     private void runLeaseAcquireProcess(ExecutorService pool, List<TestInstanceWrapper> simulatedInstances)
@@ -386,7 +386,7 @@ class ClusterLeaseClaimTaskIntegrationTest
                                                                tryGetIntConfig(config, "native_transport_port", 9042)));
     }
 
-    static int simulateDisableBinaryOfLeaseHolder(List<TestInstanceWrapper> simulatedInstances)
+    static int simulateDisableBinaryOfLeaseholder(List<TestInstanceWrapper> simulatedInstances)
     {
         for (int i = 0; i < simulatedInstances.size(); i++)
         {
@@ -411,12 +411,12 @@ class ClusterLeaseClaimTaskIntegrationTest
 
     static TestInstanceWrapper getCurrentLeaseholder(List<TestInstanceWrapper> allSimulatedInstances)
     {
-        List<TestInstanceWrapper> currentInstances = getCurrentLeaseHolderInstances(allSimulatedInstances);
+        List<TestInstanceWrapper> currentInstances = getCurrentLeaseholderInstances(allSimulatedInstances);
         assertThat(currentInstances).as("There is more than one leaseholder. This is unexpected in the simulation").hasSize(1);
         return currentInstances.get(0);
     }
 
-    static List<TestInstanceWrapper> getCurrentLeaseHolderInstances(List<TestInstanceWrapper> allSimulatedInstances)
+    static List<TestInstanceWrapper> getCurrentLeaseholderInstances(List<TestInstanceWrapper> allSimulatedInstances)
     {
         List<TestInstanceWrapper> instances = new ArrayList<>();
         for (TestInstanceWrapper instance : allSimulatedInstances)
@@ -461,7 +461,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         return result;
     }
 
-    void removeLeaseHolderFromDatabase(AbstractCluster<?> cluster)
+    void removeLeaseholderFromDatabase(AbstractCluster<?> cluster)
     {
         LOGGER.info("Removing current leaseholder from the database");
         for (int retry = 1; retry <= 20; retry++)

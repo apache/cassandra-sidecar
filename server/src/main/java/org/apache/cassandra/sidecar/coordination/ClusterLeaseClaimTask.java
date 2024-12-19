@@ -242,25 +242,25 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         }
     }
 
-    protected void maybeNotify(String sidecarHostId, boolean wasLeaseHolder)
+    protected void maybeNotify(String sidecarHostId, boolean wasLeaseholder)
     {
-        boolean isCurrentLeaseHolder = isCurrentLeaseholder(sidecarHostId);
+        boolean isCurrentLeaseholder = isCurrentLeaseholder(sidecarHostId);
         // lease has been lost
-        if (wasLeaseHolder && !isCurrentLeaseHolder)
+        if (wasLeaseholder && !isCurrentLeaseholder)
         {
             LOGGER.info("Cluster-wide lease has been lost by sidecarHostId={}", sidecarHostId);
             vertx.eventBus().publish(ON_SIDECAR_GLOBAL_LEASE_LOST.address(), sidecarHostId);
         }
 
         // lease has been claimed
-        if (!wasLeaseHolder && isCurrentLeaseHolder)
+        if (!wasLeaseholder && isCurrentLeaseholder)
         {
             LOGGER.info("Cluster-wide lease has been claimed by sidecarHostId={}", sidecarHostId);
             vertx.eventBus().publish(ON_SIDECAR_GLOBAL_LEASE_CLAIMED.address(), sidecarHostId);
         }
 
         // lease has been extended
-        if (LOGGER.isDebugEnabled() && wasLeaseHolder && isCurrentLeaseHolder)
+        if (LOGGER.isDebugEnabled() && wasLeaseholder && isCurrentLeaseholder)
         {
             LOGGER.debug("Cluster-wide lease has been extended by sidecarHostId={}", sidecarHostId);
         }
