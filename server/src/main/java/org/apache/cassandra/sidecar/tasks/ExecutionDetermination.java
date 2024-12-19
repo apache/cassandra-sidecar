@@ -39,7 +39,7 @@ public enum ExecutionDetermination
      */
     INDETERMINATE;
 
-    public boolean shouldExecuteOnLocalInstance()
+    public boolean shouldExecuteOnLocalSidecar()
     {
         return this == EXECUTE;
     }

@@ -31,7 +31,6 @@ import org.junit.jupiter.api.io.TempDir;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.coordination.BestEffortSingleConditionalExecutor;
 import org.assertj.core.api.Condition;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
@@ -355,11 +354,10 @@ class SidecarConfigurationTest
 
         CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
         assertThat(coordinationConfiguration).isNotNull();
-        BestEffortSingleConditionalExecutor.Parameters params
-        = BestEffortSingleConditionalExecutor.Parameters.from(coordinationConfiguration.conditionalExecutorParameters());
-        assertThat(params.isEnabled()).isFalse();
-        assertThat(params.initialDelayMillis()).isEqualTo(5_000L);
-        assertThat(params.delayMillis()).isEqualTo(31_000L);
+        PeriodicTaskConfiguration periodicTaskConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
+        assertThat(periodicTaskConfig.enabled()).isFalse();
+        assertThat(periodicTaskConfig.initialDelayMillis()).isEqualTo(5_000L);
+        assertThat(periodicTaskConfig.executeIntervalMillis()).isEqualTo(31_000L);
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
@@ -502,11 +500,10 @@ class SidecarConfigurationTest
         // Validate default configuration
         CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
         assertThat(coordinationConfiguration).isNotNull();
-        BestEffortSingleConditionalExecutor.Parameters params
-        = BestEffortSingleConditionalExecutor.Parameters.from(coordinationConfiguration.conditionalExecutorParameters());
-        assertThat(params.isEnabled()).isTrue();
-        assertThat(params.delayMillis()).isEqualTo(60_000L);
-        assertThat(params.initialDelayMillis()).isEqualTo(1_000L);
+        PeriodicTaskConfiguration periodicTaskConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
+        assertThat(periodicTaskConfig.enabled()).isTrue();
+        assertThat(periodicTaskConfig.executeIntervalMillis()).isEqualTo(60_000L);
+        assertThat(periodicTaskConfig.initialDelayMillis()).isEqualTo(1_000L);
     }
 
     private void validateHealthCheckConfigurationFromYaml(HealthCheckConfiguration config)

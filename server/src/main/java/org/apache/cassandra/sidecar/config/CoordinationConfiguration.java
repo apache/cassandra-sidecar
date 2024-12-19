@@ -18,16 +18,13 @@
 
 package org.apache.cassandra.sidecar.config;
 
-import java.util.Map;
-
 /**
  * Configuration relevant to the coordination functionality of Sidecar
  */
 public interface CoordinationConfiguration
 {
     /**
-     * @return configuration parameters for the {@link org.apache.cassandra.sidecar.coordination.ConditionalExecutor}
-     * implementation
+     * @return configuration parameters for the cluster lease claim task
      */
-    Map<String, String> conditionalExecutorParameters();
+    PeriodicTaskConfiguration clusterLeaseClaimConfiguration();
 }

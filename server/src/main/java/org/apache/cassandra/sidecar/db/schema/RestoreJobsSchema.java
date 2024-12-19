@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.db.schema;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseHolderOnly;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -28,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
  * to {@link org.apache.cassandra.sidecar.db.RestoreJob} like inserting a restore job, updating a restore job,
  * finding restore jobs and more
  */
-public class RestoreJobsSchema extends TableSchema implements InitializeOnSingleInstanceExecutor
+public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLeaseHolderOnly
 {
     private static final String RESTORE_JOB_TABLE_NAME = "restore_job_v4";
 

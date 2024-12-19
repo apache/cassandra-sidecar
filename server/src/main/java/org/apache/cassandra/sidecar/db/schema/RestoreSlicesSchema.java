@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.db.schema;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseHolderOnly;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -28,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
  * related to {@link org.apache.cassandra.sidecar.db.RestoreSlice} like inserting a new restore slice,
  * updating status of a slice, finding restore slices and more
  */
-public class RestoreSlicesSchema extends TableSchema implements InitializeOnSingleInstanceExecutor
+public class RestoreSlicesSchema extends TableSchema implements ExecuteOnClusterLeaseHolderOnly
 {
     private static final String RESTORE_SLICE_TABLE_NAME = "restore_slice_v3";
 

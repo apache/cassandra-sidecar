@@ -47,9 +47,9 @@ import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
-import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
-import org.apache.cassandra.sidecar.coordination.TestConditionalExecutors;
+import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
+import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -150,9 +150,9 @@ public class IntegrationTestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public ConditionalExecutor singleInstanceExecutor()
+    public ClusterLease clusterLease()
     {
-        return TestConditionalExecutors.ALWAYS_EXECUTE;
+        return new ClusterLease(ExecutionDetermination.EXECUTE);
     }
 
     private AccessControlConfiguration accessControlConfiguration()

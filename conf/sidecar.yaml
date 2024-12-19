@@ -111,17 +111,19 @@ sidecar:
     # The TTL in seconds used to insert entries into the sidecar_lease schema
     lease_schema_ttl_sec: 120
   coordination:
-    # Captures configuration parameters for the conditional executor implementation
-    conditional_executor_parameters:
+    # Captures configuration parameters for the task that performs the cluster lease claim process
+    cluster_lease_claim:
       # Whether the process is enabled
-      is_enabled: true
-      # The initial delay for the best-effort single conditional executor process in milliseconds
-      # The minimum value for the initial delay is 0
+      enabled: true
+      # The initial delay for the first execution of the cluster lease claim process task after being
+      # scheduled or rescheduled, in milliseconds.
+      # The minimum value for the initial delay is 0.
       initial_delay_millis: 1000
-      # The frequency of the best-effort single conditional executor process in milliseconds
-      # The minimum value allowed for the best-effort single conditional executor implementation is
+      # How often the cluster lease claim process task will execute after the previous task has completed
+      # the execution, in milliseconds.
+      # The minimum value allowed for the cluster lease claim process task implementation is
       # 30,000 milliseconds (30 seconds)
-      frequency_millis: 60000
+      execute_interval_millis: 60000
 
 vertx:
   filesystem_options:

@@ -22,6 +22,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Test;
@@ -30,8 +31,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
-import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
-import org.apache.cassandra.sidecar.coordination.TestConditionalExecutors;
+import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseHolderOnly;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -87,8 +88,7 @@ class PeriodicTaskExecutorTest
     {
         CountDownLatch latch = new CountDownLatch(1);
         SimulatedTask taskThatRunsOnNonExecutor = new SimulatedTask(latch);
-        PeriodicTaskExecutor taskExecutorNeverExecute = new PeriodicTaskExecutor(executorPools,
-                                                                                 TestConditionalExecutors.NEVER_EXECUTE);
+        PeriodicTaskExecutor taskExecutorNeverExecute = new PeriodicTaskExecutor(executorPools, new ClusterLease(ExecutionDetermination.SKIP_EXECUTION));
 
         taskExecutorNeverExecute.schedule(taskThatRunsOnNonExecutor);
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();
@@ -101,8 +101,7 @@ class PeriodicTaskExecutorTest
     {
         CountDownLatch latch = new CountDownLatch(1);
         SimulatedTask taskThatRunsOnExecutor = new SimulatedTask(latch);
-        PeriodicTaskExecutor taskExecutorAlwaysExecute = new PeriodicTaskExecutor(executorPools,
-                                                                                  TestConditionalExecutors.ALWAYS_EXECUTE);
+        PeriodicTaskExecutor taskExecutorAlwaysExecute = new PeriodicTaskExecutor(executorPools, new ClusterLease(ExecutionDetermination.EXECUTE));
 
         taskExecutorAlwaysExecute.schedule(taskThatRunsOnExecutor);
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();
@@ -116,32 +115,45 @@ class PeriodicTaskExecutorTest
         CountDownLatch latch = new CountDownLatch(1);
         SimulatedTask taskThatRunsOnExecutor = new SimulatedTask(latch);
 
-        PeriodicTaskExecutor taskExecutor = new PeriodicTaskExecutor(executorPools, new FirstIndeterminateThenExecuteExecutor());
+        ClusterLease clusterLease = new TestClusterLease(new ClusterLease());
+        PeriodicTaskExecutor taskExecutor = new PeriodicTaskExecutor(executorPools, clusterLease);
         taskExecutor.schedule(taskThatRunsOnExecutor);
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 30, TimeUnit.SECONDS)).isTrue();
-        assertThat(taskThatRunsOnExecutor.executionCount.get()).isEqualTo(5);
         // Task gets rescheduled on the INDETERMINATE state, so we expect the initial delay
         // to be called twice, on the first scheduling, and when rescheduling with the indeterminate state
         assertThat(taskThatRunsOnExecutor.initialDelayCount.get()).isEqualTo(2);
+        // and we only actually execute 4 times, since the first time was rescheduled
+        assertThat(taskThatRunsOnExecutor.executionCount.get()).isEqualTo(4);
     }
 
-    static class FirstIndeterminateThenExecuteExecutor implements ConditionalExecutor
+    static class TestClusterLease extends ClusterLease
     {
-        boolean firstExecution = true;
+        private final AtomicReference<ClusterLease> delegate;
+
+        TestClusterLease(ClusterLease delegate)
+        {
+            this.delegate = new AtomicReference<>(delegate);
+        }
 
         @Override
         public ExecutionDetermination executionDetermination()
         {
-            if (firstExecution)
+            ExecutionDetermination executionDetermination = delegate.get().executionDetermination();
+            if (executionDetermination == ExecutionDetermination.INDETERMINATE)
             {
-                firstExecution = false;
-                return ExecutionDetermination.INDETERMINATE;
+                delegate.set(new ClusterLease(ExecutionDetermination.EXECUTE));
             }
-            return ExecutionDetermination.EXECUTE;
+            return executionDetermination;
+        }
+
+        @Override
+        public boolean isClaimedByLocalSidecar()
+        {
+            return delegate.get().isClaimedByLocalSidecar();
         }
     }
 
-    static class SimulatedTask implements PeriodicTaskOnSingleInstanceExecutor
+    static class SimulatedTask implements PeriodicTask, ExecuteOnClusterLeaseHolderOnly
     {
         final AtomicInteger executionCount = new AtomicInteger(0);
         final AtomicInteger shouldSkipCount = new AtomicInteger(0);

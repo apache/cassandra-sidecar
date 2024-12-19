@@ -18,20 +18,10 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
-import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
-
 /**
- * {@link ConditionalExecutor ConditionalExecutors} used for testing purposes
+ * A marker interface that defines an operation should be executed on the local Sidecar instance iff
+ * the local Sidecar instance is the cluster leaseholder.
  */
-public class TestConditionalExecutors
+public interface ExecuteOnClusterLeaseHolderOnly
 {
-    /**
-     * An executor that will always schedule
-     */
-    public static final ConditionalExecutor ALWAYS_EXECUTE = () -> ExecutionDetermination.EXECUTE;
-
-    /**
-     * An executor that will never schedule
-     */
-    public static final ConditionalExecutor NEVER_EXECUTE = () -> ExecutionDetermination.SKIP_EXECUTION;
 }

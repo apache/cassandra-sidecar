@@ -80,10 +80,9 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.coordination.BestEffortSingleConditionalExecutor;
-import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
+import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTask;
 import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
-import org.apache.cassandra.sidecar.coordination.TokenZeroElectorateMembership;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
@@ -633,7 +632,7 @@ public class MainModule extends AbstractModule
                                        SystemAuthSchema systemAuthSchema,
                                        SidecarLeaseSchema sidecarLeaseSchema,
                                        SidecarMetrics metrics,
-                                       ConditionalExecutor conditionalExecutor)
+                                       ClusterLease clusterLease)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
@@ -644,7 +643,7 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(sidecarLeaseSchema);
         SchemaMetrics schemaMetrics = metrics.server().schema();
         return new SidecarSchema(vertx, executorPools, configuration,
-                                 sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics, conditionalExecutor);
+                                 sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics, clusterLease);
     }
 
     @Provides
@@ -682,29 +681,20 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public ElectorateMembership electorateMembership(InstancesConfig instancesConfig,
-                                                     CQLSessionProvider cqlSessionProvider,
-                                                     SidecarConfiguration sidecarConfiguration)
+    public ClusterLeaseClaimTask clusterLeaseClaimTask(Vertx vertx,
+                                                       ElectorateMembership electorateMembership,
+                                                       SidecarLeaseDatabaseAccessor accessor,
+                                                       ServiceConfiguration serviceConfiguration,
+                                                       PeriodicTaskExecutor periodicTaskExecutor,
+                                                       ClusterLease clusterLease,
+                                                       SidecarMetrics metrics)
     {
-        return new TokenZeroElectorateMembership(instancesConfig, cqlSessionProvider, sidecarConfiguration);
-    }
-
-    @Provides
-    @Singleton
-    public ConditionalExecutor singleInstanceExecutor(Vertx vertx,
-                                                      ExecutorPools executorPools,
-                                                      ElectorateMembership electorateMembership,
-                                                      SidecarLeaseDatabaseAccessor accessor,
-                                                      ServiceConfiguration serviceConfiguration,
-                                                      PeriodicTaskExecutor periodicTaskExecutor,
-                                                      SidecarMetrics metrics)
-    {
-        BestEffortSingleConditionalExecutor executor = new BestEffortSingleConditionalExecutor(vertx,
-                                                                                               executorPools,
-                                                                                               serviceConfiguration,
-                                                                                               electorateMembership,
-                                                                                               accessor,
-                                                                                               metrics);
+        ClusterLeaseClaimTask executor = new ClusterLeaseClaimTask(vertx,
+                                                                   serviceConfiguration,
+                                                                   electorateMembership,
+                                                                   accessor,
+                                                                   clusterLease,
+                                                                   metrics);
         vertx.eventBus().localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(),
                                        ignored -> periodicTaskExecutor.schedule(executor));
         return executor;

@@ -31,10 +31,10 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
+import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseHolderOnly;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -55,7 +55,7 @@ public class SidecarSchema
     private final AtomicLong initializationTimerId = new AtomicLong(-1L);
     private final CQLSessionProvider cqlSessionProvider;
     private final SchemaMetrics metrics;
-    private final ConditionalExecutor conditionalExecutor;
+    private final ClusterLease clusterLease;
 
     private boolean isInitialized = false;
 
@@ -65,7 +65,7 @@ public class SidecarSchema
                          SidecarInternalKeyspace sidecarInternalKeyspace,
                          CQLSessionProvider cqlSessionProvider,
                          SchemaMetrics metrics,
-                         ConditionalExecutor conditionalExecutor)
+                         ClusterLease clusterLease)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -73,7 +73,7 @@ public class SidecarSchema
         this.sidecarInternalKeyspace = sidecarInternalKeyspace;
         this.cqlSessionProvider = cqlSessionProvider;
         this.metrics = metrics;
-        this.conditionalExecutor = conditionalExecutor;
+        this.clusterLease = clusterLease;
         if (this.schemaKeyspaceConfiguration.isEnabled())
         {
             configureSidecarServerEventListeners();
@@ -188,20 +188,19 @@ public class SidecarSchema
     }
 
     /**
-     * Returns true when the schema should be created by this Sidecar instance. This currently
-     * depends on whether the election of single instance executor process is available, and
-     * the schemas are of type {@link InitializeOnSingleInstanceExecutor}, and the local Sidecar
-     * is a single instance executor. For all other types of schemas or if the election of leader
-     * process is unavailable we initialize the schemas.
+     * Returns {@code true} when the schema should be created by this Sidecar instance. For schemas
+     * of type {@link ExecuteOnClusterLeaseHolderOnly}, the schema creation is conditioned to whether
+     * the local Sidecar instance has claimed the cluster-wide lease. For all other types of schemas,
+     * the schemas will be created.
      *
      * @param schema the schema to test
      * @return {@code true} if the schema should be created by this Sidecar instance, {@code false} otherwise
      */
-    protected boolean shouldCreateSchema(@Nullable AbstractSchema schema)
+    protected boolean shouldCreateSchema(AbstractSchema schema)
     {
-        if (conditionalExecutor != null && schema instanceof InitializeOnSingleInstanceExecutor)
+        if (schema instanceof ExecuteOnClusterLeaseHolderOnly)
         {
-            return conditionalExecutor.executionDetermination().shouldExecuteOnLocalInstance();
+            return clusterLease.isClaimedByLocalSidecar();
         }
         return true;
     }

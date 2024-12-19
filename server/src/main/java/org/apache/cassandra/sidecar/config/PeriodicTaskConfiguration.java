@@ -16,15 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.tasks;
-
-import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
+package org.apache.cassandra.sidecar.config;
 
 /**
- * A marker interface that defines a periodic task that will be executed during the lifecycle of Cassandra Sidecar
- * iff when the Cassandra Sidecar instance is determined to be a single instance executor as defined by the
- * {@link ConditionalExecutor} process.
+ * Configuration relevant for {@link org.apache.cassandra.sidecar.tasks.PeriodicTask}s
  */
-public interface PeriodicTaskOnSingleInstanceExecutor extends PeriodicTask
+public interface PeriodicTaskConfiguration
 {
+    /**
+     * @return {@code true} if the task is to be executed, {@code false} if the task is to be skipped
+     */
+    boolean enabled();
+
+    /**
+     * @return the initial delay for the first execution of this task after being scheduled or rescheduled,
+     * in milliseconds
+     */
+    long initialDelayMillis();
+
+    /**
+     * @return how often this task will execute after the previous task has completed the {@link io.vertx.core.Promise}
+     * of the execution, in milliseconds
+     */
+    long executeIntervalMillis();
 }

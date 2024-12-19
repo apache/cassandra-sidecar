@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.MetricRegistry;
 import com.vdurmont.semver4j.Semver;
@@ -50,6 +52,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
@@ -58,7 +61,7 @@ import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.testing.TestVersion;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static org.apache.cassandra.sidecar.coordination.BestEffortSingleConditionalExecutorIntegrationTest.buildContactList;
+import static org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTaskIntegrationTest.buildContactList;
 import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.cassandraVersionProvider;
 import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.tryGetIntConfig;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,10 +69,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Integration tests for the {@link TokenZeroElectorateMembership} class
+ * Integration tests for the {@link MostReplicatedKeyspaceTokenZeroElectorateMembership} class
  */
-class TokenZeroElectorateMembershipIntegrationTest
+class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest.class);
     public static final SidecarConfigurationImpl CONFIG = new SidecarConfigurationImpl();
     Vertx vertx = Vertx.vertx();
     DriverUtils driverUtils = new DriverUtils();
@@ -80,7 +84,7 @@ class TokenZeroElectorateMembershipIntegrationTest
     {
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         when(mockInstancesConfig.instances()).thenReturn(Collections.emptyList());
-        ElectorateMembership membership = new TokenZeroElectorateMembership(mockInstancesConfig, null, CONFIG);
+        ElectorateMembership membership = new MostReplicatedKeyspaceTokenZeroElectorateMembership(mockInstancesConfig, null, CONFIG);
         assertThat(membership.isMember()).as("When no local instances are managed by Sidecar, we can't determine participation")
                                          .isFalse();
     }
@@ -91,7 +95,7 @@ class TokenZeroElectorateMembershipIntegrationTest
         InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
         when(mockInstancesConfig.instances()).thenReturn(Collections.singletonList(mock(InstanceMetadata.class)));
         CQLSessionProvider mockCQLSessionProvider = mock(CQLSessionProvider.class);
-        ElectorateMembership membership = new TokenZeroElectorateMembership(mockInstancesConfig, mockCQLSessionProvider, CONFIG);
+        ElectorateMembership membership = new MostReplicatedKeyspaceTokenZeroElectorateMembership(mockInstancesConfig, mockCQLSessionProvider, CONFIG);
         assertThat(membership.isMember()).as("When the CQL connection is unavailable, we can't determine participation")
                                          .isFalse();
     }
@@ -116,14 +120,16 @@ class TokenZeroElectorateMembershipIntegrationTest
                                                                                         .with(Feature.GOSSIP))
                                                             .start())
         {
+            initializeSchema(cluster);
             runTestScenario(cluster);
         }
     }
 
     private void runTestScenario(AbstractCluster<?> cluster)
     {
-        List<TokenZeroElectorateMembership> memberships = buildElectorateMembershipPerCassandraInstance(cluster);
-        assertMembership(memberships, 0);
+        List<MostReplicatedKeyspaceTokenZeroElectorateMembership> memberships = buildElectorateMembershipPerCassandraInstance(cluster);
+        // Guaranteed by the sidecar_internal keyspace
+        assertMembership(memberships, 1);
 
         // Now let's create keyspaces with RF 1-3 replicated in a single DC and validate
         String dc0 = "dc0";
@@ -135,14 +141,21 @@ class TokenZeroElectorateMembershipIntegrationTest
             assertMembership(memberships, rf);
         }
 
-        // Now let's create keyspaces with RF 1-3 replicated in DC2 and validate
+        // Now let's create keyspaces with RF 1-4 replicated in DC2 and validate
         String dc1 = "dc1";
-        for (int rf = 1; rf <= 3; rf++)
+        for (int rf = 1; rf <= 4; rf++)
         {
             cluster.schemaChange(String.format("CREATE KEYSPACE ks_dc1_%d WITH REPLICATION={'class':'NetworkTopologyStrategy','%s':%d}", rf, dc1, rf));
             // introduce delay until schema change information propagates
             sleepUninterruptibly(10, TimeUnit.SECONDS);
-            assertMembership(memberships, rf + 3);
+            if (rf == 4)
+            {
+                assertMembership(memberships, 4);
+            }
+            else
+            {
+                assertMembership(memberships, 3);
+            }
         }
 
         // Now let's create a keyspace with RF=3 replicated across both DCs
@@ -154,10 +167,10 @@ class TokenZeroElectorateMembershipIntegrationTest
         assertMembership(memberships, 6);
     }
 
-    static void assertMembership(List<TokenZeroElectorateMembership> memberships, int expectedElectorateSize)
+    static void assertMembership(List<MostReplicatedKeyspaceTokenZeroElectorateMembership> memberships, int expectedElectorateSize)
     {
         int localElectorateCount = 0;
-        for (TokenZeroElectorateMembership membership : memberships)
+        for (MostReplicatedKeyspaceTokenZeroElectorateMembership membership : memberships)
         {
             boolean shouldParticipate = membership.isMember();
             if (shouldParticipate)
@@ -169,20 +182,20 @@ class TokenZeroElectorateMembershipIntegrationTest
                                         .isEqualTo(expectedElectorateSize);
     }
 
-    List<TokenZeroElectorateMembership> buildElectorateMembershipPerCassandraInstance(AbstractCluster<?> cluster)
+    List<MostReplicatedKeyspaceTokenZeroElectorateMembership> buildElectorateMembershipPerCassandraInstance(AbstractCluster<?> cluster)
     {
         MetricRegistryFactory metricRegistryProvider = new MetricRegistryFactory("cassandra_sidecar",
                                                                                  Collections.emptyList(),
                                                                                  Collections.emptyList());
 
-        List<TokenZeroElectorateMembership> result = new ArrayList<>();
+        List<MostReplicatedKeyspaceTokenZeroElectorateMembership> result = new ArrayList<>();
         for (IInstance instance : cluster)
         {
             List<InetSocketAddress> address = buildContactList(instance);
             CQLSessionProvider sessionProvider =
             new CQLSessionProviderImpl(address, address, 500, instance.config().localDatacenter(), 0, SharedExecutorNettyOptions.INSTANCE);
             InstancesConfig instancesConfig = buildInstancesConfig(instance, sessionProvider, metricRegistryProvider);
-            result.add(new TokenZeroElectorateMembership(instancesConfig, sessionProvider, CONFIG));
+            result.add(new MostReplicatedKeyspaceTokenZeroElectorateMembership(instancesConfig, sessionProvider, CONFIG));
         }
         return result;
     }
@@ -230,5 +243,14 @@ class TokenZeroElectorateMembershipIntegrationTest
                                                       .metricRegistry(instanceSpecificRegistry)
                                                       .build());
         return new InstancesConfigImpl(metadata, DnsResolver.DEFAULT);
+    }
+
+    void initializeSchema(AbstractCluster<?> cluster)
+    {
+        SchemaKeyspaceConfiguration config = CONFIG.serviceConfiguration().schemaKeyspaceConfiguration();
+        String createKeyspaceStatement = String.format("CREATE KEYSPACE %s WITH REPLICATION = %s ;",
+                                                       config.keyspace(), config.createReplicationStrategyString());
+        cluster.schemaChange(createKeyspaceStatement);
+        LOGGER.info("Creating keyspace with DDL: {}", createKeyspaceStatement);
     }
 }

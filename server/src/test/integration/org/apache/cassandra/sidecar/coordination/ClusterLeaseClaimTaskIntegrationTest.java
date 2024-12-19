@@ -31,7 +31,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.StreamSupport;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
@@ -45,6 +47,7 @@ import org.apache.cassandra.distributed.api.ConsistencyLevel;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
+import org.apache.cassandra.distributed.api.SimpleQueryResult;
 import org.apache.cassandra.distributed.impl.AbstractCluster;
 import org.apache.cassandra.distributed.shared.Versions;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
@@ -59,6 +62,7 @@ import org.apache.cassandra.sidecar.metrics.CoordinationMetrics;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
+import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.testing.TestVersion;
 import org.jetbrains.annotations.Nullable;
@@ -66,7 +70,6 @@ import org.jetbrains.annotations.Nullable;
 import static com.google.common.util.concurrent.Uninterruptibles.awaitUninterruptibly;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
-import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.tryGetIntConfig;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -74,13 +77,29 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class BestEffortSingleConditionalExecutorIntegrationTest
+/**
+ * Integration tests for the {@link ClusterLeaseClaimTask}
+ */
+class ClusterLeaseClaimTaskIntegrationTest
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(BestEffortSingleConditionalExecutorIntegrationTest.class);
-    static final SchemaKeyspaceConfiguration CONFIG = SchemaKeyspaceConfigurationImpl.builder().build();
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterLeaseClaimTaskIntegrationTest.class);
     public static final int CONCURRENT_PROCESSES = 12;
     final List<CQLSessionProvider> sessionProviderList = new ArrayList<>();
     final Vertx vertx = Vertx.vertx();
+    SchemaKeyspaceConfiguration mockSchemaConfig;
+
+    @BeforeEach
+    void setup()
+    {
+        // mock the schema config because the actual implementation doesn't allow a low value for TTL
+        mockSchemaConfig = mock(SchemaKeyspaceConfiguration.class);
+
+        when(mockSchemaConfig.isEnabled()).thenReturn(SchemaKeyspaceConfigurationImpl.DEFAULT_IS_ENABLED);
+        when(mockSchemaConfig.keyspace()).thenReturn(SchemaKeyspaceConfigurationImpl.DEFAULT_KEYSPACE);
+        when(mockSchemaConfig.replicationStrategy()).thenReturn(SchemaKeyspaceConfigurationImpl.DEFAULT_REPLICATION_STRATEGY);
+        when(mockSchemaConfig.replicationFactor()).thenReturn(SchemaKeyspaceConfigurationImpl.DEFAULT_REPLICATION_FACTOR);
+        when(mockSchemaConfig.leaseSchemaTTLSeconds()).thenReturn(5L);
+    }
 
     @ParameterizedTest(name = "{index} => version {0}")
     @MethodSource("org.apache.cassandra.testing.TestVersionSupplier#testVersions")
@@ -99,7 +118,7 @@ class BestEffortSingleConditionalExecutorIntegrationTest
                                                             .start())
         {
             // initialize internal sidecar schema for testing
-            initializeSchemas(cluster, new SidecarLeaseSchema(CONFIG));
+            initializeSchemas(cluster, new SidecarLeaseSchema(mockSchemaConfig));
             // Run different scenarios for selection of best-effort single conditional executor
             simulate(cluster);
         }
@@ -112,42 +131,47 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         // simulation.
         List<TestInstanceWrapper> simulatedInstances = buildSimulatedInstances(cluster);
         ExecutorService pool = Executors.newFixedThreadPool(simulatedInstances.size());
-        assertThat(simulatedInstances).as("There are no lease holders when the process has not run yet")
-                                      .allMatch(e -> !e.executor.executionDetermination().shouldExecuteOnLocalInstance());
+        assertThat(simulatedInstances).as("There are no leaseholders when the process has not run yet")
+                                      .allMatch(e -> !e.clusterLease.isClaimedByLocalSidecar());
+        assertThat(simulatedInstances).as("And the state for all of them is indeterminate")
+                                      .allMatch(e -> e.clusterLease.executionDetermination() == ExecutionDetermination.INDETERMINATE);
 
         AtomicReference<Object[][]> currentLeaseHolderQueryResult = new AtomicReference<>();
-        AtomicReference<BestEffortSingleConditionalExecutor> currentLeaseHolder = new AtomicReference<>();
+        AtomicReference<TestInstanceWrapper> currentLeaseHolder = new AtomicReference<>();
         loopAssert(3, () -> {
             runLeaseAcquireProcess(pool, simulatedInstances);
             Object[][] resultSet = queryCurrentLeaseHolders(cluster);
             currentLeaseHolderQueryResult.set(resultSet);
-            // Search for the lease-holder
-            BestEffortSingleConditionalExecutor holder = getCurrentLeaseHolder(simulatedInstances);
+            // Search for the leaseholder
+            TestInstanceWrapper holder = getCurrentLeaseHolder(simulatedInstances);
             currentLeaseHolder.set(holder);
-            assertThat(currentLeaseHolder.get().sidecarHostId()).as("Expecting lease holder to match the entry in the database")
-                                                                .isEqualTo(resultSet[0][1]);
+            assertThat(currentLeaseHolder.get().clusterLeaseClaimTask.sidecarHostId()).as("Expecting leaseholder to match the entry in the database")
+                                                                                      .isEqualTo(resultSet[0][1]);
             validateMetrics(simulatedInstances, 1);
         });
 
-        // Now simulate the case where the current lease-holder forgets that it is the current executor
-        // The current lease-holder must be able to recover the information from the database.
-        currentLeaseHolder.get().resetExecutor();
-        assertThat(simulatedInstances).as("No instances are expected as we've just reset the existing lease holder information")
-                                      .allMatch(e -> !e.executor.executionDetermination().shouldExecuteOnLocalInstance());
+        // Now simulate the case where the current leaseholder forgets this information.
+        // The current leaseholder must be able to recover the information from the persisted state.
+        currentLeaseHolder.get().clusterLeaseClaimTask.resetLeaseHolder();
+        assertThat(simulatedInstances).as("No instances are expected as we've just reset the existing leaseholder information")
+                                      .allMatch(e -> !e.clusterLease.isClaimedByLocalSidecar());
+        assertThat(currentLeaseHolder.get().clusterLease.executionDetermination())
+        .as("And the state for the current leaseholder is indeterminate")
+        .isEqualTo(ExecutionDetermination.INDETERMINATE);
 
         loopAssert(3, () -> {
             runLeaseAcquireProcess(pool, simulatedInstances);
             Object[][] newLeaseHolderQueryResult = queryCurrentLeaseHolders(cluster);
-            BestEffortSingleConditionalExecutor newLeaseHolder = getCurrentLeaseHolder(simulatedInstances);
-            assertThat(newLeaseHolder).as("Lease-holder is expected to be the same since we are only recovering persisted state")
-                                      .isSameAs(currentLeaseHolder.get());
+            TestInstanceWrapper newLeaseHolder = getCurrentLeaseHolder(simulatedInstances);
+            assertThat(newLeaseHolder.clusterLeaseClaimTask).as("leaseholder is expected to be the same since we are only recovering persisted state")
+                                                            .isSameAs(currentLeaseHolder.get().clusterLeaseClaimTask);
             assertThat(currentLeaseHolderQueryResult.get()[0][0]).as("Timestamps are expected to be the same since we are only recovering persisted state")
                                                                  .isEqualTo(newLeaseHolderQueryResult[0][0]);
             validateMetrics(simulatedInstances, 1);
         });
 
         loopAssert(3, () -> {
-            // Now let's simulate the case where the lease-holder will extend its lease
+            // Now let's simulate the case where the leaseholder will extend its lease
             // we will see different write timestamps
             runLeaseAcquireProcess(pool, simulatedInstances);
             Object[][] extendedLeaseQueryResult = queryCurrentLeaseHolders(cluster);
@@ -159,19 +183,19 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         });
 
         int disabledInstanceNum = simulateDisableBinaryOfLeaseHolder(simulatedInstances);
-        assertThat(disabledInstanceNum).as("Disabling binary of the current lease-holder")
+        assertThat(disabledInstanceNum).as("Disabling binary of the current leaseholder")
                                        .isGreaterThanOrEqualTo(0)
                                        .isLessThan(simulatedInstances.size());
 
         loopAssert(3, () -> {
-            // Run a new process to acquire the lease where we would expect the existing lease-holder to
+            // Run a new process to acquire the lease where we would expect the existing leaseholder to
             // retain the lease until TTL elapses
             runLeaseAcquireProcess(pool, simulatedInstances);
 
-            // Search for the lease-holder
-            BestEffortSingleConditionalExecutor newLeaseHolder = getCurrentLeaseHolder(simulatedInstances);
-            assertThat(newLeaseHolder).as("Lease holder is expected to be the same since the entry exists in the database")
-                                      .isSameAs(currentLeaseHolder.get());
+            // Search for the leaseholder
+            TestInstanceWrapper newLeaseHolder = getCurrentLeaseHolder(simulatedInstances);
+            assertThat(newLeaseHolder.clusterLeaseClaimTask).as("Leaseholder is expected to be the same since the entry exists in the database")
+                                                            .isSameAs(currentLeaseHolder.get().clusterLeaseClaimTask);
             validateMetrics(simulatedInstances, 1);
         });
 
@@ -179,35 +203,72 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         removeLeaseHolderFromDatabase(cluster);
 
         loopAssert(3, () -> {
-            // Run a new process where we expect a different lease-holder to be
-            // elected since the current lease-holder doesn't have db connectivity.
+            // Run a new process where we expect a different leaseholder to be
+            // elected since the current leaseholder doesn't have db connectivity.
             // We should have 2 instances be executors
             runLeaseAcquireProcess(pool, simulatedInstances);
 
             Object[][] newLeaseHolderQueryResult1 = queryCurrentLeaseHolders(cluster);
             List<TestInstanceWrapper> currentLeaseHolderInstances = getCurrentLeaseHolderInstances(simulatedInstances);
-            assertThat(currentLeaseHolderInstances).as("2 instances are expected when binary is disabled for the original lease-holder")
+            assertThat(currentLeaseHolderInstances).as("2 instances are expected when binary is disabled for the original leaseholder")
                                                    .hasSize(2);
-            assertThat(currentLeaseHolderInstances).as("Existing lease-holder is part of the selected instances")
-                                                   .anyMatch(l -> l.executor == currentLeaseHolder.get());
-            assertThat(currentLeaseHolderInstances).as("New lease-holder is also part of the selected instances")
-                                                   .anyMatch(l -> l.executor.sidecarHostId().equals(newLeaseHolderQueryResult1[0][1]));
-            assertThat(currentLeaseHolder.get().sidecarHostId()).as("New lease-holder is not the same as the previous lease-holder")
-                                                                .isNotEqualTo(newLeaseHolderQueryResult1[0][1]);
+            assertThat(currentLeaseHolderInstances).as("Existing leaseholder is part of the selected instances")
+                                                   .anyMatch(l -> l.clusterLeaseClaimTask == currentLeaseHolder.get().clusterLeaseClaimTask);
+            assertThat(currentLeaseHolderInstances).as("New leaseholder is also part of the selected instances")
+                                                   .anyMatch(l -> l.clusterLeaseClaimTask.sidecarHostId().equals(newLeaseHolderQueryResult1[0][1]));
+            assertThat(currentLeaseHolder.get().clusterLeaseClaimTask.sidecarHostId()).as("New leaseholder is not the same as the previous leaseholder")
+                                                                                      .isNotEqualTo(newLeaseHolderQueryResult1[0][1]);
             validateMetrics(simulatedInstances, 2);
         });
 
-        // Re-enable binary on the original lease-holder. The original lease-holder
+        // Re-enable binary on the original leaseholder. The original leaseholder
         // will learn that it is no longer the owner of the lease.
         simulateEnableBinaryOnInstance(simulatedInstances, disabledInstanceNum);
 
         loopAssert(3, () -> {
             runLeaseAcquireProcess(pool, simulatedInstances);
             List<TestInstanceWrapper> instances = getCurrentLeaseHolderInstances(simulatedInstances);
-            assertThat(instances).as("After binary is re-enabled, the previous lease-holder learns it has lost the lease")
+            assertThat(instances).as("After binary is re-enabled, the previous leaseholder learns it has lost the lease")
                                  .hasSize(1);
             validateMetrics(simulatedInstances, 1);
         });
+
+        // Now let's actually wait for the TTL to expire and ensure the leaseholder gives up the lease
+        TestInstanceWrapper leaseHolder = getCurrentLeaseHolder(simulatedInstances);
+        assertThat(leaseHolder).as("First find out who the leaseholder is").isNotNull();
+        // then disable binary
+        simulateDisableBinaryOfLeaseHolder(simulatedInstances);
+
+        ExecutionDetermination executionDetermination = null;
+        for (int i = 0; i < 20; i++)
+        {
+            leaseHolder.clusterLeaseClaimTask.runClaimProcess();
+            executionDetermination = leaseHolder.clusterLease.executionDetermination();
+
+            if (executionDetermination != ExecutionDetermination.INDETERMINATE)
+            {
+                int ttlSeconds = Math.max(1, maybeDetermineTTL(cluster));
+                LOGGER.info("TTL is {} seconds", ttlSeconds);
+                // wait for the leaseholder to give the lease
+                // TTL is 5 seconds, so we sleep 1 second between runs
+                sleepUninterruptibly(ttlSeconds, TimeUnit.SECONDS);
+            }
+            else break;
+        }
+        assertThat(executionDetermination).as("The leaseholder should give up the lease")
+                                          .isEqualTo(ExecutionDetermination.INDETERMINATE);
+        // ensure the data is TTL'd in the database
+        for (int i = 0; i < 20; i++)
+        {
+            long rowCount = rowCountInLeaseTable(cluster);
+            if (rowCount == 0)
+            {
+                // data has been TTL'd
+                return;
+            }
+            sleepUninterruptibly(1, TimeUnit.SECONDS);
+        }
+        fail("Data was not TTL'd in the database");
     }
 
     private void validateMetrics(List<TestInstanceWrapper> simulatedInstances, int expectedLeaseHolderCount)
@@ -216,7 +277,7 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         CoordinationMetrics coordinationMetrics = simulatedInstances.get(0).metrics.server().coordination();
         assertThat(coordinationMetrics.participants.metric.getValue()).as("Everyone participates in this simulation")
                                                                       .isEqualTo(CONCURRENT_PROCESSES);
-        assertThat(coordinationMetrics.leaseHolders.metric.getValue()).as("We only have %s lease-holder(s)", expectedLeaseHolderCount)
+        assertThat(coordinationMetrics.leaseHolders.metric.getValue()).as("We only have %s leaseholder(s)", expectedLeaseHolderCount)
                                                                       .isEqualTo(expectedLeaseHolderCount);
     }
 
@@ -236,7 +297,7 @@ class BestEffortSingleConditionalExecutorIntegrationTest
                     latch.await();
 
                     // Every instance will try to run determineSingleInstanceExecutor at roughly the same time
-                    simulatedInstances.get(finalI).executor.determineSingleConditionalExecutor(() -> true);
+                    simulatedInstances.get(finalI).clusterLeaseClaimTask.runClaimProcess();
                 }
                 catch (InterruptedException e)
                 {
@@ -256,7 +317,7 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         String createKeyspaceStatement = String.format("CREATE KEYSPACE %s WITH REPLICATION = { " +
                                                        "   'class' : 'NetworkTopologyStrategy', " +
                                                        "   'replication_factor' : 3 " +
-                                                       "  } ;", CONFIG.keyspace());
+                                                       "  } ;", mockSchemaConfig.keyspace());
         cluster.schemaChange(createKeyspaceStatement);
         LOGGER.info("Creating keyspace with DDL: {}", createKeyspaceStatement);
         cluster.schemaChange(tableSchema.createSchemaStatement());
@@ -273,19 +334,20 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         {
             // unique service configuration every time to ensure we have
             // different UUIDs for hostId
-            ServiceConfiguration serviceConfiguration = new TestServiceConfigurationImpl();
+            ServiceConfiguration serviceConfiguration = new TestServiceConfigurationImpl(mockSchemaConfig);
             assertThat(hostIdSet.add(serviceConfiguration.hostId())).isTrue();
             DisconnectableCQLSessionProvider cqlSessionProvider = buildCqlSession(address);
             SidecarLeaseDatabaseAccessor accessor = buildAccessor(cqlSessionProvider);
 
-            BestEffortSingleConditionalExecutor executor =
-            new BestEffortSingleConditionalExecutor(vertx,
-                                                    createdSharedTestPool(vertx),
-                                                    serviceConfiguration,
-                                                    null,
-                                                    accessor,
-                                                    metrics);
-            processes.add(new TestInstanceWrapper(cqlSessionProvider, executor, metrics));
+            ClusterLease clusterLease = new ClusterLease();
+            ClusterLeaseClaimTask executor =
+            new ClusterLeaseClaimTask(vertx,
+                                      serviceConfiguration,
+                                      null,
+                                      accessor,
+                                      clusterLease,
+                                      metrics);
+            processes.add(new TestInstanceWrapper(cqlSessionProvider, executor, clusterLease, metrics));
         }
         return processes;
     }
@@ -312,7 +374,7 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         assertThat(session.getCluster()).isNotNull();
         assertThat(session.getCluster().getMetadata()).isNotNull();
         assertThat(session.getCluster().getMetadata().getKeyspace("sidecar_internal")).isNotNull();
-        SidecarLeaseSchema tableSchema = new SidecarLeaseSchema(CONFIG);
+        SidecarLeaseSchema tableSchema = new SidecarLeaseSchema(mockSchemaConfig);
         tableSchema.prepareStatements(session);
         return new SidecarLeaseDatabaseAccessor(tableSchema, sessionProvider);
     }
@@ -329,7 +391,7 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         for (int i = 0; i < simulatedInstances.size(); i++)
         {
             TestInstanceWrapper instance = simulatedInstances.get(i);
-            if (instance.executor.executionDetermination().shouldExecuteOnLocalInstance())
+            if (instance.clusterLease.isClaimedByLocalSidecar())
             {
                 DisconnectableCQLSessionProvider sessionProvider = instance.sessionProvider;
                 sessionProvider.disconnect();
@@ -347,11 +409,11 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         assertThat(sessionProvider.get()).as("Enabled binary on instance %s", disabledInstanceNum).isNotNull();
     }
 
-    static BestEffortSingleConditionalExecutor getCurrentLeaseHolder(List<TestInstanceWrapper> allSimulatedInstances)
+    static TestInstanceWrapper getCurrentLeaseHolder(List<TestInstanceWrapper> allSimulatedInstances)
     {
         List<TestInstanceWrapper> currentInstances = getCurrentLeaseHolderInstances(allSimulatedInstances);
         assertThat(currentInstances).as("There is more than one executor. This is unexpected in the simulation").hasSize(1);
-        return currentInstances.get(0).executor;
+        return currentInstances.get(0);
     }
 
     static List<TestInstanceWrapper> getCurrentLeaseHolderInstances(List<TestInstanceWrapper> allSimulatedInstances)
@@ -359,13 +421,32 @@ class BestEffortSingleConditionalExecutorIntegrationTest
         List<TestInstanceWrapper> instances = new ArrayList<>();
         for (TestInstanceWrapper instance : allSimulatedInstances)
         {
-            if (instance.executor.executionDetermination().shouldExecuteOnLocalInstance())
+            if (instance.clusterLease.isClaimedByLocalSidecar())
             {
                 instances.add(instance);
             }
         }
         assertThat(instances).as("Expected to have at least one instance").isNotNull();
         return instances;
+    }
+
+    static int maybeDetermineTTL(AbstractCluster<?> cluster)
+    {
+        SimpleQueryResult result
+        = cluster.getFirstRunningInstance()
+                 .coordinator()
+                 .executeWithResult("SELECT ttl(owner) FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'single_sidecar_instance_executor'",
+                                    ConsistencyLevel.LOCAL_QUORUM);
+        return result.hasNext() ? result.next().getInteger(0) : 0;
+    }
+
+    static long rowCountInLeaseTable(AbstractCluster<?> cluster)
+    {
+        SimpleQueryResult rows = cluster.getFirstRunningInstance()
+                                        .coordinator()
+                                        .executeWithResult("SELECT * FROM sidecar_internal.sidecar_lease_v1 ALLOW FILTERING",
+                                                           ConsistencyLevel.LOCAL_QUORUM);
+        return StreamSupport.stream(rows.spliterator(), false).count();
     }
 
     static Object[][] queryCurrentLeaseHolders(AbstractCluster<?> cluster)
@@ -382,22 +463,22 @@ class BestEffortSingleConditionalExecutorIntegrationTest
 
     void removeLeaseHolderFromDatabase(AbstractCluster<?> cluster)
     {
-        LOGGER.info("Removing current lease-holder from the database");
+        LOGGER.info("Removing current leaseholder from the database");
         for (int retry = 1; retry <= 20; retry++)
         {
             try
             {
                 cluster.schemaChangeIgnoringStoppedInstances("DELETE FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'single_sidecar_instance_executor'");
-                LOGGER.info("Successfully removed current lease-holder from database");
+                LOGGER.info("Successfully removed current leaseholder from database");
                 return;
             }
             catch (Exception e)
             {
-                LOGGER.error("Error removing lease-holder after {} attempts", retry, e);
+                LOGGER.error("Error removing leaseholder after {} attempts", retry, e);
                 sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
             }
         }
-        fail("Unable to remove current lease-holder from database");
+        fail("Unable to remove current leaseholder from database");
     }
 
     /**
@@ -406,11 +487,23 @@ class BestEffortSingleConditionalExecutorIntegrationTest
     static class TestServiceConfigurationImpl extends ServiceConfigurationImpl
     {
         private final String hostId = UUID.randomUUID().toString();
+        private final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
+
+        TestServiceConfigurationImpl(SchemaKeyspaceConfiguration schemaKeyspaceConfiguration)
+        {
+            this.schemaKeyspaceConfiguration = schemaKeyspaceConfiguration;
+        }
 
         @Override
         public String hostId()
         {
             return hostId;
+        }
+
+        @Override
+        public SchemaKeyspaceConfiguration schemaKeyspaceConfiguration()
+        {
+            return schemaKeyspaceConfiguration;
         }
     }
 
@@ -462,15 +555,18 @@ class BestEffortSingleConditionalExecutorIntegrationTest
     static class TestInstanceWrapper
     {
         final DisconnectableCQLSessionProvider sessionProvider;
-        final BestEffortSingleConditionalExecutor executor;
+        final ClusterLeaseClaimTask clusterLeaseClaimTask;
+        final ClusterLease clusterLease;
         final SidecarMetrics metrics;
 
         TestInstanceWrapper(DisconnectableCQLSessionProvider sessionProvider,
-                            BestEffortSingleConditionalExecutor executor,
+                            ClusterLeaseClaimTask clusterLeaseClaimTask,
+                            ClusterLease clusterLease,
                             SidecarMetrics metrics)
         {
             this.sessionProvider = sessionProvider;
-            this.executor = executor;
+            this.clusterLeaseClaimTask = clusterLeaseClaimTask;
+            this.clusterLease = clusterLease;
             this.metrics = metrics;
         }
     }

@@ -62,6 +62,11 @@ sidecar:
     keyspace: sidecar_internal
     replication_strategy: SimpleStrategy
     replication_factor: 1
+  coordination:
+    cluster_lease_claim:
+      enabled: true
+      initial_delay_millis: 1000
+      execute_interval_millis: 60000
 
 #
 # Enable SSL configuration (Disabled by default)

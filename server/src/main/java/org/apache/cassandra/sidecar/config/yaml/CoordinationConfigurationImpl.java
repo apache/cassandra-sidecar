@@ -18,37 +18,37 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.util.Collections;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
+import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 
 /**
  * Configuration relevant to the coordination functionality of Sidecar
  */
 public class CoordinationConfigurationImpl implements CoordinationConfiguration
 {
-    @JsonProperty("conditional_executor_parameters")
-    private final Map<String, String> conditionalExecutorParameters;
+    @JsonProperty("cluster_lease_claim")
+    private final PeriodicTaskConfiguration clusterLeaseClaimConfiguration;
 
     public CoordinationConfigurationImpl()
     {
-        this(Collections.emptyMap());
+        this(new PeriodicTaskConfigurationImpl(true, TimeUnit.SECONDS.toMillis(1), TimeUnit.MINUTES.toMillis(1)));
     }
 
-    public CoordinationConfigurationImpl(Map<String, String> conditionalExecutorParameters)
+    public CoordinationConfigurationImpl(PeriodicTaskConfiguration clusterLeaseClaimConfiguration)
     {
-        this.conditionalExecutorParameters = conditionalExecutorParameters;
+        this.clusterLeaseClaimConfiguration = clusterLeaseClaimConfiguration;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty("conditional_executor_parameters")
-    public Map<String, String> conditionalExecutorParameters()
+    @JsonProperty("cluster_lease_claim")
+    public PeriodicTaskConfiguration clusterLeaseClaimConfiguration()
     {
-        return conditionalExecutorParameters;
+        return clusterLeaseClaimConfiguration;
     }
 }

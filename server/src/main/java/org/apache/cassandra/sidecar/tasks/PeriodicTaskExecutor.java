@@ -32,8 +32,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.impl.ConcurrentHashSet;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
-import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
-import org.jetbrains.annotations.Nullable;
+import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseHolderOnly;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -47,8 +47,7 @@ public class PeriodicTaskExecutor implements Closeable
     private final Map<PeriodicTaskKey, Long> timerIds = new ConcurrentHashMap<>();
     private final Set<PeriodicTaskKey> activeTasks = new ConcurrentHashSet<>();
     private final TaskExecutorPool internalPool;
-    @Nullable
-    private final ConditionalExecutor conditionalExecutor;
+    private final ClusterLease clusterLease;
 
     @VisibleForTesting
     public PeriodicTaskExecutor(ExecutorPools executorPools)
@@ -57,10 +56,10 @@ public class PeriodicTaskExecutor implements Closeable
     }
 
     @Inject
-    public PeriodicTaskExecutor(ExecutorPools executorPools, @Nullable ConditionalExecutor conditionalExecutor)
+    public PeriodicTaskExecutor(ExecutorPools executorPools, ClusterLease clusterLease)
     {
         this.internalPool = executorPools.internal();
-        this.conditionalExecutor = conditionalExecutor;
+        this.clusterLease = clusterLease;
     }
 
     /**
@@ -149,8 +148,14 @@ public class PeriodicTaskExecutor implements Closeable
             case INDETERMINATE:
             default:
                 LOGGER.debug("Unable to determine execution for this task, rescheduling. task={}", periodicTask.name());
+                // When the process is unable to determine whether a task should be executed, we want
+                // the task to be rescheduled for a shorter period of time. Assume you have a PeriodicTask that
+                // runs every day. If it happens to run during a period of time when there's no
+                // determination whether task should run or not, we do not want to wait another day for the
+                // task to run, so instead we reschedule it and only wait the initial delay of the task for
+                // the task to try again.
                 reschedule(periodicTask);
-                break;
+                return;
         }
 
         if (!activeTasks.add(key))
@@ -187,9 +192,9 @@ public class PeriodicTaskExecutor implements Closeable
             return ExecutionDetermination.SKIP_EXECUTION;
         }
 
-        if (conditionalExecutor != null && periodicTask instanceof PeriodicTaskOnSingleInstanceExecutor)
+        if (periodicTask instanceof ExecuteOnClusterLeaseHolderOnly)
         {
-            return conditionalExecutor.executionDetermination();
+            return clusterLease.executionDetermination();
         }
         return ExecutionDetermination.EXECUTE;
     }

@@ -105,10 +105,10 @@ sidecar:
     replication_factor: 1
     lease_schema_ttl_sec: 120
   coordination:
-    conditional_executor_parameters:
-      is_enabled: false
+    cluster_lease_claim:
+      enabled: false
       initial_delay_millis: 5000
-      frequency_millis: 31000
+      execute_interval_millis: 31000
 
 vertx:
   filesystem_options:
@@ -176,7 +176,7 @@ driver_parameters:
   username: cassandra
   password: cassandra
   ssl:
-    enabled:  false
+    enabled: false
     keystore:
       type: PKCS12
       path: path/to/keystore.p12

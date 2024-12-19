@@ -21,13 +21,14 @@ package org.apache.cassandra.sidecar.db.schema;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseHolderOnly;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * {@link RestoreRangesSchema} holds all prepared statements needed for talking to Cassandra for various actions
  * related to restore progress tracking in terms of each token range
  */
-public class RestoreRangesSchema extends TableSchema implements InitializeOnSingleInstanceExecutor
+public class RestoreRangesSchema extends TableSchema implements ExecuteOnClusterLeaseHolderOnly
 {
     private static final String TABLE_NAME = "restore_range_v1";
 

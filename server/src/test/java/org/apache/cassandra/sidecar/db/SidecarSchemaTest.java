@@ -52,11 +52,11 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
-import org.apache.cassandra.sidecar.coordination.ConditionalExecutor;
-import org.apache.cassandra.sidecar.coordination.TestConditionalExecutors;
+import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
+import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 import org.mockito.stubbing.Answer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -267,9 +267,9 @@ public class SidecarSchemaTest
 
         @Provides
         @Singleton
-        public ConditionalExecutor singleInstanceExecutor()
+        public ClusterLease clusterLease()
         {
-            return TestConditionalExecutors.ALWAYS_EXECUTE;
+            return new ClusterLease(ExecutionDetermination.EXECUTE);
         }
     }
 }

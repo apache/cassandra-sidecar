@@ -101,10 +101,10 @@ sidecar:
     max_retries: 42
     retry_delay_millis: 1234
   coordination:
-    conditional_executor_parameters:
-      is_enabled: true
+    cluster_lease_claim:
+      enabled: true
       initial_delay_millis: 1000
-      frequency_millis: 60000
+      execute_interval_millis: 60000
 
 vertx:
   filesystem_options:

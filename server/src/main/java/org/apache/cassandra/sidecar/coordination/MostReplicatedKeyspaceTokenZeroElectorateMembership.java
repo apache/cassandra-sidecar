@@ -31,6 +31,8 @@ import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Session;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesConfig;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -45,18 +47,24 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 /**
  * An implementation of {@link ElectorateMembership} where the current Sidecar will
  * be determined to be part of the electorate iff one of the Cassandra instances it
- * manages owns token {@code 0} for user keyspaces.
+ * manages owns token {@code 0} for the user keyspace that has the highest replication
+ * factor. If multiple keyspaces have the highest replication factor, the keyspace
+ * to be used is decided by the keyspace with the name that sorts first in the
+ * lexicographic sort order. If no user keyspaces are created, the internal sidecar
+ * keyspace will be used.
  */
-public class TokenZeroElectorateMembership implements ElectorateMembership
+@Singleton
+public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements ElectorateMembership
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(TokenZeroElectorateMembership.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MostReplicatedKeyspaceTokenZeroElectorateMembership.class);
     private final InstancesConfig instancesConfig;
     private final CQLSessionProvider cqlSessionProvider;
     private final SidecarConfiguration configuration;
 
-    public TokenZeroElectorateMembership(InstancesConfig instancesConfig,
-                                         CQLSessionProvider cqlSessionProvider,
-                                         SidecarConfiguration sidecarConfiguration)
+    @Inject
+    public MostReplicatedKeyspaceTokenZeroElectorateMembership(InstancesConfig instancesConfig,
+                                                               CQLSessionProvider cqlSessionProvider,
+                                                               SidecarConfiguration sidecarConfiguration)
     {
         this.instancesConfig = instancesConfig;
         this.cqlSessionProvider = cqlSessionProvider;
@@ -69,12 +77,6 @@ public class TokenZeroElectorateMembership implements ElectorateMembership
     @Override
     public boolean isMember()
     {
-        String userKeyspace = maybeGetUserKeyspace();
-        if (userKeyspace == null)
-        {
-            return false;
-        }
-
         Set<String> localInstancesHostsAndPorts = collectLocalInstancesHostsAndPorts();
         if (localInstancesHostsAndPorts.isEmpty())
         {
@@ -91,6 +93,7 @@ public class TokenZeroElectorateMembership implements ElectorateMembership
             return false;
         }
 
+        String userKeyspace = highestReplicationFactorKeyspace();
         TokenRangeReplicasResponse tokenRangeReplicas = operations.tokenRangeReplicas(new Name(userKeyspace), nodeSettings.partitioner());
         return anyInstanceOwnsTokenZero(tokenRangeReplicas, localInstancesHostsAndPorts);
     }
@@ -135,11 +138,13 @@ public class TokenZeroElectorateMembership implements ElectorateMembership
 
     /**
      * Performs pre-checks ensuring local instances are configured; an active session to the database is present;
-     * and collects the user keyspaces available in Cassandra.
+     * and returns the keyspace with the highest replication factor. If multiple keyspaces have the highest
+     * replication factor, the keyspace to be used is decided by the keyspace with the name that sorts first in
+     * the lexicographic sort order. Defaults to the sidecar keyspace when there are no user keyspaces.
      *
-     * @return the list of user keyspaces if available, or an empty list if it is unable to retrieve the user keyspaces
+     * @return user keyspace
      */
-    String maybeGetUserKeyspace()
+    String highestReplicationFactorKeyspace()
     {
         if (instancesConfig.instances().isEmpty())
         {
@@ -211,14 +216,22 @@ public class TokenZeroElectorateMembership implements ElectorateMembership
         return start.compareTo(BigInteger.ZERO) < 0 && end.compareTo(BigInteger.ZERO) >= 0;
     }
 
-    private int replicationFactor(KeyspaceMetadata metadata)
+    /**
+     * @param keyspace the keyspace
+     * @return the aggregate replication factor for the {@link KeyspaceMetadata keyspace}
+     */
+    int replicationFactor(KeyspaceMetadata keyspace)
     {
         int replicationFactor = 0;
-        for (String value : metadata.getReplication().values())
+        for (String value : keyspace.getReplication().values())
         {
-            if (isInteger(value))
+            try
             {
-                replicationFactor += parsed(value);
+                replicationFactor += Integer.parseInt(value);
+            }
+            catch (NumberFormatException ignored)
+            {
+                // skips the class property of the replication factor
             }
         }
         return replicationFactor;
