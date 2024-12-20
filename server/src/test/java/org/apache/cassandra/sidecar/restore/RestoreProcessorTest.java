@@ -44,6 +44,7 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceRestoreMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.mockito.Mockito;
 
 import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
@@ -147,7 +148,7 @@ class RestoreProcessorTest
     {
         when(sidecarSchema.isInitialized()).thenReturn(false);
 
-        assertThat(processor.shouldSkip()).isTrue();
+        assertThat(processor.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
         assertThat(processor.activeSlices()).isZero();
 
         CountDownLatch latch = new CountDownLatch(1);

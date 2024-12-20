@@ -36,8 +36,8 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.CoordinationMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
-import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_GLOBAL_LEASE_CLAIMED;
@@ -73,8 +73,8 @@ public class ClusterLeaseClaimTask implements PeriodicTask
     private final PeriodicTaskConfiguration periodicTaskConfiguration;
     private final ServiceConfiguration config;
     private final Vertx vertx;
-    private volatile String currentLeaseholder;
-    private volatile Instant leaseTime;
+    private String currentLeaseholder;
+    private Instant leaseTime;
 
     public ClusterLeaseClaimTask(Vertx vertx,
                                  ServiceConfiguration serviceConfiguration,
@@ -96,7 +96,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
      * {@inheritDoc}
      */
     @Override
-    public boolean shouldSkip()
+    public ScheduleDecision scheduleDecision()
     {
         // The Sidecar schema feature is required for this implementation
         // so skip when the feature is not enabled
@@ -111,10 +111,10 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         }
         if (!isEnabled || !isMember)
         {
-            clusterLease.setExecutionDetermination(ExecutionDetermination.SKIP_EXECUTION);
-            return true;
+            clusterLease.setOwnership(ClusterLease.Ownership.LOST);
+            return ScheduleDecision.SKIP;
         }
-        return false;
+        return ScheduleDecision.EXECUTE;
     }
 
     /**
@@ -225,7 +225,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
                 }
 
                 leaseTime = null;
-                clusterLease.setExecutionDetermination(ExecutionDetermination.INDETERMINATE);
+                clusterLease.setOwnership(ClusterLease.Ownership.INDETERMINATE);
             }
             return;
         }
@@ -233,12 +233,12 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         if (isCurrentLeaseholder(sidecarHostId))
         {
             leaseTime = Instant.now();
-            clusterLease.setExecutionDetermination(ExecutionDetermination.EXECUTE);
+            clusterLease.setOwnership(ClusterLease.Ownership.CLAIMED);
         }
         else
         {
             leaseTime = null;
-            clusterLease.setExecutionDetermination(ExecutionDetermination.SKIP_EXECUTION);
+            clusterLease.setOwnership(ClusterLease.Ownership.LOST);
         }
     }
 
@@ -314,6 +314,6 @@ public class ClusterLeaseClaimTask implements PeriodicTask
     {
         currentLeaseholder = null;
         leaseTime = null;
-        clusterLease.setExecutionDetermination(ExecutionDetermination.INDETERMINATE);
+        clusterLease.setOwnership(ClusterLease.Ownership.INDETERMINATE);
     }
 }

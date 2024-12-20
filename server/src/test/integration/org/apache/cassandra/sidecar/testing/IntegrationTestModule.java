@@ -49,7 +49,6 @@ import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
-import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -152,7 +151,7 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public ClusterLease clusterLease()
     {
-        return new ClusterLease(ExecutionDetermination.EXECUTE);
+        return new ClusterLease(ClusterLease.Ownership.CLAIMED);
     }
 
     private AccessControlConfiguration accessControlConfiguration()

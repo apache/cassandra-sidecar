@@ -22,8 +22,8 @@ import io.vertx.core.Promise;
 import org.jetbrains.annotations.Nullable;
 
 /**
- *  * An interface that defines a task that will be executed during the lifecycle of Cassandra Sidecar
- * @param <T>
+ * An interface that defines a task that will be executed during the lifecycle of Cassandra Sidecar
+ * @param <T> result value type
  */
 public interface Task<T>
 {

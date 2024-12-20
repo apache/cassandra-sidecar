@@ -47,7 +47,6 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
-import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 
 import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -143,7 +142,7 @@ class SchemaMetricsTest
         @Singleton
         public ClusterLease clusterLease()
         {
-            return new ClusterLease(ExecutionDetermination.EXECUTE);
+            return new ClusterLease(ClusterLease.Ownership.CLAIMED);
         }
     }
 }

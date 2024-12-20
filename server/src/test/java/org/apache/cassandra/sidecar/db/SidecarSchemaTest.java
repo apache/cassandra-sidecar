@@ -56,7 +56,6 @@ import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
-import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 import org.mockito.stubbing.Answer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -269,7 +268,7 @@ public class SidecarSchemaTest
         @Singleton
         public ClusterLease clusterLease()
         {
-            return new ClusterLease(ExecutionDetermination.EXECUTE);
+            return new ClusterLease(ClusterLease.Ownership.CLAIMED);
         }
     }
 }

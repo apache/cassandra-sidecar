@@ -49,6 +49,7 @@ import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceRestoreMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 
 /**
@@ -130,14 +131,15 @@ public class RestoreProcessor implements PeriodicTask
     }
 
     @Override
-    public boolean shouldSkip()
+    public ScheduleDecision scheduleDecision()
     {
         boolean shouldSkip = !sidecarSchema().isInitialized();
         if (shouldSkip)
         {
             LOGGER.trace("Skipping restore job processing");
+            return ScheduleDecision.SKIP;
         }
-        return shouldSkip;
+        return ScheduleDecision.EXECUTE;
     }
 
     @Override

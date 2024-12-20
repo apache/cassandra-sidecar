@@ -19,28 +19,22 @@
 package org.apache.cassandra.sidecar.tasks;
 
 /**
- * Determines whether executions can proceed, be skipped, or the state is indeterminate
- * and an action can be taken based on the indeterminate state (i.e. rescheduling a {@link PeriodicTask}).
+ * Determines whether executions can proceed, be skipped, or the {@link PeriodicTask} should be rescheduled
  */
-public enum ExecutionDetermination
+public enum ScheduleDecision
 {
     /**
-     * The execution can proceed.
+     * Execute the upcoming run
      */
     EXECUTE,
 
     /**
-     * The execution will be skipped.
+     * Skip the upcoming run, but do not change the schedule
      */
-    SKIP_EXECUTION,
+    SKIP,
 
     /**
-     * It is not possible to determine whether the execution should proceed or be skipped.
+     * Skip the upcoming run and reschedule the {@link PeriodicTask}
      */
-    INDETERMINATE;
-
-    public boolean shouldExecuteOnLocalSidecar()
-    {
-        return this == EXECUTE;
-    }
+    RESCHEDULE;
 }

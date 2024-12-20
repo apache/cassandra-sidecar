@@ -48,6 +48,7 @@ import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.mockito.ArgumentCaptor;
 
@@ -197,7 +198,7 @@ class RestoreJobDiscovererTest
 
         // Execution 3
         // shouldSkip always returns false
-        assertThat(loop.shouldSkip()).isFalse();
+        assertThat(loop.scheduleDecision()).isEqualTo(ScheduleDecision.EXECUTE);
 
         // Execution 4
         UUID newJobId2 = UUIDs.timeBased();
@@ -230,7 +231,7 @@ class RestoreJobDiscovererTest
     void testSkipExecuteWhenSidecarSchemaIsNotInitialized()
     {
         when(sidecarSchema.isInitialized()).thenReturn(false);
-        assertThat(loop.shouldSkip()).isTrue();
+        assertThat(loop.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
     }
 
     @Test

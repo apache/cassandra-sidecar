@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.tasks;
 
 import java.util.concurrent.TimeUnit;
 
+import io.vertx.core.Promise;
+
 /**
  * An interface that defines a periodic task that will be executed during the lifecycle of Cassandra Sidecar
  */
@@ -38,6 +40,11 @@ public interface PeriodicTask extends Task<Void>
         return TimeUnit.MILLISECONDS;
     }
 
+    default long delayMillis()
+    {
+        return delayUnit().toMillis(delay());
+    }
+
     /**
      * @return the initial delay for the task, defaults to the {@link #delay()}
      */
@@ -54,6 +61,11 @@ public interface PeriodicTask extends Task<Void>
         return delayUnit();
     }
 
+    default long initialDelayMillis()
+    {
+        return initialDelayUnit().toMillis(initialDelay());
+    }
+
     /**
      * Register the periodic task executor at the task. By default, it is no-op.
      * If the reference to the executor is needed, the concrete {@link PeriodicTask} can implement this method
@@ -65,13 +77,14 @@ public interface PeriodicTask extends Task<Void>
     }
 
     /**
-     * Specify whether the task should be skipped.
-     * // TODO: consider returning the reason to skip, instead of just a boolean value
-     * @return {@code true} to skip; otherwise, return {@code false}
+     * Specify the schedule decision of the upcoming run.
+     * The method is evaluated before calling {@link #execute(Promise)}
+     *
+     * @return schedule decision. By default, it is to execute.
      */
-    default boolean shouldSkip()
+    default ScheduleDecision scheduleDecision()
     {
-        return false;
+        return ScheduleDecision.EXECUTE;
     }
 
     @Override

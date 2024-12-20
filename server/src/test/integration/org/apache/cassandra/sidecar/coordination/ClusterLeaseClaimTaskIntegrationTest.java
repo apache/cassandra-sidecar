@@ -63,7 +63,7 @@ import org.apache.cassandra.sidecar.metrics.CoordinationMetrics;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
-import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.testing.TestVersion;
 import org.jetbrains.annotations.NotNull;
@@ -138,7 +138,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         assertThat(simulatedInstances).as("There are no leaseholders when the process has not run yet")
                                       .allMatch(e -> !e.clusterLease.isClaimedByLocalSidecar());
         assertThat(simulatedInstances).as("And the state for all of them is indeterminate")
-                                      .allMatch(e -> e.clusterLease.executionDetermination() == ExecutionDetermination.INDETERMINATE);
+                                      .allMatch(e -> e.clusterLease.toScheduleDecision() == ScheduleDecision.RESCHEDULE);
 
         AtomicReference<Object[][]> currentLeaseholderQueryResult = new AtomicReference<>();
         AtomicReference<TestInstanceWrapper> currentLeaseholder = new AtomicReference<>();
@@ -159,9 +159,9 @@ class ClusterLeaseClaimTaskIntegrationTest
         currentLeaseholder.get().clusterLeaseClaimTask.resetLeaseholder();
         assertThat(simulatedInstances).as("No instances are expected as we've just reset the existing leaseholder information")
                                       .allMatch(e -> !e.clusterLease.isClaimedByLocalSidecar());
-        assertThat(currentLeaseholder.get().clusterLease.executionDetermination())
+        assertThat(currentLeaseholder.get().clusterLease.toScheduleDecision())
         .as("And the state for the current leaseholder is indeterminate")
-        .isEqualTo(ExecutionDetermination.INDETERMINATE);
+        .isEqualTo(ScheduleDecision.RESCHEDULE);
 
         loopAssert(3, () -> {
             runLeaseAcquireProcess(pool, simulatedInstances);
@@ -243,13 +243,13 @@ class ClusterLeaseClaimTaskIntegrationTest
         // then disable binary
         simulateDisableBinaryOfLeaseholder(simulatedInstances);
 
-        ExecutionDetermination executionDetermination = null;
+        ScheduleDecision scheduleDecision = null;
         for (int i = 0; i < 20; i++)
         {
             leaseholder.clusterLeaseClaimTask.runClaimProcess();
-            executionDetermination = leaseholder.clusterLease.executionDetermination();
+            scheduleDecision = leaseholder.clusterLease.toScheduleDecision();
 
-            if (executionDetermination != ExecutionDetermination.INDETERMINATE)
+            if (scheduleDecision != ScheduleDecision.RESCHEDULE)
             {
                 int ttlSeconds = Math.max(1, maybeDetermineTTL(cluster));
                 LOGGER.info("TTL is {} seconds", ttlSeconds);
@@ -260,8 +260,8 @@ class ClusterLeaseClaimTaskIntegrationTest
             }
             else break;
         }
-        assertThat(executionDetermination).as("The leaseholder should give up the lease")
-                                          .isEqualTo(ExecutionDetermination.INDETERMINATE);
+        assertThat(scheduleDecision).as("The leaseholder should give up the lease")
+                                    .isEqualTo(ScheduleDecision.RESCHEDULE);
         // ensure the data is TTL'd in the database
         for (int i = 0; i < 20; i++)
         {

@@ -21,7 +21,8 @@ package org.apache.cassandra.sidecar.coordination;
 import java.util.Objects;
 
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Holds information about whether this Sidecar instance has claimed the lease, it has not, or it's unable
@@ -30,23 +31,23 @@ import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 @Singleton
 public class ClusterLease
 {
-    private volatile ExecutionDetermination executionDetermination = ExecutionDetermination.INDETERMINATE;
+    private volatile Ownership leaseOwnership;
 
     public ClusterLease()
     {
     }
 
-    public ClusterLease(ExecutionDetermination executionDetermination)
+    public ClusterLease(Ownership leaseOwnership)
     {
-        this.executionDetermination = executionDetermination;
+        this.leaseOwnership = leaseOwnership;
     }
 
     /**
      * @return the current execution determination
      */
-    public ExecutionDetermination executionDetermination()
+    public ScheduleDecision toScheduleDecision()
     {
-        return executionDetermination;
+        return leaseOwnership.toScheduleDecision();
     }
 
     /**
@@ -54,16 +55,61 @@ public class ClusterLease
      */
     public boolean isClaimedByLocalSidecar()
     {
-        return executionDetermination.shouldExecuteOnLocalSidecar();
+        return leaseOwnership == Ownership.CLAIMED;
     }
 
     /**
-     * Updates the determination
+     * Updates the ownership of the lease
      *
-     * @param executionDetermination the new value
+     * @param ownership ownership of the lease
      */
-    void setExecutionDetermination(ExecutionDetermination executionDetermination)
+    void setOwnership(Ownership ownership)
     {
-        this.executionDetermination = Objects.requireNonNull(executionDetermination, "executionDetermination must be provided");
+        this.leaseOwnership = Objects.requireNonNull(ownership, "ownership must be provided");
+    }
+
+    @VisibleForTesting // only use it for testing
+    public void setOwnershipTesting(Ownership ownership)
+    {
+        setOwnership(ownership);
+    }
+
+    /**
+     * Ownership of the cluster-wide lease
+     */
+    public enum Ownership
+    {
+        /**
+         * The cluster lease is claimed by the local Sidecar
+         */
+        CLAIMED,
+        /**
+         * The cluster lease is lost by the local Sidecar. It is claimed by another remote Sidecar.
+         */
+        LOST,
+        /**
+         * The cluster lease is neither claimed by the local Sidecar nor any other remote Sidecar
+         */
+        INDETERMINATE;
+
+        private ScheduleDecision toScheduleDecision()
+        {
+            switch (this)
+            {
+                case CLAIMED:
+                    return ScheduleDecision.EXECUTE;
+                case LOST:
+                    return ScheduleDecision.SKIP;
+                case INDETERMINATE:
+                default:
+                    // When the process is unable to determine whether it is the leaseholder, we want
+                    // the task to be rescheduled for a shorter period of time. Assume you have a PeriodicTask that
+                    // runs every day. If it happens to run during a period of time when there's no
+                    // determination whether task should run or not, we do not want to wait another day for the
+                    // task to run, so instead we reschedule it and only wait the initial delay of the task for
+                    // the task to try again.
+                    return ScheduleDecision.RESCHEDULE;
+            }
+        }
     }
 }

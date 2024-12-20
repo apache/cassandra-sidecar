@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
@@ -74,9 +75,9 @@ public class RingTopologyRefresher implements PeriodicTask
     }
 
     @Override
-    public boolean shouldSkip()
+    public ScheduleDecision scheduleDecision()
     {
-        return replicaByTokenRangePerKeyspace.isEmpty();
+        return replicaByTokenRangePerKeyspace.isEmpty() ? ScheduleDecision.SKIP : ScheduleDecision.EXECUTE;
     }
 
     @Override

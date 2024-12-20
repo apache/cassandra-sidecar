@@ -167,11 +167,10 @@ public abstract class TaskExecutorPool implements WorkerExecutor
     }
 
     @Override
-    public <T> Future<T> executeBlocking(Handler<Promise<T>> blockingCodeHandler,
-                                         boolean ordered)
+    public <T> Future<T> executeBlocking(Handler<Promise<T>> blockingCodeHandler, boolean ordered)
     {
         // TODO: migrate to org.apache.cassandra.sidecar.concurrent.TaskExecutorPool.executeBlocking(java.util.concurrent.Callable<T>, boolean)
-        return StopWatch.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler), this::recordTimeTaken);
+        return StopWatch.measureTimeTaken(workerExecutor.executeBlocking(blockingCodeHandler, ordered), this::recordTimeTaken);
     }
 
     @Override

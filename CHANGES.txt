@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Ensure memory consistency from PeriodicTask executions and expose richer ScheduleDecision (CASSSIDECAR-181)
  * Refactor access to delegate methods to simplify (CASSSIDECAR-182)
  * Renaming InstancesConfig to InstancesMetadata (CASSSIDECAR-175)
  * Mechanism to have a reduced number of Sidecar instances run operations (CASSSIDECAR-174)

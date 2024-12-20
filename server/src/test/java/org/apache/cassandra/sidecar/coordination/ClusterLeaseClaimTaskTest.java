@@ -30,7 +30,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
-import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 
 import static org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTask.MINIMUM_DELAY_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,7 +55,7 @@ class ClusterLeaseClaimTaskTest
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), serviceConfiguration, mockElectorateMembership,
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
-        assertThat(task.shouldSkip()).isTrue();
+        assertThat(task.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
         // avoid expensive calls
         verifyNoInteractions(mockElectorateMembership);
     }
@@ -71,9 +71,9 @@ class ClusterLeaseClaimTaskTest
                                                                mock(SidecarLeaseDatabaseAccessor.class), clusterLease,
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
-        assertThat(task.shouldSkip()).isTrue();
-        assertThat(clusterLease.executionDetermination()).as("Skip when not a member of the electorate")
-                                                         .isEqualTo(ExecutionDetermination.SKIP_EXECUTION);
+        assertThat(task.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
+        assertThat(clusterLease.toScheduleDecision()).as("Skip when not a member of the electorate")
+                                                     .isEqualTo(ScheduleDecision.SKIP);
         verify(mockElectorateMembership, times(1)).isMember();
     }
 
@@ -87,7 +87,7 @@ class ClusterLeaseClaimTaskTest
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
-        assertThat(task.shouldSkip()).isFalse();
+        assertThat(task.scheduleDecision()).isEqualTo(ScheduleDecision.EXECUTE);
         verify(mockElectorateMembership, times(1)).isMember();
     }
 

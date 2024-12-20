@@ -193,11 +193,11 @@ public abstract class OperationalJob implements Task<Void>
     {
         isExecuting = true;
         LOGGER.info("Executing job. jobId={}", jobId);
+        promise.future().onComplete(executionPromise);
         try
         {
             // Blocking call to perform concrete job-specific execution, returning the status
             executeInternal();
-            executionPromise.tryComplete();
             promise.tryComplete();
             if (LOGGER.isDebugEnabled())
             {
@@ -208,7 +208,6 @@ public abstract class OperationalJob implements Task<Void>
         {
             OperationalJobException oje = OperationalJobException.wraps(e);
             LOGGER.error("Job execution failed. jobId={} reason='{}'", jobId, oje.getMessage(), oje);
-            executionPromise.tryFail(oje);
             promise.tryFail(oje);
         }
     }

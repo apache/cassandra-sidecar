@@ -30,6 +30,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -92,30 +93,12 @@ public class HealthCheckPeriodicTask implements PeriodicTask
         AtomicInteger instanceDown = new AtomicInteger(0);
         List<Future<?>> futures = instancesMetadata.instances()
                                                    .stream()
-                                                   .map(instanceMetadata -> internalPool.executeBlocking(p -> {
-                                                     try
-                                                     {
-                                                         instanceMetadata.delegate().healthCheck();
-                                                         p.complete();
-                                                     }
-                                                     catch (Throwable cause)
-                                                     {
-                                                         instanceDown.incrementAndGet();
-                                                         p.fail(cause);
-                                                         LOGGER.error("Unable to complete health check on instance={}",
-                                                                      instanceMetadata.id(), cause);
-                                                     }
-                                                 }, false))
+                                                   .map(instanceMetadata -> healthCheck(instanceMetadata, instanceDown))
                                                    .collect(Collectors.toList());
 
         // join always waits until all its futures are completed and will not fail as soon as one of the future fails
         Future.join(futures)
-              .onComplete(v -> {
-                  int instanceDownCount = instanceDown.get();
-                  int instanceUpCount = instancesMetadata.instances().size() - instanceDownCount;
-                  metrics.cassandraInstancesUp.metric.setValue(instanceUpCount);
-                  metrics.cassandraInstancesDown.metric.setValue(instanceDownCount);
-              })
+              .onComplete(v -> updateMetrics(instanceDown))
               .onSuccess(v -> promise.complete())
               .onFailure(promise::fail);
     }
@@ -124,5 +107,24 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     public String name()
     {
         return "Health Check";
+    }
+
+    private void updateMetrics(AtomicInteger instanceDown)
+    {
+        int instanceDownCount = instanceDown.get();
+        int instanceUpCount = instancesMetadata.instances().size() - instanceDownCount;
+        metrics.cassandraInstancesUp.metric.setValue(instanceUpCount);
+        metrics.cassandraInstancesDown.metric.setValue(instanceDownCount);
+    }
+
+    private Future<Void> healthCheck(InstanceMetadata instanceMetadata, AtomicInteger instanceDown)
+    {
+        return internalPool
+               .runBlocking(() -> instanceMetadata.delegate().healthCheck(), false)
+               .onFailure(cause -> {
+                   instanceDown.incrementAndGet();
+                   LOGGER.error("Unable to complete health check on instance={}",
+                                instanceMetadata.id(), cause);
+               });
     }
 }

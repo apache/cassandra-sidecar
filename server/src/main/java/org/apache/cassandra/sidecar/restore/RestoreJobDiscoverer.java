@@ -56,6 +56,7 @@ import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
@@ -133,22 +134,9 @@ public class RestoreJobDiscoverer implements PeriodicTask
     }
 
     @Override
-    public boolean shouldSkip()
+    public ScheduleDecision scheduleDecision()
     {
-        boolean shouldSkip = !sidecarSchema.isInitialized();
-        if (shouldSkip)
-        {
-            LOGGER.trace("Skipping restore job discovering due to sidecarSchema not initialized");
-        }
-        boolean executing = isExecuting.get();
-        shouldSkip = shouldSkip || executing;
-        if (executing)
-        {
-            LOGGER.trace("Skipping restore job discovering due to overlapping execution of this task");
-        }
-
-        // skip the task
-        return shouldSkip;
+        return shouldSkip() ? ScheduleDecision.SKIP : ScheduleDecision.EXECUTE;
     }
 
     @Override
@@ -187,6 +175,24 @@ public class RestoreJobDiscoverer implements PeriodicTask
         {
             isExecuting.set(false);
         }
+    }
+
+    private boolean shouldSkip()
+    {
+        boolean shouldSkip = !sidecarSchema.isInitialized();
+        if (shouldSkip)
+        {
+            LOGGER.trace("Skipping restore job discovering due to sidecarSchema not initialized");
+        }
+        boolean executing = isExecuting.get();
+        shouldSkip = shouldSkip || executing;
+        if (executing)
+        {
+            LOGGER.trace("Skipping restore job discovering due to overlapping execution of this task");
+        }
+
+        // skip the task
+        return shouldSkip;
     }
 
     private void executeInternal()

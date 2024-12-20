@@ -51,15 +51,13 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
 
     /**
      * Skip check if the key store is not configured or if the key store should not be reloaded
-     *
-     * @return {@code true} if the key store is not configured or if the keystore should not be reloaded,
-     * {@code false} otherwise
      */
     @Override
-    public boolean shouldSkip()
+    public ScheduleDecision scheduleDecision()
     {
-        return !configuration.isKeystoreConfigured()
-               || !configuration.keystore().reloadStore();
+        return shouldSkip()
+               ? ScheduleDecision.SKIP
+               : ScheduleDecision.EXECUTE;
     }
 
     @Override
@@ -123,5 +121,17 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
                  LOGGER.error("Unable to get lastModifiedTime for path={}", keyStorePath);
                  lastModifiedTime = -1;
              });
+    }
+
+    /**
+     * Skip check if the key store is not configured or if the key store should not be reloaded
+     *
+     * @return {@code true} if the key store is not configured or if the keystore should not be reloaded,
+     * {@code false} otherwise
+     */
+    private boolean shouldSkip()
+    {
+        return !configuration.isKeystoreConfigured()
+               || !configuration.keystore().reloadStore();
     }
 }
