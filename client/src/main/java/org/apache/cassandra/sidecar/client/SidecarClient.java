@@ -61,6 +61,7 @@ import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
+import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
@@ -676,6 +677,18 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                             .singleInstanceSelectionPolicy(instance)
                                             .listOperationalJobsRequest()
                                             .build());
+    }
+
+    /**
+     * Executes the stream stats request using the default retry policy and configured selection policy
+     *
+     * @return a completable future of the connected client stats
+     */
+    public CompletableFuture<StreamStatsResponse> streamsStats()
+    {
+        return executeRequestAsync(requestBuilder()
+                                   .streamsStatsRequest()
+                                   .build());
     }
 
     /**

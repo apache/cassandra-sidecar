@@ -80,12 +80,14 @@ import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
+import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.data.CdcSegmentInfo;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
+import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
@@ -1620,6 +1622,36 @@ abstract class SidecarClientTest
             baos.write(bytes, 0, bytes.length);
         }
         assertThat(new String(baos.toByteArray(), StandardCharsets.UTF_8)).isEqualTo("Test Content");
+    }
+
+    @Test
+    public void testStreamsStats() throws Exception
+    {
+        String streamStatsResponseAsString = "{\"operationMode\":\"NORMAL\"," +
+                                             "\"streamProgressStats\":{\"totalFilesToReceive\":7," +
+                                             "\"totalFilesReceived\":7,\"totalBytesToReceive\":15088," +
+                                             "\"totalBytesReceived\":15088,\"totalFilesToSend\":0,\"totalFilesSent\":0," +
+                                             "\"totalBytesToSend\":0,\"totalBytesSent\":0}}";
+
+        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(streamStatsResponseAsString);
+        enqueue(response);
+        StreamStatsResponse result = client.streamsStats().get();
+
+        assertThat(result).isNotNull();
+        assertThat(result.operationMode()).isNotNull().isEqualTo("NORMAL");
+        StreamProgressStats progressStats = result.streamProgressStats();
+        assertThat(progressStats).isNotNull();
+        assertThat(progressStats.totalBytesReceived()).isNotNull();
+        assertThat(progressStats.totalBytesSent()).isNotNull();
+        assertThat(progressStats.totalBytesToReceive()).isNotNull().isEqualTo(progressStats.totalBytesReceived());
+        assertThat(progressStats.totalBytesToSend()).isNotNull();
+        assertThat(progressStats.totalFilesToReceive()).isNotNull();
+        assertThat(progressStats.totalFilesToSend()).isNotNull();
+        assertThat(progressStats.totalFilesReceived()).isNotNull().isEqualTo(progressStats.totalFilesToReceive());
+        assertThat(progressStats.totalFilesSent()).isNotNull();
+
+
+        validateResponseServed(ApiEndpointsV1.STREAM_STATS_ROUTE);
     }
 
     private void enqueue(MockResponse response)

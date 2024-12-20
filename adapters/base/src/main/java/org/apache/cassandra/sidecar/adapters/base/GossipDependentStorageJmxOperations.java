@@ -146,6 +146,11 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
         return delegate.forceKeyspaceCleanup(jobs, keyspaceName, tables);
     }
 
+    public String getOperationMode()
+    {
+        return delegate.getOperationMode();
+    }
+
     /**
      * Ensures that gossip is running on the Cassandra instance
      *

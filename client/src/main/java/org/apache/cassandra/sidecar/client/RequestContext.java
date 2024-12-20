@@ -47,6 +47,7 @@ import org.apache.cassandra.sidecar.common.request.RingRequest;
 import org.apache.cassandra.sidecar.common.request.SSTableComponentRequest;
 import org.apache.cassandra.sidecar.common.request.SchemaRequest;
 import org.apache.cassandra.sidecar.common.request.SidecarHealthRequest;
+import org.apache.cassandra.sidecar.common.request.StreamStatsRequest;
 import org.apache.cassandra.sidecar.common.request.TimeSkewRequest;
 import org.apache.cassandra.sidecar.common.request.TokenRangeReplicasRequest;
 import org.apache.cassandra.sidecar.common.request.UploadSSTableRequest;
@@ -535,6 +536,17 @@ public class RequestContext
         public Builder nodeDecommissionRequest()
         {
             return request(NODE_DECOMMISSION_REQUEST);
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link StreamStatsRequest} and returns a reference to this Builder
+         * enabling method chaining.
+         *
+         * @return a reference to this Builder
+         */
+        public Builder streamsStatsRequest()
+        {
+            return request(new StreamStatsRequest());
         }
 
         /**
