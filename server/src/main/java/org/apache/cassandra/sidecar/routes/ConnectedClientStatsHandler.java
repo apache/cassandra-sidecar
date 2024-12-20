@@ -22,6 +22,7 @@ import com.google.inject.Inject;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -54,8 +55,7 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Void>
                                SocketAddress remoteAddress,
                                Void request)
     {
-
-        ifMetricsOpsAvailable(context, host, operations -> {
+        ifAvailableFromDelegate(context, host, CassandraAdapterDelegate::metricsOperations, (delegate, operations) -> {
             boolean summaryOnly = parseBooleanQueryParam(httpRequest, "summary", true);
 
             executorPools.service()

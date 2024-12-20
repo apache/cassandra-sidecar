@@ -34,7 +34,6 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.MetadataUtils;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -75,20 +74,12 @@ public class SchemaHandler extends AbstractHandler<Name>
     /**
      * Handles the request with the Cassandra {@link Metadata metadata}.
      *
-     * @param context       the event to handle
-     * @param keyspace      the keyspace parsed from the request
-     * @param metadata      the metadata on the connected cluster, including known nodes and schema definitions
+     * @param context  the event to handle
+     * @param keyspace the keyspace parsed from the request
+     * @param metadata the metadata on the connected cluster, including known nodes and schema definitions
      */
     private void handleWithMetadata(RoutingContext context, Name keyspace, Metadata metadata)
     {
-        if (metadata == null)
-        {
-            // set request as failed and return
-            logger.error("Failed to obtain metadata on the connected cluster for request '{}'", keyspace);
-            context.fail(cassandraServiceUnavailable());
-            return;
-        }
-
         if (keyspace == null)
         {
             SchemaResponse schemaResponse = new SchemaResponse(metadata.exportSchemaAsString());
@@ -122,9 +113,8 @@ public class SchemaHandler extends AbstractHandler<Name>
     private Future<Metadata> metadata(String host)
     {
         return executorPools.service().executeBlocking(() -> {
-            CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
             // metadata can block so we need to run in a blocking thread
-            return delegate.metadata();
+            return getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::metadata);
         });
     }
 

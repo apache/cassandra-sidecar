@@ -36,7 +36,6 @@ import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -115,12 +114,7 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
     private Future<KeyspaceMetadata> getKeyspaceMetadata(String host, String keyspace)
     {
         return executorPools.service().executeBlocking(() -> {
-            CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-            Metadata metadata = delegate == null ? null : delegate.metadata();
-            if (metadata == null)
-            {
-                throw cassandraServiceUnavailable();
-            }
+            Metadata metadata = getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::metadata);
             return metadata.getKeyspace(keyspace);
         });
     }

@@ -30,7 +30,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
-import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.data.SSTableImportRequestParam;
@@ -40,7 +39,6 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -164,22 +162,17 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
      */
     private Future<Void> importSSTablesAsync(SSTableImporter.ImportOptions importOptions)
     {
-        CassandraAdapterDelegate cassandra = metadataFetcher.delegate(importOptions.host());
-        if (cassandra == null)
+        try
         {
-            return Future.failedFuture(cassandraServiceUnavailable());
-        }
-
-        TableOperations tableOperations = cassandra.tableOperations();
-
-        if (tableOperations == null)
-        {
-            return Future.failedFuture(cassandraServiceUnavailable());
-        }
-        else
-        {
+            // ensure that table operations are available from the delegate before doing the import
+            // otherwise fail fast propagating the HttpException
+            getOperationFromDelegateOrThrow(importOptions.host(), CassandraAdapterDelegate::tableOperations);
             return uploadPathBuilder.isValidDirectory(importOptions.directory())
                                     .compose(validDirectory -> importer.scheduleImport(importOptions));
+        }
+        catch (HttpException exception)
+        {
+            return Future.failedFuture(exception);
         }
     }
 

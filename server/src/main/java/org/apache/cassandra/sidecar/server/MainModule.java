@@ -250,7 +250,6 @@ public class MainModule extends AbstractModule
     public Router vertxRouter(Vertx vertx,
                               SidecarConfiguration sidecarConfiguration,
                               ChainAuthHandler chainAuthHandler,
-                              ServiceConfiguration conf,
                               CassandraHealthHandler cassandraHealthHandler,
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
                               FileStreamHandler fileStreamHandler,
@@ -287,7 +286,7 @@ public class MainModule extends AbstractModule
         router.route()
               .order(RoutingOrder.HIGHEST.order)
               .handler(loggerHandler)
-              .handler(TimeoutHandler.create(conf.requestTimeoutMillis(),
+              .handler(TimeoutHandler.create(sidecarConfiguration.serviceConfiguration().requestTimeoutMillis(),
                                              HttpResponseStatus.REQUEST_TIMEOUT.code()));
 
         // chain authentication before all requests

@@ -31,7 +31,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.exceptions.NodeBootstrappingException;
 import org.apache.cassandra.sidecar.common.server.exceptions.SnapshotAlreadyExistsException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -41,7 +40,6 @@ import org.apache.cassandra.sidecar.routes.data.SnapshotRequestParam;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -76,28 +74,23 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
                                SocketAddress remoteAddress,
                                SnapshotRequestParam requestParams)
     {
-        TaskExecutorPool pool = executorPools.service();
-        pool.runBlocking(() -> {
-                CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-                StorageOperations storageOperations = delegate == null ? null : delegate.storageOperations();
-                if (storageOperations == null)
-                {
-                    throw cassandraServiceUnavailable();
-                }
+        ifAvailableFromDelegate(context, host, CassandraAdapterDelegate::storageOperations, (delegate, storageOperations) -> {
+            TaskExecutorPool pool = executorPools.service();
+            pool.runBlocking(() -> {
+                    logger.debug("Creating snapshot request={}, remoteAddress={}, instance={}",
+                                 requestParams, remoteAddress, host);
+                    Map<String, String> options = requestParams.ttl() != null
+                                                  ? ImmutableMap.of("ttl", requestParams.ttl())
+                                                  : ImmutableMap.of();
 
-                logger.debug("Creating snapshot request={}, remoteAddress={}, instance={}",
-                             requestParams, remoteAddress, host);
-                Map<String, String> options = requestParams.ttl() != null
-                                              ? ImmutableMap.of("ttl", requestParams.ttl())
-                                              : ImmutableMap.of();
-
-                storageOperations.takeSnapshot(requestParams.snapshotName(), requestParams.keyspace(),
-                                               requestParams.tableName(), options);
-                JsonObject jsonObject = new JsonObject()
-                                        .put("result", "Success");
-                context.json(jsonObject);
-            })
-            .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestParams));
+                    storageOperations.takeSnapshot(requestParams.snapshotName(), requestParams.keyspace(),
+                                                   requestParams.tableName(), options);
+                    JsonObject jsonObject = new JsonObject()
+                                            .put("result", "Success");
+                    context.json(jsonObject);
+                })
+                .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestParams));
+        });
     }
 
     @Override

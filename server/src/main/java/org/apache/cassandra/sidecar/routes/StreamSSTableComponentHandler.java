@@ -42,7 +42,6 @@ import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -81,21 +80,10 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     private Future<String> resolveComponentPathFromRequest(String host, StreamSSTableComponentRequestParam request)
     {
         return executorPools.internal().executeBlocking(() -> {
-            CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-            if (delegate == null)
-            {
-                throw cassandraServiceUnavailable();
-            }
-
             int dataDirIndex = request.dataDirectoryIndex();
             if (request.tableId() != null)
             {
-                StorageOperations storageOperations = delegate.storageOperations();
-                if (storageOperations == null)
-                {
-                    throw cassandraServiceUnavailable();
-                }
-
+                StorageOperations storageOperations = getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::storageOperations);
                 List<String> dataDirList = storageOperations.dataFileLocations();
                 if (dataDirIndex < 0 || dataDirIndex >= dataDirList.size())
                 {
@@ -106,12 +94,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
             else
             {
                 logger.debug("Streaming SSTable component without a table Id. request={}, instance={}", request, host);
-                TableOperations tableOperations = delegate.tableOperations();
-                if (tableOperations == null)
-                {
-                    throw cassandraServiceUnavailable();
-                }
-
+                TableOperations tableOperations = getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::tableOperations);
                 // asking jmx to give us the path for keyspace/table - tableId
                 // as opposed to storageOperations.dataFileLocations, the table directory can change
                 // when someone drops a table and recreates it with the same name, the table id will change

@@ -27,13 +27,11 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -60,25 +58,12 @@ public class RingHandler extends AbstractHandler<Name>
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
-        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-        if (delegate == null)
-        {
-            context.fail(cassandraServiceUnavailable());
-            return;
-        }
-
-        StorageOperations storageOperations = delegate.storageOperations();
-
-        if (storageOperations == null)
-        {
-            context.fail(cassandraServiceUnavailable());
-            return;
-        }
-
-        executorPools.service()
-                     .executeBlocking(() -> storageOperations.ring(keyspace))
-                     .onSuccess(context::json)
-                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
+        ifAvailableFromDelegate(context, host, CassandraAdapterDelegate::storageOperations, (delegate, operations) -> {
+            executorPools.service()
+                         .executeBlocking(() -> operations.ring(keyspace))
+                         .onSuccess(context::json)
+                         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
+        });
     }
 
     @Override

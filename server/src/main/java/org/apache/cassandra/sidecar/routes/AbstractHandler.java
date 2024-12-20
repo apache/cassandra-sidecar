@@ -19,7 +19,8 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.util.NoSuchElementException;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,13 +35,13 @@ import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.utils.HttpExceptions;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
@@ -102,23 +103,74 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
         }
     }
 
-    protected void ifMetricsOpsAvailable(RoutingContext context,
-                                         String host,
-                                         Consumer<MetricsOperations> ifAvailable)
+    /**
+     * Executes the bi-consumer code provided by {@code ifAvailable} only iff the delegate
+     * and the delegate operation defined by the {@code mapper} function are available.
+     * Otherwise, fails the {@code context} with a {@link HttpExceptions#cassandraServiceUnavailable}
+     * exception.
+     *
+     * <p>For example, if storage operations is required, we can use this function as
+     * follows:
+     *
+     * <pre>
+     * ifAvailableFromDelegate(context, host, CassandraAdapterDelegate::storageOperations,
+     *                         (delegate, storageOperations) -> {
+     *    storageOperations.ring(keyspace, ...)
+     * });
+     * </pre>
+     *
+     * @param context     the request context
+     * @param host        the host where this request is intended for
+     * @param mapper      the function is evaluated only when delegate is not {@code null}
+     * @param ifAvailable the bi-consumer when the operation derived from the delegate is not {@code null},
+     *                    the bi-consumer provides both the delegate and the operation
+     * @param <O>         the type of the delegate operation
+     */
+    protected <O> void ifAvailableFromDelegate(RoutingContext context,
+                                               String host,
+                                               Function<CassandraAdapterDelegate, O> mapper,
+                                               BiConsumer<CassandraAdapterDelegate, O> ifAvailable)
     {
         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-        if (delegate == null)
+        O applied = delegate == null ? null : mapper.apply(delegate);
+        if (applied == null)
         {
             context.fail(cassandraServiceUnavailable());
-            return;
         }
-        MetricsOperations operations = delegate.metricsOperations();
-        if (operations == null)
+        else
         {
-            context.fail(cassandraServiceUnavailable());
-            return;
+            ifAvailable.accept(delegate, applied);
         }
-         ifAvailable.accept(operations);
+    }
+
+    /**
+     * Returns the operation from the delegate only if the delegate and the operation defined
+     * by the {@code mapper} function are available. Otherwise, throws a
+     * {@link HttpExceptions#cassandraServiceUnavailable} exception.
+     *
+     * <p>For example, if storage operations are required, we can use as follows:</p>
+     *
+     * <pre>
+     *     StorageOperations ops = ifAvailableFromDelegate(host, CassandraAdapterDelegate::storageOperations);
+     *     ops.ring(keyspace, ...);
+     * </pre>
+     *
+     * @param host   the host where this request is intended for
+     * @param mapper the function is evaluated only when delegate is not {@code null}
+     * @param <O>    the type of the delegate operation
+     * @return the operation from the delegate
+     * @throws HttpException a {@link HttpExceptions#cassandraServiceUnavailable} exception when the delegate
+     *                       or operation are not available
+     */
+    protected <O> O getOperationFromDelegateOrThrow(String host, Function<CassandraAdapterDelegate, O> mapper)
+    {
+        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+        O applied = delegate == null ? null : mapper.apply(delegate);
+        if (applied == null)
+        {
+            throw cassandraServiceUnavailable();
+        }
+        return applied;
     }
 
     /**

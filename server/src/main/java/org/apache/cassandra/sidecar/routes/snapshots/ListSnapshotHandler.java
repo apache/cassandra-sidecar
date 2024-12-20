@@ -35,7 +35,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
-import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -48,7 +47,6 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.RequestUtils;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -194,19 +192,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
     protected Future<List<String>> dataPaths(String host, String keyspace, String table)
     {
         return executorPools.service().executeBlocking(() -> {
-            CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-            if (delegate == null)
-            {
-                throw cassandraServiceUnavailable();
-            }
-
-            TableOperations tableOperations = delegate.tableOperations();
-            if (tableOperations == null)
-            {
-                throw cassandraServiceUnavailable();
-            }
-
-            return tableOperations.getDataPaths(keyspace, table);
+            return getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::tableOperations).getDataPaths(keyspace, table);
         });
     }
 
