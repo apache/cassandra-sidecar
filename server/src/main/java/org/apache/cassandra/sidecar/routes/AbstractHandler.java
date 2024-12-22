@@ -114,7 +114,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
      *
      * <pre>
      * ifAvailableFromDelegate(context, host, CassandraAdapterDelegate::storageOperations,
-     *                         (delegate, storageOperations) -> {
+     *                         (delegate, storageOperations) -&gt; {
      *    storageOperations.ring(keyspace, ...)
      * });
      * </pre>

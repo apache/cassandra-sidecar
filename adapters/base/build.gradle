@@ -26,6 +26,7 @@ plugins {
     id 'java-library'
     id 'idea'
     id 'maven-publish'
+    id 'jacoco'
     id "com.github.spotbugs"
 }
 
