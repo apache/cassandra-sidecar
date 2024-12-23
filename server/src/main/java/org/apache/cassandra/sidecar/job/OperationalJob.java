@@ -201,23 +201,26 @@ public abstract class OperationalJob implements Task<Void>
         LOGGER.info("Executing job. jobId={}", jobId);
 
         promise.future().onComplete(res -> {
-            if (res.succeeded()) {
-                try {
+            if (res.succeeded())
+            {
+                try
+                {
                     OperationalJobStatus result = executeInternal();
-                    executionPromise.tryComplete(result); // Complete p2 with the result
-                    promise.tryComplete();  // Complete the original promise
+                    executionPromise.tryComplete(result);
                     if (LOGGER.isDebugEnabled())
                     {
                         LOGGER.debug("Complete job execution. jobId={} status={}", jobId, status());
                     }
-                } catch (Throwable e) {
-                    executionPromise.tryFail(e);          // Fail p2 if an exception occurs
-                    promise.tryFail(e);     // Fail the original promise
                 }
-            } else {
+                catch (Throwable e)
+                {
+                    executionPromise.tryFail(e);
+                }
+            }
+            else
+            {
                 Throwable cause = res.cause();
-                executionPromise.tryFail(cause);          // Propagate the failure to p2
-                promise.tryFail(cause);     // Propagate the failure to the original promise
+                executionPromise.tryFail(cause);
             }
         });
 

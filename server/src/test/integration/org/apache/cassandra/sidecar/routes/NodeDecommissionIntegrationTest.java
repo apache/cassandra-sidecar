@@ -54,8 +54,9 @@ public class NodeDecommissionIntegrationTest extends IntegrationTestBase
     private static final String DECOMMISSION_FAILED_MESSAGE = "Failed to decommission node";
 
     @CassandraIntegrationTest(nodesPerDc = 5)
-    void decommissionNodeDefault(VertxTestContext context)
+    void decommissionNodeDefault(VertxTestContext context) throws InterruptedException
     {
+        BBHelperDecommissionNode.reset();
         final String[] jobId = new String[1];
         String testRoute = "/api/v1/cassandra/node/decommission";
         testWithClient(client -> client.put(server.actualPort(), "127.0.0.1", testRoute)
@@ -67,6 +68,7 @@ public class NodeDecommissionIntegrationTest extends IntegrationTestBase
                                        })));
         Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
         pollStatusForState(context, jobId[0], SUCCEEDED, null);
+        context.awaitCompletion(2, TimeUnit.MINUTES);
     }
 
     @CassandraIntegrationTest(nodesPerDc = 5, network = true, buildCluster = false)
@@ -89,6 +91,7 @@ public class NodeDecommissionIntegrationTest extends IntegrationTestBase
                                        })));
         Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
         pollStatusForState(context, jobId[0], FAILED, DECOMMISSION_FAILED_MESSAGE);
+        context.awaitCompletion(2, TimeUnit.MINUTES);
     }
 
     private void pollStatusForState(VertxTestContext context,
