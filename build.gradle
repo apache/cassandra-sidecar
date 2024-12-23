@@ -49,6 +49,7 @@ plugins {
     id("org.nosphere.apache.rat") version "0.8.0"
 
     id 'jacoco'
+    id("io.github.surpsg.delta-coverage") version "2.5.0"
 }
 
 // Force checkstyle, rat, and spotBugs to run before test tasks for faster feedback
@@ -86,6 +87,29 @@ allprojects {
         shouldRunAfter(tasks.withType(SpotBugsTask))
     }
 
+}
+
+deltaCoverageReport {
+    diffSource {
+        git.compareWith("refs/remotes/origin/trunk")
+        git.useNativeGit.set(true)
+    }
+
+    coverageBinaryFiles = fileTree(".") { include("**/*.exec") }
+
+    violationRules {
+        failOnViolation.set(true)
+        rule(io.github.surpsg.deltacoverage.gradle.CoverageEntity.LINE) {
+            minCoverageRatio.set(0.9d)
+        }
+        rule(io.github.surpsg.deltacoverage.gradle.CoverageEntity.BRANCH) {
+            minCoverageRatio.set(0.7d)
+        }
+    }
+
+    reports {
+        html.set(true)
+    }
 }
 
 group 'org.apache.cassandra'

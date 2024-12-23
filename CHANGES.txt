@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Integrate delta-coverage-plugin plugin (CASSSIDECAR-163)
  * Mechanism to have a reduced number of Sidecar instances run operations (CASSSIDECAR-174)
  * Adding support for CDC APIs into sidecar client (CASSSIDECAR-172)
  * Stopping Sidecar can take a long time (CASSSIDECAR-178)
