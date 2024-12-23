@@ -28,7 +28,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import com.datastax.driver.core.Session;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.bytebuddy.ByteBuddy;
@@ -64,6 +63,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
     void streamStatsTest(VertxTestContext context, ConfigurableCassandraTestContext cassandraTestContext) throws InterruptedException
     {
 
+        BBHelperDecommissioningNode.reset();
         UpgradeableCluster cluster = cassandraTestContext.configureAndStartCluster(
         builder -> builder.withInstanceInitializer(BBHelperDecommissioningNode::install));
         IUpgradeableInstance node = cluster.get(5);
@@ -83,18 +83,20 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         ClusterUtils.awaitRingState(seed, node, "Leaving");
         BBHelperDecommissioningNode.transientStateEnd.countDown();
 
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 20; i++)
         {
-            try
-            {
-                streamStats(context, hasStats, dataReceived);
-                if (hasStats.get() && dataReceived.get()) break;
-            }
-            catch (Exception e)
-            {
-                throw new RuntimeException(e);
-            }
-            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+            startAsync("Request-" + i , () -> {
+                try
+                {
+                    streamStats(context, hasStats, dataReceived);
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
         }
 
         assertThat(hasStats).isTrue();
@@ -109,7 +111,6 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         testWithClient(context, client -> {
             BBHelperDecommissioningNode.transientStateEnd.countDown();
             client.get(server.actualPort(), "127.0.0.1", testRoute)
-                  .expect(ResponsePredicate.SC_OK)
                   .send(context.succeeding(response -> {
                        assertRingResponseOK(response, sidecarTestContext, hasStats, dataReceived);
                   }));
@@ -126,10 +127,12 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         if (streamProgress.totalFilesToReceive() > 0)
         {
             hasStats.set(true);
-            if (streamProgress.totalFilesToReceive() == streamProgress.totalFilesReceived())
+            if (streamProgress.totalFilesToReceive() == streamProgress.totalFilesReceived() &&
+                streamProgress.totalFilesReceived() > 0)
             {
                 dataReceived.set(true);
                 assertThat(streamProgress.totalBytesToReceive()).isEqualTo(streamProgress.totalBytesReceived());
+                assertThat(streamProgress.totalBytesReceived()).isGreaterThan(0);
             }
         }
     }
