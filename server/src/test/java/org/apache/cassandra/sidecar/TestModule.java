@@ -174,18 +174,21 @@ public class TestModule extends AbstractModule
     {
         InstanceMetadata instance1 = mockInstance("localhost",
                                                   1,
+                                                  "src/test/resources/instance1",
                                                   "src/test/resources/instance1/data",
                                                   "src/test/resources/instance1/sstable-staging",
                                                   "src/test/resources/instance1/cdc_raw",
                                                   true);
         InstanceMetadata instance2 = mockInstance("localhost2",
                                                   2,
+                                                  "src/test/resources/instance2",
                                                   "src/test/resources/instance2/data",
                                                   "src/test/resources/instance2/sstable-staging",
                                                   "src/test/resources/instance2/cdc_raw",
                                                   false);
         InstanceMetadata instance3 = mockInstance("localhost3",
                                                   3,
+                                                  "src/test/resources/instance3",
                                                   "src/test/resources/instance3/data",
                                                   "src/test/resources/instance3/sstable-staging",
                                                   "src/test/resources/instance3/cdc_raw",
@@ -197,12 +200,14 @@ public class TestModule extends AbstractModule
         return instanceMetas;
     }
 
-    private InstanceMetadata mockInstance(String host, int id, String dataDir, String stagingDir, String cdcDir, boolean isUp)
+    private InstanceMetadata mockInstance(String host, int id, String cassandraHomeDir,
+                                          String dataDir, String stagingDir, String cdcDir, boolean isUp)
     {
         InstanceMetadata instanceMeta = mock(InstanceMetadata.class);
         when(instanceMeta.id()).thenReturn(id);
         when(instanceMeta.host()).thenReturn(host);
         when(instanceMeta.port()).thenReturn(6475);
+        when(instanceMeta.cassandraHomeDir()).thenReturn(cassandraHomeDir);
         when(instanceMeta.stagingDir()).thenReturn(stagingDir);
         when(instanceMeta.cdcDir()).thenReturn(cdcDir);
         List<String> dataDirectories = Collections.singletonList(dataDir);

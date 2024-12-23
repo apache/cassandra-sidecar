@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.cluster.instance;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -39,10 +40,10 @@ class InstanceMetadataImplTest
     private static final String DATA_DIR_2 = "test/data/data2";
     private static final String CDC_DIR = "cdc_dir";
     private static final String STAGING_DIR = "staging_dir";
-    private static final String COMMITLOG_DIR = "commitlog";
-    private static final String HINTS_DIR = "hints";
-    private static final String SAVED_CACHES_DIR = "saved_caches";
-    private static final String LOCAL_SYSTEM_DATA_FILE_DIR = "local_system_data";
+    private static final String COMMITLOG_DIR = "commitlog_dir";
+    private static final String HINTS_DIR = "hints_dir";
+    private static final String SAVED_CACHES_DIR = "saved_caches_dir";
+    private static final String LOCAL_SYSTEM_DATA_FILE_DIR = "local_system_data_dir";
     private static final MetricRegistry METRIC_REGISTRY = new MetricRegistry();
 
     @TempDir
@@ -58,6 +59,7 @@ class InstanceMetadataImplTest
         assertThat(metadata.id()).isEqualTo(ID);
         assertThat(metadata.host()).isEqualTo(HOST);
         assertThat(metadata.port()).isEqualTo(PORT);
+        assertThat(metadata.cassandraHomeDir()).isEqualTo(rootDir);
         assertThat(metadata.dataDirs()).contains(rootDir + "/" + DATA_DIR_1, rootDir + "/" + DATA_DIR_2);
         assertThat(metadata.cdcDir()).isEqualTo(rootDir + "/" + CDC_DIR);
         assertThat(metadata.stagingDir()).isEqualTo(rootDir + "/" + STAGING_DIR);
@@ -75,6 +77,7 @@ class InstanceMetadataImplTest
 
         InstanceMetadataImpl metadata = getInstanceMetadataBuilder(rootDir).build();
 
+        assertThat(metadata.cassandraHomeDir()).isEqualTo(homeDir);
         assertThat(metadata.dataDirs()).contains(homeDir + "/" + DATA_DIR_1, homeDir + "/" + DATA_DIR_2);
         assertThat(metadata.cdcDir()).isEqualTo(homeDir + "/" + CDC_DIR);
         assertThat(metadata.stagingDir()).isEqualTo(homeDir + "/" + STAGING_DIR);
@@ -85,31 +88,27 @@ class InstanceMetadataImplTest
     }
 
     @Test
-    void testConstructorOptionalDirs()
+    void testConstructorWithCassandraHomeDir()
     {
-        // Some directories of Cassandra like commitlog_dir, hints_dir, saved_caches_dir and
-        // local_system_data_file_dir are not required to specified in sidecar configuration
-        // to use the majority of features in sidecar. User should be able to initialize InstanceMetadata
-        // even when these directories are not specified in sidecar configuration.
         String rootDir = tempDir.toString();
 
-        InstanceMetadataImpl metadata = getInstanceMetadataBuilder(rootDir)
-                                        .commitlogDir(null)
-                                        .hintsDir(null)
-                                        .savedCachesDir(null)
-                                        .localSystemDataFileDir(null)
-                                        .build();
+        InstanceMetadataImpl metadata = InstanceMetadataImpl.builder()
+                                        .id(ID)
+                                        .host(HOST)
+                                        .port(PORT)
+                                        .metricRegistry(METRIC_REGISTRY)
+                                        .dataDirs(Collections.singletonList(rootDir + "/" + DATA_DIR_1))
+                                        .cassandraHomeDir(rootDir)
+                                                            .build();
 
-        assertThat(metadata.id()).isEqualTo(ID);
-        assertThat(metadata.host()).isEqualTo(HOST);
-        assertThat(metadata.port()).isEqualTo(PORT);
-        assertThat(metadata.dataDirs()).contains(rootDir + "/" + DATA_DIR_1, rootDir + "/" + DATA_DIR_2);
-        assertThat(metadata.cdcDir()).isEqualTo(rootDir + "/" + CDC_DIR);
-        assertThat(metadata.stagingDir()).isEqualTo(rootDir + "/" + STAGING_DIR);
-        assertThat(metadata.commitlogDir()).isEqualTo(null);
-        assertThat(metadata.hintsDir()).isEqualTo(null);
-        assertThat(metadata.savedCachesDir()).isEqualTo(null);
-        assertThat(metadata.localSystemDataFileDir()).isEqualTo(null);
+        assertThat(metadata.cassandraHomeDir()).isEqualTo(rootDir);
+        assertThat(metadata.dataDirs()).contains(rootDir + "/" + DATA_DIR_1);
+        assertThat(metadata.cdcDir()).isEqualTo(rootDir + "/cdc_raw");
+        assertThat(metadata.commitlogDir()).isEqualTo(rootDir + "/commitlog");
+        assertThat(metadata.hintsDir()).isEqualTo(rootDir + "/hints");
+        assertThat(metadata.savedCachesDir()).isEqualTo(rootDir + "/saved_caches");
+        assertThat(metadata.stagingDir()).isNull();
+        assertThat(metadata.localSystemDataFileDir()).isNull();
     }
 
     InstanceMetadataImpl.Builder getInstanceMetadataBuilder(String rootDir)
@@ -122,6 +121,7 @@ class InstanceMetadataImplTest
                                    .id(ID)
                                    .host(HOST)
                                    .port(PORT)
+                                   .cassandraHomeDir(rootDir)
                                    .dataDirs(dataDirs)
                                    .cdcDir(rootDir + "/" + CDC_DIR)
                                    .stagingDir(rootDir + "/" + STAGING_DIR)

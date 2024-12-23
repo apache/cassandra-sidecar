@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.cluster.instance;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,9 +43,15 @@ import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableExcept
  */
 public class InstanceMetadataImpl implements InstanceMetadata
 {
+    private static final String DEFAULT_CDC_RAW_DIR = "cdc_raw";
+    private static final String DEFAULT_COMMITLOG_DIR = "commitlog";
+    private static final String DEFAULT_HINTS_DIR = "hints";
+    private static final String DEFAULT_SAVED_CACHES_DIR = "saved_caches";
+
     private final int id;
     private final String host;
     private final int port;
+    private final String cassandraHomeDir;
     private final List<String> dataDirs;
     private final String stagingDir;
     private final String cdcDir;
@@ -60,14 +68,32 @@ public class InstanceMetadataImpl implements InstanceMetadata
         id = builder.id;
         host = builder.host;
         port = builder.port;
+        cassandraHomeDir = FileUtils.maybeResolveHomeDirectory(builder.cassandraHomeDir);
+        Path cassandraHomeDirPath = cassandraHomeDir == null ?  null : Paths.get(cassandraHomeDir);
         dataDirs = builder.dataDirs.stream()
                                    .map(FileUtils::maybeResolveHomeDirectory)
                                    .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
         stagingDir = FileUtils.maybeResolveHomeDirectory(builder.stagingDir);
-        cdcDir = FileUtils.maybeResolveHomeDirectory(builder.cdcDir);
-        commitlogDir = FileUtils.maybeResolveHomeDirectory(builder.commitlogDir);
-        hintsDir = FileUtils.maybeResolveHomeDirectory(builder.hintsDir);
-        savedCachesDir = FileUtils.maybeResolveHomeDirectory(builder.savedCachesDir);
+        cdcDir = builder.cdcDir != null
+                 ? FileUtils.maybeResolveHomeDirectory(builder.cdcDir)
+                 : cassandraHomeDirPath == null
+                   ? null
+                   : cassandraHomeDirPath.resolve(DEFAULT_CDC_RAW_DIR).toAbsolutePath().toString();
+        commitlogDir = builder.commitlogDir != null
+                       ? FileUtils.maybeResolveHomeDirectory(builder.commitlogDir)
+                       : cassandraHomeDirPath == null
+                         ? null
+                         : cassandraHomeDirPath.resolve(DEFAULT_COMMITLOG_DIR).toAbsolutePath().toString();
+        hintsDir = builder.hintsDir != null
+                   ? FileUtils.maybeResolveHomeDirectory(builder.hintsDir)
+                   : cassandraHomeDirPath == null
+                     ? null
+                     : cassandraHomeDirPath.resolve(DEFAULT_HINTS_DIR).toAbsolutePath().toString();
+        savedCachesDir = builder.savedCachesDir != null
+                         ? FileUtils.maybeResolveHomeDirectory(builder.savedCachesDir)
+                         : cassandraHomeDirPath == null
+                           ? null
+                           : cassandraHomeDirPath.resolve(DEFAULT_SAVED_CACHES_DIR).toAbsolutePath().toString();
         localSystemDataFileDir = FileUtils.maybeResolveHomeDirectory(builder.localSystemDataFileDir);
         delegate = builder.delegate;
         metrics = builder.metrics;
@@ -91,6 +117,11 @@ public class InstanceMetadataImpl implements InstanceMetadata
         return port;
     }
 
+    @Override
+    public String cassandraHomeDir()
+    {
+        return cassandraHomeDir;
+    }
     @Override
     public List<String> dataDirs()
     {
@@ -173,6 +204,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         protected Integer id;
         protected String host;
         protected int port;
+        protected String cassandraHomeDir;
         protected List<String> dataDirs;
         protected String stagingDir;
         protected String cdcDir;
@@ -193,6 +225,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
             id = instanceMetadata.id;
             host = instanceMetadata.host;
             port = instanceMetadata.port;
+            cassandraHomeDir = instanceMetadata.cassandraHomeDir;
             dataDirs = new ArrayList<>(instanceMetadata.dataDirs);
             stagingDir = instanceMetadata.stagingDir;
             cdcDir = instanceMetadata.cdcDir;
@@ -241,6 +274,17 @@ public class InstanceMetadataImpl implements InstanceMetadata
         public Builder port(int port)
         {
             return update(b -> b.port = port);
+        }
+
+        /**
+         * Sets the {@code cassandraHomeDir} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param cassandraHomeDir that {@code cassandraHomeDir} to set
+         * @return a reference to this Builder
+         */
+        public Builder cassandraHomeDir(String cassandraHomeDir)
+        {
+            return update(b -> b.cassandraHomeDir = cassandraHomeDir);
         }
 
         /**
