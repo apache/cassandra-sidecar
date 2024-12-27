@@ -18,10 +18,9 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.util.concurrent.TimeUnit;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 
 /**
@@ -34,7 +33,9 @@ public class CoordinationConfigurationImpl implements CoordinationConfiguration
 
     public CoordinationConfigurationImpl()
     {
-        this(new PeriodicTaskConfigurationImpl(true, TimeUnit.SECONDS.toMillis(1), TimeUnit.MINUTES.toMillis(1)));
+        this(new PeriodicTaskConfigurationImpl(true,
+                                               MillisecondBoundConfiguration.parse("1s"),
+                                               MillisecondBoundConfiguration.parse("1m")));
     }
 
     public CoordinationConfigurationImpl(PeriodicTaskConfiguration clusterLeaseClaimConfiguration)

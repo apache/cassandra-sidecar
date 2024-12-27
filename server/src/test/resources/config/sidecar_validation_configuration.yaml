@@ -14,14 +14,14 @@ cassandra:
 sidecar:
   host: 0.0.0.0
   port: 1234
-  request_idle_timeout_millis: 500000 # this field expects integer value
-  request_timeout_millis: 1200000
+  request_idle_timeout: 500s
+  request_timeout: 20m
   throttle:
     stream_requests_per_sec: 80
-    timeout_sec: 21
-  allowable_time_skew_in_minutes: 89
+    timeout: 21s
+  allowable_time_skew: 89m
   sstable_import:
-    poll_interval_millis: 50
+    execute_interval: 50ms
 
 cassandra_input_validation:
   forbidden_keyspaces:

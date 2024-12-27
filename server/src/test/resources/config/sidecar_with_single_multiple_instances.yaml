@@ -36,12 +36,12 @@ sidecar:
   port: 9043
   throttle:
     stream_requests_per_sec: 5000
-    timeout_sec: 10
-  allowable_time_skew_in_minutes: 60
+    timeout: 10s
+  allowable_time_skew: 60m
   jmx:
     connection:
       max_retries: 40
-      retry_delay_millis: 2000
+      retry_delay: 2s
 #
 # Enable SSL configuration (Disabled by default)
 #

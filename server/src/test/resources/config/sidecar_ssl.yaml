@@ -60,46 +60,46 @@ cassandra_instances:
 sidecar:
   host: 0.0.0.0
   port: 9043
-  request_idle_timeout_millis: 300000 # this field expects integer value
-  request_timeout_millis: 300000
+  request_idle_timeout: 5m
+  request_timeout: 5m
   tcp_keep_alive: false
   accept_backlog: 1024
   server_verticle_instances: 1
   throttle:
     stream_requests_per_sec: 5000
-    timeout_sec: 10
+    timeout: 10s
   traffic_shaping:
     inbound_global_bandwidth_bps: 500
     outbound_global_bandwidth_bps: 1500
     peak_outbound_global_bandwidth_bps: 2000
-    max_delay_to_wait_millis: 2500
-    check_interval_for_stats_millis: 3000
+    max_delay_to_wait: 15s
+    check_interval_for_stats: 1s
   sstable_upload:
     concurrent_upload_limit: 80
     min_free_space_percent: 10
     # file_permissions: "rw-r--r--" # when not specified, the default file permissions are owner read & write, group & others read
-  allowable_time_skew_in_minutes: 60
+  allowable_time_skew: 60m
   sstable_import:
-    poll_interval_millis: 100
+    execute_interval: 100ms
     cache:
-      expire_after_access_millis: 7200000 # 2 hours
+      expire_after_access: 2h # 2 hours
       maximum_size: 10000
   sstable_snapshot:
     snapshot_list_cache:
-      expire_after_access_millis: 350
+      expire_after_access: 350ms
       maximum_size: 450
   worker_pools:
     service:
       name: "sidecar-worker-pool"
       size: 20
-      max_execution_time_millis: 60000 # 60 seconds
+      max_execution_time: 1m # 1 minute
     internal:
       name: "sidecar-internal-worker-pool"
       size: 20
-      max_execution_time_millis: 900000 # 15 minutes
+      max_execution_time: 15m # 15 minutes
   jmx:
     max_retries: 3
-    retry_delay_millis: 200
+    retry_delay: 200ms
 
 #
 # Enable SSL configuration (Disabled by default)
@@ -107,7 +107,7 @@ sidecar:
 ssl:
   enabled: true
   use_openssl: false
-  handshake_timeout_sec: 25
+  handshake_timeout: 25s
   client_auth: REQUEST # valid options are NONE, REQUEST, REQUIRED
   accepted_protocols:
    - TLSv1.3
@@ -124,15 +124,15 @@ ssl:
     type: PKCS12
     path: "path/to/keystore.p12"
     password: password
-    check_interval_sec: 300
+    check_interval: 5m
   truststore:
     path: "path/to/truststore.p12"
     password: password
 
 
 healthcheck:
-  initial_delay_millis: 100
-  poll_freq_millis: 30000
+  initial_delay: 100ms
+  execute_interval: 30s
 
 cassandra_input_validation:
   forbidden_keyspaces:

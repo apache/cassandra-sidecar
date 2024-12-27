@@ -60,30 +60,30 @@ cassandra_instances:
 sidecar:
   host: 0.0.0.0
   port: 9043
-  request_idle_timeout_millis: 300000 # this field expects integer value
-  request_timeout_millis: 300000
+  request_idle_timeout: 5m
+  request_timeout: 5m
   throttle:
     stream_requests_per_sec: 5000
-    timeout_sec: 10
+    timeout: 10s
   sstable_upload:
     concurrent_upload_limit: 80
     min_free_space_percent: 10
     file_permissions: "not-valid"
-  allowable_time_skew_in_minutes: 60
+  allowable_time_skew: 60m
   sstable_import:
-    poll_interval_millis: 100
+    execute_interval: 100ms
     cache:
-      expire_after_access_millis: 7200000 # 2 hours
+      expire_after_access: 2h # 2 hours
       maximum_size: 10000
   worker_pools:
     service:
       name: "sidecar-worker-pool"
       size: 20
-      max_execution_time_millis: 60000 # 60 seconds
+      max_execution_time: 1m # 1 minute
     internal:
       name: "sidecar-internal-worker-pool"
       size: 20
-      max_execution_time_millis: 900000 # 15 minutes
+      max_execution_time: 15m # 15 minutes
 
 #
 # Enable SSL configuration (Disabled by default)

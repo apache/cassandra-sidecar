@@ -29,7 +29,7 @@ public interface JmxConfiguration
     int maxRetries();
 
     /**
-     * @return the delay, in milliseconds, between retry attempts
+     * @return the delay between retry attempts
      */
-    long retryDelayMillis();
+    MillisecondBoundConfiguration retryDelay();
 }

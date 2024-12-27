@@ -26,7 +26,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
@@ -73,7 +72,8 @@ public class StorageClientPool implements SdkAutoCloseable
         sharedExecutor = new ThreadPoolExecutor(clientConfig.concurrency(), // core
                                                 clientConfig.concurrency(), // max
                                                 // keep alive
-                                                clientConfig.threadKeepAliveSeconds(), TimeUnit.SECONDS,
+                                                clientConfig.threadKeepAlive().quantity(),
+                                                clientConfig.threadKeepAlive().unit(),
                                                 new LinkedBlockingQueue<>(), // unbounded work queue
                                                 new ThreadFactoryBuilder()
                                                 .threadNamePrefix(clientConfig.threadNamePrefix())
@@ -111,7 +111,7 @@ public class StorageClientPool implements SdkAutoCloseable
             Map<SdkAdvancedAsyncClientOption<?>, ?> advancedOptions = Collections.singletonMap(
             SdkAdvancedAsyncClientOption.FUTURE_COMPLETION_EXECUTOR, sharedExecutor
             );
-            Duration apiCallTimeout = Duration.ofSeconds(clientConfig.apiCallTimeoutMillis());
+            Duration apiCallTimeout = Duration.ofMillis(clientConfig.apiCallTimeout().toMillis());
             S3AsyncClientBuilder clientBuilder =
             S3AsyncClient.builder()
                          .region(Region.of(region))

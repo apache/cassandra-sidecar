@@ -20,10 +20,15 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -31,18 +36,20 @@ import org.jetbrains.annotations.NotNull;
  */
 public class S3ClientConfigurationImpl implements S3ClientConfiguration
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3ClientConfigurationImpl.class);
     public static final String DEFAULT_THREAD_NAME_PREFIX = "s3-client";
 
     public static final String PROXY_PROPERTY = "proxy_config";
-    public static final String API_CALL_TIMEOUT_MILLIS = "api_call_timeout_millis";
+    public static final String API_CALL_TIMEOUT = "api_call_timeout";
     public static final String RANGE_GET_OBJECT_BYTES_SIZE = "range_get_object_bytes_size";
-    public static final String THREAD_KEEP_ALIVE_SECONDS = "thread_keep_alive_seconds";
+    public static final String THREAD_KEEP_ALIVE = "thread_keep_alive";
     public static final String CONCURRENCY = "concurrency";
     public static final String THREAD_NAME_PREFIX = "thread_name_prefix";
 
-    public static final long DEFAULT_THREAD_KEEP_ALIVE_SECONDS = 60;
+    public static final SecondBoundConfiguration DEFAULT_THREAD_KEEP_ALIVE = SecondBoundConfiguration.parse("60s");
     public static final int DEFAULT_S3_CLIENT_CONCURRENCY = 4;
-    public static final long DEFAULT_API_CALL_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(60);
+    public static final MillisecondBoundConfiguration DEFAULT_API_CALL_TIMEOUT = MillisecondBoundConfiguration.parse("60s");
+    public static final MillisecondBoundConfiguration MINIMUM_API_CALL_TIMEOUT = MillisecondBoundConfiguration.parse("10s");
     public static final int DEFAULT_RANGE_GET_OBJECT_BYTES_SIZE = 5 * 1024 * 1024; // 5 MiB
 
     @JsonProperty(value = THREAD_NAME_PREFIX)
@@ -51,14 +58,12 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
     @JsonProperty(value = CONCURRENCY)
     protected final int concurrency;
 
-    @JsonProperty(value = THREAD_KEEP_ALIVE_SECONDS)
-    protected final long threadKeepAliveSeconds;
+    protected SecondBoundConfiguration threadKeepAlive;
 
     @JsonProperty(value = RANGE_GET_OBJECT_BYTES_SIZE)
     protected final int rangeGetObjectBytesSize;
 
-    @JsonProperty(value = API_CALL_TIMEOUT_MILLIS)
-    protected final long apiCallTimeoutMillis;
+    protected MillisecondBoundConfiguration apiCallTimeout;
 
     @JsonProperty(value = PROXY_PROPERTY)
     protected final S3ProxyConfiguration proxyConfig;
@@ -67,27 +72,27 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
     {
         this(DEFAULT_THREAD_NAME_PREFIX,
              DEFAULT_S3_CLIENT_CONCURRENCY,
-             DEFAULT_THREAD_KEEP_ALIVE_SECONDS,
+             DEFAULT_THREAD_KEEP_ALIVE,
              DEFAULT_RANGE_GET_OBJECT_BYTES_SIZE,
-             DEFAULT_API_CALL_TIMEOUT_MILLIS,
+             DEFAULT_API_CALL_TIMEOUT,
              new S3ProxyConfigurationImpl());
     }
 
     public S3ClientConfigurationImpl(String threadNamePrefix,
                                      int concurrency,
-                                     long threadKeepAliveSeconds,
+                                     SecondBoundConfiguration threadKeepAlive,
                                      int rangeGetObjectBytesSize,
-                                     long apiCallTimeoutMillis,
+                                     MillisecondBoundConfiguration apiCallTimeout,
                                      S3ProxyConfiguration proxyConfig)
     {
-        Preconditions.checkArgument(apiCallTimeoutMillis > TimeUnit.SECONDS.toMillis(10),
-                                    "apiCallTimeout cannot be smaller than 10 seconds. Configured: " + apiCallTimeoutMillis + " ms");
+        Preconditions.checkArgument(apiCallTimeout.compareTo(MINIMUM_API_CALL_TIMEOUT) > 0,
+                                    "apiCallTimeout cannot be smaller than 10 seconds. Configured: " + apiCallTimeout);
         this.threadNamePrefix = threadNamePrefix;
         this.concurrency = concurrency;
-        this.threadKeepAliveSeconds = threadKeepAliveSeconds;
+        this.threadKeepAlive = threadKeepAlive;
         this.rangeGetObjectBytesSize = rangeGetObjectBytesSize;
         this.proxyConfig = proxyConfig;
-        this.apiCallTimeoutMillis = apiCallTimeoutMillis;
+        this.apiCallTimeout = apiCallTimeout;
     }
 
     /**
@@ -115,10 +120,23 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = THREAD_KEEP_ALIVE_SECONDS)
-    public long threadKeepAliveSeconds()
+    @JsonProperty(value = THREAD_KEEP_ALIVE)
+    public SecondBoundConfiguration threadKeepAlive()
     {
-        return threadKeepAliveSeconds;
+        return threadKeepAlive;
+    }
+
+    @JsonProperty(value = THREAD_KEEP_ALIVE)
+    public void setThreadKeepAlive(SecondBoundConfiguration threadKeepAlive)
+    {
+        this.threadKeepAlive = threadKeepAlive;
+    }
+
+    @JsonProperty(value = "thread_keep_alive_seconds")
+    public void setThreadKeepAliveSeconds(long threadKeepAliveSeconds)
+    {
+        LOGGER.warn("'thread_keep_alive_seconds' is deprecated, use '{}' instead", THREAD_KEEP_ALIVE);
+        setThreadKeepAlive(new SecondBoundConfigurationImpl(threadKeepAliveSeconds, TimeUnit.SECONDS));
     }
 
     @Override
@@ -129,10 +147,24 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
     }
 
     @Override
-    @JsonProperty(value = API_CALL_TIMEOUT_MILLIS)
-    public long apiCallTimeoutMillis()
+    @JsonProperty(value = API_CALL_TIMEOUT)
+    public MillisecondBoundConfiguration apiCallTimeout()
     {
-        return apiCallTimeoutMillis;
+        return apiCallTimeout;
+    }
+
+    @JsonProperty(value = API_CALL_TIMEOUT)
+    public void setApiCallTimeout(MillisecondBoundConfiguration apiCallTimeout)
+    {
+        this.apiCallTimeout = apiCallTimeout;
+    }
+
+    @JsonProperty(value = "api_call_timeout_millis")
+    @Deprecated
+    public void setApiCallTimeoutMillis(long apiCallTimeoutMillis)
+    {
+        LOGGER.warn("'api_call_timeout_millis' is deprecated, use 'api_call_timeout' instead");
+        setApiCallTimeout(new MillisecondBoundConfigurationImpl(apiCallTimeoutMillis, TimeUnit.MILLISECONDS));
     }
 
     /**

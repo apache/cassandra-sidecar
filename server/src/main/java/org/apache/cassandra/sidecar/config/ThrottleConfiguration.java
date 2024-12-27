@@ -29,8 +29,7 @@ public interface ThrottleConfiguration
     long rateLimitStreamRequestsPerSecond();
 
     /**
-     * @return timeout in seconds used to determine when to stop retrying stream requests when stream requests
-     * are throttled.
+     * @return timeout used to determine when to stop retrying stream requests when stream requests are throttled.
      */
-    long timeoutInSeconds();
+    SecondBoundConfiguration timeout();
 }

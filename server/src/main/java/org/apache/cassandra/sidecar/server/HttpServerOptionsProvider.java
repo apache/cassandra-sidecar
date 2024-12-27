@@ -38,7 +38,6 @@ import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.utils.SslUtils;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
 
 /**
@@ -59,7 +58,7 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
         HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
         ServiceConfiguration serviceConf = configuration.serviceConfiguration();
         options.setIdleTimeoutUnit(MILLISECONDS)
-               .setIdleTimeout(serviceConf.requestIdleTimeoutMillis())
+               .setIdleTimeout(serviceConf.requestIdleTimeout().toIntMillis())
                .setTcpKeepAlive(serviceConf.tcpKeepAlive())
                .setAcceptBacklog(serviceConf.acceptBacklog());
 
@@ -108,8 +107,8 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
      */
     protected void configureSSLOptions(SSLOptions options, SslConfiguration ssl, long timestamp)
     {
-        options.setSslHandshakeTimeout(ssl.handshakeTimeoutInSeconds())
-               .setSslHandshakeTimeoutUnit(SECONDS);
+        options.setSslHandshakeTimeout(ssl.handshakeTimeout().quantity())
+               .setSslHandshakeTimeoutUnit(ssl.handshakeTimeout().unit());
 
         configureKeyStore(options, ssl, timestamp);
         configureTrustStore(options, ssl);
@@ -162,16 +161,16 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
                     outboundGlobalBandwidthBytesPerSecond,
                     bytesToHumanReadableBinaryPrefix(peakOutboundGlobalBandwidthBytesPerSecond),
                     peakOutboundGlobalBandwidthBytesPerSecond,
-                    config.checkIntervalForStatsMillis(),
-                    config.maxDelayToWaitMillis()
+                    config.checkIntervalForStats().toMillis(),
+                    config.maxDelayToWait().toMillis()
         );
         return new TrafficShapingOptions()
                .setInboundGlobalBandwidth(inboundGlobalBandwidthBytesPerSecond)
                .setOutboundGlobalBandwidth(outboundGlobalBandwidthBytesPerSecond)
                .setPeakOutboundGlobalBandwidth(peakOutboundGlobalBandwidthBytesPerSecond)
-               .setCheckIntervalForStats(config.checkIntervalForStatsMillis())
-               .setCheckIntervalForStatsTimeUnit(MILLISECONDS)
-               .setMaxDelayToWait(config.maxDelayToWaitMillis())
-               .setMaxDelayToWaitUnit(MILLISECONDS);
+               .setCheckIntervalForStats(config.checkIntervalForStats().quantity())
+               .setCheckIntervalForStatsTimeUnit(config.checkIntervalForStats().unit())
+               .setMaxDelayToWait(config.maxDelayToWait().quantity())
+               .setMaxDelayToWaitUnit(config.maxDelayToWait().unit());
     }
 }

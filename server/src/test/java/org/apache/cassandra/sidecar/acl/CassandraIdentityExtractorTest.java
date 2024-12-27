@@ -32,6 +32,7 @@ import org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtracto
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 
@@ -117,7 +118,7 @@ class CassandraIdentityExtractorTest
         when(mockSidecarConfig.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
         CacheConfiguration mockCacheConfig = mock(CacheConfiguration.class);
         when(mockCacheConfig.enabled()).thenReturn(true);
-        when(mockCacheConfig.expireAfterAccessMillis()).thenReturn(3000L);
+        when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("3s"));
         when(mockCacheConfig.maximumSize()).thenReturn(10L);
         when(mockAccessControlConfig.permissionCacheConfiguration()).thenReturn(mockCacheConfig);
 

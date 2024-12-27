@@ -21,10 +21,10 @@ package org.apache.cassandra.sidecar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
@@ -51,7 +51,7 @@ public class ExecutorPoolsHelper
     {
         WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfigurationImpl("test-pool",
                                                                                  20,
-                                                                                 TimeUnit.SECONDS.toMillis(30));
+                                                                                 MillisecondBoundConfiguration.parse("30s"));
         return Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
         {{
             put(SERVICE_POOL, workerPoolConf);

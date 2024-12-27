@@ -17,34 +17,54 @@
  */
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 
 /**
  * Encapsulate configuration values for CDC
  */
 public class CdcConfigurationImpl implements CdcConfiguration
 {
-    public static final String SEGMENT_HARD_LINK_CACHE_EXPIRY_IN_SECS_PROPERTY = "segment_hardlink_cache_expiry_in_secs";
-    public static final long DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY_IN_SECS = 300;
+    private static final Logger LOGGER = LoggerFactory.getLogger(CdcConfigurationImpl.class);
+    public static final String SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY = "segment_hardlink_cache_expiry";
+    public static final SecondBoundConfiguration DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY =
+    SecondBoundConfiguration.parse("5m");
 
-    @JsonProperty(value = SEGMENT_HARD_LINK_CACHE_EXPIRY_IN_SECS_PROPERTY, defaultValue = DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY_IN_SECS + "")
-    protected final long segmentHardLinkCacheExpiryInSecs;
+    protected SecondBoundConfiguration segmentHardLinkCacheExpiry;
 
     public CdcConfigurationImpl()
     {
-        this.segmentHardLinkCacheExpiryInSecs = DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY_IN_SECS;
+        this.segmentHardLinkCacheExpiry = DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY;
     }
 
-    public CdcConfigurationImpl(long segmentHardLinkCacheExpiryInSecs)
+    public CdcConfigurationImpl(SecondBoundConfiguration segmentHardLinkCacheExpiry)
     {
-        this.segmentHardLinkCacheExpiryInSecs = segmentHardLinkCacheExpiryInSecs;
+        this.segmentHardLinkCacheExpiry = segmentHardLinkCacheExpiry;
     }
 
     @Override
-    @JsonProperty(value = SEGMENT_HARD_LINK_CACHE_EXPIRY_IN_SECS_PROPERTY)
-    public long segmentHardlinkCacheExpiryInSecs()
+    @JsonProperty(value = SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY)
+    public SecondBoundConfiguration segmentHardLinkCacheExpiry()
     {
-        return segmentHardLinkCacheExpiryInSecs;
+        return segmentHardLinkCacheExpiry;
+    }
+
+    @JsonProperty(value = SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY)
+    public void setSegmentHardLinkCacheExpiry(SecondBoundConfiguration segmentHardlinkCacheExpiry)
+    {
+        this.segmentHardLinkCacheExpiry = segmentHardlinkCacheExpiry;
+    }
+
+    @JsonProperty(value = "segment_hardlink_cache_expiry_in_secs")
+    public void setSegmentHardLinkCacheExpiryInSecs(long segmentHardlinkCacheExpiryInSecs)
+    {
+        LOGGER.warn("'segment_hardlink_cache_expiry_in_secs' is deprecated, use 'segment_hardlink_cache_expiry' instead");
+        setSegmentHardLinkCacheExpiry(new SecondBoundConfigurationImpl(segmentHardlinkCacheExpiryInSecs, TimeUnit.SECONDS));
     }
 }

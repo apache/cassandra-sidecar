@@ -20,7 +20,11 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 /**
@@ -28,6 +32,8 @@ import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
  */
 public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(WorkerPoolConfigurationImpl.class);
+
     @JsonProperty("name")
     protected final String workerPoolName;
 
@@ -37,21 +43,20 @@ public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
     // WorkerExecutor logs a warning if the blocking execution exceeds the max time configured.
     // It does not abort the execution. The warning messages look like this.
     // "Thread xxx has been blocked for yyy ms, time limit is zzz ms"
-    @JsonProperty("max_execution_time_millis")
-    protected final long workerMaxExecutionTimeMillis;
+    protected MillisecondBoundConfiguration workerMaxExecutionTime;
 
     public WorkerPoolConfigurationImpl()
     {
-        this(null, 20, TimeUnit.SECONDS.toMillis(60));
+        this(null, 20, MillisecondBoundConfiguration.parse("60s"));
     }
 
     public WorkerPoolConfigurationImpl(String workerPoolName,
                                        int workerPoolSize,
-                                       long workerMaxExecutionTimeMillis)
+                                       MillisecondBoundConfiguration workerMaxExecutionTime)
     {
         this.workerPoolName = workerPoolName;
         this.workerPoolSize = workerPoolSize;
-        this.workerMaxExecutionTimeMillis = workerMaxExecutionTimeMillis;
+        this.workerMaxExecutionTime = workerMaxExecutionTime;
     }
 
     /**
@@ -75,12 +80,25 @@ public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
     }
 
     /**
-     * @return the maximum execution time for the worker pool in milliseconds
+     * @return the maximum execution time for the worker pool
      */
     @Override
-    @JsonProperty("max_execution_time_millis")
-    public long workerMaxExecutionTimeMillis()
+    @JsonProperty("max_execution_time")
+    public MillisecondBoundConfiguration workerMaxExecutionTime()
     {
-        return workerMaxExecutionTimeMillis;
+        return workerMaxExecutionTime;
+    }
+
+    @JsonProperty("max_execution_time")
+    public void setWorkerMaxExecutionTime(MillisecondBoundConfiguration workerMaxExecutionTime)
+    {
+        this.workerMaxExecutionTime = workerMaxExecutionTime;
+    }
+
+    @JsonProperty("max_execution_time_millis")
+    public void setWorkerMaxExecutionTimeMillis(long workerMaxExecutionTimeMillis)
+    {
+        LOGGER.warn("'max_execution_time_millis' is deprecated, use 'max_execution_time' instead");
+        setWorkerMaxExecutionTime(new MillisecondBoundConfigurationImpl(workerMaxExecutionTimeMillis, TimeUnit.MILLISECONDS));
     }
 }

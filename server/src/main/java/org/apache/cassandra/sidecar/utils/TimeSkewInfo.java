@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 
 import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
@@ -43,7 +44,8 @@ public class TimeSkewInfo
      */
     public TimeSkewResponse timeSkewResponse()
     {
-        return new TimeSkewResponse(timeProvider.currentTimeMillis(),
-                                    configuration.allowableSkewInMinutes());
+        int allowableTimeSkewInMinutes = (int) TimeUnit.MINUTES.convert(configuration.allowableTimeSkew().quantity(),
+                                                                        configuration.allowableTimeSkew().unit());
+        return new TimeSkewResponse(timeProvider.currentTimeMillis(), allowableTimeSkewInMinutes);
     }
 }

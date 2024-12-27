@@ -43,17 +43,19 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
-import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CdcConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.PeriodicTaskConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.RestoreJobConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SSTableUploadConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
@@ -114,9 +116,9 @@ public class TestModule extends AbstractModule
     protected SidecarConfigurationImpl abstractConfig(SslConfiguration sslConfiguration,
                                                       AccessControlConfiguration accessControlConfiguration)
     {
-        ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(5, 5);
+        ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(5, SecondBoundConfiguration.parse("5s"));
         SSTableUploadConfiguration uploadConfiguration = new SSTableUploadConfigurationImpl(0F);
-        CdcConfiguration cdcConfiguration = new CdcConfigurationImpl(1L);
+        CdcConfiguration cdcConfiguration = new CdcConfigurationImpl(SecondBoundConfiguration.parse("1s"));
         SchemaKeyspaceConfiguration schemaKeyspaceConfiguration =
         SchemaKeyspaceConfigurationImpl.builder()
                                        .isEnabled(true)
@@ -133,12 +135,15 @@ public class TestModule extends AbstractModule
                                 .build();
         RestoreJobConfiguration restoreJobConfiguration =
         RestoreJobConfigurationImpl.builder()
-                                   .restoreJobTablesTtlSeconds(TimeUnit.DAYS.toSeconds(14) + 1)
+                                   .restoreJobTablesTtl(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"))
                                    .processMaxConcurrency(RESTORE_MAX_CONCURRENCY)
-                                   .slowTaskThresholdSeconds(10)
-                                   .slowTaskReportDelaySeconds(120)
+                                   .slowTaskThreshold(SecondBoundConfiguration.parse("10s"))
+                                   .slowTaskReportDelay(SecondBoundConfiguration.parse("2m"))
                                    .build();
-        HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl(200, 1000);
+        PeriodicTaskConfiguration healthCheckConfiguration
+        = new PeriodicTaskConfigurationImpl(true,
+                                            MillisecondBoundConfiguration.parse("200ms"),
+                                            MillisecondBoundConfiguration.parse("1s"));
         return SidecarConfigurationImpl.builder()
                                        .serviceConfiguration(serviceConfiguration)
                                        .sslConfiguration(sslConfiguration)

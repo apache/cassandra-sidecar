@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
@@ -182,10 +183,10 @@ class IdentityToRoleCacheTest
         when(mockConfig.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
         CacheConfiguration mockCacheConfig = mock(CacheConfiguration.class);
         when(mockCacheConfig.enabled()).thenReturn(true);
-        when(mockCacheConfig.expireAfterAccessMillis()).thenReturn(3000L);
+        when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("3s"));
         when(mockCacheConfig.maximumSize()).thenReturn(10L);
         when(mockCacheConfig.warmupRetries()).thenReturn(5);
-        when(mockCacheConfig.warmupRetryIntervalMillis()).thenReturn(1000L);
+        when(mockCacheConfig.warmupRetryInterval()).thenReturn(MillisecondBoundConfiguration.parse("1s"));
         when(mockAccessControlConfig.permissionCacheConfiguration()).thenReturn(mockCacheConfig);
         return mockConfig;
     }

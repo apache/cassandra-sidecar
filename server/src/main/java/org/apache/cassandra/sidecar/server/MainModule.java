@@ -288,7 +288,7 @@ public class MainModule extends AbstractModule
         router.route()
               .order(RoutingOrder.HIGHEST.order)
               .handler(loggerHandler)
-              .handler(TimeoutHandler.create(sidecarConfiguration.serviceConfiguration().requestTimeoutMillis(),
+              .handler(TimeoutHandler.create(sidecarConfiguration.serviceConfiguration().requestTimeout().toMillis(),
                                              HttpResponseStatus.REQUEST_TIMEOUT.code()));
 
         // chain authentication before all requests
@@ -602,7 +602,7 @@ public class MainModule extends AbstractModule
         return new RestoreJobsSchema(configuration.serviceConfiguration()
                                                   .schemaKeyspaceConfiguration(),
                                      configuration.restoreJobConfiguration()
-                                                  .restoreJobTablesTtlSeconds());
+                                                  .restoreJobTablesTtl());
     }
 
     @Provides
@@ -612,7 +612,7 @@ public class MainModule extends AbstractModule
         return new RestoreSlicesSchema(configuration.serviceConfiguration()
                                                     .schemaKeyspaceConfiguration(),
                                        configuration.restoreJobConfiguration()
-                                                    .restoreJobTablesTtlSeconds());
+                                                    .restoreJobTablesTtl());
     }
 
     @Provides
@@ -622,7 +622,7 @@ public class MainModule extends AbstractModule
         return new RestoreRangesSchema(configuration.serviceConfiguration()
                                                     .schemaKeyspaceConfiguration(),
                                        configuration.restoreJobConfiguration()
-                                                    .restoreJobTablesTtlSeconds());
+                                                    .restoreJobTablesTtl());
     }
 
     @Provides
@@ -746,7 +746,8 @@ public class MainModule extends AbstractModule
                                        .password(cassandraInstance.jmxRolePassword())
                                        .enableSsl(cassandraInstance.jmxSslEnabled())
                                        .connectionMaxRetries(jmxConfiguration.maxRetries())
-                                       .connectionRetryDelayMillis(jmxConfiguration.retryDelayMillis())
+                                       // TODO: connectionRetryDelayMillis should be a MillisecondBoundConfiguration
+                                       .connectionRetryDelayMillis(jmxConfiguration.retryDelay().toMillis())
                                        .build();
         MetricRegistry instanceSpecificRegistry = registryFactory.getOrCreate(cassandraInstance.id());
         CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,

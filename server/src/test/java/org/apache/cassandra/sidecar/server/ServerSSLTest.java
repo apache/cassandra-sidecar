@@ -52,6 +52,7 @@ import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
@@ -100,8 +101,8 @@ class ServerSSLTest
         serverKeyStoreJksPath = writeResourceToPath(classLoader, certPath, "certs/server_keystore.jks");
         trustStoreJksPath = writeResourceToPath(classLoader, certPath, "certs/truststore.jks");
 
-        p12TrustStore = new KeyStoreConfigurationImpl(trustStoreP12Path.toString(), DEFAULT_PASSWORD, "PKCS12", -1);
-        p12KeyStore = new KeyStoreConfigurationImpl(serverKeyStoreP12Path.toString(), DEFAULT_PASSWORD, "PKCS12", -1);
+        p12TrustStore = new KeyStoreConfigurationImpl(trustStoreP12Path.toString(), DEFAULT_PASSWORD, "PKCS12", SecondBoundConfiguration.ZERO);
+        p12KeyStore = new KeyStoreConfigurationImpl(serverKeyStoreP12Path.toString(), DEFAULT_PASSWORD, "PKCS12", SecondBoundConfiguration.ZERO);
 
         injector = Guice.createInjector(Modules.override(new MainModule())
                                                .with(Modules.override(new TestModule())
@@ -367,7 +368,7 @@ class ServerSSLTest
     void testHotReloadOfServerCertificates(VertxTestContext context)
     {
         KeyStoreConfigurationImpl expiredP12KeyStore =
-        new KeyStoreConfigurationImpl(expiredServerKeyStoreP12Path.toString(), DEFAULT_PASSWORD, "PKCS12", -1);
+        new KeyStoreConfigurationImpl(expiredServerKeyStoreP12Path.toString(), DEFAULT_PASSWORD, "PKCS12", SecondBoundConfiguration.ZERO);
         SslConfigurationImpl ssl =
         SslConfigurationImpl.builder()
                             .enabled(true)

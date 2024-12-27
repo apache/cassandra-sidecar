@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
@@ -71,7 +72,8 @@ class SidecarConfigurationTest
         Path yamlPath = yaml("config/sidecar_custom_allowable_time_skew.yaml");
         SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(config.serviceConfiguration()).isNotNull();
-        assertThat(config.serviceConfiguration().allowableSkewInMinutes()).isEqualTo(1);
+        assertThat(config.serviceConfiguration().allowableTimeSkew().quantity()).isEqualTo(1);
+        assertThat(config.serviceConfiguration().allowableTimeSkew().unit()).isEqualTo(TimeUnit.MINUTES);
     }
 
     @Test
@@ -111,7 +113,8 @@ class SidecarConfigurationTest
         assertThat(config.serviceConfiguration().jmxConfiguration()).isNotNull();
         JmxConfiguration jmxConfiguration = config.serviceConfiguration().jmxConfiguration();
         assertThat(jmxConfiguration.maxRetries()).isEqualTo(42);
-        assertThat(jmxConfiguration.retryDelayMillis()).isEqualTo(1234L);
+        assertThat(jmxConfiguration.retryDelay().quantity()).isEqualTo(1234L);
+        assertThat(jmxConfiguration.retryDelay().unit()).isEqualTo(TimeUnit.MILLISECONDS);
     }
 
     @Test
@@ -122,7 +125,8 @@ class SidecarConfigurationTest
         assertThat(config.serviceConfiguration().jmxConfiguration()).isNotNull();
         JmxConfiguration jmxConfiguration = config.serviceConfiguration().jmxConfiguration();
         assertThat(jmxConfiguration.maxRetries()).isEqualTo(3);
-        assertThat(jmxConfiguration.retryDelayMillis()).isEqualTo(200L);
+        assertThat(jmxConfiguration.retryDelay().quantity()).isEqualTo(200L);
+        assertThat(jmxConfiguration.retryDelay().unit()).isEqualTo(TimeUnit.MILLISECONDS);
     }
 
     @Test
@@ -223,7 +227,7 @@ class SidecarConfigurationTest
         assertThat(configuration.replicationFactor()).isEqualTo(3);
         assertThat(configuration.createReplicationStrategyString())
         .isEqualTo("{'class':'SimpleStrategy', 'replication_factor':'3'}");
-        assertThat(configuration.leaseSchemaTTLSeconds()).isEqualTo(120);
+        assertThat(configuration.leaseSchemaTTL().toSeconds()).isEqualTo(120);
     }
 
     @Test
@@ -306,12 +310,14 @@ class SidecarConfigurationTest
     }
 
     @Test
-    void testCdcCofiguration() throws IOException
+    void testCdcConfiguration() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_cdc.yaml");
         SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(sidecarConfiguration).isNotNull();
-        assertThat(sidecarConfiguration.serviceConfiguration().cdcConfiguration().segmentHardlinkCacheExpiryInSecs()).isEqualTo(60L);
+        CdcConfiguration cdcConfig = sidecarConfiguration.serviceConfiguration().cdcConfiguration();
+        assertThat(cdcConfig.segmentHardLinkCacheExpiry().quantity()).isEqualTo(1);
+        assertThat(cdcConfig.segmentHardLinkCacheExpiry().unit()).isEqualTo(TimeUnit.MINUTES);
     }
 
     @Test
@@ -338,10 +344,13 @@ class SidecarConfigurationTest
         assertThat(accessControlConfiguration.permissionCacheConfiguration()).isNotNull();
         CacheConfiguration permissionCacheConfiguration = accessControlConfiguration.permissionCacheConfiguration();
         assertThat(permissionCacheConfiguration.enabled()).isTrue();
-        assertThat(permissionCacheConfiguration.expireAfterAccessMillis()).isEqualTo(300000);
+        assertThat(permissionCacheConfiguration.expireAfterAccess().quantity()).isEqualTo(5);
+        assertThat(permissionCacheConfiguration.expireAfterAccess().unit()).isEqualTo(TimeUnit.MINUTES);
         assertThat(permissionCacheConfiguration.maximumSize()).isEqualTo(1000);
         assertThat(permissionCacheConfiguration.warmupRetries()).isEqualTo(5);
-        assertThat(permissionCacheConfiguration.warmupRetryIntervalMillis()).isEqualTo(2000);
+        assertThat(permissionCacheConfiguration.warmupRetryInterval().quantity()).isEqualTo(2);
+        assertThat(permissionCacheConfiguration.warmupRetryInterval().unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(permissionCacheConfiguration.warmupRetryInterval().toMillis()).isEqualTo(2_000L);
     }
 
     @Test
@@ -356,8 +365,8 @@ class SidecarConfigurationTest
         assertThat(coordinationConfiguration).isNotNull();
         PeriodicTaskConfiguration periodicTaskConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
         assertThat(periodicTaskConfig.enabled()).isFalse();
-        assertThat(periodicTaskConfig.initialDelayMillis()).isEqualTo(5_000L);
-        assertThat(periodicTaskConfig.executeIntervalMillis()).isEqualTo(31_000L);
+        assertThat(periodicTaskConfig.initialDelay().toMillis()).isEqualTo(5_000L);
+        assertThat(periodicTaskConfig.executeInterval().toMillis()).isEqualTo(31_000L);
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
@@ -466,9 +475,15 @@ class SidecarConfigurationTest
         assertThat(serviceConfiguration).isNotNull();
         assertThat(serviceConfiguration.host()).isEqualTo("0.0.0.0");
         assertThat(serviceConfiguration.port()).is(new Condition<>(port -> port == 9043 || port == 0, "port"));
-        assertThat(serviceConfiguration.requestIdleTimeoutMillis()).isEqualTo(300000);
-        assertThat(serviceConfiguration.requestTimeoutMillis()).isEqualTo(300000);
-        assertThat(serviceConfiguration.allowableSkewInMinutes()).isEqualTo(60);
+        assertThat(serviceConfiguration.requestIdleTimeout().quantity()).isEqualTo(5);
+        assertThat(serviceConfiguration.requestIdleTimeout().unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(serviceConfiguration.requestIdleTimeout().toMillis()).isEqualTo(300_000);
+        assertThat(serviceConfiguration.requestTimeout().quantity()).isEqualTo(5);
+        assertThat(serviceConfiguration.requestTimeout().unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(serviceConfiguration.requestTimeout().toMillis()).isEqualTo(300_000);
+        assertThat(serviceConfiguration.allowableTimeSkew().quantity()).isEqualTo(60);
+        assertThat(serviceConfiguration.allowableTimeSkew().unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(serviceConfiguration.allowableTimeSkew().toSeconds()).isEqualTo(3_600);
         assertThat(serviceConfiguration.tcpKeepAlive()).isFalse();
         assertThat(serviceConfiguration.acceptBacklog()).isEqualTo(1024);
 
@@ -477,7 +492,15 @@ class SidecarConfigurationTest
 
         assertThat(throttle).isNotNull();
         assertThat(throttle.rateLimitStreamRequestsPerSecond()).isEqualTo(5000);
-        assertThat(throttle.timeoutInSeconds()).isEqualTo(10);
+        assertThat(throttle.timeout().quantity()).isEqualTo(10);
+        assertThat(throttle.timeout().unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(throttle.timeout().toSeconds()).isEqualTo(10);
+
+        // sstable import configuration
+        SSTableImportConfiguration importConfig = serviceConfiguration.sstableImportConfiguration();
+        assertThat(importConfig).isNotNull();
+        assertThat(importConfig.executeInterval().quantity()).isEqualTo(100);
+        assertThat(importConfig.executeInterval().unit()).isEqualTo(TimeUnit.MILLISECONDS);
 
         // validate traffic shaping options
         TrafficShapingConfiguration trafficShaping = serviceConfiguration.trafficShapingConfiguration();
@@ -485,8 +508,12 @@ class SidecarConfigurationTest
         assertThat(trafficShaping.inboundGlobalBandwidthBytesPerSecond()).isEqualTo(500L);
         assertThat(trafficShaping.outboundGlobalBandwidthBytesPerSecond()).isEqualTo(1500L);
         assertThat(trafficShaping.peakOutboundGlobalBandwidthBytesPerSecond()).isEqualTo(2000L);
-        assertThat(trafficShaping.maxDelayToWaitMillis()).isEqualTo(2500L);
-        assertThat(trafficShaping.checkIntervalForStatsMillis()).isEqualTo(3000L);
+        assertThat(trafficShaping.maxDelayToWait().quantity()).isEqualTo(15);
+        assertThat(trafficShaping.maxDelayToWait().unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(trafficShaping.maxDelayToWait().toMillis()).isEqualTo(15_000L);
+        assertThat(trafficShaping.checkIntervalForStats().quantity()).isEqualTo(1);
+        assertThat(trafficShaping.checkIntervalForStats().unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(trafficShaping.checkIntervalForStats().toMillis()).isEqualTo(1_000L);
 
         // SSTable snapshot configuration section
         SSTableSnapshotConfiguration snapshotConfig = serviceConfiguration.sstableSnapshotConfiguration();
@@ -495,22 +522,27 @@ class SidecarConfigurationTest
 
         assertThat(snapshotConfig.snapshotListCacheConfiguration().enabled()).isTrue();
         assertThat(snapshotConfig.snapshotListCacheConfiguration().maximumSize()).isEqualTo(450);
-        assertThat(snapshotConfig.snapshotListCacheConfiguration().expireAfterAccessMillis()).isEqualTo(350);
+        assertThat(snapshotConfig.snapshotListCacheConfiguration().expireAfterAccess().quantity()).isEqualTo(350);
+        assertThat(snapshotConfig.snapshotListCacheConfiguration().expireAfterAccess().unit()).isEqualTo(TimeUnit.MILLISECONDS);
 
         // Validate default configuration
         CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
         assertThat(coordinationConfiguration).isNotNull();
         PeriodicTaskConfiguration periodicTaskConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
         assertThat(periodicTaskConfig.enabled()).isTrue();
-        assertThat(periodicTaskConfig.executeIntervalMillis()).isEqualTo(60_000L);
-        assertThat(periodicTaskConfig.initialDelayMillis()).isEqualTo(1_000L);
+        assertThat(periodicTaskConfig.executeInterval().toMillis()).isEqualTo(60_000L);
+        assertThat(periodicTaskConfig.initialDelay().toMillis()).isEqualTo(1_000L);
     }
 
-    private void validateHealthCheckConfigurationFromYaml(HealthCheckConfiguration config)
+    private void validateHealthCheckConfigurationFromYaml(PeriodicTaskConfiguration config)
     {
         assertThat(config).isNotNull();
-        assertThat(config.initialDelayMillis()).isEqualTo(100);
-        assertThat(config.checkIntervalMillis()).isEqualTo(30_000);
+        assertThat(config.initialDelay().quantity()).isEqualTo(100);
+        assertThat(config.initialDelay().unit()).isEqualTo(TimeUnit.MILLISECONDS);
+        assertThat(config.initialDelay().toMillis()).isEqualTo(100L);
+        assertThat(config.executeInterval().quantity()).isEqualTo(30);
+        assertThat(config.executeInterval().unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(config.executeInterval().toMillis()).isEqualTo(30_000);
     }
 
     void validateCassandraInputValidationConfigurationFromYaml(CassandraInputValidationConfiguration config)
@@ -544,19 +576,23 @@ class SidecarConfigurationTest
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isTrue();
         assertThat(config.preferOpenSSL()).isFalse();
-        assertThat(config.handshakeTimeoutInSeconds()).isEqualTo(25L);
+        assertThat(config.handshakeTimeout().quantity()).isEqualTo(25);
+        assertThat(config.handshakeTimeout().unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(config.handshakeTimeout().toSeconds()).isEqualTo(25);
         assertThat(config.clientAuth()).isEqualTo("REQUEST");
         assertThat(config.keystore()).isNotNull();
         assertThat(config.keystore().type()).isEqualTo("PKCS12");
         assertThat(config.keystore().path()).isEqualTo("path/to/keystore.p12");
         assertThat(config.keystore().password()).isEqualTo("password");
         assertThat(config.keystore().reloadStore()).isTrue();
-        assertThat(config.keystore().checkIntervalInSeconds()).isEqualTo(300);
+        assertThat(config.keystore().checkInterval().quantity()).isEqualTo(5);
+        assertThat(config.keystore().checkInterval().unit()).isEqualTo(TimeUnit.MINUTES);
         assertThat(config.truststore()).isNotNull();
         assertThat(config.truststore().path()).isEqualTo("path/to/truststore.p12");
         assertThat(config.truststore().password()).isEqualTo("password");
         assertThat(config.truststore().reloadStore()).isFalse();
-        assertThat(config.truststore().checkIntervalInSeconds()).isEqualTo(-1);
+        assertThat(config.truststore().checkInterval().quantity()).isEqualTo(0);
+        assertThat(config.truststore().checkInterval().unit()).isEqualTo(TimeUnit.SECONDS);
         assertThat(config.secureTransportProtocols()).containsExactly("TLSv1.3");
         assertThat(config.cipherSuites()).contains("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
                                                    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",

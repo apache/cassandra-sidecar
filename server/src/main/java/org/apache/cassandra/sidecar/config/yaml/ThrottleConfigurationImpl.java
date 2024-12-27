@@ -18,7 +18,13 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 
 /**
@@ -26,33 +32,33 @@ import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
  */
 public class ThrottleConfigurationImpl implements ThrottleConfiguration
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ThrottleConfigurationImpl.class);
     public static final long DEFAULT_STREAM_REQUESTS_PER_SEC = 5000;
-    public static final long DEFAULT_TIMEOUT_SEC = 10;
+    public static final SecondBoundConfiguration DEFAULT_TIMEOUT = SecondBoundConfiguration.parse("10s");
     public static final String STREAM_REQUESTS_PER_SEC_PROPERTY = "stream_requests_per_sec";
-    public static final String TIMEOUT_SEC_PROPERTY = "timeout_sec";
+    public static final String TIMEOUT_PROPERTY = "timeout";
 
     @JsonProperty(value = STREAM_REQUESTS_PER_SEC_PROPERTY)
     protected final long rateLimitStreamRequestsPerSecond;
-    @JsonProperty(value = TIMEOUT_SEC_PROPERTY)
-    protected final long timeoutInSeconds;
+    protected SecondBoundConfiguration timeout;
 
     public ThrottleConfigurationImpl()
     {
         this(DEFAULT_STREAM_REQUESTS_PER_SEC,
-             DEFAULT_TIMEOUT_SEC);
+             DEFAULT_TIMEOUT);
     }
 
     public ThrottleConfigurationImpl(long rateLimitStreamRequestsPerSecond)
     {
         this(rateLimitStreamRequestsPerSecond,
-             DEFAULT_TIMEOUT_SEC);
+             DEFAULT_TIMEOUT);
     }
 
     public ThrottleConfigurationImpl(long rateLimitStreamRequestsPerSecond,
-                                     long timeoutInSeconds)
+                                     SecondBoundConfiguration timeout)
     {
         this.rateLimitStreamRequestsPerSecond = rateLimitStreamRequestsPerSecond;
-        this.timeoutInSeconds = timeoutInSeconds;
+        this.timeout = timeout;
     }
 
     /**
@@ -69,9 +75,22 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = TIMEOUT_SEC_PROPERTY)
-    public long timeoutInSeconds()
+    @JsonProperty(value = TIMEOUT_PROPERTY)
+    public SecondBoundConfiguration timeout()
     {
-        return timeoutInSeconds;
+        return timeout;
+    }
+
+    @JsonProperty(value = TIMEOUT_PROPERTY)
+    public void setTimeout(SecondBoundConfiguration timeout)
+    {
+        this.timeout = timeout;
+    }
+
+    @JsonProperty(value = "timeout_sec")
+    public void setTimeoutInSeconds(long seconds)
+    {
+        LOGGER.warn("'timeout_sec' is deprecated, use '{}' instead", TIMEOUT_PROPERTY);
+        setTimeout(new SecondBoundConfigurationImpl(seconds, TimeUnit.SECONDS));
     }
 }

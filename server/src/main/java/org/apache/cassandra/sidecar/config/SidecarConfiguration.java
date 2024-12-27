@@ -56,7 +56,7 @@ public interface SidecarConfiguration
     /**
      * @return the configuration for the health check service
      */
-    HealthCheckConfiguration healthCheckConfiguration();
+    PeriodicTaskConfiguration healthCheckConfiguration();
 
     /**
      * @return configuration needed for metrics capture

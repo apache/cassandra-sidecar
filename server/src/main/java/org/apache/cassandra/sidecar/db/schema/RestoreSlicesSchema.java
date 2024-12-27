@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.db.schema;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,16 +35,16 @@ public class RestoreSlicesSchema extends TableSchema implements ExecuteOnCluster
     private static final String RESTORE_SLICE_TABLE_NAME = "restore_slice_v3";
 
     private final SchemaKeyspaceConfiguration keyspaceConfig;
-    private final long tableTtlSeconds;
+    private final SecondBoundConfiguration tableTtl;
 
     // prepared statements
     private PreparedStatement insertSlice;
     private PreparedStatement findAllByTokenRange;
 
-    public RestoreSlicesSchema(SchemaKeyspaceConfiguration keyspaceConfig, long tableTtlSeconds)
+    public RestoreSlicesSchema(SchemaKeyspaceConfiguration keyspaceConfig, SecondBoundConfiguration tableTtl)
     {
         this.keyspaceConfig = keyspaceConfig;
-        this.tableTtlSeconds = tableTtlSeconds;
+        this.tableTtl = tableTtl;
     }
 
     @Override
@@ -81,7 +82,7 @@ public class RestoreSlicesSchema extends TableSchema implements ExecuteOnCluster
                              "  uncompressed_size bigint," +
                              "  PRIMARY KEY ((job_id, bucket_id), start_token, end_token, slice_id)" +
                              ") WITH default_time_to_live = %s",
-                             keyspaceConfig.keyspace(), RESTORE_SLICE_TABLE_NAME, tableTtlSeconds);
+                             keyspaceConfig.keyspace(), RESTORE_SLICE_TABLE_NAME, tableTtl.toSeconds());
     }
 
     public PreparedStatement insertSlice()

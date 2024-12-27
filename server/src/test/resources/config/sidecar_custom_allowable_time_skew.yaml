@@ -14,6 +14,6 @@ cassandra:
 sidecar:
   host: 0.0.0.0
   port: 1234
-  request_idle_timeout_millis: 500000 # this field expects integer value
-  request_timeout_millis: 1200000
-  allowable_time_skew_in_minutes: 1
+  request_idle_timeout: 500s
+  request_timeout: 20m
+  allowable_time_skew: 1m

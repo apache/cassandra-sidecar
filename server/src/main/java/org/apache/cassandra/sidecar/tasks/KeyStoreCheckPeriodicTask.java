@@ -18,13 +18,12 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
-import java.util.concurrent.TimeUnit;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.config.DurationSpec;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -63,15 +62,9 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
     }
 
     @Override
-    public long delay()
+    public DurationSpec delay()
     {
-        return configuration.keystore().checkIntervalInSeconds();
-    }
-
-    @Override
-    public TimeUnit delayUnit()
-    {
-        return TimeUnit.SECONDS;
+        return configuration.keystore().checkInterval();
     }
 
     @Override

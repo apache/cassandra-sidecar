@@ -33,6 +33,8 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
+import org.apache.cassandra.sidecar.config.DurationSpec;
+import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.metrics.HealthMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
@@ -46,7 +48,7 @@ public class HealthCheckPeriodicTask implements PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(HealthCheckPeriodicTask.class);
     private final EventBus eventBus;
-    private final SidecarConfiguration configuration;
+    private final PeriodicTaskConfiguration configuration;
     private final InstancesMetadata instancesMetadata;
     private final TaskExecutorPool internalPool;
     private final HealthMetrics metrics;
@@ -58,9 +60,9 @@ public class HealthCheckPeriodicTask implements PeriodicTask
                                    SidecarMetrics metrics)
     {
         eventBus = vertx.eventBus();
-        this.configuration = configuration;
+        this.configuration = configuration.healthCheckConfiguration();
         this.instancesMetadata = instancesMetadata;
-        internalPool = executorPools.internal();
+        this.internalPool = executorPools.internal();
         this.metrics = metrics.server().health();
     }
 
@@ -71,15 +73,15 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     }
 
     @Override
-    public long initialDelay()
+    public DurationSpec initialDelay()
     {
-        return configuration.healthCheckConfiguration().initialDelayMillis();
+        return configuration.initialDelay();
     }
 
     @Override
-    public long delay()
+    public DurationSpec delay()
     {
-        return configuration.healthCheckConfiguration().checkIntervalMillis();
+        return configuration.executeInterval();
     }
 
     /**

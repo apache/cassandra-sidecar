@@ -50,6 +50,8 @@ import org.jetbrains.annotations.VisibleForTesting;
  * This class is in charge of performing SSTable imports into the desired Cassandra instance.
  * Since imports are synchronized in the Cassandra side on a per table-basis, we only perform one import per
  * Cassandra instance's keyspace/table, and we queue the rest of the import requests.
+ *
+ * <p>TODO: Consider making SSTableImporter a PeriodicTask</p>
  */
 @Singleton
 public class SSTableImporter
@@ -91,7 +93,7 @@ public class SSTableImporter
         this.uploadPathBuilder = uploadPathBuilder;
         this.importQueuePerHost = new ConcurrentHashMap<>();
         executorPools.internal()
-                     .setPeriodic(configuration.sstableImportConfiguration().importIntervalMillis(),
+                     .setPeriodic(configuration.sstableImportConfiguration().executeInterval().toMillis(),
                                   this::processPendingImports);
     }
 

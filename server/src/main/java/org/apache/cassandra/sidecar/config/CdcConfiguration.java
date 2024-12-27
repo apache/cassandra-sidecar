@@ -23,7 +23,7 @@ package org.apache.cassandra.sidecar.config;
 public interface CdcConfiguration
 {
     /**
-     * @return segment hard link cache expiration time in seconds used in {@link org.apache.cassandra.sidecar.cdc.CdcLogCache}
+     * @return segment hard link cache expiration time used in {@link org.apache.cassandra.sidecar.cdc.CdcLogCache}
      */
-    long segmentHardlinkCacheExpiryInSecs();
+    SecondBoundConfiguration segmentHardLinkCacheExpiry();
 }

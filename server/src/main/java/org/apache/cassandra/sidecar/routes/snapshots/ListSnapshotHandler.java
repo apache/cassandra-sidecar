@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.routes.snapshots;
 import java.io.FileNotFoundException;
 import java.nio.file.NoSuchFileException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -227,7 +226,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
         }
         return Caffeine.newBuilder()
                        .maximumSize(cacheConfiguration.maximumSize())
-                       .expireAfterAccess(cacheConfiguration.expireAfterAccessMillis(), TimeUnit.MILLISECONDS)
+                       .expireAfterAccess(cacheConfiguration.expireAfterAccess().quantity(), cacheConfiguration.expireAfterAccess().unit())
                        .recordStats(() -> snapshotCacheMetrics)
                        .removalListener((key, value, cause) ->
                                         logger.debug("Removed from cache={}, entry={}, key={}, cause={}",

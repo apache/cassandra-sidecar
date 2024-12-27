@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.db.schema;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,7 +35,7 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
     private static final String RESTORE_JOB_TABLE_NAME = "restore_job_v4";
 
     private final SchemaKeyspaceConfiguration keyspaceConfig;
-    private final long tableTtlSeconds;
+    private final SecondBoundConfiguration tableTtl;
 
     // prepared statements
     private PreparedStatement insertJob;
@@ -46,10 +47,10 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
     private PreparedStatement selectJob;
     private PreparedStatement findAllByCreatedAt;
 
-    public RestoreJobsSchema(SchemaKeyspaceConfiguration keyspaceConfig, long tableTtlSeconds)
+    public RestoreJobsSchema(SchemaKeyspaceConfiguration keyspaceConfig, SecondBoundConfiguration tableTtl)
     {
         this.keyspaceConfig = keyspaceConfig;
-        this.tableTtlSeconds = tableTtlSeconds;
+        this.tableTtl = tableTtl;
     }
 
     @Override
@@ -96,7 +97,7 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
                              "  local_datacenter text," +
                              "  PRIMARY KEY (created_at, job_id)" +
                              ") WITH default_time_to_live = %s",
-                             keyspaceConfig.keyspace(), RESTORE_JOB_TABLE_NAME, tableTtlSeconds);
+                             keyspaceConfig.keyspace(), RESTORE_JOB_TABLE_NAME, tableTtl.toSeconds());
     }
 
     public PreparedStatement insertJob()

@@ -18,10 +18,9 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.util.concurrent.TimeUnit;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
 
 /**
@@ -30,7 +29,7 @@ import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
 public class SSTableSnapshotConfigurationImpl implements SSTableSnapshotConfiguration
 {
     protected static final CacheConfiguration DEFAULT_SNAPSHOT_LIST_CACHE_CONFIGURATION =
-    new CacheConfigurationImpl(TimeUnit.HOURS.toMillis(2), 10_000);
+    new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"), 10_000);
 
     @JsonProperty(value = "snapshot_list_cache")
     protected CacheConfiguration snapshotListCacheConfiguration;

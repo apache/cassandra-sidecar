@@ -16,20 +16,39 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.config;
+package org.apache.cassandra.sidecar.config.yaml;
 
-/**
- * Configuration for the health checks
- */
-public interface HealthCheckConfiguration
+import java.util.concurrent.TimeUnit;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
+public class MillisecondBoundConfigurationImpl extends DurationSpecImpl implements MillisecondBoundConfiguration
 {
-    /**
-     * @return the initial delay for the first health check, in milliseconds
-     */
-    int initialDelayMillis();
+    public MillisecondBoundConfigurationImpl()
+    {
+        super(0, MILLISECONDS);
+    }
+
+    @JsonCreator
+    public MillisecondBoundConfigurationImpl(String value)
+    {
+        super(value);
+    }
+
+    public MillisecondBoundConfigurationImpl(long quantity, TimeUnit unit)
+    {
+        super(quantity, unit);
+    }
 
     /**
-     * @return the interval, in milliseconds, in which the health checks will be performed
+     * {@inheritDoc}
      */
-    int checkIntervalMillis();
+    @Override
+    TimeUnit minimumUnit()
+    {
+        return MILLISECONDS;
+    }
 }

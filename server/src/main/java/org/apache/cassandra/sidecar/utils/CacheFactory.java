@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-
 import com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,14 +77,13 @@ public class CacheFactory
     protected Cache<SSTableImporter.ImportOptions, Future<Void>>
     initSSTableImportCache(CacheConfiguration configuration, SSTableImporter ssTableImporter, Ticker ticker)
     {
-        Duration expireAfterAccessDuration = Duration.of(configuration.expireAfterAccessMillis(), ChronoUnit.MILLIS);
         long maximumSize = configuration.maximumSize();
         LOGGER.info("Building SSTable Import Cache with expireAfterAccess={}, maxSize={}",
-                    expireAfterAccessDuration, maximumSize);
+                    configuration.expireAfterAccess(), maximumSize);
         return Caffeine.newBuilder()
                        .ticker(ticker)
                        .executor(MoreExecutors.directExecutor())
-                       .expireAfterAccess(expireAfterAccessDuration)
+                       .expireAfterAccess(configuration.expireAfterAccess().quantity(), configuration.expireAfterAccess().unit())
                        .maximumSize(maximumSize)
                        .recordStats()
                        .removalListener((RemovalListener<SSTableImporter.ImportOptions, Future<Void>>)

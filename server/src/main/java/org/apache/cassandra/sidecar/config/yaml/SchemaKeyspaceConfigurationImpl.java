@@ -20,9 +20,13 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 /**
@@ -30,12 +34,13 @@ import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
  */
 public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfiguration
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SchemaKeyspaceConfigurationImpl.class);
     public static final boolean DEFAULT_IS_ENABLED = false;
     public static final String DEFAULT_KEYSPACE = "sidecar_internal";
     public static final String DEFAULT_REPLICATION_STRATEGY = "SimpleStrategy";
     public static final int DEFAULT_REPLICATION_FACTOR = 1;
-    public static final long DEFAULT_LEASE_SCHEMA_TTL_SECONDS = TimeUnit.MINUTES.toSeconds(2);
-    public static final long MINIMUM_LEASE_SCHEMA_TTL_SECONDS = TimeUnit.MINUTES.toSeconds(1);
+    public static final SecondBoundConfiguration DEFAULT_LEASE_SCHEMA_TTL = SecondBoundConfiguration.parse("2m");
+    public static final SecondBoundConfiguration MINIMUM_LEASE_SCHEMA_TTL = SecondBoundConfiguration.parse("1m");
 
     @JsonProperty(value = "is_enabled")
     protected final boolean isEnabled;
@@ -49,7 +54,7 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
     @JsonProperty(value = "replication_factor")
     protected final int replicationFactor;
 
-    protected long leaseSchemaTTLSeconds;
+    protected SecondBoundConfiguration leaseSchemaTTL;
 
     protected SchemaKeyspaceConfigurationImpl()
     {
@@ -62,7 +67,7 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
         this.keyspace = builder.keyspace;
         this.replicationStrategy = builder.replicationStrategy;
         this.replicationFactor = builder.replicationFactor;
-        this.leaseSchemaTTLSeconds = builder.leaseSchemaTTLSeconds;
+        this.leaseSchemaTTL = builder.leaseSchemaTTL;
     }
 
     /**
@@ -109,20 +114,28 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "lease_schema_ttl_sec")
-    public long leaseSchemaTTLSeconds()
+    @JsonProperty(value = "lease_schema_ttl")
+    public SecondBoundConfiguration leaseSchemaTTL()
     {
-        return leaseSchemaTTLSeconds;
+        return leaseSchemaTTL;
+    }
+
+    @JsonProperty(value = "lease_schema_ttl")
+    public void setLeaseSchemaTTL(SecondBoundConfiguration leaseSchemaTTL)
+    {
+        if (leaseSchemaTTL.compareTo(MINIMUM_LEASE_SCHEMA_TTL) < 0)
+        {
+            throw leaseTTLConfigurationException(leaseSchemaTTL);
+        }
+        this.leaseSchemaTTL = leaseSchemaTTL;
     }
 
     @JsonProperty(value = "lease_schema_ttl_sec")
+    @Deprecated
     public void setLeaseSchemaTTLSeconds(long leaseSchemaTTLSeconds)
     {
-        if (leaseSchemaTTLSeconds < MINIMUM_LEASE_SCHEMA_TTL_SECONDS)
-        {
-            throw leaseTTLConfigurationException(leaseSchemaTTLSeconds);
-        }
-        this.leaseSchemaTTLSeconds = leaseSchemaTTLSeconds;
+        LOGGER.warn("'lease_schema_ttl_sec' is deprecated, use 'lease_schema_ttl' instead");
+        setLeaseSchemaTTL(new SecondBoundConfigurationImpl(leaseSchemaTTLSeconds, TimeUnit.SECONDS));
     }
 
     public static Builder builder()
@@ -130,10 +143,11 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
         return new Builder();
     }
 
-    static ConfigurationException leaseTTLConfigurationException(long leaseSchemaTTLSeconds)
+    static ConfigurationException leaseTTLConfigurationException(SecondBoundConfiguration leaseSchemaTTL)
     {
-        return new ConfigurationException(String.format("Lease schema TTL value of '%d' seconds is less than the minimum allowed value of '%d'",
-                                                        leaseSchemaTTLSeconds, MINIMUM_LEASE_SCHEMA_TTL_SECONDS));
+        String message = String.format("Lease schema TTL value of %s is less than the minimum allowed value of %s",
+                                       leaseSchemaTTL, MINIMUM_LEASE_SCHEMA_TTL);
+        return new ConfigurationException(message);
     }
 
     /**
@@ -145,7 +159,7 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
         private String keyspace = DEFAULT_KEYSPACE;
         private String replicationStrategy = DEFAULT_REPLICATION_STRATEGY;
         private int replicationFactor = DEFAULT_REPLICATION_FACTOR;
-        private long leaseSchemaTTLSeconds = DEFAULT_LEASE_SCHEMA_TTL_SECONDS;
+        private SecondBoundConfiguration leaseSchemaTTL = DEFAULT_LEASE_SCHEMA_TTL;
 
         protected Builder()
         {
@@ -206,23 +220,23 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
         }
 
         /**
-         * Sets the {@code leaseSchemaTTLSeconds} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code leaseSchemaTTL} and returns a reference to this Builder enabling method chaining.
          *
-         * @param leaseSchemaTTLSeconds the {@code leaseSchemaTTLSeconds} to set
+         * @param leaseSchemaTTL the {@code leaseSchemaTTL} to set
          * @return a reference to this Builder
          */
-        public Builder leaseSchemaTTLSeconds(long leaseSchemaTTLSeconds)
+        public Builder leaseSchemaTTL(SecondBoundConfiguration leaseSchemaTTL)
         {
-            this.leaseSchemaTTLSeconds = leaseSchemaTTLSeconds;
+            this.leaseSchemaTTL = leaseSchemaTTL;
             return this;
         }
 
         @Override
         public SchemaKeyspaceConfigurationImpl build()
         {
-            if (leaseSchemaTTLSeconds < MINIMUM_LEASE_SCHEMA_TTL_SECONDS)
+            if (leaseSchemaTTL.compareTo(MINIMUM_LEASE_SCHEMA_TTL) < 0)
             {
-                throw leaseTTLConfigurationException(leaseSchemaTTLSeconds);
+                throw leaseTTLConfigurationException(leaseSchemaTTL);
             }
             return new SchemaKeyspaceConfigurationImpl(this);
         }

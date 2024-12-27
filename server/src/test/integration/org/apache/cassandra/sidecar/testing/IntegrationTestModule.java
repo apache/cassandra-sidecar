@@ -33,16 +33,18 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
-import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
+import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.HealthCheckConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ParameterizedClassConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.PeriodicTaskConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
@@ -95,14 +97,16 @@ public class IntegrationTestModule extends AbstractModule
                                                                                               .isEnabled(true)
                                                                                               .build())
                                   .build();
-        HealthCheckConfiguration healthCheckConfiguration
-        = new HealthCheckConfigurationImpl(50, 500);
+        PeriodicTaskConfiguration healthCheckConfiguration
+        = new PeriodicTaskConfigurationImpl(true,
+                                            MillisecondBoundConfiguration.parse("50ms"),
+                                            MillisecondBoundConfiguration.parse("500ms"));
 
         SslConfiguration sslConfiguration =
         SslConfigurationImpl.builder()
                             .enabled(true)
                             .useOpenSsl(true)
-                            .handshakeTimeoutInSeconds(10L)
+                            .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
                             .clientAuth("REQUEST")
                             .keystore(new KeyStoreConfigurationImpl(serverKeystorePath.toAbsolutePath().toString(),
                                                                     "password"))
@@ -157,10 +161,12 @@ public class IntegrationTestModule extends AbstractModule
     private AccessControlConfiguration accessControlConfiguration()
     {
         Map<String, String> params = new HashMap<String, String>()
-        { {
-            put("certificate_validator", "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl");
-            put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
-        } };
+        {
+            {
+                put("certificate_validator", "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl");
+                put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
+            }
+        };
         ParameterizedClassConfiguration mTLSConfig
         = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory",
                                                   params);

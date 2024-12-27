@@ -29,14 +29,13 @@ public interface PeriodicTaskConfiguration
     boolean enabled();
 
     /**
-     * @return the initial delay for the first execution of this task after being scheduled or rescheduled,
-     * in milliseconds
+     * @return the initial delay for the first execution of this task after being scheduled or rescheduled
      */
-    long initialDelayMillis();
+    MillisecondBoundConfiguration initialDelay();
 
     /**
      * @return how often this task will execute after the previous task has completed the {@link io.vertx.core.Promise}
-     * of the execution, in milliseconds
+     * of the execution
      */
-    long executeIntervalMillis();
+    MillisecondBoundConfiguration executeInterval();
 }

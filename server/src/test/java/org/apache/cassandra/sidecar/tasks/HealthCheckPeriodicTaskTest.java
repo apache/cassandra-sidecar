@@ -37,7 +37,8 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
@@ -60,7 +61,7 @@ import static org.mockito.Mockito.when;
 class HealthCheckPeriodicTaskTest
 {
     SidecarConfiguration mockConfiguration;
-    HealthCheckConfiguration mockHealthCheckConfiguration;
+    PeriodicTaskConfiguration mockHealthCheckConfiguration;
     HealthCheckPeriodicTask healthCheck;
     InstancesMetadata mockInstancesMetadata;
     SidecarMetrics metrics;
@@ -69,10 +70,10 @@ class HealthCheckPeriodicTaskTest
     void setup()
     {
         mockConfiguration = mock(SidecarConfiguration.class);
-        mockHealthCheckConfiguration = mock(HealthCheckConfiguration.class);
+        mockHealthCheckConfiguration = mock(PeriodicTaskConfiguration.class);
         when(mockConfiguration.healthCheckConfiguration()).thenReturn(mockHealthCheckConfiguration);
-        when(mockHealthCheckConfiguration.initialDelayMillis()).thenReturn(10);
-        when(mockHealthCheckConfiguration.checkIntervalMillis()).thenReturn(1000);
+        when(mockHealthCheckConfiguration.initialDelay()).thenReturn(MillisecondBoundConfiguration.parse("10ms"));
+        when(mockHealthCheckConfiguration.executeInterval()).thenReturn(MillisecondBoundConfiguration.parse("1s"));
 
         mockInstancesMetadata = mock(InstancesMetadata.class);
 

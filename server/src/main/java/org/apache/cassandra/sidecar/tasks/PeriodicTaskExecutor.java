@@ -77,7 +77,7 @@ public class PeriodicTaskExecutor implements Closeable
     public void schedule(PeriodicTask task)
     {
         PeriodicTaskKey key = new PeriodicTaskKey(task);
-        schedule(key, 0, task.initialDelayMillis(), 0);
+        schedule(key, 0, task.initialDelay().to(TimeUnit.MILLISECONDS), 0);
     }
 
     private void schedule(PeriodicTaskKey key, long priorExecDurationMillis, long delayMillis, long execCount)
@@ -147,7 +147,7 @@ public class PeriodicTaskExecutor implements Closeable
                             return;
                         }
                         long priorExecutionDurationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
-                        schedule(key, priorExecutionDurationMillis, key.task.delayMillis(), execCount + 1);
+                        schedule(key, priorExecutionDurationMillis, key.task.delay().to(TimeUnit.MILLISECONDS), execCount + 1);
                     });
     }
 

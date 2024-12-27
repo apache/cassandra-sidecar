@@ -24,10 +24,10 @@ package org.apache.cassandra.sidecar.config;
 public interface CacheConfiguration
 {
     /**
-     * @return the configured amount of time in milliseconds after the entry's creation, the most recent
-     * replacement of its value, or its last access has elapsed to be considered an expired entry in the cache
+     * @return the configured amount of time after the entry's creation, the most recent replacement
+     * of its value, or its last access has elapsed to be considered an expired entry in the cache
      */
-    long expireAfterAccessMillis();
+    MillisecondBoundConfiguration expireAfterAccess();
 
     /**
      * @return the maximum number of entries the cache may contain
@@ -48,7 +48,7 @@ public interface CacheConfiguration
     int warmupRetries();
 
     /**
-     * @return interval duration in millis inbetween cache warming retries
+     * @return interval duration inbetween cache warming retries
      */
-    long warmupRetryIntervalMillis();
+    MillisecondBoundConfiguration warmupRetryInterval();
 }

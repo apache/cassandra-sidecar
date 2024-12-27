@@ -43,6 +43,7 @@ import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
+import org.apache.cassandra.sidecar.config.DurationSpec;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -140,12 +141,12 @@ public class RestoreJobDiscoverer implements PeriodicTask
     }
 
     @Override
-    public long delay()
+    public DurationSpec delay()
     {
         // delay value is re-evaluated when rescheduling
         return hasInflightJobs()
-               ? restoreJobConfig.jobDiscoveryActiveLoopDelayMillis()
-               : restoreJobConfig.jobDiscoveryIdleLoopDelayMillis();
+               ? restoreJobConfig.jobDiscoveryActiveLoopDelay()
+               : restoreJobConfig.jobDiscoveryIdleLoopDelay();
     }
 
     @Override

@@ -21,13 +21,8 @@ package org.apache.cassandra.sidecar.config;
 /**
  * Configuration for the SSTable Import functionality
  */
-public interface SSTableImportConfiguration
+public interface SSTableImportConfiguration extends PeriodicTaskConfiguration
 {
-    /**
-     * @return the interval in milliseconds in which the SSTable Importer will process pending imports
-     */
-    int importIntervalMillis();
-
     /**
      * @return the configuration for the cache used for SSTable Import requests
      */

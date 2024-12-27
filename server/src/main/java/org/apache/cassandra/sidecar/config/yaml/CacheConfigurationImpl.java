@@ -20,8 +20,12 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -29,8 +33,9 @@ import org.jetbrains.annotations.VisibleForTesting;
  */
 public class CacheConfigurationImpl implements CacheConfiguration
 {
-    @JsonProperty("expire_after_access_millis")
-    protected final long expireAfterAccessMillis;
+    private static final Logger LOGGER = LoggerFactory.getLogger(CacheConfigurationImpl.class);
+
+    protected MillisecondBoundConfiguration expireAfterAccess;
 
     @JsonProperty("maximum_size")
     protected final long maximumSize;
@@ -41,34 +46,50 @@ public class CacheConfigurationImpl implements CacheConfiguration
     @JsonProperty("warmup_retries")
     protected final int warmupRetries;
 
-    @JsonProperty("warmup_retry_interval_millis")
-    protected final long warmupRetryIntervalMillis;
+    protected MillisecondBoundConfiguration warmupRetryInterval;
 
     public CacheConfigurationImpl()
     {
-        this(TimeUnit.HOURS.toMillis(1), 100, true, 5, 1000);
+        this(MillisecondBoundConfiguration.parse("1h"), 100, true, 5, MillisecondBoundConfiguration.parse("60s"));
     }
 
     @VisibleForTesting
-    public CacheConfigurationImpl(long expireAfterAccessMillis, long maximumSize)
+    public CacheConfigurationImpl(MillisecondBoundConfiguration expireAfterAccess, long maximumSize)
     {
-        this(expireAfterAccessMillis, maximumSize, true, 5, 1000);
+        this(expireAfterAccess, maximumSize, true, 5, MillisecondBoundConfiguration.parse("60s"));
     }
 
-    public CacheConfigurationImpl(long expireAfterAccessMillis, long maximumSize, boolean enabled, int warmupRetries, long warmupRetryIntervalMillis)
+    public CacheConfigurationImpl(MillisecondBoundConfiguration expireAfterAccess,
+                                  long maximumSize,
+                                  boolean enabled,
+                                  int warmupRetries,
+                                  MillisecondBoundConfiguration warmupRetryInterval)
     {
-        this.expireAfterAccessMillis = expireAfterAccessMillis;
+        this.expireAfterAccess = expireAfterAccess;
         this.maximumSize = maximumSize;
         this.enabled = enabled;
         this.warmupRetries = warmupRetries;
-        this.warmupRetryIntervalMillis = warmupRetryIntervalMillis;
+        this.warmupRetryInterval = warmupRetryInterval;
     }
 
     @Override
-    @JsonProperty("expire_after_access_millis")
-    public long expireAfterAccessMillis()
+    @JsonProperty("expire_after_access")
+    public MillisecondBoundConfiguration expireAfterAccess()
     {
-        return expireAfterAccessMillis;
+        return expireAfterAccess;
+    }
+
+    @JsonProperty("expire_after_access")
+    public void setExpireAfterAccess(MillisecondBoundConfiguration expireAfterAccess)
+    {
+        this.expireAfterAccess = expireAfterAccess;
+    }
+
+    @JsonProperty("expire_after_access_millis")
+    public void setExpireAfterAccessMillis(long expireAfterAccessMillis)
+    {
+        LOGGER.warn("'expire_after_access_millis' is deprecated, use 'expire_after_access' instead");
+        setExpireAfterAccess(new MillisecondBoundConfigurationImpl(expireAfterAccessMillis, TimeUnit.MILLISECONDS));
     }
 
     @Override
@@ -91,9 +112,22 @@ public class CacheConfigurationImpl implements CacheConfiguration
         return warmupRetries;
     }
 
-    @JsonProperty(value = "warmup_retry_interval_millis")
-    public long warmupRetryIntervalMillis()
+    @JsonProperty(value = "warmup_retry_interval")
+    public MillisecondBoundConfiguration warmupRetryInterval()
     {
-        return warmupRetryIntervalMillis;
+        return warmupRetryInterval;
+    }
+
+    @JsonProperty("warmup_retry_interval")
+    public void setWarmupRetryInterval(MillisecondBoundConfiguration warmupRetryInterval)
+    {
+        this.warmupRetryInterval = warmupRetryInterval;
+    }
+
+    @JsonProperty("warmup_retry_interval_millis")
+    public void setWarmupRetryIntervalMillis(long warmupRetryIntervalMillis)
+    {
+        LOGGER.warn("'warmup_retry_interval_millis' is deprecated, use 'warmup_retry_interval' instead");
+        setWarmupRetryInterval(new MillisecondBoundConfigurationImpl(warmupRetryIntervalMillis, TimeUnit.MILLISECONDS));
     }
 }

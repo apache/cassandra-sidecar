@@ -22,55 +22,43 @@ import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 
 /**
  * Configuration for the SSTable Import functionality
  */
-public class SSTableImportConfigurationImpl implements SSTableImportConfiguration
+public class SSTableImportConfigurationImpl extends PeriodicTaskConfigurationImpl implements SSTableImportConfiguration
 {
-    public static final String POLL_INTERVAL_MILLIS_PROPERTY = "poll_interval_millis";
-    public static final int DEFAULT_POLL_INTERVAL_MILLIS = 100;
+    private static final MillisecondBoundConfiguration DEFAULT_IMPORT_EXECUTE_INTERVAL = MillisecondBoundConfiguration.parse("100ms");
     public static final String CACHE_PROPERTY = "cache";
     protected static final CacheConfiguration DEFAULT_CACHE_CONFIGURATION =
-    new CacheConfigurationImpl(TimeUnit.HOURS.toMillis(2), 10_000);
-
-    @JsonProperty(value = POLL_INTERVAL_MILLIS_PROPERTY)
-    protected final int importIntervalMillis;
+    new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"), 10_000);
 
     @JsonProperty(value = CACHE_PROPERTY)
     protected final CacheConfiguration cacheConfiguration;
 
     public SSTableImportConfigurationImpl()
     {
-        this(DEFAULT_POLL_INTERVAL_MILLIS, DEFAULT_CACHE_CONFIGURATION);
+        this(DEFAULT_IMPORT_EXECUTE_INTERVAL, DEFAULT_CACHE_CONFIGURATION);
     }
 
     public SSTableImportConfigurationImpl(CacheConfiguration cacheConfiguration)
     {
-        this(DEFAULT_POLL_INTERVAL_MILLIS, cacheConfiguration);
+        this(DEFAULT_IMPORT_EXECUTE_INTERVAL, cacheConfiguration);
     }
 
     public SSTableImportConfigurationImpl(int importIntervalMillis)
     {
-        this(importIntervalMillis, DEFAULT_CACHE_CONFIGURATION);
+        this(new MillisecondBoundConfigurationImpl(importIntervalMillis, TimeUnit.MILLISECONDS),
+             DEFAULT_CACHE_CONFIGURATION);
     }
 
-    public SSTableImportConfigurationImpl(int importIntervalMillis,
+    public SSTableImportConfigurationImpl(MillisecondBoundConfiguration importExecuteInterval,
                                           CacheConfiguration cacheConfiguration)
     {
-        this.importIntervalMillis = importIntervalMillis;
+        super(true, null, importExecuteInterval);
         this.cacheConfiguration = cacheConfiguration;
-    }
-
-    /**
-     * @return the interval in milliseconds in which the SSTable Importer will process pending imports
-     */
-    @Override
-    @JsonProperty(value = POLL_INTERVAL_MILLIS_PROPERTY)
-    public int importIntervalMillis()
-    {
-        return importIntervalMillis;
     }
 
     /**

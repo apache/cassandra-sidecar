@@ -41,9 +41,9 @@ public interface SslConfiguration
     boolean preferOpenSSL();
 
     /**
-     * @return the configuration for the SSL handshake timeout in seconds
+     * @return the configuration for the SSL handshake timeout
      */
-    long handshakeTimeoutInSeconds();
+    SecondBoundConfiguration handshakeTimeout();
 
     /**
      * Returns the client authentication mode. Valid values are {@code NONE}, {@code REQUEST}, and {@code REQUIRED}.

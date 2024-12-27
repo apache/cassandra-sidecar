@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
@@ -46,7 +47,7 @@ import static org.mockito.Mockito.mock;
  */
 class CacheFactoryTest
 {
-    static final long SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS_MILLIS = TimeUnit.HOURS.toMillis(2);
+    static final MillisecondBoundConfiguration SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS = MillisecondBoundConfiguration.parse("2h");
     static final long SSTABLE_IMPORT_CACHE_MAX_SIZE = 10L;
     private CacheFactory cacheFactory;
     private FakeTicker fakeTicker;
@@ -57,8 +58,7 @@ class CacheFactoryTest
         fakeTicker = new FakeTicker();
 
         CacheConfiguration ssTableImportCacheConfiguration =
-        new CacheConfigurationImpl(SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS_MILLIS, // 2 hours
-                                   SSTABLE_IMPORT_CACHE_MAX_SIZE);
+        new CacheConfigurationImpl(SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS, SSTABLE_IMPORT_CACHE_MAX_SIZE);
 
         SSTableImportConfiguration ssTableImportConfiguration =
         new SSTableImportConfigurationImpl(ssTableImportCacheConfiguration);

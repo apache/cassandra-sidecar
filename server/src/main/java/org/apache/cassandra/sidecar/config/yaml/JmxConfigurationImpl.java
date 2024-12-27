@@ -18,30 +18,36 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 
 /**
  * General JMX connectivity configuration that is not instance-specific.
  */
 public class JmxConfigurationImpl implements JmxConfiguration
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(JmxConfigurationImpl.class);
 
     @JsonProperty("max_retries")
     protected final int maxRetries;
 
-    @JsonProperty("retry_delay_millis")
-    protected final long retryDelayMillis;
+    protected MillisecondBoundConfiguration retryDelay;
 
     public JmxConfigurationImpl()
     {
-        this(3, 200L);
+        this(3, MillisecondBoundConfiguration.parse("200ms"));
     }
 
-    public JmxConfigurationImpl(int maxRetries, long retryDelayMillis)
+    public JmxConfigurationImpl(int maxRetries, MillisecondBoundConfiguration retryDelay)
     {
         this.maxRetries = maxRetries;
-        this.retryDelayMillis = retryDelayMillis;
+        this.retryDelay = retryDelay;
     }
 
     /**
@@ -58,9 +64,22 @@ public class JmxConfigurationImpl implements JmxConfiguration
      * @return the delay, in milliseconds, between retry attempts
      */
     @Override
-    @JsonProperty("retry_delay_millis")
-    public long retryDelayMillis()
+    @JsonProperty("retry_delay")
+    public MillisecondBoundConfiguration retryDelay()
     {
-        return retryDelayMillis;
+        return retryDelay;
+    }
+
+    @JsonProperty("retry_delay")
+    public void setRetryDelay(MillisecondBoundConfiguration retryDelay)
+    {
+        this.retryDelay = retryDelay;
+    }
+
+    @JsonProperty("retry_delay_millis")
+    public void setRetryDelayMillis(long retryDelayMillis)
+    {
+        LOGGER.warn("'retry_delay_millis' is deprecated, use 'retry_delay' instead");
+        setRetryDelay(new MillisecondBoundConfigurationImpl(retryDelayMillis, TimeUnit.MILLISECONDS));
     }
 }

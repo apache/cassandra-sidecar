@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
@@ -68,7 +69,7 @@ public class TestSslModule extends TestModule
         SslConfigurationImpl.builder()
                             .enabled(true)
                             .useOpenSsl(true)
-                            .handshakeTimeoutInSeconds(10L)
+                            .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
                             .clientAuth("NONE")
                             .keystore(new KeyStoreConfigurationImpl(keyStorePath.toAbsolutePath().toString(),
                                                                     keyStorePassword))

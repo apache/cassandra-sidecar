@@ -18,9 +18,15 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.netty.handler.traffic.AbstractTrafficShapingHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 
 /**
@@ -29,6 +35,8 @@ import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
  */
 public class TrafficShapingConfigurationImpl implements TrafficShapingConfiguration
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TrafficShapingConfigurationImpl.class);
+
     /**
      * Default inbound bandwidth limit in bytes/sec = 0 (0 implies unthrottled)
      */
@@ -51,13 +59,13 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
      * Shall be less than TIMEOUT. Here half of "standard" 30s.
      * See {@link AbstractTrafficShapingHandler#DEFAULT_MAX_TIME}
      */
-    public static final long DEFAULT_MAX_DELAY_TIME = 15000L;
+    public static final MillisecondBoundConfiguration DEFAULT_MAX_DELAY_TIME = MillisecondBoundConfiguration.parse("15s");
 
     /**
      * Default delay between two checks: 1s (1000ms)
      * See {@link AbstractTrafficShapingHandler#DEFAULT_CHECK_INTERVAL}
      */
-    public static final long DEFAULT_CHECK_INTERVAL = 1000L;
+    public static final MillisecondBoundConfiguration DEFAULT_CHECK_INTERVAL = MillisecondBoundConfiguration.parse("1s");
 
     /**
      * Default inbound bandwidth limit in bytes/sec for ingress files = 0 (0 implies unthrottled)
@@ -73,11 +81,9 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
     @JsonProperty(value = "peak_outbound_global_bandwidth_bps")
     protected final long peakOutboundGlobalBandwidthBytesPerSecond;
 
-    @JsonProperty(value = "max_delay_to_wait_millis")
-    protected final long maxDelayToWaitMillis;
+    protected MillisecondBoundConfiguration maxDelayToWait;
 
-    @JsonProperty(value = "check_interval_for_stats_millis")
-    protected final long checkIntervalForStatsMillis;
+    protected MillisecondBoundConfiguration checkIntervalForStats;
 
     @JsonProperty(value = "inbound_global_file_bandwidth_bps")
     protected final long inboundGlobalFileBandwidthBytesPerSecond;
@@ -96,15 +102,15 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
     public TrafficShapingConfigurationImpl(long inboundGlobalBandwidthBytesPerSecond,
                                            long outboundGlobalBandwidthBytesPerSecond,
                                            long peakOutboundGlobalBandwidthBytesPerSecond,
-                                           long maxDelayToWaitMillis,
-                                           long checkIntervalForStatsMillis,
+                                           MillisecondBoundConfiguration maxDelayToWait,
+                                           MillisecondBoundConfiguration checkIntervalForStats,
                                            long inboundGlobalFileBandwidthBytesPerSecond)
     {
         this.inboundGlobalBandwidthBytesPerSecond = inboundGlobalBandwidthBytesPerSecond;
         this.outboundGlobalBandwidthBytesPerSecond = outboundGlobalBandwidthBytesPerSecond;
         this.peakOutboundGlobalBandwidthBytesPerSecond = peakOutboundGlobalBandwidthBytesPerSecond;
-        this.maxDelayToWaitMillis = maxDelayToWaitMillis;
-        this.checkIntervalForStatsMillis = checkIntervalForStatsMillis;
+        this.maxDelayToWait = maxDelayToWait;
+        this.checkIntervalForStats = checkIntervalForStats;
         this.inboundGlobalFileBandwidthBytesPerSecond = inboundGlobalFileBandwidthBytesPerSecond;
     }
 
@@ -142,20 +148,46 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "max_delay_to_wait_millis")
-    public long maxDelayToWaitMillis()
+    @JsonProperty(value = "max_delay_to_wait")
+    public MillisecondBoundConfiguration maxDelayToWait()
     {
-        return maxDelayToWaitMillis;
+        return maxDelayToWait;
+    }
+
+    @JsonProperty(value = "max_delay_to_wait")
+    public void setMaxDelayToWait(MillisecondBoundConfiguration maxDelayToWait)
+    {
+        this.maxDelayToWait = maxDelayToWait;
+    }
+
+    @JsonProperty(value = "max_delay_to_wait_millis")
+    public void setMaxDelayToWaitMillis(long maxDelayToWaitMillis)
+    {
+        LOGGER.warn("'max_delay_to_wait_millis' is deprecated, use 'max_delay_to_wait' instead");
+        setMaxDelayToWait(new MillisecondBoundConfigurationImpl(maxDelayToWaitMillis, TimeUnit.MILLISECONDS));
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "check_interval_for_stats_millis")
-    public long checkIntervalForStatsMillis()
+    @JsonProperty(value = "check_interval_for_stats")
+    public MillisecondBoundConfiguration checkIntervalForStats()
     {
-        return checkIntervalForStatsMillis;
+        return checkIntervalForStats;
+    }
+
+    @JsonProperty(value = "check_interval_for_stats")
+    public void setCheckIntervalForStats(MillisecondBoundConfiguration checkIntervalForStats)
+    {
+        this.checkIntervalForStats = checkIntervalForStats;
+    }
+
+    @JsonProperty(value = "check_interval_for_stats_millis")
+    public void setCheckIntervalForStatsMillis(long checkIntervalForStatsMillis)
+    {
+        LOGGER.warn("'check_interval_for_stats_millis' is deprecated, use 'check_interval_for_stats' instead");
+        setCheckIntervalForStats(new MillisecondBoundConfigurationImpl(checkIntervalForStatsMillis, TimeUnit.MILLISECONDS));
     }
 
     @Override

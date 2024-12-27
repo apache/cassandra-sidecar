@@ -18,38 +18,30 @@
 
 package org.apache.cassandra.sidecar.config;
 
-/**
- * Configuration for sidecar schema creation
- */
-public interface SchemaKeyspaceConfiguration
+import org.apache.cassandra.sidecar.config.yaml.SecondBoundConfigurationImpl;
+
+public interface SecondBoundConfiguration extends DurationSpec
 {
     /**
-     * @return boolean indicating if schema creation is enabled
+     * Represents a 0 seconds configuration
      */
-    boolean isEnabled();
+    SecondBoundConfiguration ZERO = SecondBoundConfiguration.parse("0s");
 
     /**
-     * @return keyspace name for sidecar schema
+     * Represents a 1 second configuration
      */
-    String keyspace();
+    SecondBoundConfiguration ONE = SecondBoundConfiguration.parse("1s");
 
-    /**
-     * @return replication strategy for sidecar schema
-     */
-    String replicationStrategy();
-
-    /**
-     * @return replication factor for sidecar schema
-     */
-    int replicationFactor();
-
-    /**
-     * @return the TTL used to insert entries into the sidecar_lease schema
-     */
-    SecondBoundConfiguration leaseSchemaTTL();
-
-    default String createReplicationStrategyString()
+    static SecondBoundConfiguration parse(String value)
     {
-        return String.format("{'class':'%s', 'replication_factor':'%s'}", replicationStrategy(), replicationFactor());
+        return new SecondBoundConfigurationImpl(value);
+    }
+
+    /**
+     * @return the duration in seconds
+     */
+    default long toSeconds()
+    {
+        return unit().toSeconds(quantity());
     }
 }

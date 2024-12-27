@@ -35,6 +35,7 @@ import com.google.inject.util.Modules;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
@@ -70,7 +71,7 @@ class RestoreProcessorTest
         sidecarSchema = mock(SidecarSchema.class);
         RestoreProcessor delegate = injector.getInstance(RestoreProcessor.class);
         processor = spy(delegate);
-        when(processor.delay()).thenReturn(100L);
+        when(processor.delay()).thenReturn(MillisecondBoundConfiguration.parse("100ms"));
         when(processor.sidecarSchema()).thenReturn(sidecarSchema);
         periodicTaskExecutor = injector.getInstance(PeriodicTaskExecutor.class);
     }

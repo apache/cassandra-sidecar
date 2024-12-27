@@ -18,9 +18,8 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
-import java.util.concurrent.TimeUnit;
-
 import io.vertx.core.Promise;
+import org.apache.cassandra.sidecar.config.DurationSpec;
 
 /**
  * An interface that defines a periodic task that will be executed during the lifecycle of Cassandra Sidecar
@@ -28,42 +27,16 @@ import io.vertx.core.Promise;
 public interface PeriodicTask extends Task<Void>
 {
     /**
-     * @return delay in the specified {@link #delayUnit()} for periodic task
+     * @return delay for periodic task
      */
-    long delay();
-
-    /**
-     * @return the unit for the {@link #delay()}, if not specified defaults to milliseconds
-     */
-    default TimeUnit delayUnit()
-    {
-        return TimeUnit.MILLISECONDS;
-    }
-
-    default long delayMillis()
-    {
-        return delayUnit().toMillis(delay());
-    }
+    DurationSpec delay();
 
     /**
      * @return the initial delay for the task, defaults to the {@link #delay()}
      */
-    default long initialDelay()
+    default DurationSpec initialDelay()
     {
         return delay();
-    }
-
-    /**
-     * @return the units for the {@link #initialDelay()}, if not specified defaults to {@link #delayUnit()}
-     */
-    default TimeUnit initialDelayUnit()
-    {
-        return delayUnit();
-    }
-
-    default long initialDelayMillis()
-    {
-        return initialDelayUnit().toMillis(initialDelay());
     }
 
     /**

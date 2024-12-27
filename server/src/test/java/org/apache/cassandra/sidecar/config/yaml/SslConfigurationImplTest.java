@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,7 +36,8 @@ class SslConfigurationImplTest
         assertThat(sslConfiguration).isNotNull();
         assertThat(sslConfiguration.enabled()).isFalse();
         assertThat(sslConfiguration.preferOpenSSL()).isTrue();
-        assertThat(sslConfiguration.handshakeTimeoutInSeconds()).isEqualTo(10);
+        assertThat(sslConfiguration.handshakeTimeout().quantity()).isEqualTo(10);
+        assertThat(sslConfiguration.handshakeTimeout().unit()).isEqualTo(TimeUnit.SECONDS);
         assertThat(sslConfiguration.clientAuth()).isEqualTo("NONE");
         assertThat(sslConfiguration.cipherSuites()).isEmpty();
         assertThat(sslConfiguration.secureTransportProtocols()).containsExactly("TLSv1.2", "TLSv1.3");

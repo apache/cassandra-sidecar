@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.coordination;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -31,7 +30,9 @@ import com.datastax.driver.core.exceptions.CASWriteUnknownException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.config.DurationSpec;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.CoordinationMetrics;
@@ -65,7 +66,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterLeaseClaimTask.class);
 
-    static final long MINIMUM_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(30);
+    static final SecondBoundConfiguration MINIMUM_DELAY = SecondBoundConfiguration.parse("30s");
     private final ElectorateMembership electorateMembership;
     private final SidecarLeaseDatabaseAccessor accessor;
     private final ClusterLease clusterLease;
@@ -121,24 +122,23 @@ public class ClusterLeaseClaimTask implements PeriodicTask
      * {@inheritDoc}
      */
     @Override
-    public long initialDelay()
+    public DurationSpec initialDelay()
     {
-        return periodicTaskConfiguration.initialDelayMillis();
+        return periodicTaskConfiguration.initialDelay();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public long delay()
+    public DurationSpec delay()
     {
-        long delay = periodicTaskConfiguration.executeIntervalMillis();
+        DurationSpec delay = periodicTaskConfiguration.executeInterval();
 
-        if (delay < MINIMUM_DELAY_MILLIS)
+        if (delay.compareTo(MINIMUM_DELAY) < 0)
         {
-            LOGGER.warn("Ignoring executeIntervalMillis value '{}' which is less than the required minimum of '{}'",
-                        delay, MINIMUM_DELAY_MILLIS);
-            return MINIMUM_DELAY_MILLIS;
+            LOGGER.warn("Ignoring delay value {} which is less than the required minimum of {}", delay, MINIMUM_DELAY);
+            return MINIMUM_DELAY;
         }
 
         return delay;
@@ -282,7 +282,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
 
     private Instant leaseExpirationTime()
     {
-        return leaseTime.plus(config.schemaKeyspaceConfiguration().leaseSchemaTTLSeconds(), ChronoUnit.SECONDS);
+        return leaseTime.plus(config.schemaKeyspaceConfiguration().leaseSchemaTTL().toSeconds(), ChronoUnit.SECONDS);
     }
 
     /**

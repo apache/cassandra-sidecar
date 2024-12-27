@@ -38,7 +38,9 @@ import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
@@ -65,8 +67,8 @@ import static org.mockito.Mockito.when;
 
 class RestoreJobDiscovererTest
 {
-    private static final long activeLoopDelay = 1000;
-    private static final long idleLoopDelay = 2000;
+    private static final MillisecondBoundConfiguration activeLoopDelay = MillisecondBoundConfiguration.parse("1s");
+    private static final MillisecondBoundConfiguration idleLoopDelay = MillisecondBoundConfiguration.parse("2s");
     private static final int recencyDays = 5;
     private final RestoreJobDatabaseAccessor mockJobAccessor = mock(RestoreJobDatabaseAccessor.class);
     private final RestoreSliceDatabaseAccessor mockSliceAccessor = mock(RestoreSliceDatabaseAccessor.class);
@@ -122,7 +124,7 @@ class RestoreJobDiscovererTest
         loop.registerPeriodicTaskExecutor(executor);
         executeBlocking();
         assertThat(metrics.server().restore().activeJobs.metric.getValue()).describedAs("active jobs count is updated")
-                                                               .isOne();
+                                                                           .isOne();
         assertThat(loop.delay()).isEqualTo(activeLoopDelay);
         // when no more jobs are active, the delay is reset back to idle loop delay accordingly.
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
@@ -135,7 +137,7 @@ class RestoreJobDiscovererTest
                                                         .build()));
         executeBlocking();
         assertThat(metrics.server().restore().activeJobs.metric.getValue()).describedAs("active jobs count is updated")
-                                                               .isZero();
+                                                                           .isZero();
         assertThat(loop.delay()).isEqualTo(idleLoopDelay);
     }
 
@@ -322,11 +324,12 @@ class RestoreJobDiscovererTest
     private RestoreJobConfiguration testConfig()
     {
         RestoreJobConfiguration restoreJobConfiguration = mock(RestoreJobConfiguration.class);
-        when(restoreJobConfiguration.jobDiscoveryActiveLoopDelayMillis()).thenReturn(activeLoopDelay);
-        when(restoreJobConfiguration.jobDiscoveryIdleLoopDelayMillis()).thenReturn(idleLoopDelay);
+        when(restoreJobConfiguration.jobDiscoveryActiveLoopDelay()).thenReturn(activeLoopDelay);
+        when(restoreJobConfiguration.jobDiscoveryIdleLoopDelay()).thenReturn(idleLoopDelay);
         when(restoreJobConfiguration.jobDiscoveryMinimumRecencyDays()).thenReturn(recencyDays);
         when(restoreJobConfiguration.processMaxConcurrency()).thenReturn(TestModule.RESTORE_MAX_CONCURRENCY);
-        when(restoreJobConfiguration.restoreJobTablesTtlSeconds()).thenReturn(TimeUnit.DAYS.toSeconds(14) + 1);
+        when(restoreJobConfiguration.restoreJobTablesTtl())
+        .thenReturn(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"));
 
         return restoreJobConfiguration;
     }

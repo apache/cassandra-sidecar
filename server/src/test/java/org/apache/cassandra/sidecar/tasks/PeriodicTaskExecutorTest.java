@@ -36,6 +36,9 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.DurationSpec;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.MillisecondBoundConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
@@ -79,9 +82,9 @@ class PeriodicTaskExecutorTest
         taskExecutor.schedule(new PeriodicTask()
         {
             @Override
-            public long delay()
+            public DurationSpec delay()
             {
-                return 1;
+                return MillisecondBoundConfiguration.ONE;
             }
 
             @Override
@@ -174,9 +177,9 @@ class PeriodicTaskExecutorTest
         PeriodicTask task = new PeriodicTask()
         {
             @Override
-            public long delay()
+            public DurationSpec delay()
             {
-                return 1;
+                return MillisecondBoundConfiguration.ONE;
             }
 
             @Override
@@ -353,16 +356,16 @@ class PeriodicTaskExecutorTest
         }
 
         @Override
-        public long initialDelay()
+        public DurationSpec initialDelay()
         {
             initialDelayCount.incrementAndGet();
-            return 0;
+            return MillisecondBoundConfiguration.ZERO;
         }
 
         @Override
-        public long delay()
+        public DurationSpec delay()
         {
-            return 1;
+            return MillisecondBoundConfiguration.ONE;
         }
 
         @Override
@@ -413,9 +416,9 @@ class PeriodicTaskExecutorTest
         }
 
         @Override
-        public long delay()
+        public DurationSpec delay()
         {
-            return 1;
+            return MillisecondBoundConfiguration.ONE;
         }
 
         @Override
@@ -443,15 +446,15 @@ class PeriodicTaskExecutorTest
             }
 
             @Override
-            public long initialDelay()
+            public DurationSpec initialDelay()
             {
-                return initialDelayMillis;
+                return new MillisecondBoundConfigurationImpl(initialDelayMillis, TimeUnit.MILLISECONDS);
             }
 
             @Override
-            public long delay()
+            public DurationSpec delay()
             {
-                return delayMillis;
+                return new MillisecondBoundConfigurationImpl(delayMillis, TimeUnit.MILLISECONDS);
             }
 
             @Override

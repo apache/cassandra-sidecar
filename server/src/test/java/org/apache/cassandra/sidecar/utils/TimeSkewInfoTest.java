@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.utils;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,7 +46,7 @@ public class TimeSkewInfoTest
     public void returnsMaxSkewInMinutes()
     {
         ServiceConfiguration config = mock(ServiceConfiguration.class);
-        when(config.allowableSkewInMinutes()).thenReturn(60);
+        when(config.allowableTimeSkew()).thenReturn(SecondBoundConfiguration.parse("60m"));
         TimeSkewInfo info = new TimeSkewInfo(TimeProvider.DEFAULT_TIME_PROVIDER, config);
         assertThat(info.timeSkewResponse().allowableSkewInMinutes).isEqualTo(60);
     }

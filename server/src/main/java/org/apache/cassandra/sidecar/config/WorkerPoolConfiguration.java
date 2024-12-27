@@ -34,7 +34,7 @@ public interface WorkerPoolConfiguration
     int workerPoolSize();
 
     /**
-     * @return the maximum execution time for the worker pool in milliseconds
+     * @return the maximum execution time for the worker pool
      */
-    long workerMaxExecutionTimeMillis();
+    MillisecondBoundConfiguration workerMaxExecutionTime();
 }

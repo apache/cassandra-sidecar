@@ -40,7 +40,9 @@ import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
 import org.apache.cassandra.sidecar.db.RestoreRange;
@@ -76,11 +78,12 @@ class RestoreJobManagerTest
         when(instanceMetadata.stagingDir()).thenReturn(testDir.toString());
 
         RestoreJobConfiguration restoreJobConfiguration = mock(RestoreJobConfiguration.class);
-        when(restoreJobConfiguration.jobDiscoveryActiveLoopDelayMillis()).thenReturn(0L);
-        when(restoreJobConfiguration.jobDiscoveryIdleLoopDelayMillis()).thenReturn(0L);
+        when(restoreJobConfiguration.jobDiscoveryActiveLoopDelay()).thenReturn(MillisecondBoundConfiguration.ZERO);
+        when(restoreJobConfiguration.jobDiscoveryIdleLoopDelay()).thenReturn(MillisecondBoundConfiguration.ZERO);
         when(restoreJobConfiguration.jobDiscoveryMinimumRecencyDays()).thenReturn(jobRecencyDays);
         when(restoreJobConfiguration.processMaxConcurrency()).thenReturn(0);
-        when(restoreJobConfiguration.restoreJobTablesTtlSeconds()).thenReturn(TimeUnit.DAYS.toSeconds(14) + 1);
+        when(restoreJobConfiguration.restoreJobTablesTtl())
+        .thenReturn(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"));
 
         manager = new RestoreJobManager(restoreJobConfiguration,
                                         instanceMetadata,

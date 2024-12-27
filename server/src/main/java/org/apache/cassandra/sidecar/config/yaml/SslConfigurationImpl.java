@@ -22,12 +22,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.core.http.ClientAuth;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 
 /**
@@ -35,9 +40,10 @@ import org.apache.cassandra.sidecar.config.SslConfiguration;
  */
 public class SslConfigurationImpl implements SslConfiguration
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SslConfigurationImpl.class);
     public static final boolean DEFAULT_SSL_ENABLED = false;
     public static final boolean DEFAULT_USE_OPEN_SSL = true;
-    public static final long DEFAULT_HANDSHAKE_TIMEOUT_SECONDS = 10L;
+    public static final SecondBoundConfiguration DEFAULT_HANDSHAKE_TIMEOUT = SecondBoundConfiguration.parse("10s");
     public static final String DEFAULT_CLIENT_AUTH = "NONE";
     public static final List<String> DEFAULT_SECURE_TRANSPORT_PROTOCOLS
     = Collections.unmodifiableList(Arrays.asList("TLSv1.2", "TLSv1.3"));
@@ -49,8 +55,7 @@ public class SslConfigurationImpl implements SslConfiguration
     @JsonProperty(value = "use_openssl")
     protected final boolean useOpenSsl;
 
-    @JsonProperty(value = "handshake_timeout_sec")
-    protected final long handshakeTimeoutInSeconds;
+    protected SecondBoundConfiguration handshakeTimeout;
 
     protected String clientAuth;
 
@@ -75,7 +80,7 @@ public class SslConfigurationImpl implements SslConfiguration
     {
         enabled = builder.enabled;
         useOpenSsl = builder.useOpenSsl;
-        handshakeTimeoutInSeconds = builder.handshakeTimeoutInSeconds;
+        handshakeTimeout = builder.handshakeTimeout;
         setClientAuth(builder.clientAuth);
         keystore = builder.keystore;
         truststore = builder.truststore;
@@ -107,10 +112,23 @@ public class SslConfigurationImpl implements SslConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = "handshake_timeout_sec")
-    public long handshakeTimeoutInSeconds()
+    @JsonProperty(value = "handshake_timeout")
+    public SecondBoundConfiguration handshakeTimeout()
     {
-        return handshakeTimeoutInSeconds;
+        return handshakeTimeout;
+    }
+
+    @JsonProperty(value = "handshake_timeout")
+    public void setHandshakeTimeout(SecondBoundConfiguration handshakeTimeout)
+    {
+        this.handshakeTimeout = handshakeTimeout;
+    }
+
+    @JsonProperty(value = "handshake_timeout_sec")
+    public void setHandshakeTimeoutInSeconds(long handshakeTimeoutInSeconds)
+    {
+        LOGGER.warn("'handshake_timeout_sec' is deprecated, use 'handshake_timeout' instead");
+        setHandshakeTimeout(new SecondBoundConfigurationImpl(handshakeTimeoutInSeconds, TimeUnit.SECONDS));
     }
 
     /**
@@ -204,7 +222,7 @@ public class SslConfigurationImpl implements SslConfiguration
     {
         protected boolean enabled = DEFAULT_SSL_ENABLED;
         protected boolean useOpenSsl = DEFAULT_USE_OPEN_SSL;
-        protected long handshakeTimeoutInSeconds = DEFAULT_HANDSHAKE_TIMEOUT_SECONDS;
+        protected SecondBoundConfiguration handshakeTimeout = DEFAULT_HANDSHAKE_TIMEOUT;
         protected String clientAuth = DEFAULT_CLIENT_AUTH;
         protected List<String> cipherSuites = Collections.emptyList();
         protected List<String> secureTransportProtocols = DEFAULT_SECURE_TRANSPORT_PROTOCOLS;
@@ -244,14 +262,14 @@ public class SslConfigurationImpl implements SslConfiguration
         }
 
         /**
-         * Sets the {@code handshakeTimeoutInSeconds} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code handshakeTimeout} and returns a reference to this Builder enabling method chaining.
          *
-         * @param handshakeTimeoutInSeconds the {@code handshakeTimeoutInSeconds} to set
+         * @param handshakeTimeout the {@code handshakeTimeout} to set
          * @return a reference to this Builder
          */
-        public Builder handshakeTimeoutInSeconds(long handshakeTimeoutInSeconds)
+        public Builder handshakeTimeout(SecondBoundConfiguration handshakeTimeout)
         {
-            return update(b -> b.handshakeTimeoutInSeconds = handshakeTimeoutInSeconds);
+            return update(b -> b.handshakeTimeout = handshakeTimeout);
         }
 
         /**

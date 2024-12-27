@@ -53,6 +53,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.adapters.base.CassandraTableOperations;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -110,14 +111,14 @@ class BaseUploadsHandlerTest
         .thenReturn(DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT);
         when(trafficShapingConfiguration.peakOutboundGlobalBandwidthBytesPerSecond())
         .thenReturn(DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT);
-        when(trafficShapingConfiguration.maxDelayToWaitMillis()).thenReturn(DEFAULT_MAX_DELAY_TIME);
-        when(trafficShapingConfiguration.checkIntervalForStatsMillis()).thenReturn(DEFAULT_CHECK_INTERVAL);
+        when(trafficShapingConfiguration.maxDelayToWait()).thenReturn(DEFAULT_MAX_DELAY_TIME);
+        when(trafficShapingConfiguration.checkIntervalForStats()).thenReturn(DEFAULT_CHECK_INTERVAL);
         when(trafficShapingConfiguration.inboundGlobalFileBandwidthBytesPerSecond())
         .thenReturn(DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT);
         ServiceConfiguration serviceConfiguration =
         TestServiceConfiguration.builder()
-                                .requestIdleTimeoutMillis(500)
-                                .requestTimeoutMillis(TimeUnit.SECONDS.toMillis(30))
+                                .requestIdleTimeout(MillisecondBoundConfiguration.parse("500ms"))
+                                .requestTimeout(MillisecondBoundConfiguration.parse("30s"))
                                 .sstableUploadConfiguration(mockSSTableUploadConfiguration)
                                 .trafficShapingConfiguration(trafficShapingConfiguration)
                                 .port(0) // use a dynamic port for the server

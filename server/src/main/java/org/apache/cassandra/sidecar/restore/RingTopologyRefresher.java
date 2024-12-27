@@ -37,6 +37,7 @@ import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.config.DurationSpec;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -69,9 +70,9 @@ public class RingTopologyRefresher implements PeriodicTask
     }
 
     @Override
-    public long delay()
+    public DurationSpec delay()
     {
-        return restoreJobConfiguration.ringTopologyRefreshDelayMillis();
+        return restoreJobConfiguration.ringTopologyRefreshDelay();
     }
 
     @Override
@@ -265,7 +266,6 @@ public class RingTopologyRefresher implements PeriodicTask
                     // return null to remove the promise
                     return null;
                 });
-
             }
         }
 

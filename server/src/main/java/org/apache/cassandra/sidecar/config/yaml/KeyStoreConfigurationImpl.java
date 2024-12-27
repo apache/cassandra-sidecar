@@ -18,14 +18,22 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 
 /**
  * Encapsulates key or trust store option configurations
  */
 public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KeyStoreConfigurationImpl.class);
+
     @JsonProperty("path")
     protected final String path;
 
@@ -35,30 +43,29 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
     @JsonProperty(value = "type")
     protected final String type;
 
-    @JsonProperty(value = "check_interval_sec")
-    protected final int checkIntervalInSeconds;
+    protected SecondBoundConfiguration checkInterval;
 
     public KeyStoreConfigurationImpl()
     {
-        this(null, null, DEFAULT_TYPE, DEFAULT_CHECK_INTERVAL_SECONDS);
+        this(null, null, DEFAULT_TYPE, SecondBoundConfiguration.ZERO);
     }
 
     public KeyStoreConfigurationImpl(String path, String password)
     {
-        this(path, password, DEFAULT_TYPE, DEFAULT_CHECK_INTERVAL_SECONDS);
+        this(path, password, DEFAULT_TYPE, SecondBoundConfiguration.ZERO);
     }
 
     public KeyStoreConfigurationImpl(String path, String password, String type)
     {
-        this(path, password, type, DEFAULT_CHECK_INTERVAL_SECONDS);
+        this(path, password, type, SecondBoundConfiguration.ZERO);
     }
 
-    public KeyStoreConfigurationImpl(String path, String password, String type, int checkIntervalInSeconds)
+    public KeyStoreConfigurationImpl(String path, String password, String type, SecondBoundConfiguration checkInterval)
     {
         this.path = path;
         this.password = password;
         this.type = type;
-        this.checkIntervalInSeconds = checkIntervalInSeconds;
+        this.checkInterval = checkInterval;
     }
 
     /**
@@ -92,12 +99,25 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
     }
 
     /**
-     * @return the interval, in seconds, in which the key store will be checked for changes in the filesystem
+     * @return the interval in which the key store will be checked for changes in the filesystem
      */
     @Override
-    @JsonProperty(value = "check_interval_sec")
-    public int checkIntervalInSeconds()
+    @JsonProperty(value = "check_interval")
+    public SecondBoundConfiguration checkInterval()
     {
-        return checkIntervalInSeconds;
+        return checkInterval;
+    }
+
+    @JsonProperty(value = "check_interval")
+    public void setCheckInterval(SecondBoundConfiguration checkInterval)
+    {
+        this.checkInterval = checkInterval;
+    }
+
+    @JsonProperty(value = "check_interval_sec")
+    public void setCheckIntervalInSeconds(long checkIntervalInSeconds)
+    {
+        LOGGER.warn("'check_interval_sec' is deprecated, use 'check_interval' instead");
+        setCheckInterval(new SecondBoundConfigurationImpl(checkIntervalInSeconds, TimeUnit.SECONDS));
     }
 }

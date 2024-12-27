@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.db.schema;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,16 +34,16 @@ public class RestoreRangesSchema extends TableSchema implements ExecuteOnCluster
     private static final String TABLE_NAME = "restore_range_v1";
 
     private final SchemaKeyspaceConfiguration keyspaceConfig;
-    private final long tableTtlSeconds;
+    private final SecondBoundConfiguration tableTtl;
 
     private PreparedStatement insert;
     private PreparedStatement findAll;
     private PreparedStatement update;
 
-    public RestoreRangesSchema(SchemaKeyspaceConfiguration keyspaceConfig, long tableTtlSeconds)
+    public RestoreRangesSchema(SchemaKeyspaceConfiguration keyspaceConfig, SecondBoundConfiguration tableTtl)
     {
         this.keyspaceConfig = keyspaceConfig;
-        this.tableTtlSeconds = tableTtlSeconds;
+        this.tableTtl = tableTtl;
     }
 
     @Override
@@ -79,7 +80,7 @@ public class RestoreRangesSchema extends TableSchema implements ExecuteOnCluster
                              "  status_by_replica map<text, text>," +
                              "  PRIMARY KEY ((job_id, bucket_id), start_token, end_token)" +
                              ") WITH default_time_to_live = %s",
-                             keyspaceConfig.keyspace(), TABLE_NAME, tableTtlSeconds);
+                             keyspaceConfig.keyspace(), TABLE_NAME, tableTtl.toSeconds());
     }
 
     public PreparedStatement insert()

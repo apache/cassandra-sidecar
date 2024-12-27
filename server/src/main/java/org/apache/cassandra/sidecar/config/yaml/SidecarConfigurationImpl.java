@@ -41,9 +41,10 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
-import org.apache.cassandra.sidecar.config.HealthCheckConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.MetricsConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -51,6 +52,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Configuration for this Sidecar process
@@ -77,7 +79,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     protected final AccessControlConfiguration accessControlConfiguration;
 
     @JsonProperty("healthcheck")
-    protected final HealthCheckConfiguration healthCheckConfiguration;
+    protected final PeriodicTaskConfiguration healthCheckConfiguration;
 
     @JsonProperty("metrics")
     protected final MetricsConfiguration metricsConfiguration;
@@ -181,7 +183,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
      */
     @Override
     @JsonProperty("healthcheck")
-    public HealthCheckConfiguration healthCheckConfiguration()
+    public PeriodicTaskConfiguration healthCheckConfiguration()
     {
         return healthCheckConfiguration;
     }
@@ -267,6 +269,18 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return mapper.readValue(yamlConfigurationPath.toFile(), SidecarConfigurationImpl.class);
     }
 
+    @VisibleForTesting
+    static SidecarConfigurationImpl fromYamlString(String yaml) throws IOException
+    {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
+                              .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+                              .configure(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS, true)
+                              .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                              .registerModule(resolveYamlTypeMappings());
+
+        return mapper.readValue(yaml, SidecarConfigurationImpl.class);
+    }
+
     private static SimpleModule resolveYamlTypeMappings() throws IOException
     {
         String packageName = SidecarConfigurationImpl.class.getPackage().getName();
@@ -338,7 +352,10 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         private ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl();
         private SslConfiguration sslConfiguration = null;
         private AccessControlConfiguration accessControlConfiguration = new AccessControlConfigurationImpl();
-        private HealthCheckConfiguration healthCheckConfiguration = new HealthCheckConfigurationImpl();
+        private PeriodicTaskConfiguration healthCheckConfiguration
+        = new PeriodicTaskConfigurationImpl(true,
+                                            MillisecondBoundConfiguration.ZERO,
+                                            MillisecondBoundConfiguration.parse("30s"));
         private MetricsConfiguration metricsConfiguration = new MetricsConfigurationImpl();
         private CassandraInputValidationConfiguration cassandraInputValidationConfiguration
         = new CassandraInputValidationConfigurationImpl();
@@ -418,7 +435,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
          * @param healthCheckConfiguration the {@code healthCheckConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder healthCheckConfiguration(HealthCheckConfiguration healthCheckConfiguration)
+        public Builder healthCheckConfiguration(PeriodicTaskConfiguration healthCheckConfiguration)
         {
             return update(b -> b.healthCheckConfiguration = healthCheckConfiguration);
         }

@@ -144,7 +144,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         this.sslConfiguration = driverConfiguration.sslConfiguration();
         this.numAdditionalConnections = driverConfiguration.numConnections();
         this.nettyOptions = options;
-        int maxDelayMs = configuration.healthCheckConfiguration().checkIntervalMillis();
+        long maxDelayMs = configuration.healthCheckConfiguration().executeInterval().toMillis();
         this.reconnectionPolicy = new ExponentialReconnectionPolicy(500, maxDelayMs);
     }
 

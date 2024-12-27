@@ -16,40 +16,39 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.config;
+package org.apache.cassandra.sidecar.config.yaml;
 
-/**
- * Configuration for sidecar schema creation
- */
-public interface SchemaKeyspaceConfiguration
+import java.util.concurrent.TimeUnit;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+public class SecondBoundConfigurationImpl extends DurationSpecImpl implements SecondBoundConfiguration
 {
-    /**
-     * @return boolean indicating if schema creation is enabled
-     */
-    boolean isEnabled();
-
-    /**
-     * @return keyspace name for sidecar schema
-     */
-    String keyspace();
-
-    /**
-     * @return replication strategy for sidecar schema
-     */
-    String replicationStrategy();
-
-    /**
-     * @return replication factor for sidecar schema
-     */
-    int replicationFactor();
-
-    /**
-     * @return the TTL used to insert entries into the sidecar_lease schema
-     */
-    SecondBoundConfiguration leaseSchemaTTL();
-
-    default String createReplicationStrategyString()
+    public SecondBoundConfigurationImpl()
     {
-        return String.format("{'class':'%s', 'replication_factor':'%s'}", replicationStrategy(), replicationFactor());
+        super(0, SECONDS);
+    }
+
+    @JsonCreator
+    public SecondBoundConfigurationImpl(String value)
+    {
+        super(value);
+    }
+
+    public SecondBoundConfigurationImpl(long quantity, TimeUnit unit)
+    {
+        super(quantity, unit);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    TimeUnit minimumUnit()
+    {
+        return SECONDS;
     }
 }

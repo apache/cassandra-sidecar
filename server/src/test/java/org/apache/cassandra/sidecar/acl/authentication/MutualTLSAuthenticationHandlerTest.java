@@ -57,6 +57,7 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
@@ -298,7 +299,7 @@ class MutualTLSAuthenticationHandlerTest
             SslConfigurationImpl.builder()
                                 .enabled(true)
                                 .useOpenSsl(true)
-                                .handshakeTimeoutInSeconds(10L)
+                                .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
                                 .clientAuth(ClientAuth.REQUEST.name())
                                 .keystore(new KeyStoreConfigurationImpl(keystorePath.toAbsolutePath().toString(),
                                                                         "password"))

@@ -19,47 +19,47 @@ cassandra:
 sidecar:
   host: 0.0.0.0
   port: 0 # bind sever to the first available port
-  request_idle_timeout_millis: 300000 # this field expects integer value
-  request_timeout_millis: 300000
+  request_idle_timeout: 5m
+  request_timeout: 5m
   tcp_keep_alive: false
   accept_backlog: 1024
   server_verticle_instances: 2
   throttle:
     stream_requests_per_sec: 5000
-    timeout_sec: 10
+    timeout: 10s
   traffic_shaping:
     inbound_global_bandwidth_bps: 500
     outbound_global_bandwidth_bps: 1500
     peak_outbound_global_bandwidth_bps: 2000
-    max_delay_to_wait_millis: 2500
-    check_interval_for_stats_millis: 3000
+    max_delay_to_wait: 2500ms
+    check_interval_for_stats: 3s
   sstable_upload:
     concurrent_upload_limit: 80
     min_free_space_percent: 10
-  allowable_time_skew_in_minutes: 60
+  allowable_time_skew: 60m
   sstable_import:
-    poll_interval_millis: 100
+    execute_interval: 100ms
     cache:
-      expire_after_access_millis: 7200000 # 2 hours
+      expire_after_access: 2h # 2 hours
       maximum_size: 10000
   sstable_snapshot:
     snapshot_list_cache:
-      expire_after_access_millis: 350
+      expire_after_access: 350ms
       maximum_size: 450
   worker_pools:
     service:
       name: "sidecar-worker-pool"
       size: 20
-      max_execution_time_millis: 60000 # 60 seconds
+      max_execution_time: 1m # 1 minute
     internal:
       name: "sidecar-internal-worker-pool"
       size: 20
-      max_execution_time_millis: 900000 # 15 minutes
+      max_execution_time: 15m # 15 minutes
   cdc:
-    segment_hardlink_cache_expiry_in_secs: 60 # 1 mins
+    segment_hardlink_cache_expiry: 1m # 1 minute
   jmx:
     max_retries: 42
-    retry_delay_millis: 1234
+    retry_delay: 1234ms
   schema:
     is_enabled: false
     keyspace: sidecar_internal

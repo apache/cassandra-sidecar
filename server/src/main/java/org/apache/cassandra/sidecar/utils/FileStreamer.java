@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,9 +37,10 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
 import org.apache.cassandra.sidecar.models.HttpResponse;
 
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
 import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 import static org.apache.cassandra.sidecar.utils.MetricUtils.parseSSTableComponent;
 
@@ -193,7 +192,7 @@ public class FileStreamer
                          // Note: adding an extra millisecond is required for 2 reasons
                          // 1. setTimer does not like scheduling with 0 delay; it throws
                          // 2. the retry should be scheduled later than the waitTimeNanos, in order to ensure it can acquire
-                         .setTimer(TimeUnit.NANOSECONDS.toMillis(waitTimeNanos) + 1,
+                         .setTimer(NANOSECONDS.toMillis(waitTimeNanos) + 1,
                                    t -> acquireAndSend(response, instanceId, filename, fileLength, range,
                                                        startTimeNanos, promise));
         }
@@ -210,7 +209,8 @@ public class FileStreamer
     private boolean isTimeoutExceeded(long startTimeNanos, long waitTimeNanos)
     {
         long nowNanos = System.nanoTime();
-        return startTimeNanos + waitTimeNanos + TimeUnit.SECONDS.toNanos(config.timeoutInSeconds()) < nowNanos;
+        long timeoutNanos = startTimeNanos + waitTimeNanos + config.timeout().to(NANOSECONDS);
+        return timeoutNanos < nowNanos;
     }
 
     /**

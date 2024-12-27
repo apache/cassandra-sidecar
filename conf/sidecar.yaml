@@ -60,70 +60,74 @@ cassandra_instances:
 sidecar:
   host: 0.0.0.0
   port: 9043
-  request_idle_timeout_millis: 300000 # this field expects integer value
-  request_timeout_millis: 300000
+  request_idle_timeout: 5m
+  request_timeout: 5m
   tcp_keep_alive: false
   accept_backlog: 1024
   server_verticle_instances: 1
   throttle:
     stream_requests_per_sec: 5000
-    timeout_sec: 10
+    timeout: 10s
   traffic_shaping:
     inbound_global_bandwidth_bps: 0               # 0 implies unthrottled, the inbound bandwidth in bytes per second
     outbound_global_bandwidth_bps: 0              # 0 implies unthrottled, the outbound bandwidth in bytes per second
     peak_outbound_global_bandwidth_bps: 419430400 # the peak outbound bandwidth in bytes per second. The default is 400 mebibytes per second
-    max_delay_to_wait_millis: 15000               # 15 seconds
-    check_interval_for_stats_millis: 1000         # 1 second
+    max_delay_to_wait: 15s                        # 15 seconds
+    check_interval_for_stats: 1s                  # 1 second
     inbound_global_file_bandwidth_bps: 0          # 0 implies unthrottled, the inbound bandwidth allocated for incoming files in bytes per second, upper-bounded by inbound_global_bandwidth_bps
   sstable_upload:
     concurrent_upload_limit: 80
     min_free_space_percent: 10
     # file_permissions: "rw-r--r--" # when not specified, the default file permissions are owner read & write, group & others read
-  allowable_time_skew_in_minutes: 60
+  # The maximum allowable time skew between the server and the client.
+  # Resolution is in minutes. Conversions from finer to coarser granularities
+  # truncate, so lose precision. For example, converting 61s will result in a
+  # 1 minute allowable time skew losing the additional second in the configuration.
+  # The minimum configurable value is 1 minute.
+  allowable_time_skew: 60m
   sstable_import:
-    poll_interval_millis: 100
+    execute_interval: 100ms
     cache:
-      expire_after_access_millis: 7200000 # 2 hours
+      expire_after_access: 2h # 2 hours
       maximum_size: 10000
   sstable_snapshot:
     snapshot_list_cache:
-      expire_after_access_millis: 7200000 # 2 hours
+      expire_after_access: 2h # 2 hours
       maximum_size: 10000
   cdc:
-    segment_hardlink_cache_expiry_in_secs: 300 # 5 mins
+    segment_hardlink_cache_expiry: 5m # 5 minutes
   worker_pools:
     service:
       name: "sidecar-worker-pool"
       size: 20
-      max_execution_time_millis: 60000 # 60 seconds
+      max_execution_time: 1m # 1 minute
     internal:
       name: "sidecar-internal-worker-pool"
       size: 20
-      max_execution_time_millis: 900000 # 15 minutes
+      max_execution_time: 15m # 15 minutes
   jmx:
     max_retries: 3
-    retry_delay_millis: 200
+    retry_delay: 200ms
   schema:
     is_enabled: false
     keyspace: sidecar_internal
     replication_strategy: SimpleStrategy
     replication_factor: 1
     # The TTL in seconds used to insert entries into the sidecar_lease schema
-    lease_schema_ttl_sec: 120
+    lease_schema_ttl: 2m
   coordination:
     # Captures configuration parameters for the task that performs the cluster lease claim process
     cluster_lease_claim:
       # Whether the process is enabled
       enabled: true
       # The initial delay for the first execution of the cluster lease claim process task after being
-      # scheduled or rescheduled, in milliseconds.
-      # The minimum value for the initial delay is 0.
-      initial_delay_millis: 1000
+      # scheduled or rescheduled.
+      # The minimum value for the initial delay is 0ms.
+      initial_delay: 1s
       # How often the cluster lease claim process task will execute after the previous task has completed
-      # the execution, in milliseconds.
-      # The minimum value allowed for the cluster lease claim process task implementation is
-      # 30,000 milliseconds (30 seconds)
-      execute_interval_millis: 60000
+      # the execution.
+      # The minimum value allowed for the cluster lease claim process task implementation is 30 seconds
+      execute_interval: 1m
 
 vertx:
   filesystem_options:
@@ -136,7 +140,7 @@ vertx:
 #  ssl:
 #    enabled: true
 #    use_openssl: true
-#    handshake_timeout_sec: 10
+#    handshake_timeout: 10s
 #    client_auth: NONE # valid options are NONE, REQUEST, REQUIRED
 #    accepted_protocols:
 #     - TLSv1.2
@@ -146,7 +150,7 @@ vertx:
 #      type: PKCS12
 #      path: "path/to/keystore.p12"
 #      password: password
-#      check_interval_sec: 300
+#      check_interval: 5m
 #    truststore:
 #      path: "path/to/truststore.p12"
 #      password: password
@@ -179,10 +183,10 @@ access_control:
 #    - spiffe://authorized/admin/identities
   permission_cache:
     enabled: true
-    expire_after_access_millis: 300000
+    expire_after_access: 5m
     maximum_size: 1000
     warmup_retries: 5
-    warmup_retry_interval_millis: 2000
+    warmup_retry_interval: 2s
 
 driver_parameters:
   contact_points:
@@ -204,8 +208,8 @@ driver_parameters:
 #  local_dc: datacenter1
 
 healthcheck:
-  initial_delay_millis: 0
-  poll_freq_millis: 30000
+  initial_delay: 0ms
+  execute_interval: 30s
 
 metrics:
   registry_name: cassandra_sidecar
@@ -238,20 +242,20 @@ cassandra_input_validation:
   allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(.db|TOC.txt)"
 
 blob_restore:
-  job_discovery_active_loop_delay_millis: 300000
-  job_discovery_idle_loop_delay_millis: 600000
+  job_discovery_active_loop_delay: 5m
+  job_discovery_idle_loop_delay: 10m
   job_discovery_recency_days: 5
   slice_process_max_concurrency: 20
-  restore_job_tables_ttl_seconds: 7776000
-  slow_task_threshold_seconds: 600
-  slow_task_report_delay_seconds: 60
-  ring_topology_refresh_delay_millis: 60000
+  restore_job_tables_ttl: 90d
+  slow_task_threshold: 10m
+  slow_task_report_delay: 1m
+  ring_topology_refresh_delay: 1m
 
 s3_client:
   concurrency: 4
   thread_name_prefix: s3-client
-  thread_keep_alive_seconds: 60
-  api_call_timeout_millis: 60000 # 1 minute
+  thread_keep_alive: 1m
+  api_call_timeout: 1m # 1 minute
   range_get_object_bytes_size: 5242880  # 5 MiB
 #  proxy_config:
 #    uri:

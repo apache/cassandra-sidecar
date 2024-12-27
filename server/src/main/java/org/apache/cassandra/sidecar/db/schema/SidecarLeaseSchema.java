@@ -82,11 +82,11 @@ public class SidecarLeaseSchema extends TableSchema
         claimLease = prepare(claimLease, session,
                              String.format("INSERT INTO %s.%s (name,owner) VALUES ('cluster_lease_holder',?) " +
                                            "IF NOT EXISTS USING TTL %d",
-                                           keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTLSeconds()));
+                                           keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTL().toSeconds()));
         extendLease = prepare(extendLease, session,
                               String.format("UPDATE %s.%s USING TTL %d SET owner = ? " +
                                             "WHERE name = 'cluster_lease_holder' IF owner = ?",
-                                            keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTLSeconds()));
+                                            keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTL().toSeconds()));
     }
 
     /**

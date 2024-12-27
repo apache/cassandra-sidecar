@@ -23,19 +23,25 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -43,26 +49,28 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ServiceConfigurationImpl implements ServiceConfiguration
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServiceConfigurationImpl.class);
     public static final String HOST_PROPERTY = "host";
     public static final String DEFAULT_HOST = "0.0.0.0";
     public static final String PORT_PROPERTY = "port";
     public static final int DEFAULT_PORT = 9043;
-    public static final String REQUEST_IDLE_TIMEOUT_MILLIS_PROPERTY = "request_idle_timeout_millis";
-    public static final int DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS = 300000;
-    public static final String REQUEST_TIMEOUT_MILLIS_PROPERTY = "request_timeout_millis";
-    public static final long DEFAULT_REQUEST_TIMEOUT_MILLIS = 300000L;
+    public static final String REQUEST_IDLE_TIMEOUT_PROPERTY = "request_idle_timeout";
+    public static final MillisecondBoundConfiguration DEFAULT_REQUEST_IDLE_TIMEOUT = MillisecondBoundConfiguration.parse("5m");
+    public static final String REQUEST_TIMEOUT_PROPERTY = "request_timeout";
+    public static final MillisecondBoundConfiguration DEFAULT_REQUEST_TIMEOUT = MillisecondBoundConfiguration.parse("5m");
     public static final String TCP_KEEP_ALIVE_PROPERTY = "tcp_keep_alive";
     public static final boolean DEFAULT_TCP_KEEP_ALIVE = false;
     public static final String ACCEPT_BACKLOG_PROPERTY = "accept_backlog";
     public static final int DEFAULT_ACCEPT_BACKLOG = 1024;
-    public static final String ALLOWABLE_SKEW_IN_MINUTES_PROPERTY = "allowable_time_skew_in_minutes";
-    public static final int DEFAULT_ALLOWABLE_SKEW_IN_MINUTES = 60;
+    public static final String ALLOWABLE_TIME_SKEW_PROPERTY = "allowable_time_skew";
+    public static final SecondBoundConfiguration DEFAULT_ALLOWABLE_TIME_SKEW = SecondBoundConfiguration.parse("60m");
     private static final String SERVER_VERTICLE_INSTANCES_PROPERTY = "server_verticle_instances";
     private static final String OPERATIONAL_JOB_TRACKER_SIZE_PROPERTY = "operations_job_tracker_size";
-    private static final String OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_MILLIS_PROPERTY = "operations_job_sync_response_timeout";
+    private static final String OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY = "operations_job_sync_response_timeout";
     private static final int DEFAULT_SERVER_VERTICLE_INSTANCES = 1;
     private static final int DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE = 64;
-    private static final long DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_MILLIS = TimeUnit.SECONDS.toMillis(5);
+    private static final MillisecondBoundConfiguration DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME =
+    MillisecondBoundConfiguration.parse("5s");
     public static final String THROTTLE_PROPERTY = "throttle";
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
@@ -77,10 +85,10 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     = Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
     {{
         put(SERVICE_POOL, new WorkerPoolConfigurationImpl("sidecar-worker-pool", 20,
-                                                          TimeUnit.SECONDS.toMillis(60)));
+                                                          MillisecondBoundConfiguration.parse("60s")));
 
         put(INTERNAL_POOL, new WorkerPoolConfigurationImpl("sidecar-internal-worker-pool", 20,
-                                                           TimeUnit.MINUTES.toMillis(15)));
+                                                           MillisecondBoundConfiguration.parse("15m")));
     }});
 
 
@@ -90,11 +98,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = PORT_PROPERTY, defaultValue = DEFAULT_PORT + "")
     protected final int port;
 
-    @JsonProperty(value = REQUEST_IDLE_TIMEOUT_MILLIS_PROPERTY, defaultValue = DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS + "")
-    protected final int requestIdleTimeoutMillis;
+    protected MillisecondBoundConfiguration requestIdleTimeout;
 
-    @JsonProperty(value = REQUEST_TIMEOUT_MILLIS_PROPERTY, defaultValue = DEFAULT_REQUEST_TIMEOUT_MILLIS + "")
-    protected final long requestTimeoutMillis;
+    protected MillisecondBoundConfiguration requestTimeout;
 
     @JsonProperty(value = TCP_KEEP_ALIVE_PROPERTY, defaultValue = DEFAULT_TCP_KEEP_ALIVE + "")
     protected final boolean tcpKeepAlive;
@@ -102,8 +108,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = ACCEPT_BACKLOG_PROPERTY, defaultValue = DEFAULT_ACCEPT_BACKLOG + "")
     protected final int acceptBacklog;
 
-    @JsonProperty(value = ALLOWABLE_SKEW_IN_MINUTES_PROPERTY, defaultValue = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES + "")
-    protected final int allowableSkewInMinutes;
+    protected SecondBoundConfiguration allowableTimeSkew;
 
     @JsonProperty(value = SERVER_VERTICLE_INSTANCES_PROPERTY, defaultValue = DEFAULT_SERVER_VERTICLE_INSTANCES + "")
     protected final int serverVerticleInstances;
@@ -111,8 +116,8 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = OPERATIONAL_JOB_TRACKER_SIZE_PROPERTY, defaultValue = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE + "")
     protected final int operationalJobTrackerSize;
 
-    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_MILLIS_PROPERTY)
-    protected final long operationalJobExecutionMaxWaitTimeMillis;
+    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY)
+    protected final MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime;
 
     @JsonProperty(value = THROTTLE_PROPERTY)
     protected final ThrottleConfiguration throttleConfiguration;
@@ -161,14 +166,14 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     {
         host = builder.host;
         port = builder.port;
-        requestIdleTimeoutMillis = builder.requestIdleTimeoutMillis;
-        requestTimeoutMillis = builder.requestTimeoutMillis;
+        requestIdleTimeout = builder.requestIdleTimeout;
+        requestTimeout = builder.requestTimeout;
         tcpKeepAlive = builder.tcpKeepAlive;
         acceptBacklog = builder.acceptBacklog;
-        allowableSkewInMinutes = builder.allowableSkewInMinutes;
+        allowableTimeSkew = builder.allowableTimeSkew;
         serverVerticleInstances = builder.serverVerticleInstances;
         operationalJobTrackerSize = builder.operationalJobTrackerSize;
-        operationalJobExecutionMaxWaitTimeMillis = builder.operationalJobExecutionMaxWaitTimeMillis;
+        operationalJobExecutionMaxWaitTime = builder.operationalJobExecutionMaxWaitTime;
         throttleConfiguration = builder.throttleConfiguration;
         sstableUploadConfiguration = builder.sstableUploadConfiguration;
         sstableImportConfiguration = builder.sstableImportConfiguration;
@@ -205,20 +210,48 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = REQUEST_IDLE_TIMEOUT_MILLIS_PROPERTY)
-    public int requestIdleTimeoutMillis()
+    @JsonProperty(value = REQUEST_IDLE_TIMEOUT_PROPERTY)
+    public MillisecondBoundConfiguration requestIdleTimeout()
     {
-        return requestIdleTimeoutMillis;
+        return requestIdleTimeout;
+    }
+
+    @JsonProperty(value = REQUEST_IDLE_TIMEOUT_PROPERTY)
+    public void setRequestIdleTimeout(MillisecondBoundConfiguration requestIdleTimeout)
+    {
+        this.requestIdleTimeout = requestIdleTimeout;
+    }
+
+    @JsonProperty(value = "request_idle_timeout_millis")
+    @Deprecated
+    public void setRequestIdleTimeoutMillis(long requestIdleTimeoutMillis)
+    {
+        LOGGER.warn("'request_idle_timeout_millis' is deprecated, use '{}' instead", REQUEST_IDLE_TIMEOUT_PROPERTY);
+        setRequestIdleTimeout(new MillisecondBoundConfigurationImpl(requestIdleTimeoutMillis, TimeUnit.MILLISECONDS));
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = REQUEST_TIMEOUT_MILLIS_PROPERTY)
-    public long requestTimeoutMillis()
+    @JsonProperty(value = REQUEST_TIMEOUT_PROPERTY)
+    public MillisecondBoundConfiguration requestTimeout()
     {
-        return requestTimeoutMillis;
+        return requestTimeout;
+    }
+
+    @JsonProperty(value = REQUEST_TIMEOUT_PROPERTY)
+    public void setRequestTimeout(MillisecondBoundConfiguration requestTimeout)
+    {
+        this.requestTimeout = requestTimeout;
+    }
+
+    @JsonProperty(value = "request_timeout_millis")
+    @Deprecated
+    public void setRequestTimeoutMillis(long requestTimeoutMillis)
+    {
+        LOGGER.warn("'request_timeout_millis' is deprecated, use '{}' instead", REQUEST_TIMEOUT_PROPERTY);
+        setRequestTimeout(new MillisecondBoundConfigurationImpl(requestTimeoutMillis, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -245,10 +278,29 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = ALLOWABLE_SKEW_IN_MINUTES_PROPERTY)
-    public int allowableSkewInMinutes()
+    @JsonProperty(value = ALLOWABLE_TIME_SKEW_PROPERTY)
+    public SecondBoundConfiguration allowableTimeSkew()
     {
-        return allowableSkewInMinutes;
+        return allowableTimeSkew;
+    }
+
+    @JsonProperty(value = ALLOWABLE_TIME_SKEW_PROPERTY)
+    public void setAllowableTimeSkew(SecondBoundConfiguration allowableTimeSkew)
+    {
+        if (allowableTimeSkew.compareTo(SecondBoundConfiguration.parse("1m")) < 0)
+        {
+            throw new ConfigurationException(String.format("Invalid %s value (%s). The minimum allowed value is 1 minute (1m)",
+                                                           ALLOWABLE_TIME_SKEW_PROPERTY, allowableTimeSkew));
+        }
+        this.allowableTimeSkew = allowableTimeSkew;
+    }
+
+    @JsonProperty(value = "allowable_time_skew_in_minutes")
+    @Deprecated
+    public void setAllowableTimeSkewInMinutes(long allowableTimeSkewInMinutes)
+    {
+        LOGGER.warn("'allowable_time_skew_in_minutes' is deprecated, use '{}' instead", ALLOWABLE_TIME_SKEW_PROPERTY);
+        setAllowableTimeSkew(new SecondBoundConfigurationImpl(allowableTimeSkewInMinutes, TimeUnit.MINUTES));
     }
 
     /**
@@ -275,10 +327,10 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_MILLIS_PROPERTY)
-    public long operationalJobExecutionMaxWaitTimeInMillis()
+    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY)
+    public MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime()
     {
-        return operationalJobExecutionMaxWaitTimeMillis;
+        return operationalJobExecutionMaxWaitTime;
     }
 
     /**
@@ -391,14 +443,14 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     {
         protected String host = DEFAULT_HOST;
         protected int port = DEFAULT_PORT;
-        protected int requestIdleTimeoutMillis = DEFAULT_REQUEST_IDLE_TIMEOUT_MILLIS;
-        protected long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT_MILLIS;
+        protected MillisecondBoundConfiguration requestIdleTimeout = DEFAULT_REQUEST_IDLE_TIMEOUT;
+        protected MillisecondBoundConfiguration requestTimeout = DEFAULT_REQUEST_TIMEOUT;
         protected boolean tcpKeepAlive = DEFAULT_TCP_KEEP_ALIVE;
         protected int acceptBacklog = DEFAULT_ACCEPT_BACKLOG;
-        protected int allowableSkewInMinutes = DEFAULT_ALLOWABLE_SKEW_IN_MINUTES;
+        protected SecondBoundConfiguration allowableTimeSkew = DEFAULT_ALLOWABLE_TIME_SKEW;
         protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
         protected int operationalJobTrackerSize = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE;
-        protected long operationalJobExecutionMaxWaitTimeMillis = DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_MILLIS;
+        protected MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime = DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME;
         protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
         protected SSTableUploadConfiguration sstableUploadConfiguration = new SSTableUploadConfigurationImpl();
         protected SSTableImportConfiguration sstableImportConfiguration = new SSTableImportConfigurationImpl();
@@ -444,25 +496,25 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         }
 
         /**
-         * Sets the {@code requestIdleTimeoutMillis} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code requestIdleTimeout} and returns a reference to this Builder enabling method chaining.
          *
-         * @param requestIdleTimeoutMillis the {@code requestIdleTimeoutMillis} to set
+         * @param requestIdleTimeout the {@code requestIdleTimeout} to set
          * @return a reference to this Builder
          */
-        public Builder requestIdleTimeoutMillis(int requestIdleTimeoutMillis)
+        public Builder requestIdleTimeout(MillisecondBoundConfiguration requestIdleTimeout)
         {
-            return update(b -> b.requestIdleTimeoutMillis = requestIdleTimeoutMillis);
+            return update(b -> b.requestIdleTimeout = requestIdleTimeout);
         }
 
         /**
-         * Sets the {@code requestTimeoutMillis} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code requestTimeout} and returns a reference to this Builder enabling method chaining.
          *
-         * @param requestTimeoutMillis the {@code requestTimeoutMillis} to set
+         * @param requestTimeout the {@code requestTimeout} to set
          * @return a reference to this Builder
          */
-        public Builder requestTimeoutMillis(long requestTimeoutMillis)
+        public Builder requestTimeout(MillisecondBoundConfiguration requestTimeout)
         {
-            return update(b -> b.requestTimeoutMillis = requestTimeoutMillis);
+            return update(b -> b.requestTimeout = requestTimeout);
         }
 
         /**
@@ -488,14 +540,14 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         }
 
         /**
-         * Sets the {@code allowableSkewInMinutes} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code allowableTimeSkew} and returns a reference to this Builder enabling method chaining.
          *
-         * @param allowableSkewInMinutes the {@code allowableSkewInMinutes} to set
+         * @param allowableTimeSkew the {@code allowableTimeSkew} to set
          * @return a reference to this Builder
          */
-        public Builder allowableSkewInMinutes(int allowableSkewInMinutes)
+        public Builder allowableTimeSkew(SecondBoundConfiguration allowableTimeSkew)
         {
-            return update(b -> b.allowableSkewInMinutes = allowableSkewInMinutes);
+            return update(b -> b.allowableTimeSkew = allowableTimeSkew);
         }
 
         /**
@@ -521,15 +573,15 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         }
 
         /**
-         * Sets the {@code operationalJobExecutionMaxWaitTimeMillis} and returns a reference to this Builder
+         * Sets the {@code operationalJobExecutionMaxWaitTime} and returns a reference to this Builder
          * enabling method chaining.
          *
-         * @param operationalJobExecutionMaxWaitTimeMillis the {@code operationalJobExecutionMaxWaitTimeMillis} to set
+         * @param operationalJobExecutionMaxWaitTime the {@code operationalJobExecutionMaxWaitTime} to set
          * @return a reference to this Builder
          */
-        public Builder operationalJobExecutionMaxWaitTimeMillis(int operationalJobExecutionMaxWaitTimeMillis)
+        public Builder operationalJobExecutionMaxWaitTime(MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime)
         {
-            return update(b -> b.operationalJobExecutionMaxWaitTimeMillis = operationalJobExecutionMaxWaitTimeMillis);
+            return update(b -> b.operationalJobExecutionMaxWaitTime = operationalJobExecutionMaxWaitTime);
         }
 
         /**

@@ -21,11 +21,11 @@ package org.apache.cassandra.sidecar.config.yaml;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 
 /**
@@ -36,7 +36,8 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
     private static final boolean DEFAULT_ENABLED = false;
     private static final List<ParameterizedClassConfiguration> DEFAULT_AUTHENTICATORS_CONFIGURATION = Collections.emptyList();
     private static final Set<String> DEFAULT_ADMIN_IDENTITIES = Collections.emptySet();
-    private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION = new CacheConfigurationImpl(TimeUnit.HOURS.toMillis(2), 1_000);
+    private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION =
+    new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"), 1_000);
 
     @JsonProperty(value = "enabled")
     protected final boolean enabled;

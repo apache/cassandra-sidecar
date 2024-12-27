@@ -40,6 +40,8 @@ import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
+import org.apache.cassandra.sidecar.config.DurationSpec;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
@@ -72,8 +74,8 @@ public class RestoreProcessor implements PeriodicTask
     // mapping of task to the time when it should be reported as 'slow' if it is still active
     // using concurrent data structure because the map is accessed from multiple threads
     private final Map<RestoreRangeHandler, Long> activeTasks = new ConcurrentHashMap<>();
-    private final long slowTaskThresholdInSeconds;
-    private final long slowTaskReportDelayInSeconds;
+    private final SecondBoundConfiguration slowTaskThreshold;
+    private final SecondBoundConfiguration slowTaskReportDelay;
     private final LocalTokenRangesProvider localTokenRangesProvider;
     private final SidecarMetrics metrics;
 
@@ -97,8 +99,8 @@ public class RestoreProcessor implements PeriodicTask
                                                                         .processMaxConcurrency());
         this.requiredUsableSpacePercentage
         = config.serviceConfiguration().sstableUploadConfiguration().minimumSpacePercentageRequired() / 100.0;
-        this.slowTaskThresholdInSeconds = config.restoreJobConfiguration().slowTaskThresholdSeconds();
-        this.slowTaskReportDelayInSeconds = config.restoreJobConfiguration().slowTaskReportDelaySeconds();
+        this.slowTaskThreshold = config.restoreJobConfiguration().slowTaskThreshold();
+        this.slowTaskReportDelay = config.restoreJobConfiguration().slowTaskReportDelay();
         this.importer = importer;
         this.rangeDatabaseAccessor = rangeDatabaseAccessor;
         this.restoreJobUtil = restoreJobUtil;
@@ -120,6 +122,7 @@ public class RestoreProcessor implements PeriodicTask
 
     /**
      * Remove the restore range from work queue
+     *
      * @param range restore range to be removed
      */
     void remove(RestoreRange range)
@@ -143,10 +146,10 @@ public class RestoreProcessor implements PeriodicTask
     }
 
     @Override
-    public long delay()
+    public DurationSpec delay()
     {
-        // try to run the loop every 1 second.
-        return 1000;
+        // try to run the loop every second
+        return SecondBoundConfiguration.ONE;
     }
 
     @Override
@@ -180,7 +183,7 @@ public class RestoreProcessor implements PeriodicTask
                                                          localTokenRangesProvider,
                                                          metrics);
 
-            activeTasks.put(task, slowTaskThresholdInSeconds);
+            activeTasks.put(task, slowTaskThreshold.toSeconds());
             pool.executeBlocking(task, false) // unordered; run in parallel
                 // wrap success/failure handling in compose to catch any exception thrown
                 .compose(taskSuccessHandler(task),
@@ -227,7 +230,7 @@ public class RestoreProcessor implements PeriodicTask
                     LOGGER.warn("Long-running restore slice task detected. " +
                                 "elapsedSeconds={} thresholdSeconds={} sliceKey={} jobId={} status={}",
                                 elapsedInSeconds,
-                                slowTaskThresholdInSeconds,
+                                slowTaskThreshold.toSeconds(),
                                 task.range().sliceKey(),
                                 task.range().jobId(),
                                 task.range().job().status);
@@ -235,7 +238,7 @@ public class RestoreProcessor implements PeriodicTask
                         .owner()
                         .metrics()
                         .restore().slowRestoreTaskTime.metric.update(elapsedInNanos, TimeUnit.NANOSECONDS);
-                    return timeToReport + slowTaskReportDelayInSeconds; // increment by the delay
+                    return timeToReport + slowTaskReportDelay.toSeconds(); // increment by the delay
                 }
 
                 return timeToReport; // do not update

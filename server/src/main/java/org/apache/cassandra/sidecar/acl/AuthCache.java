@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.acl;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -124,8 +123,8 @@ public abstract class AuthCache<K, V>
         return Caffeine.newBuilder()
                        // setting refreshAfterWrite and expireAfterWrite to same value makes sure no stale
                        // data is fetched after expire time
-                       .refreshAfterWrite(config.expireAfterAccessMillis(), TimeUnit.MILLISECONDS)
-                       .expireAfterWrite(config.expireAfterAccessMillis(), TimeUnit.MILLISECONDS)
+                       .refreshAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
+                       .expireAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
                        .maximumSize(config.maximumSize())
                        .build(loadFunction::apply);
     }
@@ -167,7 +166,7 @@ public abstract class AuthCache<K, V>
         catch (Exception e)
         {
             LOGGER.warn("Unexpected error encountered during pre-warming of cache={} ", name, e);
-            vertx.setTimer(config.warmupRetryIntervalMillis(), t -> warmUpAsync(availableRetries - 1));
+            vertx.setTimer(config.warmupRetryInterval().toMillis(), t -> warmUpAsync(availableRetries - 1));
         }
     }
 }

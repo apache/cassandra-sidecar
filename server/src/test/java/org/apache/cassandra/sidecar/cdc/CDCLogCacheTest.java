@@ -21,11 +21,11 @@ package org.apache.cassandra.sidecar.cdc;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-
-import com.google.common.base.Preconditions;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
@@ -33,7 +33,9 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.server.MainModule;
 
@@ -116,13 +118,17 @@ class CdcLogCacheTest
     private CdcLogCache cdcLogCache()
     {
         ExecutorPools executorPools = ExecutorPoolsHelper.createdSharedTestPool(Vertx.vertx());
-        return new CdcLogCache(executorPools, instancesMetadata, 100L);
+        SecondBoundConfiguration mockCacheExpiryConfig = mock(SecondBoundConfiguration.class);
+        when(mockCacheExpiryConfig.quantity()).thenReturn(100L);
+        when(mockCacheExpiryConfig.unit()).thenReturn(TimeUnit.MILLISECONDS);
+        return new CdcLogCache(executorPools, instancesMetadata, mockCacheExpiryConfig);
     }
 
     private SidecarConfiguration sidecarConfiguration()
     {
         SidecarConfiguration sidecarConfiguration = mock(SidecarConfiguration.class, RETURNS_DEEP_STUBS);
-        when(sidecarConfiguration.serviceConfiguration().cdcConfiguration().segmentHardlinkCacheExpiryInSecs()).thenReturn(1L);
+        when(sidecarConfiguration.serviceConfiguration().cdcConfiguration().segmentHardLinkCacheExpiry())
+        .thenReturn(SecondBoundConfiguration.parse("1s"));
         return sidecarConfiguration;
     }
 

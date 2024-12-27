@@ -72,12 +72,12 @@ public interface ServiceConfiguration
      *
      * @return the configured idle timeout value
      */
-    int requestIdleTimeoutMillis();
+    MillisecondBoundConfiguration requestIdleTimeout();
 
     /**
-     * @return the amount of time in millis when a response is considered as timed-out after data has not been written
+     * @return the amount of time when a response is considered as timed-out after data has not been written
      */
-    long requestTimeoutMillis();
+    MillisecondBoundConfiguration requestTimeout();
 
     /**
      * @return {@code true} if TCP keep alive is enabled, {@code false} otherwise
@@ -92,7 +92,7 @@ public interface ServiceConfiguration
     /**
      * @return the maximum time skew allowed between the server and the client
      */
-    int allowableSkewInMinutes();
+    SecondBoundConfiguration allowableTimeSkew();
 
     /**
      * @return the number of vertx verticle instances that should be deployed
@@ -106,11 +106,11 @@ public interface ServiceConfiguration
     int operationalJobTrackerSize();
 
     /**
-     * @return the max wait time in milliseconds for operational job to run internally before returning the http response;
+     * @return the max wait time for operational job to run internally before returning the http response;
      *         if the job finishes before the max wait time, it returns immediately on completion;
      *         otherwise, a response indicating the job is still running is returned after the max wait time.
      */
-    long operationalJobExecutionMaxWaitTimeInMillis();
+    MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime();
 
     /**
      * @return the throttling configuration

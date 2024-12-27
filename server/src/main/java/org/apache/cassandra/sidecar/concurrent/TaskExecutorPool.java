@@ -45,8 +45,8 @@ public abstract class TaskExecutorPool implements WorkerExecutor
         this.vertx = vertx;
         this.workerExecutor = vertx.createSharedWorkerExecutor(config.workerPoolName(),
                                                                config.workerPoolSize(),
-                                                               config.workerMaxExecutionTimeMillis(),
-                                                               TimeUnit.MILLISECONDS);
+                                                               config.workerMaxExecutionTime().quantity(),
+                                                               config.workerMaxExecutionTime().unit());
     }
 
     /**
@@ -202,6 +202,7 @@ public abstract class TaskExecutorPool implements WorkerExecutor
 
     /**
      * Records time taken for tasks executed by {@link TaskExecutorPool}
+     *
      * @param durationNanos time taken by a task
      */
     protected abstract void recordTimeTaken(long durationNanos);
