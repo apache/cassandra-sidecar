@@ -24,7 +24,6 @@ import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -56,9 +55,7 @@ public class NodeSettingsHandler extends AbstractHandler<Void>
                                SocketAddress remoteAddress,
                                Void request)
     {
-        ifAvailableFromDelegate(context, host, CassandraAdapterDelegate::nodeSettings, (delegate, nodeSettings) -> {
-            context.json(nodeSettings);
-        });
+        context.json(metadataFetcher.delegate(host).nodeSettings());
     }
 
     /**

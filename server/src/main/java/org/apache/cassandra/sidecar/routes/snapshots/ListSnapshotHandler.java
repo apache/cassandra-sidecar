@@ -33,7 +33,6 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -191,9 +190,9 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
 
     protected Future<List<String>> dataPaths(String host, String keyspace, String table)
     {
-        return executorPools.service().executeBlocking(() -> {
-            return getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::tableOperations).getDataPaths(keyspace, table);
-        });
+        return executorPools.service().executeBlocking(() -> metadataFetcher.delegate(host)
+                                                                            .tableOperations()
+                                                                            .getDataPaths(keyspace, table));
     }
 
     protected Future<ListSnapshotFilesResponse>

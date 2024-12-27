@@ -30,7 +30,6 @@ import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.SSTableUploadResponse;
 import org.apache.cassandra.sidecar.concurrent.ConcurrencyLimiter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -189,7 +188,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
                                                                        SSTableUploadRequestParam request)
     {
         TaskExecutorPool pool = executorPools.service();
-        return pool.executeBlocking(() -> getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::metadata))
+        return pool.executeBlocking(() -> metadataFetcher.delegate(host).metadata())
                    .compose(metadata -> {
                        KeyspaceMetadata keyspaceMetadata = MetadataUtils.keyspace(metadata, request.keyspace());
                        if (keyspaceMetadata == null)

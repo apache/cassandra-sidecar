@@ -25,7 +25,6 @@ import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 
@@ -58,7 +57,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public @Nullable Metadata metadata()
+    public Metadata metadata()
     {
         return metadata;
     }
@@ -69,7 +68,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public @Nullable TableOperations tableOperations()
+    public  TableOperations tableOperations()
     {
         return tableOperations;
     }
@@ -80,7 +79,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public @Nullable NodeSettings nodeSettings()
+    public  NodeSettings nodeSettings()
     {
         return nodeSettings;
     }
@@ -102,7 +101,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public @Nullable StorageOperations storageOperations()
+    public  StorageOperations storageOperations()
     {
         return storageOperations;
     }

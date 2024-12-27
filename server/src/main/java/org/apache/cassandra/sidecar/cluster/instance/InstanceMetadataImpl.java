@@ -30,7 +30,10 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.utils.FileUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 
 /**
  * Local implementation of InstanceMetadata.
@@ -98,13 +101,17 @@ public class InstanceMetadataImpl implements InstanceMetadata
     }
 
     @Override
-    public @Nullable CassandraAdapterDelegate delegate()
+    public @NotNull CassandraAdapterDelegate delegate()
     {
+        if (delegate == null)
+        {
+            throw cassandraServiceUnavailable();
+        }
         return delegate;
     }
 
     @Override
-    public InstanceMetrics metrics()
+    public @NotNull InstanceMetrics metrics()
     {
         return metrics;
     }

@@ -30,7 +30,6 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
@@ -83,7 +82,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
             int dataDirIndex = request.dataDirectoryIndex();
             if (request.tableId() != null)
             {
-                StorageOperations storageOperations = getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::storageOperations);
+                StorageOperations storageOperations = metadataFetcher.delegate(host).storageOperations();
                 List<String> dataDirList = storageOperations.dataFileLocations();
                 if (dataDirIndex < 0 || dataDirIndex >= dataDirList.size())
                 {
@@ -94,7 +93,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
             else
             {
                 logger.debug("Streaming SSTable component without a table Id. request={}, instance={}", request, host);
-                TableOperations tableOperations = getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::tableOperations);
+                TableOperations tableOperations = metadataFetcher.delegate(host).tableOperations();
                 // asking jmx to give us the path for keyspace/table - tableId
                 // as opposed to storageOperations.dataFileLocations, the table directory can change
                 // when someone drops a table and recreates it with the same name, the table id will change

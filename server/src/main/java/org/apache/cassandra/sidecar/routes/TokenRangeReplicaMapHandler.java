@@ -28,6 +28,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -67,13 +68,13 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<Name>
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
-        ifAvailableFromDelegate(context, host, CassandraAdapterDelegate::storageOperations, (delegate, operations) -> {
-            NodeSettings nodeSettings = delegate.nodeSettings();
-            executorPools.service()
-                         .executeBlocking(() -> operations.tokenRangeReplicas(keyspace, nodeSettings.partitioner()))
-                         .onSuccess(context::json)
-                         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
-        });
+        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+        NodeSettings nodeSettings = delegate.nodeSettings();
+        StorageOperations operations = delegate.storageOperations();
+        executorPools.service()
+                     .executeBlocking(() -> operations.tokenRangeReplicas(keyspace, nodeSettings.partitioner()))
+                     .onSuccess(context::json)
+                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
     }
 
     @Override

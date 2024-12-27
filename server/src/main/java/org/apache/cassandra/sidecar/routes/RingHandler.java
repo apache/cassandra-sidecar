@@ -26,7 +26,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -58,12 +58,11 @@ public class RingHandler extends AbstractHandler<Name>
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
-        ifAvailableFromDelegate(context, host, CassandraAdapterDelegate::storageOperations, (delegate, operations) -> {
-            executorPools.service()
-                         .executeBlocking(() -> operations.ring(keyspace))
-                         .onSuccess(context::json)
-                         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
-        });
+        StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
+        executorPools.service()
+                     .executeBlocking(() -> operations.ring(keyspace))
+                     .onSuccess(context::json)
+                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
     }
 
     @Override

@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.routes.validations;
 
 import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.TableMetadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -28,7 +27,6 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
@@ -113,9 +111,6 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
 
     private Future<KeyspaceMetadata> getKeyspaceMetadata(String host, String keyspace)
     {
-        return executorPools.service().executeBlocking(() -> {
-            Metadata metadata = getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::metadata);
-            return metadata.getKeyspace(keyspace);
-        });
+        return executorPools.service().executeBlocking(() -> metadataFetcher.delegate(host).metadata().getKeyspace(keyspace));
     }
 }

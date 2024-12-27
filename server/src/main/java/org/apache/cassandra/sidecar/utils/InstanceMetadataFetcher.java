@@ -26,6 +26,7 @@ import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -78,7 +79,7 @@ public class InstanceMetadataFetcher
      * @return the {@link CassandraAdapterDelegate} for the given {@code host}, or the first instance when {@code host}
      * is {@code null}
      */
-    @Nullable
+    @NotNull
     public CassandraAdapterDelegate delegate(String host)
     {
         return instance(host).delegate();

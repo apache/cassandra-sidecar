@@ -58,7 +58,6 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.adapters.base.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
@@ -66,7 +65,7 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSAND
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_JMX_DISCONNECTED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_JMX_READY;
-
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 
 /**
  * Since it's possible for the version of Cassandra to change under us, we need this delegate to wrap the functionality
@@ -357,7 +356,6 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      * @return metadata on the connected cluster, including known nodes and schema definitions obtained from the
      * {@link ICassandraAdapter}
      */
-    @Nullable
     @Override
     public Metadata metadata()
     {
@@ -371,7 +369,6 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      * @return a cached {@link NodeSettings}. The returned value will be {@code null} when no JMX connection is
      * established
      */
-    @Nullable
     @Override
     public NodeSettings nodeSettings()
     {
@@ -396,28 +393,24 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         return fromAdapter(ICassandraAdapter::localStorageBroadcastAddress);
     }
 
-    @Nullable
     @Override
     public StorageOperations storageOperations()
     {
         return fromAdapter(ICassandraAdapter::storageOperations);
     }
 
-    @Nullable
     @Override
     public MetricsOperations metricsOperations()
     {
         return fromAdapter(ICassandraAdapter::metricsOperations);
     }
 
-    @Nullable
     @Override
     public ClusterMembershipOperations clusterMembershipOperations()
     {
         return fromAdapter(ICassandraAdapter::clusterMembershipOperations);
     }
 
-    @Nullable
     @Override
     public TableOperations tableOperations()
     {
@@ -556,11 +549,15 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
     }
 
-    @Nullable
     private <T> T fromAdapter(Function<ICassandraAdapter, T> getter)
     {
         ICassandraAdapter localAdapter = this.adapter;
-        return localAdapter == null ? null : getter.apply(localAdapter);
+        T value = localAdapter != null ? getter.apply(localAdapter) : null;
+        if (value == null)
+        {
+            throw cassandraServiceUnavailable();
+        }
+        return value;
     }
 
     private void runIfThisHost(Host host, Runnable runnable)

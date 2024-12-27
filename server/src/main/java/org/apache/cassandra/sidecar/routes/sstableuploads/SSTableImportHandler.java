@@ -28,7 +28,6 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
@@ -166,7 +165,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
         {
             // ensure that table operations are available from the delegate before doing the import
             // otherwise fail fast propagating the HttpException
-            getOperationFromDelegateOrThrow(importOptions.host(), CassandraAdapterDelegate::tableOperations);
+            metadataFetcher.delegate(importOptions.host()).tableOperations();
             return uploadPathBuilder.isValidDirectory(importOptions.directory())
                                     .compose(validDirectory -> importer.scheduleImport(importOptions));
         }

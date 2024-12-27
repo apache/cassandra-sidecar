@@ -64,8 +64,7 @@ public interface InstanceMetadata
     /**
      * @return a {@link CassandraAdapterDelegate} specific for the instance
      */
-    @Nullable
-    CassandraAdapterDelegate delegate();
+    @NotNull CassandraAdapterDelegate delegate();
 
     /**
      * @return {@link InstanceMetrics} metrics specific for the Cassandra instance

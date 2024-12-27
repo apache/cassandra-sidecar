@@ -26,7 +26,6 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -114,7 +113,7 @@ public class SchemaHandler extends AbstractHandler<Name>
     {
         return executorPools.service().executeBlocking(() -> {
             // metadata can block so we need to run in a blocking thread
-            return getOperationFromDelegateOrThrow(host, CassandraAdapterDelegate::metadata);
+            return metadataFetcher.delegate(host).metadata();
         });
     }
 

@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.data.SnapshotRequestParam;
@@ -67,15 +67,14 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
                                SocketAddress remoteAddress,
                                SnapshotRequestParam requestParams)
     {
-        ifAvailableFromDelegate(context, host, CassandraAdapterDelegate::storageOperations, ((delegate, storageOperations) -> {
-            executorPools.service().runBlocking(() -> {
-                logger.debug("Clearing snapshot request={}, remoteAddress={}, instance={}",
-                             requestParams, remoteAddress, host);
-                storageOperations.clearSnapshot(requestParams.snapshotName(), requestParams.keyspace(),
-                                                requestParams.tableName());
-                context.response().end();
-            }).onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestParams));
-        }));
+        StorageOperations storageOperations = metadataFetcher.delegate(host).storageOperations();
+        executorPools.service().runBlocking(() -> {
+            logger.debug("Clearing snapshot request={}, remoteAddress={}, instance={}",
+                         requestParams, remoteAddress, host);
+            storageOperations.clearSnapshot(requestParams.snapshotName(), requestParams.keyspace(),
+                                            requestParams.tableName());
+            context.response().end();
+        }).onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestParams));
     }
 
     @Override
