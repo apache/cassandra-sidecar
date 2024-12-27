@@ -215,19 +215,9 @@ public class SSTableImporter
             {
                 instanceMetrics = instance.metrics();
             }
-            TableOperations tableOperations;
             try
             {
-                tableOperations = instance.delegate().tableOperations();
-            }
-            catch (HttpException exception)
-            {
-                failureCount++;
-                promise.fail(HttpExceptions.cassandraServiceUnavailable());
-                continue;
-            }
-            try
-            {
+                TableOperations tableOperations = instance.delegate().tableOperations();
                 long startTime = System.nanoTime();
                 List<String> failedDirectories =
                 tableOperations.importNewSSTables(options.keyspace,

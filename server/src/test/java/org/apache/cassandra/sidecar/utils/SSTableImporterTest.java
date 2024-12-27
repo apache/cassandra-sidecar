@@ -46,6 +46,7 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 
 import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -107,6 +108,7 @@ class SSTableImporterTest
         when(mockTableOperations2.importNewSSTables("ks", "tbl", "/dir", true, true,
                                                     true, true, true, true, false))
         .thenThrow(new RuntimeException("Exception during import"));
+        when(mockCassandraAdapterDelegate3.tableOperations()).thenThrow(cassandraServiceUnavailable());
         executorPools = new ExecutorPools(vertx, serviceConfiguration);
         mockUploadPathBuilder = mock(SSTableUploadsPathBuilder.class);
 

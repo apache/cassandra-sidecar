@@ -26,6 +26,7 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 
 /**
@@ -59,7 +60,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     @Override
     public Metadata metadata()
     {
-        return metadata;
+        return throwOnNull(metadata);
     }
 
     public void setMetadata(Metadata metadata)
@@ -68,9 +69,9 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public  TableOperations tableOperations()
+    public TableOperations tableOperations()
     {
-        return tableOperations;
+        return throwOnNull(tableOperations);
     }
 
     public void setTableOperations(TableOperations tableOperations)
@@ -79,9 +80,9 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public  NodeSettings nodeSettings()
+    public NodeSettings nodeSettings()
     {
-        return nodeSettings;
+        return throwOnNull(nodeSettings);
     }
 
     public void setNodeSettings(NodeSettings nodeSettings)
@@ -101,9 +102,9 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public  StorageOperations storageOperations()
+    public StorageOperations storageOperations()
     {
-        return storageOperations;
+        return throwOnNull(storageOperations);
     }
 
     public void setStorageOperations(StorageOperations storageOperations)
@@ -114,5 +115,14 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     @Override
     public void close()
     {
+    }
+
+    private <T> T throwOnNull(T value)
+    {
+        if (value == null)
+        {
+            throw cassandraServiceUnavailable();
+        }
+        return value;
     }
 }
