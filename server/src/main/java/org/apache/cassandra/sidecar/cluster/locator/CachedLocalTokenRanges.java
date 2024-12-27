@@ -88,7 +88,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             return Collections.emptyMap();
         }
 
-        CassandraAdapterDelegate delegate = localInstances.get(0).delegate();
+        CassandraAdapterDelegate delegate = localInstances.get(0).delegateOrNull();
         Metadata metadata = delegate == null ? null : delegate.metadata();
         if (metadata == null)
         {

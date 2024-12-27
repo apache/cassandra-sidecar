@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.cluster.instance;
 import java.util.List;
 import java.util.function.Function;
 
+import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.jetbrains.annotations.NotNull;
@@ -62,9 +63,16 @@ public interface InstanceMetadata
     String cdcDir();
 
     /**
-     * @return a {@link CassandraAdapterDelegate} specific for the instance
+     * @return a {@link CassandraAdapterDelegate} specific for the instance, or throws when the delegate is unavailable
+     * @throws HttpException with a {@code 503} - Service Unavailable code when the Cassandra service is unavailable
      */
-    @NotNull CassandraAdapterDelegate delegate();
+    @NotNull CassandraAdapterDelegate delegate() throws HttpException;
+
+    /**
+     * @return a {@link CassandraAdapterDelegate} specific for the instance, or {@code null} if the delegate is
+     * unavailable
+     */
+    @Nullable CassandraAdapterDelegate delegateOrNull();
 
     /**
      * @return {@link InstanceMetrics} metrics specific for the Cassandra instance
@@ -80,7 +88,6 @@ public interface InstanceMetadata
     @Nullable
     default <T> T applyFromDelegate(Function<CassandraAdapterDelegate, T> mapper)
     {
-        CassandraAdapterDelegate delegate = delegate();
-        return delegate == null ? null : mapper.apply(delegate);
+        return mapper.apply(delegate());
     }
 }

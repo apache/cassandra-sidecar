@@ -159,7 +159,7 @@ public class RestoreJobProgressTracker
     {
         if (cleanupOutOfRangeRequested)
         {
-            CassandraAdapterDelegate delegate = instanceMetadata.delegate();
+            CassandraAdapterDelegate delegate = instanceMetadata.delegateOrNull();
             StorageOperations operations = delegate == null ? null : delegate.storageOperations();
             if (operations == null)
             {

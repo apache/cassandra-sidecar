@@ -38,7 +38,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -212,67 +211,60 @@ public class SSTableImporter
             ImportOptions options = pair.getValue();
 
             InstanceMetadata instance = metadataFetcher.instance(options.host);
-            CassandraAdapterDelegate delegate = instance.delegate();
             if (instanceMetrics == null)
             {
                 instanceMetrics = instance.metrics();
             }
-
-            if (delegate == null)
+            TableOperations tableOperations;
+            try
+            {
+                tableOperations = instance.delegate().tableOperations();
+            }
+            catch (HttpException exception)
             {
                 failureCount++;
                 promise.fail(HttpExceptions.cassandraServiceUnavailable());
                 continue;
             }
-
-            TableOperations tableOperations = delegate.tableOperations();
-            if (tableOperations == null)
+            try
             {
-                failureCount++;
-                promise.fail(HttpExceptions.cassandraServiceUnavailable());
-            }
-            else
-            {
-                try
-                {
-                    long startTime = System.nanoTime();
-                    List<String> failedDirectories =
-                    tableOperations.importNewSSTables(options.keyspace,
-                                                      options.tableName,
-                                                      options.directory,
-                                                      options.resetLevel,
-                                                      options.clearRepaired,
-                                                      options.verifySSTables,
-                                                      options.verifyTokens,
-                                                      options.invalidateCaches,
-                                                      options.extendedVerify,
-                                                      options.copyData);
-                    long serviceTimeNanos = System.nanoTime() - startTime;
-                    if (!failedDirectories.isEmpty())
-                    {
-                        failureCount++;
-                        LOGGER.error("Failed to import SSTables with options={}, serviceTimeMillis={}, " +
-                                     "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos),
-                                     failedDirectories);
-                        // TODO: HttpException should not be thrown by importer, as it is not at the transport layer
-                        promise.fail(new HttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                                                       "Failed to import from directories: " + failedDirectories));
-                    }
-                    else
-                    {
-                        successCount++;
-                        LOGGER.info("Successfully imported SSTables with options={}, serviceTimeMillis={}",
-                                    options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
-                        promise.complete();
-                        cleanup(options);
-                    }
-                }
-                catch (Exception exception)
+                long startTime = System.nanoTime();
+                List<String> failedDirectories =
+                tableOperations.importNewSSTables(options.keyspace,
+                                                  options.tableName,
+                                                  options.directory,
+                                                  options.resetLevel,
+                                                  options.clearRepaired,
+                                                  options.verifySSTables,
+                                                  options.verifyTokens,
+                                                  options.invalidateCaches,
+                                                  options.extendedVerify,
+                                                  options.copyData);
+                long serviceTimeNanos = System.nanoTime() - startTime;
+                if (!failedDirectories.isEmpty())
                 {
                     failureCount++;
-                    LOGGER.error("Failed to import SSTables with options={}", options, exception);
-                    promise.fail(exception);
+                    LOGGER.error("Failed to import SSTables with options={}, serviceTimeMillis={}, " +
+                                 "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos),
+                                 failedDirectories);
+                    // TODO: HttpException should not be thrown by importer, as it is not at the transport layer
+                    promise.fail(new HttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
+                                                   "Failed to import from directories: " + failedDirectories));
                 }
+                else
+                {
+                    successCount++;
+                    LOGGER.info("Successfully imported SSTables with options={}, serviceTimeMillis={}",
+                                options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
+                    promise.complete();
+                    cleanup(options);
+                }
+            }
+            catch (Exception exception)
+            {
+                failureCount++;
+                LOGGER.error("Failed to import SSTables with options={}", options, exception);
+                promise.fail(exception);
             }
         }
 

@@ -105,7 +105,7 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
         Set<String> result = new HashSet<>();
         for (InstanceMetadata instance : instancesMetadata.instances())
         {
-            CassandraAdapterDelegate delegate = instance.delegate();
+            CassandraAdapterDelegate delegate = instance.delegateOrNull();
             if (delegate == null)
             {
                 LOGGER.debug("Delegate is unavailable for instance={}", instance);
@@ -128,7 +128,7 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
     {
         for (InstanceMetadata instance : instancesMetadata.instances())
         {
-            CassandraAdapterDelegate delegate = instance.delegate();
+            CassandraAdapterDelegate delegate = instance.delegateOrNull();
             O applied = delegate == null ? null : mapper.apply(delegate);
             if (applied != null)
             {

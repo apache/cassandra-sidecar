@@ -111,6 +111,12 @@ public class InstanceMetadataImpl implements InstanceMetadata
     }
 
     @Override
+    public @Nullable CassandraAdapterDelegate delegateOrNull()
+    {
+        return delegate;
+    }
+
+    @Override
     public @NotNull InstanceMetrics metrics()
     {
         return metrics;

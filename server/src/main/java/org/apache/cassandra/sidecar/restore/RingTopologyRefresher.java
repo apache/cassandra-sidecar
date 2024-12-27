@@ -121,7 +121,7 @@ public class RingTopologyRefresher implements PeriodicTask
 
     private void executeBlocking()
     {
-        CassandraAdapterDelegate delegate = metadataFetcher.anyInstance().delegate();
+        CassandraAdapterDelegate delegate = metadataFetcher.anyInstance().delegateOrNull();
         StorageOperations storageOperations = delegate == null ? null : delegate.storageOperations();
         NodeSettings nodeSettings = delegate == null ? null : delegate.nodeSettings();
         if (storageOperations == null || nodeSettings == null)
