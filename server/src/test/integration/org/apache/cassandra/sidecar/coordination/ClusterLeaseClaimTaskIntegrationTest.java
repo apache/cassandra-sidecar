@@ -76,6 +76,7 @@ import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableExcept
 import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.tryGetIntConfig;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -398,7 +399,8 @@ class ClusterLeaseClaimTaskIntegrationTest
             {
                 DisconnectableCQLSessionProvider sessionProvider = instance.sessionProvider;
                 sessionProvider.disconnect();
-                assertThat(sessionProvider.get()).as("Simulating disable binary of instance %s", (i + 1)).isNull();
+                assertThatExceptionOfType(CassandraUnavailableException.class).as("Simulating disable binary of instance %s", (i + 1))
+                                                                              .isThrownBy(sessionProvider::get);
                 return i;
             }
         }
