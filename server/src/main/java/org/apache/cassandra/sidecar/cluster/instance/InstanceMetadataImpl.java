@@ -113,7 +113,8 @@ public class InstanceMetadataImpl implements InstanceMetadata
     }
 
     @Override
-    public @NotNull InstanceMetrics metrics()
+    @NotNull
+    public InstanceMetrics metrics()
     {
         return metrics;
     }

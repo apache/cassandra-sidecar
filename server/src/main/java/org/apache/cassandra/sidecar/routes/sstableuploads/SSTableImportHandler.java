@@ -30,6 +30,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.data.SSTableImportRequestParam;
 import org.apache.cassandra.sidecar.utils.CacheFactory;
@@ -169,7 +170,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
             return uploadPathBuilder.isValidDirectory(importOptions.directory())
                                     .compose(validDirectory -> importer.scheduleImport(importOptions));
         }
-        catch (HttpException exception)
+        catch (CassandraUnavailableException exception)
         {
             return Future.failedFuture(exception);
         }

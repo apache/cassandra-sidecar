@@ -32,7 +32,9 @@ import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -67,7 +69,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipTest
         when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
         CQLSessionProvider mockCQLSessionProvider = mock(CQLSessionProvider.class);
         // the session is not available so we return null
-        when(mockCQLSessionProvider.get()).thenReturn(null);
+        when(mockCQLSessionProvider.get()).thenThrow(new CassandraUnavailableException(CQL, new RuntimeException("connection failed")));
         ElectorateMembership membership = new MostReplicatedKeyspaceTokenZeroElectorateMembership(mockInstancesMetadata, mockCQLSessionProvider, CONFIG);
         assertThat(membership.isMember()).as("When the CQL connection is unavailable, we can't determine participation")
                                          .isFalse();

@@ -158,12 +158,10 @@ public class IntegrationTestModule extends AbstractModule
     private AccessControlConfiguration accessControlConfiguration()
     {
         Map<String, String> params = new HashMap<String, String>()
-        {
-            {
-                put("certificate_validator", "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl");
-                put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
-            }
-        };
+        { {
+            put("certificate_validator", "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl");
+            put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
+        } };
         ParameterizedClassConfiguration mTLSConfig
         = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory",
                                                   params);

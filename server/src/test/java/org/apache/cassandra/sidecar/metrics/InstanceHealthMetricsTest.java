@@ -27,9 +27,11 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.JMX;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -52,6 +54,7 @@ public class InstanceHealthMetricsTest
         Vertx vertx = Vertx.vertx();
         CassandraVersionProvider mockCassandraVersionProvider = mock(CassandraVersionProvider.class);
         CQLSessionProvider mockCqlSessionProvider = mock(CQLSessionProvider.class);
+        when(mockCqlSessionProvider.get()).thenThrow(new CassandraUnavailableException(JMX, "not available"));
         jmxClient = mock(JmxClient.class);
         metrics = new InstanceHealthMetrics(registry(1));
         delegate = new CassandraAdapterDelegate(vertx, 1, mockCassandraVersionProvider,

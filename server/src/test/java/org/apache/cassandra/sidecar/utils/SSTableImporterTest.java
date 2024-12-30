@@ -183,10 +183,9 @@ class SSTableImporterTest
         });
 
         importFuture.onComplete(context.failing(p -> {
-            assertThat(p).isInstanceOf(HttpException.class);
-            HttpException exception = (HttpException) p;
-            assertThat(exception.getStatusCode()).isEqualTo(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
-            assertThat(exception.getPayload()).isEqualTo("Cassandra service is unavailable");
+            assertThat(p).isInstanceOf(CassandraUnavailableException.class);
+            CassandraUnavailableException exception = (CassandraUnavailableException) p;
+            assertThat(exception.getMessage()).isEqualTo("Cassandra CQL_AND_JMX service is unavailable. Cassandra unavailable");
 
             assertThat(importer.importQueuePerHost).isNotEmpty();
             assertThat(importer.importQueuePerHost).containsKey(new SSTableImporter.ImportId("127.0.0.3", "ks", "tbl"));

@@ -34,6 +34,7 @@ import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.response.data.RestoreRangeJson;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
+import org.apache.cassandra.sidecar.common.server.utils.StringUtils;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
@@ -506,7 +507,7 @@ public class RestoreRange
     private String storageAddressWithPort(InstanceMetadata instance) throws CassandraUnavailableException
     {
         InetSocketAddress storageAddress = instance.delegate().localStorageBroadcastAddress();
-        return storageAddress.getAddress().getHostAddress() + ':' + storageAddress.getPort();
+        return StringUtils.cassandraFormattedHostAndPort(storageAddress);
     }
 
     /**

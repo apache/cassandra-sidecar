@@ -60,7 +60,8 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public @NotNull Metadata metadata()
+    @NotNull
+    public Metadata metadata()
     {
         return throwOnNull(metadata);
     }
@@ -71,7 +72,8 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public @NotNull TableOperations tableOperations()
+    @NotNull
+    public TableOperations tableOperations()
     {
         return throwOnNull(tableOperations);
     }
@@ -82,7 +84,8 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public @NotNull NodeSettings nodeSettings()
+    @NotNull
+    public NodeSettings nodeSettings()
     {
         return throwOnNull(nodeSettings);
     }
@@ -104,7 +107,8 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public @NotNull StorageOperations storageOperations()
+    @NotNull
+    public StorageOperations storageOperations()
     {
         return throwOnNull(storageOperations);
     }
