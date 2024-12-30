@@ -20,9 +20,6 @@ package org.apache.cassandra.sidecar.adapters.base;
 
 import java.net.InetSocketAddress;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
@@ -39,14 +36,16 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
-import org.jetbrains.annotations.Nullable;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
+import org.jetbrains.annotations.NotNull;
+
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 
 /**
  * A {@link ICassandraAdapter} implementation for Cassandra 4.0 and later
  */
 public class CassandraAdapter implements ICassandraAdapter
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraAdapter.class);
     protected final DnsResolver dnsResolver;
     protected final JmxClient jmxClient;
     protected final CQLSessionProvider cqlSessionProvider;
@@ -71,93 +70,46 @@ public class CassandraAdapter implements ICassandraAdapter
      * {@inheritDoc}
      */
     @Override
-    @Nullable
-    public Metadata metadata()
+    @NotNull
+    public Metadata metadata() throws CassandraUnavailableException
     {
-        Session activeSession = cqlSessionProvider.get();
-        if (activeSession == null)
-        {
-            LOGGER.warn("There is no active session to Cassandra");
-            return null;
-        }
-
-        if (activeSession.getCluster() == null)
-        {
-            LOGGER.warn("There is no available cluster for session={}", activeSession);
-            return null;
-        }
-
-        if (activeSession.getCluster().getMetadata() == null)
-        {
-            LOGGER.warn("There is no available metadata for session={}, cluster={}",
-                        activeSession, activeSession.getCluster());
-        }
-
-        return activeSession.getCluster().getMetadata();
+        return cqlSessionProvider.get().getCluster().getMetadata();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @Nullable
+    @NotNull
     public NodeSettings nodeSettings()
     {
         throw new UnsupportedOperationException("Node settings are not provided by this adapter");
     }
 
     @Override
+    @NotNull
     public ResultSet executeLocal(Statement statement)
     {
         Session activeSession = cqlSessionProvider.get();
         Metadata metadata = metadata();
-        // Both of the above log about lack of session/metadata, so no need to log again
-        if (activeSession == null || metadata == null)
-        {
-            return null;
-        }
-
         Host host = getHost(metadata);
-        if (host == null)
-        {
-            LOGGER.debug("Could not find host in metadata for address {}", localNativeTransportAddress);
-            return null;
-        }
         statement.setConsistencyLevel(ConsistencyLevel.ONE);
         statement.setHost(host);
         return activeSession.execute(statement);
     }
 
-    protected Host getHost(Metadata metadata)
-    {
-        if (host == null)
-        {
-            synchronized (this)
-            {
-                if (host == null)
-                {
-                    host = driverUtils.getHost(metadata, localNativeTransportAddress);
-                }
-            }
-        }
-        return host;
-    }
-
     @Override
+    @NotNull
     public InetSocketAddress localNativeTransportAddress()
     {
         return localNativeTransportAddress;
     }
 
     @Override
+    @NotNull
     public InetSocketAddress localStorageBroadcastAddress()
     {
         Metadata metadata = metadata();
-        if (metadata == null)
-        {
-            return null;
-        }
-
         return getHost(metadata).getBroadcastSocketAddress();
     }
 
@@ -165,12 +117,14 @@ public class CassandraAdapter implements ICassandraAdapter
      * {@inheritDoc}
      */
     @Override
+    @NotNull
     public StorageOperations storageOperations()
     {
         return new CassandraStorageOperations(jmxClient, dnsResolver);
     }
 
     @Override
+    @NotNull
     public MetricsOperations metricsOperations()
     {
         return new CassandraMetricsOperations(cqlSessionProvider);
@@ -180,6 +134,7 @@ public class CassandraAdapter implements ICassandraAdapter
      * {@inheritDoc}
      */
     @Override
+    @NotNull
     public ClusterMembershipOperations clusterMembershipOperations()
     {
         return new CassandraClusterMembershipOperations(jmxClient);
@@ -189,6 +144,7 @@ public class CassandraAdapter implements ICassandraAdapter
      * {@inheritDoc}
      */
     @Override
+    @NotNull
     public TableOperations tableOperations()
     {
         return new CassandraTableOperations(jmxClient);
@@ -201,5 +157,27 @@ public class CassandraAdapter implements ICassandraAdapter
     public String toString()
     {
         return "CassandraAdapter" + "@" + Integer.toHexString(hashCode());
+    }
+
+    @NotNull
+    protected Host getHost(Metadata metadata)
+    {
+        if (host != null)
+        {
+            return host;
+        }
+
+        synchronized (this)
+        {
+            if (host == null)
+            {
+                host = driverUtils.getHost(metadata, localNativeTransportAddress);
+                if (host == null)
+                {
+                    throw new CassandraUnavailableException(CQL, "No Host available in Metadata for address: " + localNativeTransportAddress);
+                }
+            }
+        }
+        return host;
     }
 }

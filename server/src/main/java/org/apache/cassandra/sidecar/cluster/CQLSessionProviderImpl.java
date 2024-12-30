@@ -58,9 +58,13 @@ import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
+
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 
 /**
  * Provides connections to the local Cassandra cluster as defined in the Configuration. Currently, it only supports
@@ -79,7 +83,6 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     private final String username;
     private final String password;
     private final DriverUtils driverUtils;
-    @Nullable
     private volatile Session session;
 
     @VisibleForTesting
@@ -169,13 +172,14 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
      * @return Session
      */
     @Override
-    @Nullable
-    public synchronized Session get()
+    @NotNull
+    public synchronized Session get() throws CassandraUnavailableException
     {
         if (session != null)
         {
             return session;
         }
+
         Cluster cluster = null;
         try
         {
@@ -219,26 +223,29 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
             cluster = builder.build();
             session = cluster.connect();
             logger.info("Successfully connected to Cassandra!");
+            return session;
         }
-        catch (Exception e)
+        catch (Exception connectionException)
         {
-            logger.error("Failed to reach Cassandra", e);
+            logger.error("Failed to reach Cassandra", connectionException);
             if (cluster != null)
             {
                 try
                 {
                     cluster.close();
                 }
-                catch (Exception ex)
+                catch (Exception closeException)
                 {
-                    logger.error("Failed to close cluster in cleanup", ex);
+                    logger.error("Failed to close cluster in cleanup", closeException);
+                    connectionException.addSuppressed(closeException);
                 }
             }
+            throw new CassandraUnavailableException(CQL, connectionException);
         }
-        return session;
     }
 
     @Override
+    @Nullable
     public Session getIfConnected()
     {
         return session;

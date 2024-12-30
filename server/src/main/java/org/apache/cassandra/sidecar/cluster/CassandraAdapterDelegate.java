@@ -54,6 +54,8 @@ import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
@@ -61,11 +63,11 @@ import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.adapters.base.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_JMX_DISCONNECTED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_JMX_READY;
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 
 /**
  * Since it's possible for the version of Cassandra to change under us, we need this delegate to wrap the functionality
@@ -90,8 +92,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private final JmxClient jmxClient;
     private final JmxNotificationListener notificationListener;
     private SimpleCassandraVersion currentVersion;
-    private ICassandraAdapter adapter;
-    private volatile boolean isNativeUp = false;
+    private volatile ICassandraAdapter adapter;
+    private final AtomicBoolean isNativeUp = new AtomicBoolean(false);
     private volatile NodeSettings nodeSettingsFromJmx = null;
     private final AtomicBoolean registered = new AtomicBoolean(false);
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
@@ -136,6 +138,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         notificationListener = initializeJmxListener();
     }
 
+    // TODO: re-organize the methods in the class to group the public/protected/private methods together
     protected JmxNotificationListener initializeJmxListener()
     {
         JmxNotificationListener notificationListener = new JmxNotificationListener();
@@ -204,7 +207,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      * Performs health checks by utilizing the JMX protocol. It uses a small subset of the exposed mBeans to
      * collect information needed to populate the {@link NodeSettings} object.
      */
-    protected void jmxHealthCheck()
+    protected synchronized void jmxHealthCheck()
     {
         try
         {
@@ -237,8 +240,12 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      */
     protected void nativeProtocolHealthCheck()
     {
-        Session activeSession = cqlSessionProvider.get();
-        if (activeSession == null)
+        Session activeSession;
+        try
+        {
+            activeSession = cqlSessionProvider.get();
+        }
+        catch (CassandraUnavailableException cue)
         {
             LOGGER.info("No local CQL session is available for cassandraInstanceId={}. " +
                         "Cassandra instance is down presumably.", cassandraInstanceId);
@@ -263,24 +270,12 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             healthCheckStatement.setHost(host);
             healthCheckStatement.setConsistencyLevel(ConsistencyLevel.ONE);
             Row row = activeSession.execute(healthCheckStatement).one();
+            // This should never happen but added for completeness
+            Preconditions.checkArgument(row != null, "Session execution result should never be null");
 
-            if (row != null)
+            if (isNativeUp.compareAndSet(false, true))
             {
-                if (!isNativeUp)
-                {
-                    isNativeUp = true;
-                    notifyNativeConnection();
-                }
-            }
-            else
-            {
-                // This should never happen but added for completeness
-                LOGGER.error("Expected to query the release_version from system.local but encountered null {}",
-                             cassandraInstanceId);
-                // The cassandra native protocol connection to the node is down.
-                markNativeDownAndMaybeNotifyDisconnection();
-                // Unregister the host listener.
-                maybeUnregisterHostListener(activeSession);
+                notifyNativeConnection();
             }
         }
         catch (IllegalArgumentException | NoHostAvailableException e)
@@ -357,7 +352,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      * {@link ICassandraAdapter}
      */
     @Override
-    public Metadata metadata()
+    @NotNull
+    public Metadata metadata() throws CassandraUnavailableException
     {
         return fromAdapter(ICassandraAdapter::metadata);
     }
@@ -366,53 +362,61 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      * Returns the cached node settings value obtained during scheduled health checks. This method does not delegate
      * to the internal adapter, as the information is retrieved on the configured health check interval.
      *
-     * @return a cached {@link NodeSettings}. The returned value will be {@code null} when no JMX connection is
-     * established
+     * @return a cached {@link NodeSettings}.
+     * @throws CassandraUnavailableException when no JMX connection is established
      */
     @Override
-    public NodeSettings nodeSettings()
+    @NotNull
+    public NodeSettings nodeSettings() throws CassandraUnavailableException
     {
         return nodeSettingsFromJmx;
     }
 
     @Override
-    public ResultSet executeLocal(Statement statement)
+    @NotNull
+    public ResultSet executeLocal(Statement statement) throws CassandraUnavailableException
     {
         return fromAdapter(adapter -> adapter.executeLocal(statement));
     }
 
     @Override
-    public InetSocketAddress localNativeTransportAddress()
+    @NotNull
+    public InetSocketAddress localNativeTransportAddress() throws CassandraUnavailableException
     {
         return fromAdapter(ICassandraAdapter::localNativeTransportAddress);
     }
 
     @Override
-    public InetSocketAddress localStorageBroadcastAddress()
+    @NotNull
+    public InetSocketAddress localStorageBroadcastAddress() throws CassandraUnavailableException
     {
         return fromAdapter(ICassandraAdapter::localStorageBroadcastAddress);
     }
 
     @Override
-    public StorageOperations storageOperations()
+    @NotNull
+    public StorageOperations storageOperations() throws CassandraUnavailableException
     {
         return fromAdapter(ICassandraAdapter::storageOperations);
     }
 
     @Override
-    public MetricsOperations metricsOperations()
+    @NotNull
+    public MetricsOperations metricsOperations() throws CassandraUnavailableException
     {
         return fromAdapter(ICassandraAdapter::metricsOperations);
     }
 
     @Override
-    public ClusterMembershipOperations clusterMembershipOperations()
+    @NotNull
+    public ClusterMembershipOperations clusterMembershipOperations() throws CassandraUnavailableException
     {
         return fromAdapter(ICassandraAdapter::clusterMembershipOperations);
     }
 
     @Override
-    public TableOperations tableOperations()
+    @NotNull
+    public TableOperations tableOperations() throws CassandraUnavailableException
     {
         return fromAdapter(ICassandraAdapter::tableOperations);
     }
@@ -460,7 +464,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      */
     public boolean isNativeUp()
     {
-        return isNativeUp;
+        return isNativeUp.get();
     }
 
     /**
@@ -522,9 +526,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     protected void markNativeDownAndMaybeNotifyDisconnection()
     {
         healthMetrics.nativeDown.metric.setValue(1);
-        boolean wasCqlConnected = isNativeUp;
-        isNativeUp = false;
-        if (wasCqlConnected)
+        if (isNativeUp.compareAndSet(true, false))
         {
             JsonObject disconnectMessage = new JsonObject()
                                            .put("cassandraInstanceId", cassandraInstanceId);
@@ -549,15 +551,15 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
     }
 
-    private <T> T fromAdapter(Function<ICassandraAdapter, T> getter)
+    @NotNull
+    private <T> T fromAdapter(Function<ICassandraAdapter, T> getter) throws CassandraUnavailableException
     {
         ICassandraAdapter localAdapter = this.adapter;
-        T value = localAdapter != null ? getter.apply(localAdapter) : null;
-        if (value == null)
+        if (localAdapter == null)
         {
-            throw cassandraServiceUnavailable();
+            throw new CassandraUnavailableException(CQL_AND_JMX, "CassandraAdapter is null");
         }
-        return value;
+        return getter.apply(localAdapter);
     }
 
     private void runIfThisHost(Host host, Runnable runnable)

@@ -25,11 +25,13 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
-import org.jetbrains.annotations.Nullable;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
+import org.jetbrains.annotations.NotNull;
 
 /**
- * Core Cassandra Adapter interface
- * For now, this is just a placeholder.  We will most likely want to define the interface to returns bits such as
+ * Core Cassandra Adapter interface.
+ *
+ * <p>For now, this is just a placeholder. We will most likely want to define the interface to returns bits such as
  * compaction(), clusterMembership(), etc., which return interfaces such as Compaction, ClusterMembership.
  * We will need different implementations due to the slow move away from JMX towards CQL for some, but not all, actions.
  */
@@ -37,64 +39,77 @@ public interface ICassandraAdapter
 {
     /**
      * @return metadata on the connected cluster, including known nodes and schema definitions
+     * @throws CassandraUnavailableException when no CQL connection is established
      */
-    Metadata metadata();
+    @NotNull Metadata metadata() throws CassandraUnavailableException;
 
     /**
      * The {@link NodeSettings} for this instance.
+     *
      * @return the {@link NodeSettings} instance for this instance.
+     * @throws CassandraUnavailableException when no JMX connection is established
      */
-    NodeSettings nodeSettings();
+    @NotNull NodeSettings nodeSettings() throws CassandraUnavailableException;
 
     /**
      * Execute the provided query on the locally-managed Cassandra instance
+     *
      * @param query the query to execute
      * @return the {@link ResultSet}
+     * @throws CassandraUnavailableException when CQL connection is not yet established
      */
-    default ResultSet executeLocal(String query)
+    @NotNull
+    default ResultSet executeLocal(String query) throws CassandraUnavailableException
     {
         return executeLocal(new SimpleStatement(query));
     }
 
     /**
      * Execute the provided statement on the locally-managed Cassandra instance
+     *
      * @param statement the statement to execute
      * @return the {@link ResultSet}
+     * @throws CassandraUnavailableException when CQL connection is not yet established
      */
-    ResultSet executeLocal(Statement statement);
+    @NotNull ResultSet executeLocal(Statement statement) throws CassandraUnavailableException;
 
     /**
      * The address on which the local Cassandra instance is listening for CQL connections
+     *
      * @return the {@link InetSocketAddress} representing the address and port.
+     * @throws CassandraUnavailableException when CQL connection is not yet established
      */
-    InetSocketAddress localNativeTransportAddress();
+    @NotNull InetSocketAddress localNativeTransportAddress() throws CassandraUnavailableException;
 
     /**
      * The address on which the local Cassandra instance broadcasts the intra-cluster storage traffic
+     *
      * @return the {@link InetSocketAddress} representing the address and port.
-     *         When CQL connection is not yet established, returns null
+     * @throws CassandraUnavailableException when CQL connection is not yet established
      */
-    @Nullable
-    InetSocketAddress localStorageBroadcastAddress();
+    @NotNull InetSocketAddress localStorageBroadcastAddress() throws CassandraUnavailableException;
 
     /**
      * @return the {@link StorageOperations} implementation for the Cassandra cluster
+     * @throws CassandraUnavailableException when Cassandra is not available
      */
-    StorageOperations storageOperations();
+    @NotNull StorageOperations storageOperations() throws CassandraUnavailableException;
 
     /**
      * @return the {@link MetricsOperations} implementation for the Cassandra cluster
+     * @throws CassandraUnavailableException when Cassandra is not available
      */
-    MetricsOperations metricsOperations();
-
+    @NotNull MetricsOperations metricsOperations() throws CassandraUnavailableException;
 
     /**
      * @return the {@link ClusterMembershipOperations} implementation for handling cluster membership operations
+     * @throws CassandraUnavailableException when Cassandra is not available
      */
-    ClusterMembershipOperations clusterMembershipOperations();
+    @NotNull ClusterMembershipOperations clusterMembershipOperations() throws CassandraUnavailableException;
 
     /**
      * @return the {@link TableOperations} implementation for the Cassandra cluster
+     * @throws CassandraUnavailableException when Cassandra is not available
      */
-    TableOperations tableOperations();
+    @NotNull TableOperations tableOperations();
 }

@@ -26,6 +26,8 @@ import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
+import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -51,7 +53,8 @@ public class InstanceMetadataFetcher
      * @return the {@link InstanceMetadata} for the given {@code host}, or the first instance when {@code host} is
      * {@code null}
      */
-    public InstanceMetadata instance(@Nullable String host)
+    @NotNull
+    public InstanceMetadata instance(@Nullable String host) throws NoSuchSidecarInstanceException
     {
         return host == null
                ? firstInstance()
@@ -65,8 +68,10 @@ public class InstanceMetadataFetcher
      * @param instanceId the identifier for the Cassandra instance
      * @return the {@link InstanceMetadata} for the given {@code instanceId}, or the first instance when
      * {@code instanceId} is {@code null}
+     * @throws NoSuchSidecarInstanceException when the Cassandra instance with {@code instanceId} does not exist
      */
-    public InstanceMetadata instance(int instanceId)
+    @NotNull
+    public InstanceMetadata instance(int instanceId) throws NoSuchSidecarInstanceException
     {
         return instancesMetadata.instanceFromId(instanceId);
     }
@@ -78,9 +83,11 @@ public class InstanceMetadataFetcher
      * @param host the Cassandra instance host
      * @return the {@link CassandraAdapterDelegate} for the given {@code host}, or the first instance when {@code host}
      * is {@code null}
+     * @throws NoSuchSidecarInstanceException when the Cassandra instance with {@code host} does not exist
+     * @throws CassandraUnavailableException  when Cassandra is not yet connected
      */
     @NotNull
-    public CassandraAdapterDelegate delegate(String host)
+    public CassandraAdapterDelegate delegate(@Nullable String host) throws NoSuchSidecarInstanceException, CassandraUnavailableException
     {
         return instance(host).delegate();
     }
@@ -89,10 +96,12 @@ public class InstanceMetadataFetcher
      * Returns the {@link CassandraAdapterDelegate} for the given {@code instanceId}
      *
      * @param instanceId the identifier for the Cassandra instance
-     * @return the {@link CassandraAdapterDelegate} for the given {@code instanceId}, or the first instance when
-     * {@code instanceId} is {@code null}
+     * @return the {@link CassandraAdapterDelegate} for the given {@code instanceId}
+     * @throws NoSuchSidecarInstanceException when the Cassandra instance with {@code instanceId} does not exist
+     * @throws CassandraUnavailableException  when Cassandra is not yet connected
      */
-    public CassandraAdapterDelegate delegate(int instanceId)
+    @NotNull
+    public CassandraAdapterDelegate delegate(int instanceId) throws NoSuchSidecarInstanceException, CassandraUnavailableException
     {
         return instance(instanceId).delegate();
     }

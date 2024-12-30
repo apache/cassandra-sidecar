@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -159,21 +158,14 @@ public class RestoreJobProgressTracker
     {
         if (cleanupOutOfRangeRequested)
         {
-            CassandraAdapterDelegate delegate = instanceMetadata.delegateOrNull();
-            StorageOperations operations = delegate == null ? null : delegate.storageOperations();
-            if (operations == null)
-            {
-                LOGGER.warn("Out of range data cleanup for the restore job is requested. It failed to start the operation. jobId={}", restoreJob.jobId);
-                return;
-            }
-
             try
             {
+                StorageOperations operations = instanceMetadata.delegate().storageOperations();
                 operations.outOfRangeDataCleanup(restoreJob.keyspaceName, restoreJob.tableName);
             }
             catch (Throwable cause)
             {
-                LOGGER.warn("Clean up out of range data has failed", cause);
+                LOGGER.warn("Clean up out of range data has failed. jobId={}", restoreJob.jobId, cause);
             }
         }
     }

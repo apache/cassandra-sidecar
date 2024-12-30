@@ -29,13 +29,13 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import com.datastax.driver.core.Row;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.response.data.RestoreRangeJson;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
@@ -503,19 +503,10 @@ public class RestoreRange
         statusByReplica.put(storageAddressWithPort(instance), status);
     }
 
-    private String storageAddressWithPort(InstanceMetadata instance)
+    private String storageAddressWithPort(InstanceMetadata instance) throws CassandraUnavailableException
     {
-        try
-        {
-            InetSocketAddress storageAddress = instance.applyFromDelegate(CassandraAdapterDelegate::localStorageBroadcastAddress);
-            return storageAddress.getAddress().getHostAddress() + ':' + storageAddress.getPort();
-        }
-        catch (NullPointerException npe) // various places can throw NPE. Catch them all in one single place.
-        {
-            NullPointerException e = new NullPointerException("Unexpected null storageBroadcastAddress from CassandraAdapter");
-            e.addSuppressed(npe);
-            throw e;
-        }
+        InetSocketAddress storageAddress = instance.delegate().localStorageBroadcastAddress();
+        return storageAddress.getAddress().getHostAddress() + ':' + storageAddress.getPort();
     }
 
     /**

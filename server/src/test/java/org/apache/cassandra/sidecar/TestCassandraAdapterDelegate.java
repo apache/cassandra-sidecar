@@ -24,9 +24,11 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
+import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 
 /**
@@ -58,7 +60,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public Metadata metadata()
+    public @NotNull Metadata metadata()
     {
         return throwOnNull(metadata);
     }
@@ -69,7 +71,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public TableOperations tableOperations()
+    public @NotNull TableOperations tableOperations()
     {
         return throwOnNull(tableOperations);
     }
@@ -80,7 +82,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public NodeSettings nodeSettings()
+    public @NotNull NodeSettings nodeSettings()
     {
         return throwOnNull(nodeSettings);
     }
@@ -102,7 +104,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     }
 
     @Override
-    public StorageOperations storageOperations()
+    public @NotNull StorageOperations storageOperations()
     {
         return throwOnNull(storageOperations);
     }
@@ -121,7 +123,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     {
         if (value == null)
         {
-            throw cassandraServiceUnavailable();
+            throw new CassandraUnavailableException(CQL_AND_JMX, "Cassandra unavailable");
         }
         return value;
     }

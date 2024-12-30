@@ -82,6 +82,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -104,11 +105,11 @@ class RestoreRangeTaskTest
     @BeforeEach
     void setup()
     {
-        InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
+        InstanceMetadata instanceMetadata = mock(InstanceMetadata.class, RETURNS_DEEP_STUBS);
         when(instanceMetadata.id()).thenReturn(1);
         when(instanceMetadata.host()).thenReturn("host-1");
         when(instanceMetadata.metrics()).thenReturn(new InstanceMetricsImpl(registry(1)));
-        when(instanceMetadata.applyFromDelegate(any())).thenReturn(new InetSocketAddress(9043));
+        when(instanceMetadata.delegate().localStorageBroadcastAddress()).thenReturn(new InetSocketAddress(9043));
         InstanceMetadataFetcher mockInstanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
         when(mockInstanceMetadataFetcher.instance(1)).thenReturn(instanceMetadata);
         RestoreSlice slice = RestoreSlice.builder()

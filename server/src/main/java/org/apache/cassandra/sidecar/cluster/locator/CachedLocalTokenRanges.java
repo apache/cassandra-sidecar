@@ -41,11 +41,11 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -88,9 +88,12 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             return Collections.emptyMap();
         }
 
-        CassandraAdapterDelegate delegate = localInstances.get(0).delegateOrNull();
-        Metadata metadata = delegate == null ? null : delegate.metadata();
-        if (metadata == null)
+        Metadata metadata;
+        try
+        {
+            metadata = localInstances.get(0).delegate().metadata();
+        }
+        catch (CassandraUnavailableException ignored)
         {
             LOGGER.debug("Not yet connect to Cassandra cluster");
             return Collections.emptyMap();

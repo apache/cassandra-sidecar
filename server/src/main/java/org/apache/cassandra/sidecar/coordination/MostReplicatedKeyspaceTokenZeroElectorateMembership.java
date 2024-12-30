@@ -41,6 +41,7 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.utils.StringUtils;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 
 /**
  * An implementation of {@link ElectorateMembership} where the current Sidecar will
@@ -105,21 +106,16 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
         Set<String> result = new HashSet<>();
         for (InstanceMetadata instance : instancesMetadata.instances())
         {
-            CassandraAdapterDelegate delegate = instance.delegateOrNull();
-            if (delegate == null)
+            try
             {
-                LOGGER.debug("Delegate is unavailable for instance={}", instance);
-                continue;
+                InetSocketAddress address = instance.delegate().localStorageBroadcastAddress();
+                result.add(StringUtils.cassandraFormattedHostAndPort(address));
             }
-
-            InetSocketAddress address = delegate.localStorageBroadcastAddress();
-            if (address == null)
+            catch (CassandraUnavailableException exception)
             {
-                LOGGER.warn("Unable to determine local storage broadcast address for instance={}", instance);
-                continue;
+                // Log a warning message and continue
+                LOGGER.warn("Unable to determine local storage broadcast address for instance. instance={}", instance, exception);
             }
-
-            result.add(StringUtils.cassandraFormattedHostAndPort(address));
         }
         return result;
     }
@@ -128,11 +124,15 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
     {
         for (InstanceMetadata instance : instancesMetadata.instances())
         {
-            CassandraAdapterDelegate delegate = instance.delegateOrNull();
-            O applied = delegate == null ? null : mapper.apply(delegate);
-            if (applied != null)
+            try
             {
-                return applied;
+                CassandraAdapterDelegate delegate = instance.delegate();
+                return mapper.apply(delegate);
+            }
+            catch (CassandraUnavailableException exception)
+            {
+                // no-op; try the next instance
+                LOGGER.debug("CassandraAdapterDelegate is not available for instance. instance={}", instance, exception);
             }
         }
         return null;
@@ -154,8 +154,12 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
             return null;
         }
 
-        Session activeSession = cqlSessionProvider.get();
-        if (activeSession == null)
+        Session activeSession;
+        try
+        {
+            activeSession = cqlSessionProvider.get();
+        }
+        catch (CassandraUnavailableException exception)
         {
             LOGGER.warn("There is no active session to Cassandra");
             return null;

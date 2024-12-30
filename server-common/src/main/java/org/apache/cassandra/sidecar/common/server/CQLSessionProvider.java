@@ -19,6 +19,8 @@
 package org.apache.cassandra.sidecar.common.server;
 
 import com.datastax.driver.core.Session;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -32,16 +34,18 @@ public interface CQLSessionProvider
 {
     /**
      * Provides a Session connected to the cluster; otherwise, it tries to connect to the cluster.
-     * Returning null means the connection can not be established.
-     * The session still might throw a NoHostAvailableException if the cluster is unreachable.
+     * {@link CassandraUnavailableException} is thrown when no CQL connection can be established.
      *
-     * @return Session or null
+     * @return the session that holds connections to a Cassandra cluster
+     * @throws CassandraUnavailableException when CQL connection is not successful
      */
-    @Nullable Session get();
+    @NotNull Session get() throws CassandraUnavailableException;
 
     /**
      * Gets the current Session object if it already exists.
-     * Unlike {@link #get()}, it does not attempt to connect to the cluster.
+     * Unlike {@link #get()}, it does not attempt to connect to the cluster,
+     * and it can return {@code null} when no connection is established.
+     * The call-sites are required to handle {@code null} value.
      *
      * @return the connected {@link Session} object if available. Null otherwise.
      */

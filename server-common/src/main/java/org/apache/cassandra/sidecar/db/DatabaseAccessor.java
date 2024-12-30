@@ -50,21 +50,7 @@ public abstract class DatabaseAccessor<T extends TableSchema>
     @NotNull
     public Session session()
     {
-        Session session;
-        try
-        {
-            session = cqlSessionProvider.get();
-        }
-        catch (Exception e)
-        {
-            throw new IllegalStateException("Instance is not ready", e);
-        }
-        if (session == null)
-        {
-            logger.error("Unable to obtain session");
-            throw new IllegalStateException("Could not obtain session");
-        }
-        return session;
+        return cqlSessionProvider.get();
     }
 
     protected ResultSet execute(Statement statement)

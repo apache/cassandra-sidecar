@@ -27,13 +27,14 @@ import java.util.stream.Collectors;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.utils.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 
 /**
  * Local implementation of InstanceMetadata.
@@ -101,18 +102,13 @@ public class InstanceMetadataImpl implements InstanceMetadata
     }
 
     @Override
-    public @NotNull CassandraAdapterDelegate delegate()
+    @NotNull
+    public CassandraAdapterDelegate delegate() throws CassandraUnavailableException
     {
         if (delegate == null)
         {
-            throw cassandraServiceUnavailable();
+            throw new CassandraUnavailableException(CQL_AND_JMX, "CassandraAdapterDelegate is null");
         }
-        return delegate;
-    }
-
-    @Override
-    public @Nullable CassandraAdapterDelegate delegateOrNull()
-    {
         return delegate;
     }
 
@@ -125,6 +121,16 @@ public class InstanceMetadataImpl implements InstanceMetadata
     public static Builder builder()
     {
         return new Builder();
+    }
+
+    @Override
+    public String toString()
+    {
+        return "InstanceMetadataImpl{" +
+               "id=" + id +
+               ", host='" + host + '\'' +
+               ", port=" + port +
+               '}';
     }
 
     /**

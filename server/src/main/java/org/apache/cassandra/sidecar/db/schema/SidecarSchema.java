@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
 
@@ -141,15 +142,9 @@ public class SidecarSchema
             return;
         }
 
-        Session session = cqlSessionProvider.get();
-        if (session == null)
-        {
-            LOGGER.debug("Cql session is not yet available. Skip initializing...");
-            return;
-        }
-
         try
         {
+            Session session = cqlSessionProvider.get();
             isInitialized = sidecarInternalKeyspace.initialize(session, this::shouldCreateSchema);
 
             if (isInitialized())
@@ -158,6 +153,10 @@ public class SidecarSchema
                 cancelTimer(timerId);
                 reportSidecarSchemaInitialized();
             }
+        }
+        catch (CassandraUnavailableException ignored)
+        {
+            LOGGER.debug("Cql session is not yet available. Skip initializing...");
         }
         catch (Exception ex)
         {

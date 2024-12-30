@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.utils;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.handler.HttpException;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 
 /**
  * This class consists exclusively of static methods that operate on or return {@link Exception}s of type
@@ -30,18 +31,6 @@ public class HttpExceptions
     // Suppresses default constructor, ensuring non-instantiability.
     private HttpExceptions()
     {
-    }
-
-    /**
-     * Returns an {@link HttpException} with the {@link HttpResponseStatus#SERVICE_UNAVAILABLE} response code
-     * when the Cassandra service is unavailable.
-     *
-     * @return an {@link HttpException} with the {@link HttpResponseStatus#SERVICE_UNAVAILABLE} response code
-     * when the Cassandra service is unavailable
-     */
-    public static HttpException cassandraServiceUnavailable()
-    {
-        return new HttpException(HttpResponseStatus.SERVICE_UNAVAILABLE.code(), "Cassandra service is unavailable");
     }
 
     /**
@@ -85,6 +74,13 @@ public class HttpExceptions
         {
             return (HttpException) cause;
         }
+
+        if (cause instanceof CassandraUnavailableException)
+        {
+            String actualPayload = payload == null ? cause.getMessage() : payload;
+            return new HttpException(HttpResponseStatus.SERVICE_UNAVAILABLE.code(), actualPayload, cause);
+        }
+
         if (payload != null)
         {
             return new HttpException(status.code(), payload, cause);

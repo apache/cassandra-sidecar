@@ -19,7 +19,8 @@
 package org.apache.cassandra.sidecar.metrics;
 
 import com.codahale.metrics.MetricRegistry;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
+import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -50,22 +51,12 @@ public class SidecarMetricsImpl implements SidecarMetrics
     @Override
     public InstanceMetrics instance(int instanceId)
     {
-        InstanceMetadata instanceMetadata = instanceMetadataFetcher.instance(instanceId);
-        if (instanceMetadata == null)
-        {
-            throw new IllegalArgumentException("Instance metrics requested for non existent instance id " + instanceId);
-        }
-        return instanceMetadata.metrics();
+        return instanceMetadataFetcher.instance(instanceId).metrics();
     }
 
     @Override
-    public InstanceMetrics instance(String host)
+    public InstanceMetrics instance(String host) throws NoSuchSidecarInstanceException, CassandraUnavailableException
     {
-        InstanceMetadata instanceMetadata = instanceMetadataFetcher.instance(host);
-        if (instanceMetadata == null)
-        {
-            throw new IllegalArgumentException("Instance metrics requested for non existent host " + host);
-        }
-        return instanceMetadata.metrics();
+        return instanceMetadataFetcher.instance(host).metrics();
     }
 }

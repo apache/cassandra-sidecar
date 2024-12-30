@@ -51,7 +51,6 @@ import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.apache.cassandra.sidecar.tasks.ExecutionDetermination;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
@@ -127,7 +126,8 @@ public class IntegrationTestModule extends AbstractModule
         CQLSessionProvider cqlSessionProvider = new CQLSessionProvider()
         {
             @Override
-            public @Nullable Session get()
+            @NotNull
+            public Session get()
             {
                 return cassandraTestContext.session();
             }
@@ -139,7 +139,7 @@ public class IntegrationTestModule extends AbstractModule
             }
 
             @Override
-            public @Nullable Session getIfConnected()
+            public Session getIfConnected()
             {
                 return get();
             }
@@ -158,10 +158,12 @@ public class IntegrationTestModule extends AbstractModule
     private AccessControlConfiguration accessControlConfiguration()
     {
         Map<String, String> params = new HashMap<String, String>()
-        { {
-            put("certificate_validator", "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl");
-            put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
-        } };
+        {
+            {
+                put("certificate_validator", "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl");
+                put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
+            }
+        };
         ParameterizedClassConfiguration mTLSConfig
         = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory",
                                                   params);

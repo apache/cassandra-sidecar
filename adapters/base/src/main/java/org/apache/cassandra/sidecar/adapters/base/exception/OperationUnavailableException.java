@@ -23,9 +23,6 @@ package org.apache.cassandra.sidecar.adapters.base.exception;
  */
 public class OperationUnavailableException extends RuntimeException
 {
-    public static final OperationUnavailableException GOSSIP_DISABLED
-    = new OperationUnavailableException("Gossip is required for the operation but it is disabled");
-
     public OperationUnavailableException(String errorMessage)
     {
         super(errorMessage);
