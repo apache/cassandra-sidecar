@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 
 import io.vertx.ext.auth.User;
+import org.apache.cassandra.sidecar.acl.authorization.Permission;
 import org.apache.cassandra.sidecar.acl.authorization.StandardPermission;
 import org.apache.cassandra.sidecar.acl.authorization.WildcardPermission;
 
