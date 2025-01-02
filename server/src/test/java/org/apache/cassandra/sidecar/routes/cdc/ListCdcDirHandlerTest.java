@@ -93,8 +93,8 @@ class ListCdcDirHandlerTest
               .send(context.succeeding(resp -> {
                   context.verify(() -> {
                       ListCdcSegmentsResponse listCDCSegmentsResponse = resp.bodyAsJson(ListCdcSegmentsResponse.class);
-                      assertThat(listCDCSegmentsResponse.segmentInfos().size()).isEqualTo(2);
-                      for (CdcSegmentInfo segmentInfo : listCDCSegmentsResponse.segmentInfos())
+                      assertThat(listCDCSegmentsResponse.segmentsInfo().size()).isEqualTo(2);
+                      for (CdcSegmentInfo segmentInfo : listCDCSegmentsResponse.segmentsInfo())
                       {
                           if (segmentInfo.name.equals("CommitLog-1-1.log"))
                           {
@@ -120,7 +120,7 @@ class ListCdcDirHandlerTest
               .send(context.succeeding(resp -> {
                   context.verify(() -> {
                       ListCdcSegmentsResponse listCDCSegmentsResponse = resp.bodyAsJson(ListCdcSegmentsResponse.class);
-                      for (CdcSegmentInfo segmentInfo : listCDCSegmentsResponse.segmentInfos())
+                      for (CdcSegmentInfo segmentInfo : listCDCSegmentsResponse.segmentsInfo())
                       {
                           assertThat(segmentInfo.name).isNotEqualTo("CommitLog-1-3.log");
                       }

@@ -37,16 +37,16 @@ public class ListCdcSegmentsResponse
 {
     private final String host;
     private final int port;
-    private final List<CdcSegmentInfo> segmentInfos;
+    private final List<CdcSegmentInfo> segmentsInfo;
 
     @JsonCreator
     public ListCdcSegmentsResponse(@JsonProperty("host") String host,
                                    @JsonProperty("port") int port,
-                                   @JsonProperty("segmentInfos") List<CdcSegmentInfo> segmentsInfo)
+                                   @JsonProperty("segmentsInfo") List<CdcSegmentInfo> segmentsInfo)
     {
         this.host = host;
         this.port = port;
-        this.segmentInfos = Collections.unmodifiableList(segmentsInfo);
+        this.segmentsInfo = segmentsInfo == null ? Collections.emptyList() : Collections.unmodifiableList(segmentsInfo);
     }
 
     @JsonProperty("host")
@@ -61,10 +61,10 @@ public class ListCdcSegmentsResponse
         return port;
     }
 
-    @JsonProperty("segmentInfos")
-    public List<CdcSegmentInfo> segmentInfos()
+    @JsonProperty("segmentsInfo")
+    public List<CdcSegmentInfo> segmentsInfo()
     {
-        return segmentInfos;
+        return segmentsInfo;
     }
 
     @Override
@@ -79,12 +79,12 @@ public class ListCdcSegmentsResponse
             return false;
         }
         ListCdcSegmentsResponse that = (ListCdcSegmentsResponse) o;
-        return port == that.port && Objects.equals(host, that.host) && Objects.equals(segmentInfos, that.segmentInfos);
+        return port == that.port && Objects.equals(host, that.host) && Objects.equals(segmentsInfo, that.segmentsInfo);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(host, port, segmentInfos);
+        return Objects.hash(host, port, segmentsInfo);
     }
 }

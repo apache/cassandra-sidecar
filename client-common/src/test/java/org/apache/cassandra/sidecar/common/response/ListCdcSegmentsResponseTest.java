@@ -43,14 +43,25 @@ class ListCdcSegmentsResponseTest
         String json = mapper.writeValueAsString(response);
         assertThat(json).isEqualTo("{\"host\":\"localhost\"," +
                                    "\"port\":9043," +
-                                   "\"segmentInfos\":[" +
+                                   "\"segmentsInfo\":[" +
                                    "{\"name\":\"commit-log1\",\"size\":100,\"idx\":100,\"completed\":true,\"lastModifiedTimestamp\":1732148713725}," +
                                    "{\"name\":\"commit-log2\",\"size\":100,\"idx\":10,\"completed\":false,\"lastModifiedTimestamp\":1732148713725}]}");
         ListCdcSegmentsResponse deserialized = mapper.readValue(json, ListCdcSegmentsResponse.class);
         assertThat(deserialized.host()).isEqualTo("localhost");
         assertThat(deserialized.port()).isEqualTo(9043);
-        assertThat(deserialized.segmentInfos()).hasSize(2);
-        assertThat(deserialized.segmentInfos().get(0).name).isEqualTo("commit-log1");
-        assertThat(deserialized.segmentInfos().get(1).name).isEqualTo("commit-log2");
+        assertThat(deserialized.segmentsInfo()).hasSize(2);
+        assertThat(deserialized.segmentsInfo().get(0).name).isEqualTo("commit-log1");
+        assertThat(deserialized.segmentsInfo().get(1).name).isEqualTo("commit-log2");
+    }
+
+    @Test
+    void testHandleNoSegmentsInfoInDeserialization() throws Exception
+    {
+        String json = "{\"host\":\"localhost\",\"port\":9043}";
+        ObjectMapper mapper = new ObjectMapper();
+        ListCdcSegmentsResponse deserialized =  mapper.readValue(json, ListCdcSegmentsResponse.class);
+        assertThat(deserialized.host()).isEqualTo("localhost");
+        assertThat(deserialized.port()).isEqualTo(9043);
+        assertThat(deserialized.segmentsInfo()).isEmpty();
     }
 }
