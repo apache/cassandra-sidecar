@@ -33,10 +33,8 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.auth.authorization.OrAuthorization;
-import io.vertx.ext.auth.authorization.impl.OrAuthorizationImpl;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
@@ -79,11 +77,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        Authorization createRestore = SidecarActions.CREATE_RESTORE.toAuthorization(resource);
-        Authorization updateRestore = SidecarActions.UPDATE_RESTORE.toAuthorization(resource);
-        OrAuthorization createOrUpdate
-        = new OrAuthorizationImpl().addAuthorization(createRestore).addAuthorization(updateRestore);
-        return ImmutableSet.of(createOrUpdate);
+        return ImmutableSet.of(SidecarPermissions.UPDATE_RESTORE_JOB.toAuthorization(resource));
     }
 
     @Override

@@ -98,7 +98,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
                                                    .map(permission -> new PermissionBasedAuthorizationImpl(permission)
                                                                       .setResource(resource))
                                                    .collect(Collectors.toSet());
-            roleAuthorizations.computeIfAbsent(role, k -> new HashSet<>(authorizations)).addAll(authorizations);
+            roleAuthorizations.computeIfAbsent(role, k -> new HashSet<>()).addAll(authorizations);
         }
         return roleAuthorizations;
     }

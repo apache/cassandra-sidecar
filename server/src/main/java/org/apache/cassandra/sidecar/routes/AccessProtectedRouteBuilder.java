@@ -169,7 +169,7 @@ public class AccessProtectedRouteBuilder
                                                     .collect(Collectors.toSet());
         if (requiredAuthorizations.isEmpty())
         {
-            throw new ConfigurationException("Authorized route must have enforced authorizations set");
+            throw new ConfigurationException("Authorized route must have authorizations declared");
         }
         AndAuthorization andAuthorization = AndAuthorization.create();
         requiredAuthorizations.forEach(andAuthorization::addAuthorization);

@@ -49,12 +49,17 @@ public class AdminIdentityResolver
 
     public boolean isAdmin(String identity)
     {
+        if (adminIdentities.contains(identity))
+        {
+            return true;
+        }
+
         String role = identityToRoleCache.get(identity);
         if (role == null)
         {
-            throw new HttpException(HttpResponseStatus.FORBIDDEN.code(), "No matching Cassandra role found");
+            return false;
         }
-        // Sidecar configured and Cassandra superusers have admin privileges
-        return adminIdentities.contains(identity) || superUserCache.isSuperUser(role);
+        // Cassandra superusers have admin privileges
+        return superUserCache.isSuperUser(role);
     }
 }

@@ -85,7 +85,7 @@ public class RoleBasedAuthorizationProviderTest
         when(mockIdentityToRoleCache.get("spiffe://cassandra/sidecar/test_user")).thenReturn("test_role");
         RoleAuthorizationsCache mockRolePermissionsCache = mock(RoleAuthorizationsCache.class);
         when(mockRolePermissionsCache.getAuthorizations("test_role"))
-        .thenReturn(ImmutableSet.of(CassandraActions.CREATE.toAuthorization(), SidecarActions.CREATE_SNAPSHOT.toAuthorization()));
+        .thenReturn(ImmutableSet.of(CassandraActions.CREATE.toAuthorization(), SidecarPermissions.CREATE_SNAPSHOT.toAuthorization()));
         RoleBasedAuthorizationProvider authorizationProvider = new RoleBasedAuthorizationProvider(mockIdentityToRoleCache,
                                                                                                   mockRolePermissionsCache);
         User user = MutualTlsUser.fromIdentities(Collections.singletonList("spiffe://cassandra/sidecar/test_user"));

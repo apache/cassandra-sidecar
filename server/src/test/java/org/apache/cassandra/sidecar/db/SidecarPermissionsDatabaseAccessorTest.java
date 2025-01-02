@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test for {@link SidecarPermissionsDatabaseAccessor}
  */
-class SidecarActionsDatabaseAccessorTest
+class SidecarPermissionsDatabaseAccessorTest
 {
     @Test
     void testReadingInvalidActions()

@@ -32,7 +32,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -86,7 +86,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarActions.IMPORT_SSTABLE.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.IMPORT_SSTABLE.toAuthorization(resource));
     }
 
     /**

@@ -23,14 +23,14 @@ package org.apache.cassandra.sidecar.acl.authorization;
  */
 public class CassandraActions
 {
-    public static final Action CREATE = new StandardAction("CREATE");
-    public static final Action ALTER = new StandardAction("ALTER");
-    public static final Action DROP = new StandardAction("DROP");
-    public static final Action SELECT = new StandardAction("SELECT");
-    public static final Action MODIFY = new StandardAction("MODIFY");
-    public static final Action AUTHORIZE = new StandardAction("AUTHORIZE");
-    public static final Action DESCRIBE = new StandardAction("DESCRIBE");
-    public static final Action EXECUTE = new StandardAction("EXECUTE");
-    public static final Action UNMASK = new StandardAction("UNMASK");
-    public static final Action SELECT_MASKED = new StandardAction("SELECT_MASKED");
+    public static final Permission CREATE = new StandardPermission("CREATE");
+    public static final Permission ALTER = new StandardPermission("ALTER");
+    public static final Permission DROP = new StandardPermission("DROP");
+    public static final Permission SELECT = new StandardPermission("SELECT");
+    public static final Permission MODIFY = new StandardPermission("MODIFY");
+    public static final Permission AUTHORIZE = new StandardPermission("AUTHORIZE");
+    public static final Permission DESCRIBE = new StandardPermission("DESCRIBE");
+    public static final Permission EXECUTE = new StandardPermission("EXECUTE");
+    public static final Permission UNMASK = new StandardPermission("UNMASK");
+    public static final Permission SELECT_MASKED = new StandardPermission("SELECT_MASKED");
 }

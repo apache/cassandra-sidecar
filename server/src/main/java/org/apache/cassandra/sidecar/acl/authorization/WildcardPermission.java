@@ -27,12 +27,12 @@ import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorization
 /**
  * Wildcard actions allow grouping allowed actions
  */
-public class WildcardAction extends StandardAction
+public class WildcardPermission extends StandardPermission
 {
     public static final String WILDCARD_TOKEN = "*";
     public static final String WILDCARD_PART_DIVIDER_TOKEN = ":";
 
-    public WildcardAction(String name)
+    public WildcardPermission(String name)
     {
         super(name);
         if (!name.contains(WILDCARD_TOKEN) && !name.contains(WILDCARD_PART_DIVIDER_TOKEN))

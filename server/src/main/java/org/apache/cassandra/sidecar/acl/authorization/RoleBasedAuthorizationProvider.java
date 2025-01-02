@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -85,14 +84,7 @@ public class RoleBasedAuthorizationProvider implements AuthorizationProvider
                 continue;
             }
             // when entries in cache are not found, null is returned. We can not add null in user.authorizations()
-            authorizations.addAll(Optional.ofNullable(roleAuthorizationsCache.getAuthorizations(role))
-                                          .orElse(Collections.emptySet()));
-        }
-
-        if (authorizations.isEmpty())
-        {
-            return Future.failedFuture(new HttpException(HttpResponseStatus.FORBIDDEN.code(),
-                                                         "User does not have any permissions"));
+            Optional.ofNullable(roleAuthorizationsCache.getAuthorizations(role)).ifPresent(authorizations::addAll);
         }
         user.authorizations().add(getId(), authorizations);
         return Future.succeededFuture();

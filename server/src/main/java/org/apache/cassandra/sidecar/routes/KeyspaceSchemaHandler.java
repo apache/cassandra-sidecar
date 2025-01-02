@@ -33,7 +33,7 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.OrAuthorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.CassandraActions;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
@@ -75,7 +75,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
         or.addAuthorization(CassandraActions.ALTER.toAuthorization(resource));
         or.addAuthorization(CassandraActions.DROP.toAuthorization(resource));
         or.addAuthorization(CassandraActions.DESCRIBE.toAuthorization(resource));
-        or.addAuthorization(SidecarActions.VIEW_SCHEMA.toAuthorization(resource));
+        or.addAuthorization(SidecarPermissions.VIEW_SCHEMA.toAuthorization(resource));
         return ImmutableSet.of(or);
     }
 

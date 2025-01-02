@@ -27,7 +27,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
@@ -59,7 +59,7 @@ public class ListOperationalJobsHandler extends AbstractHandler<Void> implements
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.SIDECAR.resource();
-        return ImmutableSet.of(SidecarActions.VIEW_TASKS.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.VIEW_TASKS.toAuthorization(resource));
     }
 
     @Override

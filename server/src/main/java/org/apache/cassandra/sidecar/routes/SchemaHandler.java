@@ -29,7 +29,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -60,7 +60,7 @@ public class SchemaHandler extends AbstractHandler<Void> implements AccessProtec
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return ImmutableSet.of(SidecarActions.VIEW_SCHEMA.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.VIEW_SCHEMA.toAuthorization(resource));
     }
 
     /**

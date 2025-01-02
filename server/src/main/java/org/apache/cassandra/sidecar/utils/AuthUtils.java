@@ -23,15 +23,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.auth.User;
-import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.acl.authorization.Action;
-import org.apache.cassandra.sidecar.acl.authorization.StandardAction;
-import org.apache.cassandra.sidecar.acl.authorization.WildcardAction;
+import org.apache.cassandra.sidecar.acl.authorization.StandardPermission;
+import org.apache.cassandra.sidecar.acl.authorization.WildcardPermission;
 
-import static org.apache.cassandra.sidecar.acl.authorization.WildcardAction.WILDCARD_PART_DIVIDER_TOKEN;
-import static org.apache.cassandra.sidecar.acl.authorization.WildcardAction.WILDCARD_TOKEN;
+import static org.apache.cassandra.sidecar.acl.authorization.WildcardPermission.WILDCARD_PART_DIVIDER_TOKEN;
+import static org.apache.cassandra.sidecar.acl.authorization.WildcardPermission.WILDCARD_TOKEN;
 
 /**
  * Class with utility methods for Authentication and Authorization.
@@ -46,7 +43,15 @@ public class AuthUtils
      */
     public static List<String> extractIdentities(User user)
     {
-        validatePrincipal(user);
+        if (user.principal() == null)
+        {
+            return Collections.emptyList();
+        }
+
+        if (!user.principal().containsKey("identity") && !user.principal().containsKey("identities"))
+        {
+            return Collections.emptyList();
+        }
 
         return Optional.ofNullable(user.principal().getString("identity"))
                        .map(Collections::singletonList)
@@ -56,9 +61,9 @@ public class AuthUtils
     }
 
     /**
-     * @return an instance of {@link Action} given the name
+     * @return an instance of {@link Permission} given the name
      */
-    public static Action actionFromName(String name)
+    public static Permission actionFromName(String name)
     {
         if (name == null)
         {
@@ -68,21 +73,8 @@ public class AuthUtils
         boolean isWildCard = name.equals(WILDCARD_TOKEN) || name.contains(WILDCARD_PART_DIVIDER_TOKEN);
         if (isWildCard)
         {
-            return new WildcardAction(name);
+            return new WildcardPermission(name);
         }
-        return new StandardAction(name);
-    }
-
-    private static void validatePrincipal(User user)
-    {
-        if (user.principal() == null)
-        {
-            throw new HttpException(HttpResponseStatus.FORBIDDEN.code(), "User principal empty");
-        }
-
-        if (!user.principal().containsKey("identity") && !user.principal().containsKey("identities"))
-        {
-            throw new HttpException(HttpResponseStatus.FORBIDDEN.code(), "No valid identity found for authorizing");
-        }
+        return new StandardPermission(name);
     }
 }

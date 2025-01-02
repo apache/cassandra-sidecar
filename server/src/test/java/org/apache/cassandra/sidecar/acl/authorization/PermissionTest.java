@@ -22,29 +22,28 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
 import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
-import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 import static org.apache.cassandra.sidecar.utils.AuthUtils.actionFromName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Test for {@link Action}
+ * Test for {@link Permission}
  */
-class ActionTest
+class PermissionTest
 {
     @Test
     void testValidActions()
     {
-        assertThat(actionFromName("CREATE_SNAPSHOT")).isInstanceOf(StandardAction.class);
-        assertThat(actionFromName("OPERATE")).isInstanceOf(StandardAction.class);
-        assertThat(actionFromName("CREATESNAPSHOT")).isInstanceOf(StandardAction.class);
-        assertThat(actionFromName("CREATE:SNAPSHOT")).isInstanceOf(WildcardAction.class);
-        assertThat(actionFromName("*:SNAPSHOT")).isInstanceOf(WildcardAction.class);
-        assertThat(actionFromName("STREAM:*")).isInstanceOf(WildcardAction.class);
-        assertThat(actionFromName("*")).isInstanceOf(WildcardAction.class);
-        assertThat(actionFromName("*:*")).isInstanceOf(WildcardAction.class);
-        assertThat(actionFromName("CREATE:SNAPSHOT:*")).isInstanceOf(WildcardAction.class);
+        assertThat(actionFromName("CREATE_SNAPSHOT")).isInstanceOf(StandardPermission.class);
+        assertThat(actionFromName("OPERATE")).isInstanceOf(StandardPermission.class);
+        assertThat(actionFromName("CREATESNAPSHOT")).isInstanceOf(StandardPermission.class);
+        assertThat(actionFromName("CREATE:SNAPSHOT")).isInstanceOf(WildcardPermission.class);
+        assertThat(actionFromName("*:SNAPSHOT")).isInstanceOf(WildcardPermission.class);
+        assertThat(actionFromName("STREAM:*")).isInstanceOf(WildcardPermission.class);
+        assertThat(actionFromName("*")).isInstanceOf(WildcardPermission.class);
+        assertThat(actionFromName("*:*")).isInstanceOf(WildcardPermission.class);
+        assertThat(actionFromName("CREATE:SNAPSHOT:*")).isInstanceOf(WildcardPermission.class);
     }
 
     @Test
@@ -80,15 +79,15 @@ class ActionTest
     @Test
     void testInvalidWildcardActions()
     {
-        assertThatThrownBy(() -> new WildcardAction("CREATE"))
+        assertThatThrownBy(() -> new WildcardPermission("CREATE"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Wildcard actions must either have wildcard token * or must have wildcard parts");
 
-        assertThatThrownBy(() -> new WildcardAction(":"))
+        assertThatThrownBy(() -> new WildcardPermission(":"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Wildcard action parts can not be empty");
 
-        assertThatThrownBy(() -> new WildcardAction("::"))
+        assertThatThrownBy(() -> new WildcardPermission("::"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Wildcard action parts can not be empty");
     }

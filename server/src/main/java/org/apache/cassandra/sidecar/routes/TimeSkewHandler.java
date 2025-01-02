@@ -26,7 +26,7 @@ import com.google.inject.Inject;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.utils.TimeSkewInfo;
 
@@ -53,7 +53,7 @@ public class TimeSkewHandler implements Handler<RoutingContext>, AccessProtected
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return ImmutableSet.of(SidecarActions.VIEW_CLUSTER.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.VIEW_CLUSTER.toAuthorization(resource));
     }
 
     @Override

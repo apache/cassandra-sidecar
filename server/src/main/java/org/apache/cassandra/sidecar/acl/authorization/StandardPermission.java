@@ -21,25 +21,30 @@ package org.apache.cassandra.sidecar.acl.authorization;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
 import io.vertx.ext.auth.authorization.impl.PermissionBasedAuthorizationImpl;
-import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
-import static org.apache.cassandra.sidecar.acl.authorization.WildcardAction.WILDCARD_TOKEN;
+import static org.apache.cassandra.sidecar.acl.authorization.WildcardPermission.WILDCARD_TOKEN;
 
 /**
- * Standard actions need an exact match between allowed actions.
+ * Standard permissions need an exact match between allowed permissions.
  */
-public class StandardAction implements Action
+public class StandardPermission implements Permission
 {
     protected final String name;
 
-    public StandardAction(String name)
+    public StandardPermission(String name)
     {
         if (name == null || name.isEmpty())
         {
-            throw new IllegalArgumentException("Action name can not be null or empty. To allow wildcard action across "
-                                               + "resources, use " + WILDCARD_TOKEN);
+            throw new IllegalArgumentException("Permission name can not be null or empty. To allow wildcard permission "
+                                               + "across resource, use " + WILDCARD_TOKEN);
         }
         this.name = name;
+    }
+
+    @Override
+    public String name()
+    {
+        return name;
     }
 
     @Override

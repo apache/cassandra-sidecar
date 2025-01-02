@@ -84,7 +84,7 @@ public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<Sidecar
             }
             if (!authorizations.isEmpty())
             {
-                roleAuthorizations.computeIfAbsent(role, k -> new HashSet<>(authorizations)).addAll(authorizations);
+                roleAuthorizations.computeIfAbsent(role, k -> new HashSet<>()).addAll(authorizations);
             }
         }
         return roleAuthorizations;

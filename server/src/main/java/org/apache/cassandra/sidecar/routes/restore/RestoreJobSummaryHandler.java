@@ -32,7 +32,7 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.OrAuthorization;
 import io.vertx.ext.auth.authorization.impl.OrAuthorizationImpl;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobSummaryResponsePayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -63,8 +63,8 @@ public class RestoreJobSummaryHandler extends AbstractHandler<String> implements
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        Authorization createRestore = SidecarActions.CREATE_RESTORE.toAuthorization(resource);
-        Authorization viewRestore = SidecarActions.VIEW_RESTORE.toAuthorization(resource);
+        Authorization createRestore = SidecarPermissions.CREATE_RESTORE_JOB.toAuthorization(resource);
+        Authorization viewRestore = SidecarPermissions.VIEW_RESTORE_JOB.toAuthorization(resource);
         OrAuthorization createOrView
         = new OrAuthorizationImpl().addAuthorization(createRestore).addAuthorization(viewRestore);
         return ImmutableSet.of(createOrView);

@@ -33,7 +33,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarActions;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
@@ -71,7 +71,7 @@ public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobReq
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarActions.CREATE_RESTORE.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.CREATE_RESTORE_JOB.toAuthorization(resource));
     }
 
     @Override
