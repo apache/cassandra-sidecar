@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.slf4j.Logger;
@@ -36,6 +38,7 @@ import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.exceptions.NodeBootstrappingException;
 import org.apache.cassandra.sidecar.common.server.exceptions.SnapshotAlreadyExistsException;
@@ -44,6 +47,9 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
+import static org.apache.cassandra.sidecar.common.utils.Preconditions.checkArgument;
 
 /**
  * An implementation of the {@link StorageOperations} that interfaces with Cassandra 4.0 and later
@@ -253,5 +259,61 @@ public class CassandraStorageOperations implements StorageOperations
     {
         return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
                         .getClusterName();
+    }
+
+    @Override
+    public Set<String> naturalEndpointsInLocalDatacenter(List<QualifiedTableName> tableNameList,
+                                                         String localDatacenter,
+                                                         Set<String> tokens) throws UnknownHostException
+    {
+        requireNonNull(tableNameList, "tableNameList must be non-null");
+        requireNonNull(localDatacenter, "localDatacenter must be non-null");
+        requireNonNull(tokens, "tokens must be non-null");
+        checkArgument(!tableNameList.isEmpty(), "tableNameList must be non-empty");
+        checkArgument(!tokens.isEmpty(), "tokens must be non-empty");
+
+        Set<String> nonLocalEndpoints = new HashSet<>();
+        Set<String> naturalEndpoints = new HashSet<>();
+        StorageJmxOperations storageOps = initializeStorageOps();
+        EndpointSnitchJmxOperations epSnitchInfo = initializeEndpointProxy();
+        for (QualifiedTableName name : tableNameList)
+        {
+            for (String token : tokens)
+            {
+                List<String> naturalEndpointsWithPort = storageOps.getNaturalEndpointsWithPort(name.keyspace(), name.tableName(), token);
+                for (String endpoint : naturalEndpointsWithPort)
+                {
+                    if (naturalEndpoints.contains(endpoint) ||
+                            nonLocalEndpoints.contains(endpoint))
+                    {
+                        continue; // We already have checked this endpoint
+                    }
+
+                    String datacenter = epSnitchInfo.getDatacenter(endpoint);
+
+                    if (localDatacenter.equals(datacenter))
+                    {
+                        naturalEndpoints.add(endpoint);
+                    }
+                    else
+                    {
+                        nonLocalEndpoints.add(endpoint); // avoid checking the datacenter information from the endpoint snitch again
+                    }
+                }
+            }
+        }
+
+        return naturalEndpoints;
+    }
+
+    protected EndpointSnitchJmxOperations initializeEndpointProxy()
+    {
+        return jmxClient.proxy(EndpointSnitchJmxOperations.class, ENDPOINT_SNITCH_INFO_OBJ_NAME);
+    }
+
+    protected StorageJmxOperations initializeStorageOps()
+    {
+        return new GossipDependentStorageJmxOperations(jmxClient.proxy(StorageJmxOperations.class,
+                STORAGE_SERVICE_OBJ_NAME));
     }
 }

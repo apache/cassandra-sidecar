@@ -189,6 +189,17 @@ public abstract class IntegrationTestBase
               })
               .onFailure(context::failNow);
 
+        server.start()
+                .onSuccess(s -> {
+                    sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
+                    if (!sidecarTestContext.isClusterBuilt())
+                    {
+                        // Give everything a moment to get started and connected
+                        vertx.setTimer(TimeUnit.SECONDS.toMillis(1), id1 -> context.completeNow());
+                    }
+                })
+                .onFailure(context::failNow);
+
         context.awaitCompletion(5, TimeUnit.SECONDS);
 
         // add a listener to refresh instance metadata when cluster is not yet built when starting server

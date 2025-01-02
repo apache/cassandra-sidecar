@@ -89,6 +89,25 @@ public enum SidecarServerEvents
     ON_SIDECAR_SCHEMA_INITIALIZED,
 
     /**
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the health of a Sidecar
+     * peer instance is marked as DOWN.
+     */
+    ON_SIDECAR_PEER_DOWN,
+
+    /**
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the health of a Sidecar
+     * peer instance is marked as UP.
+     */
+    ON_SIDECAR_PEER_UP,
+
+    // LeadershipEvents
+    ON_TOKEN_RANGE_GAINED,
+    ON_TOKEN_RANGE_LOST,
+
+    // RangeManagerEvents
+    ON_TOKEN_RANGE_CHANGED,
+
+    /**
      * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the Sidecar instance
      * has claimed the cluster-wide lease.
      */

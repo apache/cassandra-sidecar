@@ -75,6 +75,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.cluster.locator.CachedLocalTokenRanges;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
+import org.apache.cassandra.sidecar.codecs.SidecarInstanceCodecs;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
@@ -95,10 +96,16 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTask;
 import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
+import org.apache.cassandra.sidecar.coordination.InnerDcTokenAdjacentPeerProvider;
 import org.apache.cassandra.sidecar.coordination.MostReplicatedKeyspaceTokenZeroElectorateMembership;
+import org.apache.cassandra.sidecar.coordination.SidecarHttpHealthProvider;
+import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitor;
+import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthProvider;
+import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
 import org.apache.cassandra.sidecar.datahub.EmitterFactory;
 import org.apache.cassandra.sidecar.datahub.IdentifiersProvider;
 import org.apache.cassandra.sidecar.datahub.SchemaReportingTask;
@@ -135,6 +142,7 @@ import org.apache.cassandra.sidecar.routes.OperationalJobHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
+import org.apache.cassandra.sidecar.routes.SidecarPeersHealthHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.StreamStatsHandler;
 import org.apache.cassandra.sidecar.routes.TableStatsHandler;
@@ -161,10 +169,12 @@ import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.routes.sstableuploads.SSTableUploadHandler;
 import org.apache.cassandra.sidecar.routes.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.JdkMd5DigestProvider;
+import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.apache.cassandra.sidecar.utils.XXHash32Provider;
 import org.jetbrains.annotations.NotNull;
@@ -326,6 +336,7 @@ public class MainModule extends AbstractModule
                               ChainAuthHandler chainAuthHandler,
                               Supplier<AccessProtectedRouteBuilder> protectedRouteBuilderFactory,
                               CassandraHealthHandler cassandraHealthHandler,
+                              SidecarPeersHealthHandler sidecarPeersHealthHandler,
                               StreamSSTableComponentHandler streamSSTableComponentHandler,
                               FileStreamHandler fileStreamHandler,
                               ClearSnapshotHandler clearSnapshotHandler,
@@ -406,6 +417,9 @@ public class MainModule extends AbstractModule
 
         router.get(ApiEndpointsV1.CASSANDRA_JMX_HEALTH_ROUTE)
               .handler(cassandraHealthHandler);
+
+        router.get(ApiEndpointsV1.SIDECAR_PEERS_HEALTH_ROUTE)
+              .handler(sidecarPeersHealthHandler);
 
         // Node settings endpoint is not Access protected. Any user who can log in into Cassandra is able to view
         // node settings information. Since sidecar and cassandra share list of authenticated identities, sidecar's
@@ -779,6 +793,52 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
+    public SidecarPeerHealthProvider sidecarHealthProvider(SidecarConfiguration configuration,
+                                                           SidecarClientProvider sidecarClientProvider)
+    {
+        return new SidecarHttpHealthProvider(configuration, sidecarClientProvider);
+    }
+
+    @Provides
+    @Singleton
+    public SidecarPeerProvider sidecarPeerProvider(InstancesMetadata instancesMetadata,
+                                                   CassandraClientTokenRingProvider cassandraClientTokenRingProvider,
+                                                   SidecarConfiguration configuration,
+                                                   DnsResolver dnsResolver)
+    {
+        return new InnerDcTokenAdjacentPeerProvider(instancesMetadata, cassandraClientTokenRingProvider, configuration.serviceConfiguration(), dnsResolver);
+    }
+
+    @Provides
+    @Singleton
+    public SidecarPeerHealthMonitor sidecarPeerHealthMonitor(Vertx vertx,
+                                                             SidecarConfiguration sidecarConfiguration,
+                                                             SidecarPeerProvider sidecarPeerProvider,
+                                                             SidecarPeerHealthProvider healthProvider,
+                                                             SidecarInstanceCodecs sidecarInstanceCodecs)
+    {
+        return new SidecarPeerHealthMonitor(vertx,
+                                            sidecarConfiguration,
+                                            sidecarPeerProvider,
+                                            healthProvider,
+                                            sidecarInstanceCodecs);
+    }
+
+    @Provides
+    @Singleton
+    public SidecarPeersHealthHandler sidecarPeersHealthHandler(InstanceMetadataFetcher metadataFetcher,
+                                                               ExecutorPools executorPools,
+                                                               CassandraInputValidator validator,
+                                                               SidecarPeerHealthMonitor sidecarPeerHealthMonitor)
+    {
+        return new SidecarPeersHealthHandler(metadataFetcher,
+                                             executorPools,
+                                             validator,
+                                             sidecarPeerHealthMonitor);
+    }
+
+    @Provides
+    @Singleton
     public RestoreJobsSchema restoreJobsSchema(SidecarConfiguration configuration)
     {
         return new RestoreJobsSchema(configuration.serviceConfiguration()
@@ -916,11 +976,16 @@ public class MainModule extends AbstractModule
                                                      ExecutorPools executorPools,
                                                      ClusterLease clusterLease,
                                                      ClusterLeaseClaimTask clusterLeaseClaimTask,
-                                                     SchemaReportingTask schemaReportingTask)
+                                                     SchemaReportingTask schemaReportingTask,
+                                                     SidecarPeerHealthMonitor sidecarPeerHealthMonitor
+                                                     )
     {
         PeriodicTaskExecutor periodicTaskExecutor = new PeriodicTaskExecutor(executorPools, clusterLease);
         vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address(),
-                                       ignored -> periodicTaskExecutor.schedule(clusterLeaseClaimTask));
+                                       ignored -> {
+                                           periodicTaskExecutor.schedule(clusterLeaseClaimTask);
+                                           periodicTaskExecutor.schedule(sidecarPeerHealthMonitor);
+                                       });
         vertx.eventBus().localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(),
                                        message -> periodicTaskExecutor.schedule(schemaReportingTask));
         return periodicTaskExecutor;

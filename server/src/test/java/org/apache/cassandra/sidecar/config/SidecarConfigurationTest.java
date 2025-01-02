@@ -295,6 +295,20 @@ class SidecarConfigurationTest
     }
 
     @Test
+    void testSidecarPeerHealthConfiguration() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_down_detector_config.yaml");
+        SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+        assertThat(sidecarConfiguration).isNotNull();
+        SidecarPeerHealthConfiguration config = sidecarConfiguration.sidecarPeerHealthConfiguration();
+        assertThat(config).isNotNull();
+        assertThat(config.enabled()).isFalse();
+        assertThat(config.executeInterval().toMillis()).isEqualTo(1_000);
+        assertThat(config.healthCheckRetries()).isEqualTo(1);
+        assertThat(config.healthCheckRetryDelay().toMillis()).isEqualTo(2_000);
+    }
+
+    @Test
     void testVertxFilesystemOptionsConfiguration() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_vertx_filesystem_options.yaml");
@@ -405,6 +419,8 @@ class SidecarConfigurationTest
         // metrics configuration
         validateMetricsConfiguration(config.metricsConfiguration());
 
+        validateSidecarPeerHealthConfigurationDefaults(config.sidecarPeerHealthConfiguration());
+
         // cassandra input validation configuration
         validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
 
@@ -486,6 +502,15 @@ class SidecarConfigurationTest
 
         // cassandra input validation configuration
         validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
+    }
+
+    private void validateSidecarPeerHealthConfigurationDefaults(SidecarPeerHealthConfiguration config)
+    {
+        assertThat(config).isNotNull();
+        assertThat(config.enabled()).isTrue();
+        assertThat(config.executeInterval().toMillis()).isEqualTo(30_000);
+        assertThat(config.healthCheckRetries()).isEqualTo(5);
+        assertThat(config.healthCheckRetryDelay().toMillis()).isEqualTo(10_000);
     }
 
     void validateServiceConfigurationFromYaml(ServiceConfiguration serviceConfiguration)

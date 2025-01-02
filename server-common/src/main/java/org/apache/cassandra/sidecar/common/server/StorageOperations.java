@@ -22,11 +22,13 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -129,4 +131,17 @@ public interface StorageOperations
      * @return the name of the cluster
      */
     String clusterName();
+
+    /**
+     * Returns the set of natural replication endpoints in the local datacenter.
+     *
+     * @param tableNameList   a list of qualified table names to use for retrieving the natural endpoints
+     * @param localDatacenter the name of the datacenter used to filter endpoints that are in the same datacenter
+     * @param tokens          a set of tokens managed by the instance
+     * @return the set of natural replication endpoints in the local datacenter
+     */
+    Set<String> naturalEndpointsInLocalDatacenter(List<QualifiedTableName> tableNameList,
+                                                  String localDatacenter,
+                                                  Set<String> tokens) throws UnknownHostException;
+
 }

@@ -1,0 +1,106 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.cassandra.sidecar.config;
+
+import org.apache.cassandra.sidecar.client.SidecarClientConfig;
+
+/**
+ * Configuration for sidecar client
+ */
+public interface SidecarClientConfiguration extends SidecarClientConfig
+{
+    /**
+     * @return {@code true} if SSL should be used for Sidecar client connections
+     */
+    boolean useSsl();
+
+    /**
+     * @return {@code true} if OpenSSL is preferred when available, {@code false} to use JDK's SSL implementation
+     */
+    boolean preferOpenSSL();
+
+    /**
+     * @return {@code true} if the keystore is configured, and the {@link KeyStoreConfiguration#path()} and
+     * {@link KeyStoreConfiguration#password()} parameters are provided
+     */
+    default boolean isKeystoreConfigured()
+    {
+        return keystore() != null && keystore().isConfigured();
+    }
+
+    /**
+     * @return the configuration for the keystore
+     */
+    KeyStoreConfiguration keystore();
+
+    /**
+     * @return {@code true} if the truststore is configured, and the {@link KeyStoreConfiguration#path()} and
+     * {@link KeyStoreConfiguration#password()} parameters are provided
+     */
+    default boolean isTruststoreConfigured()
+    {
+        return truststore() != null && truststore().isConfigured();
+    }
+
+    /**
+     * @return the configuration for the truststore
+     */
+    KeyStoreConfiguration truststore();
+
+    /**
+     * @return the client request timeout value in milliseconds for the connection to be established
+     */
+    long requestTimeoutMillis();
+
+    /**
+     * @return the client idle timeout in milliseconds before the connection is considered as stale
+     */
+    long requestIdleTimeoutMillis();
+
+    // Pooling options
+
+    /**
+     * @return the maximum size of the pool for client connections
+     */
+    int connectionPoolMaxSize();
+
+    /**
+     * @return the connection pool cleaner period in milliseconds, a non-positive value disables expiration checks
+     * and connections will remain in the pool until they are closed.
+     */
+    long connectionPoolCleanerPeriodMillis();
+
+    /**
+     * Return the configured number of event-loop the pool use.
+     *
+     * <ul>
+     *   <li>when the size is {@code 0}, the client pool will use the current event-loop</li>
+     *   <li>otherwise the client will create and use its own event loop</li>
+     * </ul>
+     *
+     * @return the configured number of event-loop the pool use
+     */
+    int connectionPoolEventLoopSize();
+
+    /**
+     * @return the maximum requests allowed in the wait queue, any requests beyond the max size will result in
+     * a ConnectionPoolTooBusyException.  If the value is set to a negative number then the queue will be unbounded.
+     */
+    int connectionPoolMaxWaitQueueSize();
+}

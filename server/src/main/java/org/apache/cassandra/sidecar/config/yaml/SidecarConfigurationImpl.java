@@ -49,7 +49,9 @@ import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaReportingConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -80,6 +82,12 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
 
     @JsonProperty("access_control")
     protected final AccessControlConfiguration accessControlConfiguration;
+
+    @JsonProperty("sidecar_peer_health")
+    protected final SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration;
+
+    @JsonProperty("sidecar_client")
+    protected final SidecarClientConfiguration sidecarClientConfiguration;
 
     @JsonProperty("healthcheck")
     protected final PeriodicTaskConfiguration healthCheckConfiguration;
@@ -117,6 +125,8 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         sslConfiguration = builder.sslConfiguration;
         accessControlConfiguration = builder.accessControlConfiguration;
         healthCheckConfiguration = builder.healthCheckConfiguration;
+        sidecarPeerHealthConfiguration = builder.sidecarPeerHealthConfiguration;
+        sidecarClientConfiguration = builder.sidecarClientConfiguration;
         metricsConfiguration = builder.metricsConfiguration;
         cassandraInputValidationConfiguration = builder.cassandraInputValidationConfiguration;
         driverConfiguration = builder.driverConfiguration;
@@ -186,6 +196,12 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return accessControlConfiguration;
     }
 
+    @Override
+    public SidecarClientConfiguration sidecarClientConfiguration()
+    {
+        return sidecarClientConfiguration;
+    }
+
     /**
      * @return the configuration for the health check service
      */
@@ -194,6 +210,16 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     public PeriodicTaskConfiguration healthCheckConfiguration()
     {
         return healthCheckConfiguration;
+    }
+
+    /**
+     * @return the configuration for the down detector service
+     */
+    @Override
+    @JsonProperty("sidecar_peer_health")
+    public SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration()
+    {
+        return sidecarPeerHealthConfiguration;
     }
 
     /**
@@ -375,6 +401,8 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         = new PeriodicTaskConfigurationImpl(true,
                                             MillisecondBoundConfiguration.ZERO,
                                             MillisecondBoundConfiguration.parse("30s"));
+        private SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration = new SidecarPeerHealthConfigurationImpl();
+        private SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl();
         private MetricsConfiguration metricsConfiguration = new MetricsConfigurationImpl();
         private CassandraInputValidationConfiguration cassandraInputValidationConfiguration = new CassandraInputValidationConfigurationImpl();
         private DriverConfiguration driverConfiguration = new DriverConfigurationImpl();
@@ -438,6 +466,17 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         }
 
         /**
+         * Sets the {@code downDetectorConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param sidecarPeerHealthConfiguration the {@code downDetectorConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder downDetectorConfiguration(SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration)
+        {
+            return update(b -> b.sidecarPeerHealthConfiguration = sidecarPeerHealthConfiguration);
+        }
+
+        /**
          * Sets the {@code accessControlConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param accessControlConfiguration the {@code accessControlConfiguration} to set
@@ -457,6 +496,17 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder healthCheckConfiguration(PeriodicTaskConfiguration healthCheckConfiguration)
         {
             return update(b -> b.healthCheckConfiguration = healthCheckConfiguration);
+        }
+
+        /**
+         * Sets the {@code healthCheckConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param sidecarPeerHealthConfiguration the {@code healthCheckConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder sidecarPeerHealthConfiguration(SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration)
+        {
+            return update(b -> b.sidecarPeerHealthConfiguration = sidecarPeerHealthConfiguration);
         }
 
         /**

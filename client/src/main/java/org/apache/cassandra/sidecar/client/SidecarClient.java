@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RunnableOnStatusCodeRetryPolicy;
 import org.apache.cassandra.sidecar.client.selection.InstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.RandomInstanceSelectionPolicy;
+import org.apache.cassandra.sidecar.client.selection.SingleInstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.common.request.AbortRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.AllServicesConfigRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobRequest;
@@ -119,6 +120,21 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                             .sidecarHealthRequest()
                                             .retryPolicy(oncePerInstanceRetryPolicy)
                                             .build());
+    }
+
+    /**
+     * Executes the Sidecar health request against a single sidecar instance and retries to confirm
+     * the Sidecar is DOWN for extended period of time.
+     *
+     * @return a completable future of the Sidecar health response
+     */
+    public CompletableFuture<HealthResponse> sidecarInstanceHealth(SidecarInstance instance, RetryPolicy retryPolicy)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                .sidecarHealthRequest()
+                .instanceSelectionPolicy(new SingleInstanceSelectionPolicy(instance))
+                .retryPolicy(retryPolicy)
+                .build());
     }
 
     /**

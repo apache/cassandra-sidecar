@@ -60,6 +60,7 @@ import okio.Buffer;
 import okio.Okio;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
 import org.apache.cassandra.sidecar.client.request.RequestExecutorTest;
+import org.apache.cassandra.sidecar.client.retry.NoRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RetryAction;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
@@ -179,6 +180,37 @@ abstract class SidecarClientTest
         .hasCauseInstanceOf(RetriesExhaustedException.class);
 
         validateResponseServed(ApiEndpointsV1.HEALTH_ROUTE);
+    }
+
+    @Test
+    void testSidecarInstanceHealth() throws Exception
+    {
+        MockResponse responseInstance1 = new MockResponse()
+                .setResponseCode(200)
+                .setHeader("content-type", "application/json")
+                .setBody("{\"status\":\"OK\"}");
+        MockResponse responseInstance2 = new MockResponse()
+                .setResponseCode(503)
+                .setHeader("content-type", "application/json")
+                .setBody("{\"status\":\"NOT_OK\"}");
+
+        servers.get(1).enqueue(responseInstance1);
+        servers.get(2).enqueue(responseInstance2);
+
+        HealthResponse response1 = client.sidecarInstanceHealth(instances.get(1), new NoRetryPolicy()).get(30, TimeUnit.SECONDS);
+        assertThat(response1).isNotNull();
+        assertThat(response1.status()).isEqualToIgnoringCase("OK");
+        assertThat(response1.isOk()).isTrue();
+
+        assertThatThrownBy(() -> client.sidecarInstanceHealth(instances.get(2), new NoRetryPolicy()).get(30, TimeUnit.SECONDS))
+                .isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(RetriesExhaustedException.class);
+
+        assertThat(servers.get(1).getRequestCount()).isEqualTo(1);
+        assertThat(servers.get(1).takeRequest().getPath()).isEqualTo(ApiEndpointsV1.HEALTH_ROUTE);
+
+        assertThat(servers.get(2).getRequestCount()).isEqualTo(1);
+        assertThat(servers.get(2).takeRequest().getPath()).isEqualTo(ApiEndpointsV1.HEALTH_ROUTE);
     }
 
     @SuppressWarnings("deprecation")

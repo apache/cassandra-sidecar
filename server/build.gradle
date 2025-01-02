@@ -141,6 +141,7 @@ dependencies {
     testImplementation('org.mockito:mockito-core:4.10.0')
     testImplementation('org.mockito:mockito-inline:4.10.0')
     testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
+//    implementation(testFixtures(project(":client")))
     testImplementation(testFixtures(project(":client-common")))
     testImplementation(testFixtures(project(":server-common")))
     testImplementation(testFixtures(project(":test-common")))
@@ -149,6 +150,7 @@ dependencies {
     implementation(project(":adapters:adapters-base"))
     implementation(project(":adapters:adapters-cassandra41"))
     implementation(project(":vertx-auth-mtls"))
+    implementation(project(":vertx-client"))
 
     testFixturesApi(testFixtures(project(":server-common")))
     testFixturesApi(testFixtures(project(":vertx-auth-mtls")))
@@ -181,6 +183,9 @@ test {
     // ordinarily we don't need integration tests
     // see the integrationTest task
     useJUnitPlatform()
+    if (Os.isFamily(Os.FAMILY_MAC)) {
+        jvmArgs "-XX:+MaxFDLimit"
+    }
     reports {
         junitXml.setRequired(true)
         def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "test").toFile()
@@ -202,6 +207,8 @@ tasks.register("containerTest", Test) {
     if (JavaVersion.current().isJava11Compatible()) {
         jvmArgs(project.ext.JDK11_OPTIONS)
         println("JVM arguments for $project.name are $allJvmArgs")
+    } else {
+        jvmArgs '-XX:+MaxFDLimit'
     }
 
     useJUnitPlatform()

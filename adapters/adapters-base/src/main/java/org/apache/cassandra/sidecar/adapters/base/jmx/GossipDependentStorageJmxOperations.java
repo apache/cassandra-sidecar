@@ -123,6 +123,12 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     }
 
     @Override
+    public List<String> getNaturalEndpointsWithPort(String keyspaceName, String cf, String key)
+    {
+        return delegate.getNaturalEndpointsWithPort(keyspaceName, cf, key);
+    }
+
+    @Override
     public Map<List<String>, List<String>> getPendingRangeToEndpointWithPortMap(String keyspace)
     {
         return delegate.getPendingRangeToEndpointWithPortMap(keyspace);

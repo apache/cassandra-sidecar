@@ -55,6 +55,16 @@ public interface SidecarConfiguration
     AccessControlConfiguration accessControlConfiguration();
 
     /**
+     * @return the configuration for the Sidecar client
+     */
+    SidecarClientConfiguration sidecarClientConfiguration();
+
+    /**
+     * @return the configuration for the Sidecar peer health service
+     */
+    SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration();
+
+    /**
      * @return the configuration for the health check service
      */
     PeriodicTaskConfiguration healthCheckConfiguration();
