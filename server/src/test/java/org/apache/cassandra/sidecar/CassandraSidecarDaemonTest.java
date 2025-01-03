@@ -47,7 +47,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  */
 class CassandraSidecarDaemonTest
 {
-    private final Logger LOGGER = LoggerFactory.getLogger(CassandraSidecarDaemonTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraSidecarDaemonTest.class);
 
     static final String[] NO_ARGS = {};
 
