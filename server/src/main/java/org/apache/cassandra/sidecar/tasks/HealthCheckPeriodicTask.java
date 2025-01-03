@@ -68,7 +68,6 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     @Override
     public void registerPeriodicTaskExecutor(PeriodicTaskExecutor executor)
     {
-        eventBus.localConsumer(ON_SERVER_START.address(), message -> executor.schedule(this));
         eventBus.localConsumer(ON_SERVER_STOP.address(), message -> executor.unschedule(this));
     }
 

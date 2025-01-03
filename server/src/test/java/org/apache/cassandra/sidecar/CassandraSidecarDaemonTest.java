@@ -29,6 +29,9 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -44,6 +47,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  */
 class CassandraSidecarDaemonTest
 {
+    private final Logger LOGGER = LoggerFactory.getLogger(CassandraSidecarDaemonTest.class);
+
     static final String[] NO_ARGS = {};
 
     @BeforeEach
@@ -130,6 +135,7 @@ class CassandraSidecarDaemonTest
         }
         finally
         {
+            LOGGER.debug("Tearing down");
             maybeStopCassandraSidecar();
             Files.deleteIfExists(targetFile);
 
