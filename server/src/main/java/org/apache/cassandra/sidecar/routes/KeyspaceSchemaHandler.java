@@ -32,7 +32,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.OrAuthorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.CassandraActions;
+import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
@@ -71,10 +71,10 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE.resource();
         OrAuthorization or = OrAuthorization.create();
-        or.addAuthorization(CassandraActions.CREATE.toAuthorization(resource));
-        or.addAuthorization(CassandraActions.ALTER.toAuthorization(resource));
-        or.addAuthorization(CassandraActions.DROP.toAuthorization(resource));
-        or.addAuthorization(CassandraActions.DESCRIBE.toAuthorization(resource));
+        or.addAuthorization(CassandraPermissions.CREATE.toAuthorization(resource));
+        or.addAuthorization(CassandraPermissions.ALTER.toAuthorization(resource));
+        or.addAuthorization(CassandraPermissions.DROP.toAuthorization(resource));
+        or.addAuthorization(CassandraPermissions.DESCRIBE.toAuthorization(resource));
         or.addAuthorization(SidecarPermissions.VIEW_SCHEMA.toAuthorization(resource));
         return ImmutableSet.of(or);
     }

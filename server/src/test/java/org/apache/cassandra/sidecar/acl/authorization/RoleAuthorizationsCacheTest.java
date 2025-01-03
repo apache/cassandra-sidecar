@@ -62,7 +62,7 @@ class RoleAuthorizationsCacheTest
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.getAllRolesAndPermissions())
-        .thenReturn(Collections.singletonMap("test_role1", Collections.singleton(CassandraActions.SELECT.toAuthorization())));
+        .thenReturn(Collections.singletonMap("test_role1", Collections.singleton(CassandraPermissions.SELECT.toAuthorization())));
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions())
         .thenReturn(Collections.singletonMap("test_role1", Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
@@ -93,7 +93,7 @@ class RoleAuthorizationsCacheTest
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.getAllRolesAndPermissions())
-        .thenReturn(Collections.singletonMap("test_role1", Collections.singleton(CassandraActions.SELECT.toAuthorization())));
+        .thenReturn(Collections.singletonMap("test_role1", Collections.singleton(CassandraPermissions.SELECT.toAuthorization())));
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions())
         .thenReturn(Collections.singletonMap("test_role1", Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
@@ -187,8 +187,8 @@ class RoleAuthorizationsCacheTest
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.getAllRolesAndPermissions())
-        .thenReturn(ImmutableMap.of("test_role1", Collections.singleton(CassandraActions.SELECT.toAuthorization()),
-                                    "test_role2", Collections.singleton(CassandraActions.CREATE.toAuthorization())));
+        .thenReturn(ImmutableMap.of("test_role1", Collections.singleton(CassandraPermissions.SELECT.toAuthorization()),
+                                    "test_role2", Collections.singleton(CassandraPermissions.CREATE.toAuthorization())));
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         when(mockDbAccessor.getAllRolesAndPermissions())
         .thenReturn(ImmutableMap.of("test_role3", Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));

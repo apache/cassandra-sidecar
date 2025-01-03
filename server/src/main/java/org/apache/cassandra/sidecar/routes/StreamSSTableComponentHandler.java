@@ -34,7 +34,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.CassandraActions;
+import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -74,7 +74,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
         Authorization stream = SidecarPermissions.STREAM_SSTABLE.toAuthorization(resource);
-        Authorization select = CassandraActions.SELECT.toAuthorization(resource);
+        Authorization select = CassandraPermissions.SELECT.toAuthorization(resource);
         return ImmutableSet.of(stream, select);
     }
 

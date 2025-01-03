@@ -19,9 +19,9 @@
 package org.apache.cassandra.sidecar.acl.authorization;
 
 /**
- * Cassandra actions allowed.
+ * Cassandra permissions allowed.
  */
-public class CassandraActions
+public class CassandraPermissions
 {
     public static final Permission CREATE = new StandardPermission("CREATE");
     public static final Permission ALTER = new StandardPermission("ALTER");

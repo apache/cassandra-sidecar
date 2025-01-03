@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 import io.vertx.ext.auth.authorization.Authorization;
 
 /**
- * Represents a permission that can be granted to a user on a resource.
+ * Represents a permission that can be granted to a user
  */
 public interface Permission
 {
@@ -31,7 +31,8 @@ public interface Permission
     String name();
 
     /**
-     * @return {@link Authorization}. Most sidecar endpoints require a resource. This method is used in testing
+     * @return {@link Authorization} created from permission. Most sidecar endpoints require a resource.
+     * This method is used in testing
      */
     default Authorization toAuthorization()
     {
@@ -39,7 +40,7 @@ public interface Permission
     }
 
     /**
-     * @return {@link Authorization} created for a resource
+     * @return {@link Authorization} created from permission for a resource.
      */
     Authorization toAuthorization(String resource);
 }
