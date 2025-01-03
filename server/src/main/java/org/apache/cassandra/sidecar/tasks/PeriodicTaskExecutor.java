@@ -83,15 +83,17 @@ public class PeriodicTaskExecutor implements Closeable
     {
         long actualDelayMillis = delayMillis - priorExecDurationMillis;
         boolean runImmediately = actualDelayMillis <= 0;
-        LOGGER.debug("Scheduling task {}. task='{}' execCount={}",
-                     runImmediately ? "immediately" : "in " + actualDelayMillis + " milliseconds",
-                     key, execCount);
         timerIds.compute(key, (k, v) -> {
             // The periodic task has been scheduled already. Exit early and avoid scheduling the duplication
             if (v != null && execCount == 0)
             {
+                LOGGER.debug("Task is already scheduled. task='{}'", key);
                 return v;
             }
+
+            LOGGER.debug("Scheduling task {}. task='{}' execCount={}",
+                         runImmediately ? "immediately" : "in " + actualDelayMillis + " milliseconds",
+                         key, execCount);
 
             key.task.registerPeriodicTaskExecutor(this);
 
@@ -122,14 +124,15 @@ public class PeriodicTaskExecutor implements Closeable
                         // schedule the next run iff the task is not killed
                         if (poisonPilledTasks.remove(key))
                         {
+                            // timerId might get populated after unschedule due to race.
+                            // Have another attempt to clean up here.
+                            timerIds.remove(key);
                             LOGGER.debug("Avoid scheduling the next run, and remove it from poisonPilledTasks. task='{}' execCount={}",
                                          key, execCount);
+                            return;
                         }
-                        else
-                        {
-                            long priorExecutionDurationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
-                            schedule(key, priorExecutionDurationMillis, key.task.delayMillis(), execCount + 1);
-                        }
+                        long priorExecutionDurationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+                        schedule(key, priorExecutionDurationMillis, key.task.delayMillis(), execCount + 1);
                     });
     }
 

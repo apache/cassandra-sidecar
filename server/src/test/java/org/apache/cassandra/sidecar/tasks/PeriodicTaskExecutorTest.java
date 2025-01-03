@@ -146,11 +146,11 @@ class PeriodicTaskExecutorTest
     void testUnscheduleShouldStopExecution()
     {
         // the first run starts immediately, and the subsequent delay is 1 millis
-        testUnscheduleShouldStopExecution(0, 1);
+        testUnscheduleShouldStopExecution("task1", 0, 1);
         // the first run starts immediately, and the subsequent runs also starts immediately
-        testUnscheduleShouldStopExecution(0, 0);
+        testUnscheduleShouldStopExecution("task2", 0, 0);
         // tasks are scheduled with delay 1 millis
-        testUnscheduleShouldStopExecution(1, 1);
+        testUnscheduleShouldStopExecution("task3", 1, 1);
     }
 
     @Test
@@ -276,11 +276,11 @@ class PeriodicTaskExecutorTest
         taskExecutor.close(Promise.promise());
     }
 
-    private void testUnscheduleShouldStopExecution(long taskInitialDelay, long taskDelayMillis)
+    private void testUnscheduleShouldStopExecution(String taskName, long taskInitialDelay, long taskDelayMillis)
     {
         AtomicInteger counter = new AtomicInteger(0);
         CountDownLatch testFinish = new CountDownLatch(1);
-        PeriodicTask task = createSimplePeriodicTask("simple periodic task", taskInitialDelay, taskDelayMillis, () -> {
+        PeriodicTask task = createSimplePeriodicTask(taskName, taskInitialDelay, taskDelayMillis, () -> {
             counter.incrementAndGet();
             testFinish.countDown();
         });
