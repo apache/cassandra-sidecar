@@ -128,6 +128,21 @@ class PeriodicTaskExecutorTest
     }
 
     @Test
+    void testScheduleSameTaskMultipleTimes()
+    {
+        AtomicInteger counter = new AtomicInteger(0);
+        // each time, the task is executed, the counter is incremented by 1.
+        // The task has the initial delay of 0, but the periodic interval is 1 day to ensure it is executed only once during the test runtime
+        PeriodicTask task = createSimplePeriodicTask("task", 0, TimeUnit.DAYS.toMillis(1), counter::incrementAndGet);
+        // schedule the same task for 10 times, only the first schedule goes through
+        for (int i = 0; i < 10; i++)
+        {
+            taskExecutor.schedule(task);
+        }
+        assertThat(counter.get()).isEqualTo(1);
+    }
+
+    @Test
     void testUnscheduleShouldStopExecution()
     {
         // the first run starts immediately, and the subsequent delay is 1 millis
@@ -138,31 +153,48 @@ class PeriodicTaskExecutorTest
         testUnscheduleShouldStopExecution(1, 1);
     }
 
-    private void testUnscheduleShouldStopExecution(long taskInitialDelay, long taskDelayMillis)
+    @Test
+    void testUnscheduleNonExistTaskHasNoEffect()
     {
-        AtomicInteger counter = new AtomicInteger(0);
-        CountDownLatch testFinish = new CountDownLatch(1);
-        PeriodicTask task = createSimplyPeriodicTask("simple periodic task", taskInitialDelay, taskDelayMillis, () -> {
-            counter.incrementAndGet();
-            testFinish.countDown();
-        });
-        taskExecutor.schedule(task);
-        Uninterruptibles.awaitUninterruptibly(testFinish);
-        taskExecutor.unschedule(task);
-        int totalSamples = 50;
-        List<Integer> counterValues = new ArrayList<>(totalSamples);
-        for (int i = 0; i < totalSamples; i++)
-        {
-            counterValues.add(counter.get());
-            Uninterruptibles.sleepUninterruptibly(Math.max(1, taskDelayMillis), TimeUnit.MILLISECONDS);
-        }
+        PeriodicTask notScheduled = createSimplePeriodicTask("simple task", 1, () -> {});
+        taskExecutor.unschedule(notScheduled);
         assertThat(taskExecutor.poisonPilledTasks()).isEmpty();
         assertThat(taskExecutor.timerIds()).isEmpty();
-        int lastValue = counter.get();
-        int numOfValuesEqualsToLast = counterValues.stream().mapToInt(i -> i == lastValue ? 1 : 0).sum();
-        assertThat(numOfValuesEqualsToLast)
-        .describedAs("Execution should stop soon after unschedule is called. The internal counter should produce the same value")
-        .isCloseTo(totalSamples, within(5));
+    }
+
+    @Test
+    void testRescheduleNonExistTaskShouldNotClose()
+    {
+        AtomicBoolean isCloseCalled = new AtomicBoolean(false);
+        CountDownLatch taskScheduled = new CountDownLatch(1);
+        PeriodicTask task = new PeriodicTask()
+        {
+            @Override
+            public long delay()
+            {
+                return 1;
+            }
+
+            @Override
+            public void execute(Promise<Void> promise)
+            {
+                taskScheduled.countDown();
+                promise.complete();
+            }
+
+            @Override
+            public void close()
+            {
+                isCloseCalled.set(true);
+            }
+        };
+
+        // for such unscheduled task, reschedule has the same effect as schedule.
+        taskExecutor.reschedule(task);
+        Uninterruptibles.awaitUninterruptibly(taskScheduled);
+        assertThat(isCloseCalled.get())
+        .describedAs("When rescheduling an unscheduled task, the close method of the task should not be called")
+        .isFalse();
     }
 
     @Test
@@ -175,7 +207,7 @@ class PeriodicTaskExecutorTest
 
         CountDownLatch latch1 = new CountDownLatch(1);
         // The periodic task increment counter1 initially, then switches to increment counter 2 once it is rescheduled
-        PeriodicTask task = createSimplyPeriodicTask("simple periodic task", 1, () -> {
+        PeriodicTask task = createSimplePeriodicTask("simple periodic task", 1, () -> {
             if (latch1.getCount() > 0)
             {
                 counter1.incrementAndGet();
@@ -241,6 +273,34 @@ class PeriodicTaskExecutorTest
         assertThat(taskThatRunsOnExecutor.initialDelayCount.get()).isEqualTo(2);
         // and we only actually execute 4 times, since the first time was rescheduled
         assertThat(taskThatRunsOnExecutor.executionCount.get()).isEqualTo(4);
+        taskExecutor.close(Promise.promise());
+    }
+
+    private void testUnscheduleShouldStopExecution(long taskInitialDelay, long taskDelayMillis)
+    {
+        AtomicInteger counter = new AtomicInteger(0);
+        CountDownLatch testFinish = new CountDownLatch(1);
+        PeriodicTask task = createSimplePeriodicTask("simple periodic task", taskInitialDelay, taskDelayMillis, () -> {
+            counter.incrementAndGet();
+            testFinish.countDown();
+        });
+        taskExecutor.schedule(task);
+        Uninterruptibles.awaitUninterruptibly(testFinish);
+        taskExecutor.unschedule(task);
+        int totalSamples = 50;
+        List<Integer> counterValues = new ArrayList<>(totalSamples);
+        for (int i = 0; i < totalSamples; i++)
+        {
+            counterValues.add(counter.get());
+            Uninterruptibles.sleepUninterruptibly(Math.max(1, taskDelayMillis), TimeUnit.MILLISECONDS);
+        }
+        assertThat(taskExecutor.poisonPilledTasks()).isEmpty();
+        assertThat(taskExecutor.timerIds()).isEmpty();
+        int lastValue = counter.get();
+        int numOfValuesEqualsToLast = counterValues.stream().mapToInt(i -> i == lastValue ? 1 : 0).sum();
+        assertThat(numOfValuesEqualsToLast)
+        .describedAs("Execution should stop soon after unschedule is called. The internal counter should produce the same value")
+        .isCloseTo(totalSamples, within(5));
     }
 
     static class TestClusterLease extends ClusterLease
@@ -371,12 +431,12 @@ class PeriodicTaskExecutorTest
         }
     }
 
-    static PeriodicTask createSimplyPeriodicTask(String name, long delayMillis, Runnable taskBody)
+    static PeriodicTask createSimplePeriodicTask(String name, long delayMillis, Runnable taskBody)
     {
-        return createSimplyPeriodicTask(name, delayMillis, delayMillis, taskBody);
+        return createSimplePeriodicTask(name, delayMillis, delayMillis, taskBody);
     }
 
-    static PeriodicTask createSimplyPeriodicTask(String name, long initialDelayMillis, long delayMillis, Runnable taskBody)
+    static PeriodicTask createSimplePeriodicTask(String name, long initialDelayMillis, long delayMillis, Runnable taskBody)
     {
         return new PeriodicTask()
         {

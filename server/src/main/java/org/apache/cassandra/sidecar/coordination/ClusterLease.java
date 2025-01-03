@@ -35,6 +35,7 @@ public class ClusterLease
 
     public ClusterLease()
     {
+        this(Ownership.INDETERMINATE);
     }
 
     public ClusterLease(Ownership leaseOwnership)

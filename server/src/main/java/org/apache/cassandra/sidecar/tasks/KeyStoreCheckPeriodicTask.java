@@ -51,6 +51,8 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
 
     /**
      * Skip check if the key store is not configured or if the key store should not be reloaded
+     *
+     * @return whether to {@link ScheduleDecision#SKIP} or {@link ScheduleDecision#EXECUTE} this task
      */
     @Override
     public ScheduleDecision scheduleDecision()

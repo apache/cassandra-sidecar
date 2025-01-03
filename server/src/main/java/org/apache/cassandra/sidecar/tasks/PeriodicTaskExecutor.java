@@ -39,8 +39,9 @@ import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * This class manages the scheduling and execution of {@link PeriodicTask}s.
- * For the {@link PeriodicTask} that also is {@link ExecuteOnClusterLeaseholderOnly}, the executor ensure
+ * For the {@link PeriodicTask} that also is {@link ExecuteOnClusterLeaseholderOnly}, the executor ensures
  * the task execution is only performed when {@link ClusterLease} is claimed by the local Sidecar instance.
+ *
  * <p>The execution of each {@link PeriodicTask} is <i>ordered</i> and <i>serial</i>, meanwhile there could
  * be concurrent execution of different {@link PeriodicTask}s.
  * <p>Memory consistency effects: Actions in the prior {@link PeriodicTask} run <i>happen-before</i> its
@@ -119,11 +120,10 @@ public class PeriodicTaskExecutor implements Closeable
                     .onComplete(ignored -> {
                         LOGGER.debug("Task run finishes. task='{}' execCount={}", key, execCount);
                         // schedule the next run iff the task is not killed
-                        if (poisonPilledTasks.contains(key))
+                        if (poisonPilledTasks.remove(key))
                         {
                             LOGGER.debug("Avoid scheduling the next run, and remove it from poisonPilledTasks. task='{}' execCount={}",
                                          key, execCount);
-                            poisonPilledTasks.remove(key);
                         }
                         else
                         {
@@ -153,26 +153,27 @@ public class PeriodicTaskExecutor implements Closeable
     private Future<Void> unschedule(PeriodicTask task, boolean shouldCloseTask)
     {
         PeriodicTaskKey key = new PeriodicTaskKey(task);
-        // always insert a poison pill on unscheduling, and conditionally remove when the timer can be cancelled
-        poisonPilledTasks.add(key);
         Long timerId = timerIds.remove(key);
-        LOGGER.debug("Unscheduling task. task='{}' timerId={}", key, timerId);
-        if (timerId != null)
+        if (timerId == null)
         {
-            // if timer is not started, it can be cancelled
-            if (timerId != PLACEHOLDER_TIMER_ID && internalPool.cancelTimer(timerId))
-            {
-                poisonPilledTasks.remove(key);
-            }
+            return Future.failedFuture("No such PeriodicTask: " + key);
         }
+
+        LOGGER.debug("Unscheduling task. task='{}' timerId={}", key, timerId);
+        // always insert a poison pill when unscheduling an existing task,
+        // and conditionally remove when the timer can be cancelled
+        poisonPilledTasks.add(key);
+        // if timer is not started, it can be cancelled
+        if (timerId != PLACEHOLDER_TIMER_ID && internalPool.cancelTimer(timerId))
+        {
+            poisonPilledTasks.remove(key);
+        }
+
         // The current run might have started already.
         // If so, a non-null activeRun should be retrieved and a poison pill
         // is placed to avoid further scheduling.
         // Reschedule should only happen after the activeRun finishes.
-        Future<Void> activeRun = activeRuns.get(key);
-        Future<Void> unscheduleFuture = activeRun == null
-                                        ? Future.succeededFuture()
-                                        : activeRun;
+        Future<Void> unscheduleFuture = activeRuns.getOrDefault(key, Future.succeededFuture());
         return shouldCloseTask
                ? unscheduleFuture.onComplete(ignored -> task.close())
                : unscheduleFuture;

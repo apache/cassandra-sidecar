@@ -80,7 +80,7 @@ public interface PeriodicTask extends Task<Void>
      * Specify the schedule decision of the upcoming run.
      * The method is evaluated before calling {@link #execute(Promise)}
      *
-     * @return schedule decision. By default, it is to execute.
+     * @return schedule decision. The default is to {@link ScheduleDecision#EXECUTE}.
      */
     default ScheduleDecision scheduleDecision()
     {
