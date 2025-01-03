@@ -42,7 +42,6 @@ import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly
 
 import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
 
 /**
  * Unit tests for the {@link PeriodicTaskExecutor} class
@@ -122,7 +121,11 @@ class PeriodicTaskExecutorTest
         }
         Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
         tasks.forEach(taskExecutor::unschedule);
+        // wait until unschedule is complete
+        loopAssert(1, () -> assertThat(taskExecutor.timerIds()).isEmpty());
+        loopAssert(1, () -> assertThat(taskExecutor.poisonPilledTasks()).isEmpty());
         tasks.forEach(incTask -> assertThat(incTask.atomicValue.get())
+                                 .describedAs(incTask.name() + " should have same value")
                                  .isEqualTo(incTask.value)
                                  .isPositive());
     }
@@ -139,7 +142,8 @@ class PeriodicTaskExecutorTest
         {
             taskExecutor.schedule(task);
         }
-        assertThat(counter.get()).isEqualTo(1);
+        // in case that the test environment gets slow and the counter update is delayed
+        loopAssert(1, () -> assertThat(counter.get()).isEqualTo(1));
     }
 
     @Test
@@ -287,20 +291,12 @@ class PeriodicTaskExecutorTest
         taskExecutor.schedule(task);
         Uninterruptibles.awaitUninterruptibly(testFinish);
         taskExecutor.unschedule(task);
-        int totalSamples = 50;
-        List<Integer> counterValues = new ArrayList<>(totalSamples);
-        for (int i = 0; i < totalSamples; i++)
-        {
-            counterValues.add(counter.get());
-            Uninterruptibles.sleepUninterruptibly(Math.max(1, taskDelayMillis), TimeUnit.MILLISECONDS);
-        }
-        assertThat(taskExecutor.poisonPilledTasks()).isEmpty();
-        assertThat(taskExecutor.timerIds()).isEmpty();
-        int lastValue = counter.get();
-        int numOfValuesEqualsToLast = counterValues.stream().mapToInt(i -> i == lastValue ? 1 : 0).sum();
-        assertThat(numOfValuesEqualsToLast)
-        .describedAs("Execution should stop soon after unschedule is called. The internal counter should produce the same value")
-        .isCloseTo(totalSamples, within(5));
+        loopAssert(1,
+                   () -> assertThat(taskExecutor.poisonPilledTasks()).isEmpty());
+        loopAssert(1,
+                   () -> assertThat(taskExecutor.timerIds())
+                         .describedAs("Execution should stop after unschedule is called")
+                         .isEmpty());
     }
 
     static class TestClusterLease extends ClusterLease

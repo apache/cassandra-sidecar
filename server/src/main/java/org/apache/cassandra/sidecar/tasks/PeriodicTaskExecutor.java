@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,29 +83,43 @@ public class PeriodicTaskExecutor implements Closeable
     private void schedule(PeriodicTaskKey key, long priorExecDurationMillis, long delayMillis, long execCount)
     {
         long actualDelayMillis = delayMillis - priorExecDurationMillis;
-        boolean runImmediately = actualDelayMillis <= 0;
+        AtomicBoolean runImmediately = new AtomicBoolean(actualDelayMillis <= 0);
         timerIds.compute(key, (k, v) -> {
             // The periodic task has been scheduled already. Exit early and avoid scheduling the duplication
             if (v != null && execCount == 0)
             {
                 LOGGER.debug("Task is already scheduled. task='{}'", key);
+                runImmediately.set(false);
                 return v;
             }
 
             LOGGER.debug("Scheduling task {}. task='{}' execCount={}",
-                         runImmediately ? "immediately" : "in " + actualDelayMillis + " milliseconds",
+                         runImmediately.get() ? "immediately" : "in " + actualDelayMillis + " milliseconds",
                          key, execCount);
 
-            key.task.registerPeriodicTaskExecutor(this);
-
-            if (runImmediately)
+            try
             {
-                executeAndScheduleNext(key, execCount);
+                key.task.registerPeriodicTaskExecutor(this);
+            }
+            catch (Exception e)
+            {
+                LOGGER.warn("Failed to invoke registerPeriodicTaskExecutor. task='{}'", key, e);
+            }
+
+            // If run immediately, do not execute within the compute block.
+            // Return the placeholder timer ID, and execute after exiting the compute block.
+            if (runImmediately.get())
+            {
                 return PLACEHOLDER_TIMER_ID; // use the placeholder ID, since this run is not scheduled as a timer
             }
             // Schedule and update the timer id
             return internalPool.setTimer(delayMillis, timerId -> executeAndScheduleNext(key, execCount));
         });
+
+        if (runImmediately.get())
+        {
+            executeAndScheduleNext(key, execCount);
+        }
     }
 
     /**
