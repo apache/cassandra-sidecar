@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.testing;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -25,6 +26,7 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.ext.auth.mtls.utils.CertificateBundle;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.shared.ShutdownException;
 
@@ -39,14 +41,31 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
     private final Map<String, String> initialProperties;
     protected UpgradeableCluster cluster;
 
+    // certificates created when cluster is started with auth
+    public final CertificateBundle ca;
+    public final Path serverKeystorePath;
+    public final String serverKeystorePassword;
+    public final Path truststorePath;
+    public final String truststorePassword;
+
     public CassandraIntegrationTest annotation;
 
     public AbstractCassandraTestContext(SimpleCassandraVersion version,
                                         UpgradeableCluster cluster,
+                                        CertificateBundle ca,
+                                        Path serverKeystorePath,
+                                        String serverKeystorePassword,
+                                        Path truststorePath,
+                                        String truststorePassword,
                                         CassandraIntegrationTest annotation)
     {
         this.version = version;
         this.cluster = cluster;
+        this.ca = ca;
+        this.serverKeystorePath = serverKeystorePath;
+        this.serverKeystorePassword = serverKeystorePassword;
+        this.truststorePath = truststorePath;
+        this.truststorePassword = truststorePassword;
         this.annotation = annotation;
         this.initialProperties = systemStringProperties();
     }
@@ -54,7 +73,7 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
     public AbstractCassandraTestContext(SimpleCassandraVersion version,
                                         CassandraIntegrationTest annotation)
     {
-        this(version, null, annotation);
+        this(version, null, null, null, null, null, null, annotation);
     }
 
     public UpgradeableCluster cluster()

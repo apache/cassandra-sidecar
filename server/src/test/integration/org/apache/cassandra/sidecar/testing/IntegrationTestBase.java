@@ -97,11 +97,11 @@ public abstract class IntegrationTestBase
     protected File tempDir;
     protected CertificateBundle ca;
     protected Path serverKeystorePath;
-    protected String serverKeystorePassword = "password";
+    protected String serverKeystorePassword;
     protected Path clientKeystorePath;
     protected String clientKeystorePassword = "password";
     protected Path truststorePath;
-    protected String truststorePassword = "password";
+    protected String truststorePassword;
     protected WebClient client;
     protected CassandraSidecarTestContext sidecarTestContext;
     protected Injector injector;
@@ -112,9 +112,11 @@ public abstract class IntegrationTestBase
     {
         testExceptions.clear();
 
-        ca = ca();
-        truststorePath = truststorePath();
-        serverKeystorePath = serverKeystorePath();
+        ca = cassandraTestContext.ca;
+        truststorePath = cassandraTestContext.truststorePath;
+        truststorePassword = cassandraTestContext.truststorePassword;
+        serverKeystorePath = cassandraTestContext.serverKeystorePath;
+        serverKeystorePassword = cassandraTestContext.serverKeystorePassword;
         clientKeystorePath = clientKeystorePath(ADMIN_IDENTITY);
 
         IntegrationTestModule integrationTestModule = new IntegrationTestModule();
@@ -432,29 +434,6 @@ public abstract class IntegrationTestBase
     {
         instancesMetadata.instances()
                          .forEach(instanceMetadata -> instanceMetadata.delegate().healthCheck());
-    }
-
-    protected CertificateBundle ca() throws Exception
-    {
-        return CertificateBuilder.builder()
-                                 .subject("CN=Apache cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
-                                 .isCertificateAuthority(true)
-                                 .buildSelfSigned();
-    }
-    protected Path truststorePath() throws Exception
-    {
-        return ca.toTempKeyStorePath(tempDir.toPath(), truststorePassword.toCharArray(), truststorePassword.toCharArray());
-    }
-
-    protected Path serverKeystorePath() throws Exception
-    {
-        CertificateBundle keystore
-        = CertificateBuilder.builder()
-                            .subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                            .addSanDnsName("localhost")
-                            .addSanIpAddress("127.0.0.1")
-                            .buildIssuedBy(ca);
-        return keystore.toTempKeyStorePath(tempDir.toPath(), serverKeystorePassword.toCharArray(), serverKeystorePassword.toCharArray());
     }
 
     protected Path clientKeystorePath(String identity) throws Exception

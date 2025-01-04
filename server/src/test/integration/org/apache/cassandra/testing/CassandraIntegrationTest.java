@@ -124,4 +124,19 @@ public @interface CassandraIntegrationTest
      *         false if it should be run on the first version.
      */
     boolean versionDependent() default true;
+
+    /**
+     * AuthMode set for Cassandra cluster. Cassandra is started with required authenticator depending on the mode.
+     * @return AuthMode selected for the cluster. Possible options are {@code AuthMode.NONE}, {@code AuthMode.PASSWORD}
+     * {@code AuthMode.MUTUAL_TLS}
+     */
+    AuthMode authMode() default AuthMode.NONE;
+
+    /**
+     * Enables SSL for Cassandra cluster when set to true
+     *
+     * Note: enabledSsl is not required when AuthMode is set to {@code AuthMode.MUTUAL_TLS}
+     * @return whether SSL is enabled for Cassandra cluster
+     */
+    boolean enableSsl() default false;
 }

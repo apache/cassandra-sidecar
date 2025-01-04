@@ -20,8 +20,11 @@ package org.apache.cassandra.testing;
 
 import java.lang.reflect.AnnotatedElement;
 import java.net.BindException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -40,6 +43,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.vdurmont.semver4j.Semver;
+import io.vertx.ext.auth.mtls.utils.CertificateBuilder;
+import io.vertx.ext.auth.mtls.utils.CertificateBundle;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.TokenSupplier;
@@ -47,6 +52,7 @@ import org.apache.cassandra.distributed.impl.AbstractCluster;
 import org.apache.cassandra.distributed.shared.Versions;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.utils.Throwables;
+import software.amazon.awssdk.utils.ImmutableMap;
 
 
 /**
@@ -62,6 +68,9 @@ import org.apache.cassandra.utils.Throwables;
 public class CassandraTestTemplate implements TestTemplateInvocationContextProvider
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraTestTemplate.class);
+    private static final int MIN_VERSION_WITH_MTLS = 5;
+    private String truststorePassword = "password";
+    private String serverKeystorePassword = "password";
 
     private AbstractCassandraTestContext cassandraTestContext;
 
@@ -171,6 +180,54 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                                   .withSharedClasses(extra.or(AbstractCluster.SHARED_PREDICATE))
                                   .withDataDirCount(annotation.numDataDirsPerInstance())
                                   .withConfig(config -> annotationToFeatureList(annotation).forEach(config::with));
+
+                Path tempDirPath = Files.createTempDirectory("certs");
+                CertificateBundle ca = ca();
+                Path serverKeystorePath = serverKeystorePath(ca, tempDirPath);
+                Path truststorePath = truststorePath(ca, tempDirPath);
+
+                switch(annotation.authMode())
+                {
+                    case PASSWORD:
+                    {
+                        clusterBuilder.appendConfig(config -> config.set("authenticator", "org.apache.cassandra.auth.PasswordAuthenticator"));
+                        break;
+                    }
+                    case MUTUAL_TLS:
+                    {
+                        // mTLS authentication was added in Cassandra starting 5.0 version
+                        if (clusterBuilder.getVersion().version.getMajor() >= MIN_VERSION_WITH_MTLS)
+                        {
+                            clusterBuilder.appendConfig(config -> {
+                                config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
+                                      .set("authenticator.parameters", Collections.singletonMap("validator_class_name",
+                                                                                                "org.apache.cassandra.auth.SpiffeCertificateValidator"))
+                                      .set("role_manager", "CassandraRoleManager")
+                                      .set("authorizer", "CassandraAuthorizer")
+                                      .set("client_encryption_options.enabled", "true")
+                                      .set("client_encryption_options.optional", "true")
+                                      .set("client_encryption_options.require_client_auth", "true")
+                                      .set("client_encryption_options.require_endpoint_verification", "false")
+                                      .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
+                                      .set("client_encryption_options.keystore_password", serverKeystorePassword)
+                                      .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
+                                      .set("client_encryption_options.truststore_password", truststorePassword);
+                            });
+                        }
+                        break;
+                    }
+                }
+
+                if (annotation.enableSsl() && !annotation.authMode().equals(AuthMode.MUTUAL_TLS))
+                {
+                    clusterBuilder.appendConfig(config ->
+                                                // dot-separated options are not supported in 4.0
+                                                config.set("client_encryption_options", ImmutableMap.of("enabled", "true",
+                                                                                                        "require_client_auth", "false",
+                                                                                                        "keystore", serverKeystorePath.toAbsolutePath().toString(),
+                                                                                                        "keystore_password", serverKeystorePassword)));
+                }
+
                 TokenSupplier tokenSupplier = TokenSupplier.evenlyDistributedTokens(finalNodeCount,
                                                                                     clusterBuilder.getTokenCount());
                 clusterBuilder.withTokenSupplier(tokenSupplier);
@@ -185,7 +242,9 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     {
                         cluster = clusterBuilder.createWithoutStarting();
                     }
-                    cassandraTestContext = new CassandraTestContext(versionParsed, cluster, annotation);
+                    cassandraTestContext = new CassandraTestContext(versionParsed, cluster, ca, serverKeystorePath,
+                                                                    serverKeystorePassword, truststorePath,
+                                                                    truststorePassword, annotation);
                 }
                 else
                 {
@@ -307,6 +366,30 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                 }
             };
         }
+    }
+
+    private CertificateBundle ca() throws Exception
+    {
+        return CertificateBuilder.builder()
+                                 .subject("CN=Apache cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
+                                 .isCertificateAuthority(true)
+                                 .buildSelfSigned();
+    }
+
+    private Path truststorePath(CertificateBundle ca, Path path) throws Exception
+    {
+        return ca.toTempKeyStorePath(path, truststorePassword.toCharArray(), truststorePassword.toCharArray());
+    }
+
+    private Path serverKeystorePath(CertificateBundle ca, Path path) throws Exception
+    {
+        CertificateBundle keystore
+        = CertificateBuilder.builder()
+                            .subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                            .addSanDnsName("localhost")
+                            .addSanIpAddress("127.0.0.1")
+                            .buildIssuedBy(ca);
+        return keystore.toTempKeyStorePath(path, serverKeystorePassword.toCharArray(), serverKeystorePassword.toCharArray());
     }
 
     public static UpgradeableCluster retriableStartCluster(UpgradeableCluster.Builder builder, int maxAttempts)

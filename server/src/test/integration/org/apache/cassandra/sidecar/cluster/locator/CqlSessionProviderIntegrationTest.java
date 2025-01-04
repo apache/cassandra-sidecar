@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.cluster.locator;
 
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,9 +32,9 @@ import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
+import org.apache.cassandra.testing.AuthMode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
-import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
-import software.amazon.awssdk.utils.ImmutableMap;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.apache.cassandra.sidecar.testing.IntegrationTestModule.ADMIN_IDENTITY;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,28 +48,17 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
 {
     private static final int MIN_VERSION_WITH_MTLS = 5;
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testWithUsernamePassword(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
+    @CassandraIntegrationTest(authMode = AuthMode.PASSWORD)
+     void testWithUsernamePassword(VertxTestContext context) throws Exception
     {
-        cassandraContext.configureAndStartCluster(builder -> {
-            builder.appendConfig(config -> config.set("authenticator", "org.apache.cassandra.auth.PasswordAuthenticator"));
-        });
         sidecarTestContext.refreshInstancesMetadata();
         waitForSchemaReady(30, TimeUnit.SECONDS);
         retrieveClientStats(context, "cassandra", false);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testWithSSLOnly(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
+    @CassandraIntegrationTest(enableSsl = true)
+    void testWithSSLOnly(VertxTestContext context) throws Exception
     {
-        cassandraContext.configureAndStartCluster(builder -> {
-            builder.appendConfig(config ->
-                                 // dot-separated options are not supported in 4.0
-                                 config.set("client_encryption_options", ImmutableMap.of("enabled", "true",
-                                                                                         "require_client_auth", "false",
-                                                                                         "keystore", serverKeystorePath.toAbsolutePath().toString(),
-                                                                                         "keystore_password", serverKeystorePassword)));
-        });
         sidecarTestContext.setUsernamePassword(null, null);
         sidecarTestContext.setSslConfiguration(sslConfigWithTruststore());
         waitForSchemaReady(30, TimeUnit.SECONDS);
@@ -78,19 +66,9 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
         retrieveClientStats(context, "anonymous", true);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testWithSSLOnlyWithUsername(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
+    @CassandraIntegrationTest(enableSsl = true, authMode = AuthMode.PASSWORD)
+    void testWithSSLOnlyWithUsername(VertxTestContext context) throws Exception
     {
-        cassandraContext.configureAndStartCluster(builder -> {
-            builder.appendConfig(config -> config.set("authenticator", "org.apache.cassandra.auth.PasswordAuthenticator"));
-
-            builder.appendConfig(config ->
-                                 // dot-separated options are not supported in 4.0
-                                 config.set("client_encryption_options", ImmutableMap.of("enabled", "true",
-                                                                                         "require_client_auth", "false",
-                                                                                         "keystore", serverKeystorePath.toAbsolutePath().toString(),
-                                                                                         "keystore_password", serverKeystorePassword)));
-        });
         sidecarTestContext.setUsernamePassword("cassandra", "cassandra");
         sidecarTestContext.setSslConfiguration(sslConfigWithTruststore());
         waitForSchemaReady(30, TimeUnit.SECONDS);
@@ -98,29 +76,14 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
         retrieveClientStats(context, "cassandra", true);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testWithMTLS(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testWithMTLS(VertxTestContext context, CassandraTestContext cassandraTestContext) throws Exception
     {
         // mTLS authentication was added in Cassandra starting 5.0 version
-        assumeThat(cassandraContext.version.major)
+        assumeThat(cassandraTestContext.version.major)
         .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
         .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
-        cassandraContext.configureAndStartCluster(builder -> builder.appendConfig(config -> {
-            config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
-                  .set("authenticator.parameters", Collections.singletonMap("validator_class_name",
-                                                                            "org.apache.cassandra.auth.SpiffeCertificateValidator"))
-                  .set("role_manager", "CassandraRoleManager")
-                  .set("authorizer", "CassandraAuthorizer")
-                  .set("client_encryption_options.enabled", "true")
-                  .set("client_encryption_options.optional", "true")
-                  .set("client_encryption_options.require_client_auth", "true")
-                  .set("client_encryption_options.require_endpoint_verification", "false")
-                  .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
-                  .set("client_encryption_options.keystore_password", serverKeystorePassword)
-                  .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
-                  .set("client_encryption_options.truststore_password", truststorePassword);
-        }));
         waitForSchemaReady(30, TimeUnit.SECONDS);
         insertIdentityRole(ADMIN_IDENTITY, "cassandra");
         sidecarTestContext.setSslConfiguration(sslConfigWithKeystoreTruststore());
