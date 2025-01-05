@@ -6,6 +6,7 @@ cassandra:
   port: 9042
   username: cassandra
   password: cassandra
+  cassandra_home_dir: /ccm/test/node1
   data_dirs:
     - /ccm/test/node1/data0
     - /ccm/test/node1/data1

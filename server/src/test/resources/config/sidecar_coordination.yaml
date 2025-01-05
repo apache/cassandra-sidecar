@@ -23,6 +23,7 @@ cassandra_instances:
   - id: 1
     host: localhost1
     port: 9042
+    cassandra_home_dir: /ccm/test/node1
     data_dirs:
       - ~/.ccm/test/node1/data0
     staging_dir: ~/.ccm/test/node1/sstable-staging
@@ -34,6 +35,7 @@ cassandra_instances:
   - id: 2
     host: localhost2
     port: 9042
+    cassandra_home_dir: /ccm/test/node2
     data_dirs:
       - ~/.ccm/test/node2/data0
     staging_dir: ~/.ccm/test/node2/sstable-staging
@@ -45,6 +47,7 @@ cassandra_instances:
   - id: 3
     host: localhost3
     port: 9042
+    cassandra_home_dir: /ccm/test/node3
     data_dirs:
       - ~/.ccm/test/node3/data0
     staging_dir: ~/.ccm/test/node3/sstable-staging

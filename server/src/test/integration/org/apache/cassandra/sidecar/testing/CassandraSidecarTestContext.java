@@ -290,6 +290,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                              .id(i + 1)
                                              .host(config.broadcastAddress().getAddress().getHostAddress())
                                              .port(nativeTransportPort)
+                                             .cassandraHomeDir(dataDirParentPath.toString())
                                              .dataDirs(Arrays.asList(dataDirectories))
                                              .stagingDir(stagingDir)
                                              .delegate(delegate)

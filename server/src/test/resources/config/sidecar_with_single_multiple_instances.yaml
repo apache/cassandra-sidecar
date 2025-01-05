@@ -4,6 +4,7 @@
 cassandra:
   host: localhost
   port: 9042
+  cassandra_home_dir: /cassandra/d1
   data_dirs: /cassandra/d1/data, /cassandra/d2/data
   jmx_host: 127.0.0.1
   jmx_port: 7199
@@ -15,6 +16,7 @@ cassandra_instances:
   - id: 1
     host: localhost1
     port: 9042
+    cassandra_home_dir: /cassandra/d1
     data_dirs: /cassandra/d1/data, /cassandra/d2/data
     jmx_host: 127.0.0.1
     jmx_port: 7100
@@ -24,6 +26,7 @@ cassandra_instances:
   - id: 2
     host: localhost2
     port: 9042
+    cassandra_home_dir: /cassandra/d3
     data_dirs: /cassandra/d3/data, /cassandra/d4/data
     jmx_host: 127.0.0.1
     jmx_port: 7200

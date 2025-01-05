@@ -69,7 +69,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         host = builder.host;
         port = builder.port;
         cassandraHomeDir = FileUtils.maybeResolveHomeDirectory(builder.cassandraHomeDir);
-        Path cassandraHomeDirPath = cassandraHomeDir == null ?  null : Paths.get(cassandraHomeDir);
+        Path cassandraHomeDirPath = cassandraHomeDir == null ? null : Paths.get(cassandraHomeDir);
         dataDirs = builder.dataDirs.stream()
                                    .map(FileUtils::maybeResolveHomeDirectory)
                                    .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
@@ -122,6 +122,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
     {
         return cassandraHomeDir;
     }
+
     @Override
     public List<String> dataDirs()
     {
@@ -135,6 +136,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
     }
 
     @Override
+    @NotNull
     public String cdcDir()
     {
         return cdcDir;
@@ -151,19 +153,23 @@ public class InstanceMetadataImpl implements InstanceMetadata
         return delegate;
     }
 
-    public @Nullable String commitlogDir()
+    @Override
+    @NotNull
+    public String commitlogDir()
     {
         return commitlogDir;
     }
 
     @Override
-    public @Nullable String hintsDir()
+    @NotNull
+    public String hintsDir()
     {
         return hintsDir;
     }
 
     @Override
-    public @Nullable String savedCachesDir()
+    @NotNull
+    public String savedCachesDir()
     {
         return savedCachesDir;
     }
@@ -396,6 +402,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         {
             Objects.requireNonNull(id);
             Objects.requireNonNull(metricRegistry);
+            Objects.requireNonNull(cassandraHomeDir);
 
             metrics = new InstanceMetricsImpl(metricRegistry);
 
