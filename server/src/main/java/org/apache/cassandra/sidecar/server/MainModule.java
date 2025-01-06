@@ -606,8 +606,7 @@ public class MainModule extends AbstractModule
                                                  SidecarConfiguration sidecarConfiguration,
                                                  DriverUtils driverUtils)
     {
-        CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(vertx,
-                                                                               sidecarConfiguration,
+        CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(sidecarConfiguration,
                                                                                NettyOptions.DEFAULT_INSTANCE,
                                                                                driverUtils);
         vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());

@@ -73,19 +73,6 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
     }
 
     @Override
-    protected void unprepareStatements()
-    {
-        insertJob = null;
-        updateBlobSecrets = null;
-        updateStatus = null;
-        updateJobAgent = null;
-        updateExpireAt = null;
-        updateSliceCount = null;
-        selectJob = null;
-        findAllByCreatedAt = null;
-    }
-
-    @Override
     protected String tableName()
     {
         return RESTORE_JOB_TABLE_NAME;

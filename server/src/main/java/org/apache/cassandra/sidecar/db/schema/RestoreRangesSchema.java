@@ -61,14 +61,6 @@ public class RestoreRangesSchema extends TableSchema implements ExecuteOnCluster
     }
 
     @Override
-    protected void unprepareStatements()
-    {
-        insert = null;
-        findAll = null;
-        update = null;
-    }
-
-    @Override
     protected String tableName()
     {
         return TABLE_NAME;

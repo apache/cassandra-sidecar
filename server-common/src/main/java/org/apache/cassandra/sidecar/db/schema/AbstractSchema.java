@@ -46,17 +46,6 @@ public abstract class AbstractSchema
         return initialized;
     }
 
-    public synchronized void reset()
-    {
-        initialized = false;
-        unprepareStatements();
-    }
-
-    protected void ensureSchemaAvailable() throws SchemaUnavailableException
-    {
-        // no-op
-    }
-
     protected PreparedStatement prepare(PreparedStatement cached, Session session, String cqlLiteral)
     {
         return cached == null ? session.prepare(cqlLiteral).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM) : cached;
@@ -107,8 +96,6 @@ public abstract class AbstractSchema
      * @param session the CQL session
      */
     protected abstract void prepareStatements(@NotNull Session session);
-
-    protected abstract void unprepareStatements();
 
     /**
      * @param metadata the cluster metadata

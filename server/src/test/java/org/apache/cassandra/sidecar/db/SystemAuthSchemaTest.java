@@ -25,8 +25,9 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
+import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 
-import static com.datastax.driver.core.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -49,7 +50,11 @@ class SystemAuthSchemaTest
 
         SystemAuthSchema systemAuthSchema = new SystemAuthSchema();
         systemAuthSchema.initialize(mockSession, ignored -> true);
-        assertThat(systemAuthSchema.selectRoleFromIdentity()).isNull();
-        assertThat(systemAuthSchema.getAllRolesAndIdentities()).isNull();
+        assertThatThrownBy(systemAuthSchema::selectRoleFromIdentity)
+        .isExactlyInstanceOf(SchemaUnavailableException.class)
+        .hasMessage("Table system_auth/identity_to_role does not exist");
+        assertThatThrownBy(systemAuthSchema::getAllRolesAndIdentities)
+        .isExactlyInstanceOf(SchemaUnavailableException.class)
+        .hasMessage("Table system_auth/identity_to_role does not exist");
     }
 }

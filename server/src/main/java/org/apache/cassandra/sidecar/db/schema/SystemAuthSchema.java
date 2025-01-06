@@ -22,7 +22,7 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
+import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -84,16 +84,6 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     }
 
     @Override
-    protected void unprepareStatements()
-    {
-        selectRoleFromIdentity = null;
-        getAllRolesAndIdentities = null;
-        getAllRolesAndPermissions = null;
-        getSuperUserStatus = null;
-        getRoles = null;
-    }
-
-    @Override
     protected String tableName()
     {
         throw new UnsupportedOperationException("SystemAuthSchema supports reading information from multiple " +
@@ -129,12 +119,12 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
         return getRoles;
     }
 
-    @Override
     protected void ensureSchemaAvailable() throws SchemaUnavailableException
     {
         if (selectRoleFromIdentity == null || getAllRolesAndIdentities == null)
         {
-            throw new SchemaUnavailableException(keyspaceName(), IDENTITY_TO_ROLE_TABLE);
+            throw new SchemaUnavailableException(String.format("Table %s/%s does not exist",
+                                                               keyspaceName(), IDENTITY_TO_ROLE_TABLE));
         }
     }
 }

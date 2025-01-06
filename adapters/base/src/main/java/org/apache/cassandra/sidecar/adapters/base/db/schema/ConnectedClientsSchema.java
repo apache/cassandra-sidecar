@@ -49,13 +49,6 @@ public class ConnectedClientsSchema extends CassandraSystemTableSchema
     }
 
     @Override
-    protected void unprepareStatements()
-    {
-        statsStatement = null;
-        connectionsByUserStatement = null;
-    }
-
-    @Override
     protected String tableName()
     {
         return TABLE_NAME;
