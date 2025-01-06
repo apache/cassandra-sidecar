@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
@@ -84,6 +85,7 @@ import static org.mockito.Mockito.when;
 /**
  * Integration tests for the {@link ClusterLeaseClaimTask}
  */
+@Tag("heavy")
 class ClusterLeaseClaimTaskIntegrationTest
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterLeaseClaimTaskIntegrationTest.class);
