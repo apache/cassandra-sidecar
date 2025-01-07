@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.acl;
 
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -39,8 +38,9 @@ import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
+import org.apache.cassandra.testing.AuthMode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
-import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.apache.cassandra.sidecar.testing.IntegrationTestModule.ADMIN_IDENTITY;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,22 +54,20 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 {
     private static final int MIN_VERSION_WITH_MTLS = 5;
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testForAdmin(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testForAdmin(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
     {
-        // starts cluster for 5.0 and above version test
-        startClusterWithMtlsAndAuthorizer(cassandraContext);
+        prepareForTest(cassandraContext);
 
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
         // uses client keystore with admin identity. Admins bypass authorization checks
         verifyAccess(context, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testForSuperUser(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testForSuperUser(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
     {
-        // starts cluster for 5.0 and above version test
-        startClusterWithMtlsAndAuthorizer(cassandraContext);
+        prepareForTest(cassandraContext);
 
         createRole("test_role", true);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
@@ -80,11 +78,10 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testForNonAdmin(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testForNonAdmin(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
     {
-        // starts cluster for 5.0 and above version test
-        startClusterWithMtlsAndAuthorizer(cassandraContext);
+        prepareForTest(cassandraContext);
 
         createRole("test_role", false);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
@@ -96,12 +93,11 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testGrantingForTable(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext)
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testGrantingForTable(VertxTestContext context, CassandraTestContext cassandraContext)
     throws Exception
     {
-        // starts cluster for 5.0 and above version test
-        startClusterWithMtlsAndAuthorizer(cassandraContext);
+        prepareForTest(cassandraContext);
 
         createRole("test_role", false);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
@@ -121,12 +117,11 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, checkpoint, HttpMethod.DELETE, createSnapshotRoute, clientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testEndpointWithOrAuthorization(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext)
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testEndpointWithOrAuthorization(VertxTestContext context, CassandraTestContext cassandraContext)
     throws Exception
     {
-        // starts cluster for 5.0 and above version test
-        startClusterWithMtlsAndAuthorizer(cassandraContext);
+        prepareForTest(cassandraContext);
 
         createRole("test_role", false);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
@@ -141,12 +136,11 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testWildcardActionForAllTargets(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext)
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testWildcardActionForAllTargets(VertxTestContext context, CassandraTestContext cassandraContext)
     throws Exception
     {
-        // starts cluster for 5.0 and above version test
-        startClusterWithMtlsAndAuthorizer(cassandraContext);
+        prepareForTest(cassandraContext);
 
         createRole("test_role", false);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
@@ -176,11 +170,10 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testResourceWideActions(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext) throws Exception
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testResourceWideActions(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
     {
-        // starts cluster for 5.0 and above version test
-        startClusterWithMtlsAndAuthorizer(cassandraContext);
+        prepareForTest(cassandraContext);
 
         createRole("test_role", false);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
@@ -206,12 +199,11 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, checkpoint, HttpMethod.GET, viewSnapshotRoute, clientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testAllWildcardActionsForTarget(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext)
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testAllWildcardActionsForTarget(VertxTestContext context, CassandraTestContext cassandraContext)
     throws Exception
     {
-        // starts cluster for 5.0 and above version test
-        startClusterWithMtlsAndAuthorizer(cassandraContext);
+        prepareForTest(cassandraContext);
 
         createRole("test_role", false);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
@@ -233,12 +225,11 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, checkpoint, HttpMethod.GET, streamSSTableRoute, clientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(buildCluster = false)
-    void testEndpointRequiringMultipleActions(VertxTestContext context, ConfigurableCassandraTestContext cassandraContext)
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testEndpointRequiringMultipleActions(VertxTestContext context, CassandraTestContext cassandraContext)
     throws Exception
     {
-       // starts cluster for 5.0 and above version test
-        startClusterWithMtlsAndAuthorizer(cassandraContext);
+        prepareForTest(cassandraContext);
 
         createRole("test_role", false);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
@@ -296,29 +287,13 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
               });
     }
 
-    private void startClusterWithMtlsAndAuthorizer(ConfigurableCassandraTestContext  cassandraContext) throws Exception
+    private void prepareForTest(CassandraTestContext cassandraContext) throws Exception
     {
         // mTLS authentication was added in Cassandra starting 5.0 version
         assumeThat(cassandraContext.version.major)
         .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
         .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
-        cassandraContext.configureAndStartCluster(builder -> {
-            builder.appendConfig(config -> config.set("authenticator.class_name",
-                                                      "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
-                                                 .set("authenticator.parameters",
-                                                      Collections.singletonMap("validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator"))
-                                                 .set("role_manager", "CassandraRoleManager")
-                                                 .set("authorizer", "CassandraAuthorizer")
-                                                 .set("client_encryption_options.enabled", "true")
-                                                 .set("client_encryption_options.optional", "true")
-                                                 .set("client_encryption_options.require_client_auth", "true")
-                                                 .set("client_encryption_options.require_endpoint_verification", "false")
-                                                 .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
-                                                 .set("client_encryption_options.keystore_password", serverKeystorePassword)
-                                                 .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
-                                                 .set("client_encryption_options.truststore_password", truststorePassword));
-        });
         waitForSchemaReady(30, TimeUnit.SECONDS);
 
         // required for authentication of sidecar requests to Cassandra. Only superusers can grant permissions

@@ -369,7 +369,7 @@ class ClusterLeaseClaimTaskIntegrationTest
     DisconnectableCQLSessionProvider buildCqlSession(List<InetSocketAddress> address)
     {
         CQLSessionProvider sessionProvider =
-        new CQLSessionProviderImpl(vertx, address, address, 500, null, 0, SharedExecutorNettyOptions.INSTANCE);
+        new CQLSessionProviderImpl(address, address, 500, null, 0, SharedExecutorNettyOptions.INSTANCE);
         sessionProviderList.add(sessionProvider);
         return new DisconnectableCQLSessionProvider(sessionProvider);
     }

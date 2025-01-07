@@ -64,12 +64,6 @@ public class SidecarRolePermissionsSchema extends TableSchema
     }
 
     @Override
-    protected void unprepareStatements()
-    {
-        this.getAllRolesAndPermissions = null;
-    }
-
-    @Override
     protected String createSchemaStatement()
     {
         return String.format("CREATE TABLE IF NOT EXISTS %s.%s ("
