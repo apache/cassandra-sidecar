@@ -35,12 +35,10 @@ public class CassandraTestContext extends AbstractCassandraTestContext
                                 UpgradeableCluster cluster,
                                 CertificateBundle ca,
                                 Path serverKeystorePath,
-                                String serverKeystorePassword,
                                 Path truststorePath,
-                                String truststorePassword,
                                 CassandraIntegrationTest annotation)
     {
-        super(version, cluster, ca, serverKeystorePath, serverKeystorePassword, truststorePath, truststorePassword, annotation);
+        super(version, cluster, ca, serverKeystorePath, truststorePath, annotation);
     }
 
     @Override

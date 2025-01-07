@@ -18,11 +18,12 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
 import org.apache.cassandra.sidecar.acl.authorization.Permission;
 import org.apache.cassandra.sidecar.acl.authorization.StandardPermission;
@@ -44,27 +45,32 @@ public class AuthUtils
      */
     public static List<String> extractIdentities(User user)
     {
-        if (user.principal() == null)
+        JsonObject principal = user.principal();
+
+        if (principal == null)
         {
             return Collections.emptyList();
         }
 
-        if (!user.principal().containsKey("identity") && !user.principal().containsKey("identities"))
+        List<String> identities = new ArrayList<>();
+
+        if (principal.containsKey("identity"))
         {
-            return Collections.emptyList();
+            identities.add(principal.getString("identity"));
         }
 
-        return Optional.ofNullable(user.principal().getString("identity"))
-                       .map(Collections::singletonList)
-                       .orElseGet(() -> Arrays.asList(user.principal()
-                                                          .getString("identities")
-                                                          .split(",")));
+        if (principal.containsKey("identities"))
+        {
+            String[] parts = user.principal().getString("identities").split(",");
+            identities.addAll(Arrays.asList(parts));
+        }
+        return identities;
     }
 
     /**
      * @return an instance of {@link Permission} given the name
      */
-    public static Permission actionFromName(String name)
+    public static Permission permissionFromName(String name)
     {
         if (name == null)
         {

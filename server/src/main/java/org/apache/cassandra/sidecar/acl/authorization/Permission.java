@@ -32,7 +32,7 @@ public interface Permission
 
     /**
      * @return {@link Authorization} created from permission. Most sidecar endpoints require a resource.
-     * This method is used in testing
+     * This method is mainly used in testing
      */
     default Authorization toAuthorization()
     {
@@ -40,6 +40,14 @@ public interface Permission
     }
 
     /**
+     * @return {@link Authorization} created from permission for a resource.
+     */
+
+
+    /**
+     * User authorization created with resource
+     *
+     * @param resource resource set for authorization matching
      * @return {@link Authorization} created from permission for a resource.
      */
     Authorization toAuthorization(String resource);

@@ -35,7 +35,7 @@ import io.vertx.ext.auth.authorization.Authorization;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
 
-import static org.apache.cassandra.sidecar.utils.AuthUtils.actionFromName;
+import static org.apache.cassandra.sidecar.utils.AuthUtils.permissionFromName;
 
 /**
  * {@link SidecarPermissionsDatabaseAccessor} is an accessor for role_permissions_v1 table under sidecar_internal
@@ -74,11 +74,11 @@ public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<Sidecar
             {
                 try
                 {
-                    authorizations.add(actionFromName(permission).toAuthorization(resource));
+                    authorizations.add(permissionFromName(permission).toAuthorization(resource));
                 }
                 catch (Exception e)
                 {
-                    logger.error("Error reading sidecar permission {} for resource {} for role {}, e",
+                    logger.error("Error on parsing sidecar permission={} resource={} role={}",
                                  permission, resource, role, e);
                 }
             }

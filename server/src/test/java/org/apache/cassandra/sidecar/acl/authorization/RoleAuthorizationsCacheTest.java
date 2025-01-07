@@ -34,6 +34,7 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarPermissionsDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache.UNIQUE_CACHE_ENTRY;
@@ -48,12 +49,15 @@ import static org.mockito.Mockito.when;
 class RoleAuthorizationsCacheTest
 {
     Vertx vertx;
+    SidecarSchema mockSidecarSchema;
     ExecutorPools executorPools;
 
     @BeforeEach
     void setup()
     {
         vertx = Vertx.vertx();
+        mockSidecarSchema = mock(SidecarSchema.class);
+        when(mockSidecarSchema.isInitialized()).thenReturn(true);
         executorPools = createdSharedTestPool(vertx);
     }
 
@@ -70,6 +74,7 @@ class RoleAuthorizationsCacheTest
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
                                                                     mockConfig,
+                                                                    mockSidecarSchema,
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor);
         assertThat(cache.getAll().size()).isZero();
@@ -101,6 +106,7 @@ class RoleAuthorizationsCacheTest
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
                                                                     mockConfig,
+                                                                    mockSidecarSchema,
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor);
         assertThat(cache.getAll().size()).isZero();
@@ -126,6 +132,7 @@ class RoleAuthorizationsCacheTest
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
                                                                     mockConfig,
+                                                                    mockSidecarSchema,
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor);
         assertThat(cache.getAll().size()).isZero();
@@ -153,6 +160,7 @@ class RoleAuthorizationsCacheTest
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
                                                                     mockConfig,
+                                                                    mockSidecarSchema,
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor);
         assertThat(cache.getAuthorizations("test_role1").size()).isOne();
@@ -169,6 +177,7 @@ class RoleAuthorizationsCacheTest
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
                                                                     mockConfig,
+                                                                    mockSidecarSchema,
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor);
         assertThat(cache.getAll().size()).isZero();
@@ -201,6 +210,7 @@ class RoleAuthorizationsCacheTest
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
                                                                     mockConfig,
+                                                                    mockSidecarSchema,
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor);
         assertThat(cache.getAll().size()).isZero();

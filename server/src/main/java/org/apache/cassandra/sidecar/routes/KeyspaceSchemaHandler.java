@@ -75,7 +75,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
         or.addAuthorization(CassandraPermissions.ALTER.toAuthorization(resource));
         or.addAuthorization(CassandraPermissions.DROP.toAuthorization(resource));
         or.addAuthorization(CassandraPermissions.DESCRIBE.toAuthorization(resource));
-        or.addAuthorization(SidecarPermissions.VIEW_SCHEMA.toAuthorization(resource));
+        or.addAuthorization(SidecarPermissions.READ_SCHEMA.toAuthorization(resource));
         return ImmutableSet.of(or);
     }
 

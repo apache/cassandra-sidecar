@@ -27,8 +27,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.auth.authorization.OrAuthorization;
-import io.vertx.ext.auth.authorization.impl.OrAuthorizationImpl;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
@@ -77,11 +75,7 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        Authorization createRestore = SidecarPermissions.CREATE_RESTORE_JOB.toAuthorization(resource);
-        Authorization viewRestore = SidecarPermissions.VIEW_RESTORE_JOB.toAuthorization(resource);
-        OrAuthorization createOrView
-        = new OrAuthorizationImpl().addAuthorization(createRestore).addAuthorization(viewRestore);
-        return ImmutableSet.of(createOrView);
+        return ImmutableSet.of(SidecarPermissions.READ_RESTORE_JOB.toAuthorization(resource));
     }
 
     @Override

@@ -60,7 +60,7 @@ public class SchemaHandler extends AbstractHandler<Void> implements AccessProtec
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return ImmutableSet.of(SidecarPermissions.VIEW_SCHEMA.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.READ_SCHEMA.toAuthorization(resource));
     }
 
     /**

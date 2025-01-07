@@ -22,10 +22,12 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
 import io.vertx.ext.auth.authorization.impl.PermissionBasedAuthorizationImpl;
 
-import static org.apache.cassandra.sidecar.acl.authorization.WildcardPermission.WILDCARD_TOKEN;
+import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
+import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 
 /**
- * Standard permissions need an exact match between allowed permissions.
+ * {@link StandardPermission} needs an exact match between permissions. If resource is set, exact match between
+ * resources if also required.
  */
 public class StandardPermission implements Permission
 {
@@ -33,10 +35,9 @@ public class StandardPermission implements Permission
 
     public StandardPermission(String name)
     {
-        if (name == null || name.isEmpty())
+        if (isNullOrEmpty(name))
         {
-            throw new IllegalArgumentException("Permission name can not be null or empty. To allow wildcard permission "
-                                               + "across resource, use " + WILDCARD_TOKEN);
+            throw new IllegalArgumentException("Permission name can not be null or empty");
         }
         this.name = name;
     }
@@ -51,7 +52,7 @@ public class StandardPermission implements Permission
     public Authorization toAuthorization(String resource)
     {
         PermissionBasedAuthorization authorization = new PermissionBasedAuthorizationImpl(name);
-        if (resource != null && !resource.isEmpty())
+        if (isNotEmpty(resource))
         {
             authorization.setResource(resource);
         }

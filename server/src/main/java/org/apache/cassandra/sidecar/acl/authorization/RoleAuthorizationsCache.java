@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import com.google.inject.Inject;
@@ -32,6 +31,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarPermissionsDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 /**
  * Caches role and authorizations held by it. Entries from system_auth.role_permissions table in Cassandra and
@@ -49,6 +49,7 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
     public RoleAuthorizationsCache(Vertx vertx,
                                    ExecutorPools executorPools,
                                    SidecarConfiguration sidecarConfiguration,
+                                   SidecarSchema sidecarSchema,
                                    SystemAuthDatabaseAccessor systemAuthDatabaseAccessor,
                                    SidecarPermissionsDatabaseAccessor sidecarPermissionsDatabaseAccessor)
     {
@@ -56,17 +57,17 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
               vertx,
               executorPools,
               k -> loadAuthorizations(systemAuthDatabaseAccessor,
-                                      sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration().isEnabled(),
+                                      sidecarSchema,
                                       sidecarPermissionsDatabaseAccessor),
               () -> Collections.singletonMap(UNIQUE_CACHE_ENTRY,
                                              loadAuthorizations(systemAuthDatabaseAccessor,
-                                                                sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration().isEnabled(),
+                                                                sidecarSchema,
                                                                 sidecarPermissionsDatabaseAccessor)),
               sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration());
     }
 
     /**
-     * Returns a {@code Set} of {@link Authorization} a role holds.
+     * @return a {@code Set} of {@link Authorization} a role holds.
      */
     public Set<Authorization> getAuthorizations(String role)
     {
@@ -75,17 +76,15 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
     }
 
     private static Map<String, Set<Authorization>> loadAuthorizations(SystemAuthDatabaseAccessor systemAuthDatabaseAccessor,
-                                                                      boolean isSidecarSchemaEnabled,
+                                                                      SidecarSchema sidecarSchema,
                                                                       SidecarPermissionsDatabaseAccessor sidecarPermissionsDatabaseAccessor)
     {
-        // when entries in cache are not found, null is returned. We can not add null in Map
-        Map<String, Set<Authorization>>  roleAuthorizations
-        = Optional.ofNullable(systemAuthDatabaseAccessor.getAllRolesAndPermissions()).orElse(Collections.emptyMap());
+        Map<String, Set<Authorization>>  roleAuthorizations = systemAuthDatabaseAccessor.getAllRolesAndPermissions();
 
-        if (isSidecarSchemaEnabled)
+        if (sidecarSchema.isInitialized())
         {
             Map<String, Set<Authorization>> sidecarAuthorizations
-            = Optional.ofNullable(sidecarPermissionsDatabaseAccessor.getAllRolesAndPermissions()).orElse(Collections.emptyMap());
+            = sidecarPermissionsDatabaseAccessor.getAllRolesAndPermissions();
 
             // merge authorizations from Cassandra and Sidecar tables
             sidecarAuthorizations.forEach((role, authorizations) -> {

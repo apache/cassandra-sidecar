@@ -24,8 +24,20 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
 import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
 
+import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
+
 /**
- * Wildcard actions allow grouping allowed actions
+ * Wildcard permissions allow grouping allowed permissions. They can be represented with ':' wildcard parts divider
+ * to divide wildcard parts and '*' wildcard token for matching wildcard parts. Majority of sidecar permissions are
+ * represented in format action_allowed:action_target.
+ * <p>
+ * Example, with CREATE:SNAPSHOT permission, CREATE action is allowed for SNAPSHOT target. Sample actions are
+ * CREATE, READ, EDIT, UPDATE, DELETE, IMPORT, UPLOAD, START, ABORT etc.
+ * <p>
+ * Some examples of wildcard permissions are:
+ * - *:SNAPSHOT allows CREATE:SNAPSHOT, VIEW:SNAPSHOT and DELETE:SNAPSHOT.
+ * - CREATE:* allows CREATE action on all possible targets.
+ * - *:* allows all possible permissions for specified resource
  */
 public class WildcardPermission extends StandardPermission
 {
@@ -37,8 +49,8 @@ public class WildcardPermission extends StandardPermission
         super(name);
         if (!name.contains(WILDCARD_TOKEN) && !name.contains(WILDCARD_PART_DIVIDER_TOKEN))
         {
-            throw new IllegalArgumentException("Wildcard actions must either have wildcard token " + WILDCARD_TOKEN
-                                               + " or must have wildcard parts");
+            throw new IllegalArgumentException("Wildcard permissions must either have wildcard token " + WILDCARD_TOKEN
+                                               + " or must be divided into wildcard parts");
         }
         validate(name);
     }
@@ -49,7 +61,7 @@ public class WildcardPermission extends StandardPermission
         boolean hasEmptyParts = Arrays.stream(wildcardParts).anyMatch(String::isEmpty);
         if (wildcardParts.length == 0 || hasEmptyParts)
         {
-            throw new IllegalArgumentException("Wildcard action parts can not be empty");
+            throw new IllegalArgumentException("Wildcard permission parts can not be empty");
         }
     }
 
@@ -57,7 +69,7 @@ public class WildcardPermission extends StandardPermission
     public Authorization toAuthorization(String resource)
     {
         WildcardPermissionBasedAuthorization authorization = new WildcardPermissionBasedAuthorizationImpl(name);
-        if (resource != null && !resource.isEmpty())
+        if (isNotEmpty(resource))
         {
             authorization.setResource(resource);
         }

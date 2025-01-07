@@ -62,7 +62,7 @@ public class OperationalJobHandler extends AbstractHandler<UUID> implements Acce
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.SIDECAR.resource();
-        return ImmutableSet.of(SidecarPermissions.VIEW_TASKS.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.READ_OPERATIONAL_JOBS.toAuthorization(resource));
     }
 
     /**

@@ -57,7 +57,7 @@ public class RingHandler extends AbstractHandler<Void> implements AccessProtecte
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return ImmutableSet.of(SidecarPermissions.VIEW_CLUSTER.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
     }
 
     /**

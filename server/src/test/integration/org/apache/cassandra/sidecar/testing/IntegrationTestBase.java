@@ -97,11 +97,10 @@ public abstract class IntegrationTestBase
     protected File tempDir;
     protected CertificateBundle ca;
     protected Path serverKeystorePath;
-    protected String serverKeystorePassword;
     protected Path clientKeystorePath;
     protected String clientKeystorePassword = "password";
     protected Path truststorePath;
-    protected String truststorePassword;
+    protected String truststorePassword = "password";
     protected WebClient client;
     protected CassandraSidecarTestContext sidecarTestContext;
     protected Injector injector;
@@ -114,9 +113,7 @@ public abstract class IntegrationTestBase
 
         ca = cassandraTestContext.ca;
         truststorePath = cassandraTestContext.truststorePath;
-        truststorePassword = cassandraTestContext.truststorePassword;
         serverKeystorePath = cassandraTestContext.serverKeystorePath;
-        serverKeystorePassword = cassandraTestContext.serverKeystorePassword;
         clientKeystorePath = clientKeystorePath(ADMIN_IDENTITY);
 
         IntegrationTestModule integrationTestModule = new IntegrationTestModule();

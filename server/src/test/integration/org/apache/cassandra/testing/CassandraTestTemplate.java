@@ -216,16 +216,18 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                         }
                         break;
                     }
+                    default:
                 }
 
                 if (annotation.enableSsl() && !annotation.authMode().equals(AuthMode.MUTUAL_TLS))
                 {
-                    clusterBuilder.appendConfig(config ->
-                                                // dot-separated options are not supported in 4.0
-                                                config.set("client_encryption_options", ImmutableMap.of("enabled", "true",
-                                                                                                        "require_client_auth", "false",
-                                                                                                        "keystore", serverKeystorePath.toAbsolutePath().toString(),
-                                                                                                        "keystore_password", serverKeystorePassword)));
+                    clusterBuilder.appendConfig(config -> {
+                        // dot-separated options are not supported in 4.0
+                        config.set("client_encryption_options", ImmutableMap.of("enabled", "true",
+                                                                                "require_client_auth", "false",
+                                                                                "keystore", serverKeystorePath.toAbsolutePath().toString(),
+                                                                                "keystore_password", serverKeystorePassword));
+                    });
                 }
 
                 TokenSupplier tokenSupplier = TokenSupplier.evenlyDistributedTokens(finalNodeCount,
@@ -243,8 +245,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                         cluster = clusterBuilder.createWithoutStarting();
                     }
                     cassandraTestContext = new CassandraTestContext(versionParsed, cluster, ca, serverKeystorePath,
-                                                                    serverKeystorePassword, truststorePath,
-                                                                    truststorePassword, annotation);
+                                                                    truststorePath, annotation);
                 }
                 else
                 {

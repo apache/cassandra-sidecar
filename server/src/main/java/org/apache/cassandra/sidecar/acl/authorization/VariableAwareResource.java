@@ -27,7 +27,26 @@ import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE;
 public enum VariableAwareResource
 {
     CLUSTER("cluster"),
+
     SIDECAR("sidecar"),
+
+
+    /**
+     * Cassandra stores data resource in the format data/keyspace_name/table_name within the role_permissions table.
+     * A similar format is followed for storing data resource in sidecar permissions table role_permissions_v1. hence
+     * sidecar endpoints expect data resources to be provided in format data/keyspace_name/table_name.
+     * <p>
+     * In this context, curly braces are used to denote variable parts of the resource. For e.g., when permissions are
+     * checked for resource data/{keyspace} in an endpoint, the part within the curly braces ({keyspace})
+     * represents a placeholder for the actual keyspace.
+     * <p>
+     * During the permission matching process, the placeholder {keyspace} is resolved to the actual keyspace
+     * being accessed by the endpoint. For e.g. data/{keyspace} resolves to data/university if the keyspace is
+     * "university".
+     * <p>
+     * User permissions are then extracted from both Cassandra and sidecar role permissions tables for
+     * the resolved resource and are matched against the expected permissions set defined in the endpoint's handler.
+     */
     DATA_WITH_KEYSPACE(String.format("data/{%s}", KEYSPACE)),
     DATA_WITH_KEYSPACE_TABLE(String.format("data/{%s}/{%s}", KEYSPACE, TABLE));
 

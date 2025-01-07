@@ -22,8 +22,6 @@ import java.util.Set;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 

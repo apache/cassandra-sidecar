@@ -68,7 +68,7 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<Name> implement
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE.resource();
-        return ImmutableSet.of(SidecarPermissions.VIEW_TOPOLOGY.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.READ_TOPOLOGY.toAuthorization(resource));
     }
 
     /**

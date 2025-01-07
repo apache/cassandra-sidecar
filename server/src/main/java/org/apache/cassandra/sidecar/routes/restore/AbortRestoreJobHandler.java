@@ -75,7 +75,7 @@ public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobReque
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarPermissions.ABORT_RESTORE_JOB.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.DELETE_RESTORE_JOB.toAuthorization(resource));
     }
 
     @Override

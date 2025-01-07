@@ -20,10 +20,10 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 /**
  * Sidecar permissions allowed on specific targets are listed here. Majority of sidecar permissions are represented in
- * format <action_allowed>:<action_target>.
+ * format action_allowed:action_target.
  * <p>
  * Example, with CREATE:SNAPSHOT permission, CREATE action is allowed for SNAPSHOT target. Sample actions are
- * CREATE, VIEW, UPDATE, DELETE, STREAM, IMPORT, UPLOAD, START, ABORT etc.
+ * CREATE, READ, EDIT, UPDATE, DELETE, IMPORT, UPLOAD, START etc.
  * <p>
  * Wildcard permissions are supported with ':' wildcard parts divider and '*' wildcard token to match parts:
  * <p>
@@ -34,7 +34,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 public class SidecarPermissions
 {
     // cassandra cluster related permissions
-    public static final Permission VIEW_CLUSTER = new WildcardPermission("VIEW:CLUSTER");
+    public static final Permission READ_CLUSTER = new WildcardPermission("READ:CLUSTER");
 
     // SSTable related permissions
     public static final Permission UPLOAD_SSTABLE = new WildcardPermission("UPLOAD:SSTABLE");
@@ -46,23 +46,23 @@ public class SidecarPermissions
 
     // snapshot related permissions
     public static final Permission CREATE_SNAPSHOT = new WildcardPermission("CREATE:SNAPSHOT");
-    public static final Permission VIEW_SNAPSHOT = new WildcardPermission("VIEW:SNAPSHOT");
+    public static final Permission READ_SNAPSHOT = new WildcardPermission("READ:SNAPSHOT");
     public static final Permission DELETE_SNAPSHOT = new WildcardPermission("DELETE:SNAPSHOT");
 
     // restore related permissions
     public static final Permission CREATE_RESTORE_JOB = new WildcardPermission("CREATE:RESTORE_JOB");
-    public static final Permission VIEW_RESTORE_JOB = new WildcardPermission("VIEW:RESTORE_JOB");
-    public static final Permission UPDATE_RESTORE_JOB = new WildcardPermission("UPDATE:RESTORE_JOB");
-    public static final Permission ABORT_RESTORE_JOB = new WildcardPermission("ABORT:RESTORE_JOB");
+    public static final Permission READ_RESTORE_JOB = new WildcardPermission("READ:RESTORE_JOB");
+    public static final Permission EDIT_RESTORE_JOB = new WildcardPermission("EDIT:RESTORE_JOB");
+    public static final Permission DELETE_RESTORE_JOB = new WildcardPermission("DELETE:RESTORE_JOB");
 
     // cdc related permissions
     public static final Permission STREAM_CDC = new WildcardPermission("STREAM:CDC");
-    public static final Permission VIEW_CDC = new WildcardPermission("VIEW:CDC");
+    public static final Permission READ_CDC = new WildcardPermission("READ:CDC");
 
     // sidecar operation related permissions
-    public static final Permission VIEW_TASKS = new WildcardPermission("VIEW:TASKS");
+    public static final Permission READ_OPERATIONAL_JOBS = new WildcardPermission("READ:OPERATIONAL_JOBS");
 
     // cassandra data related actions
-    public static final Permission VIEW_SCHEMA = new WildcardPermission("VIEW:SCHEMA");
-    public static final Permission VIEW_TOPOLOGY = new WildcardPermission("VIEW:TOPOLOGY");
+    public static final Permission READ_SCHEMA = new WildcardPermission("READ:SCHEMA");
+    public static final Permission READ_TOPOLOGY = new WildcardPermission("READ:TOPOLOGY");
 }

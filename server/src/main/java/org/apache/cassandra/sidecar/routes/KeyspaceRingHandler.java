@@ -43,7 +43,7 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE.resource();
-        return ImmutableSet.of(SidecarPermissions.VIEW_CLUSTER.toAuthorization(resource));
+        return ImmutableSet.of(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
     }
 
     /**

@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
 import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
 
-import static org.apache.cassandra.sidecar.utils.AuthUtils.actionFromName;
+import static org.apache.cassandra.sidecar.utils.AuthUtils.permissionFromName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -35,22 +35,22 @@ class PermissionTest
     @Test
     void testValidActions()
     {
-        assertThat(actionFromName("CREATE_SNAPSHOT")).isInstanceOf(StandardPermission.class);
-        assertThat(actionFromName("OPERATE")).isInstanceOf(StandardPermission.class);
-        assertThat(actionFromName("CREATESNAPSHOT")).isInstanceOf(StandardPermission.class);
-        assertThat(actionFromName("CREATE:SNAPSHOT")).isInstanceOf(WildcardPermission.class);
-        assertThat(actionFromName("*:SNAPSHOT")).isInstanceOf(WildcardPermission.class);
-        assertThat(actionFromName("STREAM:*")).isInstanceOf(WildcardPermission.class);
-        assertThat(actionFromName("*")).isInstanceOf(WildcardPermission.class);
-        assertThat(actionFromName("*:*")).isInstanceOf(WildcardPermission.class);
-        assertThat(actionFromName("CREATE:SNAPSHOT:*")).isInstanceOf(WildcardPermission.class);
+        assertThat(permissionFromName("CREATE_SNAPSHOT")).isInstanceOf(StandardPermission.class);
+        assertThat(permissionFromName("OPERATE")).isInstanceOf(StandardPermission.class);
+        assertThat(permissionFromName("CREATESNAPSHOT")).isInstanceOf(StandardPermission.class);
+        assertThat(permissionFromName("CREATE:SNAPSHOT")).isInstanceOf(WildcardPermission.class);
+        assertThat(permissionFromName("*:SNAPSHOT")).isInstanceOf(WildcardPermission.class);
+        assertThat(permissionFromName("STREAM:*")).isInstanceOf(WildcardPermission.class);
+        assertThat(permissionFromName("*")).isInstanceOf(WildcardPermission.class);
+        assertThat(permissionFromName("*:*")).isInstanceOf(WildcardPermission.class);
+        assertThat(permissionFromName("CREATE:SNAPSHOT:*")).isInstanceOf(WildcardPermission.class);
     }
 
     @Test
     void testInvalidActions()
     {
-        assertThatThrownBy(() -> actionFromName("")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> actionFromName(null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> permissionFromName("")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> permissionFromName(null)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -58,10 +58,10 @@ class PermissionTest
     {
         String expectedResource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
         PermissionBasedAuthorization authorization
-        = (PermissionBasedAuthorization) actionFromName("CREATESNAPSHOT").toAuthorization(expectedResource);
+        = (PermissionBasedAuthorization) permissionFromName("CREATESNAPSHOT").toAuthorization(expectedResource);
         assertThat(authorization.getResource()).isEqualTo(expectedResource);
         WildcardPermissionBasedAuthorization wildcardAuthorization
-        = (WildcardPermissionBasedAuthorization) actionFromName("CREATE:SNAPSHOT").toAuthorization(expectedResource);
+        = (WildcardPermissionBasedAuthorization) permissionFromName("CREATE:SNAPSHOT").toAuthorization(expectedResource);
         assertThat(wildcardAuthorization.getResource()).isEqualTo(expectedResource);
     }
 
@@ -69,10 +69,10 @@ class PermissionTest
     void testToAuthorizationWithEmptyResource()
     {
         PermissionBasedAuthorization authorization
-        = (PermissionBasedAuthorization) actionFromName("CREATESNAPSHOT").toAuthorization("");
+        = (PermissionBasedAuthorization) permissionFromName("CREATESNAPSHOT").toAuthorization("");
         assertThat(authorization.getResource()).isNull();
         WildcardPermissionBasedAuthorization wildcardAuthorization
-        = (WildcardPermissionBasedAuthorization) actionFromName("CREATE:SNAPSHOT").toAuthorization("");
+        = (WildcardPermissionBasedAuthorization) permissionFromName("CREATE:SNAPSHOT").toAuthorization("");
         assertThat(wildcardAuthorization.getResource()).isNull();
     }
 
