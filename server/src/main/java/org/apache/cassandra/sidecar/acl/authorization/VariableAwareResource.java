@@ -30,7 +30,6 @@ public enum VariableAwareResource
 
     SIDECAR("sidecar"),
 
-
     /**
      * Cassandra stores data resource in the format data/keyspace_name/table_name within the role_permissions table.
      * A similar format is followed for storing data resource in sidecar permissions table role_permissions_v1. hence
@@ -38,7 +37,8 @@ public enum VariableAwareResource
      * <p>
      * In this context, curly braces are used to denote variable parts of the resource. For e.g., when permissions are
      * checked for resource data/{keyspace} in an endpoint, the part within the curly braces ({keyspace})
-     * represents a placeholder for the actual keyspace.
+     * represents a placeholder for the actual keyspace. For more context refer to
+     * {@link io.vertx.ext.auth.authorization.impl.VariableAwareExpression}
      * <p>
      * During the permission matching process, the placeholder {keyspace} is resolved to the actual keyspace
      * being accessed by the endpoint. For e.g. data/{keyspace} resolves to data/university if the keyspace is

@@ -24,11 +24,11 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,7 +83,7 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return ImmutableSet.of(SidecarPermissions.READ_CDC.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_CDC.toAuthorization(resource));
     }
 
     @Override

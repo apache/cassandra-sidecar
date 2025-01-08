@@ -18,10 +18,9 @@
 
 package org.apache.cassandra.sidecar.routes.restore;
 
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Inject;
@@ -77,7 +76,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarPermissions.EDIT_RESTORE_JOB.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.EDIT_RESTORE_JOB.toAuthorization(resource));
     }
 
     @Override

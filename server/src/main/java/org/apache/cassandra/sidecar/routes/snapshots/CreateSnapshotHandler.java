@@ -18,11 +18,11 @@
 
 package org.apache.cassandra.sidecar.routes.snapshots;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
 import com.google.inject.Inject;
@@ -67,7 +67,7 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization(resource));
     }
 
     /**

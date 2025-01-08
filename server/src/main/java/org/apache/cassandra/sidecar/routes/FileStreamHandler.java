@@ -21,9 +21,8 @@ package org.apache.cassandra.sidecar.routes;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
+import java.util.Collections;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -68,7 +67,7 @@ public class FileStreamHandler extends AbstractHandler<String> implements Access
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarPermissions.STREAM_SSTABLE.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.STREAM_SSTABLE.toAuthorization(resource));
     }
 
     @Override

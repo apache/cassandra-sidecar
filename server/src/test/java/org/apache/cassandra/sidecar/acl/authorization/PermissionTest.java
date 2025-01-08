@@ -81,14 +81,14 @@ class PermissionTest
     {
         assertThatThrownBy(() -> new WildcardPermission("CREATE"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Wildcard actions must either have wildcard token * or must have wildcard parts");
+        .hasMessage("Wildcard permissions must either have wildcard token * or must be divided into wildcard parts");
 
         assertThatThrownBy(() -> new WildcardPermission(":"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Wildcard action parts can not be empty");
+        .hasMessage("Wildcard permission parts can not be empty");
 
         assertThatThrownBy(() -> new WildcardPermission("::"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Wildcard action parts can not be empty");
+        .hasMessage("Wildcard permission parts can not be empty");
     }
 }

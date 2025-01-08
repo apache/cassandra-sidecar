@@ -51,7 +51,6 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(authMode = AuthMode.PASSWORD)
      void testWithUsernamePassword(VertxTestContext context) throws Exception
     {
-        sidecarTestContext.refreshInstancesMetadata();
         waitForSchemaReady(30, TimeUnit.SECONDS);
         retrieveClientStats(context, "cassandra", false);
     }
@@ -86,7 +85,7 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
 
         waitForSchemaReady(30, TimeUnit.SECONDS);
         insertIdentityRole(ADMIN_IDENTITY, "cassandra");
-        sidecarTestContext.setSslConfiguration(sslConfigWithKeystoreTruststore());
+
         retrieveClientStats(context, "cassandra", true);
     }
 

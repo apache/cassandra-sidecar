@@ -20,9 +20,9 @@ package org.apache.cassandra.sidecar.routes.cdc;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,7 +85,7 @@ public class StreamCdcSegmentHandler extends AbstractHandler<String> implements 
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return ImmutableSet.of(SidecarPermissions.STREAM_CDC.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.STREAM_CDC.toAuthorization(resource));
     }
 
     @Override

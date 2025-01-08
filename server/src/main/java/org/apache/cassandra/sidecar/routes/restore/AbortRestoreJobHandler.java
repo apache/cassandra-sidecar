@@ -18,9 +18,8 @@
 
 package org.apache.cassandra.sidecar.routes.restore;
 
+import java.util.Collections;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -75,7 +74,7 @@ public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobReque
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarPermissions.DELETE_RESTORE_JOB.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.DELETE_RESTORE_JOB.toAuthorization(resource));
     }
 
     @Override

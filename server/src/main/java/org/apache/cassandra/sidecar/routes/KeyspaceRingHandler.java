@@ -1,8 +1,7 @@
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.Collections;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -43,7 +42,7 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE.resource();
-        return ImmutableSet.of(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
     }
 
     /**

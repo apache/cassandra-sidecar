@@ -50,7 +50,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
  * Test for role based access control in Sidecar
  */
 @ExtendWith(VertxExtension.class)
-public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
+class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 {
     private static final int MIN_VERSION_WITH_MTLS = 5;
 
@@ -86,7 +86,7 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createRole("test_role", false);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
 
-        // grant permission for not non super user
+        // grant permission for non super user
         grantKeyspacePermission("sample_keyspace", "test_role");
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
@@ -126,12 +126,12 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createRole("test_role", false);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
 
-        grantSidecarPermission("test_role", "data/sample_keyspace", "VIEW:*");
+        grantSidecarPermission("test_role", "data/sample_keyspace", "READ:*");
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
 
         // schema endpoint for keyspaces accepts CREATE, ALTER, DROP or DESCRIBE cassandra permissions.
-        // cassandra permission for test_role on sample_keyspace not granted, sidecar permission VIEW:* is used to
+        // cassandra permission for test_role on sample_keyspace not granted, sidecar permission READ:* is used to
         // grant access
         verifyAccess(context, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath);
     }
@@ -145,23 +145,23 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createRole("test_role", false);
         insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
 
-        // VIEW action allowed across targets for same resource. VIEW:* for cluster resource allows VIEW:SCHEMA,
-        // VIEW:CDC, VIEW:CLUSTER etc
-        grantSidecarPermission("test_role", "cluster", "VIEW:*");
+        // READ action allowed across targets for same resource. READ:* for cluster resource allows READ:SCHEMA,
+        // READ:CDC, READ:CLUSTER etc
+        grantSidecarPermission("test_role", "cluster", "READ:*");
 
         String timeSkewRoute = "/api/v1/time-skew";
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
 
         Checkpoint checkpoint = context.checkpoint(4);
 
-        // Uses sidecar permission VIEW:* added
+        // Uses sidecar permission READ:* added
         verifyAccess(context, checkpoint, HttpMethod.GET, timeSkewRoute, clientKeystorePath, false);
 
         String schemaRoute = "/api/v1/cassandra/schema";
         verifyAccess(context, checkpoint, HttpMethod.GET, schemaRoute, clientKeystorePath, false);
 
         String ringRoute = "/api/v1/cassandra/ring";
-        // Allows VIEW:CLUSTER too
+        // Allows READ:CLUSTER too
         verifyAccess(context, checkpoint, HttpMethod.GET, ringRoute, clientKeystorePath, false);
 
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
@@ -186,16 +186,16 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         Checkpoint checkpoint = context.checkpoint(3);
 
         // *:* permission across resource data/test_keyspace allows all possible actions across all possible targets,
-        // Such as VIEW:SCHEMA, VIEW:CLUSTER etc.
+        // Such as READ:SCHEMA, READ:CLUSTER etc.
         verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, false);
 
         String keyspaceRingRoute = String.format("/api/v1/cassandra/ring/keyspaces/%s", "sample_keyspace");
-        // VIEW:CLUSTER granted
+        // READ:CLUSTER granted
         verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceRingRoute, clientKeystorePath, false);
 
         String viewSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s",
                                                  "sample_keyspace", "sample_table", "sample_snapshot");
-        // does not allow VIEW:SNAPSHOT which requires table resource too
+        // does not allow READ:SNAPSHOT which requires table resource too
         verifyAccess(context, checkpoint, HttpMethod.GET, viewSnapshotRoute, clientKeystorePath, true);
     }
 
@@ -217,7 +217,7 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         Checkpoint checkpoint = context.checkpoint(2);
 
         // *:SNAPSHOT permission across data/sample_resource/sample_table allows all possible actions for SNAPSHOT target
-        // such as CREATE:SNAPSHOT, VIEW:SNAPSHOT, DELETE:SNAPSHOT. Does not allow STREAM:SSTABLE or other actions
+        // such as CREATE:SNAPSHOT, READ:SNAPSHOT, DELETE:SNAPSHOT. Does not allow STREAM:SSTABLE or other actions
         verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
 
         String streamSSTableRoute =  String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
@@ -299,10 +299,6 @@ public class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // required for authentication of sidecar requests to Cassandra. Only superusers can grant permissions
         insertIdentityRole(ADMIN_IDENTITY, "cassandra");
         createKeyspaceTable();
-
-        // Add keystore for Sidecar
-        sidecarTestContext.setSslConfiguration(sslConfigWithKeystoreTruststore());
-        Thread.sleep(2000);
     }
 
     private void createKeyspaceTable()

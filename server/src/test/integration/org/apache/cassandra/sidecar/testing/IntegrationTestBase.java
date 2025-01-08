@@ -67,10 +67,14 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
+import org.apache.cassandra.testing.AuthMode;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.testing.IntegrationTestModule.ADMIN_IDENTITY;
@@ -124,8 +128,19 @@ public abstract class IntegrationTestBase
         int clusterSize = cassandraTestContext.clusterSize();
         injector = Guice.createInjector(Modules.override(new MainModule()).with(integrationTestModule));
         vertx = injector.getInstance(Vertx.class);
-        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
-                                                              getNumInstancesToManage(clusterSize), null);
+
+        if (cassandraTestContext.annotation.authMode().equals(AuthMode.MUTUAL_TLS))
+        {
+            SslConfiguration sslConfig = sslConfigWithClientKeystoreTruststore();
+            sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
+                                                                  getNumInstancesToManage(clusterSize), sslConfig);
+        }
+        else
+        {
+            sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
+                                                                  getNumInstancesToManage(clusterSize), null);
+        }
+
 
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
 
@@ -156,6 +171,12 @@ public abstract class IntegrationTestBase
               .onFailure(context::failNow);
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
+    }
+
+    private void insertIdentityRole(String identity, String role)
+    {
+        Session session = maybeGetSession();
+        session.execute("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
     }
 
     @AfterEach
@@ -294,12 +315,6 @@ public abstract class IntegrationTestBase
         RuntimeException rte = new RuntimeException("Could not create test keyspace after 5 attempts.");
         thrown.forEach(rte::addSuppressed);
         throw rte;
-    }
-
-    protected void closeNativeThenReconnect()
-    {
-        sidecarTestContext.close();
-        maybeGetSession();
     }
 
     private String generateRfString(Map<String, Integer> dcToRf)
@@ -455,6 +470,16 @@ public abstract class IntegrationTestBase
         }
         CertificateBundle clientKeystore = builder.buildIssuedBy(ca);
         return clientKeystore.toTempKeyStorePath(tempDir.toPath(), clientKeystorePassword.toCharArray(), clientKeystorePassword.toCharArray());
+    }
+
+    private SslConfiguration sslConfigWithClientKeystoreTruststore()
+    {
+        return SslConfigurationImpl
+               .builder()
+               .enabled(true)
+               .keystore(new KeyStoreConfigurationImpl(clientKeystorePath.toAbsolutePath().toString(), clientKeystorePassword, "PKCS12"))
+               .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
+               .build();
     }
 
     protected WebClient createClient(Path clientKeystorePath, Path truststorePath)

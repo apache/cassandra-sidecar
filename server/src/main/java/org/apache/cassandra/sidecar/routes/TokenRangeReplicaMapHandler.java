@@ -18,9 +18,9 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.Collections;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
 import com.google.inject.Inject;
@@ -68,7 +68,7 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<Name> implement
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE.resource();
-        return ImmutableSet.of(SidecarPermissions.READ_TOPOLOGY.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_TOPOLOGY.toAuthorization(resource));
     }
 
     /**

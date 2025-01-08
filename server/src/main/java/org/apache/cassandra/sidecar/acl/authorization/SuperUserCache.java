@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import java.util.Optional;
+
 import com.google.inject.Inject;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.acl.AuthCache;
@@ -48,6 +50,6 @@ public class SuperUserCache extends AuthCache<String, Boolean>
 
     public boolean isSuperUser(String role)
     {
-        return get(role) != null;
+        return Optional.ofNullable(get(role)).orElse(false);
     }
 }

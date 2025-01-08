@@ -18,10 +18,9 @@
 
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.google.inject.Inject;
@@ -107,7 +106,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarPermissions.UPLOAD_SSTABLE.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.UPLOAD_SSTABLE.toAuthorization(resource));
     }
 
     /**

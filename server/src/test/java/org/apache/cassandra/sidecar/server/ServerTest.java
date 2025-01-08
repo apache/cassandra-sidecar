@@ -313,7 +313,7 @@ class ServerTest
     void unrecognizedAuthorizationProviderSet()
     {
         assertThatThrownBy(() -> configureServer("config/sidecar_unrecognized_authorizer.yaml"))
-        .hasCauseInstanceOf(RuntimeException.class)
+        .hasCauseInstanceOf(ConfigurationException.class)
         .hasMessageContaining("Unrecognized authorization provider org.apache.cassandra.sidecar.acl." +
                               "authorization.UnrecognizedAuthorizationProvider set");
     }

@@ -18,9 +18,9 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.Collections;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
 import com.google.inject.Inject;
@@ -57,7 +57,7 @@ public class RingHandler extends AbstractHandler<Void> implements AccessProtecte
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return ImmutableSet.of(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
     }
 
     /**

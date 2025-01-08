@@ -19,9 +19,8 @@
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
 import java.nio.file.NoSuchFileException;
+import java.util.Collections;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -65,7 +64,7 @@ public class SSTableCleanupHandler extends AbstractHandler<String> implements Ac
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarPermissions.DELETE_SSTABLE_UPLOAD.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.DELETE_SSTABLE_UPLOAD.toAuthorization(resource));
     }
 
     /**

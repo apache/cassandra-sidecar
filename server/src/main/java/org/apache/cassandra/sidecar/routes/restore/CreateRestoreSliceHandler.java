@@ -19,10 +19,9 @@
 package org.apache.cassandra.sidecar.routes.restore;
 
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Set;
 import javax.inject.Inject;
-
-import com.google.common.collect.ImmutableSet;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
@@ -80,7 +79,7 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarPermissions.CREATE_RESTORE_JOB.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.CREATE_RESTORE_JOB.toAuthorization(resource));
     }
 
     @Override

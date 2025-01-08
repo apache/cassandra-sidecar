@@ -40,11 +40,6 @@ public interface Permission
     }
 
     /**
-     * @return {@link Authorization} created from permission for a resource.
-     */
-
-
-    /**
      * User authorization created with resource
      *
      * @param resource resource set for authorization matching

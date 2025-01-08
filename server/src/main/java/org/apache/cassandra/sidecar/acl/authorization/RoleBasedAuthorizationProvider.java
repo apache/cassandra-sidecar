@@ -22,14 +22,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.AuthorizationProvider;
-import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
@@ -70,8 +68,7 @@ public class RoleBasedAuthorizationProvider implements AuthorizationProvider
 
         if (identities.isEmpty())
         {
-            return Future.failedFuture(new HttpException(HttpResponseStatus.FORBIDDEN.code(),
-                                                         "Missing client identities"));
+            return Future.failedFuture("Missing client identities");
         }
 
         Set<Authorization> authorizations = new HashSet<>();

@@ -16,10 +16,9 @@
 
 package org.apache.cassandra.sidecar.routes.restore;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -75,7 +74,7 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarPermissions.READ_RESTORE_JOB.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_RESTORE_JOB.toAuthorization(resource));
     }
 
     @Override

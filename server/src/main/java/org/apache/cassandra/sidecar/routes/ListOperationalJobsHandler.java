@@ -18,10 +18,9 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.Collections;
 import java.util.Set;
 import javax.inject.Inject;
-
-import com.google.common.collect.ImmutableSet;
 
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -59,7 +58,7 @@ public class ListOperationalJobsHandler extends AbstractHandler<Void> implements
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.SIDECAR.resource();
-        return ImmutableSet.of(SidecarPermissions.READ_OPERATIONAL_JOBS.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_OPERATIONAL_JOBS.toAuthorization(resource));
     }
 
     @Override

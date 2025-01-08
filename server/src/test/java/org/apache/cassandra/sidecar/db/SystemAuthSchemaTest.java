@@ -49,7 +49,6 @@ class SystemAuthSchemaTest
         when(mockSession.getCluster()).thenReturn(mockCluster);
 
         SystemAuthSchema systemAuthSchema = new SystemAuthSchema();
-        systemAuthSchema.initialize(mockSession, ignored -> true);
         assertThatThrownBy(systemAuthSchema::selectRoleFromIdentity)
         .isExactlyInstanceOf(SchemaUnavailableException.class)
         .hasMessage("Table system_auth/identity_to_role does not exist");

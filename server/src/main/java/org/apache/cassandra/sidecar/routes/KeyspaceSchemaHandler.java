@@ -17,9 +17,8 @@
  */
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.Collections;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
@@ -76,7 +75,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
         or.addAuthorization(CassandraPermissions.DROP.toAuthorization(resource));
         or.addAuthorization(CassandraPermissions.DESCRIBE.toAuthorization(resource));
         or.addAuthorization(SidecarPermissions.READ_SCHEMA.toAuthorization(resource));
-        return ImmutableSet.of(or);
+        return Collections.singleton(or);
     }
 
     /**

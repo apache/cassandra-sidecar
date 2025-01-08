@@ -20,11 +20,10 @@ package org.apache.cassandra.sidecar.routes.snapshots;
 
 import java.io.FileNotFoundException;
 import java.nio.file.NoSuchFileException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -98,7 +97,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return ImmutableSet.of(SidecarPermissions.READ_SNAPSHOT.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_SNAPSHOT.toAuthorization(resource));
     }
 
     /**

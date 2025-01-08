@@ -126,7 +126,7 @@ public class SidecarSchema
         }
     }
 
-    private synchronized void initialize(long timerId)
+    protected synchronized void initialize(long timerId)
     {
         // it should not happen since the callback is only scheduled when isEnabled == true
         if (!schemaKeyspaceConfiguration.isEnabled())
@@ -134,7 +134,6 @@ public class SidecarSchema
             LOGGER.debug("Sidecar schema is not enabled");
             return;
         }
-
 
         if (isInitialized())
         {

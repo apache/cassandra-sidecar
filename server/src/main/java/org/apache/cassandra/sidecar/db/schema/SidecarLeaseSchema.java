@@ -89,12 +89,6 @@ public class SidecarLeaseSchema extends TableSchema
                                             keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTL().toSeconds()));
     }
 
-    protected void unprepareStatements()
-    {
-        claimLease = null;
-        extendLease = null;
-    }
-
     /**
      * {@inheritDoc}
      */

@@ -17,9 +17,8 @@
  */
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.Collections;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
@@ -60,7 +59,7 @@ public class SchemaHandler extends AbstractHandler<Void> implements AccessProtec
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return ImmutableSet.of(SidecarPermissions.READ_SCHEMA.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_SCHEMA.toAuthorization(resource));
     }
 
     /**
