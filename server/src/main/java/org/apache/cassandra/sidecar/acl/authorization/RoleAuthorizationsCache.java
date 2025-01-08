@@ -66,6 +66,13 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
               sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration());
     }
 
+    /**
+     * {@code get} retrieves all role to authorizations mapping maintained in this cache.
+     *
+     * @param ignored key for retrieval. Cache always contains one entry stored against unique_cache_entry_key,
+     *                hence key is ignored
+     * @return Cache entry stored against unique_cache_entry_key
+     */
     @Override
     public Map<String, Set<Authorization>> get(String ignored)
     {
