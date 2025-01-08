@@ -19,6 +19,8 @@
 package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,10 +78,12 @@ public class SuperUserCacheTest
     @Test
     void testCacheDisabled()
     {
+        Map<String, Boolean> superUserMap = new HashMap<>();
+        superUserMap.put("test_role1", true);
+        superUserMap.put("test_role2", false);
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.isSuperUser("test_role")).thenReturn(true);
-        when(mockDbAccessor.getRoles()).thenReturn(ImmutableMap.of("test_role1", true,
-                                                                   "test_role2", false));
+        when(mockDbAccessor.getRoles()).thenReturn(superUserMap);
         SidecarConfiguration mockConfig = mockConfig();
         when(mockConfig.accessControlConfiguration().permissionCacheConfiguration().enabled()).thenReturn(false);
         SuperUserCache superUserCache = new SuperUserCache(vertx, executorPools, mockConfig, mockDbAccessor);

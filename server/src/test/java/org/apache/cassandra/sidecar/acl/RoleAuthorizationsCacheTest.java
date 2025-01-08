@@ -16,16 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.acl.authorization;
+package org.apache.cassandra.sidecar.acl;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
-import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.authorization.Authorization;
+import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
+import org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache;
+import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -37,7 +44,6 @@ import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
-import static org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache.UNIQUE_CACHE_ENTRY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -64,12 +70,14 @@ class RoleAuthorizationsCacheTest
     @Test
     void testCacheSizeAlwaysOne() throws InterruptedException
     {
+        Map<String, Set<Authorization>> cassandraAuthorizations = new HashMap<>();
+        cassandraAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(CassandraPermissions.SELECT.toAuthorization())));
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions())
-        .thenReturn(Collections.singletonMap("test_role1", Collections.singleton(CassandraPermissions.SELECT.toAuthorization())));
+        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(cassandraAuthorizations);
+        Map<String, Set<Authorization>> sidecarAuthorizations = new HashMap<>();
+        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
-        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions())
-        .thenReturn(Collections.singletonMap("test_role1", Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
         SidecarConfiguration mockConfig = mockConfig();
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
@@ -81,9 +89,8 @@ class RoleAuthorizationsCacheTest
         assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(2);
         assertThat(cache.getAll().size()).isOne();
 
-        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions())
-        .thenReturn(ImmutableMap.of("test_role1", Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization()),
-                                    "test_role2", Collections.singleton(SidecarPermissions.STREAM_SSTABLE.toAuthorization())));
+        sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(SidecarPermissions.STREAM_SSTABLE.toAuthorization())));
+        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
 
         // wait for cache entries to be refreshed
         Thread.sleep(3000);
@@ -94,14 +101,16 @@ class RoleAuthorizationsCacheTest
     }
 
     @Test
-    void testNotFoundUser() throws Exception
+    void testNotFoundUser()
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions())
-        .thenReturn(Collections.singletonMap("test_role1", Collections.singleton(CassandraPermissions.SELECT.toAuthorization())));
+        Map<String, Set<Authorization>> cassandraAuthorizations = new HashMap<>();
+        cassandraAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(CassandraPermissions.SELECT.toAuthorization())));
+        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(cassandraAuthorizations);
+        Map<String, Set<Authorization>> sidecarAuthorizations = new HashMap<>();
+        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
-        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions())
-        .thenReturn(Collections.singletonMap("test_role1", Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
         SidecarConfiguration mockConfig = mockConfig();
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
@@ -111,22 +120,21 @@ class RoleAuthorizationsCacheTest
                                                                     mockSidecarPermissionsAccessor);
         assertThat(cache.getAll().size()).isZero();
 
-        // wait for cache entries to be refreshed
-        Thread.sleep(3000);
+        cache.warmUp(5);
 
         // New entries fetched during refreshes
         assertThat(cache.getAll().size()).isOne();
         assertThat(cache.getAuthorizations("test_role2")).isNull();
     }
 
-
     @Test
     void testBulkload() throws InterruptedException
     {
+        Map<String, Set<Authorization>> sidecarAuthorizations = new HashMap<>();
+        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(SidecarPermissions.STREAM_SSTABLE.toAuthorization())));
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions())
-        .thenReturn(ImmutableMap.of("test_role1", Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization()),
-                                    "test_role2", Collections.singleton(SidecarPermissions.STREAM_SSTABLE.toAuthorization())));
+        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         SidecarConfiguration mockConfig = mockConfig();
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
@@ -143,17 +151,18 @@ class RoleAuthorizationsCacheTest
         // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
         Thread.sleep(3000);
         assertThat(cache.getAll().size()).isOne();
-        assertThat(cache.get(UNIQUE_CACHE_ENTRY).get("test_role1").size()).isOne();
-        assertThat(cache.get(UNIQUE_CACHE_ENTRY).get("test_role2").size()).isOne();
+        assertThat(cache.get("unique_cache_entry_key").get("test_role1").size()).isOne();
+        assertThat(cache.get("unique_cache_entry_key").get("test_role2").size()).isOne();
     }
 
     @Test
     void testCacheDisabled()
     {
+        Map<String, Set<Authorization>> sidecarAuthorizations = new HashMap<>();
+        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(SidecarPermissions.STREAM_SSTABLE.toAuthorization())));
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions())
-        .thenReturn(ImmutableMap.of("test_role1", Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization()),
-                                    "test_role2", Collections.singleton(SidecarPermissions.STREAM_SSTABLE.toAuthorization())));
+        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         SidecarConfiguration mockConfig = mockConfig();
         when(mockConfig.accessControlConfiguration().permissionCacheConfiguration().enabled()).thenReturn(false);
@@ -188,25 +197,24 @@ class RoleAuthorizationsCacheTest
         // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
         Thread.sleep(3000);
         assertThat(cache.getAll().size()).isOne();
-        assertThat(cache.get(UNIQUE_CACHE_ENTRY).size()).isZero();
+        assertThat(cache.get("unique_cache_entry_key").size()).isZero();
     }
 
     @Test
-    void testSidecarPermissionsNotAddedWhenSchemaDisabled() throws InterruptedException
+    void testSidecarPermissionsNotAddedWhenSchemaDisabled()
     {
+        Map<String, Set<Authorization>> cassandraAuthorizations = new HashMap<>();
+        cassandraAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(CassandraPermissions.SELECT.toAuthorization())));
+        cassandraAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(CassandraPermissions.CREATE.toAuthorization())));
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions())
-        .thenReturn(ImmutableMap.of("test_role1", Collections.singleton(CassandraPermissions.SELECT.toAuthorization()),
-                                    "test_role2", Collections.singleton(CassandraPermissions.CREATE.toAuthorization())));
+        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(cassandraAuthorizations);
+        Map<String, Set<Authorization>> sidecarAuthorizations = new HashMap<>();
+        sidecarAuthorizations.put("test_role3", new HashSet<>(Collections.singletonList(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions())
-        .thenReturn(ImmutableMap.of("test_role3", Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
         SidecarConfiguration mockConfig = mockConfig();
-        ServiceConfiguration mockServiceConfig = mock(ServiceConfiguration.class);
-        SchemaKeyspaceConfiguration mockSchemaConfig = mock(SchemaKeyspaceConfiguration.class);
-        when(mockSchemaConfig.isEnabled()).thenReturn(false);
-        when(mockServiceConfig.schemaKeyspaceConfiguration()).thenReturn(mockSchemaConfig);
-        when(mockConfig.serviceConfiguration()).thenReturn(mockServiceConfig);
+        SidecarSchema mockSidecarSchema = mock(SidecarSchema.class);
+        when(mockSidecarSchema.isInitialized()).thenReturn(false);
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
                                                                     mockConfig,
@@ -215,15 +223,13 @@ class RoleAuthorizationsCacheTest
                                                                     mockSidecarPermissionsAccessor);
         assertThat(cache.getAll().size()).isZero();
 
-        // warming cache
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+        // force warmup of cache
+        cache.warmUp(5);
 
-        // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
-        Thread.sleep(3000);
         assertThat(cache.getAll().size()).isOne();
-        assertThat(cache.get(UNIQUE_CACHE_ENTRY).get("test_role1").size()).isOne();
-        assertThat(cache.get(UNIQUE_CACHE_ENTRY).get("test_role2").size()).isOne();
-        assertThat(cache.get(UNIQUE_CACHE_ENTRY).get("test_role3")).isNull();
+        assertThat(cache.get("unique_cache_entry_key").get("test_role1").size()).isOne();
+        assertThat(cache.get("unique_cache_entry_key").get("test_role2").size()).isOne();
+        assertThat(cache.get("unique_cache_entry_key").get("test_role3")).isNull();
     }
 
     private SidecarConfiguration mockConfig()
@@ -238,7 +244,7 @@ class RoleAuthorizationsCacheTest
         when(mockConfig.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
         CacheConfiguration mockCacheConfig = mock(CacheConfiguration.class);
         when(mockCacheConfig.enabled()).thenReturn(true);
-        when(mockCacheConfig.expireAfterAccessMillis()).thenReturn(3000L);
+        when(mockCacheConfig.expireAfterAccessMillis()).thenReturn(1000L);
         when(mockCacheConfig.maximumSize()).thenReturn(10L);
         when(mockCacheConfig.warmupRetries()).thenReturn(5);
         when(mockCacheConfig.warmupRetryIntervalMillis()).thenReturn(1000L);

@@ -34,7 +34,6 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -42,11 +41,10 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.MetadataUtils;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * The {@link KeyspaceSchemaHandler} class handles schema request for a keyspace
+ * The {@link SchemaHandler} class handles schema requests
  */
 @Singleton
 public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements AccessProtected
@@ -59,7 +57,8 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
      * @param validator       a validator instance to validate Cassandra-specific input
      */
     @Inject
-    protected KeyspaceSchemaHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools,
+    protected KeyspaceSchemaHandler(InstanceMetadataFetcher metadataFetcher,
+                                    ExecutorPools executorPools,
                                     CassandraInputValidator validator)
     {
         super(metadataFetcher, executorPools, validator);
@@ -96,17 +95,16 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     /**
      * Handles the request with the Cassandra {@link Metadata metadata}.
      *
-     * @param context       the event to handle
-     * @param keyspace      the keyspace parsed from the request
-     * @param metadata      the metadata on the connected cluster, including known nodes and schema definitions
+     * @param context  the event to handle
+     * @param keyspace the keyspace parsed from the request
+     * @param metadata the metadata on the connected cluster, including known nodes and schema definitions
      */
     private void handleWithMetadata(RoutingContext context, Name keyspace, Metadata metadata)
     {
-        if (metadata == null)
+        if (keyspace == null)
         {
-            // set request as failed and return
-            logger.error("Failed to obtain metadata on the connected cluster for request '{}'", keyspace);
-            context.fail(cassandraServiceUnavailable());
+            SchemaResponse schemaResponse = new SchemaResponse(metadata.exportSchemaAsString());
+            context.json(schemaResponse);
             return;
         }
 
@@ -136,9 +134,8 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     private Future<Metadata> metadata(String host)
     {
         return executorPools.service().executeBlocking(() -> {
-            CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
             // metadata can block so we need to run in a blocking thread
-            return delegate.metadata();
+            return metadataFetcher.delegate(host).metadata();
         });
     }
 
@@ -151,6 +148,6 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     @Override
     protected Name extractParamsOrThrow(RoutingContext context)
     {
-        return keyspace(context, true);
+        return keyspace(context, false);
     }
 }

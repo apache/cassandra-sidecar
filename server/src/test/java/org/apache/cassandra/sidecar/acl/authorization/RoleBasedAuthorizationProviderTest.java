@@ -18,23 +18,24 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
-import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.mtls.impl.MutualTlsUser;
-import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 import static com.datastax.driver.core.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.apache.cassandra.sidecar.utils.AuthUtils.permissionFromName;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -53,29 +54,40 @@ public class RoleBasedAuthorizationProviderTest
     }
 
     @Test
-    void testMissingIdentity()
+    void testMissingIdentity(VertxTestContext testContext)
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
         RoleBasedAuthorizationProvider authorizationProvider = new RoleBasedAuthorizationProvider(mockIdentityToRoleCache,
                                                                                                   mockRolePermissionsCache);
         User user = User.fromName("test_user");
-        assertThatThrownBy(() -> authorizationProvider.getAuthorizations(user))
-        .isInstanceOf(HttpException.class)
-        .hasMessage(HttpResponseStatus.FORBIDDEN.reasonPhrase());
+        authorizationProvider.getAuthorizations(user)
+                             .onSuccess(v -> testContext.failNow("With missing identity authorization provider is expected to return a failed future"))
+                             .onFailure(cause -> testContext.completeNow());
     }
 
     @Test
-    void testCassandraRoleNotFound()
+    void testCassandraRoleNotFound() throws Exception
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
+        RoleAuthorizationsCache mockRolePermissionsCache = mock(RoleAuthorizationsCache.class);
         RoleBasedAuthorizationProvider authorizationProvider = new RoleBasedAuthorizationProvider(mockIdentityToRoleCache,
                                                                                                   mockRolePermissionsCache);
         User user = MutualTlsUser.fromIdentities(Collections.singletonList("spiffe://cassandra/sidecar/test_user"));
-        assertThatThrownBy(() -> authorizationProvider.getAuthorizations(user))
-        .isInstanceOf(HttpException.class)
-        .hasMessage(HttpResponseStatus.FORBIDDEN.reasonPhrase());
+
+        CountDownLatch waitForEmptyAuthorizations = new CountDownLatch(1);
+        authorizationProvider.getAuthorizations(user).onComplete(v -> waitForEmptyAuthorizations.countDown());
+        waitForEmptyAuthorizations.await(30, TimeUnit.SECONDS);
+
+        assertThat(user.authorizations().get("RoleBasedAccessControl")).isEmpty();
+
         when(mockIdentityToRoleCache.get("spiffe://cassandra/sidecar/test_user")).thenReturn("test_role");
-        authorizationProvider.getAuthorizations(user);
+        when(mockRolePermissionsCache.getAuthorizations("test_role")).thenReturn(Collections.singleton(permissionFromName("RANDOM").toAuthorization()));
+
+        CountDownLatch waitForAuthorizations = new CountDownLatch(1);
+        authorizationProvider.getAuthorizations(user).onComplete(v -> waitForAuthorizations.countDown());
+        waitForAuthorizations.await(30, TimeUnit.SECONDS);
+
+        assertThat(user.authorizations().get("RoleBasedAccessControl")).isNotEmpty();
     }
 
     @Test
@@ -85,7 +97,7 @@ public class RoleBasedAuthorizationProviderTest
         when(mockIdentityToRoleCache.get("spiffe://cassandra/sidecar/test_user")).thenReturn("test_role");
         RoleAuthorizationsCache mockRolePermissionsCache = mock(RoleAuthorizationsCache.class);
         when(mockRolePermissionsCache.getAuthorizations("test_role"))
-        .thenReturn(ImmutableSet.of(CassandraPermissions.CREATE.toAuthorization(), SidecarPermissions.CREATE_SNAPSHOT.toAuthorization()));
+        .thenReturn(new HashSet<>(Arrays.asList(CassandraPermissions.CREATE.toAuthorization(), SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
         RoleBasedAuthorizationProvider authorizationProvider = new RoleBasedAuthorizationProvider(mockIdentityToRoleCache,
                                                                                                   mockRolePermissionsCache);
         User user = MutualTlsUser.fromIdentities(Collections.singletonList("spiffe://cassandra/sidecar/test_user"));

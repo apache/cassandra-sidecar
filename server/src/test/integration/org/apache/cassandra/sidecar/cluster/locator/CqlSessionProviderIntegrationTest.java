@@ -22,15 +22,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.datastax.driver.core.Session;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
-import org.apache.cassandra.sidecar.config.SslConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.AuthMode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
@@ -59,7 +55,6 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
     void testWithSSLOnly(VertxTestContext context) throws Exception
     {
         sidecarTestContext.setUsernamePassword(null, null);
-        sidecarTestContext.setSslConfiguration(sslConfigWithTruststore());
         waitForSchemaReady(30, TimeUnit.SECONDS);
         // we enable only SSL and do not set any authenticator, hence username is "anonymous"
         retrieveClientStats(context, "anonymous", true);
@@ -69,7 +64,6 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
     void testWithSSLOnlyWithUsername(VertxTestContext context) throws Exception
     {
         sidecarTestContext.setUsernamePassword("cassandra", "cassandra");
-        sidecarTestContext.setSslConfiguration(sslConfigWithTruststore());
         waitForSchemaReady(30, TimeUnit.SECONDS);
         // we enable only SSL and do not set any authenticator, hence username is "anonymous"
         retrieveClientStats(context, "cassandra", true);
@@ -83,27 +77,10 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
         .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
         .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
+        insertIdentityRole(cassandraTestContext, ADMIN_IDENTITY, "cassandra");
         waitForSchemaReady(30, TimeUnit.SECONDS);
-        insertIdentityRole(ADMIN_IDENTITY, "cassandra");
 
         retrieveClientStats(context, "cassandra", true);
-    }
-
-    private SslConfiguration sslConfigWithTruststore()
-    {
-        return SslConfigurationImpl.builder()
-                                   .enabled(true)
-                                   .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
-                                   .build();
-    }
-
-    private SslConfiguration sslConfigWithKeystoreTruststore()
-    {
-        return SslConfigurationImpl.builder()
-                                   .enabled(true)
-                                   .keystore(new KeyStoreConfigurationImpl(clientKeystorePath.toAbsolutePath().toString(), clientKeystorePassword, "PKCS12"))
-                                   .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
-                                   .build();
     }
 
     private void retrieveClientStats(VertxTestContext context, String expectedUsername, boolean checkSsl) throws Exception
@@ -146,9 +123,9 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
         }
     }
 
-    private void insertIdentityRole(String identity, String role)
+    private void insertIdentityRole(CassandraTestContext cassandraContext, String identity, String role)
     {
-        Session session = maybeGetSession();
-        session.execute("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
+        cassandraContext.cluster()
+                        .schemaChangeIgnoringStoppedInstances("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
     }
 }

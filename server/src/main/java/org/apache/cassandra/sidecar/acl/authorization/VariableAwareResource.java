@@ -48,6 +48,7 @@ public enum VariableAwareResource
      * the resolved resource and are matched against the expected permissions set defined in the endpoint's handler.
      */
     DATA_WITH_KEYSPACE(String.format("data/{%s}", KEYSPACE)),
+    
     DATA_WITH_KEYSPACE_TABLE(String.format("data/{%s}/{%s}", KEYSPACE, TABLE));
 
     private final String resource;

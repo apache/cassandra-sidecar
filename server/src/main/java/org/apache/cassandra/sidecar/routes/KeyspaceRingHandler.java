@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.cassandra.sidecar.routes;
 
 import java.util.Collections;
@@ -11,21 +29,21 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.OrAuthorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * A handler that provides ring information for a specific keyspace for the Cassandra cluster
+ * A handler that provides ring information for the Cassandra cluster
  */
 @Singleton
 public class KeyspaceRingHandler extends AbstractHandler<Name> implements AccessProtected
@@ -55,23 +73,9 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
-        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-        if (delegate == null)
-        {
-            context.fail(cassandraServiceUnavailable());
-            return;
-        }
-
-        StorageOperations storageOperations = delegate.storageOperations();
-
-        if (storageOperations == null)
-        {
-            context.fail(cassandraServiceUnavailable());
-            return;
-        }
-
+        StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
         executorPools.service()
-                     .executeBlocking(() -> storageOperations.ring(keyspace))
+                     .executeBlocking(() -> operations.ring(keyspace))
                      .onSuccess(context::json)
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
     }

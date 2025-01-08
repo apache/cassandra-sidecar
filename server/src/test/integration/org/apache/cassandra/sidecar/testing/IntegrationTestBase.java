@@ -131,6 +131,14 @@ public abstract class IntegrationTestBase
 
         SslConfiguration sslConfig = cassandraTestContext.annotation.authMode().equals(AuthMode.MUTUAL_TLS)
                                      ? sslConfigWithClientKeystoreTruststore() : null;
+
+        // When only SSL is enabled and mTLS is not enabled, we should not set keystore in SslConfig. Set a keystore
+        // when mTLS is enabled
+        if (cassandraTestContext.annotation.enableSsl() &&
+            !cassandraTestContext.annotation.authMode().equals(AuthMode.MUTUAL_TLS))
+        {
+            sslConfig = sslConfigWithTruststore();
+        }
         sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
                                                               getNumInstancesToManage(clusterSize), sslConfig);
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
@@ -464,6 +472,14 @@ public abstract class IntegrationTestBase
                .keystore(new KeyStoreConfigurationImpl(clientKeystorePath.toAbsolutePath().toString(), clientKeystorePassword, "PKCS12"))
                .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
                .build();
+    }
+
+    private SslConfiguration sslConfigWithTruststore()
+    {
+        return SslConfigurationImpl.builder()
+                                   .enabled(true)
+                                   .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
+                                   .build();
     }
 
     protected WebClient createClient(Path clientKeystorePath, Path truststorePath)
