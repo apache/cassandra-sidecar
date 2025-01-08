@@ -70,7 +70,10 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         prepareForTest(cassandraContext);
 
         createRole("test_role", true);
-        insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
+
+        // wait for cache refreshes to pick up superuser status
+        Thread.sleep(2000);
 
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
         // uses client keystore with superuser identity
@@ -84,10 +87,14 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         prepareForTest(cassandraContext);
 
         createRole("test_role", false);
-        insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
 
         // grant permission for non super user
         grantKeyspacePermission("sample_keyspace", "test_role");
+
+        // wait for cache refreshes to pick up granted permissions
+        Thread.sleep(2000);
+
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
         verifyAccess(context, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath);
@@ -100,9 +107,12 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         prepareForTest(cassandraContext);
 
         createRole("test_role", false);
-        insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
 
         grantSidecarPermission("test_role", "data/sample_keyspace/sample_table", "CREATE:SNAPSHOT");
+
+        // wait for cache refreshes to pick up granted permission
+        Thread.sleep(2000);
 
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "sample_keyspace", "sample_table");
@@ -124,9 +134,13 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         prepareForTest(cassandraContext);
 
         createRole("test_role", false);
-        insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
 
         grantSidecarPermission("test_role", "data/sample_keyspace", "READ:*");
+
+        // wait for cache refreshes to pick up granted permission
+        Thread.sleep(2000);
+
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
 
@@ -143,11 +157,14 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         prepareForTest(cassandraContext);
 
         createRole("test_role", false);
-        insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
 
         // READ action allowed across targets for same resource. READ:* for cluster resource allows READ:SCHEMA,
         // READ:CDC, READ:CLUSTER etc
         grantSidecarPermission("test_role", "cluster", "READ:*");
+
+        // wait for cache refreshes to pick up granted permission
+        Thread.sleep(2000);
 
         String timeSkewRoute = "/api/v1/time-skew";
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
@@ -176,9 +193,12 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         prepareForTest(cassandraContext);
 
         createRole("test_role", false);
-        insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
 
         grantSidecarPermission("test_role", "data/sample_keyspace", "*:*");
+
+        // wait for cache refreshes to pick up granted permission
+        Thread.sleep(2000);
 
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
@@ -206,9 +226,12 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         prepareForTest(cassandraContext);
 
         createRole("test_role", false);
-        insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
 
         grantSidecarPermission("test_role", "data/sample_keyspace/sample_table", "*:SNAPSHOT");
+
+        // wait for cache refreshes to pick up granted permission
+        Thread.sleep(2000);
 
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "sample_keyspace", "sample_table");
@@ -220,8 +243,8 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // such as CREATE:SNAPSHOT, READ:SNAPSHOT, DELETE:SNAPSHOT. Does not allow STREAM:SSTABLE or other actions
         verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
 
-        String streamSSTableRoute =  String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
-                                                   "sample_keyspace", "sample_table", "my-snapshot", "nc-1-big-Data.db");
+        String streamSSTableRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
+                                                  "sample_keyspace", "sample_table", "my-snapshot", "nc-1-big-Data.db");
         verifyAccess(context, checkpoint, HttpMethod.GET, streamSSTableRoute, clientKeystorePath, true);
     }
 
@@ -232,17 +255,20 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         prepareForTest(cassandraContext);
 
         createRole("test_role", false);
-        insertIdentityRole("spiffe://cassandra/sidecar/test_user", "test_role");
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
 
         grantSidecarPermission("test_role", "data/sample_keyspace/sample_table", "CREATE:SNAPSHOT");
+
+        // wait for cache refreshes to pick up granted permission
+        Thread.sleep(2000);
 
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "sample_keyspace", "sample_table");
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
 
         String streamRoute
-        =  String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
-                         "sample_keyspace", "sample_table", "my-snapshot", "nc-1-big-Data.db");
+        = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
+                        "sample_keyspace", "sample_table", "my-snapshot", "nc-1-big-Data.db");
 
         // CREATE:SNAPSHOT permission granted for data/sample_keyspace/sample_table
         WebClient client = createClient(clientKeystorePath, truststorePath);
@@ -294,10 +320,10 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
         .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
-        waitForSchemaReady(30, TimeUnit.SECONDS);
-
         // required for authentication of sidecar requests to Cassandra. Only superusers can grant permissions
-        insertIdentityRole(ADMIN_IDENTITY, "cassandra");
+        insertIdentityRole(cassandraContext, ADMIN_IDENTITY, "cassandra");
+
+        waitForSchemaReady(30, TimeUnit.SECONDS);
         createKeyspaceTable();
     }
 
@@ -310,13 +336,14 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     private void createRole(String role, boolean superUser)
     {
         Session session = maybeGetSession();
+
         session.execute("CREATE ROLE " + role + " WITH PASSWORD = 'password' AND SUPERUSER = " + superUser + " AND LOGIN = true;");
     }
 
-    private void insertIdentityRole(String identity, String role)
+    private void insertIdentityRole(CassandraTestContext cassandraContext, String identity, String role)
     {
-        Session session = maybeGetSession();
-        session.execute("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
+        cassandraContext.cluster()
+                        .schemaChangeIgnoringStoppedInstances("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
     }
 
     private void createKeyspace(String keyspace)

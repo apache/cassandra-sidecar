@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import io.vertx.core.AsyncResult;
@@ -79,7 +80,8 @@ public class RoleBasedAuthorizationProvider implements AuthorizationProvider
             {
                 continue;
             }
-            roleAuthorizationsCache.getAuthorizations(role).addAll(authorizations);
+            // when entries in cache are not found, null is returned. We can not add null in user.authorizations()
+            Optional.ofNullable(roleAuthorizationsCache.getAuthorizations(role)).ifPresent(authorizations::addAll);
         }
         user.authorizations().add(getId(), authorizations);
         return Future.succeededFuture();

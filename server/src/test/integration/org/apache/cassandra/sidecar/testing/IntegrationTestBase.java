@@ -129,23 +129,13 @@ public abstract class IntegrationTestBase
         injector = Guice.createInjector(Modules.override(new MainModule()).with(integrationTestModule));
         vertx = injector.getInstance(Vertx.class);
 
-        if (cassandraTestContext.annotation.authMode().equals(AuthMode.MUTUAL_TLS))
-        {
-            SslConfiguration sslConfig = sslConfigWithClientKeystoreTruststore();
-            sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
-                                                                  getNumInstancesToManage(clusterSize), sslConfig);
-        }
-        else
-        {
-            sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
-                                                                  getNumInstancesToManage(clusterSize), null);
-        }
-
-
+        SslConfiguration sslConfig = cassandraTestContext.annotation.authMode().equals(AuthMode.MUTUAL_TLS)
+                                     ? sslConfigWithClientKeystoreTruststore() : null;
+        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
+                                                              getNumInstancesToManage(clusterSize), sslConfig);
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);
-        client = createClient(clientKeystorePath, truststorePath);
         VertxTestContext context = new VertxTestContext();
 
         if (sidecarTestContext.isClusterBuilt())
@@ -171,12 +161,6 @@ public abstract class IntegrationTestBase
               .onFailure(context::failNow);
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
-    }
-
-    private void insertIdentityRole(String identity, String role)
-    {
-        Session session = maybeGetSession();
-        session.execute("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
     }
 
     @AfterEach
