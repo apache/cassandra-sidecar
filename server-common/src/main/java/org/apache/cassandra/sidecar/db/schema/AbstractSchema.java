@@ -80,7 +80,7 @@ public abstract class AbstractSchema
         }
 
         prepareStatements(session);
-        logger.info("{} is initialized!", this.getClass().getSimpleName());
+        logger.debug("{} is initialized!", this.getClass().getSimpleName());
         return true;
     }
 
