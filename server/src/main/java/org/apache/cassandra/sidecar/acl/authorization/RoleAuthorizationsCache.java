@@ -66,6 +66,12 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
               sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration());
     }
 
+    @Override
+    public Map<String, Set<Authorization>> get(String key)
+    {
+        return get(UNIQUE_CACHE_ENTRY);
+    }
+
     /**
      * @return a {@code Set} of {@link Authorization} a role holds.
      */
