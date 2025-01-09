@@ -25,6 +25,9 @@ import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+/**
+ * Implementation of the {@link SecondBoundConfiguration}
+ */
 public class SecondBoundConfigurationImpl extends DurationSpecImpl implements SecondBoundConfiguration
 {
     public SecondBoundConfigurationImpl()
@@ -47,7 +50,7 @@ public class SecondBoundConfigurationImpl extends DurationSpecImpl implements Se
      * {@inheritDoc}
      */
     @Override
-    TimeUnit minimumUnit()
+    public TimeUnit minimumUnit()
     {
         return SECONDS;
     }

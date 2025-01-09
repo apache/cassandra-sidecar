@@ -37,10 +37,10 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
 import org.apache.cassandra.sidecar.models.HttpResponse;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
-import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
+import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 import static org.apache.cassandra.sidecar.utils.MetricUtils.parseSSTableComponent;
 

@@ -25,6 +25,9 @@ import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+/**
+ * Implementation of the {@link MillisecondBoundConfiguration}
+ */
 public class MillisecondBoundConfigurationImpl extends DurationSpecImpl implements MillisecondBoundConfiguration
 {
     public MillisecondBoundConfigurationImpl()
@@ -47,7 +50,7 @@ public class MillisecondBoundConfigurationImpl extends DurationSpecImpl implemen
      * {@inheritDoc}
      */
     @Override
-    TimeUnit minimumUnit()
+    public TimeUnit minimumUnit()
     {
         return MILLISECONDS;
     }

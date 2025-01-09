@@ -20,15 +20,20 @@ package org.apache.cassandra.sidecar.config;
 
 import org.apache.cassandra.sidecar.config.yaml.MillisecondBoundConfigurationImpl;
 
+/**
+ * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in milliseconds.
+ * If the user sets a different unit - we still validate that converted to milliseconds the quantity will not exceed
+ * that upper bound.
+ */
 public interface MillisecondBoundConfiguration extends DurationSpec
 {
     /**
-     * Represents a 0 millisecond configuration
+     * Represents a 0-millisecond configuration
      */
     MillisecondBoundConfiguration ZERO = MillisecondBoundConfiguration.parse("0ms");
 
     /**
-     * Represents a 1 millisecond configuration
+     * Represents a 1-millisecond configuration
      */
     MillisecondBoundConfiguration ONE = MillisecondBoundConfiguration.parse("1ms");
 

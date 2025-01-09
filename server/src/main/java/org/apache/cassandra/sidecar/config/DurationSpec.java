@@ -30,6 +30,11 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+/**
+ * Represents a positive time duration. Wrapper interface for Cassandra Sidecar duration configuration parameters,
+ * providing to the users the opportunity to be able to provide configuration values with a unit of their choice
+ * in {@code sidecar.yaml} as per the available options. This class mirrors the Cassandra DurationSpec class.
+ */
 public interface DurationSpec extends Comparable<DurationSpec>
 {
     /**
@@ -89,6 +94,11 @@ public interface DurationSpec extends Comparable<DurationSpec>
      * @return the time unit to specify the amount of duration
      */
     TimeUnit unit();
+
+    /**
+     * @return the minimum unit that can be represented by this type
+     */
+    TimeUnit minimumUnit();
 
     /**
      * Converts this duration spec to the {@code targetUnit}.

@@ -20,15 +20,20 @@ package org.apache.cassandra.sidecar.config;
 
 import org.apache.cassandra.sidecar.config.yaml.SecondBoundConfigurationImpl;
 
+/**
+ * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in seconds.
+ * If the user sets a different unit - we still validate that converted to seconds the quantity will not exceed
+ * that upper bound.
+ */
 public interface SecondBoundConfiguration extends DurationSpec
 {
     /**
-     * Represents a 0 seconds configuration
+     * Represents a 0-seconds configuration
      */
     SecondBoundConfiguration ZERO = SecondBoundConfiguration.parse("0s");
 
     /**
-     * Represents a 1 second configuration
+     * Represents a 1-second configuration
      */
     SecondBoundConfiguration ONE = SecondBoundConfiguration.parse("1s");
 

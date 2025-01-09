@@ -31,7 +31,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Represents a positive time duration. Wrapper class for Cassandra Sidecar duration configuration parameters,
  * providing to the users the opportunity to be able to provide configuration values with a unit of their choice
- * in sidecar.yaml as per the available options. This class mirrors the Cassandra DurationSpec class
+ * in {@code sidecar.yaml} as per the available options. This class mirrors the Cassandra DurationSpec class.
  */
 abstract class DurationSpecImpl implements DurationSpec
 {
@@ -73,7 +73,7 @@ abstract class DurationSpecImpl implements DurationSpec
     /**
      * @return the minimum unit that can be represented by this type
      */
-    abstract TimeUnit minimumUnit();
+    public abstract TimeUnit minimumUnit();
 
     /**
      * {@inheritDoc}
