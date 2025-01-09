@@ -30,6 +30,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.MillisecondBoundConfigurationImpl;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
@@ -100,6 +101,7 @@ class ClusterLeaseClaimTaskTest
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
         when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().quantity()).thenReturn(configuredDelayMillis);
         when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().unit()).thenReturn(TimeUnit.MILLISECONDS);
+        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().to(TimeUnit.MILLISECONDS)).thenCallRealMethod();
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), mockServiceConfiguration, mock(ElectorateMembership.class),
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
@@ -112,12 +114,15 @@ class ClusterLeaseClaimTaskTest
     void testDelayFromConfiguration(long configuredDelayMillis)
     {
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
-        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().executeInterval().toMillis()).thenReturn(configuredDelayMillis);
+        MillisecondBoundConfigurationImpl value = new MillisecondBoundConfigurationImpl(configuredDelayMillis, TimeUnit.MILLISECONDS);
+        when(mockServiceConfiguration.coordinationConfiguration()
+                                     .clusterLeaseClaimConfiguration()
+                                     .executeInterval()).thenReturn(value);
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), mockServiceConfiguration, mock(ElectorateMembership.class),
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
-        assertThat(task.delay()).isEqualTo(configuredDelayMillis);
+        assertThat(task.delay().to(TimeUnit.MILLISECONDS)).isEqualTo(configuredDelayMillis);
     }
 
     @Test

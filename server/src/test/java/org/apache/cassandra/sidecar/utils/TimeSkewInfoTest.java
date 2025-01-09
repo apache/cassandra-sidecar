@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -37,7 +38,7 @@ public class TimeSkewInfoTest
     {
         long currentTime = 12345L;
         TimeProvider timeProvider = () -> currentTime;
-        ServiceConfiguration config = mock(ServiceConfiguration.class);
+        ServiceConfiguration config = new ServiceConfigurationImpl();
         TimeSkewInfo info = new TimeSkewInfo(timeProvider, config);
         assertThat(info.timeSkewResponse().currentTime).isEqualTo(currentTime);
     }

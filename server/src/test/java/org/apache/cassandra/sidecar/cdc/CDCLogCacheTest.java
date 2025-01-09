@@ -121,6 +121,7 @@ class CdcLogCacheTest
         SecondBoundConfiguration mockCacheExpiryConfig = mock(SecondBoundConfiguration.class);
         when(mockCacheExpiryConfig.quantity()).thenReturn(100L);
         when(mockCacheExpiryConfig.unit()).thenReturn(TimeUnit.MILLISECONDS);
+        when(mockCacheExpiryConfig.to(TimeUnit.MILLISECONDS)).thenCallRealMethod();
         return new CdcLogCache(executorPools, instancesMetadata, mockCacheExpiryConfig);
     }
 

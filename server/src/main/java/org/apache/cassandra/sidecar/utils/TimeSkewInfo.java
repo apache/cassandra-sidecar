@@ -44,8 +44,7 @@ public class TimeSkewInfo
      */
     public TimeSkewResponse timeSkewResponse()
     {
-        int allowableTimeSkewInMinutes = (int) TimeUnit.MINUTES.convert(configuration.allowableTimeSkew().quantity(),
-                                                                        configuration.allowableTimeSkew().unit());
+        int allowableTimeSkewInMinutes = (int) configuration.allowableTimeSkew().to(TimeUnit.MINUTES);
         return new TimeSkewResponse(timeProvider.currentTimeMillis(), allowableTimeSkewInMinutes);
     }
 }
