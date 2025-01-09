@@ -96,7 +96,8 @@ public class OperationalJobHandler extends AbstractHandler<Void>
         catch (IllegalArgumentException e)
         {
             logger.info("Invalid jobId. jobId={}", requestJobId);
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, String.format("Invalid job ID provided :%s.", requestJobId));
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                    String.format("Invalid job ID provided: %s.", requestJobId));
         }
         return jobId;
     }

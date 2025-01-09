@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
@@ -54,9 +53,6 @@ import static org.mockito.Mockito.when;
  */
 class OperationalJobManagerTest
 {
-//    @Mock
-//    SidecarConfiguration mockConfig;
-
     protected Vertx vertx;
 
     protected ExecutorPools executorPool;
@@ -67,9 +63,6 @@ class OperationalJobManagerTest
         vertx = Vertx.vertx();
         executorPool = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         MockitoAnnotations.openMocks(this);
-//        ServiceConfiguration mockServiceConfig = mock(ServiceConfiguration.class);
-//        when(mockConfig.serviceConfiguration()).thenReturn(mockServiceConfig);
-//        when(mockServiceConfig.operationalJobExecutionMaxWaitTimeInMillis()).thenReturn(5000L);
     }
 
     @Test
@@ -136,7 +129,7 @@ class OperationalJobManagerTest
             }
 
             @Override
-            protected OperationalJobStatus executeInternal() throws OperationalJobException
+            protected void executeInternal() throws OperationalJobException
             {
                 throw new OperationalJobException(msg);
             }

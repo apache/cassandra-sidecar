@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
-import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 
 /**
  * Implementation of {@link OperationalJob} to perform node decommission operation.
@@ -47,23 +46,47 @@ public class DecommissionJob extends OperationalJob
     @Override
     public boolean isRunningOnCassandra()
     {
-        return storageOperations.isDecommissioning();
+        String operationMode = storageOperations.getOperationMode();
+        return operationMode.equals("LEAVING") || operationMode.equals("DECOMMISSIONED");
+
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public OperationalJobStatus status()
+    {
+        String operationMode = storageOperations.getOperationMode();
+
+        if (operationMode.equals("LEAVING"))
+        {
+            return OperationalJobStatus.RUNNING;
+        }
+        else if (operationMode.equals("DECOMMISSIONED"))
+        {
+            return OperationalJobStatus.SUCCEEDED;
+        }
+        else
+        {
+            return super.status();
+        }
     }
 
     /**
      * {@inheritDoc}
      */
 
-    protected OperationalJobStatus executeInternal() throws OperationalJobException
+    protected void executeInternal()
     {
-        LOGGER.info("Executing decommission operation. jobId={}", jobId);
-        return storageOperations.decommission(isForce);
-    }
+        if (isRunningOnCassandra())
+        {
+            LOGGER.info("Not executing job as an ongoing or completed decommission operation was found jobId={}", jobId);
+            return;
+        }
 
-    @Override
-    public void close()
-    {
-        super.close();
+        LOGGER.info("Executing decommission operation. jobId={}", jobId);
+        storageOperations.decommission(isForce);
     }
 
     /**

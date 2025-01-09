@@ -28,7 +28,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
-import org.apache.cassandra.sidecar.common.response.NodeDecommissionResponse;
+import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -49,7 +49,6 @@ public class NodeDecommissionHandler extends AbstractHandler<Void>
 {
     private final OperationalJobManager jobManager;
     private final ServiceConfiguration config;
-    private boolean isForce;
 
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -78,7 +77,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Void>
     protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        isForce = parseBooleanQueryParam(context.request(), "force", false);
+        boolean isForce = parseBooleanQueryParam(context.request(), "force", false);
 
         OperationalJob job = new DecommissionJob(UUIDs.timeBased(), operations, isForce);
         jobManager.trySubmitJob(job);
@@ -103,7 +102,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Void>
                 break;
             case FAILED:
                 reason = job.asyncResult().cause().getMessage();
-                context.response().setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+                context.response().setStatusCode(HttpResponseStatus.OK.code());
                 break;
             case CREATED:
             case RUNNING:
@@ -112,7 +111,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Void>
             default:
                 throw new IllegalArgumentException("Unexpected job status encountered: " + jobStatus);
         }
-        context.json(new NodeDecommissionResponse(job.jobId, jobStatus, host, reason));
+        context.json(new OperationalJobResponse(job.jobId, jobStatus, host, reason));
     }
 
     @Override

@@ -75,7 +75,6 @@ import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
-import org.apache.cassandra.sidecar.common.response.NodeDecommissionResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
@@ -1337,9 +1336,9 @@ abstract class SidecarClientTest
                                 .setBody(nodeDecommissionString);
         enqueue(response);
 
-        NodeDecommissionResponse result = client.nodeDecommission().get(30, TimeUnit.SECONDS);
+        SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(servers.get(0));
+        OperationalJobResponse result = client.nodeDecommission(sidecarInstance).get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
-        assertThat(result.instance()).isEqualTo("127.0.0.1");
         assertThat(result.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
         validateResponseServed(ApiEndpointsV1.NODE_DECOMMISSION_ROUTE);
     }

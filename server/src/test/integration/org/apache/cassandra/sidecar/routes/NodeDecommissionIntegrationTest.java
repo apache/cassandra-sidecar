@@ -21,25 +21,30 @@ package org.apache.cassandra.sidecar.routes;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import org.apache.cassandra.db.SystemKeyspace;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
-import org.apache.cassandra.sidecar.common.response.NodeDecommissionResponse;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 
+import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
@@ -53,21 +58,22 @@ public class NodeDecommissionIntegrationTest extends IntegrationTestBase
 {
     private static final String DECOMMISSION_FAILED_MESSAGE = "Failed to decommission node";
 
-    @CassandraIntegrationTest(nodesPerDc = 5)
+    @CassandraIntegrationTest(nodesPerDc = 2)
     void decommissionNodeDefault(VertxTestContext context) throws InterruptedException
     {
         BBHelperDecommissionNode.reset();
         final String[] jobId = new String[1];
-        String testRoute = "/api/v1/cassandra/node/decommission";
+        String testRoute = "/api/v1/cassandra/operations/decommission?force=true";
         testWithClient(client -> client.put(server.actualPort(), "127.0.0.1", testRoute)
                                        .send(context.succeeding(response -> {
                                            logger.info("Response Status:" + response.statusCode());
-                                           NodeDecommissionResponse decommissionResponse = response.bodyAsJson(NodeDecommissionResponse.class);
+                                           OperationalJobResponse decommissionResponse = response.bodyAsJson(OperationalJobResponse.class);
                                            assertThat(decommissionResponse.status()).isEqualTo(RUNNING);
                                            jobId[0] = String.valueOf(decommissionResponse.jobId());
                                        })));
         Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
-        pollStatusForState(context, jobId[0], SUCCEEDED, null);
+        pollStatusForState(jobId[0], SUCCEEDED, null);
+        context.completeNow();
         context.awaitCompletion(2, TimeUnit.MINUTES);
     }
 
@@ -80,63 +86,64 @@ public class NodeDecommissionIntegrationTest extends IntegrationTestBase
             builder.withInstanceInitializer(BBHelperDecommissionNode::install);
         });
 
-        final String[] jobId = new String[1];
-        String testRoute = "/api/v1/cassandra/node/decommission";
+        AtomicReference<String> jobId = new AtomicReference<>();
+        String testRoute = "/api/v1/cassandra/operations/decommission";
         testWithClient(client -> client.put(server.actualPort(), "127.0.0.1", testRoute)
                                        .send(context.succeeding(response -> {
                                            logger.info("Response Status:" + response.statusCode());
-                                           NodeDecommissionResponse decommissionResponse = response.bodyAsJson(NodeDecommissionResponse.class);
+                                           OperationalJobResponse decommissionResponse = response.bodyAsJson(OperationalJobResponse.class);
                                            assertThat(decommissionResponse.status()).isEqualTo(RUNNING);
-                                           jobId[0] = String.valueOf(decommissionResponse.jobId());
+                                           jobId.set(String.valueOf(decommissionResponse.jobId()));
                                        })));
         Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
-        pollStatusForState(context, jobId[0], FAILED, DECOMMISSION_FAILED_MESSAGE);
+        pollStatusForState(jobId.get(), FAILED, DECOMMISSION_FAILED_MESSAGE);
+        context.completeNow();
         context.awaitCompletion(2, TimeUnit.MINUTES);
     }
 
-    private void pollStatusForState(VertxTestContext context,
-                                    String uuid,
+    private void pollStatusForState(String uuid,
                                     OperationalJobStatus expectedStatus,
                                     String expectedReason)
     {
-
         int attempts = 10;
         String status = "/api/v1/cassandra/operational-jobs/" + uuid;
         AtomicBoolean stateReached = new AtomicBoolean(false);
-        logger.info("Job Stats Attempt:" + attempts);
-        final int[] counter = {0};
-        int finalAttempts = attempts;
-        vertx.setPeriodic(10000, id -> {
-            counter[0]++;
-            testWithClient(false, client -> client.get(server.actualPort(), "127.0.0.1", status)
-                                                  .send(context.succeeding(resp -> {
-                                                      if (resp.statusCode() == HttpResponseStatus.OK.code())
-                                                      {
-                                                          stateReached.set(true);
-                                                          logger.info("Success Status Response code:" + resp.statusCode());
-                                                          logger.info("Status Response:" + resp.bodyAsString());
-                                                          OperationalJobResponse jobStatusResp = resp.bodyAsJson(OperationalJobResponse.class);
-                                                          assertThat(jobStatusResp.jobId()).isEqualTo(UUID.fromString(uuid));
-                                                          assertThat(jobStatusResp.status()).isEqualTo(expectedStatus);
-                                                          assertThat(jobStatusResp.reason()).isEqualTo(expectedReason);
-                                                          assertThat(jobStatusResp.operation()).isEqualTo("decommission");
-                                                      }
-                                                      else
-                                                      {
-                                                          assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.ACCEPTED.code());
-                                                          logger.info("Status Response code:" + resp.statusCode());
-                                                          logger.info("Status Response:" + resp.bodyAsString());
-                                                          OperationalJobResponse jobStatusResp = resp.bodyAsJson(OperationalJobResponse.class);
-                                                          assertThat(jobStatusResp.jobId()).isEqualTo(UUID.fromString(uuid));
-                                                          // assertThat(jobStatusResp).isNull();
-                                                      }
-                                                      logger.info("Request completed");
-                                                  })));
-            if (stateReached.get() || counter[0] == finalAttempts)
+        logger.info("Job Stats Attempt: {}", attempts);
+        AtomicInteger counter = new AtomicInteger(0);
+        loopAssert(30, () -> {
+            counter.incrementAndGet();
+            // todo: create a helper method in the base class to get response in the blocking manner
+            HttpResponse<Buffer> resp;
+            try
             {
-                vertx.cancelTimer(id);
+                resp = client.get(server.actualPort(), "127.0.0.1", status)
+                                                  .send()
+                                                  .toCompletionStage()
+                                                  .toCompletableFuture()
+                                                  .get();
+                logger.info("Success Status Response code: {}", resp.statusCode());
+                logger.info("Status Response: {}", resp.bodyAsString());
+                if (resp.statusCode() == HttpResponseStatus.OK.code())
+                {
+                    stateReached.set(true);
+                    OperationalJobResponse jobStatusResp = resp.bodyAsJson(OperationalJobResponse.class);
+                    assertThat(jobStatusResp.jobId()).isEqualTo(UUID.fromString(uuid));
+                    assertThat(jobStatusResp.status()).isEqualTo(expectedStatus);
+                    assertThat(jobStatusResp.reason()).isEqualTo(expectedReason);
+                    assertThat(jobStatusResp.operation()).isEqualTo("decommission");
+                }
+                else
+                {
+                    assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.ACCEPTED.code());
+                    OperationalJobResponse jobStatusResp = resp.bodyAsJson(OperationalJobResponse.class);
+                    assertThat(jobStatusResp.jobId()).isEqualTo(UUID.fromString(uuid));
+                }
+                logger.info("Request completed");
                 assertThat(stateReached.get()).isTrue();
-                context.completeNow();
+            }
+            catch (InterruptedException | ExecutionException e)
+            {
+                throw new RuntimeException(e);
             }
         });
     }

@@ -43,7 +43,7 @@ public abstract class OperationalJob implements Task<Void>
     // use v1 time-based uuid
     public final UUID jobId;
 
-    private final Promise<OperationalJobStatus> executionPromise;
+    private final Promise<Void> executionPromise;
     private volatile boolean isExecuting = false;
 
     /**
@@ -101,7 +101,6 @@ public abstract class OperationalJob implements Task<Void>
      */
     public abstract boolean isRunningOnCassandra();
 
-
     /**
      * Determines the status of the job. OperationalJob subclasses could choose to override the method.
      * <p>
@@ -117,7 +116,7 @@ public abstract class OperationalJob implements Task<Void>
      */
     public OperationalJobStatus status()
     {
-        Future<OperationalJobStatus> fut = asyncResult();
+        Future<Void> fut = asyncResult();
         // Jobs that are created and yet to be picked up by the executor thread
         if (!isExecuting && !fut.isComplete())
         {
@@ -133,12 +132,11 @@ public abstract class OperationalJob implements Task<Void>
         }
         else
         {
-            // When the future is complete, return the status from the job execution
-            return fut.result();
+            return OperationalJobStatus.SUCCEEDED;
         }
     }
 
-    public Future<OperationalJobStatus> asyncResult()
+    public Future<Void> asyncResult()
     {
         return executionPromise.future();
     }
@@ -150,13 +148,13 @@ public abstract class OperationalJob implements Task<Void>
      *
      * @param executorPool executor pool to run the timer
      * @param waitTime     maximum time to wait before returning
-     * @return a future that ia either the result of the configured timeout based on {@code waitTime} or the async
+     * @return a future that is either the result of the configured timeout based on {@code waitTime} or the async
      * result. A succeeded future here, represents either a timeout or the result of the job and a failure is
      * represented by an exception thrown by the job execution, within the configured timeout.
      */
-    public Future<OperationalJobStatus> asyncResult(TaskExecutorPool executorPool, Duration waitTime)
+    public Future<Void> asyncResult(TaskExecutorPool executorPool, Duration waitTime)
     {
-        Future<OperationalJobStatus> resultFut = asyncResult();
+        Future<Void> resultFut = asyncResult();
         if (resultFut.isComplete())
         {
             return resultFut;
@@ -185,10 +183,8 @@ public abstract class OperationalJob implements Task<Void>
 
     /**
      * OperationalJob body. The implementation is executed in a blocking manner.
-     *
-     * @throws OperationalJobException OperationalJobException that wraps job failure
      */
-    protected abstract OperationalJobStatus executeInternal() throws OperationalJobException;
+    protected abstract void executeInternal();
 
     /**
      * Execute the job behavior as specified in the internal execution {@link #executeInternal()},
@@ -199,41 +195,11 @@ public abstract class OperationalJob implements Task<Void>
     {
         isExecuting = true;
         LOGGER.info("Executing job. jobId={}", jobId);
-
-        promise.future().onComplete(res -> {
-            if (res.succeeded())
-            {
-                try
-                {
-                    OperationalJobStatus result = executeInternal();
-                    executionPromise.tryComplete(result);
-                    if (LOGGER.isDebugEnabled())
-                    {
-                        LOGGER.debug("Complete job execution. jobId={} status={}", jobId, status());
-                    }
-                }
-                catch (Throwable e)
-                {
-                    executionPromise.tryFail(e);
-                }
-            }
-            else
-            {
-                Throwable cause = res.cause();
-                executionPromise.tryFail(cause);
-            }
-        });
-
-
-
-
-
-
+        promise.future().onComplete(executionPromise);
         try
         {
             // Blocking call to perform concrete job-specific execution, returning the status
-            OperationalJobStatus result = executeInternal();
-            executionPromise.tryComplete(result);
+            executeInternal();
             promise.tryComplete();
             if (LOGGER.isDebugEnabled())
             {
@@ -244,12 +210,7 @@ public abstract class OperationalJob implements Task<Void>
         {
             OperationalJobException oje = OperationalJobException.wraps(e);
             LOGGER.error("Job execution failed. jobId={} reason='{}'", jobId, oje.getMessage(), oje);
-            executionPromise.tryFail(oje);
             promise.tryFail(oje);
-        }
-        finally
-        {
-            isExecuting = false;
         }
     }
 }

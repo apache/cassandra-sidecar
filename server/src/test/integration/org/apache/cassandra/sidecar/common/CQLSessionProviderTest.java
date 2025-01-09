@@ -60,7 +60,6 @@ public class CQLSessionProviderTest extends IntegrationTestBase
     throws Exception
     {
         UpgradeableCluster cluster = cassandraTestContext.cluster();
-
         testWithClient(context, false, webClient -> {
                            // To start, both instances are stopped, so we should get 503s for both
                            buildInstanceHealthRequest(webClient, "1")

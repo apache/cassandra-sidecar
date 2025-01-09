@@ -172,7 +172,7 @@ class OperationalJobHandlerTest
         {
             OperationalJobManager mockManager = mock(OperationalJobManager.class);
             OperationalJob runningMock = mock(OperationalJob.class);
-            Promise<OperationalJobStatus> p = Promise.promise();
+            Promise<Void> p = Promise.promise();
             when(runningMock.status()).thenReturn(OperationalJobStatus.RUNNING);
             when(runningMock.asyncResult()).thenReturn(p.future());
             OperationalJob completedMock = mock(OperationalJob.class);

@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,10 +45,11 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.response.NodeDecommissionResponse;
+import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
+import org.mockito.AdditionalAnswers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -60,6 +60,8 @@ import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNN
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -110,18 +112,17 @@ public class NodeDecommissionHandlerTest
     @Test
     void testDecommissionLongRunning(VertxTestContext context)
     {
-        when(mockStorageOperations.decommission(anyBoolean())).thenAnswer(i -> {
-            Uninterruptibles.sleepUninterruptibly(6000, TimeUnit.SECONDS);
-            return SUCCEEDED;
-        });
+        when(mockStorageOperations.getOperationMode()).thenReturn("NORMAL");
+        doAnswer(AdditionalAnswers.answersWithDelay(6000, invocation -> null))
+        .when(mockStorageOperations).decommission(anyBoolean());
 
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/node/decommission";
+        String testRoute = "/api/v1/cassandra/operations/decommission";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_ACCEPTED)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(ACCEPTED.code());
-                  NodeDecommissionResponse decommissionResponse = response.bodyAsJson(NodeDecommissionResponse.class);
+                  OperationalJobResponse decommissionResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(decommissionResponse).isNotNull();
                   assertThat(decommissionResponse.status()).isEqualTo(RUNNING);
                   context.completeNow();
@@ -131,18 +132,17 @@ public class NodeDecommissionHandlerTest
     @Test
     void testDecommissionCompleted(VertxTestContext context)
     {
-        when(mockStorageOperations.decommission(anyBoolean())).thenReturn(SUCCEEDED);
+        when(mockStorageOperations.getOperationMode()).thenReturn("NORMAL");
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/node/decommission";
+        String testRoute = "/api/v1/cassandra/operations/decommission";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   LOGGER.info("Decommission Response: {}", response.bodyAsString());
 
-                  NodeDecommissionResponse decommissionResponse = response.bodyAsJson(NodeDecommissionResponse.class);
+                  OperationalJobResponse decommissionResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(decommissionResponse).isNotNull();
                   assertThat(decommissionResponse.status()).isEqualTo(SUCCEEDED);
-                  assertThat(decommissionResponse.instance()).isEqualTo("127.0.0.1");
                   context.completeNow();
               }));
     }
@@ -150,9 +150,10 @@ public class NodeDecommissionHandlerTest
     @Test
     void testDecommissionFailed(VertxTestContext context)
     {
-        when(mockStorageOperations.decommission(anyBoolean())).thenThrow(new RuntimeException("Simulated failure"));
+        when(mockStorageOperations.getOperationMode()).thenReturn("NORMAL");
+        doThrow(new RuntimeException("Simulated failure")).when(mockStorageOperations).decommission(anyBoolean());
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/node/decommission";
+        String testRoute = "/api/v1/cassandra/operations/decommission";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_INTERNAL_SERVER_ERROR)
               .send(context.succeeding(response -> {

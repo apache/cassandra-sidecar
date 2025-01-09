@@ -56,7 +56,6 @@ import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
-import org.apache.cassandra.sidecar.common.response.NodeDecommissionResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
@@ -670,9 +669,12 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      *
      * @return a completable future of the jobs list
      */
-    public CompletableFuture<NodeDecommissionResponse> nodeDecommission()
+    public CompletableFuture<OperationalJobResponse> nodeDecommission(SidecarInstance instance)
     {
-        return executor.executeRequestAsync(requestBuilder().nodeDecommissionRequest().build());
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .nodeDecommissionRequest()
+                                            .build());
     }
 
     /**
