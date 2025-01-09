@@ -92,7 +92,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Void>
     private void sendResponse(RoutingContext context, OperationalJob job, Void request, SocketAddress remoteAddress, String host)
     {
         OperationalJobStatus jobStatus = job.status();
-        logger.info("Job completion status={}, request={}, remoteAddress={}, instance={}",
+        logger.info("Job completion status={} request={} remoteAddress={} instance={}",
                     jobStatus, request, remoteAddress, host);
 
         String reason = null;

@@ -89,10 +89,7 @@ public class OperationalJobManager
 
         // New job is submitted for all cases when we do not have a corresponding downstream job
         jobTracker.computeIfAbsent(job.jobId, jobId -> {
-            internalExecutorPool.executeBlocking(() -> {
-                job.execute(Promise.promise());
-                return null;
-            });
+            internalExecutorPool.executeBlocking(job::execute);
             return job;
         });
     }
