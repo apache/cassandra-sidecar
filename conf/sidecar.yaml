@@ -179,7 +179,8 @@ access_control:
     # AuthorizationProvider provides authorizations an authenticated user holds.
     #
     # org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider marks all requests as authorized.
-    # Other options are org.apache.cassandra.sidecar.acl.authorization.RoleBaseAuthorizationProvider, it validates
+    # It is used when requests to be only authenticated and not authorized. Other options are
+    # org.apache.cassandra.sidecar.acl.authorization.RoleBaseAuthorizationProvider, it validates
     # role associated with authenticated user has permission for resource it accesses.
     - class_name: org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider
   # Identities that are authenticated and authorized.
