@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE;
@@ -56,19 +57,34 @@ public enum VariableAwareResource
      */
     DATA("data"),
 
-    DATA_WITH_KEYSPACE(String.format("data/{%s}", KEYSPACE)),
+    DATA_WITH_KEYSPACE(String.format("data/{%s}", KEYSPACE),
+                       // can expand to DATA
+                       DATA),
 
-    // resource is set to allow permissions on all tables within a keyspace. It does not grant the given permissions
-    // on the keyspace itself, such as CREATE, ALTER, DROP when granted are allowed on tables, but not on keyspace.
-    DATA_WITH_KEYSPACE_ALL_TABLES(String.format("data/{%s}/*", KEYSPACE)),
+    // TODO remove this hack once VariableAwareExpression bug is fixed
+    // VariableAwareExpression in vertx-auth-common package has a bug during String.substring() call, hence
+    // we cannot set resources that do not end in curly braces (e.g. data/keyspace/*) in
+    // PermissionBasedAuthorizationImpl or WildcardPermissionBasedAuthorizationImpl. data/{%s}/{TABLE_WILDCARD} treats
+    // TABLE_WILDCARD as a variable. This hack allows to read resource level permissions that could be set for all
+    // tables through data/<keyspace_name>/*
+    // Note: DATA_WITH_KEYSPACE_ALL_TABLES resource comprises all tables under the keyspace excluding the keyspace itself
+    DATA_WITH_KEYSPACE_ALL_TABLES(String.format("data/{%s}/{TABLE_WILDCARD}", KEYSPACE),
+                                  // can expand to DATA, DATA_WITH_KEYSPACE
+                                  DATA, DATA_WITH_KEYSPACE),
 
-    DATA_WITH_KEYSPACE_TABLE(String.format("data/{%s}/{%s}", KEYSPACE, TABLE));
+    DATA_WITH_KEYSPACE_TABLE(String.format("data/{%s}/{%s}", KEYSPACE, TABLE),
+                             // can expand to DATA, DATA_WITH_KEYSPACE and DATA_WITH_KEYSPACE_ALL_TABLES
+                             DATA, DATA_WITH_KEYSPACE, DATA_WITH_KEYSPACE_ALL_TABLES);
 
     private final String resource;
+    private final List<String> expandedResources;
 
-    VariableAwareResource(String resource)
+    VariableAwareResource(String resource, VariableAwareResource... expansions)
     {
         this.resource = resource;
+        List<String> expandedResources = Arrays.stream(expansions).map(r -> r.resource).collect(Collectors.toList());
+        expandedResources.add(resource);
+        this.expandedResources = Collections.unmodifiableList(expandedResources);
     }
 
     public String resource()
@@ -78,26 +94,6 @@ public enum VariableAwareResource
 
     public List<String> expandedResources()
     {
-        if (resource.equals(DATA_WITH_KEYSPACE.resource))
-        {
-            return Collections.unmodifiableList(Arrays.asList(DATA.resource,
-                                                              DATA_WITH_KEYSPACE.resource));
-        }
-        else if (resource.equals(DATA_WITH_KEYSPACE_ALL_TABLES.resource))
-        {
-            return Collections.unmodifiableList(Arrays.asList(DATA.resource,
-                                                              DATA_WITH_KEYSPACE.resource,
-                                                              DATA_WITH_KEYSPACE_ALL_TABLES.resource));
-        }
-        else if (resource.equals(DATA_WITH_KEYSPACE_TABLE.resource))
-        {
-            // See https://issues.apache.org/jira/browse/CASSANDRA-17027 Allows to grant permissions for all tables
-            // in a keyspace.
-            return Collections.unmodifiableList(Arrays.asList(DATA.resource,
-                                                              DATA_WITH_KEYSPACE.resource,
-                                                              DATA_WITH_KEYSPACE_ALL_TABLES.resource,
-                                                              DATA_WITH_KEYSPACE_TABLE.resource));
-        }
-        return Collections.singletonList(resource);
+        return expandedResources;
     }
 }

@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.acl;
 
 import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -31,7 +32,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
@@ -51,345 +51,239 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 {
     private static final int MIN_VERSION_WITH_MTLS = 5;
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testForAdmin(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
-    {
-        prepareForTest(cassandraContext);
-
-        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
-        // uses client keystore with admin identity. Admins bypass authorization checks
-        verifyAccess(context, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath);
-    }
+    private Path nonAdminClientKeystorePath;
 
     @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testForSuperUser(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
+    void testAuthorizationScenarios(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
     {
         prepareForTest(cassandraContext);
-
-        createRole("test_role", true);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
 
         // wait for cache refreshes to pick up superuser status
         Thread.sleep(2000);
 
-        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
+
+
+        testForAdmin(context);
+        testForSuperUser(context);
+        testForNonAdmin(context);
+        testGrantingForTable(context);
+        testGrantingForAllTables(context);
+        testGrantingAllTablesExceptKeyspace(context);
+        testGrantingAtDataLevel(context);
+        testEndpointWithOrAuthorization(context);
+        testWildcardActionForAllTargets(context);
+        testAllWildcardActionsForTarget(context);
+        testGrantingWithWildcardSubparts(context);
+        testResourceWideActions(context);
+        testEndpointRequiringMultipleActions(context);
+        context.completeNow();
+    }
+
+    void testForAdmin(VertxTestContext context)
+    {
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
+        // uses client keystore with admin identity. Admins bypass authorization checks
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, false);
+    }
+
+    void testForSuperUser(VertxTestContext context) throws Exception
+    {
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
         // uses client keystore with superuser identity
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
-        verifyAccess(context, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath);
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/super_user_test_user");
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, false);
     }
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testForNonAdmin(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
+    void testForNonAdmin(VertxTestContext context)
     {
-        prepareForTest(cassandraContext);
-
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
-
-        // grant permission for non super user
-        grantKeyspacePermission("sample_keyspace", "test_role");
-
-        // wait for cache refreshes to pick up granted permissions
-        Thread.sleep(2000);
-
-        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
-        verifyAccess(context, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath);
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, false);
     }
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testGrantingForTable(VertxTestContext context, CassandraTestContext cassandraContext)
-    throws Exception
+    void testGrantingForTable(VertxTestContext context)
     {
-        prepareForTest(cassandraContext);
-
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
-
-        grantSidecarPermission("test_role", "data/sample_keyspace/sample_table", "CREATE:SNAPSHOT");
-
-        // wait for cache refreshes to pick up granted permission
-        Thread.sleep(2000);
-
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "sample_keyspace", "sample_table");
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+                                                   "grant_table_test_keyspace", "test_table");
 
-        Checkpoint checkpoint = context.checkpoint(2);
+        CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        // CREATE:SNAPSHOT permission granted for data/sample_keyspace/sample_table
-        verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
+        // CREATE:SNAPSHOT permission granted for data/grant_table_test_keyspace/test_table
+        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
-        // DELETE:SNAPSHOT permission not granted for data/sample_keyspace/sample_table
-        verifyAccess(context, checkpoint, HttpMethod.DELETE, createSnapshotRoute, clientKeystorePath, true);
+        // DELETE:SNAPSHOT permission not granted for data/grant_table_test_keyspace/test_table
+        verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testGrantingSidecarPermissionForAllTables(VertxTestContext context, CassandraTestContext cassandraContext)
-    throws Exception
+    void testGrantingForAllTables(VertxTestContext context)
     {
-        prepareForTest(cassandraContext);
-
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
-
-        grantSidecarPermission("test_role", "data/sample_keyspace", "CREATE:SNAPSHOT");
-
-        // wait for cache refreshes to pick up granted permission
-        Thread.sleep(2000);
-
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "sample_keyspace", "sample_table");
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+                                                   "grant_tables_test_keyspace", "test_table");
 
-        Checkpoint checkpoint = context.checkpoint(2);
+        CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        // CREATE:SNAPSHOT permission granted for data/sample_keyspace/sample_table with data/sample_keyspace grant
-        verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
+        // CREATE:SNAPSHOT permission granted for data/grant_tables_test_keyspace/test_table with
+        // data/grant_tables_test_keyspace grant
+        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
-        // DELETE:SNAPSHOT permission not granted for data/sample_keyspace/sample_table
-        verifyAccess(context, checkpoint, HttpMethod.DELETE, createSnapshotRoute, clientKeystorePath, true);
+        // DELETE:SNAPSHOT permission not granted for data/grant_tables_test_keyspace/test_table
+        verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testGrantingSidecarPermissionForAllTablesExceptKeyspace(VertxTestContext context, CassandraTestContext cassandraContext)
-    throws Exception
+    void testGrantingAllTablesExceptKeyspace(VertxTestContext context)
     {
-        prepareForTest(cassandraContext);
-
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
-
-        grantSidecarPermission("test_role", "data/sample_keyspace/*", "CREATE:SNAPSHOT");
-
-        // wait for cache refreshes to pick up granted permission
-        Thread.sleep(2000);
-
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "sample_keyspace", "sample_table");
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+                                                   "grant_tables_except_keyspace_test_keyspace", "test_table");
 
-        Checkpoint checkpoint = context.checkpoint(2);
+        CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        // CREATE:SNAPSHOT permission granted for data/sample_keyspace/sample_table with data/sample_keyspace grant
-        verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
+        // CREATE:SNAPSHOT permission granted for data/grant_tables_except_keyspace_test_keyspace/test_table
+        // with data/grant_tables_except_keyspace_test_keyspace grant
+        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
         // READ:SCHEMA is not granted since it expects permissions at keyspace level
-        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
-        verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, true);
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "grant_tables_except_keyspace_test_keyspace");
+        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testGrantingPermissionsForAtDataLevel(VertxTestContext context, CassandraTestContext cassandraContext)
-    throws Exception
+    void testGrantingAtDataLevel(VertxTestContext context) throws Exception
     {
-        prepareForTest(cassandraContext);
-
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
-
-        grantSidecarPermission("test_role", "data", "CREATE:SNAPSHOT");
-
-        // wait for cache refreshes to pick up granted permission
-        Thread.sleep(2000);
-
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "sample_keyspace", "sample_table");
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+                                                   "test_keyspace", "test_table");
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/grant_data_test_user");
 
-        Checkpoint checkpoint = context.checkpoint(2);
+        CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        // CREATE:SNAPSHOT permission granted for data/sample_keyspace/sample_table with data resource grant
-        verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
+        // CREATE:SNAPSHOT permission granted for data/test_keyspace/test_table with data resource grant
+        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
 
-        // DELETE:SNAPSHOT permission not granted for data/sample_keyspace/sample_table not granted
-        verifyAccess(context, checkpoint, HttpMethod.DELETE, createSnapshotRoute, clientKeystorePath, true);
+        // DELETE:SNAPSHOT permission not granted for data/test_keyspace/test_table not granted
+        verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, clientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testEndpointWithOrAuthorization(VertxTestContext context, CassandraTestContext cassandraContext)
-    throws Exception
+    void testEndpointWithOrAuthorization(VertxTestContext context)
     {
-        prepareForTest(cassandraContext);
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "orAuthorization_test_keyspace");
 
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
-
-        grantSidecarPermission("test_role", "data/sample_keyspace", "READ:*");
-
-        // wait for cache refreshes to pick up granted permission
-        Thread.sleep(2000);
-
-        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+        CountDownLatch countDownLatch = new CountDownLatch(1);
 
         // schema endpoint for keyspaces accepts CREATE, ALTER, DROP or DESCRIBE cassandra permissions.
         // cassandra permission for test_role on sample_keyspace not granted, sidecar permission READ:* is used to
         // grant access
-        verifyAccess(context, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath);
+        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, false);
     }
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testWildcardActionForAllTargets(VertxTestContext context, CassandraTestContext cassandraContext)
-    throws Exception
+    void testWildcardActionForAllTargets(VertxTestContext context) throws Exception
     {
-        prepareForTest(cassandraContext);
-
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
-
-        // READ action allowed across targets for same resource. READ:* for cluster resource allows READ:SCHEMA,
-        // READ:CDC, READ:GOSSIP, READ:RING etc
-        grantSidecarPermission("test_role", "cluster", "READ:*");
-
-        // wait for cache refreshes to pick up granted permission
-        Thread.sleep(2000);
-
         String timeSkewRoute = "/api/v1/time-skew";
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/wildcard_across_targets_test_user");
 
-        Checkpoint checkpoint = context.checkpoint(4);
+        CountDownLatch countDownLatch = new CountDownLatch(4);
 
         // Uses sidecar permission READ:* added
-        verifyAccess(context, checkpoint, HttpMethod.GET, timeSkewRoute, clientKeystorePath, false);
+        verifyAccess(context, countDownLatch, HttpMethod.GET, timeSkewRoute, clientKeystorePath, false);
 
         String schemaRoute = "/api/v1/cassandra/schema";
-        verifyAccess(context, checkpoint, HttpMethod.GET, schemaRoute, clientKeystorePath, false);
+        // Allows READ:SCHEMA
+        verifyAccess(context, countDownLatch, HttpMethod.GET, schemaRoute, clientKeystorePath, false);
 
         String ringRoute = "/api/v1/cassandra/ring";
         // Allows READ:RING too
-        verifyAccess(context, checkpoint, HttpMethod.GET, ringRoute, clientKeystorePath, false);
+        verifyAccess(context, countDownLatch, HttpMethod.GET, ringRoute, clientKeystorePath, false);
 
-        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
         // Does not allow finding schema for keyspace, keyspace schema route requires access specific to
-        // data/sample_keyspace resource
-        verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, true);
+        // data/test_keyspace resource
+        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testGrantingPermissionsWithWildcardSubparts(VertxTestContext context, CassandraTestContext cassandraContext)
-    throws Exception
+    void testAllWildcardActionsForTarget(VertxTestContext context)
     {
-        prepareForTest(cassandraContext);
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
+                                                   "all_wildcard_actions_for_target_test_keyspace", "test_table");
 
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
+        CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        grantSidecarPermission("test_role", "cluster", "READ:SCHEMA,GOSSIP");
+        // *:SNAPSHOT permission across ata/all_wildcard_actions_for_target_test_keyspace/test_table allows all
+        // possible actions for SNAPSHOT target such as CREATE:SNAPSHOT, READ:SNAPSHOT, DELETE:SNAPSHOT.
+        // Does not allow STREAM:SSTABLE or other actions
+        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
-        // wait for cache refreshes to pick up granted permission
-        Thread.sleep(2000);
+        String streamSSTableRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
+                                                  "all_wildcard_actions_for_target_test_keyspace", "test_table",
+                                                  "my-snapshot", "nc-1-big-Data.db");
+        verifyAccess(context, countDownLatch, HttpMethod.GET, streamSSTableRoute, nonAdminClientKeystorePath, true);
+    }
 
+    void testGrantingWithWildcardSubparts(VertxTestContext context) throws Exception
+    {
         String schemaRoute = "/api/v1/cassandra/schema";
         String gossipRoute = "/api/v1/cassandra/gossip";
         String ringRoute = "/api/v1/cassandra/ring";
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/wildcard_with_subparts_test_user");
 
-        Checkpoint checkpoint = context.checkpoint(3);
+        CountDownLatch countDownLatch = new CountDownLatch(3);
 
         // READ:SCHEMA permission granted for cluster with READ:SCHEMA,GOSSIP
-        verifyAccess(context, checkpoint, HttpMethod.GET, schemaRoute, clientKeystorePath, false);
+        verifyAccess(context, countDownLatch, HttpMethod.GET, schemaRoute, clientKeystorePath, false);
 
         // READ:GOSSIP permission granted for cluster with READ:SCHEMA,GOSSIP
-        verifyAccess(context, checkpoint, HttpMethod.GET, gossipRoute, clientKeystorePath, false);
+        verifyAccess(context, countDownLatch, HttpMethod.GET, gossipRoute, clientKeystorePath, false);
 
         // READ:RING permission not granted with READ:SCHEMA,GOSSIP
-        verifyAccess(context, checkpoint, HttpMethod.GET, ringRoute, clientKeystorePath, true);
+        verifyAccess(context, countDownLatch, HttpMethod.GET, ringRoute, clientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testResourceWideActions(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
+    void testResourceWideActions(VertxTestContext context)
     {
-        prepareForTest(cassandraContext);
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "resource_wide_actions_test_keyspace");
 
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
+        CountDownLatch countDownLatch = new CountDownLatch(4);
 
-        grantSidecarPermission("test_role", "data/sample_keyspace", "*:*");
+        // *:* permission across resource data/resource_wide_actions_test_keyspace allows all possible actions
+        // across all possible targets, Such as READ:SCHEMA for given keyspace, READ:RING for given keyspace etc.
+        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, false);
 
-        // wait for cache refreshes to pick up granted permission
-        Thread.sleep(2000);
-
-        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
-
-        Checkpoint checkpoint = context.checkpoint(3);
-
-        // *:* permission across resource data/test_keyspace allows all possible actions across all possible targets,
-        // Such as READ:SCHEMA for given keyspace, READ:RING for given keyspace etc.
-        verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, false);
-
-        String keyspaceRingRoute = String.format("/api/v1/cassandra/ring/keyspaces/%s", "sample_keyspace");
+        String keyspaceRingRoute = String.format("/api/v1/cassandra/ring/keyspaces/%s", "resource_wide_actions_test_keyspace");
         // READ:RING for keyspace granted
-        verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceRingRoute, clientKeystorePath, false);
+        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceRingRoute, nonAdminClientKeystorePath, false);
 
 
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "sample_keyspace", "sample_table");
-        // allows CREATE:SNAPSHOT which requires table resource too, since data/sample_keyspace grant is a wider grant
-        verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
+                                                   "resource_wide_actions_test_keyspace", "test_table");
+        // allows CREATE:SNAPSHOT which requires table resource too, since data/resource_wide_actions_test_keyspace
+        // grant is a wider grant
+        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
+
+        // does not allow access on a different keyspace
+        String disallowedKeyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
+        verifyAccess(context, countDownLatch, HttpMethod.GET, disallowedKeyspaceSchemaRoute, nonAdminClientKeystorePath, true);
     }
 
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testAllWildcardActionsForTarget(VertxTestContext context, CassandraTestContext cassandraContext)
-    throws Exception
+    void testEndpointRequiringMultipleActions(VertxTestContext context)
     {
-        prepareForTest(cassandraContext);
-
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
-
-        grantSidecarPermission("test_role", "data/sample_keyspace/sample_table", "*:SNAPSHOT");
-
-        // wait for cache refreshes to pick up granted permission
-        Thread.sleep(2000);
-
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "sample_keyspace", "sample_table");
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
-
-        Checkpoint checkpoint = context.checkpoint(2);
-
-        // *:SNAPSHOT permission across data/sample_resource/sample_table allows all possible actions for SNAPSHOT target
-        // such as CREATE:SNAPSHOT, READ:SNAPSHOT, DELETE:SNAPSHOT. Does not allow STREAM:SSTABLE or other actions
-        verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
-
-        String streamSSTableRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
-                                                  "sample_keyspace", "sample_table", "my-snapshot", "nc-1-big-Data.db");
-        verifyAccess(context, checkpoint, HttpMethod.GET, streamSSTableRoute, clientKeystorePath, true);
-    }
-
-    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testEndpointRequiringMultipleActions(VertxTestContext context, CassandraTestContext cassandraContext)
-    throws Exception
-    {
-        prepareForTest(cassandraContext);
-
-        createRole("test_role", false);
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
-
-        grantSidecarPermission("test_role", "data/sample_keyspace/sample_table", "CREATE:SNAPSHOT");
-
-        // wait for cache refreshes to pick up granted permission
-        Thread.sleep(2000);
-
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "sample_keyspace", "sample_table");
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+                                                   "multiple_permissions_required_test_keyspace", "test_table");
 
         String streamRoute
         = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
-                        "sample_keyspace", "sample_table", "my-snapshot", "nc-1-big-Data.db");
+                        "multiple_permissions_required_test_keyspace", "test_table", "my-snapshot", "nc-1-big-Data.db");
 
-        // CREATE:SNAPSHOT permission granted for data/sample_keyspace/sample_table
-        WebClient client = createClient(clientKeystorePath, truststorePath);
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+
+        // CREATE:SNAPSHOT permission granted for data/multiple_permissions_required_test_keyspace/test_table
+        WebClient client = createClient(nonAdminClientKeystorePath, truststorePath);
         client.put(server.actualPort(), "127.0.0.1", createSnapshotRoute)
               .send()
               .compose(createResp -> {
                   assertThat(createResp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
 
                   // grant sidecar permission for streaming
-                  updateSidecarPermission("test_role", "data/sample_keyspace/sample_table", "STREAM:SSTABLE");
+                  updateSidecarPermission("non_admin_test_role",
+                                          "data/multiple_permissions_required_test_keyspace/test_table",
+                                          "STREAM:SSTABLE");
 
                   // wait for cache refresh
                   Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
@@ -403,7 +297,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                   assertThat(deniedStreamResp.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
 
                   // grant SELECT permission with cassandra role
-                  grantTablePermission("sample_keyspace", "sample_table", "test_role");
+                  grantTablePermission("multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
 
                   // wait for cache refresh
                   Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
@@ -420,7 +314,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
                   // request goes through with both permissions granted
                   assertThat(acceptedStreamResp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                  context.completeNow();
+                  countDownLatch.countDown();
               });
     }
 
@@ -435,26 +329,109 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         insertIdentityRole(cassandraContext, ADMIN_IDENTITY, "cassandra");
 
         waitForSchemaReady(30, TimeUnit.SECONDS);
-        createKeyspaceTable();
-    }
-
-    private void createKeyspaceTable()
-    {
-        createKeyspace("sample_keyspace");
-        createTable("sample_keyspace", "sample_table");
-    }
-
-    private void createRole(String role, boolean superUser)
-    {
-        Session session = maybeGetSession();
-
-        session.execute("CREATE ROLE " + role + " WITH PASSWORD = 'password' AND SUPERUSER = " + superUser + " AND LOGIN = true;");
+        createRequiredKeyspaceTables();
+        createRequiredRoles(cassandraContext);
+        grantRequiredPermissions();
+        createRequiredKeystores();
     }
 
     private void insertIdentityRole(CassandraTestContext cassandraContext, String identity, String role)
     {
         cassandraContext.cluster()
                         .schemaChangeIgnoringStoppedInstances("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
+    }
+
+    private void createRequiredKeyspaceTables()
+    {
+        createKeyspace("test_keyspace");
+        createKeyspace("non_admin_test_keyspace");
+        createKeyspace("grant_table_test_keyspace");
+        createKeyspace("grant_tables_test_keyspace");
+        createKeyspace("grant_tables_except_keyspace_test_keyspace");
+        createKeyspace("orAuthorization_test_keyspace");
+        createKeyspace("resource_wide_actions_test_keyspace");
+        createKeyspace("all_wildcard_actions_for_target_test_keyspace");
+        createKeyspace("multiple_permissions_required_test_keyspace");
+        createTable("test_keyspace", "test_table");
+        createTable("non_admin_test_keyspace", "test_table");
+        createTable("grant_table_test_keyspace", "test_table");
+        createTable("grant_tables_test_keyspace", "test_table");
+        createTable("grant_tables_except_keyspace_test_keyspace", "test_table");
+        createTable("orAuthorization_test_keyspace", "test_table");
+        createTable("resource_wide_actions_test_keyspace", "test_table");
+        createTable("all_wildcard_actions_for_target_test_keyspace", "test_table");
+        createTable("multiple_permissions_required_test_keyspace", "test_table");
+    }
+
+    private void createRequiredRoles(CassandraTestContext cassandraContext)
+    {
+        createRole("super_user_test_role", true);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/super_user_test_user", "super_user_test_role");
+
+        createRole("non_admin_test_role", false);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/non_admin_test_user", "non_admin_test_role");
+
+        createRole("grant_data_test_role", false);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/grant_data_test_user", "grant_data_test_role");
+
+        createRole("wildcard_across_targets_test_role", false);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/wildcard_across_targets_test_user", "wildcard_across_targets_test_role");
+
+        createRole("wildcard_with_subparts_test_role", false);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/wildcard_with_subparts_test_user", "wildcard_with_subparts_test_role");
+    }
+
+    private void grantRequiredPermissions()
+    {
+        // permission for testForNonAdmin
+        grantKeyspacePermission("non_admin_test_keyspace", "non_admin_test_role");
+
+        // permission for testGrantingForTable
+        grantSidecarPermission("non_admin_test_role", "data/grant_table_test_keyspace/test_table", "CREATE:SNAPSHOT");
+
+        // permission for testGrantingForAllTables
+        grantSidecarPermission("non_admin_test_role", "data/grant_tables_test_keyspace", "CREATE:SNAPSHOT");
+
+        // permission for testGrantingAllTablesExceptKeyspace
+        grantSidecarPermission("non_admin_test_role", "data/grant_tables_except_keyspace_test_keyspace/*", "CREATE:SNAPSHOT");
+
+        // permission for testGrantingAtDataLevel
+        grantSidecarPermission("grant_data_test_role", "data", "CREATE:SNAPSHOT");
+
+        // permission for testEndpointWithOrAuthorization
+        grantSidecarPermission("non_admin_test_role", "data/orAuthorization_test_keyspace", "READ:*");
+
+        // permission for testWildcardActionForAllTargets
+        // READ action allowed across targets for same resource. READ:* for cluster resource allows READ:SCHEMA,
+        // READ:CDC, READ:GOSSIP, READ:RING etc
+        grantSidecarPermission("wildcard_across_targets_test_role", "cluster", "READ:*");
+
+        // permission for testAllWildcardActionsForTarget
+        grantSidecarPermission("non_admin_test_role",
+                               "data/all_wildcard_actions_for_target_test_keyspace/test_table",
+                               "*:SNAPSHOT");
+
+        // permission for testGrantingWithWildcardSubparts
+        grantSidecarPermission("wildcard_with_subparts_test_role", "cluster", "READ:SCHEMA,GOSSIP");
+
+        // permission for testResourceWideActions
+        grantSidecarPermission("non_admin_test_role", "data/resource_wide_actions_test_keyspace", "*:*");
+
+        // permission for testEndpointRequiringMultipleActions
+        grantSidecarPermission("non_admin_test_role",
+                               "data/multiple_permissions_required_test_keyspace/test_table",
+                               "CREATE:SNAPSHOT");
+    }
+
+    private void createRequiredKeystores() throws Exception
+    {
+        nonAdminClientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/non_admin_test_user");
+    }
+
+    private void createRole(String role, boolean superUser)
+    {
+        Session session = maybeGetSession();
+        session.execute("CREATE ROLE " + role + " WITH PASSWORD = 'password' AND SUPERUSER = " + superUser + " AND LOGIN = true;");
     }
 
     private void createKeyspace(String keyspace)
@@ -496,28 +473,29 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                                       "where role = '%s' and resource = '%s'", permission, role, resource));
     }
 
-    private void verifyAccess(VertxTestContext context, HttpMethod method, String testRoute, Path clientKeystorePath)
-    {
-        Checkpoint checkpoint = context.checkpoint();
-        verifyAccess(context, checkpoint, method, testRoute, clientKeystorePath, false);
-    }
-
-    private void verifyAccess(VertxTestContext context, Checkpoint checkpoint, HttpMethod method,
+    private void verifyAccess(VertxTestContext context, CountDownLatch countDownLatch, HttpMethod method,
                               String testRoute, Path clientKeystorePath, boolean expectForbidden)
     {
         WebClient client = createClient(clientKeystorePath, truststorePath);
         client.request(method, server.actualPort(), "127.0.0.1", testRoute)
-              .send(context.succeeding(response -> {
-                  context.verify(() -> {
-                      if (expectForbidden)
-                      {
-                          assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
-                          return;
-                      }
-                      assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                  });
-                  checkpoint.flag();
-              }));
+              .send(response -> {
+                  if (response.cause() != null)
+                  {
+                      context.failNow(response.cause());
+                      countDownLatch.countDown();
+                      return;
+                  }
+
+                  if (expectForbidden)
+                  {
+                      assertThat(response.result().statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
+                  }
+                  else
+                  {
+                      assertThat(response.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                  }
+                  countDownLatch.countDown();
+              });
     }
 
     private Future<HttpResponse<Buffer>> streamRequest(WebClient client, String route)
