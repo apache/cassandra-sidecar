@@ -58,16 +58,17 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     {
         prepareForTest(cassandraContext);
 
-        // wait for cache refreshes to pick up superuser status
+        // wait for cache refreshes
         Thread.sleep(2000);
 
-
-
+        // permissions for test cases below are granted during prepareForTest to save cache refresh time. Please
+        // refer to grantRequiredPermissions to check permissions granted for a test to understand verifications done in
+        // test
         testForAdmin(context);
         testForSuperUser(context);
         testForNonAdmin(context);
         testGrantingForTable(context);
-        testGrantingForAllTables(context);
+        testGrantingForKeyspace(context);
         testGrantingAllTablesExceptKeyspace(context);
         testGrantingAtDataLevel(context);
         testEndpointWithOrAuthorization(context);
@@ -117,18 +118,18 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, true);
     }
 
-    void testGrantingForAllTables(VertxTestContext context)
+    void testGrantingForKeyspace(VertxTestContext context)
     {
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "grant_tables_test_keyspace", "test_table");
+                                                   "grant_keyspace_test_keyspace", "test_table");
 
         CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        // CREATE:SNAPSHOT permission granted for data/grant_tables_test_keyspace/test_table with
+        // CREATE:SNAPSHOT permission granted for data/grant_keyspace_test_keyspace/test_table with
         // data/grant_tables_test_keyspace grant
         verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
-        // DELETE:SNAPSHOT permission not granted for data/grant_tables_test_keyspace/test_table
+        // DELETE:SNAPSHOT permission not granted for data/grant_keyspace_test_keyspace/test_table
         verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, true);
     }
 
@@ -346,7 +347,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createKeyspace("test_keyspace");
         createKeyspace("non_admin_test_keyspace");
         createKeyspace("grant_table_test_keyspace");
-        createKeyspace("grant_tables_test_keyspace");
+        createKeyspace("grant_keyspace_test_keyspace");
         createKeyspace("grant_tables_except_keyspace_test_keyspace");
         createKeyspace("orAuthorization_test_keyspace");
         createKeyspace("resource_wide_actions_test_keyspace");
@@ -355,7 +356,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createTable("test_keyspace", "test_table");
         createTable("non_admin_test_keyspace", "test_table");
         createTable("grant_table_test_keyspace", "test_table");
-        createTable("grant_tables_test_keyspace", "test_table");
+        createTable("grant_keyspace_test_keyspace", "test_table");
         createTable("grant_tables_except_keyspace_test_keyspace", "test_table");
         createTable("orAuthorization_test_keyspace", "test_table");
         createTable("resource_wide_actions_test_keyspace", "test_table");
@@ -389,8 +390,8 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // permission for testGrantingForTable
         grantSidecarPermission("non_admin_test_role", "data/grant_table_test_keyspace/test_table", "CREATE:SNAPSHOT");
 
-        // permission for testGrantingForAllTables
-        grantSidecarPermission("non_admin_test_role", "data/grant_tables_test_keyspace", "CREATE:SNAPSHOT");
+        // permission for testGrantingForKeyspace
+        grantSidecarPermission("non_admin_test_role", "data/grant_keyspace_test_keyspace", "CREATE:SNAPSHOT");
 
         // permission for testGrantingAllTablesExceptKeyspace
         grantSidecarPermission("non_admin_test_role", "data/grant_tables_except_keyspace_test_keyspace/*", "CREATE:SNAPSHOT");
