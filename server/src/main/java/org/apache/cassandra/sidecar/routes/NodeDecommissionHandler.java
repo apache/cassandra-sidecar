@@ -30,10 +30,11 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
-import org.apache.cassandra.sidecar.job.DecommissionJob;
+import org.apache.cassandra.sidecar.job.NodeDecommissionJob;
 import org.apache.cassandra.sidecar.job.OperationalJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -79,20 +80,28 @@ public class NodeDecommissionHandler extends AbstractHandler<Void>
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
         boolean isForce = parseBooleanQueryParam(context.request(), "force", false);
 
-        OperationalJob job = new DecommissionJob(UUIDs.timeBased(), operations, isForce);
-        jobManager.trySubmitJob(job);
+        OperationalJob job = new NodeDecommissionJob(UUIDs.timeBased(), operations, isForce);
+        try
+        {
+            jobManager.trySubmitJob(job);
+        }
+        catch (OperationalJobConflictException oje)
+        {
+            logger.error("Conflicting job encountered. reason={}", oje.getMessage());
+            context.fail(wrapHttpException(HttpResponseStatus.CONFLICT, oje.getMessage(), oje.getCause()));
+        }
 
+        // Get the result, waiting for the specified wait time for result
         job.asyncResult(executorPools.service(),
                         Duration.of(config.operationalJobExecutionMaxWaitTimeInMillis(), ChronoUnit.MILLIS))
-           .onSuccess(f -> sendResponse(context, job, request, remoteAddress, host))
-           .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+        .onComplete(v -> sendResponse(context, job, request, remoteAddress, host));
     }
 
     private void sendResponse(RoutingContext context, OperationalJob job, Void request, SocketAddress remoteAddress, String host)
     {
         OperationalJobStatus jobStatus = job.status();
-        logger.info("Job completion status={} request={} remoteAddress={} instance={}",
-                    jobStatus, request, remoteAddress, host);
+        logger.info("Job completion status={} request={} remoteAddress={} instance={} jobId={}",
+                    jobStatus, request, remoteAddress, host, job.jobId);
 
         String reason = null;
         switch(jobStatus)
@@ -101,8 +110,17 @@ public class NodeDecommissionHandler extends AbstractHandler<Void>
                 context.response().setStatusCode(HttpResponseStatus.OK.code());
                 break;
             case FAILED:
-                reason = job.asyncResult().cause().getMessage();
-                context.response().setStatusCode(HttpResponseStatus.OK.code());
+                // All exceptions from the job execution are wrapped by OperationalJobException
+                Throwable cause = job.asyncResult().cause();
+                if (cause instanceof OperationalJobException)
+                {
+                    reason = cause.getMessage();
+                    context.response().setStatusCode(HttpResponseStatus.OK.code());
+                }
+                else
+                {
+                    processFailure(cause, context, host, remoteAddress, request);
+                }
                 break;
             case CREATED:
             case RUNNING:
@@ -112,20 +130,5 @@ public class NodeDecommissionHandler extends AbstractHandler<Void>
                 throw new IllegalArgumentException("Unexpected job status encountered: " + jobStatus);
         }
         context.json(new OperationalJobResponse(job.jobId, jobStatus, host, reason));
-    }
-
-    @Override
-    protected void processFailure(Throwable cause,
-                                  RoutingContext context,
-                                  String host,
-                                  SocketAddress remoteAddress,
-                                  Void request)
-    {
-        if (cause instanceof OperationalJobConflictException)
-        {
-            context.fail(wrapHttpException(HttpResponseStatus.CONFLICT, cause.getMessage(), cause));
-            return;
-        }
-        super.processFailure(cause, context, host, remoteAddress, request);
     }
 }

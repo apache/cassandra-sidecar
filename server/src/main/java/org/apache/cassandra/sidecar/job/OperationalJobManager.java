@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 
 import com.google.inject.Singleton;
-import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;

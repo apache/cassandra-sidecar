@@ -54,7 +54,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
-import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
+import static io.netty.handler.codec.http.HttpResponseStatus.CONFLICT;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
@@ -155,9 +155,23 @@ public class NodeDecommissionHandlerTest
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/operations/decommission";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_INTERNAL_SERVER_ERROR)
+              .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(INTERNAL_SERVER_ERROR.code());
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testDecommissionConflict(VertxTestContext context)
+    {
+        when(mockStorageOperations.getOperationMode()).thenReturn("LEAVING");
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/cassandra/operations/decommission";
+        client.put(server.actualPort(), "127.0.0.1", testRoute)
+              .expect(ResponsePredicate.SC_CONFLICT)
+              .send(context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(CONFLICT.code());
                   context.completeNow();
               }));
     }

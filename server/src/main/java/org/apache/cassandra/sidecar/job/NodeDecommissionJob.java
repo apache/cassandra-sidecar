@@ -29,14 +29,14 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 /**
  * Implementation of {@link OperationalJob} to perform node decommission operation.
  */
-public class DecommissionJob extends OperationalJob
+public class NodeDecommissionJob extends OperationalJob
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DecommissionJob.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NodeDecommissionJob.class);
     private static final String operation = "decommission";
     private final boolean isForce;
     protected StorageOperations storageOperations;
 
-    public DecommissionJob(UUID jobId, StorageOperations storageOps, boolean isForce)
+    public NodeDecommissionJob(UUID jobId, StorageOperations storageOps, boolean isForce)
     {
         super(jobId);
         this.storageOperations = storageOps;
