@@ -18,6 +18,10 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE;
 
@@ -30,10 +34,13 @@ public enum VariableAwareResource
 
     SIDECAR("sidecar"),
 
+    // data resources
+
     /**
-     * Cassandra stores data resource in the format data/keyspace_name/table_name within the role_permissions table.
-     * A similar format is followed for storing data resource in sidecar permissions table role_permissions_v1. hence
-     * sidecar endpoints expect data resources to be provided in format data/keyspace_name/table_name.
+     * Cassandra stores data resource in the format data, data/keyspace or data/keyspace_name/table_name within
+     * the role_permissions table. A similar format is followed for storing data resources in sidecar permissions
+     * table role_permissions_v1. hence sidecar endpoints expect data resources to be provided in format
+     * data/keyspace_name/table_name.
      * <p>
      * In this context, curly braces are used to denote variable parts of the resource. For e.g., when permissions are
      * checked for resource data/{keyspace} in an endpoint, the part within the curly braces ({keyspace})
@@ -47,8 +54,14 @@ public enum VariableAwareResource
      * User permissions are then extracted from both Cassandra and sidecar role permissions tables for
      * the resolved resource and are matched against the expected permissions set defined in the endpoint's handler.
      */
+    DATA("data"),
+
     DATA_WITH_KEYSPACE(String.format("data/{%s}", KEYSPACE)),
-    
+
+    // resource is set to allow permissions on all tables within a keyspace. It does not grant the given permissions
+    // on the keyspace itself, such as CREATE, ALTER, DROP when granted are allowed on tables, but not on keyspace.
+    DATA_WITH_KEYSPACE_ALL_TABLES(String.format("data/{%s}/*", KEYSPACE)),
+
     DATA_WITH_KEYSPACE_TABLE(String.format("data/{%s}/{%s}", KEYSPACE, TABLE));
 
     private final String resource;
@@ -61,5 +74,30 @@ public enum VariableAwareResource
     public String resource()
     {
         return resource;
+    }
+
+    public List<String> expandedResources()
+    {
+        if (resource.equals(DATA_WITH_KEYSPACE.resource))
+        {
+            return Collections.unmodifiableList(Arrays.asList(DATA.resource,
+                                                              DATA_WITH_KEYSPACE.resource));
+        }
+        else if (resource.equals(DATA_WITH_KEYSPACE_ALL_TABLES.resource))
+        {
+            return Collections.unmodifiableList(Arrays.asList(DATA.resource,
+                                                              DATA_WITH_KEYSPACE.resource,
+                                                              DATA_WITH_KEYSPACE_ALL_TABLES.resource));
+        }
+        else if (resource.equals(DATA_WITH_KEYSPACE_TABLE.resource))
+        {
+            // See https://issues.apache.org/jira/browse/CASSANDRA-17027 Allows to grant permissions for all tables
+            // in a keyspace.
+            return Collections.unmodifiableList(Arrays.asList(DATA.resource,
+                                                              DATA_WITH_KEYSPACE.resource,
+                                                              DATA_WITH_KEYSPACE_ALL_TABLES.resource,
+                                                              DATA_WITH_KEYSPACE_TABLE.resource));
+        }
+        return Collections.singletonList(resource);
     }
 }

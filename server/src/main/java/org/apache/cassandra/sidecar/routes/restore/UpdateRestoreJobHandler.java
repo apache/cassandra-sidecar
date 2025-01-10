@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.routes.restore;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -75,8 +76,8 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return Collections.singleton(SidecarPermissions.EDIT_RESTORE_JOB.toAuthorization(resource));
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
+        return Collections.singleton(SidecarPermissions.EDIT_RESTORE_JOB.toAuthorization(eligibleResources));
     }
 
     @Override

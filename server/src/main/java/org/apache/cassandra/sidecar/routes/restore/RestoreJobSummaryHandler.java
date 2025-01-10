@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.routes.restore;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -59,8 +60,8 @@ public class RestoreJobSummaryHandler extends AbstractHandler<String> implements
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return Collections.singleton(SidecarPermissions.READ_RESTORE_JOB.toAuthorization(resource));
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
+        return Collections.singleton(SidecarPermissions.READ_RESTORE_JOB.toAuthorization(eligibleResources));
     }
 
     @Override

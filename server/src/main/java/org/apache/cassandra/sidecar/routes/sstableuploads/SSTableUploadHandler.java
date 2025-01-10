@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -105,8 +106,8 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return Collections.singleton(SidecarPermissions.UPLOAD_SSTABLE.toAuthorization(resource));
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
+        return Collections.singleton(SidecarPermissions.UPLOAD_SSTABLE.toAuthorization(eligibleResources));
     }
 
     /**

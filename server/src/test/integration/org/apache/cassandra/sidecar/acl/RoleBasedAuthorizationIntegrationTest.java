@@ -34,9 +34,6 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.config.SslConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.AuthMode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
@@ -128,6 +125,88 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testGrantingSidecarPermissionForAllTables(VertxTestContext context, CassandraTestContext cassandraContext)
+    throws Exception
+    {
+        prepareForTest(cassandraContext);
+
+        createRole("test_role", false);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
+
+        grantSidecarPermission("test_role", "data/sample_keyspace", "CREATE:SNAPSHOT");
+
+        // wait for cache refreshes to pick up granted permission
+        Thread.sleep(2000);
+
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
+                                                   "sample_keyspace", "sample_table");
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+
+        Checkpoint checkpoint = context.checkpoint(2);
+
+        // CREATE:SNAPSHOT permission granted for data/sample_keyspace/sample_table with data/sample_keyspace grant
+        verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
+
+        // DELETE:SNAPSHOT permission not granted for data/sample_keyspace/sample_table
+        verifyAccess(context, checkpoint, HttpMethod.DELETE, createSnapshotRoute, clientKeystorePath, true);
+    }
+
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testGrantingSidecarPermissionForAllTablesExceptKeyspace(VertxTestContext context, CassandraTestContext cassandraContext)
+    throws Exception
+    {
+        prepareForTest(cassandraContext);
+
+        createRole("test_role", false);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
+
+        grantSidecarPermission("test_role", "data/sample_keyspace/*", "CREATE:SNAPSHOT");
+
+        // wait for cache refreshes to pick up granted permission
+        Thread.sleep(2000);
+
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
+                                                   "sample_keyspace", "sample_table");
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+
+        Checkpoint checkpoint = context.checkpoint(2);
+
+        // CREATE:SNAPSHOT permission granted for data/sample_keyspace/sample_table with data/sample_keyspace grant
+        verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
+
+        // READ:SCHEMA is not granted since it expects permissions at keyspace level
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
+        verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, true);
+    }
+
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testGrantingPermissionsForAtDataLevel(VertxTestContext context, CassandraTestContext cassandraContext)
+    throws Exception
+    {
+        prepareForTest(cassandraContext);
+
+        createRole("test_role", false);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
+
+        grantSidecarPermission("test_role", "data", "CREATE:SNAPSHOT");
+
+        // wait for cache refreshes to pick up granted permission
+        Thread.sleep(2000);
+
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
+                                                   "sample_keyspace", "sample_table");
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+
+        Checkpoint checkpoint = context.checkpoint(2);
+
+        // CREATE:SNAPSHOT permission granted for data/sample_keyspace/sample_table with data resource grant
+        verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
+
+        // DELETE:SNAPSHOT permission not granted for data/sample_keyspace/sample_table not granted
+        verifyAccess(context, checkpoint, HttpMethod.DELETE, createSnapshotRoute, clientKeystorePath, true);
+    }
+
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
     void testEndpointWithOrAuthorization(VertxTestContext context, CassandraTestContext cassandraContext)
     throws Exception
     {
@@ -160,7 +239,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
 
         // READ action allowed across targets for same resource. READ:* for cluster resource allows READ:SCHEMA,
-        // READ:CDC, READ:CLUSTER etc
+        // READ:CDC, READ:GOSSIP, READ:RING etc
         grantSidecarPermission("test_role", "cluster", "READ:*");
 
         // wait for cache refreshes to pick up granted permission
@@ -178,13 +257,44 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, checkpoint, HttpMethod.GET, schemaRoute, clientKeystorePath, false);
 
         String ringRoute = "/api/v1/cassandra/ring";
-        // Allows READ:CLUSTER too
+        // Allows READ:RING too
         verifyAccess(context, checkpoint, HttpMethod.GET, ringRoute, clientKeystorePath, false);
 
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "sample_keyspace");
         // Does not allow finding schema for keyspace, keyspace schema route requires access specific to
         // data/sample_keyspace resource
         verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, true);
+    }
+
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testGrantingPermissionsWithWildcardSubparts(VertxTestContext context, CassandraTestContext cassandraContext)
+    throws Exception
+    {
+        prepareForTest(cassandraContext);
+
+        createRole("test_role", false);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test_user", "test_role");
+
+        grantSidecarPermission("test_role", "cluster", "READ:SCHEMA,GOSSIP");
+
+        // wait for cache refreshes to pick up granted permission
+        Thread.sleep(2000);
+
+        String schemaRoute = "/api/v1/cassandra/schema";
+        String gossipRoute = "/api/v1/cassandra/gossip";
+        String ringRoute = "/api/v1/cassandra/ring";
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test_user");
+
+        Checkpoint checkpoint = context.checkpoint(3);
+
+        // READ:SCHEMA permission granted for cluster with READ:SCHEMA,GOSSIP
+        verifyAccess(context, checkpoint, HttpMethod.GET, schemaRoute, clientKeystorePath, false);
+
+        // READ:GOSSIP permission granted for cluster with READ:SCHEMA,GOSSIP
+        verifyAccess(context, checkpoint, HttpMethod.GET, gossipRoute, clientKeystorePath, false);
+
+        // READ:RING permission not granted with READ:SCHEMA,GOSSIP
+        verifyAccess(context, checkpoint, HttpMethod.GET, ringRoute, clientKeystorePath, true);
     }
 
     @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
@@ -206,17 +316,18 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         Checkpoint checkpoint = context.checkpoint(3);
 
         // *:* permission across resource data/test_keyspace allows all possible actions across all possible targets,
-        // Such as READ:SCHEMA, READ:CLUSTER etc.
+        // Such as READ:SCHEMA for given keyspace, READ:RING for given keyspace etc.
         verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, false);
 
         String keyspaceRingRoute = String.format("/api/v1/cassandra/ring/keyspaces/%s", "sample_keyspace");
-        // READ:CLUSTER granted
+        // READ:RING for keyspace granted
         verifyAccess(context, checkpoint, HttpMethod.GET, keyspaceRingRoute, clientKeystorePath, false);
 
-        String viewSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s",
-                                                 "sample_keyspace", "sample_table", "sample_snapshot");
-        // does not allow READ:SNAPSHOT which requires table resource too
-        verifyAccess(context, checkpoint, HttpMethod.GET, viewSnapshotRoute, clientKeystorePath, true);
+
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
+                                                   "sample_keyspace", "sample_table");
+        // allows CREATE:SNAPSHOT which requires table resource too, since data/sample_keyspace grant is a wider grant
+        verifyAccess(context, checkpoint, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
     }
 
     @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
@@ -383,16 +494,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         Session session = maybeGetSession();
         session.execute(String.format("UPDATE sidecar_internal.role_permissions_v1 SET permissions = permissions + {'%s'} " +
                                       "where role = '%s' and resource = '%s'", permission, role, resource));
-    }
-
-    private SslConfiguration sslConfigWithKeystoreTruststore()
-    {
-        return SslConfigurationImpl
-               .builder()
-               .enabled(true)
-               .keystore(new KeyStoreConfigurationImpl(clientKeystorePath.toAbsolutePath().toString(), clientKeystorePassword, "PKCS12"))
-               .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
-               .build();
     }
 
     private void verifyAccess(VertxTestContext context, HttpMethod method, String testRoute, Path clientKeystorePath)

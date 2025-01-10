@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.routes.snapshots;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -66,8 +67,8 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization(resource));
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
+        return Collections.singleton(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization(eligibleResources));
     }
 
     /**

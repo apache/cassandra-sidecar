@@ -23,19 +23,16 @@ package org.apache.cassandra.sidecar.acl.authorization;
  * format action_allowed:action_target.
  * <p>
  * Example, with CREATE:SNAPSHOT permission, CREATE action is allowed for SNAPSHOT target. Sample actions are
- * CREATE, READ, EDIT, UPDATE, DELETE, IMPORT, UPLOAD, START etc.
+ * CREATE, READ, EDIT, DELETE, IMPORT, UPLOAD, START etc.
  * <p>
  * Wildcard permissions are supported with ':' wildcard parts divider and '*' wildcard token to match parts:
  * <p>
- * - *:SNAPSHOT allows CREATE:SNAPSHOT, VIEW:SNAPSHOT and DELETE:SNAPSHOT.
+ * - *:SNAPSHOT allows CREATE:SNAPSHOT, READ:SNAPSHOT and DELETE:SNAPSHOT.
  * - CREATE:* allows CREATE action on all possible targets.
  * - *:* allows all possible permissions for specified resource
  */
 public class SidecarPermissions
 {
-    // cassandra cluster related permissions
-    public static final Permission READ_CLUSTER = new WildcardPermission("READ:CLUSTER");
-
     // SSTable related permissions
     public static final Permission UPLOAD_SSTABLE = new WildcardPermission("UPLOAD:SSTABLE");
     public static final Permission IMPORT_SSTABLE = new WildcardPermission("IMPORT:SSTABLE");
@@ -62,7 +59,11 @@ public class SidecarPermissions
     // sidecar operation related permissions
     public static final Permission READ_OPERATIONAL_JOBS = new WildcardPermission("READ:OPERATIONAL_JOBS");
 
-    // cassandra data related actions
+    // cassandra cluster related permissions
     public static final Permission READ_SCHEMA = new WildcardPermission("READ:SCHEMA");
+    public static final Permission READ_GOSSIP = new WildcardPermission("READ:GOSSIP");
+    public static final Permission READ_RING = new WildcardPermission("READ:RING");
+    public static final Permission READ_TIME_SKEW = new WildcardPermission("READ:TIME_SKEW");
+    public static final Permission READ_NODE_SETTINGS = new WildcardPermission("READ:NODE_SETTINGS");
     public static final Permission READ_TOPOLOGY = new WildcardPermission("READ:TOPOLOGY");
 }

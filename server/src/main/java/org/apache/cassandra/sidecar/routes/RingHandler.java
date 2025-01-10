@@ -32,7 +32,7 @@ public class RingHandler extends KeyspaceRingHandler
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_RING.toAuthorization(resource));
     }
 
     /**

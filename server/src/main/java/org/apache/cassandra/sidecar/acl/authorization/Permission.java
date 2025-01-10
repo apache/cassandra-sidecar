@@ -18,7 +18,10 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import java.util.List;
+
 import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.OrAuthorization;
 
 /**
  * Represents a permission that can be granted to a user
@@ -36,7 +39,8 @@ public interface Permission
      */
     default Authorization toAuthorization()
     {
-        return toAuthorization(null);
+        // When resource is empty, it is ignored
+        return toAuthorization("");
     }
 
     /**
@@ -46,4 +50,28 @@ public interface Permission
      * @return {@link Authorization} created from permission for a resource.
      */
     Authorization toAuthorization(String resource);
+
+    /**
+     * User authorization created with eligible resources.
+     *
+     * @param eligibleResources authorization is created with all the eligible resources, so that if user holds grant
+     *                         for any of the eligibleResources, then they are granted access
+     * @return {@link Authorization} created with given eligibleResources, when empty list is passed
+     * {@link Authorization} is created with just permission name
+     */
+    default Authorization toAuthorization(List<String> eligibleResources)
+    {
+        if (eligibleResources == null || eligibleResources.isEmpty())
+        {
+            // When resource is empty, it is ignored
+            return toAuthorization("");
+        }
+
+        OrAuthorization orAuthorization = OrAuthorization.create();
+        for (String resource : eligibleResources)
+        {
+            orAuthorization.addAuthorization(toAuthorization(resource));
+        }
+        return orAuthorization;
+    }
 }

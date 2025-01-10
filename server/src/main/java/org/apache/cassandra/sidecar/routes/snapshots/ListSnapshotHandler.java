@@ -96,8 +96,8 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return Collections.singleton(SidecarPermissions.READ_SNAPSHOT.toAuthorization(resource));
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
+        return Collections.singleton(SidecarPermissions.READ_SNAPSHOT.toAuthorization(eligibleResources));
     }
 
     /**

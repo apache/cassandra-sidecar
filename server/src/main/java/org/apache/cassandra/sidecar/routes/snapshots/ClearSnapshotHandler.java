@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.routes.snapshots;
 import java.io.FileNotFoundException;
 import java.nio.file.NoSuchFileException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import com.google.inject.Inject;
@@ -59,8 +60,8 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequestParam> 
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return Collections.singleton(SidecarPermissions.DELETE_SNAPSHOT.toAuthorization(resource));
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
+        return Collections.singleton(SidecarPermissions.DELETE_SNAPSHOT.toAuthorization(eligibleResources));
     }
 
     /**

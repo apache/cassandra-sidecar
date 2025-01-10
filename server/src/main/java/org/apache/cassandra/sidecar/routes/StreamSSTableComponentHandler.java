@@ -72,9 +72,9 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        Authorization stream = SidecarPermissions.STREAM_SSTABLE.toAuthorization(resource);
-        Authorization select = CassandraPermissions.SELECT.toAuthorization(resource);
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
+        Authorization stream = SidecarPermissions.STREAM_SSTABLE.toAuthorization(eligibleResources);
+        Authorization select = CassandraPermissions.SELECT.toAuthorization(eligibleResources);
         return ImmutableSet.of(stream, select);
     }
 

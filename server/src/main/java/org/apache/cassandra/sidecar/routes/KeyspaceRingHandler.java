@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -57,8 +58,8 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE.resource();
-        return Collections.singleton(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE.expandedResources();
+        return Collections.singleton(SidecarPermissions.READ_RING.toAuthorization(eligibleResources));
     }
 
     /**

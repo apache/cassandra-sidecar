@@ -18,6 +18,7 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import com.datastax.driver.core.KeyspaceMetadata;
@@ -67,13 +68,13 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE.resource();
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE.expandedResources();
         OrAuthorization or = OrAuthorization.create();
-        or.addAuthorization(CassandraPermissions.CREATE.toAuthorization(resource));
-        or.addAuthorization(CassandraPermissions.ALTER.toAuthorization(resource));
-        or.addAuthorization(CassandraPermissions.DROP.toAuthorization(resource));
-        or.addAuthorization(CassandraPermissions.DESCRIBE.toAuthorization(resource));
-        or.addAuthorization(SidecarPermissions.READ_SCHEMA.toAuthorization(resource));
+        or.addAuthorization(CassandraPermissions.CREATE.toAuthorization(eligibleResources));
+        or.addAuthorization(CassandraPermissions.ALTER.toAuthorization(eligibleResources));
+        or.addAuthorization(CassandraPermissions.DROP.toAuthorization(eligibleResources));
+        or.addAuthorization(CassandraPermissions.DESCRIBE.toAuthorization(eligibleResources));
+        or.addAuthorization(SidecarPermissions.READ_SCHEMA.toAuthorization(eligibleResources));
         return Collections.singleton(or);
     }
 

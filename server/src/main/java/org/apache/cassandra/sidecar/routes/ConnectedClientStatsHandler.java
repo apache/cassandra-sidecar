@@ -18,7 +18,9 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import com.google.inject.Inject;
@@ -26,7 +28,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
+import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -54,8 +56,11 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Boolean> implem
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
+        List<String> eligibleResources = Arrays.asList(VariableAwareResource.DATA.resource(),
+                                                       "data/system_views",
+                                                       "data/system_views/*",
+                                                       "data/system_views/clients");
+        return Collections.singleton(CassandraPermissions.SELECT.toAuthorization(eligibleResources));
     }
 
     /**

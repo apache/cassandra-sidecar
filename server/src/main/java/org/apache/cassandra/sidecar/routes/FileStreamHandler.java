@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import com.google.inject.Inject;
@@ -66,8 +67,8 @@ public class FileStreamHandler extends AbstractHandler<String> implements Access
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return Collections.singleton(SidecarPermissions.STREAM_SSTABLE.toAuthorization(resource));
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
+        return Collections.singleton(SidecarPermissions.STREAM_SSTABLE.toAuthorization(eligibleResources));
     }
 
     @Override

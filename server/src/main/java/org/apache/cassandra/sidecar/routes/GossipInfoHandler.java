@@ -58,7 +58,7 @@ public class GossipInfoHandler extends AbstractHandler<Void> implements AccessPr
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_GOSSIP.toAuthorization(resource));
     }
 
     /**

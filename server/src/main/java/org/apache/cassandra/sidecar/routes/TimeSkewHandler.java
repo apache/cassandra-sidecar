@@ -52,7 +52,7 @@ public class TimeSkewHandler implements Handler<RoutingContext>, AccessProtected
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_TIME_SKEW.toAuthorization(resource));
     }
 
     @Override

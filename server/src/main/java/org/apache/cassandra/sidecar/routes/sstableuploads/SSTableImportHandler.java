@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.routes.sstableuploads;
 
 import java.nio.file.NoSuchFileException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -84,8 +85,8 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return Collections.singleton(SidecarPermissions.IMPORT_SSTABLE.toAuthorization(resource));
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
+        return Collections.singleton(SidecarPermissions.IMPORT_SSTABLE.toAuthorization(eligibleResources));
     }
 
     /**

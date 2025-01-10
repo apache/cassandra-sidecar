@@ -73,8 +73,8 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
-        return Collections.singleton(SidecarPermissions.READ_RESTORE_JOB.toAuthorization(resource));
+        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
+        return Collections.singleton(SidecarPermissions.READ_RESTORE_JOB.toAuthorization(eligibleResources));
     }
 
     @Override

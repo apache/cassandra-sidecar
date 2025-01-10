@@ -56,7 +56,7 @@ public class NodeSettingsHandler extends AbstractHandler<Void> implements Access
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(SidecarPermissions.READ_CLUSTER.toAuthorization(resource));
+        return Collections.singleton(SidecarPermissions.READ_NODE_SETTINGS.toAuthorization(resource));
     }
 
     /**
