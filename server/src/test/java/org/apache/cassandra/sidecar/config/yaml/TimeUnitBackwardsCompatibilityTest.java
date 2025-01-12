@@ -41,14 +41,15 @@ import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
- * Tests for {@link org.apache.cassandra.sidecar.config.DurationSpec} based configurations
+ * Tests for {@link DurationSpec} based configurations
  */
-class DurationSpecTest
+class TimeUnitBackwardsCompatibilityTest
 {
     @DisplayName("Configuration for a duration spec type")
     @Test
@@ -173,6 +174,7 @@ class DurationSpecTest
         assertThat(serviceConfiguration.allowableTimeSkew().unit()).isEqualTo(TimeUnit.MINUTES);
     }
 
+    @DisplayName("Fails when the 'allowable_time_skew' configuration is less than the minimum allowable value")
     @Test
     void failsOnInvalidAllowableTimeSkewConfiguration()
     {
@@ -203,6 +205,7 @@ class DurationSpecTest
 
     // SSTableImportConfiguration
 
+    @DisplayName("Supports legacy name 'poll_interval_millis' for the 'sidecar.sstable_import' configuration")
     @Test
     void testLegacySSTableImportPollIntervalConfiguration() throws IOException
     {
@@ -221,6 +224,7 @@ class DurationSpecTest
 
     // TrafficShapingConfiguration
 
+    @DisplayName("Supports legacy names 'max_delay_to_wait_millis' and 'check_interval_for_stats_millis' for the 'sidecar.traffic_shaping' configuration")
     @Test
     void testLegacyTrafficShapingConfiguration() throws IOException
     {
@@ -238,6 +242,7 @@ class DurationSpecTest
 
     // CacheConfiguration
 
+    @DisplayName("Supports legacy name 'expire_after_access_millis' for the 'sidecar.sstable_import.cache' configuration")
     @Test
     void testLegacyExpireAfterAccessConfiguration() throws IOException
     {
@@ -252,6 +257,7 @@ class DurationSpecTest
         assertThat(cacheConfig.expireAfterAccess().toMillis()).isEqualTo(32_000L);
     }
 
+    @DisplayName("Supports legacy name 'warmup_retry_interval_millis' for the 'access_control.permission_cache' configuration")
     @Test
     void testLegacyWarmupRetryIntervalConfiguration() throws IOException
     {
@@ -267,6 +273,7 @@ class DurationSpecTest
 
     // WorkerPoolConfiguration
 
+    @DisplayName("Supports legacy name 'max_execution_time_millis' for the 'sidecar.worker_pools.service' and 'sidecar.worker_pools.internal' configurations")
     @Test
     void testLegacyWorkerMaxExecutionTimeConfiguration() throws IOException
     {
@@ -286,6 +293,7 @@ class DurationSpecTest
 
     // JmxConfiguration
 
+    @DisplayName("Supports legacy name 'retry_delay_millis' for the 'sidecar.jmx' configuration")
     @Test
     void testLegacyJmxRetryDelayConfiguration() throws IOException
     {
@@ -301,6 +309,7 @@ class DurationSpecTest
 
     // CdcConfiguration
 
+    @DisplayName("Supports legacy name 'segment_hardlink_cache_expiry_in_secs' for the 'sidecar.cdc' configuration")
     @Test
     void testLegacyCdcSegmentHardLinkCacheExpiryConfiguration() throws IOException
     {
@@ -316,6 +325,7 @@ class DurationSpecTest
 
     // KeyStoreConfiguration
 
+    @DisplayName("Supports legacy name 'check_interval_sec' for the 'ssl.keystore' configuration")
     @Test
     void testLegacyKeyStoreCheckIntervalConfiguration() throws IOException
     {
@@ -331,6 +341,7 @@ class DurationSpecTest
 
     // SslConfiguration
 
+    @DisplayName("Supports legacy name 'handshake_timeout_sec' for the 'ssl' configuration")
     @Test
     void testLegacySslHandshakeTimeoutConfiguration() throws IOException
     {
@@ -345,6 +356,7 @@ class DurationSpecTest
 
     // S3ClientConfiguration
 
+    @DisplayName("Supports legacy name 'thread_keep_alive_seconds' for the 's3_client' configuration")
     @Test
     void testLegacyS3ClientThreadKeepAliveConfiguration() throws IOException
     {
@@ -357,6 +369,7 @@ class DurationSpecTest
         assertThat(s3ClientConfig.threadKeepAlive().toSeconds()).isEqualTo(152);
     }
 
+    @DisplayName("Supports legacy name 'api_call_timeout_millis' for the 's3_client' configuration")
     @Test
     void testLegacyS3ClientApiCallTimeoutConfiguration() throws IOException
     {
@@ -371,6 +384,7 @@ class DurationSpecTest
 
     // RestoreJobConfiguration
 
+    @DisplayName("Supports legacy name 'job_discovery_active_loop_delay_millis' for the 'blob_restore' configuration")
     @Test
     void testLegacyRestoreJobDiscoveryActiveLoopDelayConfiguration() throws IOException
     {
@@ -383,6 +397,7 @@ class DurationSpecTest
         assertThat(restoreJobConfig.jobDiscoveryActiveLoopDelay().toMillis()).isEqualTo(1234567);
     }
 
+    @DisplayName("Supports legacy name 'job_discovery_idle_loop_delay_millis' for the 'blob_restore' configuration")
     @Test
     void testLegacyRestoreJobDiscoveryIdleLoopDelayConfiguration() throws IOException
     {
@@ -395,6 +410,7 @@ class DurationSpecTest
         assertThat(restoreJobConfig.jobDiscoveryIdleLoopDelay().toMillis()).isEqualTo(76543);
     }
 
+    @DisplayName("Supports legacy name 'restore_job_tables_ttl_seconds' for the 'blob_restore' configuration")
     @Test
     void testLegacyRestoreJobTablesTtlConfiguration() throws IOException
     {
@@ -407,6 +423,7 @@ class DurationSpecTest
         assertThat(restoreJobConfig.restoreJobTablesTtl().toSeconds()).isEqualTo(76543);
     }
 
+    @DisplayName("Supports legacy name 'ring_topology_refresh_delay_millis' for the 'blob_restore' configuration")
     @Test
     void testLegacyRestoreJobRingTopologyRefreshDelayConfiguration() throws IOException
     {
@@ -419,6 +436,7 @@ class DurationSpecTest
         assertThat(restoreJobConfig.ringTopologyRefreshDelay().toMillis()).isEqualTo(724831);
     }
 
+    @DisplayName("Supports legacy name 'slow_task_threshold_seconds' for the 'blob_restore' configuration")
     @Test
     void testLegacyRestoreJobSlowTaskThresholdConfiguration() throws IOException
     {
@@ -431,6 +449,7 @@ class DurationSpecTest
         assertThat(restoreJobConfig.slowTaskThreshold().toSeconds()).isEqualTo(27);
     }
 
+    @DisplayName("Supports legacy name 'slow_task_report_delay_seconds' for the 'blob_restore' configuration")
     @Test
     void testLegacyRestoreJobSlowTaskReportDelayConfiguration() throws IOException
     {

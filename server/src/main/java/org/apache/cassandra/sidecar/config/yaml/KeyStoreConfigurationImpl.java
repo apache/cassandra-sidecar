@@ -114,7 +114,14 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
         this.checkInterval = checkInterval;
     }
 
+    /**
+     * Legacy property {@code check_interval_sec}
+     *
+     * @param checkIntervalInSeconds interval in milliseconds
+     * @deprecated in favor of {@code check_interval}
+     */
     @JsonProperty(value = "check_interval_sec")
+    @Deprecated
     public void setCheckIntervalInSeconds(long checkIntervalInSeconds)
     {
         LOGGER.warn("'check_interval_sec' is deprecated, use 'check_interval' instead");

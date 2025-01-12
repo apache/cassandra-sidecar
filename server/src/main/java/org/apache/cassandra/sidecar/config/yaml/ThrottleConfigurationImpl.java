@@ -87,10 +87,17 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
         this.timeout = timeout;
     }
 
+    /**
+     * Legacy property {@code timeout_sec}
+     *
+     * @param timeoutInSeconds timeout in seconds
+     * @deprecated in favor of {@link #TIMEOUT_PROPERTY}
+     */
     @JsonProperty(value = "timeout_sec")
-    public void setTimeoutInSeconds(long seconds)
+    @Deprecated
+    public void setTimeoutInSeconds(long timeoutInSeconds)
     {
         LOGGER.warn("'timeout_sec' is deprecated, use '{}' instead", TIMEOUT_PROPERTY);
-        setTimeout(new SecondBoundConfigurationImpl(seconds, TimeUnit.SECONDS));
+        setTimeout(new SecondBoundConfigurationImpl(timeoutInSeconds, TimeUnit.SECONDS));
     }
 }

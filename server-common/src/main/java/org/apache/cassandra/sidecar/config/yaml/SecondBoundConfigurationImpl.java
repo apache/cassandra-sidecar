@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpecImpl;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -52,6 +53,6 @@ public class SecondBoundConfigurationImpl extends DurationSpecImpl implements Se
     @Override
     public TimeUnit minimumUnit()
     {
-        return SECONDS;
+        return TimeUnit.SECONDS;
     }
 }

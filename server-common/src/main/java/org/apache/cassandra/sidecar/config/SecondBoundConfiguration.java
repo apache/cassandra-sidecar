@@ -18,7 +18,10 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.cassandra.sidecar.config.yaml.SecondBoundConfigurationImpl;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 
 /**
  * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in seconds.
@@ -30,23 +33,21 @@ public interface SecondBoundConfiguration extends DurationSpec
     /**
      * Represents a 0-seconds configuration
      */
-    SecondBoundConfiguration ZERO = SecondBoundConfiguration.parse("0s");
+    SecondBoundConfiguration ZERO = new SecondBoundConfigurationImpl(0, TimeUnit.SECONDS);
 
     /**
      * Represents a 1-second configuration
      */
-    SecondBoundConfiguration ONE = SecondBoundConfiguration.parse("1s");
+    SecondBoundConfiguration ONE = new SecondBoundConfigurationImpl(1, TimeUnit.SECONDS);
 
+    /**
+     * Parses the {@code value} into a {@link SecondBoundConfiguration}.
+     *
+     * @param value the value to parse
+     * @return the parsed value into a {@link SecondBoundConfiguration} object
+     */
     static SecondBoundConfiguration parse(String value)
     {
         return new SecondBoundConfigurationImpl(value);
-    }
-
-    /**
-     * @return the duration in seconds
-     */
-    default long toSeconds()
-    {
-        return unit().toSeconds(quantity());
     }
 }

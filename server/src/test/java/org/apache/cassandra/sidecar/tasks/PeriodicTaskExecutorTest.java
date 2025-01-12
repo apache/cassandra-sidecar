@@ -36,12 +36,12 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.DurationSpec;
 import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.MillisecondBoundConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 
 import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;

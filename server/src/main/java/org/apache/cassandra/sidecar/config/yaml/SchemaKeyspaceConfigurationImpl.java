@@ -130,6 +130,12 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
         this.leaseSchemaTTL = leaseSchemaTTL;
     }
 
+    /**
+     * Legacy property {@code lease_schema_ttl_sec}
+     *
+     * @param leaseSchemaTTLSeconds time-to-live in seconds
+     * @deprecated in favor of {@code lease_schema_ttl}
+     */
     @JsonProperty(value = "lease_schema_ttl_sec")
     @Deprecated
     public void setLeaseSchemaTTLSeconds(long leaseSchemaTTLSeconds)

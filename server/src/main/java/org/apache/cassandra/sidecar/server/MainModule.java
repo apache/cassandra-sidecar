@@ -627,8 +627,16 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
+    public SidecarInternalKeyspace sidecarInternalKeyspace(SidecarConfiguration configuration)
+    {
+        return new SidecarInternalKeyspace(configuration);
+    }
+
+    @Provides
+    @Singleton
     public SidecarSchema sidecarSchema(Vertx vertx,
                                        ExecutorPools executorPools,
+                                       SidecarInternalKeyspace sidecarInternalKeyspace,
                                        SidecarConfiguration configuration,
                                        CQLSessionProvider cqlSessionProvider,
                                        RestoreJobsSchema restoreJobsSchema,
@@ -639,7 +647,6 @@ public class MainModule extends AbstractModule
                                        SidecarMetrics metrics,
                                        ClusterLease clusterLease)
     {
-        SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
         sidecarInternalKeyspace.registerTableSchema(restoreJobsSchema);
         sidecarInternalKeyspace.registerTableSchema(restoreSlicesSchema);
@@ -696,22 +703,31 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     public ClusterLeaseClaimTask clusterLeaseClaimTask(Vertx vertx,
+                                                       ServiceConfiguration serviceConfiguration,
                                                        ElectorateMembership electorateMembership,
                                                        SidecarLeaseDatabaseAccessor accessor,
-                                                       ServiceConfiguration serviceConfiguration,
-                                                       PeriodicTaskExecutor periodicTaskExecutor,
                                                        ClusterLease clusterLease,
                                                        SidecarMetrics metrics)
     {
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(vertx,
-                                                               serviceConfiguration,
-                                                               electorateMembership,
-                                                               accessor,
-                                                               clusterLease,
-                                                               metrics);
+        return new ClusterLeaseClaimTask(vertx,
+                                         serviceConfiguration,
+                                         electorateMembership,
+                                         accessor,
+                                         clusterLease,
+                                         metrics);
+    }
+
+    @Provides
+    @Singleton
+    public PeriodicTaskExecutor periodicTaskExecutor(Vertx vertx,
+                                                     ExecutorPools executorPools,
+                                                     ClusterLease clusterLease,
+                                                     ClusterLeaseClaimTask clusterLeaseClaimTask)
+    {
+        PeriodicTaskExecutor periodicTaskExecutor = new PeriodicTaskExecutor(executorPools, clusterLease);
         vertx.eventBus().localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(),
-                                       ignored -> periodicTaskExecutor.schedule(task));
-        return task;
+                                       ignored -> periodicTaskExecutor.schedule(clusterLeaseClaimTask));
+        return periodicTaskExecutor;
     }
 
     /**
@@ -746,8 +762,7 @@ public class MainModule extends AbstractModule
                                        .password(cassandraInstance.jmxRolePassword())
                                        .enableSsl(cassandraInstance.jmxSslEnabled())
                                        .connectionMaxRetries(jmxConfiguration.maxRetries())
-                                       // TODO: connectionRetryDelayMillis should be a MillisecondBoundConfiguration
-                                       .connectionRetryDelayMillis(jmxConfiguration.retryDelay().toMillis())
+                                       .connectionRetryDelay(jmxConfiguration.retryDelay())
                                        .build();
         MetricRegistry instanceSpecificRegistry = registryFactory.getOrCreate(cassandraInstance.id());
         CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,

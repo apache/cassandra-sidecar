@@ -124,7 +124,14 @@ public class SslConfigurationImpl implements SslConfiguration
         this.handshakeTimeout = handshakeTimeout;
     }
 
+    /**
+     * Legacy property {@code handshake_timeout_sec}
+     *
+     * @param handshakeTimeoutInSeconds timeout in seconds
+     * @deprecated in favor of {@code handshake_timeout}
+     */
     @JsonProperty(value = "handshake_timeout_sec")
+    @Deprecated
     public void setHandshakeTimeoutInSeconds(long handshakeTimeoutInSeconds)
     {
         LOGGER.warn("'handshake_timeout_sec' is deprecated, use 'handshake_timeout' instead");

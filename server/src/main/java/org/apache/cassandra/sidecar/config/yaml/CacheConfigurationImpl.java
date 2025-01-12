@@ -85,7 +85,14 @@ public class CacheConfigurationImpl implements CacheConfiguration
         this.expireAfterAccess = expireAfterAccess;
     }
 
+    /**
+     * Legacy property {@code expire_after_access_millis}
+     *
+     * @param expireAfterAccessMillis expiry in milliseconds
+     * @deprecated in favor of {@code expire_after_access}
+     */
     @JsonProperty("expire_after_access_millis")
+    @Deprecated
     public void setExpireAfterAccessMillis(long expireAfterAccessMillis)
     {
         LOGGER.warn("'expire_after_access_millis' is deprecated, use 'expire_after_access' instead");
@@ -124,7 +131,14 @@ public class CacheConfigurationImpl implements CacheConfiguration
         this.warmupRetryInterval = warmupRetryInterval;
     }
 
+    /**
+     * Legacy property {@code warmup_retry_interval_millis}
+     *
+     * @param warmupRetryIntervalMillis interval in milliseconds
+     * @deprecated in favor of {@code warmup_retry_interval}
+     */
     @JsonProperty("warmup_retry_interval_millis")
+    @Deprecated
     public void setWarmupRetryIntervalMillis(long warmupRetryIntervalMillis)
     {
         LOGGER.warn("'warmup_retry_interval_millis' is deprecated, use 'warmup_retry_interval' instead");

@@ -95,7 +95,14 @@ public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
         this.workerMaxExecutionTime = workerMaxExecutionTime;
     }
 
+    /**
+     * Legacy property {@code max_execution_time_millis}
+     *
+     * @param workerMaxExecutionTimeMillis max execution time in milliseconds
+     * @deprecated in favor of {@code max_execution_time}
+     */
     @JsonProperty("max_execution_time_millis")
+    @Deprecated
     public void setWorkerMaxExecutionTimeMillis(long workerMaxExecutionTimeMillis)
     {
         LOGGER.warn("'max_execution_time_millis' is deprecated, use 'max_execution_time' instead");

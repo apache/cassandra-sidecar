@@ -23,9 +23,9 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.config.DurationSpec;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.server.Server;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 
 /**
  * Periodically checks whether the key store file has changed. Triggers an update to the server's SSLOptions

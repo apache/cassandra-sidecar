@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import javax.management.JMX;
@@ -50,7 +49,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 
 /**
  * A simple wrapper around a JMX connection that makes it easier to get proxy instances.
@@ -69,7 +70,7 @@ public class JmxClient implements NotificationListener, Closeable
     private final Supplier<String> passwordSupplier;
     private final BooleanSupplier enableSslSupplier;
     private final int connectionMaxRetries;
-    private final long connectionRetryDelayMillis;
+    private final DurationSpec connectionRetryDelay;
     private final Set<NotificationListener> registeredNotificationListeners =
     Collections.newSetFromMap(new ConcurrentHashMap<>());
 
@@ -96,7 +97,7 @@ public class JmxClient implements NotificationListener, Closeable
         Preconditions.checkArgument(builder.connectionMaxRetries > 0,
                                     "connectionMaxRetries must be a positive integer");
         connectionMaxRetries = builder.connectionMaxRetries;
-        connectionRetryDelayMillis = builder.connectionRetryDelayMillis;
+        connectionRetryDelay = builder.connectionRetryDelay;
     }
 
     /**
@@ -195,7 +196,7 @@ public class JmxClient implements NotificationListener, Closeable
                 {
                     LOGGER.info("Could not connect to JMX on {} after {} attempts. Will retry.",
                                 jmxServiceURL, attempts, t);
-                    Uninterruptibles.sleepUninterruptibly(connectionRetryDelayMillis, TimeUnit.MILLISECONDS);
+                    Uninterruptibles.sleepUninterruptibly(connectionRetryDelay.quantity(), connectionRetryDelay.unit());
                 }
                 attempts++;
             }
@@ -343,7 +344,7 @@ public class JmxClient implements NotificationListener, Closeable
         private Supplier<String> passwordSupplier = () -> null;
         private BooleanSupplier enableSslSupplier = () -> false;
         private int connectionMaxRetries = 3;
-        private long connectionRetryDelayMillis = 200;
+        private DurationSpec connectionRetryDelay = MillisecondBoundConfiguration.parse("200ms");
 
         private Builder()
         {
@@ -468,14 +469,14 @@ public class JmxClient implements NotificationListener, Closeable
         }
 
         /**
-         * Sets the {@code connectionRetryDelayMillis} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code connectionRetryDelay} and returns a reference to this Builder enabling method chaining.
          *
-         * @param connectionRetryDelayMillis the {@code connectionRetryDelayMillis} to set
+         * @param connectionRetryDelay the {@code connectionRetryDelay} to set
          * @return a reference to this Builder
          */
-        public Builder connectionRetryDelayMillis(long connectionRetryDelayMillis)
+        public Builder connectionRetryDelay(DurationSpec connectionRetryDelay)
         {
-            return update(b -> b.connectionRetryDelayMillis = connectionRetryDelayMillis);
+            return update(b -> b.connectionRetryDelay = connectionRetryDelay);
         }
 
         /**

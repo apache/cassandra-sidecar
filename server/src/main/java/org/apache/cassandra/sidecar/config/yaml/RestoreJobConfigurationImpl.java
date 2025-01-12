@@ -119,7 +119,14 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.jobDiscoveryActiveLoopDelay = jobDiscoveryActiveLoopDelay;
     }
 
+    /**
+     * Legacy property {@code job_discovery_active_loop_delay_millis}
+     *
+     * @param jobDiscoveryActiveLoopDelayMillis active delay in milliseconds
+     * @deprecated in favor of {@code job_discovery_active_loop_delay}
+     */
     @JsonProperty(value = "job_discovery_active_loop_delay_millis")
+    @Deprecated
     public void setJobDiscoveryActiveLoopDelayMillis(long jobDiscoveryActiveLoopDelayMillis)
     {
         LOGGER.warn("'job_discovery_active_loop_delay_millis' is deprecated, use 'job_discovery_active_loop_delay' instead");
@@ -144,7 +151,14 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.jobDiscoveryIdleLoopDelay = jobDiscoveryIdleLoopDelay;
     }
 
+    /**
+     * Legacy property {@code job_discovery_idle_loop_delay_millis}
+     *
+     * @param jobDiscoveryIdleLoopDelayMillis idle delay in milliseconds
+     * @deprecated in favor of {@code job_discovery_idle_loop_delay}
+     */
     @JsonProperty(value = "job_discovery_idle_loop_delay_millis")
+    @Deprecated
     public void setJobDiscoveryIdleLoopDelayMillis(long jobDiscoveryIdleLoopDelayMillis)
     {
         LOGGER.warn("'job_discovery_idle_loop_delay_millis' is deprecated, use 'job_discovery_idle_loop_delay' instead");
@@ -187,7 +201,14 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.restoreJobTablesTtl = restoreJobTablesTtl;
     }
 
+    /**
+     * Legacy property {@code restore_job_tables_ttl_seconds}
+     *
+     * @param restoreJobTablesTtlSeconds time-to-live in seconds
+     * @deprecated in favor of {@code restore_job_tables_ttl}
+     */
     @JsonProperty(value = "restore_job_tables_ttl_seconds")
+    @Deprecated
     public void setRestoreJobTablesTtlSeconds(long restoreJobTablesTtlSeconds)
     {
         LOGGER.warn("'restore_job_tables_ttl_seconds' is deprecated, use 'restore_job_tables_ttl' instead");
@@ -210,7 +231,14 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.slowTaskThreshold = slowTaskThreshold;
     }
 
+    /**
+     * Legacy property {@code slow_task_threshold_seconds}
+     *
+     * @param slowTaskThresholdSeconds threshold in seconds
+     * @deprecated in favor of {@code slow_task_threshold}
+     */
     @JsonProperty(value = "slow_task_threshold_seconds")
+    @Deprecated
     public void setSlowTaskThresholdSeconds(long slowTaskThresholdSeconds)
     {
         LOGGER.warn("'slow_task_threshold_seconds' is deprecated, use 'slow_task_threshold' instead");
@@ -230,7 +258,14 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.slowTaskReportDelay = slowTaskReportDelay;
     }
 
+    /**
+     * Legacy property {@code slow_task_report_delay_seconds}
+     *
+     * @param slowTaskReportDelaySeconds delay in seconds
+     * @deprecated in favor of {@code slow_task_report_delay}
+     */
     @JsonProperty(value = "slow_task_report_delay_seconds")
+    @Deprecated
     public void setSlowTaskReportDelaySeconds(long slowTaskReportDelaySeconds)
     {
         LOGGER.warn("'slow_task_report_delay_seconds' is deprecated, use 'slow_task_report_delay' instead");
@@ -253,7 +288,14 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.ringTopologyRefreshDelay = ringTopologyRefreshDelay;
     }
 
+    /**
+     * Legacy property {@code ring_topology_refresh_delay_millis}
+     *
+     * @param ringTopologyRefreshDelayMillis refresh delay in milliseconds
+     * @deprecated in favor of {@code ring_topology_refresh_delay}
+     */
     @JsonProperty(value = "ring_topology_refresh_delay_millis")
+    @Deprecated
     public void setRingTopologyRefreshDelayMillis(long ringTopologyRefreshDelayMillis)
     {
         LOGGER.warn("'ring_topology_refresh_delay_millis' is deprecated, use 'ring_topology_refresh_delay' instead");

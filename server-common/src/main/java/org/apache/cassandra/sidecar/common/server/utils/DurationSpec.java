@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.config;
+package org.apache.cassandra.sidecar.common.server.utils;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -32,14 +30,15 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Represents a positive time duration. Wrapper interface for Cassandra Sidecar duration configuration parameters,
- * providing to the users the opportunity to be able to provide configuration values with a unit of their choice
- * in {@code sidecar.yaml} as per the available options. This class mirrors the Cassandra DurationSpec class.
+ * allowing users the opportunity to configure values with a unit of their choice in {@code sidecar.yaml} as per
+ * the available options. This class mirrors the Cassandra DurationSpec class.
  */
 public interface DurationSpec extends Comparable<DurationSpec>
 {
     /**
      * @param unit the time unit
      * @return the symbol associated with the provide time unit
+     * @throws IllegalArgumentException when the {@code unit} is unsupported
      */
     static String symbol(TimeUnit unit)
     {
@@ -55,13 +54,18 @@ public interface DurationSpec extends Comparable<DurationSpec>
                 return "s";
             case MILLISECONDS:
                 return "ms";
+            case MICROSECONDS:
+                return "us";
+            case NANOSECONDS:
+                return "ns";
         }
-        throw new AssertionError();
+        throw new IllegalArgumentException("Unsupported unit " + unit);
     }
 
     /**
      * @param symbol the time unit symbol
      * @return the time unit associated to the specified symbol
+     * @throws IllegalArgumentException when the {@code symbol} is unsupported
      */
     static TimeUnit fromSymbol(String symbol)
     {
@@ -78,10 +82,10 @@ public interface DurationSpec extends Comparable<DurationSpec>
             case "ms":
                 return MILLISECONDS;
             default:
-                throw new ConfigurationException(String.format("Unsupported time unit: %s. Supported units are: %s",
-                                                               symbol, Arrays.stream(TimeUnit.values())
-                                                                             .map(DurationSpec::symbol)
-                                                                             .collect(Collectors.joining(", "))));
+                throw new IllegalArgumentException(String.format("Unsupported time unit: %s. Supported units are: %s",
+                                                                 symbol, Arrays.stream(TimeUnit.values())
+                                                                               .map(DurationSpec::symbol)
+                                                                               .collect(Collectors.joining(", "))));
         }
     }
 
@@ -116,5 +120,13 @@ public interface DurationSpec extends Comparable<DurationSpec>
     default long to(TimeUnit targetUnit)
     {
         return targetUnit.convert(quantity(), unit());
+    }
+
+    /**
+     * @return the duration in seconds
+     */
+    default long toSeconds()
+    {
+        return to(TimeUnit.SECONDS);
     }
 }

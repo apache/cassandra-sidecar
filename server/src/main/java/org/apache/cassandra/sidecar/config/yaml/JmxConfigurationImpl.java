@@ -76,7 +76,14 @@ public class JmxConfigurationImpl implements JmxConfiguration
         this.retryDelay = retryDelay;
     }
 
+    /**
+     * Legacy property {@code retry_delay_millis}
+     *
+     * @param retryDelayMillis retry in milliseconds
+     * @deprecated in favor of {@code retry_delay}
+     */
     @JsonProperty("retry_delay_millis")
+    @Deprecated
     public void setRetryDelayMillis(long retryDelayMillis)
     {
         LOGGER.warn("'retry_delay_millis' is deprecated, use 'retry_delay' instead");

@@ -160,7 +160,14 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
         this.maxDelayToWait = maxDelayToWait;
     }
 
+    /**
+     * Legacy property {@code max_delay_to_wait_millis}
+     *
+     * @param maxDelayToWaitMillis max delay to wait in milliseconds
+     * @deprecated in favor of {@code max_delay_to_wait}
+     */
     @JsonProperty(value = "max_delay_to_wait_millis")
+    @Deprecated
     public void setMaxDelayToWaitMillis(long maxDelayToWaitMillis)
     {
         LOGGER.warn("'max_delay_to_wait_millis' is deprecated, use 'max_delay_to_wait' instead");
@@ -183,7 +190,14 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
         this.checkIntervalForStats = checkIntervalForStats;
     }
 
+    /**
+     * Legacy property {@code check_interval_for_stats_millis}
+     *
+     * @param checkIntervalForStatsMillis check interval for stats in milliseconds
+     * @deprecated in favor of {@code check_interval_for_stats}
+     */
     @JsonProperty(value = "check_interval_for_stats_millis")
+    @Deprecated
     public void setCheckIntervalForStatsMillis(long checkIntervalForStatsMillis)
     {
         LOGGER.warn("'check_interval_for_stats_millis' is deprecated, use 'check_interval_for_stats' instead");

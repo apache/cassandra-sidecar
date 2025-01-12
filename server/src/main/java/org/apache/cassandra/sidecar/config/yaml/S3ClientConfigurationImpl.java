@@ -132,7 +132,14 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
         this.threadKeepAlive = threadKeepAlive;
     }
 
+    /**
+     * Legacy property {@code thread_keep_alive_seconds}
+     *
+     * @param threadKeepAliveSeconds keep alive time in seconds
+     * @deprecated in favor of {@link #THREAD_KEEP_ALIVE}
+     */
     @JsonProperty(value = "thread_keep_alive_seconds")
+    @Deprecated
     public void setThreadKeepAliveSeconds(long threadKeepAliveSeconds)
     {
         LOGGER.warn("'thread_keep_alive_seconds' is deprecated, use '{}' instead", THREAD_KEEP_ALIVE);
@@ -159,6 +166,12 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
         this.apiCallTimeout = apiCallTimeout;
     }
 
+    /**
+     * Legacy property {@code api_call_timeout_millis}
+     *
+     * @param apiCallTimeoutMillis timeout in milliseconds
+     * @deprecated in favor of {@code api_call_timeout}
+     */
     @JsonProperty(value = "api_call_timeout_millis")
     @Deprecated
     public void setApiCallTimeoutMillis(long apiCallTimeoutMillis)

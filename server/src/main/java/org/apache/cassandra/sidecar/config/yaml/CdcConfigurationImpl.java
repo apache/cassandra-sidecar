@@ -61,7 +61,14 @@ public class CdcConfigurationImpl implements CdcConfiguration
         this.segmentHardLinkCacheExpiry = segmentHardlinkCacheExpiry;
     }
 
+    /**
+     * Legacy property {@code segment_hardlink_cache_expiry_in_secs}
+     *
+     * @param segmentHardlinkCacheExpiryInSecs expiry in seconds
+     * @deprecated in favor of {@code segment_hardlink_cache_expiry}
+     */
     @JsonProperty(value = "segment_hardlink_cache_expiry_in_secs")
+    @Deprecated
     public void setSegmentHardLinkCacheExpiryInSecs(long segmentHardlinkCacheExpiryInSecs)
     {
         LOGGER.warn("'segment_hardlink_cache_expiry_in_secs' is deprecated, use 'segment_hardlink_cache_expiry' instead");

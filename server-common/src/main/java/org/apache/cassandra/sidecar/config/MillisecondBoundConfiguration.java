@@ -18,7 +18,10 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.cassandra.sidecar.config.yaml.MillisecondBoundConfigurationImpl;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 
 /**
  * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in milliseconds.
@@ -30,13 +33,19 @@ public interface MillisecondBoundConfiguration extends DurationSpec
     /**
      * Represents a 0-millisecond configuration
      */
-    MillisecondBoundConfiguration ZERO = MillisecondBoundConfiguration.parse("0ms");
+    MillisecondBoundConfiguration ZERO = new MillisecondBoundConfigurationImpl(0, TimeUnit.MILLISECONDS);
 
     /**
      * Represents a 1-millisecond configuration
      */
-    MillisecondBoundConfiguration ONE = MillisecondBoundConfiguration.parse("1ms");
+    MillisecondBoundConfiguration ONE = new MillisecondBoundConfigurationImpl(1, TimeUnit.MILLISECONDS);
 
+    /**
+     * Parses the {@code value} into a {@link MillisecondBoundConfiguration}.
+     *
+     * @param value the value to parse
+     * @return the parsed value into a {@link MillisecondBoundConfiguration} object
+     */
     static MillisecondBoundConfiguration parse(String value)
     {
         return new MillisecondBoundConfigurationImpl(value);
@@ -47,7 +56,7 @@ public interface MillisecondBoundConfiguration extends DurationSpec
      */
     default long toMillis()
     {
-        return unit().toMillis(quantity());
+        return to(TimeUnit.MILLISECONDS);
     }
 
     /**

@@ -16,24 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.config.yaml;
+package org.apache.cassandra.sidecar.common.server.utils;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.cassandra.sidecar.config.DurationSpec;
-import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a positive time duration. Wrapper class for Cassandra Sidecar duration configuration parameters,
  * providing to the users the opportunity to be able to provide configuration values with a unit of their choice
- * in {@code sidecar.yaml} as per the available options. This class mirrors the Cassandra DurationSpec class.
+ * in {@code sidecar.yaml} as per the available options. This class mirrors the Cassandra DurationSpec class,
+ * but it differs in that it does not support nanoseconds.
  */
-abstract class DurationSpecImpl implements DurationSpec
+public abstract class DurationSpecImpl implements DurationSpec
 {
     /**
      * The Regexp used to parse the duration provided as String.
@@ -43,7 +43,14 @@ abstract class DurationSpecImpl implements DurationSpec
     private final long quantity;
     private final TimeUnit unit;
 
-    DurationSpecImpl(String value)
+    /**
+     * Constructs the {@link DurationSpecImpl} with the given {@code value}.
+     *
+     * @param value the value to parse
+     * @throws IllegalArgumentException when the {@code value} can't be parsed, the unit is invalid,
+     *                                  or the quantity is invalid
+     */
+    protected DurationSpecImpl(String value) throws IllegalArgumentException
     {
         Matcher matcher = UNITS_PATTERN.matcher(value);
 
@@ -54,20 +61,27 @@ abstract class DurationSpecImpl implements DurationSpec
         }
         else
         {
-            throw new ConfigurationException(String.format("Invalid duration value %s. Only positive numbers with" +
-                                                           "the unit of %s are allowed", value, acceptedUnits(minimumUnit())));
+            throw iae(value);
         }
 
-        validateMinUnit(unit, minimumUnit());
+        validateMinUnit(value, unit, minimumUnit());
         validateQuantity(value, quantity, unit, minimumUnit(), Long.MAX_VALUE);
     }
 
-    public DurationSpecImpl(long quantity, TimeUnit unit)
+    /**
+     * Constructs the {@link DurationSpecImpl} with the given {@code quantity} and {@code unit}.
+     *
+     * @param quantity the quantity for the duration
+     * @param unit     the unit for the duration
+     * @throws IllegalArgumentException when the unit is invalid or the quantity is invalid
+     */
+    protected DurationSpecImpl(long quantity, TimeUnit unit) throws IllegalArgumentException
     {
         this.quantity = quantity;
         this.unit = unit;
 
-        validateMinUnit(unit, minimumUnit());
+        validateMinUnit(this, unit, minimumUnit());
+        validateQuantity(this, quantity, unit, minimumUnit(), Long.MAX_VALUE);
     }
 
     /**
@@ -97,9 +111,41 @@ abstract class DurationSpecImpl implements DurationSpec
      * {@inheritDoc}
      */
     @Override
+    public int hashCode()
+    {
+        // Milliseconds seems to be a reasonable tradeoff
+        return Objects.hash(unit.toMillis(quantity));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj)
+            return true;
+
+        if (!(obj instanceof DurationSpec))
+            return false;
+
+        DurationSpec that = (DurationSpec) obj;
+        if (unit == that.unit())
+            return quantity == that.quantity();
+
+        // Due to overflows we can only guarantee that the 2 durations are equal if we get the same results
+        // doing the conversion in both directions.
+        return unit.convert(that.quantity(), that.unit()) == quantity
+               && that.unit().convert(quantity, unit) == that.quantity();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String toString()
     {
-        return "'" + quantity + "' " + unit.toString().toLowerCase();
+        return quantity + DurationSpec.symbol(unit);
     }
 
     /**
@@ -117,15 +163,17 @@ abstract class DurationSpecImpl implements DurationSpec
         return Long.compare(this.to(minUnit), that.to(minUnit));
     }
 
-    void validateMinUnit(TimeUnit unit, TimeUnit minUnit)
+    void validateMinUnit(Object value, TimeUnit unit, TimeUnit minUnit)
     {
         if (unit.compareTo(minUnit) < 0)
-            throw new IllegalArgumentException(String.format("Invalid duration: %s Accepted units:%s",
-                                                             this, acceptedUnits(minimumUnit())));
+            throw iae(value);
     }
 
-    void validateQuantity(String value, long quantity, TimeUnit sourceUnit, TimeUnit minUnit, long max)
+    void validateQuantity(Object value, long quantity, TimeUnit sourceUnit, TimeUnit minUnit, long max)
     {
+        if (quantity < 0)
+            throw iae(value);
+
         // no need to validate for negatives as they are not allowed at first place from the regex
 
         if (minUnit.convert(quantity, sourceUnit) >= max)
@@ -133,11 +181,17 @@ abstract class DurationSpecImpl implements DurationSpec
                                                (max - 1) + " in " + minUnit.name().toLowerCase());
     }
 
+    IllegalArgumentException iae(Object value)
+    {
+        return new IllegalArgumentException(String.format("Invalid duration %s. Positive numbers with " +
+                                                          "units %s are allowed", value, acceptedUnits(minimumUnit())));
+    }
+
     static String acceptedUnits(TimeUnit minimumUnit)
     {
         TimeUnit[] units = TimeUnit.values();
         return Arrays.stream(Arrays.copyOfRange(units, minimumUnit.ordinal(), units.length))
-                     .map(DurationSpec::symbol)
+                     .map(unit -> DurationSpec.symbol(unit) + "(" + unit.name().toLowerCase() + ")")
                      .collect(Collectors.joining(", ", "[", "]"));
     }
 }

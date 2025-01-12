@@ -222,6 +222,12 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         this.requestIdleTimeout = requestIdleTimeout;
     }
 
+    /**
+     * Legacy property {@code request_idle_timeout_millis}
+     *
+     * @param requestIdleTimeoutMillis idle timeout in milliseconds
+     * @deprecated in favor of {@link #REQUEST_IDLE_TIMEOUT_PROPERTY}
+     */
     @JsonProperty(value = "request_idle_timeout_millis")
     @Deprecated
     public void setRequestIdleTimeoutMillis(long requestIdleTimeoutMillis)
@@ -246,6 +252,12 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         this.requestTimeout = requestTimeout;
     }
 
+    /**
+     * Legacy property {@code request_timeout_millis}
+     *
+     * @param requestTimeoutMillis request timeout in milliseconds
+     * @deprecated in favor of {@link #REQUEST_TIMEOUT_PROPERTY}
+     */
     @JsonProperty(value = "request_timeout_millis")
     @Deprecated
     public void setRequestTimeoutMillis(long requestTimeoutMillis)
@@ -295,6 +307,12 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         this.allowableTimeSkew = allowableTimeSkew;
     }
 
+    /**
+     * Legacy property {@code allowable_time_skew_in_minutes}
+     *
+     * @param allowableTimeSkewInMinutes allowable time skew in minutes
+     * @deprecated in favor of {@link #ALLOWABLE_TIME_SKEW_PROPERTY}
+     */
     @JsonProperty(value = "allowable_time_skew_in_minutes")
     @Deprecated
     public void setAllowableTimeSkewInMinutes(long allowableTimeSkewInMinutes)

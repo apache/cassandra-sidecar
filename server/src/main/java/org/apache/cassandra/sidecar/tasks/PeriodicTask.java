@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.tasks;
 
 import io.vertx.core.Promise;
-import org.apache.cassandra.sidecar.config.DurationSpec;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 
 /**
  * An interface that defines a periodic task that will be executed during the lifecycle of Cassandra Sidecar

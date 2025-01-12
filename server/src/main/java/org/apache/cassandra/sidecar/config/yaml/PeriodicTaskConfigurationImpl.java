@@ -95,6 +95,12 @@ public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
         }
     }
 
+    /**
+     * Legacy property {@code initial_delay_millis}
+     *
+     * @param initialDelayMillis initial delay in milliseconds
+     * @deprecated in favor of {@code initial_delay}
+     */
     @JsonProperty("initial_delay_millis")
     @Deprecated
     public void setInitialDelayMillis(long initialDelayMillis)
