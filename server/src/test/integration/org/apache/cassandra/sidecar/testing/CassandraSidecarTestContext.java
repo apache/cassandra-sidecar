@@ -48,6 +48,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
@@ -268,7 +269,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                            .host(hostName)
                                            .port(config.jmxPort())
                                            .connectionMaxRetries(20)
-                                           .connectionRetryDelayMillis(1000L)
+                                           .connectionRetryDelay(SecondBoundConfiguration.ONE)
                                            .build();
             this.jmxClients.add(jmxClient);
 

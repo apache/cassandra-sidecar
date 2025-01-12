@@ -20,8 +20,8 @@ package org.apache.cassandra.sidecar.config;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.cassandra.sidecar.config.yaml.MillisecondBoundConfigurationImpl;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.config.yaml.MillisecondBoundConfigurationImpl;
 
 /**
  * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in milliseconds.

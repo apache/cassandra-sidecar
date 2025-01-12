@@ -176,9 +176,9 @@ public abstract class DurationSpecImpl implements DurationSpec
 
         // no need to validate for negatives as they are not allowed at first place from the regex
 
-        if (minUnit.convert(quantity, sourceUnit) >= max)
-            throw new IllegalArgumentException("Invalid duration: " + value + ". It shouldn't be more than " +
-                                               (max - 1) + " in " + minUnit.name().toLowerCase());
+        if (minUnit.convert(quantity, sourceUnit) > max)
+            throw new IllegalArgumentException(String.format("Invalid duration: %s. It shouldn't be more than %d in %s",
+                                                             value, max, minUnit.name().toLowerCase()));
     }
 
     IllegalArgumentException iae(Object value)

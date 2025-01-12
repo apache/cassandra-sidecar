@@ -21,8 +21,8 @@ package org.apache.cassandra.sidecar.config.yaml;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpecImpl;
+import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
