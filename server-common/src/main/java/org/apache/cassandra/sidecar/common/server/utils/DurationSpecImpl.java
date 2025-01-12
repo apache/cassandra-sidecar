@@ -31,7 +31,7 @@ import org.jetbrains.annotations.NotNull;
  * Represents a positive time duration. Wrapper class for Cassandra Sidecar duration configuration parameters,
  * providing to the users the opportunity to be able to provide configuration values with a unit of their choice
  * in {@code sidecar.yaml} as per the available options. This class mirrors the Cassandra DurationSpec class,
- * but it differs in that it does not support nanoseconds.
+ * but it differs in that it does not support nanoseconds or microseconds.
  */
 public abstract class DurationSpecImpl implements DurationSpec
 {

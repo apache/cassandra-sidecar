@@ -82,7 +82,8 @@ class TimeBoundConfigurationImplTest
     {
         assertThatIllegalArgumentException()
         .isThrownBy(() -> MillisecondBoundConfiguration.parse(value))
-        .withMessageContaining("Invalid duration %s. Positive numbers with units [ms(milliseconds), s(seconds), m(minutes), h(hours), d(days)] are allowed", value);
+        .withMessageContaining("Invalid duration %s. Positive numbers with units [ms(milliseconds), s(seconds), " +
+                               "m(minutes), h(hours), d(days)] are allowed", value);
     }
 
     @Test
@@ -119,7 +120,8 @@ class TimeBoundConfigurationImplTest
     {
         assertThatIllegalArgumentException()
         .isThrownBy(() -> new MillisecondBoundConfigurationImpl(value))
-        .withMessageContaining("Invalid duration %s. Positive numbers with units [ms(milliseconds), s(seconds), m(minutes), h(hours), d(days)] are allowed", value);
+        .withMessageContaining("Invalid duration %s. Positive numbers with units [ms(milliseconds), s(seconds), " +
+                               "m(minutes), h(hours), d(days)] are allowed", value);
     }
 
     @ParameterizedTest(name = "{index} => value={0} unit={1}")
@@ -128,7 +130,8 @@ class TimeBoundConfigurationImplTest
     {
         assertThatIllegalArgumentException()
         .isThrownBy(() -> new MillisecondBoundConfigurationImpl(value, unit))
-        .withMessageContaining("Invalid duration %s%s. Positive numbers with units [ms(milliseconds), s(seconds), m(minutes), h(hours), d(days)] are allowed",
+        .withMessageContaining("Invalid duration %s%s. Positive numbers with units [ms(milliseconds), s(seconds), " +
+                               "m(minutes), h(hours), d(days)] are allowed",
                                value, DurationSpec.symbol(unit));
     }
 
