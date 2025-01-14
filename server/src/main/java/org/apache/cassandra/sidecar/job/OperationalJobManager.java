@@ -87,7 +87,7 @@ public class OperationalJobManager
         checkConflict(job);
 
         // New job is submitted for all cases when we do not have a corresponding downstream job
-        jobTracker.computeIfAbsent(job.jobId, jobId -> {
+        jobTracker.computeIfAbsent(job.jobId(), jobId -> {
             internalExecutorPool.executeBlocking(job::execute);
             return job;
         });

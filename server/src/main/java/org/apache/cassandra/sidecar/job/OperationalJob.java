@@ -41,7 +41,7 @@ public abstract class OperationalJob implements Task<Void>
     private static final Logger LOGGER = LoggerFactory.getLogger(OperationalJob.class);
 
     // use v1 time-based uuid
-    public final UUID jobId;
+    protected final UUID jobId;
 
     private final Promise<Void> executionPromise;
     private volatile boolean isExecuting = false;
@@ -56,6 +56,11 @@ public abstract class OperationalJob implements Task<Void>
         Preconditions.checkArgument(jobId.version() == 1, "OperationalJob accepts only time-based UUID");
         this.jobId = jobId;
         this.executionPromise = Promise.promise();
+    }
+
+    public UUID jobId()
+    {
+        return jobId;
     }
 
     @Override

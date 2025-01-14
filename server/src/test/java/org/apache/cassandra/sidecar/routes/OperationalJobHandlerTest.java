@@ -124,6 +124,8 @@ class OperationalJobHandlerTest
               .expect(ResponsePredicate.SC_ACCEPTED)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(ACCEPTED.code());
+                  LOGGER.info("Response Status:" + response.statusCode());
+                  LOGGER.info("Response Body:" + response.bodyAsString());
                   context.completeNow();
               }));
     }
@@ -138,6 +140,8 @@ class OperationalJobHandlerTest
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   OperationalJobResponse jobStatus = response.bodyAsJson(OperationalJobResponse.class);
+                  LOGGER.info("Response Status:" + response.statusCode());
+                  LOGGER.info("Response Body:" + response.bodyAsString());
                   assertThat(jobStatus.jobId()).isEqualTo(completedUuid);
                   assertThat(jobStatus.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
                   assertThat(jobStatus.operation()).isEqualTo("testCompleted");
@@ -155,6 +159,8 @@ class OperationalJobHandlerTest
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   OperationalJobResponse jobStatus = response.bodyAsJson(OperationalJobResponse.class);
+                  LOGGER.info("Response Status:" + response.statusCode());
+                  LOGGER.info("Response Body:" + response.bodyAsString());
                   assertThat(jobStatus.jobId()).isEqualTo(failedUuid);
                   assertThat(jobStatus.status()).isEqualTo(OperationalJobStatus.FAILED);
                   assertThat(jobStatus.operation()).isEqualTo("testFailed");
@@ -173,12 +179,15 @@ class OperationalJobHandlerTest
             OperationalJobManager mockManager = mock(OperationalJobManager.class);
             OperationalJob runningMock = mock(OperationalJob.class);
             Promise<Void> p = Promise.promise();
+            when(runningMock.jobId()).thenReturn(runningUuid);
             when(runningMock.status()).thenReturn(OperationalJobStatus.RUNNING);
             when(runningMock.asyncResult()).thenReturn(p.future());
             OperationalJob completedMock = mock(OperationalJob.class);
+            when(completedMock.jobId()).thenReturn(completedUuid);
             when(completedMock.status()).thenReturn(OperationalJobStatus.SUCCEEDED);
             when(completedMock.name()).thenReturn("testCompleted");
             OperationalJob failedMock = mock(OperationalJob.class);
+            when(failedMock.jobId()).thenReturn(failedUuid);
             when(failedMock.status()).thenReturn(OperationalJobStatus.FAILED);
             when(failedMock.asyncResult()).thenReturn(Future.failedFuture("Test failed"));
             when(failedMock.name()).thenReturn("testFailed");

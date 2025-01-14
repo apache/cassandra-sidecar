@@ -86,7 +86,6 @@ public class NodeDecommissionHandlerTest
         MockitoAnnotations.openMocks(this);
         Module testOverride = Modules.override(new TestModule())
                                      .with(new NodeDecommissionHandlerTest.NodeDecommissionTestModule());
-                                     //mockJobManager));
         injector = Guice.createInjector(Modules.override(new MainModule())
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
@@ -172,6 +171,11 @@ public class NodeDecommissionHandlerTest
               .expect(ResponsePredicate.SC_CONFLICT)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(CONFLICT.code());
+
+                  LOGGER.info("Decommission Response: {}", response.bodyAsString());
+                  OperationalJobResponse decommissionResponse = response.bodyAsJson(OperationalJobResponse.class);
+                  assertThat(decommissionResponse).isNotNull();
+                  assertThat(decommissionResponse.jobId()).isNotNull();
                   context.completeNow();
               }));
     }
@@ -181,12 +185,6 @@ public class NodeDecommissionHandlerTest
      */
     static class NodeDecommissionTestModule extends AbstractModule
     {
-
-        public NodeDecommissionTestModule()
-        {
-            MockitoAnnotations.openMocks(this);
-        }
-
         @Provides
         @Singleton
         public InstancesMetadata instanceMetadata()

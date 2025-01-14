@@ -238,6 +238,30 @@ public abstract class IntegrationTestBase
         }
     }
 
+    protected void testWithClientBlocking(boolean waitForCluster,
+                                     Consumer<WebClient> tester)
+    {
+        CassandraAdapterDelegate delegate = sidecarTestContext.instancesMetadata()
+                                                              .instanceFromId(1)
+                                                              .delegate();
+
+        assertThat(delegate).isNotNull();
+        if (delegate.isNativeUp() || !waitForCluster)
+        {
+            tester.accept(client);
+        }
+        else
+        {
+            vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
+                if (message.body().getInteger("cassandraInstanceId") == 1)
+                {
+                    tester.accept(client);
+                }
+            });
+        }
+
+    }
+
     protected void createTestKeyspace()
     {
         createTestKeyspace(ImmutableMap.of("datacenter1", 1));

@@ -61,7 +61,7 @@ public class ListOperationalJobsHandler extends AbstractHandler<Void>
         ListOperationalJobsResponse listResponse = new ListOperationalJobsResponse();
         jobManager.allInflightJobs()
                   .stream()
-                  .map(job -> new OperationalJobResponse(job.jobId, RUNNING, job.name(), null))
+                  .map(job -> new OperationalJobResponse(job.jobId(), RUNNING, job.name(), null))
                   .forEach(listResponse::addJob);
         context.json(listResponse);
     }

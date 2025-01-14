@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,25 +51,26 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 public class NodeDecommissionIntegrationTest extends IntegrationTestBase
 {
     @CassandraIntegrationTest(nodesPerDc = 2)
-    void decommissionNodeDefault(VertxTestContext context) throws InterruptedException
+    void decommissionNodeDefault(VertxTestContext context)
     {
-        final String[] jobId = new String[1];
+        final AtomicReference<String> jobId = new AtomicReference<>();
         String testRoute = "/api/v1/cassandra/operations/decommission?force=true";
         testWithClient(client -> client.put(server.actualPort(), "127.0.0.1", testRoute)
                                        .send(context.succeeding(response -> {
                                            logger.info("Response Status:" + response.statusCode());
+                                           logger.info("Response Body:" + response.bodyAsString());
                                            OperationalJobResponse decommissionResponse = response.bodyAsJson(OperationalJobResponse.class);
                                            assertThat(decommissionResponse.status()).isEqualTo(RUNNING);
-                                           jobId[0] = String.valueOf(decommissionResponse.jobId());
+                                           jobId.set(String.valueOf(decommissionResponse.jobId()));
                                        })));
         Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
-        pollStatusForState(jobId[0], SUCCEEDED, null);
+        assertThat(jobId.get()).isNotNull();
+        pollStatusForState(jobId.get(), SUCCEEDED, null);
         context.completeNow();
-        context.awaitCompletion(2, TimeUnit.MINUTES);
     }
 
     @CassandraIntegrationTest(nodesPerDc = 2)
-    void decommissionNodeWithFailure(VertxTestContext context) throws InterruptedException
+    void decommissionNodeWithFailure(VertxTestContext context)
     {
         String testRoute = "/api/v1/cassandra/operations/decommission";
         testWithClient(client -> client.put(server.actualPort(), "127.0.0.1", testRoute)
@@ -82,21 +84,19 @@ public class NodeDecommissionIntegrationTest extends IntegrationTestBase
                                            assertThat(jobId).isNotNull();
                                            context.completeNow();
                                        })));
-        context.awaitCompletion(2, TimeUnit.MINUTES);
+
     }
 
     private void pollStatusForState(String uuid,
                                     OperationalJobStatus expectedStatus,
                                     String expectedReason)
     {
-        int attempts = 10;
         String status = "/api/v1/cassandra/operational-jobs/" + uuid;
         AtomicBoolean stateReached = new AtomicBoolean(false);
-        logger.info("Job Stats Attempt: {}", attempts);
         AtomicInteger counter = new AtomicInteger(0);
         loopAssert(30, () -> {
             counter.incrementAndGet();
-            // todo: create a helper method in the base class to get response in the blocking manner
+            // TODO: optionally create a helper method in the base class to get response in the blocking manner
             HttpResponse<Buffer> resp;
             try
             {

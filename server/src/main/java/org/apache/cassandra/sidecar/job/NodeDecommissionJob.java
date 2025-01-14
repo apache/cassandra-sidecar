@@ -48,7 +48,6 @@ public class NodeDecommissionJob extends OperationalJob
     {
         String operationMode = storageOperations.getOperationMode();
         return operationMode.equals("LEAVING") || operationMode.equals("DECOMMISSIONED");
-
     }
 
     /**
@@ -76,7 +75,6 @@ public class NodeDecommissionJob extends OperationalJob
     /**
      * {@inheritDoc}
      */
-
     protected void executeInternal()
     {
         if (isRunningOnCassandra())

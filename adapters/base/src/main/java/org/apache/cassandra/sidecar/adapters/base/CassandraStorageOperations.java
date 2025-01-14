@@ -214,19 +214,6 @@ public class CassandraStorageOperations implements StorageOperations
                  .forceKeyspaceCleanup(concurrency, keyspace, table);
     }
 
-//    /**
-//     * {@inheritDoc}
-//     */
-//    @Override
-//    public boolean isDecommissioning()
-//    {
-//        StorageJmxOperations ssProxy = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);
-//        String nodeOperationMode = ssProxy.getOperationMode();
-//        // The following check is equivalent to the operation-mode checks within Cassandra to determine if a
-//        // decommission operation is in progress
-//        return nodeOperationMode.equals("LEAVING");
-//    }
-
     @Override
     public String getOperationMode()
     {

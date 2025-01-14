@@ -76,7 +76,7 @@ public class OperationalJobHandler extends AbstractHandler<Void>
                          return job;
                      })
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request))
-                     .onSuccess(job -> sendStatusBasedResponse(context, jobId, job));
+                     .onSuccess(job -> sendStatusBasedResponse(context, job));
     }
 
     UUID validatedJobIdParam(RoutingContext context)
@@ -102,9 +102,10 @@ public class OperationalJobHandler extends AbstractHandler<Void>
         return jobId;
     }
 
-    public void sendStatusBasedResponse(RoutingContext context, UUID jobId, OperationalJob job)
+    public void sendStatusBasedResponse(RoutingContext context, OperationalJob job)
     {
         OperationalJobStatus status = job.status();
+        logger.info("Job completion status={} jobId={}", status, job.jobId());
         if (status.isCompleted())
         {
             context.response().setStatusCode(HttpResponseStatus.OK.code());
@@ -115,6 +116,6 @@ public class OperationalJobHandler extends AbstractHandler<Void>
         }
 
         String reason = status == FAILED ? job.asyncResult().cause().getMessage() : null;
-        context.json(new OperationalJobResponse(jobId, status, job.name(), reason));
+        context.json(new OperationalJobResponse(job.jobId(), status, job.name(), reason));
     }
 }

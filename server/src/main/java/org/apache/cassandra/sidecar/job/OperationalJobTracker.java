@@ -72,13 +72,13 @@ public class OperationalJobTracker
                     if (status.isCompleted() && job.isStale(System.currentTimeMillis(), ONE_DAY_TTL))
                     {
                         LOGGER.debug("Expiring completed and stale job due to job tracker has reached max size. jobId={} status={} createdAt={}",
-                                     job.jobId, status, job.creationTime());
+                                     job.jobId(), status, job.creationTime());
                         return true;
                     }
                     else
                     {
                         LOGGER.warn("Job tracker reached max size, but the eldest job is not completed yet. " +
-                                    "Not evicting. jobId={} status={}", job.jobId, status);
+                                    "Not evicting. jobId={} status={}", job.jobId(), status);
                         // TODO: Optionally trigger cleanup to fetch next oldest to evict
                     }
                 }
@@ -127,7 +127,7 @@ public class OperationalJobTracker
     @VisibleForTesting
     OperationalJob put(OperationalJob job)
     {
-        return map.put(job.jobId, job);
+        return map.put(job.jobId(), job);
     }
 
     @VisibleForTesting

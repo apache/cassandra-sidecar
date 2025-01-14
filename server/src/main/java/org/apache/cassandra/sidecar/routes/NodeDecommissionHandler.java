@@ -30,23 +30,20 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
-import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
 import org.apache.cassandra.sidecar.job.NodeDecommissionJob;
-import org.apache.cassandra.sidecar.job.OperationalJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
 /**
  * Provides REST API for asynchronously decommissioning the corresponding Cassandra node
  */
-public class NodeDecommissionHandler extends AbstractHandler<Void>
+public class NodeDecommissionHandler extends OperationalJobHandler
 {
     private final OperationalJobManager jobManager;
     private final ServiceConfiguration config;
@@ -65,70 +62,33 @@ public class NodeDecommissionHandler extends AbstractHandler<Void>
                                       CassandraInputValidator validator,
                                       OperationalJobManager jobManager)
     {
-        super(metadataFetcher, executorPools, validator);
+        super(metadataFetcher, executorPools, validator, jobManager);
         this.jobManager = jobManager;
         this.config = serviceConfiguration;
     }
 
-    protected Void extractParamsOrThrow(RoutingContext context)
-    {
-        return null;
-    }
-
-    protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
+    @Override
+    public void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
         boolean isForce = parseBooleanQueryParam(context.request(), "force", false);
 
-        OperationalJob job = new NodeDecommissionJob(UUIDs.timeBased(), operations, isForce);
+        NodeDecommissionJob job = new NodeDecommissionJob(UUIDs.timeBased(), operations, isForce);
         try
         {
             jobManager.trySubmitJob(job);
         }
         catch (OperationalJobConflictException oje)
         {
-            logger.error("Conflicting job encountered. reason={}", oje.getMessage());
-            context.fail(wrapHttpException(HttpResponseStatus.CONFLICT, oje.getMessage(), oje.getCause()));
+            String reason = oje.getMessage();
+            logger.error("Conflicting job encountered. reason={}", reason);
+            context.response().setStatusCode(HttpResponseStatus.CONFLICT.code());
+            context.json(new OperationalJobResponse(job.jobId(), OperationalJobStatus.FAILED, job.name(), reason));
         }
 
         // Get the result, waiting for the specified wait time for result
         job.asyncResult(executorPools.service(),
                         Duration.of(config.operationalJobExecutionMaxWaitTimeInMillis(), ChronoUnit.MILLIS))
-        .onComplete(v -> sendResponse(context, job, request, remoteAddress, host));
-    }
-
-    private void sendResponse(RoutingContext context, OperationalJob job, Void request, SocketAddress remoteAddress, String host)
-    {
-        OperationalJobStatus jobStatus = job.status();
-        logger.info("Job completion status={} request={} remoteAddress={} instance={} jobId={}",
-                    jobStatus, request, remoteAddress, host, job.jobId);
-
-        String reason = null;
-        switch(jobStatus)
-        {
-            case SUCCEEDED:
-                context.response().setStatusCode(HttpResponseStatus.OK.code());
-                break;
-            case FAILED:
-                // All exceptions from the job execution are wrapped by OperationalJobException
-                Throwable cause = job.asyncResult().cause();
-                if (cause instanceof OperationalJobException)
-                {
-                    reason = cause.getMessage();
-                    context.response().setStatusCode(HttpResponseStatus.OK.code());
-                }
-                else
-                {
-                    processFailure(cause, context, host, remoteAddress, request);
-                }
-                break;
-            case CREATED:
-            case RUNNING:
-                context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code());
-                break;
-            default:
-                throw new IllegalArgumentException("Unexpected job status encountered: " + jobStatus);
-        }
-        context.json(new OperationalJobResponse(job.jobId, jobStatus, host, reason));
+            .onComplete(v -> sendStatusBasedResponse(context, job));
     }
 }
