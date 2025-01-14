@@ -32,7 +32,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.core.http.ClientAuth;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
-import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 
 /**
@@ -135,7 +135,7 @@ public class SslConfigurationImpl implements SslConfiguration
     public void setHandshakeTimeoutInSeconds(long handshakeTimeoutInSeconds)
     {
         LOGGER.warn("'handshake_timeout_sec' is deprecated, use 'handshake_timeout' instead");
-        setHandshakeTimeout(new SecondBoundConfigurationImpl(handshakeTimeoutInSeconds, TimeUnit.SECONDS));
+        setHandshakeTimeout(new SecondBoundConfiguration(handshakeTimeoutInSeconds, TimeUnit.SECONDS));
     }
 
     /**

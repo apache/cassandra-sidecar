@@ -53,7 +53,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.adapters.base.CassandraTableOperations;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;

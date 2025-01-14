@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
-import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
 /**
  * Encapsulates key or trust store option configurations
@@ -125,6 +125,6 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
     public void setCheckIntervalInSeconds(long checkIntervalInSeconds)
     {
         LOGGER.warn("'check_interval_sec' is deprecated, use 'check_interval' instead");
-        setCheckInterval(new SecondBoundConfigurationImpl(checkIntervalInSeconds, TimeUnit.SECONDS));
+        setCheckInterval(new SecondBoundConfiguration(checkIntervalInSeconds, TimeUnit.SECONDS));
     }
 }

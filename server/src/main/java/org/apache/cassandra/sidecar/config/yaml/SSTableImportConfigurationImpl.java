@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 
 /**
@@ -50,7 +50,7 @@ public class SSTableImportConfigurationImpl extends PeriodicTaskConfigurationImp
 
     public SSTableImportConfigurationImpl(int importIntervalMillis)
     {
-        this(new MillisecondBoundConfigurationImpl(importIntervalMillis, TimeUnit.MILLISECONDS),
+        this(new MillisecondBoundConfiguration(importIntervalMillis, TimeUnit.MILLISECONDS),
              DEFAULT_CACHE_CONFIGURATION);
     }
 

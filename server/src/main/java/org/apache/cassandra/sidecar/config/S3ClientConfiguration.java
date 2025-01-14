@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+
 /**
  * Configuration needed for S3 client used by Sidecar for purposes like restoring, etc.
  */

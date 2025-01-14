@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -96,7 +96,7 @@ public class CacheConfigurationImpl implements CacheConfiguration
     public void setExpireAfterAccessMillis(long expireAfterAccessMillis)
     {
         LOGGER.warn("'expire_after_access_millis' is deprecated, use 'expire_after_access' instead");
-        setExpireAfterAccess(new MillisecondBoundConfigurationImpl(expireAfterAccessMillis, TimeUnit.MILLISECONDS));
+        setExpireAfterAccess(new MillisecondBoundConfiguration(expireAfterAccessMillis, TimeUnit.MILLISECONDS));
     }
 
     @Override
@@ -142,6 +142,6 @@ public class CacheConfigurationImpl implements CacheConfiguration
     public void setWarmupRetryIntervalMillis(long warmupRetryIntervalMillis)
     {
         LOGGER.warn("'warmup_retry_interval_millis' is deprecated, use 'warmup_retry_interval' instead");
-        setWarmupRetryInterval(new MillisecondBoundConfigurationImpl(warmupRetryIntervalMillis, TimeUnit.MILLISECONDS));
+        setWarmupRetryInterval(new MillisecondBoundConfiguration(warmupRetryIntervalMillis, TimeUnit.MILLISECONDS));
     }
 }

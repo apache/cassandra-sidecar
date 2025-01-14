@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.config;
 
 import java.util.List;
 
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+
 /**
  * Encapsulates SSL Configuration
  */

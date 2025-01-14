@@ -25,9 +25,9 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
-import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
 /**
  * Configuration needed restore jobs restoring data from blob
@@ -130,7 +130,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     public void setJobDiscoveryActiveLoopDelayMillis(long jobDiscoveryActiveLoopDelayMillis)
     {
         LOGGER.warn("'job_discovery_active_loop_delay_millis' is deprecated, use 'job_discovery_active_loop_delay' instead");
-        setJobDiscoveryActiveLoopDelay(new MillisecondBoundConfigurationImpl(jobDiscoveryActiveLoopDelayMillis, TimeUnit.MILLISECONDS));
+        setJobDiscoveryActiveLoopDelay(new MillisecondBoundConfiguration(jobDiscoveryActiveLoopDelayMillis, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -162,7 +162,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     public void setJobDiscoveryIdleLoopDelayMillis(long jobDiscoveryIdleLoopDelayMillis)
     {
         LOGGER.warn("'job_discovery_idle_loop_delay_millis' is deprecated, use 'job_discovery_idle_loop_delay' instead");
-        setJobDiscoveryIdleLoopDelay(new MillisecondBoundConfigurationImpl(jobDiscoveryIdleLoopDelayMillis, TimeUnit.MILLISECONDS));
+        setJobDiscoveryIdleLoopDelay(new MillisecondBoundConfiguration(jobDiscoveryIdleLoopDelayMillis, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -212,7 +212,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     public void setRestoreJobTablesTtlSeconds(long restoreJobTablesTtlSeconds)
     {
         LOGGER.warn("'restore_job_tables_ttl_seconds' is deprecated, use 'restore_job_tables_ttl' instead");
-        setRestoreJobTablesTtl(new SecondBoundConfigurationImpl(restoreJobTablesTtlSeconds, TimeUnit.SECONDS));
+        setRestoreJobTablesTtl(new SecondBoundConfiguration(restoreJobTablesTtlSeconds, TimeUnit.SECONDS));
     }
 
     /**
@@ -242,7 +242,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     public void setSlowTaskThresholdSeconds(long slowTaskThresholdSeconds)
     {
         LOGGER.warn("'slow_task_threshold_seconds' is deprecated, use 'slow_task_threshold' instead");
-        setSlowTaskThreshold(new SecondBoundConfigurationImpl(slowTaskThresholdSeconds, TimeUnit.SECONDS));
+        setSlowTaskThreshold(new SecondBoundConfiguration(slowTaskThresholdSeconds, TimeUnit.SECONDS));
     }
 
     @Override
@@ -269,7 +269,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     public void setSlowTaskReportDelaySeconds(long slowTaskReportDelaySeconds)
     {
         LOGGER.warn("'slow_task_report_delay_seconds' is deprecated, use 'slow_task_report_delay' instead");
-        setSlowTaskReportDelay(new SecondBoundConfigurationImpl(slowTaskReportDelaySeconds, TimeUnit.SECONDS));
+        setSlowTaskReportDelay(new SecondBoundConfiguration(slowTaskReportDelaySeconds, TimeUnit.SECONDS));
     }
 
     /**
@@ -299,7 +299,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     public void setRingTopologyRefreshDelayMillis(long ringTopologyRefreshDelayMillis)
     {
         LOGGER.warn("'ring_topology_refresh_delay_millis' is deprecated, use 'ring_topology_refresh_delay' instead");
-        setRingTopologyRefreshDelay(new MillisecondBoundConfigurationImpl(ringTopologyRefreshDelayMillis, TimeUnit.MILLISECONDS));
+        setRingTopologyRefreshDelay(new MillisecondBoundConfiguration(ringTopologyRefreshDelayMillis, TimeUnit.MILLISECONDS));
     }
 
     public static Builder builder()

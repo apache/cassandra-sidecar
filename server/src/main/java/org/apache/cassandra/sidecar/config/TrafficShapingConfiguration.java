@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+
 /**
  * Configuration for the global traffic shaping options. These TCP server options enable configuration of
  * bandwidth limiting. Both inbound and outbound bandwidth can be limited through these options.

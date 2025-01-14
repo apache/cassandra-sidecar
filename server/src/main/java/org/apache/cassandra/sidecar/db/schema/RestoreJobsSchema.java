@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.db.schema;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
-import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 import org.jetbrains.annotations.NotNull;
 

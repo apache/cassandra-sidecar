@@ -16,29 +16,49 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.config;
+package org.apache.cassandra.sidecar.common.server.utils;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
-import org.apache.cassandra.sidecar.config.yaml.SecondBoundConfigurationImpl;
+import com.fasterxml.jackson.annotation.JsonCreator;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in seconds.
  * If the user sets a different unit - we still validate that converted to seconds the quantity will not exceed
  * that upper bound.
  */
-public interface SecondBoundConfiguration extends DurationSpec
+public class SecondBoundConfiguration extends DurationSpec
 {
     /**
      * Represents a 0-seconds configuration
      */
-    SecondBoundConfiguration ZERO = new SecondBoundConfigurationImpl(0, TimeUnit.SECONDS);
+    public static final SecondBoundConfiguration ZERO = new SecondBoundConfiguration();
 
     /**
      * Represents a 1-second configuration
      */
-    SecondBoundConfiguration ONE = new SecondBoundConfigurationImpl(1, TimeUnit.SECONDS);
+    public static final SecondBoundConfiguration ONE = new SecondBoundConfiguration(1, TimeUnit.SECONDS);
+
+    /**
+     * Constructs a 0-second configuration
+     */
+    public SecondBoundConfiguration()
+    {
+        super(0, SECONDS);
+    }
+
+    @JsonCreator
+    public SecondBoundConfiguration(String value)
+    {
+        super(value);
+    }
+
+    public SecondBoundConfiguration(long quantity, TimeUnit unit)
+    {
+        super(quantity, unit);
+    }
 
     /**
      * Parses the {@code value} into a {@link SecondBoundConfiguration}.
@@ -46,8 +66,17 @@ public interface SecondBoundConfiguration extends DurationSpec
      * @param value the value to parse
      * @return the parsed value into a {@link SecondBoundConfiguration} object
      */
-    static SecondBoundConfiguration parse(String value)
+    public static SecondBoundConfiguration parse(String value)
     {
-        return new SecondBoundConfigurationImpl(value);
+        return new SecondBoundConfiguration(value);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public TimeUnit minimumUnit()
+    {
+        return TimeUnit.SECONDS;
     }
 }

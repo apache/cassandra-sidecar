@@ -28,8 +28,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.quicktheories.core.Gen;
 import org.quicktheories.generators.SourceDSL;
 
@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.quicktheories.QuickTheory.qt;
 
 /**
- * Unit tests for {@link MillisecondBoundConfigurationImpl} and {@link SecondBoundConfigurationImpl}
+ * Unit tests for {@link MillisecondBoundConfiguration} and {@link SecondBoundConfiguration}
  */
 class TimeBoundConfigurationImplTest
 {
@@ -91,7 +91,7 @@ class TimeBoundConfigurationImplTest
     {
         assertThat(MillisecondBoundConfiguration.parse("0ms")).isEqualTo(MillisecondBoundConfiguration.parse("0s"));
         assertThat(MillisecondBoundConfiguration.parse("10s")).isEqualTo(MillisecondBoundConfiguration.parse("10s"));
-        assertThat(MillisecondBoundConfiguration.parse("10s")).isEqualTo(new MillisecondBoundConfigurationImpl(10, TimeUnit.SECONDS));
+        assertThat(MillisecondBoundConfiguration.parse("10s")).isEqualTo(new MillisecondBoundConfiguration(10, TimeUnit.SECONDS));
         assertThat(MillisecondBoundConfiguration.parse("1s")).isEqualTo(MillisecondBoundConfiguration.parse("1000ms"));
         assertThat(SecondBoundConfiguration.ONE).isEqualTo(MillisecondBoundConfiguration.parse("1000ms"));
         assertThat(MillisecondBoundConfiguration.parse("10s")).isEqualTo(MillisecondBoundConfiguration.parse("10000ms"));
@@ -108,7 +108,7 @@ class TimeBoundConfigurationImplTest
         long upperbound = TimeUnit.MILLISECONDS.toDays(Long.MAX_VALUE);
         Gen<Long> valueGen = SourceDSL.longs().between(0, upperbound);
         qt().forAll(valueGen, unitGen).check((value, unit) -> {
-            DurationSpec there = new MillisecondBoundConfigurationImpl(value, unit);
+            DurationSpec there = new MillisecondBoundConfiguration(value, unit);
             DurationSpec back = MillisecondBoundConfiguration.parse(there.toString());
             return there.equals(back);
         });
@@ -119,7 +119,7 @@ class TimeBoundConfigurationImplTest
     void testInvalidMillisecondBoundValues(String value)
     {
         assertThatIllegalArgumentException()
-        .isThrownBy(() -> new MillisecondBoundConfigurationImpl(value))
+        .isThrownBy(() -> new MillisecondBoundConfiguration(value))
         .withMessageContaining("Invalid duration %s. Positive numbers with units [ms(milliseconds), s(seconds), " +
                                "m(minutes), h(hours), d(days)] are allowed", value);
     }
@@ -129,7 +129,7 @@ class TimeBoundConfigurationImplTest
     void testInvalidMillisecondBoundUnits(long value, TimeUnit unit)
     {
         assertThatIllegalArgumentException()
-        .isThrownBy(() -> new MillisecondBoundConfigurationImpl(value, unit))
+        .isThrownBy(() -> new MillisecondBoundConfiguration(value, unit))
         .withMessageContaining("Invalid duration %s%s. Positive numbers with units [ms(milliseconds), s(seconds), " +
                                "m(minutes), h(hours), d(days)] are allowed",
                                value, DurationSpec.symbol(unit));
@@ -140,7 +140,7 @@ class TimeBoundConfigurationImplTest
     void testInvalidSecondBoundValues(String value)
     {
         assertThatIllegalArgumentException()
-        .isThrownBy(() -> new SecondBoundConfigurationImpl(value))
+        .isThrownBy(() -> new SecondBoundConfiguration(value))
         .withMessageContaining("Invalid duration %s. Positive numbers with units [s(seconds), m(minutes), h(hours), d(days)] are allowed", value);
     }
 
@@ -149,7 +149,7 @@ class TimeBoundConfigurationImplTest
     void testInvalidSecondBoundUnits(long value, TimeUnit unit)
     {
         assertThatIllegalArgumentException()
-        .isThrownBy(() -> new SecondBoundConfigurationImpl(value, unit))
+        .isThrownBy(() -> new SecondBoundConfiguration(value, unit))
         .withMessageContaining("Invalid duration %s%s. Positive numbers with units [s(seconds), m(minutes), h(hours), d(days)] are allowed",
                                value, DurationSpec.symbol(unit));
     }

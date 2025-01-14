@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 
 /**

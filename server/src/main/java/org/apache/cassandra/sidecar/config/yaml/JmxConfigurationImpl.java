@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 
 /**
  * General JMX connectivity configuration that is not instance-specific.
@@ -87,6 +87,6 @@ public class JmxConfigurationImpl implements JmxConfiguration
     public void setRetryDelayMillis(long retryDelayMillis)
     {
         LOGGER.warn("'retry_delay_millis' is deprecated, use 'retry_delay' instead");
-        setRetryDelay(new MillisecondBoundConfigurationImpl(retryDelayMillis, TimeUnit.MILLISECONDS));
+        setRetryDelay(new MillisecondBoundConfiguration(retryDelayMillis, TimeUnit.MILLISECONDS));
     }
 }

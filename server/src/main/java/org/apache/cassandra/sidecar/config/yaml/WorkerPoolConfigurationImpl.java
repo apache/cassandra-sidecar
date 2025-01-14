@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 
 /**
@@ -106,6 +106,6 @@ public class WorkerPoolConfigurationImpl implements WorkerPoolConfiguration
     public void setWorkerMaxExecutionTimeMillis(long workerMaxExecutionTimeMillis)
     {
         LOGGER.warn("'max_execution_time_millis' is deprecated, use 'max_execution_time' instead");
-        setWorkerMaxExecutionTime(new MillisecondBoundConfigurationImpl(workerMaxExecutionTimeMillis, TimeUnit.MILLISECONDS));
+        setWorkerMaxExecutionTime(new MillisecondBoundConfiguration(workerMaxExecutionTimeMillis, TimeUnit.MILLISECONDS));
     }
 }

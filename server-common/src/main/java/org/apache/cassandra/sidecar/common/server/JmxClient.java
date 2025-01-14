@@ -50,8 +50,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
 
 /**
  * A simple wrapper around a JMX connection that makes it easier to get proxy instances.

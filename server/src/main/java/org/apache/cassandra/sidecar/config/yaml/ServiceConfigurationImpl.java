@@ -31,12 +31,12 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
-import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
@@ -233,7 +233,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public void setRequestIdleTimeoutMillis(long requestIdleTimeoutMillis)
     {
         LOGGER.warn("'request_idle_timeout_millis' is deprecated, use '{}' instead", REQUEST_IDLE_TIMEOUT_PROPERTY);
-        setRequestIdleTimeout(new MillisecondBoundConfigurationImpl(requestIdleTimeoutMillis, TimeUnit.MILLISECONDS));
+        setRequestIdleTimeout(new MillisecondBoundConfiguration(requestIdleTimeoutMillis, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -263,7 +263,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public void setRequestTimeoutMillis(long requestTimeoutMillis)
     {
         LOGGER.warn("'request_timeout_millis' is deprecated, use '{}' instead", REQUEST_TIMEOUT_PROPERTY);
-        setRequestTimeout(new MillisecondBoundConfigurationImpl(requestTimeoutMillis, TimeUnit.MILLISECONDS));
+        setRequestTimeout(new MillisecondBoundConfiguration(requestTimeoutMillis, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -318,7 +318,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public void setAllowableTimeSkewInMinutes(long allowableTimeSkewInMinutes)
     {
         LOGGER.warn("'allowable_time_skew_in_minutes' is deprecated, use '{}' instead", ALLOWABLE_TIME_SKEW_PROPERTY);
-        setAllowableTimeSkew(new SecondBoundConfigurationImpl(allowableTimeSkewInMinutes, TimeUnit.MINUTES));
+        setAllowableTimeSkew(new SecondBoundConfiguration(allowableTimeSkewInMinutes, TimeUnit.MINUTES));
     }
 
     /**

@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
-import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 /**
@@ -141,7 +141,7 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
     public void setLeaseSchemaTTLSeconds(long leaseSchemaTTLSeconds)
     {
         LOGGER.warn("'lease_schema_ttl_sec' is deprecated, use 'lease_schema_ttl' instead");
-        setLeaseSchemaTTL(new SecondBoundConfigurationImpl(leaseSchemaTTLSeconds, TimeUnit.SECONDS));
+        setLeaseSchemaTTL(new SecondBoundConfiguration(leaseSchemaTTLSeconds, TimeUnit.SECONDS));
     }
 
     public static Builder builder()

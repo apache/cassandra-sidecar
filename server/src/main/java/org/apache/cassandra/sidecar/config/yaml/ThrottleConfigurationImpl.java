@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 
 /**
@@ -98,6 +98,6 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
     public void setTimeoutInSeconds(long timeoutInSeconds)
     {
         LOGGER.warn("'timeout_sec' is deprecated, use '{}' instead", TIMEOUT_PROPERTY);
-        setTimeout(new SecondBoundConfigurationImpl(timeoutInSeconds, TimeUnit.SECONDS));
+        setTimeout(new SecondBoundConfiguration(timeoutInSeconds, TimeUnit.SECONDS));
     }
 }

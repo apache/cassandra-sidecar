@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.netty.handler.traffic.AbstractTrafficShapingHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 
 /**
@@ -171,7 +171,7 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
     public void setMaxDelayToWaitMillis(long maxDelayToWaitMillis)
     {
         LOGGER.warn("'max_delay_to_wait_millis' is deprecated, use 'max_delay_to_wait' instead");
-        setMaxDelayToWait(new MillisecondBoundConfigurationImpl(maxDelayToWaitMillis, TimeUnit.MILLISECONDS));
+        setMaxDelayToWait(new MillisecondBoundConfiguration(maxDelayToWaitMillis, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -201,7 +201,7 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
     public void setCheckIntervalForStatsMillis(long checkIntervalForStatsMillis)
     {
         LOGGER.warn("'check_interval_for_stats_millis' is deprecated, use 'check_interval_for_stats' instead");
-        setCheckIntervalForStats(new MillisecondBoundConfigurationImpl(checkIntervalForStatsMillis, TimeUnit.MILLISECONDS));
+        setCheckIntervalForStats(new MillisecondBoundConfiguration(checkIntervalForStatsMillis, TimeUnit.MILLISECONDS));
     }
 
     @Override

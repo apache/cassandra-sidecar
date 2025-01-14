@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
-import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
 /**
  * Encapsulate configuration values for CDC
@@ -72,6 +72,6 @@ public class CdcConfigurationImpl implements CdcConfiguration
     public void setSegmentHardLinkCacheExpiryInSecs(long segmentHardlinkCacheExpiryInSecs)
     {
         LOGGER.warn("'segment_hardlink_cache_expiry_in_secs' is deprecated, use 'segment_hardlink_cache_expiry' instead");
-        setSegmentHardLinkCacheExpiry(new SecondBoundConfigurationImpl(segmentHardlinkCacheExpiryInSecs, TimeUnit.SECONDS));
+        setSegmentHardLinkCacheExpiry(new SecondBoundConfiguration(segmentHardlinkCacheExpiryInSecs, TimeUnit.SECONDS));
     }
 }

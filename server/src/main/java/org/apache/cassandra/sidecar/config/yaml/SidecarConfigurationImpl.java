@@ -43,7 +43,7 @@ import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.MetricsConfiguration;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;

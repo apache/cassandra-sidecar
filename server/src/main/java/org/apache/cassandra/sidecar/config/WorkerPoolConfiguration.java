@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+
 /**
  * Encapsulates configurations for the worker pool
  */

@@ -37,8 +37,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.MillisecondBoundConfigurationImpl;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
@@ -163,7 +162,8 @@ class PeriodicTaskExecutorTest
     @Test
     void testUnscheduleNonExistTaskHasNoEffect()
     {
-        PeriodicTask notScheduled = createSimplePeriodicTask("simple task", 1, () -> {});
+        PeriodicTask notScheduled = createSimplePeriodicTask("simple task", 1, () -> {
+        });
         taskExecutor.unschedule(notScheduled);
         assertThat(taskExecutor.poisonPilledTasks()).isEmpty();
         assertThat(taskExecutor.timerIds()).isEmpty();
@@ -448,13 +448,13 @@ class PeriodicTaskExecutorTest
             @Override
             public DurationSpec initialDelay()
             {
-                return new MillisecondBoundConfigurationImpl(initialDelayMillis, TimeUnit.MILLISECONDS);
+                return new MillisecondBoundConfiguration(initialDelayMillis, TimeUnit.MILLISECONDS);
             }
 
             @Override
             public DurationSpec delay()
             {
-                return new MillisecondBoundConfigurationImpl(delayMillis, TimeUnit.MILLISECONDS);
+                return new MillisecondBoundConfiguration(delayMillis, TimeUnit.MILLISECONDS);
             }
 
             @Override

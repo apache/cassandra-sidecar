@@ -28,9 +28,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.MillisecondBoundConfigurationImpl;
+
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
@@ -117,7 +117,7 @@ class ClusterLeaseClaimTaskTest
     void testDelayFromConfiguration(long configuredDelayMillis)
     {
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
-        MillisecondBoundConfigurationImpl value = new MillisecondBoundConfigurationImpl(configuredDelayMillis, TimeUnit.MILLISECONDS);
+        MillisecondBoundConfiguration value = new MillisecondBoundConfiguration(configuredDelayMillis, TimeUnit.MILLISECONDS);
         when(mockServiceConfiguration.coordinationConfiguration()
                                      .clusterLeaseClaimConfiguration()
                                      .executeInterval()).thenReturn(value);

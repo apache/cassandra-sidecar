@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+
 /**
  * Configuration for sidecar schema creation
  */

@@ -25,10 +25,10 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
-import org.apache.cassandra.sidecar.config.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -143,7 +143,7 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
     public void setThreadKeepAliveSeconds(long threadKeepAliveSeconds)
     {
         LOGGER.warn("'thread_keep_alive_seconds' is deprecated, use '{}' instead", THREAD_KEEP_ALIVE);
-        setThreadKeepAlive(new SecondBoundConfigurationImpl(threadKeepAliveSeconds, TimeUnit.SECONDS));
+        setThreadKeepAlive(new SecondBoundConfiguration(threadKeepAliveSeconds, TimeUnit.SECONDS));
     }
 
     @Override
@@ -177,7 +177,7 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
     public void setApiCallTimeoutMillis(long apiCallTimeoutMillis)
     {
         LOGGER.warn("'api_call_timeout_millis' is deprecated, use 'api_call_timeout' instead");
-        setApiCallTimeout(new MillisecondBoundConfigurationImpl(apiCallTimeoutMillis, TimeUnit.MILLISECONDS));
+        setApiCallTimeout(new MillisecondBoundConfiguration(apiCallTimeoutMillis, TimeUnit.MILLISECONDS));
     }
 
     /**

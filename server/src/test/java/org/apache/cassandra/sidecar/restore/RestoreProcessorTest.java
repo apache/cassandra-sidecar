@@ -35,7 +35,7 @@ import com.google.inject.util.Modules;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
-import org.apache.cassandra.sidecar.config.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;

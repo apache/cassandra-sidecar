@@ -17,6 +17,8 @@
  */
 package org.apache.cassandra.sidecar.config;
 
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+
 /**
  * This class encapsulates configuration values for cdc.
  */
