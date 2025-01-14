@@ -103,9 +103,8 @@ public class StreamStatsHandlerTest
     void testStreamingStatsHandler(VertxTestContext context)
     {
         StreamingStatsTestModule.streamingStatsSupplier = () -> {
-            StreamStatsResponse response = new StreamStatsResponse("NORMAL",
+            return new StreamStatsResponse("NORMAL",
                                                                    new StreamProgressStats(7, 7, 1024, 1024, 0, 0, 0, 0));
-            return response;
         };
 
 
@@ -152,7 +151,7 @@ public class StreamStatsHandlerTest
 
         @Provides
         @Singleton
-        public InstancesConfig instanceConfig() throws IOException
+        public InstancesConfig instanceConfig()
         {
             int instanceId = 100;
             String host = "127.0.0.1";

@@ -33,7 +33,6 @@ public class StreamSummary
     public final int files;
     public final long totalSize;
 
-
     public StreamSummary(String tableId, int files, long totalSize)
     {
         this.tableId = tableId;

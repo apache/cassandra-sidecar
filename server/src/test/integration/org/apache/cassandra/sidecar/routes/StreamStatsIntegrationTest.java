@@ -62,7 +62,6 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(numDataDirsPerInstance = 4, nodesPerDc = 5, network = true, buildCluster = false)
     void streamStatsTest(VertxTestContext context, ConfigurableCassandraTestContext cassandraTestContext) throws InterruptedException
     {
-
         BBHelperDecommissioningNode.reset();
         UpgradeableCluster cluster = cassandraTestContext.configureAndStartCluster(
         builder -> builder.withInstanceInitializer(BBHelperDecommissioningNode::install));

@@ -25,7 +25,6 @@ import javax.management.openmbean.CompositeData;
  */
 public class ProgressInfo
 {
-
     public final String peer;
     public final int sessionIndex;
     public final String fileName;
@@ -51,5 +50,4 @@ public class ProgressInfo
     {
         return currentBytes >= totalBytes;
     }
-
 }

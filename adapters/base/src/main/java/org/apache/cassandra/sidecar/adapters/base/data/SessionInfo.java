@@ -158,6 +158,4 @@ public class SessionInfo
     {
         return getTotalFilesCompleted(sendingFiles);
     }
-
-
 }

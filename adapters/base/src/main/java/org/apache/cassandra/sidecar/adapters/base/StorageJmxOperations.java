@@ -168,7 +168,7 @@ public interface StorageJmxOperations
 
     /**
      * Fetch the operation-mode of the node
-     * @return string representation of theoperation-mode
+     * @return string representation of the operation-mode
      */
     String getOperationMode();
 }

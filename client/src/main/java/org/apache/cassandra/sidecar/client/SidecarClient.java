@@ -680,7 +680,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     }
 
     /**
-     * Executes the stream stats request using the default retry policy and configured selection policy
+     * Executes the streams stats request using the default retry policy and configured selection policy
      *
      * @return a completable future of the connected client stats
      */

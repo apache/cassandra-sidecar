@@ -37,7 +37,6 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraService
  */
 public class StreamStatsHandler extends AbstractHandler<Void>
 {
-
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
      *
