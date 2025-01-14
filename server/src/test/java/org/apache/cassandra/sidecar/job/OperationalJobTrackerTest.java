@@ -64,18 +64,18 @@ class OperationalJobTrackerTest
     {
         jobTracker.put(job1);
         jobTracker.put(job2);
-        assertThat(jobTracker.get(job1.jobId)).isSameAs(job1);
-        assertThat(jobTracker.get(job2.jobId)).isSameAs(job2);
+        assertThat(jobTracker.get(job1.jobId())).isSameAs(job1);
+        assertThat(jobTracker.get(job2.jobId())).isSameAs(job2);
     }
 
     @Test
     void testComputeIfAbsent()
     {
         jobTracker.put(job1);
-        OperationalJob job = jobTracker.computeIfAbsent(job1.jobId, v -> job3);
+        OperationalJob job = jobTracker.computeIfAbsent(job1.jobId(), v -> job3);
         assertThat(job).isNotSameAs(job3);
         assertThat(job).isSameAs(job1);
-        assertThat(jobTracker.get(job1.jobId)).isSameAs(job1);
+        assertThat(jobTracker.get(job1.jobId())).isSameAs(job1);
     }
 
     @Test
@@ -89,10 +89,10 @@ class OperationalJobTrackerTest
         assertThat(jobTracker.size())
         .describedAs("Although the tracker initial size is 3, no job is evicted since all jobs are still running")
         .isEqualTo(4);
-        assertThat(jobTracker.get(job1.jobId)).isNotNull();
-        assertThat(jobTracker.get(job2.jobId)).isNotNull();
-        assertThat(jobTracker.get(job3.jobId)).isNotNull();
-        assertThat(jobTracker.get(job4.jobId)).isNotNull();
+        assertThat(jobTracker.get(job1.jobId())).isNotNull();
+        assertThat(jobTracker.get(job2.jobId())).isNotNull();
+        assertThat(jobTracker.get(job3.jobId())).isNotNull();
+        assertThat(jobTracker.get(job4.jobId())).isNotNull();
     }
 
     @Test
@@ -104,10 +104,10 @@ class OperationalJobTrackerTest
         jobTracker.put(job3);
 
         assertThat(jobTracker.size()).isEqualTo(3);
-        assertThat(jobTracker.get(job1.jobId)).isNotNull();
-        assertThat(jobTracker.get(job2.jobId)).isNotNull();
-        assertThat(jobTracker.get(job3.jobId)).isNotNull();
-        assertThat(jobTracker.get(jobWithStaleCreationTime.jobId)).isNull();
+        assertThat(jobTracker.get(job1.jobId())).isNotNull();
+        assertThat(jobTracker.get(job2.jobId())).isNotNull();
+        assertThat(jobTracker.get(job3.jobId())).isNotNull();
+        assertThat(jobTracker.get(jobWithStaleCreationTime.jobId())).isNull();
     }
 
     @Test
@@ -119,7 +119,7 @@ class OperationalJobTrackerTest
 
         Map<UUID, OperationalJob> view = jobTracker.jobsView();
         assertThat(view.size()).isEqualTo(2);
-        assertThatThrownBy(() -> view.put(job3.jobId, job3))
+        assertThatThrownBy(() -> view.put(job3.jobId(), job3))
         .isExactlyInstanceOf(UnsupportedOperationException.class);
     }
 

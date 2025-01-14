@@ -59,6 +59,7 @@ class OperationalJobTest
             {
             }
 
+            @Override
             public boolean isRunningOnCassandra()
             {
                 return jobStatus == OperationalJobStatus.RUNNING;

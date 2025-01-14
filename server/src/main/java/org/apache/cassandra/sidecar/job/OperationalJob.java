@@ -41,7 +41,7 @@ public abstract class OperationalJob implements Task<Void>
     private static final Logger LOGGER = LoggerFactory.getLogger(OperationalJob.class);
 
     // use v1 time-based uuid
-    protected final UUID jobId;
+    private final UUID jobId;
 
     private final Promise<Void> executionPromise;
     private volatile boolean isExecuting = false;

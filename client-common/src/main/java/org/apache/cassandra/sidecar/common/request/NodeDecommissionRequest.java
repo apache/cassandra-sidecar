@@ -38,6 +38,7 @@ public class NodeDecommissionRequest extends JsonRequest<OperationalJobResponse>
     /**
      * {@inheritDoc}
      */
+    @Override
     public HttpMethod method()
     {
         return HttpMethod.PUT;

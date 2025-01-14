@@ -149,6 +149,7 @@ class ListOperationalJobsHandlerTest
             super(jobId);
         }
 
+        @Override
         public boolean isRunningOnCassandra()
         {
             return false;

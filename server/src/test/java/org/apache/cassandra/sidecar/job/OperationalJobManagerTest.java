@@ -76,7 +76,7 @@ class OperationalJobManagerTest
         testJob.execute(Promise.promise());
         assertThat(testJob.asyncResult().isComplete()).isTrue();
         assertThat(testJob.status()).isEqualTo(SUCCEEDED);
-        assertThat(tracker.get(testJob.jobId)).isNotNull();
+        assertThat(tracker.get(testJob.jobId())).isNotNull();
     }
 
     @Test
@@ -123,6 +123,7 @@ class OperationalJobManagerTest
         String msg = "Test Job failed";
         OperationalJob failingJob = new OperationalJob(jobId)
         {
+            @Override
             public boolean isRunningOnCassandra()
             {
                 return false;

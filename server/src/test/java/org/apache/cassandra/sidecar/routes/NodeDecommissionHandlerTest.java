@@ -50,8 +50,6 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.AdditionalAnswers;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONFLICT;
@@ -74,16 +72,11 @@ public class NodeDecommissionHandlerTest
     static final Logger LOGGER = LoggerFactory.getLogger(NodeDecommissionHandlerTest.class);
     Vertx vertx;
     Server server;
-
-    @Mock
-    static
-    StorageOperations mockStorageOperations;
-
+    StorageOperations mockStorageOperations = mock(StorageOperations.class);
     @BeforeEach
     void before() throws InterruptedException
     {
         Injector injector;
-        MockitoAnnotations.openMocks(this);
         Module testOverride = Modules.override(new TestModule())
                                      .with(new NodeDecommissionHandlerTest.NodeDecommissionTestModule());
         injector = Guice.createInjector(Modules.override(new MainModule())
@@ -183,7 +176,7 @@ public class NodeDecommissionHandlerTest
     /**
      * Test guice module for Node Decommission handler tests
      */
-    static class NodeDecommissionTestModule extends AbstractModule
+    class NodeDecommissionTestModule extends AbstractModule
     {
         @Provides
         @Singleton

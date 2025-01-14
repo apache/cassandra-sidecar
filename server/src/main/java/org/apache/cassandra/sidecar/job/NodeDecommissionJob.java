@@ -75,15 +75,16 @@ public class NodeDecommissionJob extends OperationalJob
     /**
      * {@inheritDoc}
      */
+    @Override
     protected void executeInternal()
     {
         if (isRunningOnCassandra())
         {
-            LOGGER.info("Not executing job as an ongoing or completed decommission operation was found jobId={}", jobId);
+            LOGGER.info("Not executing job as an ongoing or completed decommission operation was found jobId={}", this.jobId());
             return;
         }
 
-        LOGGER.info("Executing decommission operation. jobId={}", jobId);
+        LOGGER.info("Executing decommission operation. jobId={}", this.jobId());
         storageOperations.decommission(isForce);
     }
 
