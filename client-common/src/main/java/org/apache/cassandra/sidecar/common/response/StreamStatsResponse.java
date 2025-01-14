@@ -29,21 +29,8 @@ import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class StreamStatsResponse
 {
-   @JsonProperty("operationMode")
-    public String operationMode()
-    {
-        return mode;
-    }
-
-    @JsonProperty("streamProgressStats")
-    public StreamProgressStats streamProgressStats()
-    {
-        return stats;
-    }
-
     private final String mode;
     private final StreamProgressStats stats;
-
 
     /**
      * Constructs a new {@link StreamStatsResponse}.
@@ -57,5 +44,17 @@ public class StreamStatsResponse
     {
         this.mode = mode;
         this.stats = stats;
+    }
+
+    @JsonProperty("operationMode")
+    public String operationMode()
+    {
+        return mode;
+    }
+
+    @JsonProperty("streamProgressStats")
+    public StreamProgressStats streamProgressStats()
+    {
+        return stats;
     }
 }

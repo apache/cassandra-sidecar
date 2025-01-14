@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -46,12 +45,12 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.cluster.InstancesConfig;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
+import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
-import org.apache.cassandra.sidecar.common.server.StreamManagerOperations;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.stubbing.Answer;
@@ -71,6 +70,8 @@ public class StreamStatsHandlerTest
     static final Logger LOGGER = LoggerFactory.getLogger(StreamStatsHandlerTest.class);
     Vertx vertx;
     Server server;
+
+    Supplier<StreamStatsResponse> streamingStatsSupplier;
 
     @BeforeEach
     void before() throws InterruptedException
@@ -102,29 +103,7 @@ public class StreamStatsHandlerTest
     @Test
     void testStreamingStatsHandler(VertxTestContext context)
     {
-        StreamingStatsTestModule.streamingStatsSupplier = () -> {
-            return new StreamStatsResponse("NORMAL",
-                                                                   new StreamProgressStats(7, 7, 1024, 1024, 0, 0, 0, 0));
-        };
-
-
-        WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/stats/stream";
-        client.get(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  StreamStatsResponse statsResponse = response.bodyAsJson(StreamStatsResponse.class);
-                  assertThat(statsResponse).isNotNull();
-                  assertThat(statsResponse.operationMode()).isEqualTo("NORMAL");
-                  context.completeNow();
-              }));
-    }
-
-    @Test
-    void testStreamingStatsHandlerFailure(VertxTestContext context)
-    {
-        StreamingStatsTestModule.streamingStatsSupplier = () -> {
+        streamingStatsSupplier = () -> {
             StreamStatsResponse response = new StreamStatsResponse("NORMAL",
                                                                    new StreamProgressStats(7, 7, 1024, 1024, 0, 0, 0, 0));
             return response;
@@ -132,7 +111,7 @@ public class StreamStatsHandlerTest
 
 
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/stats/stream";
+        String testRoute = "/api/v1/cassandra/stats/streams";
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
@@ -144,14 +123,12 @@ public class StreamStatsHandlerTest
               }));
     }
 
-
-    static class StreamingStatsTestModule extends AbstractModule
+    class StreamingStatsTestModule extends AbstractModule
     {
-        static Supplier<StreamStatsResponse> streamingStatsSupplier;
 
         @Provides
         @Singleton
-        public InstancesConfig instanceConfig()
+        public InstancesMetadata instancesMetadata()
         {
             int instanceId = 100;
             String host = "127.0.0.1";
@@ -162,21 +139,21 @@ public class StreamStatsHandlerTest
             when(instanceMetadata.stagingDir()).thenReturn("");
             CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
             StorageOperations ops = mock(StorageOperations.class);
-            when(ops.getOperationMode()).thenAnswer((Answer<String>) invocation -> streamingStatsSupplier.get().operationMode());
+            when(ops.operationMode()).thenAnswer((Answer<String>) invocation -> streamingStatsSupplier.get().operationMode());
             when(delegate.storageOperations()).thenReturn(ops);
-            StreamManagerOperations streamMgrOps = mock(StreamManagerOperations.class);
-            when(streamMgrOps.getStreamProgressStats())
+            MetricsOperations metricsOps = mock(MetricsOperations.class);
+            when(metricsOps.getStreamProgressStats())
             .thenAnswer((Answer<StreamProgressStats>) invocation -> streamingStatsSupplier.get().streamProgressStats());
-            when(delegate.streamManagerOperations()).thenReturn(streamMgrOps);
+            when(delegate.metricsOperations()).thenReturn(metricsOps);
 
             when(instanceMetadata.delegate()).thenReturn(delegate);
 
-            InstancesConfig mockInstancesConfig = mock(InstancesConfig.class);
-            when(mockInstancesConfig.instances()).thenReturn(Collections.singletonList(instanceMetadata));
-            when(mockInstancesConfig.instanceFromId(instanceId)).thenReturn(instanceMetadata);
-            when(mockInstancesConfig.instanceFromHost(host)).thenReturn(instanceMetadata);
+            InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
+            when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
+            when(mockInstancesMetadata.instanceFromId(instanceId)).thenReturn(instanceMetadata);
+            when(mockInstancesMetadata.instanceFromHost(host)).thenReturn(instanceMetadata);
 
-            return mockInstancesConfig;
+            return mockInstancesMetadata;
         }
     }
 }

@@ -146,6 +146,7 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
         return delegate.forceKeyspaceCleanup(jobs, keyspaceName, tables);
     }
 
+    @Override
     public String getOperationMode()
     {
         return delegate.getOperationMode();

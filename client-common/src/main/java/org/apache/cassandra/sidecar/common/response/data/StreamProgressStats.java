@@ -28,6 +28,35 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class StreamProgressStats
 {
+    private final long totalFilesToReceive;
+    private final long totalFilesReceived;
+    private final long totalBytesToReceive;
+    private final long totalBytesReceived;
+    private final long totalFilesToSend;
+    private final long totalFilesSent;
+    private final long totalBytesToSend;
+    private final long totalBytesSent;
+
+    @JsonCreator
+    public StreamProgressStats(@JsonProperty("totalFilesToReceive") long totalFilesToReceive,
+                               @JsonProperty("totalFilesReceived") long totalFilesReceived,
+                               @JsonProperty("totalBytesToReceive") long totalBytesToReceive,
+                               @JsonProperty("totalBytesReceived") long totalBytesReceived,
+                               @JsonProperty("totalFilesToSend") long totalFilesToSend,
+                               @JsonProperty("totalFilesSent") long totalFilesSent,
+                               @JsonProperty("totalBytesToSend") long totalBytesToSend,
+                               @JsonProperty("totalBytesSent") long totalBytesSent)
+    {
+        this.totalFilesToReceive = totalFilesToReceive;
+        this.totalFilesReceived = totalFilesReceived;
+        this.totalBytesToReceive = totalBytesToReceive;
+        this.totalBytesReceived = totalBytesReceived;
+        this.totalFilesToSend = totalFilesToSend;
+        this.totalFilesSent = totalFilesSent;
+        this.totalBytesToSend = totalBytesToSend;
+        this.totalBytesSent = totalBytesSent;
+    }
+
     @JsonProperty("totalFilesToReceive")
     public long totalFilesToReceive()
     {
@@ -74,40 +103,5 @@ public class StreamProgressStats
     public long totalBytesSent()
     {
         return totalBytesSent;
-    }
-
-    /* Across all sessions
-         * private final long sendProgress; from "sent to"
-            private final long sendTotal; from "Sending"
-            private final long receiveProgress; from "received from"
-            private final long receiveTotal;  from "Receiving"
-         */
-    private final long totalFilesToReceive;
-    private final long totalFilesReceived;
-    private final long totalBytesToReceive;
-    private final long totalBytesReceived;
-    private final long totalFilesToSend;
-    private final long totalFilesSent;
-    private final long totalBytesToSend;
-    private final long totalBytesSent;
-
-    @JsonCreator
-    public StreamProgressStats(@JsonProperty("totalFilesToReceive") long totalFilesToReceive,
-                               @JsonProperty("totalFilesReceived") long totalFilesReceived,
-                               @JsonProperty("totalBytesToReceive") long totalBytesToReceive,
-                               @JsonProperty("totalBytesReceived") long totalBytesReceived,
-                               @JsonProperty("totalFilesToSend") long totalFilesToSend,
-                               @JsonProperty("totalFilesSent") long totalFilesSent,
-                               @JsonProperty("totalBytesToSend") long totalBytesToSend,
-                               @JsonProperty("totalBytesSent") long totalBytesSent)
-    {
-        this.totalFilesToReceive = totalFilesToReceive;
-        this.totalFilesReceived = totalFilesReceived;
-        this.totalBytesToReceive = totalBytesToReceive;
-        this.totalBytesReceived = totalBytesReceived;
-        this.totalFilesToSend = totalFilesToSend;
-        this.totalFilesSent = totalFilesSent;
-        this.totalBytesToSend = totalBytesToSend;
-        this.totalBytesSent = totalBytesSent;
     }
 }

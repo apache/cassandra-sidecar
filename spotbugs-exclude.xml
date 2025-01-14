@@ -62,10 +62,7 @@
 
     <Match>
         <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD" />
-        <Or>
-            <Class name="org.apache.cassandra.sidecar.routes.RingHandlerTest" />
-            <Class name="org.apache.cassandra.sidecar.routes.StreamStatsHandlerTest" />
-        </Or>
+        <Class name="org.apache.cassandra.sidecar.routes.RingHandlerTest" />
     </Match>
 
     <Match>

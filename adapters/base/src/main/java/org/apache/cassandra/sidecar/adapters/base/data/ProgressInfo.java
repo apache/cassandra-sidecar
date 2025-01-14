@@ -34,7 +34,6 @@ public class ProgressInfo
 
     public ProgressInfo(CompositeData data)
     {
-
         this.peer = (String) data.get("peer");
         this.sessionIndex = (int) data.get("sessionIndex");
         this.fileName = (String) data.get("fileName");

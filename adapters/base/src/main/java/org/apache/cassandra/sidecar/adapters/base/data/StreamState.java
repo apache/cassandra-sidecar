@@ -35,14 +35,13 @@ public class StreamState
         this.sessions = parseSessions((CompositeData[]) data.get("sessions"));
     }
 
-    private Collection<SessionInfo> parseSessions(CompositeData[] sessions)
-    {
-        return Arrays.stream(sessions).map(SessionInfo::new).collect(Collectors.toList());
-    }
-
     public Collection<SessionInfo> sessions()
     {
         return sessions;
     }
 
+    private Collection<SessionInfo> parseSessions(CompositeData[] sessions)
+    {
+        return Arrays.stream(sessions).map(SessionInfo::new).collect(Collectors.toList());
+    }
 }

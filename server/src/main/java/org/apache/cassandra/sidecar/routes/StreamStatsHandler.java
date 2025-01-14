@@ -25,12 +25,10 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
+import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
-import org.apache.cassandra.sidecar.common.server.StreamManagerOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.cassandraServiceUnavailable;
 
 /**
  * Handler for retrieving node streams stats
@@ -62,24 +60,14 @@ public class StreamStatsHandler extends AbstractHandler<Void>
     {
 
         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
-        if (delegate == null)
-        {
-            context.fail(cassandraServiceUnavailable());
-            return;
-        }
 
         StorageOperations storageOperations = delegate.storageOperations();
-        StreamManagerOperations streamMgrOperations = delegate.streamManagerOperations();
-        if (storageOperations == null || streamMgrOperations == null)
-        {
-            context.fail(cassandraServiceUnavailable());
-            return;
-        }
+        MetricsOperations metricsOperations = delegate.metricsOperations();
 
         executorPools.service()
                      .executeBlocking(() -> {
-                         String mode = storageOperations.getOperationMode();
-                         StreamProgressStats stats = streamMgrOperations.getStreamProgressStats();
+                         String mode = storageOperations.operationMode();
+                         StreamProgressStats stats = metricsOperations.getStreamProgressStats();
                          return new StreamStatsResponse(mode, stats);
                      })
                      .onSuccess(context::json)
@@ -87,6 +75,10 @@ public class StreamStatsHandler extends AbstractHandler<Void>
 
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     protected Void extractParamsOrThrow(RoutingContext context)
     {
         return null;

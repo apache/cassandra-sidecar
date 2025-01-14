@@ -39,7 +39,6 @@ public class SessionInfo
     public final Collection<StreamSummary> sendingSummaries;
     /** Current session state */
     public final String state;
-
     public final Collection<ProgressInfo> receivingFiles;
     public final Collection<ProgressInfo> sendingFiles;
 
@@ -55,6 +54,92 @@ public class SessionInfo
         this.sendingFiles = parseFiles((CompositeData[]) data.get("sendingFiles"));
     }
 
+    /**
+     * @return total size(in bytes) already received.
+     */
+    public long totalSizeReceived()
+    {
+        return totalSizeInProgress(receivingFiles);
+    }
+
+    /**
+     * @return total size(in bytes) already sent.
+     */
+    public long totalSizeSent()
+    {
+        return totalSizeInProgress(sendingFiles);
+    }
+
+    /**
+     * @return total number of files to receive in the session
+     */
+    public long totalFilesToReceive()
+    {
+        return totalFiles(receivingSummaries);
+    }
+
+    /**
+     * @return total number of files to send in the session
+     */
+    public long totalFilesToSend()
+    {
+        return totalFiles(sendingSummaries);
+    }
+
+    /**
+     * @return total size(in bytes) to receive in the session
+     */
+    public long totalSizeToReceive()
+    {
+        return totalSizes(receivingSummaries);
+    }
+
+    /**
+     * @return total size(in bytes) to send in the session
+     */
+    public long totalSizeToSend()
+    {
+        return totalSizes(sendingSummaries);
+    }
+
+    /**
+     * @return total number of files already received.
+     */
+    public long totalFilesReceived()
+    {
+        return totalFilesCompleted(receivingFiles);
+    }
+
+    /**
+     * @return total number of files already sent.
+     */
+    public long totalFilesSent()
+    {
+        return totalFilesCompleted(sendingFiles);
+    }
+
+    private long totalSizes(Collection<StreamSummary> summaries)
+    {
+        long total = 0;
+        for (StreamSummary summary : summaries)
+            total += summary.totalSize;
+        return total;
+    }
+
+    private long totalFilesCompleted(Collection<ProgressInfo> files)
+    {
+        Iterable<ProgressInfo> completed = Iterables.filter(files, input -> input.isCompleted());
+        return Iterables.size(completed);
+    }
+
+    private long totalSizeInProgress(Collection<ProgressInfo> streams)
+    {
+        long total = 0;
+        for (ProgressInfo stream : streams)
+            total += stream.currentBytes;
+        return total;
+    }
+
     private Collection<StreamSummary> parseSummaries(CompositeData[] summaries)
     {
         return Arrays.stream(summaries).map(StreamSummary::new).collect(Collectors.toList());
@@ -65,97 +150,11 @@ public class SessionInfo
         return Arrays.stream(files).map(ProgressInfo::new).collect(Collectors.toList());
     }
 
-    private long getTotalFiles(Collection<StreamSummary> summaries)
+    private long totalFiles(Collection<StreamSummary> summaries)
     {
         long total = 0;
         for (StreamSummary summary : summaries)
             total += summary.files;
         return total;
-    }
-
-    /**
-     * @return total size(in bytes) already received.
-     */
-    public long getTotalSizeReceived()
-    {
-        return getTotalSizeInProgress(receivingFiles);
-    }
-
-    /**
-     * @return total size(in bytes) already sent.
-     */
-    public long getTotalSizeSent()
-    {
-        return getTotalSizeInProgress(sendingFiles);
-    }
-
-    /**
-     * @return total number of files to receive in the session
-     */
-    public long getTotalFilesToReceive()
-    {
-        return getTotalFiles(receivingSummaries);
-    }
-
-    /**
-     * @return total number of files to send in the session
-     */
-    public long getTotalFilesToSend()
-    {
-        return getTotalFiles(sendingSummaries);
-    }
-
-    private long getTotalSizes(Collection<StreamSummary> summaries)
-    {
-        long total = 0;
-        for (StreamSummary summary : summaries)
-            total += summary.totalSize;
-        return total;
-    }
-
-    /**
-     * @return total size(in bytes) to receive in the session
-     */
-    public long getTotalSizeToReceive()
-    {
-        return getTotalSizes(receivingSummaries);
-    }
-
-    private long getTotalSizeInProgress(Collection<ProgressInfo> streams)
-    {
-        long total = 0;
-        for (ProgressInfo stream : streams)
-            total += stream.currentBytes;
-        return total;
-    }
-
-    /**
-     * @return total size(in bytes) to send in the session
-     */
-    public long getTotalSizeToSend()
-    {
-        return getTotalSizes(sendingSummaries);
-    }
-
-    private long getTotalFilesCompleted(Collection<ProgressInfo> files)
-    {
-        Iterable<ProgressInfo> completed = Iterables.filter(files, input -> input.isCompleted());
-        return Iterables.size(completed);
-    }
-
-    /**
-     * @return total number of files already received.
-     */
-    public long getTotalFilesReceived()
-    {
-        return getTotalFilesCompleted(receivingFiles);
-    }
-
-    /**
-     * @return total number of files already sent.
-     */
-    public long getTotalFilesSent()
-    {
-        return getTotalFilesCompleted(sendingFiles);
     }
 }

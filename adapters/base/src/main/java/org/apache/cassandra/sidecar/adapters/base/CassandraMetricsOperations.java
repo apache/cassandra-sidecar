@@ -18,33 +18,51 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.management.openmbean.CompositeData;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.cassandra.sidecar.adapters.base.data.SessionInfo;
+import org.apache.cassandra.sidecar.adapters.base.data.StreamState;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStats;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsDatabaseAccessor;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsSummary;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
+import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.jetbrains.annotations.NotNull;
+
+import static org.apache.cassandra.sidecar.adapters.base.StreamManagerJmxOperations.STREAM_MANAGER_OBJ_NAME;
 
 /**
  * Default implementation that pulls methods from the Cassandra Metrics Proxy
  */
 public class CassandraMetricsOperations implements MetricsOperations
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraStorageOperations.class);
     private final ConnectedClientStatsDatabaseAccessor dbAccessor;
+
+    protected final JmxClient jmxClient;
+
 
     /**
      * Creates a new instance with the provided {@link CQLSessionProvider}
      */
-    public CassandraMetricsOperations(CQLSessionProvider session)
+    public CassandraMetricsOperations(JmxClient jmxClient, CQLSessionProvider session)
     {
+        this.jmxClient = jmxClient;
         this.dbAccessor = new ConnectedClientStatsDatabaseAccessor(session, new ConnectedClientsSchema());
     }
 
@@ -68,6 +86,47 @@ public class CassandraMetricsOperations implements MetricsOperations
                                                                                              Collectors.counting()));
         long totalConnectedClients = entries.size();
         return new ConnectedClientStatsResponse(entries, totalConnectedClients, connectionsByUser);
+    }
+
+    public StreamProgressStats getStreamProgressStats()
+    {
+        Set<CompositeData> streamData = jmxClient.proxy(StreamManagerJmxOperations.class, STREAM_MANAGER_OBJ_NAME)
+                                                 .getCurrentStreams();
+
+        List<StreamState> streamStates = streamData.stream().map(StreamState::new).collect(Collectors.toList());
+        return computeStats(streamStates);
+    }
+
+    private StreamProgressStats computeStats(List<StreamState> streamStates)
+    {
+        List<SessionInfo> sessions = streamStates.stream().map(s -> s.sessions()).flatMap(Collection::stream).collect(Collectors.toList());
+
+        long totalFilesToReceive = 0;
+        long totalFilesReceived = 0;
+        long totalBytesToReceive = 0;
+        long totalBytesReceived = 0;
+
+        long totalFilesToSend = 0;
+        long totalFilesSent = 0;
+        long totalBytesToSend = 0;
+        long totalBytesSent = 0;
+
+        for (SessionInfo s : sessions)
+        {
+            totalBytesToReceive += s.totalSizeToReceive();
+            totalBytesReceived += s.totalSizeReceived();
+            totalFilesToReceive += s.totalFilesToReceive();
+            totalFilesReceived += s.totalFilesReceived();
+            totalBytesToSend += s.totalSizeToSend();
+            totalBytesSent += s.totalSizeSent();
+            totalFilesToSend += s.totalFilesToSend();
+            totalFilesSent += s.totalFilesSent();
+
+        }
+        LOGGER.debug("Progress Stats: {}, {}, {}, {}", totalBytesToReceive, totalBytesReceived, totalBytesToSend, totalBytesSent);
+        return new StreamProgressStats(totalFilesToReceive, totalFilesReceived, totalBytesToReceive, totalBytesReceived,
+                                       totalFilesToSend, totalFilesSent, totalBytesToSend, totalBytesSent);
+
     }
 
     private ConnectedClientStatsResponse connectedClientSummary()

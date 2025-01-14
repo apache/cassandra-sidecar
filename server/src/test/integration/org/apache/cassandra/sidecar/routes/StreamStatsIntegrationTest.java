@@ -45,7 +45,6 @@ import org.apache.cassandra.distributed.shared.Uninterruptibles;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
@@ -59,20 +58,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 public class StreamStatsIntegrationTest extends IntegrationTestBase
 {
-    @CassandraIntegrationTest(numDataDirsPerInstance = 4, nodesPerDc = 5, network = true, buildCluster = false)
+    @CassandraIntegrationTest(numDataDirsPerInstance = 4, nodesPerDc = 2, network = true, buildCluster = false)
     void streamStatsTest(VertxTestContext context, ConfigurableCassandraTestContext cassandraTestContext) throws InterruptedException
     {
         BBHelperDecommissioningNode.reset();
         UpgradeableCluster cluster = cassandraTestContext.configureAndStartCluster(
         builder -> builder.withInstanceInitializer(BBHelperDecommissioningNode::install));
-        IUpgradeableInstance node = cluster.get(5);
+        IUpgradeableInstance node = cluster.get(2);
         IUpgradeableInstance seed = cluster.get(1);
 
         createTestKeyspace();
         createTestTableAndPopulate();
 
         startAsync("Decommission node" + node.config().num(),
-                   () -> node.nodetoolResult("decommission").asserts().success());
+                   () -> node.nodetoolResult("decommission", "--force").asserts().success());
         AtomicBoolean hasStats = new AtomicBoolean(false);
         AtomicBoolean dataReceived = new AtomicBoolean(false);
 
@@ -82,6 +81,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         ClusterUtils.awaitRingState(seed, node, "Leaving");
         BBHelperDecommissioningNode.transientStateEnd.countDown();
 
+        // optimal no. of attempts to poll for stats to capture streaming stats during node decommissioning
         for (int i = 0; i < 20; i++)
         {
             startAsync("Request-" + i , () -> {
@@ -106,18 +106,17 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
     private void streamStats(VertxTestContext context, AtomicBoolean hasStats, AtomicBoolean dataReceived) throws Exception
     {
-        String testRoute = "/api/v1/cassandra/stats/stream";
+        String testRoute = "/api/v1/cassandra/stats/streams";
         testWithClient(context, client -> {
             BBHelperDecommissioningNode.transientStateEnd.countDown();
             client.get(server.actualPort(), "127.0.0.1", testRoute)
                   .send(context.succeeding(response -> {
-                       assertRingResponseOK(response, sidecarTestContext, hasStats, dataReceived);
+                       assertStreamStatsResponseOK(response, hasStats, dataReceived);
                   }));
         });
     }
 
-    void assertRingResponseOK(HttpResponse<Buffer> response, CassandraSidecarTestContext cassandraTestContext,
-                              AtomicBoolean hasStats, AtomicBoolean dataReceived)
+    void assertStreamStatsResponseOK(HttpResponse<Buffer> response, AtomicBoolean hasStats, AtomicBoolean dataReceived)
     {
         StreamStatsResponse streamStatsResponse = response.bodyAsJson(StreamStatsResponse.class);
         assertThat(streamStatsResponse).isNotNull();
@@ -169,8 +168,8 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         public static void install(ClassLoader cl, Integer nodeNumber)
         {
             // Test case involves 5 node cluster with 1 leaving node
-            // We intercept the shutdown of the leaving node (5) to validate token ranges
-            if (nodeNumber == 5)
+            // We intercept the shutdown of the leaving node (2) to validate token ranges
+            if (nodeNumber == 2)
             {
                 TypePool typePool = TypePool.Default.of(cl);
                 TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")

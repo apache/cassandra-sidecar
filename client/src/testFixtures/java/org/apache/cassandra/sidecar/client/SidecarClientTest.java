@@ -1630,27 +1630,34 @@ abstract class SidecarClientTest
         String streamStatsResponseAsString = "{\"operationMode\":\"NORMAL\"," +
                                              "\"streamProgressStats\":{\"totalFilesToReceive\":7," +
                                              "\"totalFilesReceived\":7,\"totalBytesToReceive\":15088," +
-                                             "\"totalBytesReceived\":15088,\"totalFilesToSend\":0,\"totalFilesSent\":0," +
-                                             "\"totalBytesToSend\":0,\"totalBytesSent\":0}}";
+                                             "\"totalBytesReceived\":15088,\"totalFilesToSend\":2,\"totalFilesSent\":2," +
+                                             "\"totalBytesToSend\":1024,\"totalBytesSent\":1024}}";
 
         MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(streamStatsResponseAsString);
         enqueue(response);
-        StreamStatsResponse result = client.streamsStats().get();
 
-        assertThat(result).isNotNull();
-        assertThat(result.operationMode()).isNotNull().isEqualTo("NORMAL");
-        StreamProgressStats progressStats = result.streamProgressStats();
-        assertThat(progressStats).isNotNull();
-        assertThat(progressStats.totalBytesReceived()).isNotNull();
-        assertThat(progressStats.totalBytesSent()).isNotNull();
-        assertThat(progressStats.totalBytesToReceive()).isNotNull().isEqualTo(progressStats.totalBytesReceived());
-        assertThat(progressStats.totalBytesToSend()).isNotNull();
-        assertThat(progressStats.totalFilesToReceive()).isNotNull();
-        assertThat(progressStats.totalFilesToSend()).isNotNull();
-        assertThat(progressStats.totalFilesReceived()).isNotNull().isEqualTo(progressStats.totalFilesToReceive());
-        assertThat(progressStats.totalFilesSent()).isNotNull();
-
-        validateResponseServed(ApiEndpointsV1.STREAM_STATS_ROUTE);
+        for (MockWebServer server : servers)
+        {
+            SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
+            StreamStatsResponse result = client.streamsStats(sidecarInstance).get(30, TimeUnit.SECONDS);
+            assertThat(result).isNotNull();
+            assertThat(result.operationMode()).isNotNull().isEqualTo("NORMAL");
+            StreamProgressStats progressStats = result.streamProgressStats();
+            assertThat(progressStats).isNotNull();
+            assertThat(progressStats.totalFilesToSend()).isNotNull()
+                                                        .isEqualTo(progressStats.totalFilesSent())
+                                                        .isEqualTo(2);
+            assertThat(progressStats.totalBytesToSend()).isNotNull()
+                                                      .isEqualTo(progressStats.totalBytesSent())
+                                                      .isEqualTo(1024);
+            assertThat(progressStats.totalBytesToReceive()).isNotNull()
+                                                           .isEqualTo(progressStats.totalBytesReceived())
+                                                           .isEqualTo(15088);
+            assertThat(progressStats.totalFilesToReceive()).isNotNull()
+                                                           .isEqualTo(progressStats.totalFilesReceived())
+                                                           .isEqualTo(7);
+            validateResponseServed(server, ApiEndpointsV1.STREAM_STATS_ROUTE, req -> { });
+        }
     }
 
     private void enqueue(MockResponse response)
