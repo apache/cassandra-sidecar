@@ -84,11 +84,12 @@ public class NodeDecommissionHandler extends OperationalJobHandler
             logger.error("Conflicting job encountered. reason={}", reason);
             context.response().setStatusCode(HttpResponseStatus.CONFLICT.code());
             context.json(new OperationalJobResponse(job.jobId(), OperationalJobStatus.FAILED, job.name(), reason));
+            return;
         }
 
         // Get the result, waiting for the specified wait time for result
         job.asyncResult(executorPools.service(),
                         Duration.of(config.operationalJobExecutionMaxWaitTimeInMillis(), ChronoUnit.MILLIS))
-            .onComplete(v -> sendStatusBasedResponse(context, job));
+           .onComplete(v -> sendStatusBasedResponse(context, job));
     }
 }

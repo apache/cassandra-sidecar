@@ -34,7 +34,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public class Cassandra41StorageOperations extends CassandraStorageOperations
 {
-
     /**
      * Creates a new instance with the provided {@link JmxClient} and {@link DnsResolver}
      *
