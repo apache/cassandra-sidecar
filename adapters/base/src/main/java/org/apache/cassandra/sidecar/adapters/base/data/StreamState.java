@@ -35,6 +35,9 @@ public class StreamState
         this.sessions = parseSessions((CompositeData[]) data.get("sessions"));
     }
 
+    /**
+     * @return the session info for the sessions in the stream stats data
+     */
     public Collection<SessionInfo> sessions()
     {
         return sessions;

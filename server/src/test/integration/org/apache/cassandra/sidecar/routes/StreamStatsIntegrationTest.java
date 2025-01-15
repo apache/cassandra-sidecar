@@ -20,12 +20,15 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.Session;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.VertxExtension;
@@ -41,11 +44,11 @@ import net.bytebuddy.pool.TypePool;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.shared.ClusterUtils;
-import org.apache.cassandra.distributed.shared.Uninterruptibles;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
+import org.apache.cassandra.streaming.StreamOperation;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 
@@ -59,13 +62,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class StreamStatsIntegrationTest extends IntegrationTestBase
 {
     @CassandraIntegrationTest(numDataDirsPerInstance = 4, nodesPerDc = 2, network = true, buildCluster = false)
-    void streamStatsTest(VertxTestContext context, ConfigurableCassandraTestContext cassandraTestContext) throws InterruptedException
+    void streamStatsTest(VertxTestContext context, ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {
         BBHelperDecommissioningNode.reset();
         UpgradeableCluster cluster = cassandraTestContext.configureAndStartCluster(
         builder -> builder.withInstanceInitializer(BBHelperDecommissioningNode::install));
         IUpgradeableInstance node = cluster.get(2);
-        IUpgradeableInstance seed = cluster.get(1);
 
         createTestKeyspace();
         createTestTableAndPopulate();
@@ -78,25 +80,18 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         // Wait until nodes have reached expected state
         awaitLatchOrThrow(BBHelperDecommissioningNode.transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
 
-        ClusterUtils.awaitRingState(seed, node, "Leaving");
-        BBHelperDecommissioningNode.transientStateEnd.countDown();
-
         // optimal no. of attempts to poll for stats to capture streaming stats during node decommissioning
         for (int i = 0; i < 20; i++)
         {
-            startAsync("Request-" + i , () -> {
-                try
-                {
-                    streamStats(context, hasStats, dataReceived);
-                }
-                catch (Exception e)
-                {
-                    throw new RuntimeException(e);
-                }
-            });
-
+            streamStats(hasStats, dataReceived);
+            if (dataReceived.get())
+            {
+                break;
+            }
             Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
         }
+        ClusterUtils.awaitGossipStatus(node, node, "LEFT");
+        BBHelperDecommissioningNode.transientStateEnd.countDown();
 
         assertThat(hasStats).isTrue();
         assertThat(dataReceived).isTrue();
@@ -104,16 +99,29 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         context.awaitCompletion(2, TimeUnit.MINUTES);
     }
 
-    private void streamStats(VertxTestContext context, AtomicBoolean hasStats, AtomicBoolean dataReceived) throws Exception
+    private void streamStats(AtomicBoolean hasStats, AtomicBoolean dataReceived)
     {
         String testRoute = "/api/v1/cassandra/stats/streams";
-        testWithClient(context, client -> {
-            BBHelperDecommissioningNode.transientStateEnd.countDown();
-            client.get(server.actualPort(), "127.0.0.1", testRoute)
-                  .send(context.succeeding(response -> {
-                       assertStreamStatsResponseOK(response, hasStats, dataReceived);
-                  }));
-        });
+        HttpResponse<Buffer> resp;
+        try
+        {
+            resp = client.get(server.actualPort(), "127.0.0.1", testRoute)
+                         .send()
+                         .toCompletionStage()
+                         .toCompletableFuture()
+                         .get();
+            logger.info("Success Status Response code: {}", resp.statusCode());
+            logger.info("Status Response: {}", resp.bodyAsString());
+            if (resp.statusCode() == HttpResponseStatus.OK.code())
+            {
+                assertStreamStatsResponseOK(resp, hasStats, dataReceived);
+            }
+
+        }
+        catch (InterruptedException | ExecutionException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 
     void assertStreamStatsResponseOK(HttpResponse<Buffer> response, AtomicBoolean hasStats, AtomicBoolean dataReceived)
@@ -167,15 +175,15 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
         public static void install(ClassLoader cl, Integer nodeNumber)
         {
-            // Test case involves 5 node cluster with 1 leaving node
-            // We intercept the shutdown of the leaving node (2) to validate token ranges
             if (nodeNumber == 2)
             {
                 TypePool typePool = TypePool.Default.of(cl);
-                TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")
+                TypeDescription description = typePool.describe("org.apache.cassandra.streaming.StreamCoordinator")
                                                       .resolve();
                 new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                               .method(named("unbootstrap"))
+                               .method(named("connectAllStreamSessions"))
+//                               .method(named("onInitializationComplete"))
+//                               .method(named("start"))
                                .intercept(MethodDelegation.to(BBHelperDecommissioningNode.class))
                                // Defer class loading until all dependencies are loaded
                                .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
@@ -184,10 +192,10 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         }
 
         @SuppressWarnings("unused")
-        public static void unbootstrap(@SuperCall Callable<?> orig) throws Exception
+        public static void connectAllStreamSessions(@SuperCall Callable<StreamOperation> orig) throws Exception
         {
             transientStateStart.countDown();
-            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
+            Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
             orig.call();
         }
 

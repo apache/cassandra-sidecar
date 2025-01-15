@@ -171,10 +171,4 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     {
         delegate.decommission(force);
     }
-
-    @Override
-    public String getOperationMode()
-    {
-        return delegate.getOperationMode();
-    }
 }

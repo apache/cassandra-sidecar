@@ -37,5 +37,5 @@ public interface MetricsOperations
      * Retrieve the stream progress stats metrics from the cluster
      * @return the requested stream progress stats, in full or summary
      */
-    StreamProgressStats getStreamProgressStats();
+    StreamProgressStats streamProgressStats();
 }

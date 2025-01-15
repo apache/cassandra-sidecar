@@ -88,7 +88,11 @@ public class CassandraMetricsOperations implements MetricsOperations
         return new ConnectedClientStatsResponse(entries, totalConnectedClients, connectionsByUser);
     }
 
-    public StreamProgressStats getStreamProgressStats()
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public StreamProgressStats streamProgressStats()
     {
         Set<CompositeData> streamData = jmxClient.proxy(StreamManagerJmxOperations.class, STREAM_MANAGER_OBJ_NAME)
                                                  .getCurrentStreams();
@@ -123,7 +127,8 @@ public class CassandraMetricsOperations implements MetricsOperations
             totalFilesSent += s.totalFilesSent();
 
         }
-        LOGGER.debug("Progress Stats: {}, {}, {}, {}", totalBytesToReceive, totalBytesReceived, totalBytesToSend, totalBytesSent);
+        LOGGER.debug("Progress Stats: totalBytesToReceive:{} totalBytesReceived:{} totalBytesToSend:{} totalBytesSent:{}",
+                     totalBytesToReceive, totalBytesReceived, totalBytesToSend, totalBytesSent);
         return new StreamProgressStats(totalFilesToReceive, totalFilesReceived, totalBytesToReceive, totalBytesReceived,
                                        totalFilesToSend, totalFilesSent, totalBytesToSend, totalBytesSent);
 

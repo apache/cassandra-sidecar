@@ -67,7 +67,7 @@ public class StreamStatsHandler extends AbstractHandler<Void>
         executorPools.service()
                      .executeBlocking(() -> {
                          String mode = storageOperations.operationMode();
-                         StreamProgressStats stats = metricsOperations.getStreamProgressStats();
+                         StreamProgressStats stats = metricsOperations.streamProgressStats();
                          return new StreamStatsResponse(mode, stats);
                      })
                      .onSuccess(context::json)

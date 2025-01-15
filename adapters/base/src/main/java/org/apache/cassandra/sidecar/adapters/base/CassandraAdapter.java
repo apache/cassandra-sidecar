@@ -127,7 +127,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public MetricsOperations metricsOperations()
     {
-        return new CassandraMetricsOperations(cqlSessionProvider);
+        return new CassandraMetricsOperations(jmxClient, cqlSessionProvider);
     }
 
     /**

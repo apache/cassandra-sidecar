@@ -142,7 +142,7 @@ public class StreamStatsHandlerTest
             when(ops.operationMode()).thenAnswer((Answer<String>) invocation -> streamingStatsSupplier.get().operationMode());
             when(delegate.storageOperations()).thenReturn(ops);
             MetricsOperations metricsOps = mock(MetricsOperations.class);
-            when(metricsOps.getStreamProgressStats())
+            when(metricsOps.streamProgressStats())
             .thenAnswer((Answer<StreamProgressStats>) invocation -> streamingStatsSupplier.get().streamProgressStats());
             when(delegate.metricsOperations()).thenReturn(metricsOps);
 
