@@ -22,16 +22,6 @@
 #
 version: 2.1
 
-# need to reuse the same base environment for several tests
-aliases:
-  centos: &centos
-    docker:
-      - image: centos:centos8
-    working_directory: ~/repo
-    environment:
-      TERM: dumb
-      TZ: "America/Los_Angeles"
-
 commands:
   install_common:
     steps:
@@ -407,15 +397,13 @@ jobs:
 
   # ensures we can build and install rpm packages
   rpm_build_install:
-    <<: *centos
+    docker:
+      - image: cimg/openjdk:11.0
     steps:
-      - run: sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
-      - run: sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
-      - run: dnf -qy distro-sync
-      - run: dnf -qy install java-11-openjdk git
+      - run: sudo apt-get update && sudo apt install dnf
       - checkout
-      - run: JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.13.0.8-4.el8_5.x86_64 ${PWD}/gradlew -i buildRpm
-      - run: yum install -y ./build/distributions/cassandra-sidecar*.rpm
+      - run: ./gradlew -i buildRpm
+      - run: sudo dnf install -y ./build/distributions/cassandra-sidecar*.rpm
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
 
   docker_build:
