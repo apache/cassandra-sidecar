@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -94,8 +91,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean>
         }
 
         // Get the result, waiting for the specified wait time for result
-        job.asyncResult(executorPools.service(),
-                        Duration.of(config.operationalJobExecutionMaxWaitTimeInMillis(), ChronoUnit.MILLIS))
+        job.asyncResult(executorPools.service(), config.operationalJobExecutionMaxWaitTime())
            .onComplete(v -> OperationalJobUtils.sendStatusBasedResponse(context, job));
     }
 
