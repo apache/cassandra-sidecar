@@ -168,7 +168,7 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
     public int hashCode()
     {
         // Milliseconds seems to be a reasonable tradeoff
-        return Objects.hash(unit.toMillis(quantity));
+        return Objects.hash(toMillis());
     }
 
     /**

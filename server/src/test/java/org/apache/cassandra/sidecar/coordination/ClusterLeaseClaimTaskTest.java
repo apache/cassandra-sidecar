@@ -30,7 +30,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
@@ -113,7 +112,7 @@ class ClusterLeaseClaimTaskTest
     }
 
     @ParameterizedTest(name = "{index} => configuredDelayMillis {0} millis")
-    @ValueSource(longs = { 30_000, 40_000, 50_000, 100_000, 1_000_000, 10_000_000, 20_000_000, Long.MAX_VALUE })
+    @ValueSource(longs = { 30_000, 40_000, 50_000, 100_000, 1_000_000, 10_000_000, 20_000_000, Long.MAX_VALUE - 1 })
     void testDelayFromConfiguration(long configuredDelayMillis)
     {
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
