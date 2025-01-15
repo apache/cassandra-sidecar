@@ -24,7 +24,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
+import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -56,14 +56,12 @@ public class SchemaHandler extends KeyspaceSchemaHandler
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(SidecarPermissions.READ_SCHEMA.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.READ_SCHEMA.toAuthorization(resource));
     }
 
     /**
-     * Parses the request parameters
-     *
-     * @param context the event to handle
-     * @return the keyspace parsed from the request
+     * @param context the request context
+     * @return {@code null} to signify no keyspace for the request
      */
     @Override
     protected Name extractParamsOrThrow(RoutingContext context)

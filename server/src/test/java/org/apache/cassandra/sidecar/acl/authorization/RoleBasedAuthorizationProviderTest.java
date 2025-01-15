@@ -43,7 +43,7 @@ import static org.mockito.Mockito.when;
  * Test for {@link RoleBasedAuthorizationProvider}
  */
 @ExtendWith(VertxExtension.class)
-public class RoleBasedAuthorizationProviderTest
+class RoleBasedAuthorizationProviderTest
 {
     RoleAuthorizationsCache mockRolePermissionsCache;
 
@@ -76,7 +76,7 @@ public class RoleBasedAuthorizationProviderTest
 
         CountDownLatch waitForEmptyAuthorizations = new CountDownLatch(1);
         authorizationProvider.getAuthorizations(user).onComplete(v -> waitForEmptyAuthorizations.countDown());
-        waitForEmptyAuthorizations.await(30, TimeUnit.SECONDS);
+        assertThat(waitForEmptyAuthorizations.await(30, TimeUnit.SECONDS)).isTrue();
 
         assertThat(user.authorizations().get("RoleBasedAccessControl")).isEmpty();
 
@@ -85,7 +85,7 @@ public class RoleBasedAuthorizationProviderTest
 
         CountDownLatch waitForAuthorizations = new CountDownLatch(1);
         authorizationProvider.getAuthorizations(user).onComplete(v -> waitForAuthorizations.countDown());
-        waitForAuthorizations.await(30, TimeUnit.SECONDS);
+        assertThat(waitForAuthorizations.await(30, TimeUnit.SECONDS)).isTrue();
 
         assertThat(user.authorizations().get("RoleBasedAccessControl")).isNotEmpty();
     }
@@ -97,14 +97,14 @@ public class RoleBasedAuthorizationProviderTest
         when(mockIdentityToRoleCache.get("spiffe://cassandra/sidecar/test_user")).thenReturn("test_role");
         RoleAuthorizationsCache mockRolePermissionsCache = mock(RoleAuthorizationsCache.class);
         when(mockRolePermissionsCache.getAuthorizations("test_role"))
-        .thenReturn(new HashSet<>(Arrays.asList(CassandraPermissions.CREATE.toAuthorization(), SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        .thenReturn(new HashSet<>(Arrays.asList(CassandraPermissions.CREATE.toAuthorization(), BasicPermissions.CREATE_SNAPSHOT.toAuthorization())));
         RoleBasedAuthorizationProvider authorizationProvider = new RoleBasedAuthorizationProvider(mockIdentityToRoleCache,
                                                                                                   mockRolePermissionsCache);
         User user = MutualTlsUser.fromIdentities(Collections.singletonList("spiffe://cassandra/sidecar/test_user"));
         authorizationProvider.getAuthorizations(user)
-                             .onComplete(v -> {
-                                 assertThat(user.authorizations().get(authorizationProvider.getId()).size()).isEqualTo(2);
+                             .onComplete(testContext.succeeding(v -> {
+                                 assertThat(user.authorizations().get(authorizationProvider.getId())).hasSize(2);
                                  testContext.completeNow();
-                             });
+                             }));
     }
 }

@@ -29,15 +29,15 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 /**
  * Wildcard permissions allow grouping allowed permissions. They can be represented with ':' wildcard parts divider
  * to divide wildcard parts and '*' wildcard token for matching wildcard parts. Majority of sidecar permissions are
- * represented in format action_allowed:action_target.
+ * represented in format {@code domain}:{@code action}.
  * <p>
- * Example, with CREATE:SNAPSHOT permission, CREATE action is allowed for SNAPSHOT target. Sample actions are
+ * Example, with SNAPSHOT:CREATE permission, the CREATE action is allowed for the SNAPSHOT domain. Sample actions are
  * CREATE, READ, EDIT, UPDATE, DELETE, IMPORT, UPLOAD, START, ABORT etc.
  * <p>
  * Some examples of wildcard permissions are:
- * - *:SNAPSHOT allows CREATE:SNAPSHOT, VIEW:SNAPSHOT and DELETE:SNAPSHOT.
- * - CREATE:* allows CREATE action on all possible targets.
- * - *:* allows all possible permissions for specified resource
+ * - SNAPSHOT:* allows SNAPSHOT:CREATE, SNAPSHOT:VIEW and SNAPSHOT:DELETE.
+ * - *:CREATE allows the CREATE action on all possible targets.
+ * - *:* allows all possible permissions for specified all domains
  */
 public class WildcardPermission extends StandardPermission
 {

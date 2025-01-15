@@ -23,9 +23,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
@@ -44,8 +41,6 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.permissionFromName;
 @Singleton
 public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<SidecarRolePermissionsSchema>
 {
-    private static final Logger logger = LoggerFactory.getLogger(SidecarPermissionsDatabaseAccessor.class);
-
     @Inject
     protected SidecarPermissionsDatabaseAccessor(SidecarRolePermissionsSchema tableSchema,
                                                  CQLSessionProvider sessionProvider)
@@ -57,11 +52,11 @@ public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<Sidecar
      * Queries Sidecar for all rows in sidecar_internal.role_permissions_v1 table. This table maps permissions of a
      * role into {@link Authorization} and returns a {@code Map} of user role to authorizations.
      *
-     * @return - {@code Map} contains role and granted authorizations
+     * @return {@code Map} contains role and granted authorizations
      */
-    public Map<String, Set<Authorization>> getAllRolesAndPermissions()
+    public Map<String, Set<Authorization>> rolesToAuthorizations()
     {
-        BoundStatement statement = tableSchema.getAllRolesAndPermissions().bind();
+        BoundStatement statement = tableSchema.allRolesPermissions().bind();
         ResultSet result = execute(statement);
         Map<String, Set<Authorization>> roleAuthorizations = new HashMap<>();
         for (Row row : result)
@@ -78,7 +73,7 @@ public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<Sidecar
                 }
                 catch (Exception e)
                 {
-                    logger.error("Error on parsing sidecar permission={} resource={} role={}",
+                    logger.error("Error parsing Sidecar permission={} resource={} role={}",
                                  permission, resource, role, e);
                 }
             }

@@ -30,9 +30,9 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.authorization.Authorization;
+import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -73,11 +73,11 @@ class RoleAuthorizationsCacheTest
         Map<String, Set<Authorization>> cassandraAuthorizations = new HashMap<>();
         cassandraAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(CassandraPermissions.SELECT.toAuthorization())));
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(cassandraAuthorizations);
+        when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(cassandraAuthorizations);
         Map<String, Set<Authorization>> sidecarAuthorizations = new HashMap<>();
-        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(BasicPermissions.CREATE_SNAPSHOT.toAuthorization())));
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
-        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
+        when(mockSidecarPermissionsAccessor.rolesToAuthorizations()).thenReturn(sidecarAuthorizations);
         SidecarConfiguration mockConfig = mockConfig();
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
@@ -89,8 +89,8 @@ class RoleAuthorizationsCacheTest
         assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(2);
         assertThat(cache.getAll().size()).isOne();
 
-        sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(SidecarPermissions.STREAM_SSTABLE.toAuthorization())));
-        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
+        sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(BasicPermissions.STREAM_SNAPSHOT.toAuthorization())));
+        when(mockSidecarPermissionsAccessor.rolesToAuthorizations()).thenReturn(sidecarAuthorizations);
 
         // wait for cache entries to be refreshed
         Thread.sleep(3000);
@@ -106,11 +106,11 @@ class RoleAuthorizationsCacheTest
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         Map<String, Set<Authorization>> cassandraAuthorizations = new HashMap<>();
         cassandraAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(CassandraPermissions.SELECT.toAuthorization())));
-        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(cassandraAuthorizations);
+        when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(cassandraAuthorizations);
         Map<String, Set<Authorization>> sidecarAuthorizations = new HashMap<>();
-        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(BasicPermissions.CREATE_SNAPSHOT.toAuthorization())));
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
-        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
+        when(mockSidecarPermissionsAccessor.rolesToAuthorizations()).thenReturn(sidecarAuthorizations);
         SidecarConfiguration mockConfig = mockConfig();
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
@@ -131,10 +131,10 @@ class RoleAuthorizationsCacheTest
     void testBulkload() throws InterruptedException
     {
         Map<String, Set<Authorization>> sidecarAuthorizations = new HashMap<>();
-        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
-        sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(SidecarPermissions.STREAM_SSTABLE.toAuthorization())));
+        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(BasicPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(BasicPermissions.STREAM_SNAPSHOT.toAuthorization())));
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
+        when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         SidecarConfiguration mockConfig = mockConfig();
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
@@ -159,10 +159,10 @@ class RoleAuthorizationsCacheTest
     void testCacheDisabled()
     {
         Map<String, Set<Authorization>> sidecarAuthorizations = new HashMap<>();
-        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
-        sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(SidecarPermissions.STREAM_SSTABLE.toAuthorization())));
+        sidecarAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(BasicPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(BasicPermissions.STREAM_SNAPSHOT.toAuthorization())));
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
+        when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         SidecarConfiguration mockConfig = mockConfig();
         when(mockConfig.accessControlConfiguration().permissionCacheConfiguration().enabled()).thenReturn(false);
@@ -180,7 +180,7 @@ class RoleAuthorizationsCacheTest
     void testEmptyEntriesFromSystemAuthDatabaseAccessor() throws InterruptedException
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(Collections.emptyMap());
+        when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(Collections.emptyMap());
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         SidecarConfiguration mockConfig = mockConfig();
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
@@ -207,11 +207,11 @@ class RoleAuthorizationsCacheTest
         cassandraAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(CassandraPermissions.SELECT.toAuthorization())));
         cassandraAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(CassandraPermissions.CREATE.toAuthorization())));
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getAllRolesAndPermissions()).thenReturn(cassandraAuthorizations);
+        when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(cassandraAuthorizations);
         Map<String, Set<Authorization>> sidecarAuthorizations = new HashMap<>();
-        sidecarAuthorizations.put("test_role3", new HashSet<>(Collections.singletonList(SidecarPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        sidecarAuthorizations.put("test_role3", new HashSet<>(Collections.singletonList(BasicPermissions.CREATE_SNAPSHOT.toAuthorization())));
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
-        when(mockSidecarPermissionsAccessor.getAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
+        when(mockSidecarPermissionsAccessor.rolesToAuthorizations()).thenReturn(sidecarAuthorizations);
         SidecarConfiguration mockConfig = mockConfig();
         SidecarSchema mockSidecarSchema = mock(SidecarSchema.class);
         when(mockSidecarSchema.isInitialized()).thenReturn(false);

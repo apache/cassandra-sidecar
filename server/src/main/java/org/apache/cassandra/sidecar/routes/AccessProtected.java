@@ -20,15 +20,17 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.util.Set;
 
+import io.vertx.core.Handler;
 import io.vertx.ext.auth.authorization.Authorization;
 
 /**
- * Provides authorizations that Handler requires for access.
+ * Interface for authorized routes that defines the set of {@link Authorization}s required by the implementing
+ * {@link Handler}.
  */
 public interface AccessProtected
 {
     /**
-     * @return Set of authorizations required.
+     * @return the set of required authorizations
      */
     Set<Authorization> requiredAuthorizations();
 }

@@ -176,12 +176,14 @@ access_control:
         # other options are, io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor.
         certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor
   authorizer:
-    # AuthorizationProvider provides authorizations an authenticated user holds.
+    # Authorization backend, implementing io.vertx.ext.auth.authorization.AuthorizationProvider; used to
+    # limit access/provide permissions.
+    # Out of the box, Cassandra Sidecar provides
+    # org.apache.cassandra.sidecar.acl.authorization.{AllowAllAuthorizationProvider, RoleBasedAuthorizationProvider}.
     #
-    # org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider marks all requests as authorized.
-    # It is used when requests to be only authenticated and not authorized. Other options are
-    # org.apache.cassandra.sidecar.acl.authorization.RoleBaseAuthorizationProvider, it validates
-    # role associated with authenticated user has permission for resource it accesses.
+    # - AllowAllAuthorizationProvider  allows any action to any user - use it to disable authorization.
+    # - RoleBasedAuthorizationProvider validates role associated with authenticated user has permission
+    #                                  for resource it accesses.
     - class_name: org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider
   # Identities that are authenticated and authorized.
   admin_identities:
@@ -197,18 +199,19 @@ driver_parameters:
   contact_points:
     - "127.0.0.1:9042"
     - "127.0.0.2:9042"
+    - "127.0.0.3:9042"
   username: cassandra
   password: cassandra
-  ssl:
-    enabled:  false
-    keystore:
-      type: PKCS12
-      path: path/to/keystore.p12
-      password: password
-    truststore:
-      type: PKCS12
-      path: path/to/keystore.p12
-      password: password
+#  ssl:
+#    enabled:  false
+#    keystore:
+#      type: PKCS12
+#      path: path/to/keystore.p12
+#      password: password
+#    truststore:
+#      type: PKCS12
+#      path: path/to/keystore.p12
+#      password: password
   num_connections: 6
 #  local_dc: datacenter1
 

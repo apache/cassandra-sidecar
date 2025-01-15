@@ -49,11 +49,11 @@ class SystemAuthSchemaTest
         when(mockSession.getCluster()).thenReturn(mockCluster);
 
         SystemAuthSchema systemAuthSchema = new SystemAuthSchema();
-        assertThatThrownBy(systemAuthSchema::selectRoleFromIdentity)
+        assertThatThrownBy(systemAuthSchema::roleFromIdentity)
         .isExactlyInstanceOf(SchemaUnavailableException.class)
-        .hasMessage("Table system_auth/identity_to_role does not exist");
-        assertThatThrownBy(systemAuthSchema::getAllRolesAndIdentities)
+        .hasMessage("Table system_auth.identity_to_role does not exist");
+        assertThatThrownBy(systemAuthSchema::allRolesAndIdentities)
         .isExactlyInstanceOf(SchemaUnavailableException.class)
-        .hasMessage("Table system_auth/identity_to_role does not exist");
+        .hasMessage("Table system_auth.identity_to_role does not exist");
     }
 }

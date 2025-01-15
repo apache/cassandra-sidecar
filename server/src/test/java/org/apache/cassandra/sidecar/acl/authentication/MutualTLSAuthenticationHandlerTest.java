@@ -308,11 +308,11 @@ class MutualTLSAuthenticationHandlerTest
                                 .build();
 
 
+            String className = "org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider";
             AccessControlConfiguration accessControlConfiguration
             = new AccessControlConfigurationImpl(true,
                                                  authenticatorsConfiguration(),
-                                                 new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider",
-                                                                                         Collections.emptyMap()),
+                                                 new ParameterizedClassConfigurationImpl(className, Collections.emptyMap()),
                                                  Collections.singleton(ADMIN_IDENTITY),
                                                  new CacheConfigurationImpl());
 

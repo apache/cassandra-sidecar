@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
-import io.vertx.ext.auth.authorization.impl.PermissionBasedAuthorizationImpl;
 
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
@@ -51,7 +50,7 @@ public class StandardPermission implements Permission
     @Override
     public Authorization toAuthorization(String resource)
     {
-        PermissionBasedAuthorization authorization = new PermissionBasedAuthorizationImpl(name);
+        PermissionBasedAuthorization authorization = PermissionBasedAuthorization.create(name);
         if (isNotEmpty(resource))
         {
             authorization.setResource(resource);

@@ -33,18 +33,11 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
 {
     private static final String IDENTITY_TO_ROLE_TABLE = "identity_to_role";
 
-    private static final String SELECT_ROLE_FROM_IDENTITY
-    = "SELECT role FROM system_auth.identity_to_role WHERE identity = ?";
-    private static final String GET_ALL_ROLES_AND_IDENTITIES = "SELECT * FROM system_auth.identity_to_role";
-    private static final String GET_SUPER_USER_STATUS = "SELECT * FROM system_auth.roles WHERE role = ?";
-    private static final String GET_ROLES = "SELECT * FROM system_auth.roles";
-    private static final String GET_ALL_ROLES_AND_PERMISSIONS = "SELECT * FROM system_auth.role_permissions";
-
-    private PreparedStatement selectRoleFromIdentity;
-    private PreparedStatement getAllRolesAndIdentities;
-    private PreparedStatement getSuperUserStatus;
-    private PreparedStatement getRoles;
-    private PreparedStatement getAllRolesAndPermissions;
+    private PreparedStatement roleFromIdentity;
+    private PreparedStatement allRolesAndIdentities;
+    private PreparedStatement roleSuperuserStatus;
+    private PreparedStatement allRoles;
+    private PreparedStatement allRolesAndPermissions;
 
     @Override
     protected String keyspaceName()
@@ -55,17 +48,9 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     @Override
     protected void prepareStatements(@NotNull Session session)
     {
-        getSuperUserStatus = prepare(getSuperUserStatus,
-                                     session,
-                                     GET_SUPER_USER_STATUS);
-
-        getRoles = prepare(getRoles,
-                           session,
-                           GET_ROLES);
-
-        getAllRolesAndPermissions = prepare(getAllRolesAndPermissions,
-                                            session,
-                                            GET_ALL_ROLES_AND_PERMISSIONS);
+        roleSuperuserStatus = prepare(roleSuperuserStatus, session, "SELECT is_superuser FROM system_auth.roles WHERE role = ?");
+        allRoles = prepare(allRoles, session, "SELECT * FROM system_auth.roles");
+        allRolesAndPermissions = prepare(allRolesAndPermissions, session, "SELECT * FROM system_auth.role_permissions");
 
         KeyspaceMetadata keyspaceMetadata = session.getCluster().getMetadata().getKeyspace(keyspaceName());
         // identity_to_role table exists in Cassandra versions starting 5.x
@@ -74,13 +59,8 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
             logger.info("Auth table does not exist. Skip preparing. table={}/{}", keyspaceName(), IDENTITY_TO_ROLE_TABLE);
             return;
         }
-        selectRoleFromIdentity = prepare(selectRoleFromIdentity,
-                                         session,
-                                         SELECT_ROLE_FROM_IDENTITY);
-
-        getAllRolesAndIdentities = prepare(getAllRolesAndIdentities,
-                                           session,
-                                           GET_ALL_ROLES_AND_IDENTITIES);
+        roleFromIdentity = prepare(roleFromIdentity, session, "SELECT role FROM system_auth.identity_to_role WHERE identity = ?");
+        allRolesAndIdentities = prepare(allRolesAndIdentities, session, "SELECT role, identity FROM system_auth.identity_to_role");
     }
 
     @Override
@@ -91,39 +71,39 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     }
 
     @NotNull
-    public PreparedStatement selectRoleFromIdentity()
+    public PreparedStatement roleFromIdentity()
     {
         ensureSchemaAvailable();
-        return selectRoleFromIdentity;
+        return roleFromIdentity;
     }
 
     @NotNull
-    public PreparedStatement getAllRolesAndIdentities()
+    public PreparedStatement allRolesAndIdentities()
     {
         ensureSchemaAvailable();
-        return getAllRolesAndIdentities;
+        return allRolesAndIdentities;
     }
 
-    public PreparedStatement getAllRolesAndPermissions()
+    public PreparedStatement allRolesAndPermissions()
     {
-        return getAllRolesAndPermissions;
+        return allRolesAndPermissions;
     }
 
-    public PreparedStatement getGetSuperUserStatus()
+    public PreparedStatement roleSuperuserStatus()
     {
-        return getSuperUserStatus;
+        return roleSuperuserStatus;
     }
 
-    public PreparedStatement getRoles()
+    public PreparedStatement allRoles()
     {
-        return getRoles;
+        return allRoles;
     }
 
     protected void ensureSchemaAvailable() throws SchemaUnavailableException
     {
-        if (selectRoleFromIdentity == null || getAllRolesAndIdentities == null)
+        if (roleFromIdentity == null || allRolesAndIdentities == null)
         {
-            throw new SchemaUnavailableException(String.format("Table %s/%s does not exist",
+            throw new SchemaUnavailableException(String.format("Table %s.%s does not exist",
                                                                keyspaceName(), IDENTITY_TO_ROLE_TABLE));
         }
     }

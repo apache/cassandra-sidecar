@@ -57,8 +57,11 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Boolean> implem
     public Set<Authorization> requiredAuthorizations()
     {
         List<String> eligibleResources = Arrays.asList(VariableAwareResource.DATA.resource(),
+                                                       // Keyspace access to system_views
                                                        "data/system_views",
+                                                       // Access to all tables in keyspace system_views
                                                        "data/system_views/*",
+                                                       // Access to the clients table in the system_views keyspace
                                                        "data/system_views/clients");
         return Collections.singleton(CassandraPermissions.SELECT.toAuthorization(eligibleResources));
     }

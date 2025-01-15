@@ -96,12 +96,12 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
                                                                       SidecarSchema sidecarSchema,
                                                                       SidecarPermissionsDatabaseAccessor sidecarPermissionsDatabaseAccessor)
     {
-        Map<String, Set<Authorization>>  roleAuthorizations = systemAuthDatabaseAccessor.getAllRolesAndPermissions();
+        Map<String, Set<Authorization>> roleAuthorizations = systemAuthDatabaseAccessor.findAllRolesAndPermissions();
 
         if (sidecarSchema.isInitialized())
         {
             Map<String, Set<Authorization>> sidecarAuthorizations
-            = sidecarPermissionsDatabaseAccessor.getAllRolesAndPermissions();
+            = sidecarPermissionsDatabaseAccessor.rolesToAuthorizations();
 
             // merge authorizations from Cassandra and Sidecar tables
             sidecarAuthorizations.forEach((role, authorizations) -> {

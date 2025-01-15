@@ -50,7 +50,7 @@ class PermissionTest
     void testInvalidActions()
     {
         assertThatThrownBy(() -> permissionFromName("")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> permissionFromName(null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> permissionFromName(null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
@@ -88,6 +88,10 @@ class PermissionTest
         .hasMessage("Wildcard permission parts can not be empty");
 
         assertThatThrownBy(() -> new WildcardPermission("::"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Wildcard permission parts can not be empty");
+
+        assertThatThrownBy(() -> new WildcardPermission("a::d"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Wildcard permission parts can not be empty");
     }

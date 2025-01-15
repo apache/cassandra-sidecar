@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test for {@link SidecarPermissionsDatabaseAccessor}
  */
-class SidecarPermissionsDatabaseAccessorTest
+class BasicPermissionsDatabaseAccessorTest
 {
     @Test
     void testReadingInvalidActions()
@@ -46,13 +46,13 @@ class SidecarPermissionsDatabaseAccessorTest
         PreparedStatement mockStmt = mock(PreparedStatement.class);
         BoundStatement mockBoundStmt = mock(BoundStatement.class);
         when(mockStmt.bind()).thenReturn(mockBoundStmt);
-        when(mockSchema.getAllRolesAndPermissions()).thenReturn(mockStmt);
+        when(mockSchema.allRolesPermissions()).thenReturn(mockStmt);
 
         CQLSessionProvider mockSessionProvider = mock(CQLSessionProvider.class);
         TestSidecarPermissionsDatabaseAccessor sidecarPermissionsDatabaseAccessor
         = new TestSidecarPermissionsDatabaseAccessor(mockSchema, mockSessionProvider);
 
-        assertThat(sidecarPermissionsDatabaseAccessor.getAllRolesAndPermissions()).isEmpty();
+        assertThat(sidecarPermissionsDatabaseAccessor.rolesToAuthorizations()).isEmpty();
     }
 
     static class TestSidecarPermissionsDatabaseAccessor extends SidecarPermissionsDatabaseAccessor

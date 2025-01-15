@@ -22,6 +22,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.User;
+import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.AuthorizationContext;
 import io.vertx.ext.auth.authorization.AuthorizationProvider;
 
 /**
@@ -29,11 +31,25 @@ import io.vertx.ext.auth.authorization.AuthorizationProvider;
  */
 public class AllowAllAuthorizationProvider implements AuthorizationProvider
 {
-    public static final AllowAllAuthorizationProvider INSTANCE = new AllowAllAuthorizationProvider();
+    final Authorization authorization;
 
-    // use static INSTANCE
-    private AllowAllAuthorizationProvider()
+    public AllowAllAuthorizationProvider()
     {
+        // Authorization that always allows
+        authorization = new Authorization()
+        {
+            @Override
+            public boolean match(AuthorizationContext context)
+            {
+                return true;
+            }
+
+            @Override
+            public boolean verify(Authorization authorization)
+            {
+                return true;
+            }
+        };
     }
 
     /**
@@ -59,7 +75,7 @@ public class AllowAllAuthorizationProvider implements AuthorizationProvider
             return Future.failedFuture("User cannot be null");
         }
 
-        user.authorizations().add(getId(), AllowAllAuthorization.INSTANCE);
+        user.authorizations().add(getId(), authorization);
         return Future.succeededFuture();
     }
 }

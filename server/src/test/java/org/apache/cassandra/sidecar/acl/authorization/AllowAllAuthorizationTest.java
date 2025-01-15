@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.Set;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -37,30 +38,37 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 @ExtendWith(VertxExtension.class)
 class AllowAllAuthorizationTest
 {
+    AllowAllAuthorizationProvider provider;
+
+    @BeforeEach
+    void setup()
+    {
+        provider = new AllowAllAuthorizationProvider();
+    }
+
     @Test
     void testAllowAllAuthorizationMatching()
     {
         Authorization authorization = new PermissionBasedAuthorizationImpl("test_permission");
         User user = User.fromName("test_user");
         assertThat(authorization.match(user)).isFalse();
-        user.authorizations().add(AllowAllAuthorizationProvider.INSTANCE.getId(), AllowAllAuthorization.INSTANCE);
+        user.authorizations().add(provider.getId(), provider.authorization);
         assertThat(authorization.match(user)).isTrue();
-        assertThat(AllowAllAuthorization.INSTANCE.verify(authorization)).isTrue();
+        assertThat(provider.authorization.verify(authorization)).isTrue();
     }
 
     @Test
     void testAuthorizationsWithAllowAllProvider(VertxTestContext testContext)
     {
-        AllowAllAuthorizationProvider authorizationProvider = AllowAllAuthorizationProvider.INSTANCE;
         User user = User.fromName("test_user");
-        authorizationProvider.getAuthorizations(user)
-                             .onComplete(v -> {
-                                 Authorization authorization = new PermissionBasedAuthorizationImpl("test_permission");
-                                 Set<Authorization> found = user.authorizations().get(authorizationProvider.getId());
-                                 assertThat(found.size()).isOne();
-                                 assertThat(found.contains(AllowAllAuthorization.INSTANCE)).isTrue();
-                                 assertThat(found.iterator().next().verify(authorization)).isTrue();
-                                 testContext.completeNow();
-                             });
+        provider.getAuthorizations(user)
+                .onComplete(v -> {
+                    Authorization authorization = new PermissionBasedAuthorizationImpl("test_permission");
+                    Set<Authorization> found = user.authorizations().get(provider.getId());
+                    assertThat(found.size()).isOne();
+                    assertThat(found.contains(provider.authorization)).isTrue();
+                    assertThat(found.iterator().next().verify(authorization)).isTrue();
+                    testContext.completeNow();
+                });
     }
 }

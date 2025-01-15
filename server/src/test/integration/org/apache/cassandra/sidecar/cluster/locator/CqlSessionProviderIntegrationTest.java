@@ -45,7 +45,7 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
     private static final int MIN_VERSION_WITH_MTLS = 5;
 
     @CassandraIntegrationTest(authMode = AuthMode.PASSWORD)
-     void testWithUsernamePassword(VertxTestContext context) throws Exception
+    void testWithUsernamePassword(VertxTestContext context) throws Exception
     {
         waitForSchemaReady(30, TimeUnit.SECONDS);
         retrieveClientStats(context, "cassandra", false);
@@ -125,7 +125,8 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
 
     private void insertIdentityRole(CassandraTestContext cassandraContext, String identity, String role)
     {
-        cassandraContext.cluster()
-                        .schemaChangeIgnoringStoppedInstances("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
+        String statement = String.format("INSERT INTO system_auth.identity_to_role (identity, role) VALUES ('%s','%s')",
+                                         identity, role);
+        cassandraContext.cluster().schemaChangeIgnoringStoppedInstances(statement);
     }
 }

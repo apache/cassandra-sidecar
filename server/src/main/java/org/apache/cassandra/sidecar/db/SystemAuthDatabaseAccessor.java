@@ -51,12 +51,12 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
     /**
      * Queries Cassandra for the role associated with given identity.
      *
-     * @param identity  Identity of user extracted
+     * @param identity identity of user extracted
      * @return the role associated with the given identity in Cassandra
      */
     public String findRoleFromIdentity(String identity)
     {
-        BoundStatement statement = tableSchema.selectRoleFromIdentity().bind(identity);
+        BoundStatement statement = tableSchema.roleFromIdentity().bind(identity);
         ResultSet result = execute(statement);
         Row row = result.one();
         return row != null ? row.getString("role") : null;
@@ -69,7 +69,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public Map<String, String> findAllIdentityToRoles()
     {
-        BoundStatement statement = tableSchema.getAllRolesAndIdentities().bind();
+        BoundStatement statement = tableSchema.allRolesAndIdentities().bind();
         ResultSet resultSet = execute(statement);
         Map<String, String> results = new HashMap<>();
         for (Row row : resultSet)
@@ -85,9 +85,9 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      *
      * @return - {@code Map} contains role and granted authorizations
      */
-    public Map<String, Set<Authorization>> getAllRolesAndPermissions()
+    public Map<String, Set<Authorization>> findAllRolesAndPermissions()
     {
-        BoundStatement statement = tableSchema.getAllRolesAndPermissions().bind();
+        BoundStatement statement = tableSchema.allRolesAndPermissions().bind();
         ResultSet result = execute(statement);
         Map<String, Set<Authorization>> roleAuthorizations = new HashMap<>();
         for (Row row : result)
@@ -111,20 +111,18 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public boolean isSuperUser(String role)
     {
-        BoundStatement statement = tableSchema.getGetSuperUserStatus().bind(role);
+        BoundStatement statement = tableSchema.roleSuperuserStatus().bind(role);
         ResultSet result = execute(statement);
         Row row = result.one();
         return row != null && row.getBool("is_superuser");
     }
 
     /**
-     * Queries Cassandra for all roles.
-     *
-     * @return - {@code Map} containing role, and their superuser status
+     * @return a map of roles to superuser status
      */
-    public Map<String, Boolean> getRoles()
+    public Map<String, Boolean> findAllRolesToSuperuserStatus()
     {
-        BoundStatement statement = tableSchema.getRoles().bind();
+        BoundStatement statement = tableSchema.allRoles().bind();
         ResultSet result = execute(statement);
         Map<String, Boolean> roles = new HashMap<>();
         for (Row row : result)

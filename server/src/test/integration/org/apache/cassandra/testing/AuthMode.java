@@ -23,7 +23,18 @@ package org.apache.cassandra.testing;
  */
 public enum AuthMode
 {
+    /**
+     * Cassandra is configured with no authentication
+     */
     NONE,
+
+    /**
+     * Cassandra is configured with the PasswordAuthenticator
+     */
     PASSWORD,
+
+    /**
+     * Cassandra is configured with the MutualTLSWithPasswordFallbackAuthenticator
+     */
     MUTUAL_TLS
 }

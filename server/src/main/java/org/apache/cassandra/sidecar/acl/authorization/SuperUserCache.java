@@ -42,13 +42,13 @@ public class SuperUserCache extends AuthCache<String, Boolean>
               vertx,
               executorPools,
               systemAuthDatabaseAccessor::isSuperUser,
-              systemAuthDatabaseAccessor::getRoles,
+              systemAuthDatabaseAccessor::findAllRolesToSuperuserStatus,
               sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration());
     }
 
     public boolean isSuperUser(String role)
     {
         Boolean superUserStatus = get(role);
-        return superUserStatus != null ? superUserStatus : false;
+        return superUserStatus != null && superUserStatus;
     }
 }

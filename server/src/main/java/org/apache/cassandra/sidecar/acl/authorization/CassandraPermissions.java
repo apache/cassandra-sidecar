@@ -19,7 +19,10 @@
 package org.apache.cassandra.sidecar.acl.authorization;
 
 /**
- * Cassandra permissions allowed.
+ * Cassandra permissions allowed. These map to Cassandra permissions in
+ * <a href="https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/auth/Permission.java">
+ *     org.apache.cassandra.auth.Permission</a>
+ * under the Cassandra codebase.
  */
 public class CassandraPermissions
 {

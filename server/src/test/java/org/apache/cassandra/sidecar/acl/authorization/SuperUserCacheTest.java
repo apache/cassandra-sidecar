@@ -34,6 +34,7 @@ import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 
+import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +44,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test for {@link SuperUserCache}
  */
-public class SuperUserCacheTest
+class SuperUserCacheTest
 {
     Vertx vertx;
     ExecutorPools executorPools;
@@ -56,11 +57,11 @@ public class SuperUserCacheTest
     }
 
     @Test
-    void testBulkload() throws InterruptedException
+    void testBulkLoad()
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getRoles()).thenReturn(ImmutableMap.of("test_role1", true,
-                                                                   "test_role2", false));
+        when(mockDbAccessor.findAllRolesToSuperuserStatus()).thenReturn(ImmutableMap.of("test_role1", true,
+                                                                                        "test_role2", false));
         SidecarConfiguration mockConfig = mockConfig();
         SuperUserCache cache = new SuperUserCache(vertx, executorPools, mockConfig, mockDbAccessor);
         assertThat(cache.getAll().size()).isZero();
@@ -69,10 +70,11 @@ public class SuperUserCacheTest
         vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
 
         // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
-        Thread.sleep(3000);
-        assertThat(cache.getAll().size()).isEqualTo(2);
-        assertThat(cache.isSuperUser("test_role1")).isTrue();
-        assertThat(cache.isSuperUser("test_role2")).isFalse();
+        loopAssert(3, 100, () -> {
+            assertThat(cache.getAll()).hasSize(2);
+            assertThat(cache.isSuperUser("test_role1")).isTrue();
+            assertThat(cache.isSuperUser("test_role2")).isFalse();
+        });
     }
 
     @Test
@@ -83,7 +85,7 @@ public class SuperUserCacheTest
         superUserMap.put("test_role2", false);
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.isSuperUser("test_role")).thenReturn(true);
-        when(mockDbAccessor.getRoles()).thenReturn(superUserMap);
+        when(mockDbAccessor.findAllRolesToSuperuserStatus()).thenReturn(superUserMap);
         SidecarConfiguration mockConfig = mockConfig();
         when(mockConfig.accessControlConfiguration().permissionCacheConfiguration().enabled()).thenReturn(false);
         SuperUserCache superUserCache = new SuperUserCache(vertx, executorPools, mockConfig, mockDbAccessor);
@@ -93,10 +95,10 @@ public class SuperUserCacheTest
     }
 
     @Test
-    void testEmptyEntriesFetched() throws InterruptedException
+    void testEmptyEntriesFetched()
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.getRoles()).thenReturn(Collections.emptyMap());
+        when(mockDbAccessor.findAllRolesToSuperuserStatus()).thenReturn(Collections.emptyMap());
         SidecarConfiguration mockConfig = mockConfig();
         SuperUserCache cache = new SuperUserCache(vertx, executorPools, mockConfig, mockDbAccessor);
         assertThat(cache.getAll().size()).isZero();
@@ -105,8 +107,7 @@ public class SuperUserCacheTest
         vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
 
         // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
-        Thread.sleep(3000);
-        assertThat(cache.getAll().size()).isZero();
+        loopAssert(3, 100, () -> assertThat(cache.getAll().size()).isZero());
     }
 
     private SidecarConfiguration mockConfig()

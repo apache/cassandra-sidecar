@@ -125,6 +125,7 @@ import org.apache.cassandra.sidecar.routes.SchemaHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.TimeSkewHandler;
 import org.apache.cassandra.sidecar.routes.TokenRangeReplicaMapHandler;
+import org.apache.cassandra.sidecar.routes.ValidatedKeyspaceTableNameHandler;
 import org.apache.cassandra.sidecar.routes.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.routes.cdc.ListCdcDirHandler;
 import org.apache.cassandra.sidecar.routes.cdc.StreamCdcSegmentHandler;
@@ -266,7 +267,7 @@ public class MainModule extends AbstractModule
         AccessControlConfiguration accessControlConfiguration = sidecarConfiguration.accessControlConfiguration();
         if (!accessControlConfiguration.enabled())
         {
-            return AllowAllAuthorizationProvider.INSTANCE;
+            return new AllowAllAuthorizationProvider();
         }
 
         ParameterizedClassConfiguration config = accessControlConfiguration.authorizerConfiguration();
@@ -277,7 +278,7 @@ public class MainModule extends AbstractModule
 
         if (config.className().equalsIgnoreCase(AllowAllAuthorizationProvider.class.getName()))
         {
-            return AllowAllAuthorizationProvider.INSTANCE;
+            return new AllowAllAuthorizationProvider();
         }
         if (config.className().equalsIgnoreCase(RoleBasedAuthorizationProvider.class.getName()))
         {
@@ -290,11 +291,13 @@ public class MainModule extends AbstractModule
     @Singleton
     public Supplier<AccessProtectedRouteBuilder> accessProtectedRouteBuilderFactory(SidecarConfiguration sidecarConfiguration,
                                                                                     AuthorizationProvider authorizationProvider,
-                                                                                    AdminIdentityResolver adminIdentityResolver)
+                                                                                    AdminIdentityResolver adminIdentityResolver,
+                                                                                    ValidatedKeyspaceTableNameHandler validatedKeyspaceTableNameHandler)
     {
         return () -> new AccessProtectedRouteBuilder(sidecarConfiguration.accessControlConfiguration(),
                                                      authorizationProvider,
-                                                     adminIdentityResolver);
+                                                     adminIdentityResolver,
+                                                     validatedKeyspaceTableNameHandler);
     }
 
     @Provides

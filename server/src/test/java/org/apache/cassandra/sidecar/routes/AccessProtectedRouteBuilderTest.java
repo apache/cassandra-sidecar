@@ -32,7 +32,7 @@ import static org.mockito.Mockito.mock;
 /**
  * Test for {@link AccessProtectedRouteBuilder}
  */
-public class AccessProtectedRouteBuilderTest
+class AccessProtectedRouteBuilderTest
 {
     @Test
     void testRequiredParameters()
@@ -40,9 +40,11 @@ public class AccessProtectedRouteBuilderTest
         AccessControlConfiguration mockConfig = mock(AccessControlConfiguration.class);
         AuthorizationProvider mockAuthorizationProvider = mock(AuthorizationProvider.class);
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
+        ValidatedKeyspaceTableNameHandler mockHandler = mock(ValidatedKeyspaceTableNameHandler.class);
         AccessProtectedRouteBuilder accessProtectedRouteBuilder = new AccessProtectedRouteBuilder(mockConfig,
                                                                                                   mockAuthorizationProvider,
-                                                                                                  mockAdminIdentityResolver);
+                                                                                                  mockAdminIdentityResolver,
+                                                                                                  mockHandler);
         assertThatThrownBy(accessProtectedRouteBuilder::build).isInstanceOf(IllegalArgumentException.class);
         Router mockRouter = mock(Router.class);
         accessProtectedRouteBuilder.router(mockRouter);

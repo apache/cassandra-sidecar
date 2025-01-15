@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
@@ -54,17 +55,19 @@ public class AuthUtils
 
         List<String> identities = new ArrayList<>();
 
-        if (principal.containsKey("identity"))
+        String identity = principal.getString("identity");
+        if (identity != null)
         {
-            identities.add(principal.getString("identity"));
+            identities.add(identity);
         }
 
-        if (principal.containsKey("identities"))
+        String identitiesString = user.principal().getString("identities");
+        if (identitiesString != null)
         {
-            String[] parts = user.principal().getString("identities").split(",");
+            String[] parts = identitiesString.split(",");
             identities.addAll(Arrays.asList(parts));
         }
-        return identities;
+        return Collections.unmodifiableList(identities);
     }
 
     /**
@@ -72,16 +75,10 @@ public class AuthUtils
      */
     public static Permission permissionFromName(String name)
     {
-        if (name == null)
-        {
-            throw new IllegalArgumentException("Name can not be null");
-        }
-
+        Objects.requireNonNull(name, "name cannot be null");
         boolean isWildCard = name.equals(WILDCARD_TOKEN) || name.contains(WILDCARD_PART_DIVIDER_TOKEN);
-        if (isWildCard)
-        {
-            return new WildcardPermission(name);
-        }
-        return new StandardPermission(name);
+        return isWildCard
+               ? new WildcardPermission(name)
+               : new StandardPermission(name);
     }
 }

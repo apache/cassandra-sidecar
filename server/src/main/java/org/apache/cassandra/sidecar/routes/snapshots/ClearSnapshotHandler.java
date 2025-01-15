@@ -30,8 +30,10 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.OrAuthorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
+import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.acl.authorization.FeaturePermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -61,7 +63,9 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequestParam> 
     public Set<Authorization> requiredAuthorizations()
     {
         List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
-        return Collections.singleton(SidecarPermissions.DELETE_SNAPSHOT.toAuthorization(eligibleResources));
+        return Collections.singleton(OrAuthorization.create()
+                                                    .addAuthorization(FeaturePermissions.BULK_READ_DIRECT.toAuthorization(eligibleResources))
+                                                    .addAuthorization(BasicPermissions.DELETE_SNAPSHOT.toAuthorization(eligibleResources)));
     }
 
     /**

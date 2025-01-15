@@ -69,8 +69,8 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraTestTemplate.class);
     private static final int MIN_VERSION_WITH_MTLS = 5;
-    private String truststorePassword = "password";
-    private String serverKeystorePassword = "password";
+    private final String truststorePassword = "password";
+    private final String serverKeystorePassword = "password";
 
     private AbstractCassandraTestContext cassandraTestContext;
 

@@ -32,8 +32,8 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.OrAuthorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.server.data.Name;
@@ -45,7 +45,7 @@ import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * The {@link SchemaHandler} class handles schema requests
+ * The {@link KeyspaceSchemaHandler} class handles keyspace schema requests
  */
 @Singleton
 public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements AccessProtected
@@ -69,12 +69,14 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     public Set<Authorization> requiredAuthorizations()
     {
         List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE.expandedResources();
-        OrAuthorization or = OrAuthorization.create();
-        or.addAuthorization(CassandraPermissions.CREATE.toAuthorization(eligibleResources));
-        or.addAuthorization(CassandraPermissions.ALTER.toAuthorization(eligibleResources));
-        or.addAuthorization(CassandraPermissions.DROP.toAuthorization(eligibleResources));
-        or.addAuthorization(CassandraPermissions.DESCRIBE.toAuthorization(eligibleResources));
-        or.addAuthorization(SidecarPermissions.READ_SCHEMA.toAuthorization(eligibleResources));
+        // TODO: these do not make sense. Why do we allow on CREATE, ALTER, DROP? 
+        //       READ_SCHEMA makes sense and maybe describe?
+        OrAuthorization or = OrAuthorization.create()
+                                            .addAuthorization(CassandraPermissions.CREATE.toAuthorization(eligibleResources))
+                                            .addAuthorization(CassandraPermissions.ALTER.toAuthorization(eligibleResources))
+                                            .addAuthorization(CassandraPermissions.DROP.toAuthorization(eligibleResources))
+                                            .addAuthorization(CassandraPermissions.DESCRIBE.toAuthorization(eligibleResources))
+                                            .addAuthorization(BasicPermissions.READ_SCHEMA.toAuthorization(eligibleResources));
         return Collections.singleton(or);
     }
 

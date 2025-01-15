@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -36,12 +38,14 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.cassandra.sidecar.acl.authorization.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationWithAdminBypassHandler;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE;
+import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_QUALIFIED_TABLE_NAME;
 
 /**
  * Builder for building authorized routes
@@ -51,6 +55,7 @@ public class AccessProtectedRouteBuilder
     private final AccessControlConfiguration accessControlConfiguration;
     private final AuthorizationProvider authorizationProvider;
     private final AdminIdentityResolver adminIdentityResolver;
+    private final ValidatedKeyspaceTableNameHandler validatedKeyspaceTableNameHandler;
 
     private Router router;
     private HttpMethod method;
@@ -60,11 +65,13 @@ public class AccessProtectedRouteBuilder
 
     public AccessProtectedRouteBuilder(AccessControlConfiguration accessControlConfiguration,
                                        AuthorizationProvider authorizationProvider,
-                                       AdminIdentityResolver adminIdentityResolver)
+                                       AdminIdentityResolver adminIdentityResolver,
+                                       ValidatedKeyspaceTableNameHandler validatedKeyspaceTableNameHandler)
     {
         this.accessControlConfiguration = accessControlConfiguration;
         this.authorizationProvider = authorizationProvider;
         this.adminIdentityResolver = adminIdentityResolver;
+        this.validatedKeyspaceTableNameHandler = validatedKeyspaceTableNameHandler;
     }
 
     /**
@@ -133,14 +140,15 @@ public class AccessProtectedRouteBuilder
      */
     public void build()
     {
-        Preconditions.checkArgument(router != null, "Router must be set");
-        Preconditions.checkArgument(method != null, "Http method must be set");
+        Objects.requireNonNull(router, "Router must be set");
+        Objects.requireNonNull(method, "Http method must be set");
         Preconditions.checkArgument(endpoint != null && !endpoint.isEmpty(), "Endpoint must be set");
         Preconditions.checkArgument(!handlers.isEmpty(), "Handler chain can not be empty");
 
         Route route = router.route(method, endpoint);
 
         // BodyHandler should be at index 0 in handler chain
+        // otherwise the request will not be able to be processed.
         if (setBodyHandler)
         {
             route.handler(BodyHandler.create());
@@ -148,6 +156,8 @@ public class AccessProtectedRouteBuilder
 
         if (accessControlConfiguration.enabled())
         {
+            // Extracts and validates the keyspace / table name if available
+            route.handler(validatedKeyspaceTableNameHandler);
             // authorization handler added before route specific handler chain
             AuthorizationWithAdminBypassHandler authorizationHandler
             = new AuthorizationWithAdminBypassHandler(adminIdentityResolver, requiredAuthorization());
@@ -156,6 +166,7 @@ public class AccessProtectedRouteBuilder
 
             route.handler(authorizationHandler);
         }
+
         handlers.forEach(route::handler);
     }
 
@@ -179,13 +190,23 @@ public class AccessProtectedRouteBuilder
     private BiConsumer<RoutingContext, AuthorizationContext> routeGenericVariableConsumer()
     {
         return (routingCtx, authZContext) -> {
-            if (routingCtx.pathParams().containsKey(KEYSPACE))
+            Optional<QualifiedTableName> optional = RoutingContextUtils.getAsOptional(routingCtx, SC_QUALIFIED_TABLE_NAME);
+            String keyspace = null;
+            String table = null;
+            if (optional.isPresent())
             {
-                authZContext.variables().add(KEYSPACE, routingCtx.pathParam(KEYSPACE));
+                QualifiedTableName qualifiedTableName = optional.get();
+                keyspace = qualifiedTableName.keyspace();
+                table = qualifiedTableName.tableName();
             }
-            if (routingCtx.pathParams().containsKey(TABLE))
+
+            if (keyspace != null)
             {
-                authZContext.variables().add(TABLE, routingCtx.pathParam(TABLE));
+                authZContext.variables().add(KEYSPACE, keyspace);
+            }
+            if (table != null)
+            {
+                authZContext.variables().add(TABLE, table);
             }
 
             // TODO remove this hack once VariableAwareExpression bug is fixed
@@ -196,21 +217,5 @@ public class AccessProtectedRouteBuilder
             // resource level permissions that could be set for all tables through data/<keyspace_name>/*
             authZContext.variables().add("TABLE_WILDCARD", "*");
         };
-    }
-
-    /**
-     * Creates an instance of {@link AccessProtectedRouteBuilder} for building authorized route.
-     *
-     * @param accessControlConfiguration config
-     * @param authorizationProvider AuthorizationProvider for retrieving user authorizations
-     * @param adminIdentityResolver AdminIdentityResolver for identifying admin identities
-     *
-     * @return instance of {@link AccessProtectedRouteBuilder}
-     */
-    public static AccessProtectedRouteBuilder instance(AccessControlConfiguration accessControlConfiguration,
-                                                       AuthorizationProvider authorizationProvider,
-                                                       AdminIdentityResolver adminIdentityResolver)
-    {
-        return new AccessProtectedRouteBuilder(accessControlConfiguration, authorizationProvider, adminIdentityResolver);
     }
 }

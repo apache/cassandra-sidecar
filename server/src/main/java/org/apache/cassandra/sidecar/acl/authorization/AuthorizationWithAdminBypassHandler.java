@@ -46,10 +46,9 @@ public class AuthorizationWithAdminBypassHandler extends AuthorizationHandlerImp
     public void handle(RoutingContext ctx)
     {
         List<String> identities = extractIdentities(ctx.user());
-
         if (identities.isEmpty())
         {
-            throw new HttpException(HttpResponseStatus.FORBIDDEN.code(), "Missing client identities");
+            throw new HttpException(HttpResponseStatus.FORBIDDEN.code(), "Client identities are missing");
         }
 
         // Admin identities bypass route specific authorization checks

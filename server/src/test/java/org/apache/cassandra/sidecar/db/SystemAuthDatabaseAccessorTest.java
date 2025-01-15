@@ -41,9 +41,9 @@ class SystemAuthDatabaseAccessorTest
                                                                                                mockCqlSessionProvider);
         assertThatThrownBy(()  -> systemAuthDatabaseAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test"))
         .isInstanceOf(SchemaUnavailableException.class)
-        .hasMessage("Table system_auth/identity_to_role does not exist");
+        .hasMessage("Table system_auth.identity_to_role does not exist");
         assertThatThrownBy(systemAuthDatabaseAccessor::findAllIdentityToRoles)
         .isInstanceOf(SchemaUnavailableException.class)
-        .hasMessage("Table system_auth/identity_to_role does not exist");
+        .hasMessage("Table system_auth.identity_to_role does not exist");
     }
 }

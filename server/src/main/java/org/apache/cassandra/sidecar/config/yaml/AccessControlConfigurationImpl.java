@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -35,7 +36,8 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
 {
     private static final boolean DEFAULT_ENABLED = false;
     private static final List<ParameterizedClassConfiguration> DEFAULT_AUTHENTICATORS_CONFIGURATION = Collections.emptyList();
-    private static final ParameterizedClassConfiguration DEFAULT_AUTHORIZER_CONFIGURATION = null;
+    private static final ParameterizedClassConfiguration DEFAULT_AUTHORIZER_CONFIGURATION
+    = new ParameterizedClassConfigurationImpl(AllowAllAuthorizationProvider.class.getName(), Collections.emptyMap());
     private static final Set<String> DEFAULT_ADMIN_IDENTITIES = Collections.emptySet();
     private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION =
     new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"), 1_000);

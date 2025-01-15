@@ -31,7 +31,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.SidecarPermissions;
+import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
@@ -49,17 +49,20 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
 {
     @Inject
     public KeyspaceRingHandler(InstanceMetadataFetcher metadataFetcher,
-                               CassandraInputValidator validator,
-                               ExecutorPools executorPools)
+                               ExecutorPools executorPools,
+                               CassandraInputValidator validator)
     {
         super(metadataFetcher, executorPools, validator);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
         List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE.expandedResources();
-        return Collections.singleton(SidecarPermissions.READ_RING.toAuthorization(eligibleResources));
+        return Collections.singleton(BasicPermissions.READ_RING.toAuthorization(eligibleResources));
     }
 
     /**
@@ -79,6 +82,9 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected void processFailure(Throwable cause,
                                   RoutingContext context,

@@ -18,36 +18,16 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.auth.authorization.AuthorizationContext;
-
 /**
- * {@code Authorization} implementation to allow access for all users regardless of their authorizations.
+ * Permissions for features
  */
-public class AllowAllAuthorization implements Authorization
+public class FeaturePermissions
 {
-    public static final AllowAllAuthorization INSTANCE = new AllowAllAuthorization();
+    // Bulk Analytics permissions
+    public static final Permission BULK_READ_DIRECT = new WildcardPermission("BULK_READ:DIRECT");
+    public static final Permission BULK_WRITE_DIRECT = new WildcardPermission("BULK_WRITE:DIRECT");
+    public static final Permission BULK_WRITE_S3_COMPAT = new WildcardPermission("BULK_WRITE:S3_COMPAT");
 
-    // use static INSTANCE
-    private AllowAllAuthorization()
-    {
-    }
-
-    /**
-     * Marks match as true regardless of the {@link AuthorizationContext} shared
-     */
-    @Override
-    public boolean match(AuthorizationContext context)
-    {
-        return true;
-    }
-
-    /**
-     * Allows access regardless of {@link Authorization} shared.
-     */
-    @Override
-    public boolean verify(Authorization authorization)
-    {
-        return true;
-    }
+    // cdc related permissions
+    public static final Permission CDC = new StandardPermission("CDC");
 }

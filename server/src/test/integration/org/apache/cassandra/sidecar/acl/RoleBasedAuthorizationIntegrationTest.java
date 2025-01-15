@@ -144,7 +144,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // with data/grant_tables_except_keyspace_test_keyspace grant
         verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
-        // READ:SCHEMA is not granted since it expects permissions at keyspace level
+        // SCHEMA:READ is not granted since it expects permissions at keyspace level
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "grant_tables_except_keyspace_test_keyspace");
         verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, true);
     }
@@ -171,7 +171,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         CountDownLatch countDownLatch = new CountDownLatch(1);
 
         // schema endpoint for keyspaces accepts CREATE, ALTER, DROP or DESCRIBE cassandra permissions.
-        // cassandra permission for test_role on sample_keyspace not granted, sidecar permission READ:* is used to
+        // cassandra permission for test_role on sample_keyspace not granted, sidecar permission *:READ is used to
         // grant access
         verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, false);
     }
@@ -209,7 +209,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         // *:SNAPSHOT permission across ata/all_wildcard_actions_for_target_test_keyspace/test_table allows all
         // possible actions for SNAPSHOT target such as CREATE:SNAPSHOT, READ:SNAPSHOT, DELETE:SNAPSHOT.
-        // Does not allow STREAM:SSTABLE or other actions
+        // Does not allow SSTABLE:STREAM or other actions
         verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
         String streamSSTableRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
@@ -284,12 +284,12 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                   // grant sidecar permission for streaming
                   updateSidecarPermission("non_admin_test_role",
                                           "data/multiple_permissions_required_test_keyspace/test_table",
-                                          "STREAM:SSTABLE");
+                                          "SSTABLE:STREAM");
 
                   // wait for cache refresh
                   Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
 
-                  // STREAM SSTable request requires both Sidecar STREAM:SSTABLE permission and Cassandra's SELECT
+                  // STREAM SSTable request requires both Sidecar SSTABLE:STREAM permission and Cassandra's SELECT
                   // permission on a table it accesses data.
                   return streamRequest(client, streamRoute);
               })
@@ -338,8 +338,9 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
     private void insertIdentityRole(CassandraTestContext cassandraContext, String identity, String role)
     {
-        cassandraContext.cluster()
-                        .schemaChangeIgnoringStoppedInstances("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
+        String statement = String.format("INSERT INTO system_auth.identity_to_role (identity, role) VALUES ('%s','%s')",
+                                         identity, role);
+        cassandraContext.cluster().schemaChangeIgnoringStoppedInstances(statement);
     }
 
     private void createRequiredKeyspaceTables()
@@ -388,24 +389,24 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         grantKeyspacePermission("non_admin_test_keyspace", "non_admin_test_role");
 
         // permission for testGrantingForTable
-        grantSidecarPermission("non_admin_test_role", "data/grant_table_test_keyspace/test_table", "CREATE:SNAPSHOT");
+        grantSidecarPermission("non_admin_test_role", "data/grant_table_test_keyspace/test_table", "SNAPSHOT:CREATE");
 
         // permission for testGrantingForKeyspace
         grantSidecarPermission("non_admin_test_role", "data/grant_keyspace_test_keyspace", "CREATE:SNAPSHOT");
 
         // permission for testGrantingAllTablesExceptKeyspace
-        grantSidecarPermission("non_admin_test_role", "data/grant_tables_except_keyspace_test_keyspace/*", "CREATE:SNAPSHOT");
+        grantSidecarPermission("non_admin_test_role", "data/grant_tables_except_keyspace_test_keyspace/*", "SNAPSHOT:CREATE");
 
         // permission for testGrantingAtDataLevel
-        grantSidecarPermission("grant_data_test_role", "data", "CREATE:SNAPSHOT");
+        grantSidecarPermission("grant_data_test_role", "data", "SNAPSHOT:CREATE");
 
         // permission for testEndpointWithOrAuthorization
-        grantSidecarPermission("non_admin_test_role", "data/orAuthorization_test_keyspace", "READ:*");
+        grantSidecarPermission("non_admin_test_role", "data/orAuthorization_test_keyspace", "*:READ");
 
         // permission for testWildcardActionForAllTargets
         // READ action allowed across targets for same resource. READ:* for cluster resource allows READ:SCHEMA,
-        // READ:CDC, READ:GOSSIP, READ:RING etc
-        grantSidecarPermission("wildcard_across_targets_test_role", "cluster", "READ:*");
+        // CDC:READ, GOSSIP:READ, RING:READ etc
+        grantSidecarPermission("wildcard_across_targets_test_role", "cluster", "*:READ");
 
         // permission for testAllWildcardActionsForTarget
         grantSidecarPermission("non_admin_test_role",

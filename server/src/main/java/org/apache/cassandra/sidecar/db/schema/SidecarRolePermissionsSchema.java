@@ -37,7 +37,7 @@ public class SidecarRolePermissionsSchema extends TableSchema
 
     private final SchemaKeyspaceConfiguration keyspaceConfig;
 
-    private PreparedStatement getAllRolesAndPermissions;
+    private PreparedStatement allRolesAndPermissions;
 
     @Inject
     public SidecarRolePermissionsSchema(SidecarConfiguration sidecarConfiguration)
@@ -60,7 +60,7 @@ public class SidecarRolePermissionsSchema extends TableSchema
     @Override
     protected void prepareStatements(@NotNull Session session)
     {
-        getAllRolesAndPermissions = prepare(getAllRolesAndPermissions, session, CqlLiterals.getAllRolesAndPermissions(keyspaceConfig));
+        allRolesAndPermissions = prepare(allRolesAndPermissions, session, CqlLiterals.allRolesAndPermissions(keyspaceConfig));
     }
 
     @Override
@@ -74,14 +74,14 @@ public class SidecarRolePermissionsSchema extends TableSchema
                              keyspaceConfig.keyspace(), ROLE_PERMISSIONS_TABLE);
     }
 
-    public PreparedStatement getAllRolesAndPermissions()
+    public PreparedStatement allRolesPermissions()
     {
-        return getAllRolesAndPermissions;
+        return allRolesAndPermissions;
     }
 
     private static class CqlLiterals
     {
-        static String getAllRolesAndPermissions(SchemaKeyspaceConfiguration config)
+        static String allRolesAndPermissions(SchemaKeyspaceConfiguration config)
         {
             return String.format("SELECT * FROM %s.%s", config.keyspace(), ROLE_PERMISSIONS_TABLE);
         }

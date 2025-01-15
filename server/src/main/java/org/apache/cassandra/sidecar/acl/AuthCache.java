@@ -166,7 +166,7 @@ public abstract class AuthCache<K, V>
         }
         catch (SchemaUnavailableException sue)
         {
-            LOGGER.warn("Auth schema is unavailable. Skip warming up cache", sue);
+            LOGGER.warn("system_auth schema is unavailable. Skip warming up cache", sue);
         }
         catch (Exception e)
         {

@@ -31,21 +31,29 @@ import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE;
  */
 public enum VariableAwareResource
 {
+    /**
+     * Signifies the Cassandra cluster resource. For example, to determine whether you have access to retrieve
+     * basic Cassandra node settings, Cassandra ring, gossip, or other Cassandra-related information.
+     */
     CLUSTER("cluster"),
 
-    SIDECAR("sidecar"),
+    /**
+     * Signifies the Cassandra Sidecar operations resource which allows a Sidecar operator with sufficient permissions
+     * run operations against both Cassandra Sidecar and Cassandra clusters that Sidecar is managing.
+     */
+    OPERATION("operation"),
 
     // data resources
 
     /**
      * Cassandra stores data resource in the format data, data/keyspace or data/keyspace_name/table_name within
      * the role_permissions table. A similar format is followed for storing data resources in sidecar permissions
-     * table role_permissions_v1. hence sidecar endpoints expect data resources to be provided in format
+     * table role_permissions_v1. Hence, sidecar endpoints expect data resources to be provided in format
      * data/keyspace_name/table_name.
      * <p>
      * In this context, curly braces are used to denote variable parts of the resource. For e.g., when permissions are
      * checked for resource data/{keyspace} in an endpoint, the part within the curly braces ({keyspace})
-     * represents a placeholder for the actual keyspace. For more context refer to
+     * represents a placeholder for the actual keyspace name provided as a path parameter. For more context refer to
      * {@link io.vertx.ext.auth.authorization.impl.VariableAwareExpression}
      * <p>
      * During the permission matching process, the placeholder {keyspace} is resolved to the actual keyspace
@@ -92,6 +100,9 @@ public enum VariableAwareResource
         return resource;
     }
 
+    /**
+     * @return the list of expanded resources eligible to match the resources a user holds
+     */
     public List<String> expandedResources()
     {
         return expandedResources;
