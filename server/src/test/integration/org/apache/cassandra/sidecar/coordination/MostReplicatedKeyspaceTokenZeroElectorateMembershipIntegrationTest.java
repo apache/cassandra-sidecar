@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
@@ -68,6 +69,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration tests for the {@link MostReplicatedKeyspaceTokenZeroElectorateMembership} class
  */
+@Tag("heavy")
 class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest.class);
