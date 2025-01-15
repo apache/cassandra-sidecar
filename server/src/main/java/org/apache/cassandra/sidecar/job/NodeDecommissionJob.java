@@ -32,7 +32,7 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 public class NodeDecommissionJob extends OperationalJob
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeDecommissionJob.class);
-    private static final String operation = "decommission";
+    private static final String OPERATION = "decommission";
     private final boolean isForce;
     protected StorageOperations storageOperations;
 
@@ -94,7 +94,7 @@ public class NodeDecommissionJob extends OperationalJob
     @Override
     public String name()
     {
-        return operation;
+        return OPERATION;
     }
 }
 
