@@ -69,8 +69,6 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     public Set<Authorization> requiredAuthorizations()
     {
         List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE.expandedResources();
-        // TODO: these do not make sense. Why do we allow on CREATE, ALTER, DROP? 
-        //       READ_SCHEMA makes sense and maybe describe?
         OrAuthorization or = OrAuthorization.create()
                                             .addAuthorization(CassandraPermissions.CREATE.toAuthorization(eligibleResources))
                                             .addAuthorization(CassandraPermissions.ALTER.toAuthorization(eligibleResources))

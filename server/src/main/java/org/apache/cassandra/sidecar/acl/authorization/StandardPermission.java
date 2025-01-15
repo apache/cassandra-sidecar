@@ -25,7 +25,7 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 
 /**
- * {@link StandardPermission} needs an exact match between permissions. If resource is set, exact match between
+ * {@link StandardPermission} needs an exact match between permission. If resource is set, exact match between
  * resources if also required.
  */
 public class StandardPermission implements Permission

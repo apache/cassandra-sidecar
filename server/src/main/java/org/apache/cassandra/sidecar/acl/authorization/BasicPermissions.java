@@ -23,7 +23,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
  * permissions on specific targets which are listed here. The majority of Sidecar permissions are represented in
  * format {@code domain}:{@code action}.
  * <p>
- * For example, the SNAPSHOT:CREATE permission, SNAPSHOT is the resource and CREATE is the action. Sample actions are
+ * For example, the SNAPSHOT:CREATE permission, CREATE action is allowed for the SNAPSHOT domain. Sample actions are
  * CREATE, READ, EDIT, DELETE, IMPORT, UPLOAD, START etc.
  * <p>
  * Wildcard permissions are supported with ':' wildcard parts divider and '*' wildcard token to match parts:
@@ -32,21 +32,32 @@ package org.apache.cassandra.sidecar.acl.authorization;
  * - *:CREATE allows CREATE action on all possible targets.
  * - *:* allows all possible permissions for specified resource
  *
- * <p>For feature-level permissions refer to the {@link FeaturePermissions} class. Feature-level permissions
- * are composite of individual-level permissions related to corresponding features i.e. BULK_READ.
+ * <p>For feature-level permissions refer to the {@link FeaturePermission} class. Feature-level permissions
+ * are composite of individual-level permissions related to corresponding features i.e. BULK_READ permission is a
+ * composite of CREATE_SNAPSHOT, DELETE_SNAPSHOT etc.
  */
 public class BasicPermissions
 {
     // SSTable staging related permissions
-    public static final Permission UPLOAD_STAGE_SSTABLE = new WildcardPermission("STAGED_SSTABLE:UPLOAD");
-    public static final Permission IMPORT_STAGE_SSTABLE = new WildcardPermission("STAGED_SSTABLE:IMPORT");
-    public static final Permission DELETE_STAGE_SSTABLE = new WildcardPermission("STAGED_SSTABLE:DELETE");
+    public static final Permission UPLOAD_STAGED_SSTABLE = new WildcardPermission("STAGED_SSTABLE:UPLOAD");
+    public static final Permission IMPORT_STAGED_SSTABLE = new WildcardPermission("STAGED_SSTABLE:IMPORT");
+    public static final Permission DELETE_STAGED_SSTABLE = new WildcardPermission("STAGED_SSTABLE:DELETE");
 
     // snapshot related permissions
     public static final Permission CREATE_SNAPSHOT = new WildcardPermission("SNAPSHOT:CREATE");
     public static final Permission READ_SNAPSHOT = new WildcardPermission("SNAPSHOT:READ");
     public static final Permission DELETE_SNAPSHOT = new WildcardPermission("SNAPSHOT:DELETE");
     public static final Permission STREAM_SNAPSHOT = new WildcardPermission("SNAPSHOT:STREAM");
+
+    // restore job related permissions
+    public static final Permission CREATE_RESTORE_JOB = new WildcardPermission("RESTORE_JOB:CREATE");
+    public static final Permission READ_RESTORE_JOB = new WildcardPermission("RESTORE_JOB:READ");
+    public static final Permission EDIT_RESTORE_JOB = new WildcardPermission("RESTORE_JOB:EDIT");
+    public static final Permission DELETE_RESTORE_JOB = new WildcardPermission("RESTORE_JOB:DELETE");
+
+    // cdc related permissions
+    public static final Permission STREAM_CDC = new WildcardPermission("CDC:STREAM");
+    public static final Permission READ_CDC = new WildcardPermission("CDC:READ");
 
     // sidecar operation related permissions
     public static final Permission READ_OPERATIONAL_JOB = new WildcardPermission("OPERATIONAL_JOB:READ");

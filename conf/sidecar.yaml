@@ -177,7 +177,7 @@ access_control:
         certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor
   authorizer:
     # Authorization backend, implementing io.vertx.ext.auth.authorization.AuthorizationProvider; used to
-    # limit access/provide permissions.
+    # provide permissions a user holds.
     # Out of the box, Cassandra Sidecar provides
     # org.apache.cassandra.sidecar.acl.authorization.{AllowAllAuthorizationProvider, RoleBasedAuthorizationProvider}.
     #

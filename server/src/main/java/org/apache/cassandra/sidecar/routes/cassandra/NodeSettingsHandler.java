@@ -27,10 +27,8 @@ import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.auth.authorization.OrAuthorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.FeaturePermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
@@ -58,9 +56,7 @@ public class NodeSettingsHandler extends AbstractHandler<Void> implements Access
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(OrAuthorization.create()
-                                                    .addAuthorization(FeaturePermissions.BULK_READ_DIRECT.toAuthorization(resource))
-                                                    .addAuthorization(BasicPermissions.READ_NODE_SETTINGS.toAuthorization(resource)));
+        return Collections.singleton(BasicPermissions.READ_NODE_SETTINGS.toAuthorization(resource));
     }
 
     /**

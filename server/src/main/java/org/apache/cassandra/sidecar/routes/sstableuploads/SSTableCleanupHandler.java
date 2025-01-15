@@ -28,10 +28,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.auth.authorization.OrAuthorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.FeaturePermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
@@ -67,9 +65,7 @@ public class SSTableCleanupHandler extends AbstractHandler<String> implements Ac
     public Set<Authorization> requiredAuthorizations()
     {
         List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
-        return Collections.singleton(OrAuthorization.create()
-                                                    .addAuthorization(FeaturePermissions.BULK_WRITE_DIRECT.toAuthorization(eligibleResources))
-                                                    .addAuthorization(BasicPermissions.DELETE_STAGE_SSTABLE.toAuthorization(eligibleResources)));
+        return Collections.singleton(BasicPermissions.DELETE_STAGED_SSTABLE.toAuthorization(eligibleResources));
     }
 
     /**

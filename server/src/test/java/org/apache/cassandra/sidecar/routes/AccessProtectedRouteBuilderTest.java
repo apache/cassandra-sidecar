@@ -24,6 +24,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import io.vertx.ext.web.Router;
 import org.apache.cassandra.sidecar.acl.authorization.AdminIdentityResolver;
+import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,7 +41,7 @@ class AccessProtectedRouteBuilderTest
         AccessControlConfiguration mockConfig = mock(AccessControlConfiguration.class);
         AuthorizationProvider mockAuthorizationProvider = mock(AuthorizationProvider.class);
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
-        ValidatedKeyspaceTableNameHandler mockHandler = mock(ValidatedKeyspaceTableNameHandler.class);
+        AuthorizationParameterValidateHandler mockHandler = mock(AuthorizationParameterValidateHandler.class);
         AccessProtectedRouteBuilder accessProtectedRouteBuilder = new AccessProtectedRouteBuilder(mockConfig,
                                                                                                   mockAuthorizationProvider,
                                                                                                   mockAdminIdentityResolver,

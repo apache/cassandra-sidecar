@@ -33,18 +33,27 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
  */
 public class AuthorizationWithAdminBypassHandler extends AuthorizationHandlerImpl
 {
+    private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
     private final AdminIdentityResolver adminIdentityResolver;
 
-    public AuthorizationWithAdminBypassHandler(AdminIdentityResolver adminIdentityResolver,
+    public AuthorizationWithAdminBypassHandler(AuthorizationParameterValidateHandler authZParameterValidateHandler,
+                                               AdminIdentityResolver adminIdentityResolver,
                                                Authorization authorization)
     {
         super(authorization);
+        this.authZParameterValidateHandler = authZParameterValidateHandler;
         this.adminIdentityResolver = adminIdentityResolver;
     }
 
     @Override
     public void handle(RoutingContext ctx)
     {
+        authZParameterValidateHandler.handle(ctx);
+        if (ctx.failed()) // failed due to validation
+        {
+            return;
+        }
+
         List<String> identities = extractIdentities(ctx.user());
         if (identities.isEmpty())
         {

@@ -56,7 +56,7 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
         // identity_to_role table exists in Cassandra versions starting 5.x
         if (keyspaceMetadata == null || keyspaceMetadata.getTable(IDENTITY_TO_ROLE_TABLE) == null)
         {
-            logger.info("Auth table does not exist. Skip preparing. table={}/{}", keyspaceName(), IDENTITY_TO_ROLE_TABLE);
+            logger.info("Auth table does not exist. Skip preparing. table={}.{}", keyspaceName(), IDENTITY_TO_ROLE_TABLE);
             return;
         }
         roleFromIdentity = prepare(roleFromIdentity, session, "SELECT role FROM system_auth.identity_to_role WHERE identity = ?");

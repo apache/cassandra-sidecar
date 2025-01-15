@@ -26,12 +26,13 @@ import java.util.Objects;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
+import org.apache.cassandra.sidecar.acl.authorization.FeaturePermission;
 import org.apache.cassandra.sidecar.acl.authorization.Permission;
 import org.apache.cassandra.sidecar.acl.authorization.StandardPermission;
 import org.apache.cassandra.sidecar.acl.authorization.WildcardPermission;
 
 import static org.apache.cassandra.sidecar.acl.authorization.WildcardPermission.WILDCARD_PART_DIVIDER_TOKEN;
-import static org.apache.cassandra.sidecar.acl.authorization.WildcardPermission.WILDCARD_TOKEN;
+import static org.apache.cassandra.sidecar.acl.authorization.WildcardPermission.WILDCARD_SUBPART_DIVIDER_TOKEN;
 
 /**
  * Class with utility methods for Authentication and Authorization.
@@ -76,7 +77,12 @@ public class AuthUtils
     public static Permission permissionFromName(String name)
     {
         Objects.requireNonNull(name, "name cannot be null");
-        boolean isWildCard = name.equals(WILDCARD_TOKEN) || name.contains(WILDCARD_PART_DIVIDER_TOKEN);
+        if (FeaturePermission.contains(name))
+        {
+            return FeaturePermission.fromName(name);
+        }
+        boolean isWildCard
+        = name.contains(WILDCARD_PART_DIVIDER_TOKEN) || name.contains(WILDCARD_SUBPART_DIVIDER_TOKEN);
         return isWildCard
                ? new WildcardPermission(name)
                : new StandardPermission(name);

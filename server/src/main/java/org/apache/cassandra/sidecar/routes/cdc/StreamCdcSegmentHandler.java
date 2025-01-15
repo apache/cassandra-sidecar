@@ -36,7 +36,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.cassandra.sidecar.acl.authorization.FeaturePermissions;
+import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cdc.CdcLogCache;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -85,7 +85,7 @@ public class StreamCdcSegmentHandler extends AbstractHandler<String> implements 
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(FeaturePermissions.CDC.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.STREAM_CDC.toAuthorization(resource));
     }
 
     @Override

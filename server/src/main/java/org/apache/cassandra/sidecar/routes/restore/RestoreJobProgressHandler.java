@@ -27,7 +27,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.FeaturePermissions;
+import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
@@ -74,7 +74,7 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     public Set<Authorization> requiredAuthorizations()
     {
         List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
-        return Collections.singleton(FeaturePermissions.BULK_WRITE_S3_COMPAT.toAuthorization(eligibleResources));
+        return Collections.singleton(BasicPermissions.READ_RESTORE_JOB.toAuthorization(eligibleResources));
     }
 
     @Override

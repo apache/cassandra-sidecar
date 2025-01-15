@@ -37,6 +37,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.cassandra.sidecar.acl.authorization.AdminIdentityResolver;
+import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationWithAdminBypassHandler;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
@@ -55,7 +56,7 @@ public class AccessProtectedRouteBuilder
     private final AccessControlConfiguration accessControlConfiguration;
     private final AuthorizationProvider authorizationProvider;
     private final AdminIdentityResolver adminIdentityResolver;
-    private final ValidatedKeyspaceTableNameHandler validatedKeyspaceTableNameHandler;
+    private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
 
     private Router router;
     private HttpMethod method;
@@ -66,12 +67,12 @@ public class AccessProtectedRouteBuilder
     public AccessProtectedRouteBuilder(AccessControlConfiguration accessControlConfiguration,
                                        AuthorizationProvider authorizationProvider,
                                        AdminIdentityResolver adminIdentityResolver,
-                                       ValidatedKeyspaceTableNameHandler validatedKeyspaceTableNameHandler)
+                                       AuthorizationParameterValidateHandler authZParameterValidateHandler)
     {
         this.accessControlConfiguration = accessControlConfiguration;
         this.authorizationProvider = authorizationProvider;
         this.adminIdentityResolver = adminIdentityResolver;
-        this.validatedKeyspaceTableNameHandler = validatedKeyspaceTableNameHandler;
+        this.authZParameterValidateHandler = authZParameterValidateHandler;
     }
 
     /**
@@ -147,8 +148,8 @@ public class AccessProtectedRouteBuilder
 
         Route route = router.route(method, endpoint);
 
-        // BodyHandler should be at index 0 in handler chain
-        // otherwise the request will not be able to be processed.
+        // BodyHandler must be placed before Authorization handler
+        // See io.vertx.ext.web.impl.RouteState.Priority
         if (setBodyHandler)
         {
             route.handler(BodyHandler.create());
@@ -156,11 +157,10 @@ public class AccessProtectedRouteBuilder
 
         if (accessControlConfiguration.enabled())
         {
-            // Extracts and validates the keyspace / table name if available
-            route.handler(validatedKeyspaceTableNameHandler);
             // authorization handler added before route specific handler chain
             AuthorizationWithAdminBypassHandler authorizationHandler
-            = new AuthorizationWithAdminBypassHandler(adminIdentityResolver, requiredAuthorization());
+            = new AuthorizationWithAdminBypassHandler(authZParameterValidateHandler, adminIdentityResolver,
+                                                      requiredAuthorization());
             authorizationHandler.addAuthorizationProvider(authorizationProvider);
             authorizationHandler.variableConsumer(routeGenericVariableConsumer());
 

@@ -42,7 +42,7 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * A handler that provides ring information for the Cassandra cluster
+ * A handler that provides ring information for a specific keyspace for the Cassandra cluster
  */
 @Singleton
 public class KeyspaceRingHandler extends AbstractHandler<Name> implements AccessProtected

@@ -125,7 +125,7 @@ import org.apache.cassandra.sidecar.routes.SchemaHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.TimeSkewHandler;
 import org.apache.cassandra.sidecar.routes.TokenRangeReplicaMapHandler;
-import org.apache.cassandra.sidecar.routes.ValidatedKeyspaceTableNameHandler;
+import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
 import org.apache.cassandra.sidecar.routes.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.routes.cdc.ListCdcDirHandler;
 import org.apache.cassandra.sidecar.routes.cdc.StreamCdcSegmentHandler;
@@ -292,12 +292,12 @@ public class MainModule extends AbstractModule
     public Supplier<AccessProtectedRouteBuilder> accessProtectedRouteBuilderFactory(SidecarConfiguration sidecarConfiguration,
                                                                                     AuthorizationProvider authorizationProvider,
                                                                                     AdminIdentityResolver adminIdentityResolver,
-                                                                                    ValidatedKeyspaceTableNameHandler validatedKeyspaceTableNameHandler)
+                                                                                    AuthorizationParameterValidateHandler authorizationParameterValidateHandler)
     {
         return () -> new AccessProtectedRouteBuilder(sidecarConfiguration.accessControlConfiguration(),
                                                      authorizationProvider,
                                                      adminIdentityResolver,
-                                                     validatedKeyspaceTableNameHandler);
+                                                     authorizationParameterValidateHandler);
     }
 
     @Provides

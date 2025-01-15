@@ -28,35 +28,35 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 
 /**
  * Wildcard permissions allow grouping allowed permissions. They can be represented with ':' wildcard parts divider
- * to divide wildcard parts and '*' wildcard token for matching wildcard parts. Majority of sidecar permissions are
- * represented in format {@code domain}:{@code action}.
+ * to divide wildcard parts or with ',' wildcard subpart divider. Wildcard token '*' is restricted in
+ * {@link WildcardPermission} to avoid unpredictable behaviour. Majority of sidecar permissions are represented in
+ * format {@code domain}:{@code action}.
  * <p>
- * Example, with SNAPSHOT:CREATE permission, the CREATE action is allowed for the SNAPSHOT domain. Sample actions are
+ * Example, with SNAPSHOT:CREATE permission, CREATE action is allowed for the SNAPSHOT domain. Sample actions are
  * CREATE, READ, EDIT, UPDATE, DELETE, IMPORT, UPLOAD, START, ABORT etc.
  * <p>
  * Some examples of wildcard permissions are:
- * - SNAPSHOT:* allows SNAPSHOT:CREATE, SNAPSHOT:VIEW and SNAPSHOT:DELETE.
- * - *:CREATE allows the CREATE action on all possible targets.
- * - *:* allows all possible permissions for specified all domains
+ * - SNAPSHOT:CREATE,READ,DELETE allows SNAPSHOT:CREATE, SNAPSHOT:READ and SNAPSHOT:DELETE.
  */
 public class WildcardPermission extends StandardPermission
 {
     public static final String WILDCARD_TOKEN = "*";
     public static final String WILDCARD_PART_DIVIDER_TOKEN = ":";
+    public static final String WILDCARD_SUBPART_DIVIDER_TOKEN = ",";
 
     public WildcardPermission(String name)
     {
         super(name);
-        if (!name.contains(WILDCARD_TOKEN) && !name.contains(WILDCARD_PART_DIVIDER_TOKEN))
-        {
-            throw new IllegalArgumentException("Wildcard permissions must either have wildcard token " + WILDCARD_TOKEN
-                                               + " or must be divided into wildcard parts");
-        }
         validate(name);
     }
 
     private void validate(String name)
     {
+        if (name.contains(WILDCARD_TOKEN))
+        {
+            throw new IllegalArgumentException("Wildcard permission can not have " + WILDCARD_TOKEN +
+                                               " to avoid unpredictable behavior");
+        }
         String[] wildcardParts = name.split(WILDCARD_PART_DIVIDER_TOKEN);
         boolean hasEmptyParts = Arrays.stream(wildcardParts).anyMatch(String::isEmpty);
         if (wildcardParts.length == 0 || hasEmptyParts)
