@@ -47,7 +47,7 @@ public class NodeDecommissionJob extends OperationalJob
     public boolean isRunningOnCassandra()
     {
         String operationMode = storageOperations.operationMode();
-        return operationMode.equals("LEAVING") || operationMode.equals("DECOMMISSIONED");
+        return "LEAVING".equals(operationMode) || "DECOMMISSIONED".equals(operationMode);
     }
 
     /**
@@ -58,11 +58,11 @@ public class NodeDecommissionJob extends OperationalJob
     {
         String operationMode = storageOperations.operationMode();
 
-        if (operationMode.equals("LEAVING"))
+        if ("LEAVING".equals(operationMode))
         {
             return OperationalJobStatus.RUNNING;
         }
-        else if (operationMode.equals("DECOMMISSIONED"))
+        else if ("DECOMMISSIONED".equals(operationMode))
         {
             return OperationalJobStatus.SUCCEEDED;
         }

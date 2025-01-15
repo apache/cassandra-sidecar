@@ -57,8 +57,6 @@ public class NodeDecommissionIntegrationTest extends IntegrationTestBase
         String testRoute = "/api/v1/cassandra/operations/decommission?force=true";
         testWithClient(client -> client.put(server.actualPort(), "127.0.0.1", testRoute)
                                        .send(context.succeeding(response -> {
-                                           logger.info("Response Status:" + response.statusCode());
-                                           logger.info("Response Body:" + response.bodyAsString());
                                            OperationalJobResponse decommissionResponse = response.bodyAsJson(OperationalJobResponse.class);
                                            assertThat(decommissionResponse.status()).isEqualTo(RUNNING);
                                            jobId.set(String.valueOf(decommissionResponse.jobId()));
@@ -75,8 +73,6 @@ public class NodeDecommissionIntegrationTest extends IntegrationTestBase
         String testRoute = "/api/v1/cassandra/operations/decommission";
         testWithClient(client -> client.put(server.actualPort(), "127.0.0.1", testRoute)
                                        .send(context.succeeding(response -> {
-                                           logger.info("Response Status:" + response.statusCode());
-                                           logger.info("Response Body:" + response.bodyAsString());
                                            OperationalJobResponse decommissionResponse = response.bodyAsJson(OperationalJobResponse.class);
                                            assertThat(decommissionResponse.status()).isEqualTo(FAILED);
                                            assertThat(decommissionResponse.jobId()).isNotNull();

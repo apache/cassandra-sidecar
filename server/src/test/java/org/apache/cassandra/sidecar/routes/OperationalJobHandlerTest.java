@@ -124,8 +124,6 @@ class OperationalJobHandlerTest
               .expect(ResponsePredicate.SC_ACCEPTED)
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(ACCEPTED.code());
-                  LOGGER.info("Response Status: {}", response.statusCode());
-                  LOGGER.info("Response Body: {}", response.bodyAsString());
                   context.completeNow();
               }));
     }
@@ -140,8 +138,6 @@ class OperationalJobHandlerTest
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   OperationalJobResponse jobStatus = response.bodyAsJson(OperationalJobResponse.class);
-                  LOGGER.info("Response Status: {}", response.statusCode());
-                  LOGGER.info("Response Body: {}", response.bodyAsString());
                   assertThat(jobStatus.jobId()).isEqualTo(completedUuid);
                   assertThat(jobStatus.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
                   assertThat(jobStatus.operation()).isEqualTo("testCompleted");
@@ -159,8 +155,6 @@ class OperationalJobHandlerTest
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   OperationalJobResponse jobStatus = response.bodyAsJson(OperationalJobResponse.class);
-                  LOGGER.info("Response Status: {}", response.statusCode());
-                  LOGGER.info("Response Body: {}", response.bodyAsString());
                   assertThat(jobStatus.jobId()).isEqualTo(failedUuid);
                   assertThat(jobStatus.status()).isEqualTo(OperationalJobStatus.FAILED);
                   assertThat(jobStatus.operation()).isEqualTo("testFailed");

@@ -25,22 +25,20 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
-import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.job.OperationalJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.OperationalJobUtils;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM;
-import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * Handler for retrieving the status of async operational jobs running on the sidecar
  */
-public class OperationalJobHandler extends AbstractHandler<Void>
+public class OperationalJobHandler extends AbstractHandler<UUID>
 {
     private final OperationalJobManager jobManager;
 
@@ -54,16 +52,16 @@ public class OperationalJobHandler extends AbstractHandler<Void>
         this.jobManager = jobManager;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    protected Void extractParamsOrThrow(RoutingContext context)
+    public void handleInternal(RoutingContext context,
+                               HttpServerRequest httpRequest,
+                               String host,
+                               SocketAddress remoteAddress,
+                               UUID jobId)
     {
-        return null;
-    }
-
-    @Override
-    public void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
-    {
-        UUID jobId = validatedJobIdParam(context);
         executorPools.service()
                      .executeBlocking(() -> {
                          OperationalJob job = jobManager.getJobIfExists(jobId);
@@ -75,11 +73,20 @@ public class OperationalJobHandler extends AbstractHandler<Void>
                          }
                          return job;
                      })
-                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request))
-                     .onSuccess(job -> sendStatusBasedResponse(context, job));
+                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, jobId))
+                     .onSuccess(job -> OperationalJobUtils.sendStatusBasedResponse(context, job));
     }
 
-    UUID validatedJobIdParam(RoutingContext context)
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected UUID extractParamsOrThrow(RoutingContext context)
+    {
+        return validatedJobIdParam(context);
+    }
+
+    private UUID validatedJobIdParam(RoutingContext context)
     {
         String requestJobId = context.pathParam(OPERATIONAL_JOB_ID_PATH_PARAM.substring(1));
         if (requestJobId == null)
@@ -100,22 +107,5 @@ public class OperationalJobHandler extends AbstractHandler<Void>
                                     String.format("Invalid job ID provided: %s.", requestJobId));
         }
         return jobId;
-    }
-
-    public void sendStatusBasedResponse(RoutingContext context, OperationalJob job)
-    {
-        OperationalJobStatus status = job.status();
-        logger.info("Job completion status={} jobId={}", status, job.jobId());
-        if (status.isCompleted())
-        {
-            context.response().setStatusCode(HttpResponseStatus.OK.code());
-        }
-        else
-        {
-            context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code());
-        }
-
-        String reason = status == FAILED ? job.asyncResult().cause().getMessage() : null;
-        context.json(new OperationalJobResponse(job.jobId(), status, job.name(), reason));
     }
 }

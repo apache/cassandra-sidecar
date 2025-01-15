@@ -37,13 +37,14 @@ import org.apache.cassandra.sidecar.job.NodeDecommissionJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.OperationalJobUtils;
 
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
 /**
  * Provides REST API for asynchronously decommissioning the corresponding Cassandra node
  */
-public class NodeDecommissionHandler extends OperationalJobHandler
+public class NodeDecommissionHandler extends AbstractHandler<Boolean>
 {
     private final OperationalJobManager jobManager;
     private final ServiceConfiguration config;
@@ -62,17 +63,22 @@ public class NodeDecommissionHandler extends OperationalJobHandler
                                       CassandraInputValidator validator,
                                       OperationalJobManager jobManager)
     {
-        super(metadataFetcher, executorPools, validator, jobManager);
+        super(metadataFetcher, executorPools, validator);
         this.jobManager = jobManager;
         this.config = serviceConfiguration;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, Void request)
+    public void handleInternal(RoutingContext context,
+                               HttpServerRequest httpRequest,
+                               String host,
+                               SocketAddress remoteAddress,
+                               Boolean isForce)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        boolean isForce = parseBooleanQueryParam(context.request(), "force", false);
-
         NodeDecommissionJob job = new NodeDecommissionJob(UUIDs.timeBased(), operations, isForce);
         try
         {
@@ -90,6 +96,15 @@ public class NodeDecommissionHandler extends OperationalJobHandler
         // Get the result, waiting for the specified wait time for result
         job.asyncResult(executorPools.service(),
                         Duration.of(config.operationalJobExecutionMaxWaitTimeInMillis(), ChronoUnit.MILLIS))
-           .onComplete(v -> sendStatusBasedResponse(context, job));
+           .onComplete(v -> OperationalJobUtils.sendStatusBasedResponse(context, job));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected Boolean extractParamsOrThrow(RoutingContext context)
+    {
+        return parseBooleanQueryParam(context.request(), "force", false);
     }
 }
