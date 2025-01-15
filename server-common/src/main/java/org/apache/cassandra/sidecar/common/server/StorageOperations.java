@@ -106,7 +106,7 @@ public interface StorageOperations
     /**
      * @return the operation-mode of the Cassandra instance
      */
-    String getOperationMode();
+    String operationMode();
 
     /**
      * Triggers the node decommission operation

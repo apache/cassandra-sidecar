@@ -214,8 +214,11 @@ public class CassandraStorageOperations implements StorageOperations
                  .forceKeyspaceCleanup(concurrency, keyspace, table);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public String getOperationMode()
+    public String operationMode()
     {
         StorageJmxOperations ssProxy = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);
         return ssProxy.getOperationMode();

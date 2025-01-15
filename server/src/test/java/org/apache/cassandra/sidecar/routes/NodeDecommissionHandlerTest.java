@@ -104,7 +104,7 @@ public class NodeDecommissionHandlerTest
     @Test
     void testDecommissionLongRunning(VertxTestContext context)
     {
-        when(mockStorageOperations.getOperationMode()).thenReturn("NORMAL");
+        when(mockStorageOperations.operationMode()).thenReturn("NORMAL");
         doAnswer(AdditionalAnswers.answersWithDelay(6000, invocation -> null))
         .when(mockStorageOperations).decommission(anyBoolean());
 
@@ -124,7 +124,7 @@ public class NodeDecommissionHandlerTest
     @Test
     void testDecommissionCompleted(VertxTestContext context)
     {
-        when(mockStorageOperations.getOperationMode()).thenReturn("NORMAL");
+        when(mockStorageOperations.operationMode()).thenReturn("NORMAL");
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/operations/decommission";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
@@ -142,7 +142,7 @@ public class NodeDecommissionHandlerTest
     @Test
     void testDecommissionFailed(VertxTestContext context)
     {
-        when(mockStorageOperations.getOperationMode()).thenReturn("NORMAL");
+        when(mockStorageOperations.operationMode()).thenReturn("NORMAL");
         doThrow(new RuntimeException("Simulated failure")).when(mockStorageOperations).decommission(anyBoolean());
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/operations/decommission";
@@ -157,7 +157,7 @@ public class NodeDecommissionHandlerTest
     @Test
     void testDecommissionConflict(VertxTestContext context)
     {
-        when(mockStorageOperations.getOperationMode()).thenReturn("LEAVING");
+        when(mockStorageOperations.operationMode()).thenReturn("LEAVING");
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/operations/decommission";
         client.put(server.actualPort(), "127.0.0.1", testRoute)
