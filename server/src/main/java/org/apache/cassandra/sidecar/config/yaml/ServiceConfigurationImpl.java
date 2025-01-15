@@ -28,15 +28,15 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.ThrottleConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
@@ -63,7 +63,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final String ACCEPT_BACKLOG_PROPERTY = "accept_backlog";
     public static final int DEFAULT_ACCEPT_BACKLOG = 1024;
     public static final String ALLOWABLE_TIME_SKEW_PROPERTY = "allowable_time_skew";
-    public static final SecondBoundConfiguration DEFAULT_ALLOWABLE_TIME_SKEW = SecondBoundConfiguration.parse("60m");
+    public static final MinuteBoundConfiguration DEFAULT_ALLOWABLE_TIME_SKEW = MinuteBoundConfiguration.parse("1h");
     private static final String SERVER_VERTICLE_INSTANCES_PROPERTY = "server_verticle_instances";
     private static final String OPERATIONAL_JOB_TRACKER_SIZE_PROPERTY = "operations_job_tracker_size";
     private static final String OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY = "operations_job_sync_response_timeout";
@@ -108,7 +108,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = ACCEPT_BACKLOG_PROPERTY, defaultValue = DEFAULT_ACCEPT_BACKLOG + "")
     protected final int acceptBacklog;
 
-    protected SecondBoundConfiguration allowableTimeSkew;
+    protected MinuteBoundConfiguration allowableTimeSkew;
 
     @JsonProperty(value = SERVER_VERTICLE_INSTANCES_PROPERTY, defaultValue = DEFAULT_SERVER_VERTICLE_INSTANCES + "")
     protected final int serverVerticleInstances;
@@ -291,15 +291,15 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      */
     @Override
     @JsonProperty(value = ALLOWABLE_TIME_SKEW_PROPERTY)
-    public SecondBoundConfiguration allowableTimeSkew()
+    public MinuteBoundConfiguration allowableTimeSkew()
     {
         return allowableTimeSkew;
     }
 
     @JsonProperty(value = ALLOWABLE_TIME_SKEW_PROPERTY)
-    public void setAllowableTimeSkew(SecondBoundConfiguration allowableTimeSkew)
+    public void setAllowableTimeSkew(MinuteBoundConfiguration allowableTimeSkew)
     {
-        if (allowableTimeSkew.compareTo(SecondBoundConfiguration.parse("1m")) < 0)
+        if (allowableTimeSkew.compareTo(MinuteBoundConfiguration.parse("1m")) < 0)
         {
             throw new ConfigurationException(String.format("Invalid %s value (%s). The minimum allowed value is 1 minute (1m)",
                                                            ALLOWABLE_TIME_SKEW_PROPERTY, allowableTimeSkew));
@@ -318,7 +318,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public void setAllowableTimeSkewInMinutes(long allowableTimeSkewInMinutes)
     {
         LOGGER.warn("'allowable_time_skew_in_minutes' is deprecated, use '{}' instead", ALLOWABLE_TIME_SKEW_PROPERTY);
-        setAllowableTimeSkew(new SecondBoundConfiguration(allowableTimeSkewInMinutes, TimeUnit.MINUTES));
+        setAllowableTimeSkew(new MinuteBoundConfiguration(allowableTimeSkewInMinutes, TimeUnit.MINUTES));
     }
 
     /**
@@ -465,7 +465,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected MillisecondBoundConfiguration requestTimeout = DEFAULT_REQUEST_TIMEOUT;
         protected boolean tcpKeepAlive = DEFAULT_TCP_KEEP_ALIVE;
         protected int acceptBacklog = DEFAULT_ACCEPT_BACKLOG;
-        protected SecondBoundConfiguration allowableTimeSkew = DEFAULT_ALLOWABLE_TIME_SKEW;
+        protected MinuteBoundConfiguration allowableTimeSkew = DEFAULT_ALLOWABLE_TIME_SKEW;
         protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
         protected int operationalJobTrackerSize = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE;
         protected MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime = DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME;
@@ -563,7 +563,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          * @param allowableTimeSkew the {@code allowableTimeSkew} to set
          * @return a reference to this Builder
          */
-        public Builder allowableTimeSkew(SecondBoundConfiguration allowableTimeSkew)
+        public Builder allowableTimeSkew(MinuteBoundConfiguration allowableTimeSkew)
         {
             return update(b -> b.allowableTimeSkew = allowableTimeSkew);
         }

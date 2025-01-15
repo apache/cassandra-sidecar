@@ -179,12 +179,12 @@ class TimeUnitBackwardsCompatibilityTest
     void failsOnInvalidAllowableTimeSkewConfiguration()
     {
         String yaml = "sidecar:\n" +
-                      "  allowable_time_skew: 59s";
+                      "  allowable_time_skew: 0m";
 
         assertThatExceptionOfType(JsonMappingException.class)
         .isThrownBy(() -> SidecarConfigurationImpl.fromYamlString(yaml))
         .withRootCauseInstanceOf(ConfigurationException.class)
-        .withMessageContaining("Invalid allowable_time_skew value (59s). The minimum allowed value is 1 minute (1m)");
+        .withMessageContaining("Invalid allowable_time_skew value (0m). The minimum allowed value is 1 minute (1m)");
     }
 
     // ThrottleConfiguration

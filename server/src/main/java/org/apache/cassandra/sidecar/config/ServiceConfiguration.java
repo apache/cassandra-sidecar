@@ -27,6 +27,7 @@ import java.util.UUID;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.core.net.impl.SocketAddressImpl;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
 /**
@@ -94,7 +95,7 @@ public interface ServiceConfiguration
     /**
      * @return the maximum time skew allowed between the server and the client
      */
-    SecondBoundConfiguration allowableTimeSkew();
+    MinuteBoundConfiguration allowableTimeSkew();
 
     /**
      * @return the number of vertx verticle instances that should be deployed

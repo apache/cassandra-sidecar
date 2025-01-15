@@ -84,7 +84,7 @@ sidecar:
   # truncate, so lose precision. For example, converting 61s will result in a
   # 1 minute allowable time skew losing the additional second in the configuration.
   # The minimum configurable value is 1 minute.
-  allowable_time_skew: 60m
+  allowable_time_skew: 1h
   sstable_import:
     execute_interval: 100ms
     cache:

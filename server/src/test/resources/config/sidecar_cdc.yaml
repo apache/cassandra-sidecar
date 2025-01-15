@@ -36,7 +36,7 @@ sidecar:
   sstable_upload:
     concurrent_upload_limit: 80
     min_free_space_percent: 10
-  allowable_time_skew: 60m
+  allowable_time_skew: 1h
   sstable_import:
     execute_interval: 100ms
     cache:

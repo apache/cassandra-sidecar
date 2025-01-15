@@ -38,7 +38,7 @@ sidecar:
   throttle:
     stream_requests_per_sec: 5000
     timeout: 10s
-  allowable_time_skew: 60m
+  allowable_time_skew: 1h
   jmx:
     max_retries: 42
     retry_delay: 1234ms

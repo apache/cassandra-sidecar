@@ -29,6 +29,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.quicktheories.core.Gen;
 import org.quicktheories.generators.SourceDSL;
@@ -50,6 +51,7 @@ class TimeBoundConfigurationImplTest
         assertThat(MillisecondBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "ms").toMillis()).isEqualTo(MAX_INT_CONFIG_VALUE);
         assertThat(MillisecondBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "s").toSeconds()).isEqualTo(MAX_INT_CONFIG_VALUE);
         assertThat(SecondBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "s").toSeconds()).isEqualTo(MAX_INT_CONFIG_VALUE);
+        assertThat(MinuteBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "m").to(TimeUnit.MINUTES)).isEqualTo(MAX_INT_CONFIG_VALUE);
     }
 
     @Test
@@ -94,6 +96,7 @@ class TimeBoundConfigurationImplTest
         assertThat(MillisecondBoundConfiguration.parse("10s")).isEqualTo(new MillisecondBoundConfiguration(10, TimeUnit.SECONDS));
         assertThat(MillisecondBoundConfiguration.parse("1s")).isEqualTo(MillisecondBoundConfiguration.parse("1000ms"));
         assertThat(SecondBoundConfiguration.ONE).isEqualTo(MillisecondBoundConfiguration.parse("1000ms"));
+        assertThat(MinuteBoundConfiguration.parse("2m")).isEqualTo(MillisecondBoundConfiguration.parse("120000ms"));
         assertThat(MillisecondBoundConfiguration.parse("10s")).isEqualTo(MillisecondBoundConfiguration.parse("10000ms"));
         assertThat(SecondBoundConfiguration.parse("4h")).isEqualTo(MillisecondBoundConfiguration.parse("14400s"));
         assertThat(SecondBoundConfiguration.parse("0m")).isNotEqualTo(MillisecondBoundConfiguration.parse("10ms"));
@@ -142,6 +145,15 @@ class TimeBoundConfigurationImplTest
         assertThatIllegalArgumentException()
         .isThrownBy(() -> new SecondBoundConfiguration(value))
         .withMessageContaining("Invalid duration %s. Positive numbers with units [s(seconds), m(minutes), h(hours), d(days)] are allowed", value);
+    }
+
+    @ParameterizedTest(name = "{index} => value={0}")
+    @ValueSource(strings = { "10ms", "10ns", "10us", "10µs", "-10s", "10millis", "10s", "10seconds", "10years", "10foo" })
+    void testInvalidMinuteBoundValues(String value)
+    {
+        assertThatIllegalArgumentException()
+        .isThrownBy(() -> new MinuteBoundConfiguration(value))
+        .withMessageContaining("Invalid duration %s. Positive numbers with units [m(minutes), h(hours), d(days)] are allowed", value);
     }
 
     @ParameterizedTest(name = "{index} => value={0} unit={1}")

@@ -76,7 +76,7 @@ sidecar:
     concurrent_upload_limit: 80
     min_free_space_percent: 10
     # file_permissions: "rw-r--r--" # when not specified, the default file permissions are owner read & write, group & others read
-  allowable_time_skew: 60m
+  allowable_time_skew: 1h
   sstable_import:
     execute_interval: 100ms
     cache:
