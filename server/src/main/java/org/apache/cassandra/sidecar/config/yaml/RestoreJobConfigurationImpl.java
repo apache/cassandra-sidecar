@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 
 /**
  * Configuration needed restore jobs restoring data from blob
@@ -140,8 +140,6 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     @JsonProperty(value = "job_discovery_idle_loop_delay")
     public MillisecondBoundConfiguration jobDiscoveryIdleLoopDelay()
     {
-        // TODO : confirm with Yifan. This was returning jobDiscoveryActiveLoopDelayMillis, but it feels it should be
-        //        returning jobDiscoveryIdleLoopDelayMillis instead
         return jobDiscoveryIdleLoopDelay;
     }
 

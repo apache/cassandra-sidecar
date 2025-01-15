@@ -23,8 +23,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;

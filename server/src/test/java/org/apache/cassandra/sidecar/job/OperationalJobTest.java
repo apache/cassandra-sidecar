@@ -18,9 +18,7 @@
 
 package org.apache.cassandra.sidecar.job;
 
-import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Test;
@@ -31,6 +29,9 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
@@ -79,12 +80,12 @@ class OperationalJobTest
         };
     }
 
-    public static OperationalJob createOperationalJob(UUID jobId, Duration jobDuration)
+    public static OperationalJob createOperationalJob(UUID jobId, DurationSpec jobDuration)
     {
         return createOperationalJob(jobId, jobDuration, null);
     }
 
-    public static OperationalJob createOperationalJob(UUID jobId, Duration jobDuration, OperationalJobException jobFailure)
+    public static OperationalJob createOperationalJob(UUID jobId, DurationSpec jobDuration, OperationalJobException jobFailure)
     {
         return new OperationalJob(jobId)
         {
@@ -99,7 +100,7 @@ class OperationalJobTest
             {
                 if (jobDuration != null)
                 {
-                    Uninterruptibles.sleepUninterruptibly(jobDuration.toMillis(), TimeUnit.MILLISECONDS);
+                    Uninterruptibles.sleepUninterruptibly(jobDuration.quantity(), jobDuration.unit());
                 }
 
                 if (jobFailure != null)
@@ -165,9 +166,9 @@ class OperationalJobTest
     @Test
     void testGetAsyncResultInWaitTime()
     {
-        OperationalJob longRunning = createOperationalJob(UUIDs.timeBased(), Duration.ofMillis(500L));
+        OperationalJob longRunning = createOperationalJob(UUIDs.timeBased(), MillisecondBoundConfiguration.parse("500ms"));
         executorPool.executeBlocking(longRunning::execute);
-        Duration waitTime = Duration.ofSeconds(2);
+        DurationSpec waitTime = SecondBoundConfiguration.parse("2s");
         Future<Void> result = longRunning.asyncResult(executorPool, waitTime);
         // it should finish in around 500 ms.
         loopAssert(1, () -> assertThat(result.succeeded()).isTrue());
@@ -177,9 +178,9 @@ class OperationalJobTest
     void testGetFailedAsyncResultInWaitTime()
     {
         OperationalJobException jobFailure = new OperationalJobException("Job fails");
-        OperationalJob longButFailedJob = createOperationalJob(UUIDs.timeBased(), Duration.ofMillis(500L), jobFailure);
+        OperationalJob longButFailedJob = createOperationalJob(UUIDs.timeBased(), MillisecondBoundConfiguration.parse("500ms"), jobFailure);
         executorPool.executeBlocking(longButFailedJob::execute);
-        Duration waitTime = Duration.ofSeconds(2);
+        DurationSpec waitTime = SecondBoundConfiguration.parse("2s");
         Future<Void> result = longButFailedJob.asyncResult(executorPool, waitTime);
         // it should finish in around 500 ms.
         loopAssert(1, () -> {
@@ -191,9 +192,9 @@ class OperationalJobTest
     @Test
     void testGetAsyncResultExceedsWaitTime()
     {
-        OperationalJob longRunning = createOperationalJob(UUIDs.timeBased(), Duration.ofMillis(5000L));
+        OperationalJob longRunning = createOperationalJob(UUIDs.timeBased(), SecondBoundConfiguration.parse("5s"));
         executorPool.executeBlocking(longRunning::execute);
-        Duration waitTime = Duration.ofMillis(200L);
+        DurationSpec waitTime = MillisecondBoundConfiguration.parse("200ms");
         Future<Void> result = longRunning.asyncResult(executorPool, waitTime);
         loopAssert(1, () -> {
             // the composite future is completed in 200ms. The operational job is still running, so the isExecuting should return true too.

@@ -33,9 +33,9 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.server.MainModule;
 
@@ -118,6 +118,8 @@ class CdcLogCacheTest
     private CdcLogCache cdcLogCache()
     {
         ExecutorPools executorPools = ExecutorPoolsHelper.createdSharedTestPool(Vertx.vertx());
+        // Mock the class because even though the resolution is seconds, for testing purposes
+        // we hack into the class and allow configuring the cache expiration with milliseconds.
         SecondBoundConfiguration mockCacheExpiryConfig = mock(SecondBoundConfiguration.class);
         when(mockCacheExpiryConfig.quantity()).thenReturn(100L);
         when(mockCacheExpiryConfig.unit()).thenReturn(TimeUnit.MILLISECONDS);

@@ -76,26 +76,4 @@ public class MillisecondBoundConfiguration extends DurationSpec
     {
         return MILLISECONDS;
     }
-
-    /**
-     * @return the duration in milliseconds
-     */
-    public long toMillis()
-    {
-        return to(TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * @return the duration in milliseconds returned as an integer, if the value overflows,
-     * returns {@link Integer#MAX_VALUE}
-     */
-    public int toIntMillis()
-    {
-        long longMillis = toMillis();
-        if (longMillis > Integer.MAX_VALUE)
-        {
-            return Integer.MAX_VALUE;
-        }
-        return (int) longMillis;
-    }
 }

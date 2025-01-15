@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.job;
 
-import java.time.Duration;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +27,7 @@ import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
@@ -102,7 +102,7 @@ class OperationalJobManagerTest
         OperationalJobTracker tracker = new OperationalJobTracker(4);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
 
-        OperationalJob testJob = OperationalJobTest.createOperationalJob(jobId, Duration.ofSeconds(10));
+        OperationalJob testJob = OperationalJobTest.createOperationalJob(jobId, SecondBoundConfiguration.parse("10s"));
 
         manager.trySubmitJob(testJob);
         // execute the job async.

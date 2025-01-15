@@ -29,8 +29,10 @@ import org.jetbrains.annotations.NotNull;
 
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.HOURS;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -71,7 +73,7 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
         }
 
         validateMinUnit(value, unit, minimumUnit());
-        validateQuantity(value, quantity, unit, minimumUnit(), Long.MAX_VALUE);
+        validateQuantity(value, quantity, unit, minimumUnit());
     }
 
     /**
@@ -87,7 +89,7 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
         this.unit = unit;
 
         validateMinUnit(this, unit, minimumUnit());
-        validateQuantity(this, quantity, unit, minimumUnit(), Long.MAX_VALUE);
+        validateQuantity(this, quantity, unit, minimumUnit());
     }
 
     /**
@@ -138,6 +140,28 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
     }
 
     /**
+     * @return the duration in milliseconds
+     */
+    public long toMillis()
+    {
+        return to(TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * @return the duration in milliseconds returned as an integer, if the value overflows,
+     * returns {@link Integer#MAX_VALUE}
+     */
+    public int toIntMillis()
+    {
+        long longMillis = toMillis();
+        if (longMillis > Integer.MAX_VALUE)
+        {
+            return Integer.MAX_VALUE;
+        }
+        return (int) longMillis;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -154,14 +178,20 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
     public boolean equals(Object obj)
     {
         if (this == obj)
+        {
             return true;
+        }
 
         if (!(obj instanceof DurationSpec))
+        {
             return false;
+        }
 
         DurationSpec that = (DurationSpec) obj;
         if (unit == that.unit())
+        {
             return quantity == that.quantity();
+        }
 
         // Due to overflows we can only guarantee that the 2 durations are equal if we get the same results
         // doing the conversion in both directions.
@@ -196,19 +226,25 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
     void validateMinUnit(Object value, TimeUnit unit, TimeUnit minUnit)
     {
         if (unit.compareTo(minUnit) < 0)
+        {
             throw iae(value);
+        }
     }
 
-    void validateQuantity(Object value, long quantity, TimeUnit sourceUnit, TimeUnit minUnit, long max)
+    void validateQuantity(Object value, long quantity, TimeUnit sourceUnit, TimeUnit minUnit)
     {
         if (quantity < 0)
+        {
             throw iae(value);
+        }
 
         // no need to validate for negatives as they are not allowed at first place from the regex
 
-        if (minUnit.convert(quantity, sourceUnit) > max)
+        if (minUnit.convert(quantity, sourceUnit) == Long.MAX_VALUE)
+        {
             throw new IllegalArgumentException(String.format("Invalid duration: %s. It shouldn't be more than %d in %s",
-                                                             value, max, minUnit.name().toLowerCase()));
+                                                             value, Long.MAX_VALUE - 1, minUnit.name().toLowerCase()));
+        }
     }
 
     IllegalArgumentException iae(Object value)
@@ -263,6 +299,11 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
                 return SECONDS;
             case "ms":
                 return MILLISECONDS;
+            case "us":
+            case "µs":
+                return MICROSECONDS;
+            case "ns":
+                return NANOSECONDS;
             default:
                 throw new IllegalArgumentException(String.format("Unsupported time unit: %s. Supported units are: %s",
                                                                  symbol, Arrays.stream(TimeUnit.values())

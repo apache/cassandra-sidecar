@@ -481,8 +481,8 @@ class SidecarConfigurationTest
         assertThat(serviceConfiguration.requestTimeout().quantity()).isEqualTo(5);
         assertThat(serviceConfiguration.requestTimeout().unit()).isEqualTo(TimeUnit.MINUTES);
         assertThat(serviceConfiguration.requestTimeout().toMillis()).isEqualTo(300_000);
-        assertThat(serviceConfiguration.allowableTimeSkew().quantity()).isEqualTo(60);
-        assertThat(serviceConfiguration.allowableTimeSkew().unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(serviceConfiguration.allowableTimeSkew().quantity()).isEqualTo(1);
+        assertThat(serviceConfiguration.allowableTimeSkew().unit()).isEqualTo(TimeUnit.HOURS);
         assertThat(serviceConfiguration.allowableTimeSkew().toSeconds()).isEqualTo(3_600);
         assertThat(serviceConfiguration.tcpKeepAlive()).isFalse();
         assertThat(serviceConfiguration.acceptBacklog()).isEqualTo(1024);

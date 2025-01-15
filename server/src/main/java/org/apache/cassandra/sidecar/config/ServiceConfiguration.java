@@ -28,7 +28,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.core.net.impl.SocketAddressImpl;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
 /**
  * Configuration for the Sidecar Service and configuration of the REST endpoints in the service

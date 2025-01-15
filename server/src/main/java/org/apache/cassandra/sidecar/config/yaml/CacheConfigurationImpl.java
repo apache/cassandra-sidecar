@@ -24,8 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -50,13 +50,13 @@ public class CacheConfigurationImpl implements CacheConfiguration
 
     public CacheConfigurationImpl()
     {
-        this(MillisecondBoundConfiguration.parse("1h"), 100, true, 5, MillisecondBoundConfiguration.parse("60s"));
+        this(MillisecondBoundConfiguration.parse("1h"), 100, true, 5, MillisecondBoundConfiguration.parse("1s"));
     }
 
     @VisibleForTesting
     public CacheConfigurationImpl(MillisecondBoundConfiguration expireAfterAccess, long maximumSize)
     {
-        this(expireAfterAccess, maximumSize, true, 5, MillisecondBoundConfiguration.parse("60s"));
+        this(expireAfterAccess, maximumSize, true, 5, MillisecondBoundConfiguration.parse("1s"));
     }
 
     public CacheConfigurationImpl(MillisecondBoundConfiguration expireAfterAccess,

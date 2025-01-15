@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.job;
 
-import java.time.Duration;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -29,6 +28,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.tasks.Task;
@@ -157,7 +157,7 @@ public abstract class OperationalJob implements Task<Void>
      * result. A succeeded future here, represents either a timeout or the result of the job and a failure is
      * represented by an exception thrown by the job execution, within the configured timeout.
      */
-    public Future<Void> asyncResult(TaskExecutorPool executorPool, Duration waitTime)
+    public Future<Void> asyncResult(TaskExecutorPool executorPool, DurationSpec waitTime)
     {
         Future<Void> resultFut = asyncResult();
         if (resultFut.isComplete())

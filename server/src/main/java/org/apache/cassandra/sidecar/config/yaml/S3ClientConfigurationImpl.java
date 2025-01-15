@@ -24,11 +24,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -86,7 +86,8 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
                                      S3ProxyConfiguration proxyConfig)
     {
         Preconditions.checkArgument(apiCallTimeout.compareTo(MINIMUM_API_CALL_TIMEOUT) > 0,
-                                    "apiCallTimeout cannot be smaller than 10 seconds. Configured: " + apiCallTimeout);
+                                    () -> String.format("apiCallTimeout cannot be smaller than %s. Configured: %s",
+                                                        MINIMUM_API_CALL_TIMEOUT, apiCallTimeout));
         this.threadNamePrefix = threadNamePrefix;
         this.concurrency = concurrency;
         this.threadKeepAlive = threadKeepAlive;
