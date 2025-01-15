@@ -85,7 +85,7 @@ public class StreamCdcSegmentHandler extends AbstractHandler<String> implements 
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(BasicPermissions.STREAM_CDC.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.CDC.toAuthorization(resource));
     }
 
     @Override

@@ -83,7 +83,7 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(BasicPermissions.READ_CDC.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.CDC.toAuthorization(resource));
     }
 
     @Override

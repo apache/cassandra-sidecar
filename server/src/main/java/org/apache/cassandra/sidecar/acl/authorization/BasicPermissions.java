@@ -56,8 +56,7 @@ public class BasicPermissions
     public static final Permission DELETE_RESTORE_JOB = new WildcardPermission("RESTORE_JOB:DELETE");
 
     // cdc related permissions
-    public static final Permission STREAM_CDC = new WildcardPermission("CDC:STREAM");
-    public static final Permission READ_CDC = new WildcardPermission("CDC:READ");
+    public static final Permission CDC = new StandardPermission("CDC");
 
     // sidecar operation related permissions
     public static final Permission READ_OPERATIONAL_JOB = new WildcardPermission("OPERATIONAL_JOB:READ");

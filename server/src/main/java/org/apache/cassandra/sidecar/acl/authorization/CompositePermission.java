@@ -23,7 +23,6 @@ import java.util.Set;
 
 import io.vertx.ext.auth.authorization.AndAuthorization;
 import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.auth.authorization.OrAuthorization;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 
 /**
@@ -51,17 +50,11 @@ public class CompositePermission extends WildcardPermission
     @Override
     public Authorization toAuthorization(String resource)
     {
-        AndAuthorization childAuthorizations = AndAuthorization.create();
+        AndAuthorization authorization = AndAuthorization.create();
         for (Permission permission : permissions)
         {
-            childAuthorizations.addAuthorization(permission.toAuthorization(resource));
+            authorization.addAuthorization(permission.toAuthorization(resource));
         }
-
-        OrAuthorization orAuthorization = OrAuthorization.create();
-        Authorization parentAuthorization = super.toAuthorization(resource);
-        orAuthorization.addAuthorization(parentAuthorization);
-        orAuthorization.addAuthorization(childAuthorizations);
-
-        return orAuthorization;
+        return authorization;
     }
 }
