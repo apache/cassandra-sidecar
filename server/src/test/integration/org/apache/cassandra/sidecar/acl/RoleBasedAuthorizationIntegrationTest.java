@@ -72,11 +72,10 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingAllTablesExceptKeyspace(context);
         testGrantingAtDataLevel(context);
         testEndpointWithOrAuthorization(context);
-        testWildcardActionForAllTargets(context);
-        testAllWildcardActionsForTarget(context);
         testGrantingWithWildcardSubparts(context);
-        testResourceWideActions(context);
         testEndpointRequiringMultipleActions(context);
+        testFeatureAllowsBasic(context);
+        testAllowingMultipleFeaturePermissions(context);
         context.completeNow();
     }
 
@@ -111,10 +110,10 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        // CREATE:SNAPSHOT permission granted for data/grant_table_test_keyspace/test_table
+        // SNAPSHOT:CREATE permission granted for data/grant_table_test_keyspace/test_table
         verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
-        // DELETE:SNAPSHOT permission not granted for data/grant_table_test_keyspace/test_table
+        // SNAPSHOT:DELETE permission not granted for data/grant_table_test_keyspace/test_table
         verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, true);
     }
 
@@ -125,11 +124,16 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        // CREATE:SNAPSHOT permission granted for data/grant_keyspace_test_keyspace/test_table with
+        // SNAPSHOT:CREATE permission granted for data/grant_keyspace_test_keyspace/test_table with
         // data/grant_tables_test_keyspace grant
         verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
-        // DELETE:SNAPSHOT permission not granted for data/grant_keyspace_test_keyspace/test_table
+        // access not granted for different keyspace
+        String notAllowedSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
+                                                       "not_allowed_keyspace", "test_table");
+        verifyAccess(context, countDownLatch, HttpMethod.PUT, notAllowedSnapshotRoute, nonAdminClientKeystorePath, true);
+
+        // SNAPSHOT:DELETE permission not granted for data/grant_keyspace_test_keyspace/test_table
         verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, true);
     }
 
@@ -140,7 +144,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        // CREATE:SNAPSHOT permission granted for data/grant_tables_except_keyspace_test_keyspace/test_table
+        // SNAPSHOT:CREATE permission granted for data/grant_tables_except_keyspace_test_keyspace/test_table
         // with data/grant_tables_except_keyspace_test_keyspace grant
         verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
@@ -157,10 +161,10 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        // CREATE:SNAPSHOT permission granted for data/test_keyspace/test_table with data resource grant
+        // SNAPSHOT:CREATE permission granted for data/test_keyspace/test_table with data resource grant
         verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
 
-        // DELETE:SNAPSHOT permission not granted for data/test_keyspace/test_table not granted
+        // SNAPSHOT:DELETE permission not granted for data/test_keyspace/test_table not granted
         verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, clientKeystorePath, true);
     }
 
@@ -171,51 +175,9 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         CountDownLatch countDownLatch = new CountDownLatch(1);
 
         // schema endpoint for keyspaces accepts CREATE, ALTER, DROP or DESCRIBE cassandra permissions.
-        // cassandra permission for test_role on sample_keyspace not granted, sidecar permission *:READ is used to
+        // cassandra permission for test_role on sample_keyspace not granted, sidecar permission SCHEMA:READ is used to
         // grant access
         verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, false);
-    }
-
-    void testWildcardActionForAllTargets(VertxTestContext context) throws Exception
-    {
-        String timeSkewRoute = "/api/v1/time-skew";
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/wildcard_across_targets_test_user");
-
-        CountDownLatch countDownLatch = new CountDownLatch(4);
-
-        // Uses sidecar permission READ:* added
-        verifyAccess(context, countDownLatch, HttpMethod.GET, timeSkewRoute, clientKeystorePath, false);
-
-        String schemaRoute = "/api/v1/cassandra/schema";
-        // Allows READ:SCHEMA
-        verifyAccess(context, countDownLatch, HttpMethod.GET, schemaRoute, clientKeystorePath, false);
-
-        String ringRoute = "/api/v1/cassandra/ring";
-        // Allows READ:RING too
-        verifyAccess(context, countDownLatch, HttpMethod.GET, ringRoute, clientKeystorePath, false);
-
-        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
-        // Does not allow finding schema for keyspace, keyspace schema route requires access specific to
-        // data/test_keyspace resource
-        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, true);
-    }
-
-    void testAllWildcardActionsForTarget(VertxTestContext context)
-    {
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "all_wildcard_actions_for_target_test_keyspace", "test_table");
-
-        CountDownLatch countDownLatch = new CountDownLatch(2);
-
-        // *:SNAPSHOT permission across ata/all_wildcard_actions_for_target_test_keyspace/test_table allows all
-        // possible actions for SNAPSHOT target such as CREATE:SNAPSHOT, READ:SNAPSHOT, DELETE:SNAPSHOT.
-        // Does not allow SSTABLE:STREAM or other actions
-        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
-
-        String streamSSTableRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
-                                                  "all_wildcard_actions_for_target_test_keyspace", "test_table",
-                                                  "my-snapshot", "nc-1-big-Data.db");
-        verifyAccess(context, countDownLatch, HttpMethod.GET, streamSSTableRoute, nonAdminClientKeystorePath, true);
     }
 
     void testGrantingWithWildcardSubparts(VertxTestContext context) throws Exception
@@ -227,40 +189,14 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         CountDownLatch countDownLatch = new CountDownLatch(3);
 
-        // READ:SCHEMA permission granted for cluster with READ:SCHEMA,GOSSIP
+        // SCHEMA:READ permission granted for cluster with GOSSIP,SCHEMA:READ
         verifyAccess(context, countDownLatch, HttpMethod.GET, schemaRoute, clientKeystorePath, false);
 
-        // READ:GOSSIP permission granted for cluster with READ:SCHEMA,GOSSIP
+        // GOSSIP:READ permission granted for cluster with GOSSIP,SCHEMA:READ
         verifyAccess(context, countDownLatch, HttpMethod.GET, gossipRoute, clientKeystorePath, false);
 
-        // READ:RING permission not granted with READ:SCHEMA,GOSSIP
+        // RING:READ permission not granted with GOSSIP,SCHEMA:READ
         verifyAccess(context, countDownLatch, HttpMethod.GET, ringRoute, clientKeystorePath, true);
-    }
-
-    void testResourceWideActions(VertxTestContext context)
-    {
-        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "resource_wide_actions_test_keyspace");
-
-        CountDownLatch countDownLatch = new CountDownLatch(4);
-
-        // *:* permission across resource data/resource_wide_actions_test_keyspace allows all possible actions
-        // across all possible targets, Such as READ:SCHEMA for given keyspace, READ:RING for given keyspace etc.
-        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, false);
-
-        String keyspaceRingRoute = String.format("/api/v1/cassandra/ring/keyspaces/%s", "resource_wide_actions_test_keyspace");
-        // READ:RING for keyspace granted
-        verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceRingRoute, nonAdminClientKeystorePath, false);
-
-
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "resource_wide_actions_test_keyspace", "test_table");
-        // allows CREATE:SNAPSHOT which requires table resource too, since data/resource_wide_actions_test_keyspace
-        // grant is a wider grant
-        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
-
-        // does not allow access on a different keyspace
-        String disallowedKeyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
-        verifyAccess(context, countDownLatch, HttpMethod.GET, disallowedKeyspaceSchemaRoute, nonAdminClientKeystorePath, true);
     }
 
     void testEndpointRequiringMultipleActions(VertxTestContext context)
@@ -284,12 +220,12 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                   // grant sidecar permission for streaming
                   updateSidecarPermission("non_admin_test_role",
                                           "data/multiple_permissions_required_test_keyspace/test_table",
-                                          "SSTABLE:STREAM");
+                                          "SNAPSHOT:STREAM");
 
                   // wait for cache refresh
                   Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
 
-                  // STREAM SSTable request requires both Sidecar SSTABLE:STREAM permission and Cassandra's SELECT
+                  // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
                   // permission on a table it accesses data.
                   return streamRequest(client, streamRoute);
               })
@@ -318,6 +254,37 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                   countDownLatch.countDown();
               });
     }
+
+    void testFeatureAllowsBasic(VertxTestContext context)
+    {
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
+                                                   "feature_allows_basic_test_keyspace", "test_table");
+
+        CountDownLatch countDownLatch = new CountDownLatch(2);
+
+        // SNAPSHOT:CREATE permission granted for data/feature_allows_basic_test_keyspace/test_table
+        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
+
+        // TIME_SKEW:READ permission not granted with BULK_READ:DIRECT is granted with BULK_WRITE:DIRECT or BULK_WRITE:S3_COMPAT
+        String timeSkewRoute = "/api/v1/time-skew";
+        verifyAccess(context, countDownLatch, HttpMethod.DELETE, timeSkewRoute, nonAdminClientKeystorePath, true);
+    }
+
+    void testAllowingMultipleFeaturePermissions(VertxTestContext context)
+    {
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
+                                                   "multiple_feature_test_keyspace", "test_table");
+
+        CountDownLatch countDownLatch = new CountDownLatch(3);
+
+        // TIME_SKEW:READ permission granted with BULK_WRITE:DIRECT,S3_COMPAT
+        String timeSkewRoute = "/api/v1/time-skew";
+        verifyAccess(context, countDownLatch, HttpMethod.DELETE, timeSkewRoute, nonAdminClientKeystorePath, false);
+
+        // SNAPSHOT:CREATE permission not granted with BULK_WRITE:DIRECT,S3_COMPAT
+        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, true);
+    }
+
 
     private void prepareForTest(CassandraTestContext cassandraContext) throws Exception
     {
@@ -351,18 +318,18 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createKeyspace("grant_keyspace_test_keyspace");
         createKeyspace("grant_tables_except_keyspace_test_keyspace");
         createKeyspace("orAuthorization_test_keyspace");
-        createKeyspace("resource_wide_actions_test_keyspace");
-        createKeyspace("all_wildcard_actions_for_target_test_keyspace");
         createKeyspace("multiple_permissions_required_test_keyspace");
+        createKeyspace("feature_allows_basic_test_keyspace");
+        createKeyspace("multiple_feature_test_keyspace");
         createTable("test_keyspace", "test_table");
         createTable("non_admin_test_keyspace", "test_table");
         createTable("grant_table_test_keyspace", "test_table");
         createTable("grant_keyspace_test_keyspace", "test_table");
         createTable("grant_tables_except_keyspace_test_keyspace", "test_table");
         createTable("orAuthorization_test_keyspace", "test_table");
-        createTable("resource_wide_actions_test_keyspace", "test_table");
-        createTable("all_wildcard_actions_for_target_test_keyspace", "test_table");
         createTable("multiple_permissions_required_test_keyspace", "test_table");
+        createTable("feature_allows_basic_test_keyspace", "test_table");
+        createTable("multiple_feature_test_keyspace", "test_table");
     }
 
     private void createRequiredRoles(CassandraTestContext cassandraContext)
@@ -401,28 +368,25 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         grantSidecarPermission("grant_data_test_role", "data", "SNAPSHOT:CREATE");
 
         // permission for testEndpointWithOrAuthorization
-        grantSidecarPermission("non_admin_test_role", "data/orAuthorization_test_keyspace", "*:READ");
-
-        // permission for testWildcardActionForAllTargets
-        // READ action allowed across targets for same resource. READ:* for cluster resource allows READ:SCHEMA,
-        // CDC:READ, GOSSIP:READ, RING:READ etc
-        grantSidecarPermission("wildcard_across_targets_test_role", "cluster", "*:READ");
-
-        // permission for testAllWildcardActionsForTarget
-        grantSidecarPermission("non_admin_test_role",
-                               "data/all_wildcard_actions_for_target_test_keyspace/test_table",
-                               "*:SNAPSHOT");
+        grantSidecarPermission("non_admin_test_role", "data/orAuthorization_test_keyspace", "SCHEMA:READ");
 
         // permission for testGrantingWithWildcardSubparts
-        grantSidecarPermission("wildcard_with_subparts_test_role", "cluster", "READ:SCHEMA,GOSSIP");
-
-        // permission for testResourceWideActions
-        grantSidecarPermission("non_admin_test_role", "data/resource_wide_actions_test_keyspace", "*:*");
+        grantSidecarPermission("wildcard_with_subparts_test_role", "cluster", "GOSSIP,SCHEMA:READ");
 
         // permission for testEndpointRequiringMultipleActions
         grantSidecarPermission("non_admin_test_role",
                                "data/multiple_permissions_required_test_keyspace/test_table",
                                "CREATE:SNAPSHOT");
+
+        // permission for testFeaturePermissionAllowsBasic
+        grantSidecarPermission("non_admin_test_role",
+                               "data/feature_allows_basic_test_keyspace/test_table",
+                               "BULK_READ:DIRECT");
+
+        // permission for testAllowingMultipleFeaturePermissions
+        grantSidecarPermission("non_admin_test_role",
+                               "data/multiple_feature_test_keyspace/test_table",
+                               "BULK_WRITE:DIRECT,S3_COMPAT");
     }
 
     private void createRequiredKeystores() throws Exception

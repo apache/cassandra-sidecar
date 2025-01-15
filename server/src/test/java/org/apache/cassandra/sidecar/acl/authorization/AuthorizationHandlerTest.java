@@ -39,8 +39,9 @@ class AuthorizationHandlerTest
     {
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
         Authorization mockAuthorization = mock(Authorization.class);
+        AuthorizationParameterValidateHandler mockValidateHandler = mock(AuthorizationParameterValidateHandler.class);
         AuthorizationWithAdminBypassHandler authorizationHandler
-        = new AuthorizationWithAdminBypassHandler(mockAdminIdentityResolver, mockAuthorization);
+        = new AuthorizationWithAdminBypassHandler(mockValidateHandler, mockAdminIdentityResolver, mockAuthorization);
         RoutingContext mockCtx = mock(RoutingContext.class);
         User user = User.fromName("test_user");
         when(mockCtx.user()).thenReturn(user);
