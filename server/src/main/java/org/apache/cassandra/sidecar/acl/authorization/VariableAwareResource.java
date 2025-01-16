@@ -74,7 +74,7 @@ public enum VariableAwareResource
     // we cannot set resources that do not end in curly braces (e.g. data/keyspace/*) in
     // PermissionBasedAuthorizationImpl or WildcardPermissionBasedAuthorizationImpl. data/{%s}/{TABLE_WILDCARD} treats
     // TABLE_WILDCARD as a variable. This hack allows to read resource level permissions that could be set for all
-    // tables through data/<keyspace_name>/*
+    // tables through data/<keyspace_name>/*. Bug should be fixed in 4.5.12
     // Note: DATA_WITH_KEYSPACE_ALL_TABLES resource comprises all tables under the keyspace excluding the keyspace itself
     DATA_WITH_KEYSPACE_ALL_TABLES(String.format("data/{%s}/{TABLE_WILDCARD}", KEYSPACE),
                                   // can expand to DATA, DATA_WITH_KEYSPACE

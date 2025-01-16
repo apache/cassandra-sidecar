@@ -26,15 +26,11 @@ package org.apache.cassandra.sidecar.acl.authorization;
  * For example, the SNAPSHOT:CREATE permission, CREATE action is allowed for the SNAPSHOT domain. Sample actions are
  * CREATE, READ, EDIT, DELETE, IMPORT, UPLOAD, START etc.
  * <p>
- * Wildcard permissions are supported with ':' wildcard parts divider and '*' wildcard token to match parts:
+ * Wildcard permissions are supported with ':' wildcard parts divider and ',' wildcard sub parts divier token.
+ * Wildcard token '*' is restricted to avoid unpredictable behavior.
  * <p>
- * - SNAPSHOT:* allows CREATE, READ and DELETE of snapshots.
- * - *:CREATE allows CREATE action on all possible targets.
- * - *:* allows all possible permissions for specified resource
- *
- * <p>For feature-level permissions refer to the {@link FeaturePermission} class. Feature-level permissions
- * are composite of individual-level permissions related to corresponding features i.e. BULK_READ permission is a
- * composite of CREATE_SNAPSHOT, DELETE_SNAPSHOT etc.
+ * Some examples of wildcard permissions are:
+ * - SNAPSHOT:CREATE,READ,DELETE allows SNAPSHOT:CREATE, SNAPSHOT:READ and SNAPSHOT:DELETE.
  */
 public class BasicPermissions
 {

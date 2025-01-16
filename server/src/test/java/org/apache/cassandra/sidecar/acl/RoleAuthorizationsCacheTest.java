@@ -33,6 +33,7 @@ import io.vertx.ext.auth.authorization.Authorization;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -244,10 +245,10 @@ class RoleAuthorizationsCacheTest
         when(mockConfig.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
         CacheConfiguration mockCacheConfig = mock(CacheConfiguration.class);
         when(mockCacheConfig.enabled()).thenReturn(true);
-        when(mockCacheConfig.expireAfterAccessMillis()).thenReturn(1000L);
+        when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("1s"));
         when(mockCacheConfig.maximumSize()).thenReturn(10L);
         when(mockCacheConfig.warmupRetries()).thenReturn(5);
-        when(mockCacheConfig.warmupRetryIntervalMillis()).thenReturn(1000L);
+        when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("1s"));
         when(mockAccessControlConfig.permissionCacheConfiguration()).thenReturn(mockCacheConfig);
         return mockConfig;
     }

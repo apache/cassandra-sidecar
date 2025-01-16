@@ -18,28 +18,24 @@
 
 package org.apache.cassandra.sidecar.routes.cassandra;
 
-
-import java.util.Collections;
-import java.util.Set;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
-import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
-import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
- * Provides REST endpoint to get the configured settings of a cassandra node
+ * Provides REST endpoint to get the configured settings of a cassandra node.
+ * <p>
+ * Note: {@link NodeSettingsHandler} is not Access protected, because a user who is able to log in into Cassandra
+ * can read node settings information. Since sidecar and cassandra share identities who are authenticated, sidecar
+ * authenticated users can read node settings information in Cassandra.
  */
 @Singleton
-public class NodeSettingsHandler extends AbstractHandler<Void> implements AccessProtected
+public class NodeSettingsHandler extends AbstractHandler<Void>
 {
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -50,13 +46,6 @@ public class NodeSettingsHandler extends AbstractHandler<Void> implements Access
     NodeSettingsHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, null);
-    }
-
-    @Override
-    public Set<Authorization> requiredAuthorizations()
-    {
-        String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(BasicPermissions.READ_NODE_SETTINGS.toAuthorization(resource));
     }
 
     /**

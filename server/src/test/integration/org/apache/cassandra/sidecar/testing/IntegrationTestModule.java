@@ -177,7 +177,11 @@ public class IntegrationTestModule extends AbstractModule
                                                   Collections.singletonList(mTLSConfig),
                                                   rbacConfig,
                                                   Collections.singleton(ADMIN_IDENTITY),
-                                                  new CacheConfigurationImpl(1000, 100, true, 5, 1000));
+                                                  new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("1s"),
+                                                                             100,
+                                                                             true,
+                                                                             5,
+                                                                             MillisecondBoundConfiguration.parse("1s")));
     }
 
     class WrapperInstancesMetadata implements InstancesMetadata

@@ -73,7 +73,6 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
                                             .addAuthorization(CassandraPermissions.CREATE.toAuthorization(eligibleResources))
                                             .addAuthorization(CassandraPermissions.ALTER.toAuthorization(eligibleResources))
                                             .addAuthorization(CassandraPermissions.DROP.toAuthorization(eligibleResources))
-                                            .addAuthorization(CassandraPermissions.DESCRIBE.toAuthorization(eligibleResources))
                                             .addAuthorization(BasicPermissions.READ_SCHEMA.toAuthorization(eligibleResources));
         return Collections.singleton(or);
     }
@@ -149,6 +148,6 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     @Override
     protected Name extractParamsOrThrow(RoutingContext context)
     {
-        return keyspace(context, false);
+        return keyspace(context, true);
     }
 }
