@@ -29,10 +29,8 @@ import org.jetbrains.annotations.NotNull;
 
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.HOURS;
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -272,10 +270,6 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
                 return "s";
             case MILLISECONDS:
                 return "ms";
-            case MICROSECONDS:
-                return "us";
-            case NANOSECONDS:
-                return "ns";
         }
         throw new IllegalArgumentException("Unsupported unit " + unit);
     }
@@ -299,11 +293,6 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
                 return SECONDS;
             case "ms":
                 return MILLISECONDS;
-            case "us":
-            case "µs":
-                return MICROSECONDS;
-            case "ns":
-                return NANOSECONDS;
             default:
                 throw new IllegalArgumentException(String.format("Unsupported time unit: %s. Supported units are: %s",
                                                                  symbol, Arrays.stream(TimeUnit.values())

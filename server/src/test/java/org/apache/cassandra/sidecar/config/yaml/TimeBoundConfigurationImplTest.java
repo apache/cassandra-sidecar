@@ -62,8 +62,6 @@ class TimeBoundConfigurationImplTest
         assertThat(DurationSpec.fromSymbol("h")).isEqualTo(TimeUnit.HOURS);
         assertThat(DurationSpec.fromSymbol("m")).isEqualTo(TimeUnit.MINUTES);
         assertThat(DurationSpec.fromSymbol("s")).isEqualTo(TimeUnit.SECONDS);
-        assertThatIllegalArgumentException().isThrownBy(() -> DurationSpec.fromSymbol("n"))
-                                            .withMessageContaining("Unsupported time unit: n. Supported units are: ns, us, ms, s, m, h, d");
     }
 
     @Test
@@ -74,8 +72,6 @@ class TimeBoundConfigurationImplTest
         assertThat(DurationSpec.symbol(TimeUnit.HOURS)).isEqualTo("h");
         assertThat(DurationSpec.symbol(TimeUnit.MINUTES)).isEqualTo("m");
         assertThat(DurationSpec.symbol(TimeUnit.SECONDS)).isEqualTo("s");
-        assertThat(DurationSpec.symbol(TimeUnit.MICROSECONDS)).isEqualTo("us");
-        assertThat(DurationSpec.symbol(TimeUnit.NANOSECONDS)).isEqualTo("ns");
     }
 
     @ParameterizedTest
@@ -173,9 +169,7 @@ class TimeBoundConfigurationImplTest
         Arguments.of(-10, TimeUnit.HOURS),
         Arguments.of(-10, TimeUnit.MINUTES),
         Arguments.of(-10, TimeUnit.SECONDS),
-        Arguments.of(-10, TimeUnit.MILLISECONDS),
-        Arguments.of(10, TimeUnit.MICROSECONDS),
-        Arguments.of(10, TimeUnit.NANOSECONDS)
+        Arguments.of(-10, TimeUnit.MILLISECONDS)
         );
     }
 
@@ -186,9 +180,7 @@ class TimeBoundConfigurationImplTest
         Arguments.of(-10, TimeUnit.HOURS),
         Arguments.of(-10, TimeUnit.MINUTES),
         Arguments.of(-10, TimeUnit.SECONDS),
-        Arguments.of(10, TimeUnit.MILLISECONDS),
-        Arguments.of(10, TimeUnit.MICROSECONDS),
-        Arguments.of(10, TimeUnit.NANOSECONDS)
+        Arguments.of(10, TimeUnit.MILLISECONDS)
         );
     }
 }
