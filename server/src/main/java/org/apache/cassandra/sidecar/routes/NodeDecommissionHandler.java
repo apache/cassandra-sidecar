@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.Collections;
 import java.util.Set;
 
 import com.datastax.driver.core.utils.UUIDs;
@@ -27,6 +28,8 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -71,8 +74,8 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        // TODO : Saranya
-        return Set.of();
+        String resource = VariableAwareResource.CLUSTER.resource();
+        return Collections.singleton(BasicPermissions.DECOMMISSION_NODE.toAuthorization(resource));
     }
 
     /**

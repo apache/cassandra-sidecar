@@ -75,7 +75,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingWithWildcardSubparts(context);
         testEndpointRequiringMultipleActions(context);
         testFeatureAllowsBasic(context);
-        testAllowingMultipleFeaturePermissions(context);
         context.completeNow();
     }
 
@@ -280,22 +279,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, countDownLatch, HttpMethod.DELETE, timeSkewRoute, nonAdminClientKeystorePath, true);
     }
 
-    void testAllowingMultipleFeaturePermissions(VertxTestContext context)
-    {
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "multiple_feature_test_keyspace", "test_table");
-
-        CountDownLatch countDownLatch = new CountDownLatch(2);
-
-        // TIME_SKEW:READ permission granted with BULK_WRITE:DIRECT,S3_COMPAT
-        String timeSkewRoute = "/api/v1/time-skew";
-        verifyAccess(context, countDownLatch, HttpMethod.DELETE, timeSkewRoute, nonAdminClientKeystorePath, false);
-
-        // SNAPSHOT:CREATE permission not granted with BULK_WRITE:DIRECT,S3_COMPAT
-        verifyAccess(context, countDownLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, true);
-    }
-
-
     private void prepareForTest(CassandraTestContext cassandraContext) throws Exception
     {
         // mTLS authentication was added in Cassandra starting 5.0 version
@@ -330,7 +313,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createKeyspace("orAuthorization_test_keyspace");
         createKeyspace("multiple_permissions_required_test_keyspace");
         createKeyspace("feature_allows_basic_test_keyspace");
-        createKeyspace("multiple_feature_test_keyspace");
         createTable("test_keyspace", "test_table");
         createTable("non_admin_test_keyspace", "test_table");
         createTable("grant_table_test_keyspace", "test_table");
@@ -339,7 +321,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createTable("orAuthorization_test_keyspace", "test_table");
         createTable("multiple_permissions_required_test_keyspace", "test_table");
         createTable("feature_allows_basic_test_keyspace", "test_table");
-        createTable("multiple_feature_test_keyspace", "test_table");
     }
 
     private void createRequiredRoles(CassandraTestContext cassandraContext)
@@ -391,12 +372,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // permission for testFeaturePermissionAllowsBasic
         grantSidecarPermission("non_admin_test_role",
                                "data/feature_allows_basic_test_keyspace/test_table",
-                               "BULK_READ:DIRECT");
-
-        // permission for testAllowingMultipleFeaturePermissions
-        grantSidecarPermission("non_admin_test_role",
-                               "data/multiple_feature_test_keyspace/test_table",
-                               "BULK_WRITE:DIRECT,S3_COMPAT");
+                               "BULK_READ_DIRECT");
     }
 
     private void createRequiredKeystores() throws Exception

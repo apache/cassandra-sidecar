@@ -30,7 +30,7 @@ import org.apache.cassandra.sidecar.common.utils.Preconditions;
  * feature level permissions such as BULK_READ, BULK_WRITE etc. that could contain basic permissions such as
  * CREATE_SNAPSHOT, DELETE_SNAPSHOT etc.
  */
-public class CompositePermission extends WildcardPermission
+public class CompositePermission extends StandardPermission
 {
     private final Set<Permission> permissions;
 

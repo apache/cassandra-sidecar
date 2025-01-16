@@ -68,4 +68,5 @@ public class BasicPermissions
     public static final Permission READ_TIME_SKEW = new WildcardPermission("TIME_SKEW:READ");
     public static final Permission READ_NODE_SETTINGS = new WildcardPermission("NODE_SETTINGS:READ");
     public static final Permission READ_TOPOLOGY = new WildcardPermission("TOPOLOGY:READ");
+    public static final Permission DECOMMISSION_NODE = new WildcardPermission("NODE:DECOMMISSION");
 }

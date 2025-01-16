@@ -31,7 +31,7 @@ import static org.apache.cassandra.sidecar.acl.authorization.CassandraPermission
  */
 public enum FeaturePermission
 {
-    BULK_READ_DIRECT("BULK_READ:DIRECT",
+    BULK_READ_DIRECT("BULK_READ_DIRECT",
                      READ_NODE_SETTINGS,
                      READ_RING,
                      READ_SCHEMA,
@@ -41,7 +41,7 @@ public enum FeaturePermission
                      STREAM_SNAPSHOT,
                      SELECT),
 
-    BULK_WRITE_DIRECT("BULK_WRITE:DIRECT",
+    BULK_WRITE_DIRECT("BULK_WRITE_DIRECT",
                       READ_NODE_SETTINGS,
                       READ_TIME_SKEW,
                       READ_SCHEMA,
@@ -50,7 +50,7 @@ public enum FeaturePermission
                       IMPORT_STAGED_SSTABLE,
                       DELETE_STAGED_SSTABLE),
 
-    BULK_WRITE_S3_COMPAT("BULK_WRITE:S3_COMPAT",
+    BULK_WRITE_S3_COMPAT("BULK_WRITE_S3_COMPAT",
                          READ_NODE_SETTINGS,
                          READ_TIME_SKEW,
                          READ_SCHEMA,
