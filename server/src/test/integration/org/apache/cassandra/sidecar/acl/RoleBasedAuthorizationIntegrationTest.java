@@ -79,12 +79,13 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         context.completeNow();
     }
 
-    void testForAdmin(VertxTestContext context)
+    void testForAdmin(VertxTestContext context) throws Exception
     {
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
         // uses client keystore with admin identity. Admins bypass authorization checks
         CountDownLatch countDownLatch = new CountDownLatch(1);
         verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, false);
+        countDownLatch.await(30, TimeUnit.SECONDS);
     }
 
     void testForSuperUser(VertxTestContext context) throws Exception
@@ -94,16 +95,18 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/super_user_test_user");
         CountDownLatch countDownLatch = new CountDownLatch(1);
         verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, false);
+        countDownLatch.await(30, TimeUnit.SECONDS);
     }
 
-    void testForNonAdmin(VertxTestContext context)
+    void testForNonAdmin(VertxTestContext context) throws Exception
     {
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
         CountDownLatch countDownLatch = new CountDownLatch(1);
         verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, false);
+        countDownLatch.await(30, TimeUnit.SECONDS);
     }
 
-    void testGrantingForTable(VertxTestContext context)
+    void testGrantingForTable(VertxTestContext context) throws Exception
     {
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "grant_table_test_keyspace", "test_table");
@@ -115,14 +118,15 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         // SNAPSHOT:DELETE permission not granted for data/grant_table_test_keyspace/test_table
         verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, true);
+        countDownLatch.await(30, TimeUnit.SECONDS);
     }
 
-    void testGrantingForKeyspace(VertxTestContext context)
+    void testGrantingForKeyspace(VertxTestContext context) throws Exception
     {
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "grant_keyspace_test_keyspace", "test_table");
 
-        CountDownLatch countDownLatch = new CountDownLatch(2);
+        CountDownLatch countDownLatch = new CountDownLatch(3);
 
         // SNAPSHOT:CREATE permission granted for data/grant_keyspace_test_keyspace/test_table with
         // data/grant_tables_test_keyspace grant
@@ -135,9 +139,10 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         // SNAPSHOT:DELETE permission not granted for data/grant_keyspace_test_keyspace/test_table
         verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, true);
+        countDownLatch.await(30, TimeUnit.SECONDS);
     }
 
-    void testGrantingAllTablesExceptKeyspace(VertxTestContext context)
+    void testGrantingAllTablesExceptKeyspace(VertxTestContext context) throws Exception
     {
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "grant_tables_except_keyspace_test_keyspace", "test_table");
@@ -151,6 +156,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // SCHEMA:READ is not granted since it expects permissions at keyspace level
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "grant_tables_except_keyspace_test_keyspace");
         verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, true);
+        countDownLatch.await(30, TimeUnit.SECONDS);
     }
 
     void testGrantingAtDataLevel(VertxTestContext context) throws Exception
@@ -166,9 +172,10 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         // SNAPSHOT:DELETE permission not granted for data/test_keyspace/test_table not granted
         verifyAccess(context, countDownLatch, HttpMethod.DELETE, createSnapshotRoute, clientKeystorePath, true);
+        countDownLatch.await(30, TimeUnit.SECONDS);
     }
 
-    void testEndpointWithOrAuthorization(VertxTestContext context)
+    void testEndpointWithOrAuthorization(VertxTestContext context) throws Exception
     {
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "orAuthorization_test_keyspace");
 
@@ -178,6 +185,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // cassandra permission for test_role on sample_keyspace not granted, sidecar permission SCHEMA:READ is used to
         // grant access
         verifyAccess(context, countDownLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, false);
+        countDownLatch.await(30, TimeUnit.SECONDS);
     }
 
     void testGrantingWithWildcardSubparts(VertxTestContext context) throws Exception
@@ -197,9 +205,10 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         // RING:READ permission not granted with GOSSIP,SCHEMA:READ
         verifyAccess(context, countDownLatch, HttpMethod.GET, ringRoute, clientKeystorePath, true);
+        countDownLatch.await(30, TimeUnit.SECONDS);
     }
 
-    void testEndpointRequiringMultipleActions(VertxTestContext context)
+    void testEndpointRequiringMultipleActions(VertxTestContext context) throws Exception
     {
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "multiple_permissions_required_test_keyspace", "test_table");
@@ -253,6 +262,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                   assertThat(acceptedStreamResp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                   countDownLatch.countDown();
               });
+        countDownLatch.await(30, TimeUnit.SECONDS);
     }
 
     void testFeatureAllowsBasic(VertxTestContext context)
@@ -275,7 +285,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "multiple_feature_test_keyspace", "test_table");
 
-        CountDownLatch countDownLatch = new CountDownLatch(3);
+        CountDownLatch countDownLatch = new CountDownLatch(2);
 
         // TIME_SKEW:READ permission granted with BULK_WRITE:DIRECT,S3_COMPAT
         String timeSkewRoute = "/api/v1/time-skew";
