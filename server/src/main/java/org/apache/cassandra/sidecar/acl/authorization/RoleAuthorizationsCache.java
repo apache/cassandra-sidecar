@@ -84,6 +84,9 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
     }
 
     /**
+     * Provides authorizations given user's role.
+     *
+     * @param role a role a user holds
      * @return a {@code Set} of {@link Authorization} a role holds.
      */
     public Set<Authorization> getAuthorizations(String role)

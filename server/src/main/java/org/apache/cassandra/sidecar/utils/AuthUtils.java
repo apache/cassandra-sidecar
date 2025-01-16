@@ -71,6 +71,9 @@ public class AuthUtils
     }
 
     /**
+     * Construct {@link Permission} given the permission name.
+     *
+     * @param name name of permission
      * @return an instance of {@link Permission} given the name
      */
     public static Permission permissionFromName(String name)
