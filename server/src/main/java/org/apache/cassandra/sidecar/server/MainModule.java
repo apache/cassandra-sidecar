@@ -57,6 +57,7 @@ import org.apache.cassandra.sidecar.acl.authentication.AuthenticationHandlerFact
 import org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory;
 import org.apache.cassandra.sidecar.acl.authorization.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider;
+import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
 import org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache;
 import org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
@@ -125,7 +126,6 @@ import org.apache.cassandra.sidecar.routes.SchemaHandler;
 import org.apache.cassandra.sidecar.routes.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.routes.TimeSkewHandler;
 import org.apache.cassandra.sidecar.routes.TokenRangeReplicaMapHandler;
-import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
 import org.apache.cassandra.sidecar.routes.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.routes.cdc.ListCdcDirHandler;
 import org.apache.cassandra.sidecar.routes.cdc.StreamCdcSegmentHandler;
@@ -476,11 +476,11 @@ public class MainModule extends AbstractModule
                                     .endpoint(ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE)
                                     .handler(listOperationalJobsHandler)
                                     .build();
-        router.put(ApiEndpointsV1.NODE_DECOMMISSION_ROUTE)
-              .handler(nodeDecommissionHandler);
 
-        router.get(ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE)
-              .handler(ringHandler);
+        protectedRouteBuilderFactory.get().router(router).method(HttpMethod.PUT)
+                                    .endpoint(ApiEndpointsV1.NODE_DECOMMISSION_ROUTE)
+                                    .handler(nodeDecommissionHandler)
+                                    .build();
 
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.PUT)
                                     .endpoint(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE)

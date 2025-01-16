@@ -178,12 +178,6 @@ public class CassandraSidecarTestContext implements AutoCloseable
         refreshInstancesMetadata();
     }
 
-    public void setSslConfiguration(SslConfiguration sslConfiguration)
-    {
-        this.sslConfiguration = sslConfiguration;
-        refreshInstancesMetadata();
-    }
-
     public InstancesMetadata instancesMetadata()
     {
         if (instancesMetadata == null)
