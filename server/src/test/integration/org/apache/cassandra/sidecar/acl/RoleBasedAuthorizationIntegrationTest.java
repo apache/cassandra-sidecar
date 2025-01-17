@@ -83,11 +83,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingWithWildcardSubparts(context);
         testEndpointRequiringMultipleActions(context);
 
-        if (testCompleteLatch.await(80, TimeUnit.SECONDS))
-            LOGGER.info("Test completed");
-        else
-            LOGGER.error("Test timed out.");
-
+        assertThat(testCompleteLatch.await(80, TimeUnit.SECONDS)).isTrue();
         context.completeNow();
     }
 
