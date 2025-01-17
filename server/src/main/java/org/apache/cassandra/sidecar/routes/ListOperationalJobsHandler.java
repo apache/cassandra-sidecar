@@ -58,7 +58,7 @@ public class ListOperationalJobsHandler extends AbstractHandler<Void> implements
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.OPERATION.resource();
-        return Collections.singleton(BasicPermissions.READ_OPERATIONAL_JOB.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.READ_TASKS.toAuthorization(resource));
     }
 
     @Override

@@ -61,7 +61,7 @@ public class OperationalJobHandler extends AbstractHandler<UUID> implements Acce
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.OPERATION.resource();
-        return Collections.singleton(BasicPermissions.READ_OPERATIONAL_JOB.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.READ_TASKS.toAuthorization(resource));
     }
 
     /**
