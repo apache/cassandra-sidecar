@@ -26,42 +26,42 @@ package org.apache.cassandra.sidecar.acl.authorization;
  * For example, the SNAPSHOT:CREATE permission, CREATE action is allowed for the SNAPSHOT domain. Sample actions are
  * CREATE, READ, EDIT, DELETE, IMPORT, UPLOAD, START etc.
  * <p>
- * Wildcard permissions are supported with ':' wildcard parts divider and ',' wildcard sub parts divier token.
- * Wildcard token '*' is restricted to avoid unpredictable behavior.
+ * Domain aware permissions are supported with ':' wildcard parts divider. Wildcard token '*' is restricted
+ * to avoid unpredictable behavior.
  * <p>
- * Some examples of wildcard permissions are:
+ * Some examples of domain aware permissions are:
  * - SNAPSHOT:CREATE,READ,DELETE allows SNAPSHOT:CREATE, SNAPSHOT:READ and SNAPSHOT:DELETE.
  */
 public class BasicPermissions
 {
     // SSTable staging related permissions
-    public static final Permission UPLOAD_STAGED_SSTABLE = new WildcardPermission("STAGED_SSTABLE:UPLOAD");
-    public static final Permission IMPORT_STAGED_SSTABLE = new WildcardPermission("STAGED_SSTABLE:IMPORT");
-    public static final Permission DELETE_STAGED_SSTABLE = new WildcardPermission("STAGED_SSTABLE:DELETE");
+    public static final Permission UPLOAD_STAGED_SSTABLE = new DomainAwarePermission("STAGED_SSTABLE:UPLOAD");
+    public static final Permission IMPORT_STAGED_SSTABLE = new DomainAwarePermission("STAGED_SSTABLE:IMPORT");
+    public static final Permission DELETE_STAGED_SSTABLE = new DomainAwarePermission("STAGED_SSTABLE:DELETE");
 
     // snapshot related permissions
-    public static final Permission CREATE_SNAPSHOT = new WildcardPermission("SNAPSHOT:CREATE");
-    public static final Permission READ_SNAPSHOT = new WildcardPermission("SNAPSHOT:READ");
-    public static final Permission DELETE_SNAPSHOT = new WildcardPermission("SNAPSHOT:DELETE");
-    public static final Permission STREAM_SNAPSHOT = new WildcardPermission("SNAPSHOT:STREAM");
+    public static final Permission CREATE_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:CREATE");
+    public static final Permission READ_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:READ");
+    public static final Permission DELETE_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:DELETE");
+    public static final Permission STREAM_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:STREAM");
 
     // restore job related permissions
-    public static final Permission CREATE_RESTORE_JOB = new WildcardPermission("RESTORE_JOB:CREATE");
-    public static final Permission READ_RESTORE_JOB = new WildcardPermission("RESTORE_JOB:READ");
-    public static final Permission EDIT_RESTORE_JOB = new WildcardPermission("RESTORE_JOB:EDIT");
-    public static final Permission DELETE_RESTORE_JOB = new WildcardPermission("RESTORE_JOB:DELETE");
+    public static final Permission CREATE_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:CREATE");
+    public static final Permission READ_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:READ");
+    public static final Permission EDIT_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:EDIT");
+    public static final Permission DELETE_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:DELETE");
 
     // cdc related permissions
     public static final Permission CDC = new StandardPermission("CDC");
 
     // sidecar operation related permissions
-    public static final Permission READ_OPERATIONAL_JOB = new WildcardPermission("OPERATIONAL_JOB:READ");
-    public static final Permission DECOMMISSION_NODE = new WildcardPermission("NODE:DECOMMISSION");
+    public static final Permission READ_OPERATIONAL_JOB = new DomainAwarePermission("OPERATIONAL_JOB:READ");
+    public static final Permission DECOMMISSION_NODE = new DomainAwarePermission("NODE:DECOMMISSION");
 
     // cassandra cluster related permissions
-    public static final Permission READ_SCHEMA = new WildcardPermission("SCHEMA:READ");
-    public static final Permission READ_GOSSIP = new WildcardPermission("GOSSIP:READ");
-    public static final Permission READ_RING = new WildcardPermission("RING:READ");
-    public static final Permission READ_TIME_SKEW = new WildcardPermission("TIME_SKEW:READ");
-    public static final Permission READ_TOPOLOGY = new WildcardPermission("TOPOLOGY:READ");
+    public static final Permission READ_SCHEMA = new DomainAwarePermission("SCHEMA:READ");
+    public static final Permission READ_GOSSIP = new DomainAwarePermission("GOSSIP:READ");
+    public static final Permission READ_RING = new DomainAwarePermission("RING:READ");
+    public static final Permission READ_TIME_SKEW = new DomainAwarePermission("TIME_SKEW:READ");
+    public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ");
 }

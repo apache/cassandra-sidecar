@@ -38,9 +38,9 @@ class PermissionTest
         assertThat(permissionFromName("CREATE_SNAPSHOT")).isInstanceOf(StandardPermission.class);
         assertThat(permissionFromName("OPERATE")).isInstanceOf(StandardPermission.class);
         assertThat(permissionFromName("CREATESNAPSHOT")).isInstanceOf(StandardPermission.class);
-        assertThat(permissionFromName("SNAPSHOT:CREATE")).isInstanceOf(WildcardPermission.class);
-        assertThat(permissionFromName("SNAPSHOT:CREATE,READ")).isInstanceOf(WildcardPermission.class);
-        assertThat(permissionFromName("SNAPSHOT:CREATE:NEW")).isInstanceOf(WildcardPermission.class);
+        assertThat(permissionFromName("SNAPSHOT:CREATE")).isInstanceOf(DomainAwarePermission.class);
+        assertThat(permissionFromName("SNAPSHOT:CREATE,READ")).isInstanceOf(DomainAwarePermission.class);
+        assertThat(permissionFromName("SNAPSHOT:CREATE:NEW")).isInstanceOf(DomainAwarePermission.class);
     }
 
     @Test
@@ -76,20 +76,28 @@ class PermissionTest
     @Test
     void testInvalidWildcardActions()
     {
-        assertThatThrownBy(() -> new WildcardPermission("*"))
+        assertThatThrownBy(() -> new DomainAwarePermission("*"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Wildcard permission can not have * to avoid unpredictable behavior");
+        .hasMessage("DomainAwarePermission can not have * to avoid unpredictable behavior");
 
-        assertThatThrownBy(() -> new WildcardPermission(":"))
+        assertThatThrownBy(() -> new DomainAwarePermission(":"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Wildcard permission parts can not be empty");
+        .hasMessage("DomainAwarePermission parts can not be empty");
 
-        assertThatThrownBy(() -> new WildcardPermission("::"))
+        assertThatThrownBy(() -> new DomainAwarePermission("::"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Wildcard permission parts can not be empty");
+        .hasMessage("DomainAwarePermission parts can not be empty");
 
-        assertThatThrownBy(() -> new WildcardPermission("a::d"))
+        assertThatThrownBy(() -> new DomainAwarePermission("a::d"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Wildcard permission parts can not be empty");
+        .hasMessage("DomainAwarePermission parts can not be empty");
+
+        assertThatThrownBy(() -> new DomainAwarePermission("a"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("DomainAwarePermission must have : to divide domain and action");
+
+        assertThatThrownBy(() -> new DomainAwarePermission("a,b,c"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("DomainAwarePermission must have : to divide domain and action");
     }
 }

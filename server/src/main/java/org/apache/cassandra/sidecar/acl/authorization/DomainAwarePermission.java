@@ -27,10 +27,10 @@ import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorization
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 
 /**
- * Wildcard permissions allow grouping allowed permissions. They can be represented with ':' wildcard parts divider
- * to divide wildcard parts or with ',' wildcard subpart divider. Wildcard token '*' is restricted in
- * {@link WildcardPermission} to avoid unpredictable behaviour. Majority of sidecar permissions are represented in
- * format {@code domain}:{@code action}.
+ * Domain aware permissions allow grouping allowed permissions for a domain. They can be represented with
+ * ':' wildcard parts divider. Wildcard sub parts divider token ',' can be used to group actions for a domain.
+ * Wildcard token '*' is restricted in {@link DomainAwarePermission} to avoid unpredictable behaviour. Majority
+ * of sidecar permissions are represented in format {@code domain}:{@code action}.
  * <p>
  * Example, with SNAPSHOT:CREATE permission, CREATE action is allowed for the SNAPSHOT domain. Sample actions are
  * CREATE, READ, EDIT, UPDATE, DELETE, IMPORT, UPLOAD, START, ABORT etc.
@@ -38,13 +38,12 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
  * Some examples of wildcard permissions are:
  * - SNAPSHOT:CREATE,READ,DELETE allows SNAPSHOT:CREATE, SNAPSHOT:READ and SNAPSHOT:DELETE.
  */
-public class WildcardPermission extends StandardPermission
+public class DomainAwarePermission extends StandardPermission
 {
     public static final String WILDCARD_TOKEN = "*";
     public static final String WILDCARD_PART_DIVIDER_TOKEN = ":";
-    public static final String WILDCARD_SUBPART_DIVIDER_TOKEN = ",";
 
-    public WildcardPermission(String name)
+    public DomainAwarePermission(String name)
     {
         super(name);
         validate(name);
@@ -54,14 +53,19 @@ public class WildcardPermission extends StandardPermission
     {
         if (name.contains(WILDCARD_TOKEN))
         {
-            throw new IllegalArgumentException("Wildcard permission can not have " + WILDCARD_TOKEN +
+            throw new IllegalArgumentException("DomainAwarePermission can not have " + WILDCARD_TOKEN +
                                                " to avoid unpredictable behavior");
+        }
+        if (!name.contains(WILDCARD_PART_DIVIDER_TOKEN))
+        {
+            throw new IllegalArgumentException("DomainAwarePermission must have " + WILDCARD_PART_DIVIDER_TOKEN +
+                                               " to divide domain and action");
         }
         String[] wildcardParts = name.split(WILDCARD_PART_DIVIDER_TOKEN);
         boolean hasEmptyParts = Arrays.stream(wildcardParts).anyMatch(String::isEmpty);
         if (wildcardParts.length == 0 || hasEmptyParts)
         {
-            throw new IllegalArgumentException("Wildcard permission parts can not be empty");
+            throw new IllegalArgumentException("DomainAwarePermission parts can not be empty");
         }
     }
 
