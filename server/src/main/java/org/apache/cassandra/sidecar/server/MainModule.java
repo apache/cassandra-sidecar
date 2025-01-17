@@ -367,8 +367,7 @@ public class MainModule extends AbstractModule
 
         // Add custom routers
         // Provides a simple REST endpoint to determine if Sidecar is available. Health endpoints in Sidecar are
-        // authenticated and exempted from authorization. Like wise endpoints providing information that Cassandra
-        // users can get access to by logging in are also exempted from authorization.
+        // authenticated and exempted from authorization.
         router.get(ApiEndpointsV1.HEALTH_ROUTE)
               .handler(context -> context.json(OK_STATUS));
 
@@ -383,6 +382,9 @@ public class MainModule extends AbstractModule
         router.get(ApiEndpointsV1.CASSANDRA_JMX_HEALTH_ROUTE)
               .handler(cassandraHealthHandler);
 
+        // Node settings endpoint is not Access protected. Any user who can log in into Cassandra is able to view
+        // node settings information. Since sidecar and cassandra share list of authenticated identities, sidecar's
+        // authenticated users can also read node settings information.
         router.get(ApiEndpointsV1.NODE_SETTINGS_ROUTE)
               .handler(nodeSettingsHandler);
 

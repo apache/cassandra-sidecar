@@ -30,9 +30,9 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 /**
  * Provides REST endpoint to get the configured settings of a cassandra node.
  * <p>
- * Note: {@link NodeSettingsHandler} is not Access protected, because a user who is able to log in into Cassandra
- * can read node settings information. Since sidecar and cassandra share identities who are authenticated, sidecar
- * authenticated users can read node settings information in Cassandra.
+ * Note: {@link NodeSettingsHandler} is not Access protected. Any user who can log in into Cassandra is able to view
+ * node settings information. Since sidecar and cassandra share list of authenticated identities, sidecar's
+ * authenticated users can also read node settings information.
  */
 @Singleton
 public class NodeSettingsHandler extends AbstractHandler<Void>

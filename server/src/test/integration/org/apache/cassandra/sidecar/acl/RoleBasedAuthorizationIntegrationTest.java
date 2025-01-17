@@ -48,6 +48,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test for role based access control in Sidecar
+ * Note: Do not add new test cases in this class. Add them into test method, example refer to testForAdmin
  */
 @ExtendWith(VertxExtension.class)
 class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase

@@ -63,7 +63,11 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         if (cassandraTestContext.version.major == 5)
         {
             insertIdentityRole("spiffe://cassandra/sidecar/test", "cassandra-role");
+            grantSidecarPermission("cassandra-role", "cluster", "SCHEMA:READ");
         }
+
+        // wait for cache refresh to pick by granted SCHEMA:READ permission
+        Thread.sleep(2000L);
 
         String testRoute = "/api/v1/schema/keyspaces";
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test");
@@ -134,5 +138,12 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
     {
         Session session = maybeGetSession();
         session.execute("INSERT INTO system_auth.identity_to_role (identity, role) VALUES (\'" + identity + "\',\'" + role + "\');");
+    }
+
+    private void grantSidecarPermission(String role, String resource, String permission)
+    {
+        Session session = maybeGetSession();
+        session.execute(String.format("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
+                                      "VALUES ('%s', '%s', {'%s'})", role, resource, permission));
     }
 }
