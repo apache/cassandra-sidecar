@@ -81,13 +81,7 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
         // which is unique_cache_entry_key. This is to refresh and pick up all entries and their changes from
         // Cassandra's role_permissions table and Sidecar role_permissions_v1 table. Hence during cache retrieval
         // key is ignored and entry stored against unique_cache_entry_key is returned
-        LoadingCache<String, Map<String, Set<Authorization>>> cache = cache();
-        // cache could be null when cache is not enabled
-        if (cache == null)
-        {
-            return Collections.emptyMap();
-        }
-        return cache.get(UNIQUE_CACHE_ENTRY);
+        return super.get(UNIQUE_CACHE_ENTRY);
     }
 
     /**

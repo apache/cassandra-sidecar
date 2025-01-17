@@ -55,7 +55,7 @@ public class BasicPermissions
     public static final Permission CDC = new StandardPermission("CDC");
 
     // sidecar operation related permissions
-    public static final Permission READ_TASKS = new WildcardPermission("TASKS:READ");
+    public static final Permission READ_OPERATIONAL_JOB = new WildcardPermission("OPERATIONAL_JOB:READ");
     public static final Permission DECOMMISSION_NODE = new WildcardPermission("NODE:DECOMMISSION");
 
     // cassandra cluster related permissions
