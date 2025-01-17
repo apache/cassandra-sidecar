@@ -129,7 +129,7 @@ public class SidecarSchemaTest
                 Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
             }
 
-            assertThat(interceptedExecStmts.size()).isEqualTo(5);
+            assertThat(interceptedExecStmts.size()).isEqualTo(6);
             assertThat(interceptedExecStmts.get(0)).as("Create keyspace should be executed the first")
                                                    .contains("CREATE KEYSPACE IF NOT EXISTS sidecar_internal");
             assertThat(interceptedExecStmts).as("Create table should be executed for job table")
@@ -138,6 +138,8 @@ public class SidecarSchemaTest
                                             .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.restore_slice_v3"));
             assertThat(interceptedExecStmts).as("Create table should be executed for range table")
                                             .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.restore_range_v1"));
+            assertThat(interceptedExecStmts).as("Create table should be executed for role_permissions_v1 table")
+                                            .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.role_permissions_v1"));
 
             List<String> expectedPrepStatements = Arrays.asList(
             "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  keyspace_name,  table_name,  " +
@@ -181,7 +183,15 @@ public class SidecarSchemaTest
             "VALUES ('cluster_lease_holder',?) IF NOT EXISTS USING TTL 120",
 
             "UPDATE sidecar_internal.sidecar_lease_v1 USING TTL 120 SET owner = ? " +
-            "WHERE name = 'cluster_lease_holder' IF owner = ?"
+            "WHERE name = 'cluster_lease_holder' IF owner = ?",
+
+            "SELECT * FROM sidecar_internal.role_permissions_v1",
+
+            "SELECT is_superuser FROM system_auth.roles WHERE role = ?",
+
+            "SELECT * FROM system_auth.roles",
+
+            "SELECT * FROM system_auth.role_permissions"
             );
 
             assertThat(interceptedPrepStmts).as("Intercepted statements match expected statements")

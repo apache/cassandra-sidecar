@@ -166,7 +166,11 @@ class RoleAuthorizationsCacheTest
         when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         SidecarConfiguration mockConfig = mockConfig();
-        when(mockConfig.accessControlConfiguration().permissionCacheConfiguration().enabled()).thenReturn(false);
+        CacheConfiguration mockCacheConfig = mock(CacheConfiguration.class);
+        when(mockCacheConfig.enabled()).thenReturn(true);
+        when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("1s"));
+        when(mockCacheConfig.maximumSize()).thenReturn(100L);
+        when(mockConfig.accessControlConfiguration().permissionCacheConfiguration()).thenReturn(mockCacheConfig);
         RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
                                                                     executorPools,
                                                                     mockConfig,
