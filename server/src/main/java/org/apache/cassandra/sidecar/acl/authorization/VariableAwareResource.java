@@ -33,7 +33,7 @@ public enum VariableAwareResource
 {
     /**
      * Signifies the Cassandra cluster resource. For example, to determine whether you have access to retrieve
-     * basic Cassandra node settings, Cassandra ring, gossip, or other Cassandra-related information.
+     * basic Cassandra ring, gossip, or other Cassandra-related information.
      */
     CLUSTER("cluster"),
 

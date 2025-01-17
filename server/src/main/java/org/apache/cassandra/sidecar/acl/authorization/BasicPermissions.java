@@ -56,6 +56,7 @@ public class BasicPermissions
 
     // sidecar operation related permissions
     public static final Permission READ_OPERATIONAL_JOB = new WildcardPermission("OPERATIONAL_JOB:READ");
+    public static final Permission DECOMMISSION_NODE = new WildcardPermission("NODE:DECOMMISSION");
 
     // cassandra cluster related permissions
     public static final Permission READ_SCHEMA = new WildcardPermission("SCHEMA:READ");
@@ -63,5 +64,4 @@ public class BasicPermissions
     public static final Permission READ_RING = new WildcardPermission("RING:READ");
     public static final Permission READ_TIME_SKEW = new WildcardPermission("TIME_SKEW:READ");
     public static final Permission READ_TOPOLOGY = new WildcardPermission("TOPOLOGY:READ");
-    public static final Permission DECOMMISSION_NODE = new WildcardPermission("NODE:DECOMMISSION");
 }

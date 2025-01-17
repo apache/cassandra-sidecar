@@ -74,7 +74,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.CLUSTER.resource();
+        String resource = VariableAwareResource.OPERATION.resource();
         return Collections.singleton(BasicPermissions.DECOMMISSION_NODE.toAuthorization(resource));
     }
 

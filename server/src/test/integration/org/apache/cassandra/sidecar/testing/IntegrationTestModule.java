@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
+import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -42,6 +43,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ParameterizedClassConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.PeriodicTaskConfigurationImpl;
@@ -53,6 +55,10 @@ import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME;
+import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME;
+import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME;
+import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_FORBIDDEN_KEYSPACES;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
@@ -114,7 +120,15 @@ public class IntegrationTestModule extends AbstractModule
                                                                       "password"))
                             .build();
         AccessControlConfiguration accessControlConfiguration = accessControlConfiguration();
+        CassandraInputValidationConfiguration inputValidationConfiguration
+        = new CassandraInputValidationConfigurationImpl(DEFAULT_FORBIDDEN_KEYSPACES,
+                                                        // some tests generate table folders with -
+                                                        "[a-zA-Z][a-zA-Z0-9_-]{0,47}",
+                                                        DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME,
+                                                        DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME,
+                                                        DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME);
         return SidecarConfigurationImpl.builder()
+                                       .cassandraInputValidationConfiguration(inputValidationConfiguration)
                                        .sslConfiguration(sslConfiguration)
                                        .accessControlConfiguration(accessControlConfiguration)
                                        .serviceConfiguration(conf)
