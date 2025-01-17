@@ -249,8 +249,8 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                 }
                 else
                 {
-                    cassandraTestContext = new ConfigurableCassandraTestContext(versionParsed,
-                                                                                clusterBuilder,
+                    cassandraTestContext = new ConfigurableCassandraTestContext(versionParsed, clusterBuilder, ca,
+                                                                                serverKeystorePath, truststorePath,
                                                                                 annotation);
                 }
                 LOGGER.info("Testing {} against in-jvm dtest cluster", version);

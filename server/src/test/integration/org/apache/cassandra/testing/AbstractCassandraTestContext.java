@@ -65,9 +65,12 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
     }
 
     public AbstractCassandraTestContext(SimpleCassandraVersion version,
+                                        CertificateBundle ca,
+                                        Path serverKeystorePath,
+                                        Path truststorePath,
                                         CassandraIntegrationTest annotation)
     {
-        this(version, null, null, null, null, annotation);
+        this(version, null, ca, serverKeystorePath, truststorePath, annotation);
     }
 
     public UpgradeableCluster cluster()
