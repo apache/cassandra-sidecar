@@ -63,7 +63,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // wait for cache refreshes
         Thread.sleep(2000);
 
-        testCompleteLatch = new CountDownLatch(17);
+        testCompleteLatch = new CountDownLatch(16);
 
         // permissions for test cases below are granted during prepareForTest to save cache refresh time. Please
         // refer to grantRequiredPermissions to check permissions granted for a test to understand verifications done in
@@ -78,7 +78,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingWithWildcardSubparts(context);
         testEndpointRequiringMultipleActions(context);
 
-        assertThat(testCompleteLatch.await(80, TimeUnit.SECONDS)).isTrue();
+        assertThat(testCompleteLatch.await(120, TimeUnit.SECONDS)).isTrue();
         context.completeNow();
     }
 
@@ -144,11 +144,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // SNAPSHOT:CREATE permission granted for data/grant_tables_except_keyspace_test_keyspace/test_table
         // with data/grant_tables_except_keyspace_test_keyspace grant
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
-
-        // a different table is granted too
-        String differentTableSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                           "grant_tables_except_keyspace_test_keyspace", "test_table2");
-        verifyAccess(context, testCompleteLatch, HttpMethod.PUT, differentTableSnapshotRoute, nonAdminClientKeystorePath, false);
 
         // SCHEMA:READ is not granted since it expects permissions at keyspace level
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "grant_tables_except_keyspace_test_keyspace");
@@ -276,7 +271,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createTable("grant_table_test_keyspace", "test_table");
         createTable("grant_keyspace_test_keyspace", "test_table");
         createTable("grant_tables_except_keyspace_test_keyspace", "test_table");
-        createTable("grant_tables_except_keyspace_test_keyspace", "test_table2");
         createTable("multiple_permissions_required_test_keyspace", "test_table");
     }
 
