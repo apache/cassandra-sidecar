@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;

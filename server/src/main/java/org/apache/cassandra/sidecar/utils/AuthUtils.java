@@ -26,9 +26,9 @@ import java.util.Objects;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
+import org.apache.cassandra.sidecar.acl.authorization.DomainAwarePermission;
 import org.apache.cassandra.sidecar.acl.authorization.Permission;
 import org.apache.cassandra.sidecar.acl.authorization.StandardPermission;
-import org.apache.cassandra.sidecar.acl.authorization.DomainAwarePermission;
 
 import static org.apache.cassandra.sidecar.acl.authorization.DomainAwarePermission.WILDCARD_PART_DIVIDER_TOKEN;
 

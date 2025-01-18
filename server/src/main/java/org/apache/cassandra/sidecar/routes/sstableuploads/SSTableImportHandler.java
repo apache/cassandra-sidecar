@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
 import java.nio.file.NoSuchFileException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
