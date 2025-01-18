@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -64,7 +65,7 @@ public class AuthorizationParameterValidateHandler extends AbstractHandler<Quali
                                   SocketAddress remoteAddress,
                                   QualifiedTableName qualifiedTableName)
     {
-        // DO NOTHING
+        RoutingContextUtils.put(context, RoutingContextUtils.SC_QUALIFIED_TABLE_NAME, qualifiedTableName);
     }
 
     @Override
