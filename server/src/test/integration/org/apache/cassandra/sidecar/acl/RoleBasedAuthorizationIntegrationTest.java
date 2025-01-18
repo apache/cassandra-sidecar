@@ -61,7 +61,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         prepareForTest(cassandraContext);
 
         // wait for cache refreshes
-        Thread.sleep(2000);
+        Thread.sleep(3000);
 
         testCompleteLatch = new CountDownLatch(16);
 
