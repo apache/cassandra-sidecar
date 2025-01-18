@@ -39,7 +39,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.routes.data.StreamSSTableComponentRequestParam;
+import org.apache.cassandra.sidecar.handlers.data.StreamSSTableComponentRequestParam;
 import org.apache.cassandra.sidecar.utils.BaseFileSystem;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.jetbrains.annotations.NotNull;

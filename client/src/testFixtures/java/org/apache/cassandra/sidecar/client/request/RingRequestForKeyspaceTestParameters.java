@@ -60,7 +60,7 @@ public class RingRequestForKeyspaceTestParameters implements RequestTestParamete
     @Override
     public String expectedEndpointPath()
     {
-        return ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, KEYSPACE);
+        return ApiEndpointsV1.RING_WITH_KEYSPACE_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, KEYSPACE);
     }
 
     @Override

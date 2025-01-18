@@ -112,15 +112,6 @@ public class PeriodicTaskExecutor implements Closeable
                          runNow.get() ? "immediately" : "in " + actualDelayMillis + " milliseconds",
                          key, execCount);
 
-            try
-            {
-                key.task.registerPeriodicTaskExecutor(this);
-            }
-            catch (Exception e)
-            {
-                LOGGER.warn("Failed to invoke registerPeriodicTaskExecutor. task='{}'", key, e);
-            }
-
             // If run immediately, do not execute within the compute block.
             // Return the placeholder timer ID, and execute after exiting the compute block.
             if (runNow.get())
@@ -247,6 +238,13 @@ public class PeriodicTaskExecutor implements Closeable
         {
             completion.fail(throwable);
         }
+    }
+
+    public Future<Void> close()
+    {
+        Promise<Void> promise = Promise.promise();
+        close(promise);
+        return promise.future();
     }
 
     private void executeInternal(Promise<ScheduleDecision> promise, PeriodicTaskKey key, long execCount)

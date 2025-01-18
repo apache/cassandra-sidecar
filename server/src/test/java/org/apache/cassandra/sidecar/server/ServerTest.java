@@ -19,9 +19,11 @@
 package org.apache.cassandra.sidecar.server;
 
 import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,6 +45,7 @@ import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -229,34 +232,15 @@ class ServerTest
     @DisplayName("Server should stop immediately when there port is already in use")
     void stopImmediatelyWhenPortIsInUse(VertxTestContext context)
     {
-        long attemptStartTimeMillis = System.currentTimeMillis();
+        CountDownLatch serverStartFailed = new CountDownLatch(1);
         server.start()
               // simulate a bind exception due to address already in use
               .compose(deploymentId -> Future.failedFuture(new java.net.BindException("Address already in use")))
-              .onComplete(context.failing(result -> {
-
-                  try
-                  {
-                      serverAlreadyClosedInTest.set(true);
-                      getBlocking(server.close(), 1, TimeUnit.MINUTES, "Stop server");
-                  }
-                  catch (Exception e)
-                  {
-                      context.failNow(e);
-                      return;
-                  }
-
-                  long elapsedTimeMillis = System.currentTimeMillis() - attemptStartTimeMillis;
-                  if (elapsedTimeMillis < TimeUnit.SECONDS.toMillis(10))
-                  {
-                      context.completeNow();
-                  }
-                  else
-                  {
-                      context.failNow("Expected server close to take less than 10000 millis, " +
-                                      "but it took " + elapsedTimeMillis + " millis");
-                  }
-              }));
+              .onComplete(context.failing(result -> serverStartFailed.countDown()));
+        Uninterruptibles.awaitUninterruptibly(serverStartFailed);
+        serverAlreadyClosedInTest.set(true);
+        getBlocking(server.close(), 10, TimeUnit.SECONDS, "Stop server");
+        context.completeNow();
     }
 
     @Test
@@ -347,7 +331,7 @@ class ServerTest
     {
         ClassLoader classLoader = ServerTest.class.getClassLoader();
         Path yamlPath = writeResourceToPath(classLoader, confPath, sidecarYaml);
-        Injector injector = Guice.createInjector(new MainModule(yamlPath));
+        Injector injector = Guice.createInjector(SidecarModules.all(yamlPath));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
         client = WebClient.create(vertx);

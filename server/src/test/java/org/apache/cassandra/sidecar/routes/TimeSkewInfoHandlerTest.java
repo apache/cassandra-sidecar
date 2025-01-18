@@ -39,7 +39,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 
@@ -52,7 +52,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(VertxExtension.class)
 class TimeSkewInfoHandlerTest
 {
-    private static final Logger logger = LoggerFactory.getLogger(StreamSSTableComponentHandlerTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(TimeSkewInfoHandlerTest.class);
     private static final long TEST_TIMESTAMP = 12345L;
     private Vertx vertx;
     private Server server;
@@ -61,7 +61,7 @@ class TimeSkewInfoHandlerTest
     public void setUp() throws InterruptedException
     {
         Module customTimeProvider = binder -> binder.bind(TimeProvider.class).toInstance(() -> TEST_TIMESTAMP);
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(new TestModule(), customTimeProvider));
         this.vertx = injector.getInstance(Vertx.class);
         this.server = injector.getInstance(Server.class);

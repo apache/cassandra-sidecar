@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarLeaseSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -33,10 +34,15 @@ import org.jetbrains.annotations.VisibleForTesting;
 public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseSchema>
 {
     @Inject
-    @VisibleForTesting
-    public SidecarLeaseDatabaseAccessor(SidecarLeaseSchema tableSchema, CQLSessionProvider sessionProvider)
+    public SidecarLeaseDatabaseAccessor(SidecarSchema sidecarSchema, CQLSessionProvider sessionProvider)
     {
-        super(tableSchema, sessionProvider);
+        this(sidecarSchema.tableSchema(SidecarLeaseSchema.class), sessionProvider);
+    }
+
+    @VisibleForTesting
+    public SidecarLeaseDatabaseAccessor(SidecarLeaseSchema leaseSchema, CQLSessionProvider sessionProvider)
+    {
+        super(leaseSchema, sessionProvider);
     }
 
     /**

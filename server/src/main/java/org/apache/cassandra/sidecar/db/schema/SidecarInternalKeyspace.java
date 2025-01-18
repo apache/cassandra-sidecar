@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
@@ -37,7 +37,7 @@ public class SidecarInternalKeyspace extends AbstractSchema
 {
     private final SchemaKeyspaceConfiguration keyspaceConfig;
     private final boolean isEnabled;
-    private final Set<TableSchema> tableSchemas = ConcurrentHashMap.newKeySet();
+    private final Map<Class<? extends TableSchema>, TableSchema> tableSchemas = new ConcurrentHashMap<>();
 
     public SidecarInternalKeyspace(SidecarConfiguration config)
     {
@@ -53,7 +53,13 @@ public class SidecarInternalKeyspace extends AbstractSchema
             return;
         }
 
-        tableSchemas.add(schema);
+        tableSchemas.put(schema.getClass(), schema);
+    }
+
+    public <T extends TableSchema> T tableSchema(Class<T> type)
+    {
+        //noinspection unchecked
+        return (T) tableSchemas.get(type);
     }
 
     @Override
@@ -74,7 +80,7 @@ public class SidecarInternalKeyspace extends AbstractSchema
         super.initializeInternal(session, shouldCreateSchema);
 
         boolean initialized = true;
-        for (AbstractSchema schema : tableSchemas)
+        for (AbstractSchema schema : tableSchemas.values())
         {
             // Attempts to initialize all schemas.
             // Sets initialized to false if any of the schema initialization fails

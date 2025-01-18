@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.data;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.cassandra.sidecar.routes.data.SnapshotRequestParam;
+import org.apache.cassandra.sidecar.handlers.data.SnapshotRequestParam;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

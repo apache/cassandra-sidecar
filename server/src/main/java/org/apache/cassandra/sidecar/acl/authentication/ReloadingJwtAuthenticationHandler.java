@@ -56,8 +56,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReloadingJwtAuthenticationHandler.class);
 
-    AtomicReference<OAuth2AuthHandlerImpl> delegateHandler = new AtomicReference<>();
-
+    private final AtomicReference<OAuth2AuthHandlerImpl> delegateHandler = new AtomicReference<>();
     private final Vertx vertx;
     private final JwtParameters jwtParameters;
     private final JwtRoleProcessor roleProcessor;
@@ -174,6 +173,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
             if (!jwtParameters.enabled())
             {
                 delegateHandler.set(null);
+                promise.complete();
                 return;
             }
 

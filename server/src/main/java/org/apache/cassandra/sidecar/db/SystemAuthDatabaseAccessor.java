@@ -31,7 +31,9 @@ import com.google.inject.Singleton;
 import io.vertx.ext.auth.authorization.Authorization;
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactory;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Database Accessor that queries cassandra to get information maintained under system_auth keyspace.
@@ -42,6 +44,14 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
     private final PermissionFactory permissionFactory;
 
     @Inject
+    public SystemAuthDatabaseAccessor(SidecarSchema sidecarSchema,
+                                      CQLSessionProvider sessionProvider,
+                                      PermissionFactory permissionFactory)
+    {
+        this(sidecarSchema.tableSchema(SystemAuthSchema.class), sessionProvider, permissionFactory);
+    }
+
+    @VisibleForTesting
     public SystemAuthDatabaseAccessor(SystemAuthSchema systemAuthSchema,
                                       CQLSessionProvider sessionProvider,
                                       PermissionFactory permissionFactory)

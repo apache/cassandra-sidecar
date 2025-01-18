@@ -30,6 +30,7 @@ import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.exceptions.QueryConsistencyException;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
@@ -38,9 +39,12 @@ import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.CoordinationMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
+import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
+import org.apache.cassandra.sidecar.utils.EventBusUtils;
 import org.jetbrains.annotations.VisibleForTesting;
 
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_GLOBAL_LEASE_CLAIMED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_GLOBAL_LEASE_LOST;
 
@@ -73,24 +77,29 @@ public class ClusterLeaseClaimTask implements PeriodicTask
     private final CoordinationMetrics metrics;
     private final PeriodicTaskConfiguration periodicTaskConfiguration;
     private final ServiceConfiguration config;
-    private final Vertx vertx;
+    private EventBus eventBus;
     private String currentLeaseholder;
     private Instant leaseTime;
 
-    public ClusterLeaseClaimTask(Vertx vertx,
-                                 ServiceConfiguration serviceConfiguration,
+    public ClusterLeaseClaimTask(ServiceConfiguration serviceConfiguration,
                                  ElectorateMembership electorateMembership,
                                  SidecarLeaseDatabaseAccessor accessor,
                                  ClusterLease clusterLease,
                                  SidecarMetrics metrics)
     {
-        this.vertx = vertx;
         this.periodicTaskConfiguration = serviceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration();
         this.config = serviceConfiguration;
         this.electorateMembership = electorateMembership;
         this.accessor = accessor;
         this.clusterLease = clusterLease;
         this.metrics = metrics.server().coordination();
+    }
+
+    @Override
+    public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
+    {
+        this.eventBus = vertx.eventBus();
+        EventBusUtils.onceLocalConsumer(eventBus, ON_CASSANDRA_CQL_READY.address(), ignored -> executor.schedule(this));
     }
 
     /**
@@ -259,14 +268,14 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         if (wasLeaseholder && !isCurrentLeaseholder)
         {
             LOGGER.info("Cluster-wide lease has been lost by sidecarHostId={}", sidecarHostId);
-            vertx.eventBus().publish(ON_SIDECAR_GLOBAL_LEASE_LOST.address(), sidecarHostId);
+            eventBus.publish(ON_SIDECAR_GLOBAL_LEASE_LOST.address(), sidecarHostId);
         }
 
         // lease has been claimed
         if (!wasLeaseholder && isCurrentLeaseholder)
         {
             LOGGER.info("Cluster-wide lease has been claimed by sidecarHostId={}", sidecarHostId);
-            vertx.eventBus().publish(ON_SIDECAR_GLOBAL_LEASE_CLAIMED.address(), sidecarHostId);
+            eventBus.publish(ON_SIDECAR_GLOBAL_LEASE_CLAIMED.address(), sidecarHostId);
         }
 
         // lease has been extended

@@ -54,8 +54,6 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
-import org.apache.cassandra.sidecar.tasks.HealthCheckPeriodicTask;
-import org.apache.cassandra.sidecar.tasks.KeyStoreCheckPeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
 import org.apache.cassandra.sidecar.utils.SslUtils;
@@ -63,7 +61,6 @@ import org.jetbrains.annotations.VisibleForTesting;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
  * The Sidecar {@link Server} class that manages the start and stop lifecycle of the service
@@ -74,10 +71,10 @@ public class Server
     private static final Logger LOGGER = LoggerFactory.getLogger(Server.class);
     protected final Vertx vertx;
     protected final ExecutorPools executorPools;
+    protected final PeriodicTaskExecutor periodicTaskExecutor;
     protected final SidecarConfiguration sidecarConfiguration;
     protected final InstancesMetadata instancesMetadata;
     protected final Router router;
-    protected final PeriodicTaskExecutor periodicTaskExecutor;
     protected final HttpServerOptionsProvider optionsProvider;
     protected final SidecarClientProvider sidecarClientProvider;
     protected final SidecarMetrics metrics;
@@ -98,10 +95,10 @@ public class Server
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
+        this.periodicTaskExecutor = periodicTaskExecutor;
         this.sidecarConfiguration = sidecarConfiguration;
         this.instancesMetadata = instancesMetadata;
         this.router = router;
-        this.periodicTaskExecutor = periodicTaskExecutor;
         this.optionsProvider = optionsProvider;
         this.sidecarClientProvider = sidecarClientProvider;
         this.metrics = metrics;
@@ -129,7 +126,6 @@ public class Server
                         deployedServerVerticles.add(serverVerticle);
                         return serverVerticle;
                     }, deploymentOptions)
-                    .compose(this::scheduleInternalPeriodicTasks)
                     .compose(this::notifyServerStart);
     }
 
@@ -156,22 +152,16 @@ public class Server
      *
      * @return a future completed with the result
      */
-    public Future<CompositeFuture> close()
+    public Future<Void> close()
     {
         LOGGER.info("Stopping Cassandra Sidecar");
         deployedServerVerticles.clear();
         List<Future<Void>> closingFutures = new ArrayList<>();
         closingFutures.add(notifyServerStopping(null));
-
-        Promise<Void> periodicTaskExecutorPromise = Promise.promise();
-        periodicTaskExecutor.close(periodicTaskExecutorPromise);
-        closingFutures.add(periodicTaskExecutorPromise.future());
-
         closingFutures.add(Future.future(p -> {
             sidecarClientProvider.close();
             p.complete();
         }));
-
         instancesMetadata.instances().forEach(instance -> {
             Promise<Void> closingFutureForInstance = Promise.promise();
             executorPools.internal()
@@ -198,13 +188,18 @@ public class Server
         });
 
         return Future.all(closingFutures)
-                     .andThen(v1 -> {
-                         LOGGER.debug("Closing executor pools");
-                         executorPools.close();
+                     .onSuccess(ignored -> LOGGER.debug("Closed Cassandra adapters"))
+                     .transform(v -> {
+                        LOGGER.debug("Closing PeriodicTaskExecutor");
+                        return periodicTaskExecutor.close();
                      })
-                     .andThen(v -> {
+                     .transform(v -> {
+                         LOGGER.debug("Closing executor pools");
+                         return executorPools.close();
+                     })
+                     .transform(v -> {
                          LOGGER.debug("Closing vertx");
-                         vertx.close();
+                         return vertx.close();
                      })
                      .onFailure(t -> LOGGER.error("Failed to gracefully shutdown Cassandra Sidecar", t))
                      .onSuccess(f -> LOGGER.info("Successfully stopped Cassandra Sidecar"));
@@ -258,6 +253,8 @@ public class Server
     protected Future<String> notifyServerStart(String deploymentId)
     {
         LOGGER.info("Successfully started Cassandra Sidecar");
+        MessageConsumer<JsonObject> cqlReadyConsumer = vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address());
+        cqlReadyConsumer.handler(message -> onCqlReady(cqlReadyConsumer, message));
         vertx.eventBus().publish(SidecarServerEvents.ON_SERVER_START.address(), deploymentId);
         return Future.succeededFuture(deploymentId);
     }
@@ -302,49 +299,6 @@ public class Server
         {
             throw new RuntimeException("Invalid keystore parameters for SSL", e);
         }
-    }
-
-    /**
-     * Schedules internal {@link org.apache.cassandra.sidecar.tasks.PeriodicTask}s.
-     *
-     * @param deploymentId the deployment ID
-     * @return a succeeded future with the deployment ID of the server
-     */
-    protected Future<String> scheduleInternalPeriodicTasks(String deploymentId)
-    {
-        HealthCheckPeriodicTask healthCheckPeriodicTask = new HealthCheckPeriodicTask(sidecarConfiguration,
-                                                                                      instancesMetadata,
-                                                                                      executorPools,
-                                                                                      metrics);
-        periodicTaskExecutor.schedule(healthCheckPeriodicTask);
-        vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message ->
-                                                                 periodicTaskExecutor.unschedule(healthCheckPeriodicTask));
-
-        maybeScheduleKeyStoreCheckPeriodicTask();
-
-        MessageConsumer<JsonObject> cqlReadyConsumer = vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address());
-        cqlReadyConsumer.handler(message -> onCqlReady(cqlReadyConsumer, message));
-        return Future.succeededFuture(deploymentId);
-    }
-
-    /**
-     * When the SSL configuration is provided and enabled it schedules a periodic task to check for changes
-     * in the keystore file.
-     */
-    protected void maybeScheduleKeyStoreCheckPeriodicTask()
-    {
-        SslConfiguration ssl = sidecarConfiguration.sslConfiguration();
-        if (ssl == null
-            || !ssl.enabled()
-            || !ssl.keystore().isConfigured()
-            || !ssl.keystore().reloadStore())
-        {
-            return;
-        }
-
-        // the checks for the keystore changes are initialized here because we need a reference to the
-        // server to be able to update the SSL options
-        periodicTaskExecutor.schedule(new KeyStoreCheckPeriodicTask(vertx, this, ssl));
     }
 
     /**

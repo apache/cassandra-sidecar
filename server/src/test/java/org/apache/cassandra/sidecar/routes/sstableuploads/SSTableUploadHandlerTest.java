@@ -46,6 +46,7 @@ import org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
 import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
+import org.apache.cassandra.sidecar.handlers.sstableuploads.SSTableUploadHandler;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.UploadSSTableMetrics;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;

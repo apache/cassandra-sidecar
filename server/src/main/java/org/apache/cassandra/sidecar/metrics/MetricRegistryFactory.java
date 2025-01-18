@@ -25,21 +25,17 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 
 /**
  * Provider for getting {@link FilteringMetricRegistry} based on provided metrics configuration
  */
-@Singleton
 public class MetricRegistryFactory
 {
     private final String globalRegistryName;
     private final List<MetricFilter> inclusions;
     private final List<MetricFilter> exclusions;
 
-    @Inject
     public MetricRegistryFactory(SidecarConfiguration sidecarConfiguration)
     {
         this(sidecarConfiguration.metricsConfiguration().registryName(),

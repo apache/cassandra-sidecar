@@ -53,7 +53,8 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.handlers.snapshots.ListSnapshotHandler;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 
@@ -83,7 +84,7 @@ class ListSnapshotHandlerTest
     public void setup() throws InterruptedException, IOException
     {
         canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(Modules.override(new TestModule())
                                                                      .with(new ListSnapshotTestModule())));
         server = injector.getInstance(Server.class);

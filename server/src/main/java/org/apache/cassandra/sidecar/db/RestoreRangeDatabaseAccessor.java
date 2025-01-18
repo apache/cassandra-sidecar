@@ -47,10 +47,9 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
 
     @Inject
     protected RestoreRangeDatabaseAccessor(SidecarSchema sidecarSchema,
-                                           RestoreRangesSchema tableSchema,
                                            CQLSessionProvider sessionProvider)
     {
-        super(tableSchema, sessionProvider);
+        super(sidecarSchema.tableSchema(RestoreRangesSchema.class), sessionProvider);
         this.sidecarSchema = sidecarSchema;
     }
 

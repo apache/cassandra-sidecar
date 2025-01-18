@@ -19,12 +19,12 @@
 package org.apache.cassandra.sidecar.datahub;
 
 import java.util.concurrent.ThreadLocalRandom;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -32,13 +32,16 @@ import org.apache.cassandra.sidecar.config.SchemaReportingConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
+import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
+import org.apache.cassandra.sidecar.utils.EventBusUtils;
 import org.jetbrains.annotations.NotNull;
+
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
 
 /**
  * A {@link PeriodicTask} that uses provided {@link SchemaReportingConfiguration} to report current cluster schema
  */
-@Singleton
 public class SchemaReportingTask implements PeriodicTask, ExecuteOnClusterLeaseholderOnly
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(SchemaReportingTask.class);
@@ -51,7 +54,6 @@ public class SchemaReportingTask implements PeriodicTask, ExecuteOnClusterLeaseh
     @NotNull
     protected final SchemaReporter reporter;
 
-    @Inject
     public SchemaReportingTask(@NotNull SidecarConfiguration configuration,
                                @NotNull CQLSessionProvider session,
                                @NotNull SchemaReporter reporter)
@@ -59,6 +61,13 @@ public class SchemaReportingTask implements PeriodicTask, ExecuteOnClusterLeaseh
         this.configuration = configuration.schemaReportingConfiguration();
         this.session = session;
         this.reporter = reporter;
+    }
+
+    @Override
+    public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
+    {
+        // TODO: react on ON_CASSANDRA_CQL_READY instead? When any CQL connection is ready, cluster metadata should be available from session
+        EventBusUtils.onceLocalConsumer(vertx.eventBus(), ON_ALL_CASSANDRA_CQL_READY.address(), ignored -> executor.schedule(this));
     }
 
     @Override

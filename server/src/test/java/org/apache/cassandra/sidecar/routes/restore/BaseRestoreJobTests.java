@@ -72,8 +72,9 @@ import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
+import org.apache.cassandra.sidecar.handlers.restore.CreateRestoreJobHandler;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
-import org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.restore.RestoreJobProgressTracker;
 import org.apache.cassandra.sidecar.restore.RestoreProcessor;
@@ -83,9 +84,7 @@ import org.apache.cassandra.sidecar.routes.restore.BaseRestoreJobTests.TestModul
 import org.apache.cassandra.sidecar.routes.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.routes.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.routes.restore.BaseRestoreJobTests.TestModuleOverride.TestRingTopologyRefresher;
-import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
-import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -114,7 +113,7 @@ public abstract class BaseRestoreJobTests
     {
         TestModule testModule = new TestModule();
         configureTestModule(testModule);
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(Modules.override(testModule)
                                                                      .with(new TestModuleOverride())));
         vertx = injector.getInstance(Vertx.class);
@@ -252,7 +251,7 @@ public abstract class BaseRestoreJobTests
 
             TestRestoreJobDatabaseAccessor(SidecarSchema sidecarSchema)
             {
-                super(sidecarSchema, null, null);
+                super(sidecarSchema, null);
             }
 
             @Override
@@ -287,7 +286,7 @@ public abstract class BaseRestoreJobTests
 
             TestRestoreSliceDatabaseAccessor(SidecarSchema sidecarSchema)
             {
-                super(sidecarSchema, null, null);
+                super(sidecarSchema, null);
             }
 
             @Override
@@ -311,7 +310,7 @@ public abstract class BaseRestoreJobTests
 
             TestRestoreRangeDatabaseAccessor(SidecarSchema sidecarSchema)
             {
-                super(sidecarSchema, null, null);
+                super(sidecarSchema, null);
             }
 
             @Override
@@ -340,13 +339,9 @@ public abstract class BaseRestoreJobTests
             public TestRestoreJobManagerGroup(SidecarConfiguration configuration,
                                               InstancesMetadata instancesMetadata,
                                               ExecutorPools executorPools,
-                                              PeriodicTaskExecutor periodicTaskExecutor,
-                                              RestoreProcessor restoreProcessor,
-                                              RestoreJobDiscoverer jobDiscoverer,
-                                              RingTopologyRefresher ringTopologyRefresher)
+                                              RestoreProcessor restoreProcessor)
             {
-                super(configuration, instancesMetadata, executorPools, periodicTaskExecutor, restoreProcessor,
-                      jobDiscoverer, ringTopologyRefresher);
+                super(configuration, instancesMetadata, executorPools, restoreProcessor);
             }
 
             @Override
@@ -400,18 +395,12 @@ public abstract class BaseRestoreJobTests
         public RestoreJobManagerGroup restoreJobManagerGroup(SidecarConfiguration configuration,
                                                              InstancesMetadata instancesMetadata,
                                                              ExecutorPools executorPools,
-                                                             PeriodicTaskExecutor loopExecutor,
-                                                             RestoreProcessor restoreProcessor,
-                                                             RestoreJobDiscoverer jobDiscoverer,
-                                                             RingTopologyRefresher ringTopologyRefresher)
+                                                             RestoreProcessor restoreProcessor)
         {
             return new TestRestoreJobManagerGroup(configuration,
                                                   instancesMetadata,
                                                   executorPools,
-                                                  loopExecutor,
-                                                  restoreProcessor,
-                                                  jobDiscoverer,
-                                                  ringTopologyRefresher);
+                                                  restoreProcessor);
         }
 
         @Provides

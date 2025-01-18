@@ -40,7 +40,7 @@ import io.vertx.ext.dropwizard.ThroughputMeter;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 
@@ -196,7 +196,7 @@ class FilteringMetricRegistryTest
     {
         ClassLoader classLoader = FilteringMetricRegistryTest.class.getClassLoader();
         Path yamlPath = writeResourceToPath(classLoader, confPath, "config/sidecar_metrics.yaml");
-        Injector injector = Guice.createInjector(new MainModule(yamlPath));
+        Injector injector = Guice.createInjector(SidecarModules.all(yamlPath));
         Server server = injector.getInstance(Server.class);
         Vertx vertx = injector.getInstance(Vertx.class);
 
@@ -224,7 +224,7 @@ class FilteringMetricRegistryTest
     {
         ClassLoader classLoader = FilteringMetricRegistryTest.class.getClassLoader();
         Path yamlPath = writeResourceToPath(classLoader, confPath, "config/sidecar_metrics_empty_filters.yaml");
-        Injector injector = Guice.createInjector(new MainModule(yamlPath));
+        Injector injector = Guice.createInjector(SidecarModules.all(yamlPath));
         Server server = injector.getInstance(Server.class);
         Vertx vertx = injector.getInstance(Vertx.class);
 

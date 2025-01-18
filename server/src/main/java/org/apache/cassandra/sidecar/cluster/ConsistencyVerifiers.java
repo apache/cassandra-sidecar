@@ -46,6 +46,8 @@ public class ConsistencyVerifiers
 
     /**
      * Similar to {@link #forConsistencyLevel(ConsistencyLevel, String)}, but set {@code localDatacenter} to null.
+     * @param consistencyLevel consistency level to verify
+     * @return consistency verifier
      */
     public static ConsistencyVerifier forConsistencyLevel(ConsistencyLevel consistencyLevel)
     {

@@ -61,7 +61,10 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.handlers.sstableuploads.SSTableCleanupHandler;
+import org.apache.cassandra.sidecar.handlers.sstableuploads.SSTableImportHandler;
+import org.apache.cassandra.sidecar.handlers.sstableuploads.SSTableUploadHandler;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
 
@@ -126,7 +129,7 @@ class BaseUploadsHandlerTest
                                                        .build();
         TestModule testModule = new TestModule();
         TestModuleOverride testModuleOverride = new TestModuleOverride();
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(Modules.override(testModule)
                                                                      .with(testModuleOverride)));
 

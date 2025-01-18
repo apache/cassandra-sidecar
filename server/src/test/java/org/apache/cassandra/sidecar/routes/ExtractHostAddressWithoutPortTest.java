@@ -27,6 +27,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import io.vertx.core.http.HttpServerRequest;
+import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

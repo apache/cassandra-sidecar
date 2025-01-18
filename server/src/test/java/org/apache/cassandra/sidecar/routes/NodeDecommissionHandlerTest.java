@@ -47,7 +47,8 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.handlers.NodeDecommissionHandler;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.AdditionalAnswers;
 
@@ -79,7 +80,7 @@ public class NodeDecommissionHandlerTest
         Injector injector;
         Module testOverride = Modules.override(new TestModule())
                                      .with(new NodeDecommissionHandlerTest.NodeDecommissionTestModule());
-        injector = Guice.createInjector(Modules.override(new MainModule())
+        injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);

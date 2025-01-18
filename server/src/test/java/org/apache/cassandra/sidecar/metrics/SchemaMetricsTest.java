@@ -35,20 +35,22 @@ import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
-import org.apache.cassandra.sidecar.db.SidecarSchemaTest;
 import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
+import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys.SidecarSchemaInitializerTaskKey;
 import org.apache.cassandra.sidecar.server.Server;
-import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
+import static org.apache.cassandra.sidecar.MultibindingsMapKeyTestUtil.findPeriodicTask;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -60,19 +62,19 @@ import static org.mockito.Mockito.when;
  */
 class SchemaMetricsTest
 {
-    private static final Logger logger = LoggerFactory.getLogger(SidecarSchemaTest.class);
-    private SidecarSchema sidecarSchema;
+    private static final Logger logger = LoggerFactory.getLogger(SchemaMetricsTest.class);
+    private SidecarSchemaInitializer sidecarSchemaInitializer;
     private SidecarMetrics metrics;
     Server server;
 
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(Modules.override(new TestModule())
                                                                      .with(new SchemaFailureSimulateModule())));
         server = injector.getInstance(Server.class);
-        sidecarSchema = injector.getInstance(SidecarSchema.class);
+        sidecarSchemaInitializer = findPeriodicTask(injector, SidecarSchemaInitializerTaskKey.class);
         metrics = injector.getInstance(SidecarMetrics.class);
 
         VertxTestContext context = new VertxTestContext();
@@ -97,7 +99,7 @@ class SchemaMetricsTest
     @Test
     void testSchemaModificationFailure()
     {
-        sidecarSchema.maybeStartSidecarSchemaInitializer();
+        sidecarSchemaInitializer.execute(Promise.promise());
         loopAssert(3, () -> {
             assertThat(metrics.server().schema().failedInitializations.metric.getValue())
             .isGreaterThanOrEqualTo(1);
@@ -122,19 +124,13 @@ class SchemaMetricsTest
 
         @Provides
         @Singleton
-        public SidecarSchema sidecarSchema(Vertx vertx,
-                                           PeriodicTaskExecutor periodicTaskExecutor,
-                                           SidecarConfiguration configuration,
-                                           CQLSessionProvider cqlSessionProvider,
-                                           SidecarMetrics metrics)
+        public SidecarSchema sidecarSchema(Vertx vertx, SidecarConfiguration configuration)
         {
             SidecarInternalKeyspace sidecarInternalKeyspace = mock(SidecarInternalKeyspace.class);
             when(sidecarInternalKeyspace.initialize(any(), any()))
             .thenThrow(new SidecarSchemaModificationException("Simulated failure",
                                                               new RuntimeException("Simulated exception")));
-            SchemaMetrics schemaMetrics = metrics.server().schema();
-            return new SidecarSchema(vertx, periodicTaskExecutor, configuration,
-                                     sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics, null);
+            return new SidecarSchema(vertx, configuration, sidecarInternalKeyspace);
         }
 
         @Provides

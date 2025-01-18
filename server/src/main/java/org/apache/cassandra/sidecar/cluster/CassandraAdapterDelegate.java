@@ -114,6 +114,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      * @param sidecarVersion      the version of the Sidecar from the current binary
      * @param host                the Cassandra instance's hostname or ip address as a string
      * @param port                the Cassandra instance's port number
+     * @param healthMetrics       health metrics
      */
     public CassandraAdapterDelegate(Vertx vertx,
                                     int cassandraInstanceId,

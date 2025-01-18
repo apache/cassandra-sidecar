@@ -36,6 +36,12 @@ sourceSets {
     }
 }
 
+idea {
+    module {
+        testSourceDirs += sourceSets.integrationTest.java.srcDirs
+    }
+}
+
 configurations {
     integrationTestImplementation.extendsFrom testImplementation
 }
@@ -64,7 +70,7 @@ dependencies {
 
     integrationTestImplementation(group: 'net.java.dev.jna', name: 'jna', version: '5.9.0')
     integrationTestImplementation(project(path: ":integration-framework"))
-    integrationTestImplementation('com.google.inject:guice:4.2.2')
+    integrationTestImplementation("com.google.inject:guice:${guiceVersion}")
     testRuntimeOnly 'com.fasterxml.jackson.core:jackson-annotations:2.14.2'
 }
 

@@ -58,6 +58,7 @@ import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.assertj.core.api.InstanceOfAssertFactories;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
@@ -104,7 +105,7 @@ class ServerSSLTest
         p12TrustStore = new KeyStoreConfigurationImpl(trustStoreP12Path.toString(), DEFAULT_PASSWORD, "PKCS12", SecondBoundConfiguration.ZERO);
         p12KeyStore = new KeyStoreConfigurationImpl(serverKeyStoreP12Path.toString(), DEFAULT_PASSWORD, "PKCS12", SecondBoundConfiguration.ZERO);
 
-        injector = Guice.createInjector(Modules.override(new MainModule())
+        injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                .with(Modules.override(new TestModule())
                                                             .with(new ServerSSLTestModule(builder))));
     }

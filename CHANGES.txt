@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Guice modularization (CASSSIDECAR-208)
  * Create Endpoint that Triggers an Immediate Schema Report (CASSSIDECAR-203)
  * Add JWT Authentication support in Sidecar (CASSSIDECAR-160)
  * Add Token Ring Peer Health monitor (CASSSIDECAR-206)

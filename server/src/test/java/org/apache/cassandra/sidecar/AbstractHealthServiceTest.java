@@ -39,7 +39,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
@@ -74,7 +74,7 @@ public abstract class AbstractHealthServiceTest
     void setUp() throws InterruptedException
     {
         testModule = testModule();
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(testModule));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testModule));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 

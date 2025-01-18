@@ -143,11 +143,12 @@ jobs:
     docker:
       - image: cimg/openjdk:11.0
     environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 2
+      INTEGRATION_MAX_PARALLEL_FORKS: 3
       INTEGRATION_MAX_HEAP_SIZE: "3600M"
     resource_class: large
     steps:
       - install_common
+      - setup_remote_docker
       - checkout
       - attach_workspace:
           at: dtest-jars
@@ -195,11 +196,12 @@ jobs:
     docker:
       - image: cimg/openjdk:11.0
     environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 1
+      INTEGRATION_MAX_PARALLEL_FORKS: 3
       INTEGRATION_MAX_HEAP_SIZE: "3600M"
     resource_class: large
     steps:
       - install_common
+      - setup_remote_docker
       - checkout
       - attach_workspace:
           at: dtest-jars
@@ -247,11 +249,12 @@ jobs:
     docker:
       - image: cimg/openjdk:11.0
     environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 2
+      INTEGRATION_MAX_PARALLEL_FORKS: 3
       INTEGRATION_MAX_HEAP_SIZE: "3600M"
     resource_class: large
     steps:
       - install_common
+      - setup_remote_docker
       - checkout
       - attach_workspace:
           at: dtest-jars

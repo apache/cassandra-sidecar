@@ -63,7 +63,7 @@ import org.apache.cassandra.sidecar.config.yaml.ParameterizedClassConfigurationI
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
@@ -96,7 +96,7 @@ class MutualTLSAuthenticationHandlerTest
     void setUp() throws Exception
     {
         TestModule testModule = testModule();
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(testModule));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testModule));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 

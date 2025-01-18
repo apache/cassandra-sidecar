@@ -27,7 +27,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
@@ -54,7 +53,7 @@ class ClusterLeaseClaimTaskTest
     {
         ServiceConfiguration serviceConfiguration = mockConfiguration(schemaConfigurationEnabled, featureEnabled);
         ElectorateMembership mockElectorateMembership = mock(ElectorateMembership.class);
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), serviceConfiguration, mockElectorateMembership,
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership,
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
         assertThat(task.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
@@ -69,7 +68,7 @@ class ClusterLeaseClaimTaskTest
         ElectorateMembership mockElectorateMembership = mock(ElectorateMembership.class);
         when(mockElectorateMembership.isMember()).thenReturn(false);
         ClusterLease clusterLease = new ClusterLease();
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), serviceConfiguration, mockElectorateMembership,
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership,
                                                                mock(SidecarLeaseDatabaseAccessor.class), clusterLease,
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
@@ -87,7 +86,7 @@ class ClusterLeaseClaimTaskTest
         when(mockElectorateMembership.isMember()).thenReturn(true);
         SidecarLeaseDatabaseAccessor accessor = mock(SidecarLeaseDatabaseAccessor.class);
         when(accessor.isAvailable()).thenReturn(true);
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), serviceConfiguration, mockElectorateMembership,
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership,
                                                                accessor, new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
@@ -103,7 +102,7 @@ class ClusterLeaseClaimTaskTest
         when(mockElectorateMembership.isMember()).thenReturn(true);
         SidecarLeaseDatabaseAccessor databaseAccessor = mock(SidecarLeaseDatabaseAccessor.class);
         when(databaseAccessor.isAvailable()).thenReturn(false);
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), serviceConfiguration, mockElectorateMembership,
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership,
                                                                databaseAccessor, new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
@@ -122,7 +121,7 @@ class ClusterLeaseClaimTaskTest
         .thenReturn(TimeUnit.MILLISECONDS);
         when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().to(TimeUnit.MILLISECONDS))
         .thenCallRealMethod();
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), mockServiceConfiguration, mock(ElectorateMembership.class),
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mockServiceConfiguration, mock(ElectorateMembership.class),
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
@@ -138,7 +137,7 @@ class ClusterLeaseClaimTaskTest
         when(mockServiceConfiguration.coordinationConfiguration()
                                      .clusterLeaseClaimConfiguration()
                                      .executeInterval()).thenReturn(value);
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), mockServiceConfiguration, mock(ElectorateMembership.class),
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mockServiceConfiguration, mock(ElectorateMembership.class),
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
@@ -151,7 +150,7 @@ class ClusterLeaseClaimTaskTest
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
         MillisecondBoundConfiguration lessThanMinimum = MillisecondBoundConfiguration.parse("29s");
         when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().executeInterval()).thenReturn(lessThanMinimum);
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), mockServiceConfiguration, mock(ElectorateMembership.class),
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mockServiceConfiguration, mock(ElectorateMembership.class),
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
         assertThat(task.delay()).as("The minimum is guaranteed").isEqualTo(MINIMUM_DELAY);

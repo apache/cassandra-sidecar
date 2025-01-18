@@ -18,10 +18,19 @@
 
 package org.apache.cassandra.sidecar.db;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
+import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
+import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
+import org.apache.cassandra.sidecar.db.schema.SidecarLeaseSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
+import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
@@ -37,6 +46,18 @@ class SidecarSchemaIntTest extends IntegrationTestBase
         assertThat(sidecarSchema.isInitialized())
         .describedAs("SidecarSchema should be initialized")
         .isTrue();
+
+        SidecarInternalKeyspace sidecarInternalKeyspace = sidecarSchema.sidecarInternalKeyspace();
+        for (Class<? extends TableSchema> clazz : List.of(RestoreJobsSchema.class,
+                                                          RestoreRangesSchema.class,
+                                                          RestoreSlicesSchema.class,
+                                                          SidecarLeaseSchema.class,
+                                                          SidecarRolePermissionsSchema.class,
+                                                          SystemAuthSchema.class))
+        {
+            assertThat(sidecarInternalKeyspace.tableSchema(clazz)).isExactlyInstanceOf(clazz);
+        }
+
         ClusterLease clusterLease = injector.getInstance(ClusterLease.class);
         assertThat(clusterLease.isClaimedByLocalSidecar())
         .describedAs("ClusterLease should be claimed by the local sidecar")

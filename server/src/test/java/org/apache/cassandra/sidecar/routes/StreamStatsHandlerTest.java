@@ -51,7 +51,8 @@ import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.handlers.StreamStatsHandler;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.stubbing.Answer;
 
@@ -78,7 +79,7 @@ public class StreamStatsHandlerTest
     {
         Module testOverride = Modules.override(new TestModule())
                                      .with(new StreamingStatsTestModule());
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);

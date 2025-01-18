@@ -28,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Guice;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -44,9 +44,8 @@ public class CassandraSidecarDaemon
 
     public static void main(String[] args)
     {
-        Path confPath = determineConfigPath();
-
-        Server app = Guice.createInjector(new MainModule(confPath)).getInstance(Server.class);
+        Server app = Guice.createInjector(SidecarModules.all(determineConfigPath()))
+                          .getInstance(Server.class);
         runningApplication = app;
         app.start().onSuccess(deploymentId -> Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (close(app))

@@ -45,6 +45,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.handlers.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;

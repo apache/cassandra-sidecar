@@ -1,0 +1,253 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.cassandra.sidecar.modules;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import com.google.common.util.concurrent.SidecarRateLimiter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.codahale.metrics.MetricRegistry;
+import com.datastax.driver.core.NettyOptions;
+import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
+import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
+import org.apache.cassandra.sidecar.adapters.cassandra41.Cassandra41Factory;
+import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadataImpl;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
+import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
+import org.apache.cassandra.sidecar.config.InstanceConfiguration;
+import org.apache.cassandra.sidecar.config.JmxConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
+import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
+
+import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
+
+/**
+ * Provides various configurations required by Sidecar
+ */
+public class ConfigurationModule extends AbstractModule
+{
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationModule.class);
+    protected final Path confPath;
+
+    /**
+     * Constructs the Guice main module to run Cassandra Sidecar
+     */
+    public ConfigurationModule()
+    {
+        confPath = null;
+    }
+
+    /**
+     * Constructs the Guice main module with the configured yaml {@code confPath} to run Cassandra Sidecar
+     *
+     * @param confPath the path to the yaml configuration file
+     */
+    public ConfigurationModule(Path confPath)
+    {
+        this.confPath = confPath;
+    }
+
+    @Provides
+    @Singleton
+    SidecarConfiguration sidecarConfiguration() throws IOException
+    {
+        if (confPath == null)
+        {
+            throw new NullPointerException("the YAML configuration path for Sidecar has not been defined.");
+        }
+        return SidecarConfigurationImpl.readYamlConfiguration(confPath);
+    }
+
+    @Provides
+    @Singleton
+    ServiceConfiguration serviceConfiguration(SidecarConfiguration sidecarConfiguration)
+    {
+        return sidecarConfiguration.serviceConfiguration();
+    }
+
+    @Provides
+    @Singleton
+    CassandraInputValidationConfiguration validationConfiguration(SidecarConfiguration configuration)
+    {
+        return configuration.cassandraInputValidationConfiguration();
+    }
+
+    @Provides
+    @Singleton
+    CQLSessionProvider cqlSessionProvider(Vertx vertx,
+                                          SidecarConfiguration sidecarConfiguration,
+                                          DriverUtils driverUtils)
+    {
+        CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(sidecarConfiguration,
+                                                                               NettyOptions.DEFAULT_INSTANCE,
+                                                                               driverUtils);
+        vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
+        return cqlSessionProvider;
+    }
+
+    @Provides
+    @Singleton
+    CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver, DriverUtils driverUtils)
+    {
+        return new CassandraVersionProvider.Builder()
+               .add(new CassandraFactory(dnsResolver, driverUtils))
+               .add(new Cassandra41Factory(dnsResolver, driverUtils))
+               .build();
+    }
+
+    @Provides
+    @Singleton
+    @Named("StreamRequestRateLimiter")
+    SidecarRateLimiter streamRequestRateLimiter(ServiceConfiguration config)
+    {
+        long permitsPerSecond = config.throttleConfiguration().rateLimitStreamRequestsPerSecond();
+        LOGGER.info("Configuring streamRequestRateLimiter. rateLimitStreamRequestsPerSecond={}",
+                    permitsPerSecond);
+        return SidecarRateLimiter.create(permitsPerSecond);
+    }
+
+    @Provides
+    @Singleton
+    @Named("IngressFileRateLimiter")
+    SidecarRateLimiter ingressFileRateLimiter(ServiceConfiguration config)
+    {
+        long bytesPerSecond = config.trafficShapingConfiguration()
+                                    .inboundGlobalFileBandwidthBytesPerSecond();
+        LOGGER.info("Configuring ingressFileRateLimiter. inboundGlobalFileBandwidth={}/s " +
+                    "rawInboundGlobalFileBandwidth={} B/s", bytesToHumanReadableBinaryPrefix(bytesPerSecond),
+                    bytesPerSecond);
+        return SidecarRateLimiter.create(bytesPerSecond);
+    }
+
+    @Provides
+    @Singleton
+    InstancesMetadata instancesMetadata(Vertx vertx,
+                                        SidecarConfiguration configuration,
+                                        CassandraVersionProvider cassandraVersionProvider,
+                                        SidecarVersionProvider sidecarVersionProvider,
+                                        DnsResolver dnsResolver,
+                                        CQLSessionProvider cqlSessionProvider,
+                                        DriverUtils driverUtils,
+                                        MetricRegistryFactory registryProvider)
+    {
+        List<InstanceMetadata> instanceMetadataList =
+        configuration.cassandraInstances()
+                     .stream()
+                     .map(cassandraInstance -> {
+                         JmxConfiguration jmxConfiguration = configuration.serviceConfiguration().jmxConfiguration();
+                         return buildInstanceMetadata(vertx,
+                                                      cassandraInstance,
+                                                      cassandraVersionProvider,
+                                                      sidecarVersionProvider.sidecarVersion(),
+                                                      jmxConfiguration,
+                                                      cqlSessionProvider,
+                                                      driverUtils,
+                                                      registryProvider);
+                     })
+                     .collect(Collectors.toList());
+
+        return new InstancesMetadataImpl(instanceMetadataList, dnsResolver);
+    }
+
+    /**
+     * Builds the {@link InstanceMetadata} from the {@link InstanceConfiguration},
+     * a provided {@code  versionProvider}, and {@code healthCheckFrequencyMillis}.
+     *
+     * @param vertx             the vertx instance
+     * @param cassandraInstance the cassandra instance configuration
+     * @param versionProvider   a Cassandra version provider
+     * @param sidecarVersion    the version of the Sidecar from the current binary
+     * @param jmxConfiguration  the configuration for the JMX Client
+     * @param session           the CQL Session provider
+     * @param registryFactory   factory for creating cassandra instance specific registry
+     * @return the build instance metadata object
+     */
+    private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
+                                                          InstanceConfiguration cassandraInstance,
+                                                          CassandraVersionProvider versionProvider,
+                                                          String sidecarVersion,
+                                                          JmxConfiguration jmxConfiguration,
+                                                          CQLSessionProvider session,
+                                                          DriverUtils driverUtils,
+                                                          MetricRegistryFactory registryFactory)
+    {
+        // TODO: relocate the method to somewhere testable
+        String host = cassandraInstance.host();
+        int port = cassandraInstance.port();
+
+        JmxClient jmxClient = JmxClient.builder()
+                                       .host(cassandraInstance.jmxHost())
+                                       .port(cassandraInstance.jmxPort())
+                                       .role(cassandraInstance.jmxRole())
+                                       .password(cassandraInstance.jmxRolePassword())
+                                       .enableSsl(cassandraInstance.jmxSslEnabled())
+                                       .connectionMaxRetries(jmxConfiguration.maxRetries())
+                                       .connectionRetryDelay(jmxConfiguration.retryDelay())
+                                       .build();
+        MetricRegistry instanceSpecificRegistry = registryFactory.getOrCreate(cassandraInstance.id());
+        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
+                                                                         cassandraInstance.id(),
+                                                                         versionProvider,
+                                                                         session,
+                                                                         jmxClient,
+                                                                         driverUtils,
+                                                                         sidecarVersion,
+                                                                         host,
+                                                                         port,
+                                                                         new InstanceHealthMetrics(instanceSpecificRegistry));
+        return InstanceMetadataImpl.builder()
+                                   .id(cassandraInstance.id())
+                                   .host(host)
+                                   .port(port)
+                                   .storageDir(cassandraInstance.storageDir())
+                                   .dataDirs(cassandraInstance.dataDirs())
+                                   .stagingDir(cassandraInstance.stagingDir())
+                                   .cdcDir(cassandraInstance.cdcDir())
+                                   .commitlogDir(cassandraInstance.commitlogDir())
+                                   .hintsDir(cassandraInstance.hintsDir())
+                                   .savedCachesDir(cassandraInstance.savedCachesDir())
+                                   .localSystemDataFileDir(cassandraInstance.localSystemDataFileDir())
+                                   .delegate(delegate)
+                                   .metricRegistry(instanceSpecificRegistry)
+                                   .build();
+    }
+}

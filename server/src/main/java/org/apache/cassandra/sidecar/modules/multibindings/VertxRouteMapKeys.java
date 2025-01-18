@@ -1,0 +1,241 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.cassandra.sidecar.modules.multibindings;
+
+import io.vertx.core.http.HttpMethod;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+
+/**
+ * Class keys in the {@link com.google.inject.multibindings.MapBinder} to {@link org.apache.cassandra.sidecar.routes.VertxRoute} objects
+ */
+public interface VertxRouteMapKeys
+{
+    /** Handlers that are in the global scope, not binding to any specific route **/
+    interface GlobalChainAuthHandlerKey extends ClassKey {}
+    interface GlobalUtilityHandlerKey extends ClassKey {}
+    interface GlobalErrorHandlerKey extends ClassKey {}
+    /*-------*/
+
+    /** Alphabetically sorted list of keys **/
+    interface AbortRestoreJobRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.POST;
+        String ROUTE_URI = ApiEndpointsV1.ABORT_RESTORE_JOB_ROUTE;
+    }
+    interface AllKeyspacesSchemaRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.ALL_KEYSPACES_SCHEMA_ROUTE;
+    }
+    interface CassandraConnectedClientStatsRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE;
+    }
+    interface CassandraGossipHealthRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.GOSSIP_HEALTH_ROUTE;
+    }
+    interface CassandraGossipInfoRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.GOSSIP_INFO_ROUTE;
+    }
+    interface CassandraHealthRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE;
+    }
+    interface CassandraJmxHealthRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.CASSANDRA_JMX_HEALTH_ROUTE;
+    }
+    interface CassandraNativeHealthRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.CASSANDRA_NATIVE_HEALTH_ROUTE;
+    }
+    interface CassandraNodeDecommissionRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
+        String ROUTE_URI = ApiEndpointsV1.NODE_DECOMMISSION_ROUTE;
+    }
+    interface CassandraNodeSettingsRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.NODE_SETTINGS_ROUTE;
+    }
+    interface CassandraOperationalJobRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.OPERATIONAL_JOB_ROUTE;
+    }
+    interface CassandraRingRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.RING_ROUTE;
+    }
+    interface CassandraRingWithKeyspaceRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.RING_WITH_KEYSPACE_ROUTE;
+    } // Tells the data ownership for the specific keyspace
+    interface CassandraStreamStatsRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.STREAM_STATS_ROUTE;
+    }
+    interface CassandraTokenRangeReplicaMapRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE;
+    }
+    interface ClearSnapshotRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.DELETE;
+        String ROUTE_URI = ApiEndpointsV1.SNAPSHOTS_ROUTE;
+    }
+    interface CreateRestoreJobRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.POST;
+        String ROUTE_URI = ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE;
+    }
+    interface CreateRestoreSliceRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.POST;
+        String ROUTE_URI = ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE;
+    }
+    interface CreateSnapshotRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
+        String ROUTE_URI = ApiEndpointsV1.SNAPSHOTS_ROUTE;
+    }
+    interface DeleteServiceConfigurationRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.DELETE;
+        String ROUTE_URI = ApiEndpointsV1.SERVICE_CONFIG_ROUTE;
+    }
+    interface DeprecatedAllKeyspacesSchemaRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.DEPRECATED_ALL_KEYSPACES_SCHEMA_ROUTE;
+    }
+    interface DeprecatedKeyspaceSchemaRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.DEPRECATED_KEYSPACE_SCHEMA_ROUTE;
+    }
+    interface DeprecatedListSnapshotRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.DEPRECATED_SNAPSHOTS_ROUTE;
+    }
+    interface DeprecatedStreamSSTableComponentsRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.DEPRECATED_COMPONENTS_ROUTE;
+    }
+    interface GetAllServiceConfigurationsRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.SERVICES_CONFIG_ROUTE;
+    }
+    interface GetRestoreJobProgressRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.RESTORE_JOB_PROGRESS_ROUTE;
+    }
+    interface GetRestoreJobSummaryRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.RESTORE_JOB_ROUTE;
+    }
+    interface KeyspaceSchemaRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE;
+    }
+    interface ListCassandraOperationalJobRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE;
+    }
+    interface ListCdcSegmentsRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.LIST_CDC_SEGMENTS_ROUTE;
+    }
+    interface ListSnapshotRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.SNAPSHOTS_ROUTE;
+    }
+    interface SSTableCleanupRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.DELETE;
+        String ROUTE_URI = ApiEndpointsV1.SSTABLE_CLEANUP_ROUTE;
+    }
+    interface SSTableImportRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
+        String ROUTE_URI = ApiEndpointsV1.SSTABLE_IMPORT_ROUTE;
+    }
+    interface SSTableUploadRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
+        String ROUTE_URI = ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE;
+    }
+    interface SidecarHealthRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.HEALTH_ROUTE;
+    }
+    interface StreamCdcSegmentRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.STREAM_CDC_SEGMENTS_ROUTE;
+    }
+    interface StreamSSTableComponentsRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.COMPONENTS_ROUTE;
+    }
+    interface StreamSSTableComponentsWithSecondaryIndexRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.COMPONENTS_WITH_SECONDARY_INDEX_ROUTE_SUPPORT;
+    }
+    interface TimeSkewRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.TIME_SKEW_ROUTE;
+    }
+    interface UpdateRestoreJobRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PATCH;
+        String ROUTE_URI = ApiEndpointsV1.RESTORE_JOB_ROUTE;
+    }
+    interface UpdateServiceConfigurationRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
+        String ROUTE_URI = ApiEndpointsV1.SERVICE_CONFIG_ROUTE;
+    }
+}

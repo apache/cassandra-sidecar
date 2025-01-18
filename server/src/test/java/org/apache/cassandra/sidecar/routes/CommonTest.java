@@ -40,7 +40,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static org.mockito.Mockito.mock;
@@ -62,7 +62,7 @@ public class CommonTest
         Injector injector;
         Module testOverride = Modules.override(new TestModule())
                                      .with(new CommonTestModule());
-        injector = Guice.createInjector(Modules.override(new MainModule())
+        injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);

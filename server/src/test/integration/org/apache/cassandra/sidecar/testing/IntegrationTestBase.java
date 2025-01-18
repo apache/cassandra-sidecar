@@ -68,7 +68,7 @@ import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
@@ -135,8 +135,7 @@ public abstract class IntegrationTestBase
         System.setProperty("suitename", testInfo.getDisplayName() + ": " + cassandraTestContext.version);
         int clusterSize = cassandraTestContext.clusterSize();
         // list of modules that override the priors; hence order matters
-        List<Module> modules = new ArrayList<>();
-        modules.add(new MainModule());
+        List<Module> modules = new ArrayList<>(SidecarModules.all());
         modules.add(integrationTestModule);
         if (testSpecificModule != null)
         {
@@ -160,7 +159,7 @@ public abstract class IntegrationTestBase
         }
         sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
                                                               getInstancesToManage(clusterSize), sslConfig);
-        integrationTestModule.setCassandraTestContext(sidecarTestContext);
+        integrationTestModule.setCassandraSidecarTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);
         VertxTestContext context = new VertxTestContext();
@@ -552,6 +551,6 @@ public abstract class IntegrationTestBase
         options.setSsl(true);
         options.setKeyStoreOptions(new JksOptions().setPath(clientKeystorePath.toAbsolutePath().toString()).setPassword(clientKeystorePassword));
         options.setTrustStoreOptions(new JksOptions().setPath(truststorePath.toAbsolutePath().toString()).setPassword(truststorePassword));
-        return WebClient.create(vertx, options);
+        return WebClient.create(vertx, options); // TODO: webclient is not closed
     }
 }

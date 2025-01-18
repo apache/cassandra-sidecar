@@ -21,11 +21,16 @@ package org.apache.cassandra.sidecar.tasks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.inject.Provider;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.server.Server;
+import org.apache.cassandra.sidecar.utils.EventBusUtils;
+
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_START;
 
 /**
  * Periodically checks whether the key store file has changed. Triggers an update to the server's SSLOptions
@@ -36,16 +41,29 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
     private static final Logger LOGGER = LoggerFactory.getLogger(KeyStoreCheckPeriodicTask.class);
 
     private final Vertx vertx;
-    private final Server server;
+    private final Provider<Server> server;
     private final SslConfiguration configuration;
     private long lastModifiedTime = 0; // records the last modified timestamp
 
-    public KeyStoreCheckPeriodicTask(Vertx vertx, Server server, SslConfiguration configuration)
+    public KeyStoreCheckPeriodicTask(Vertx vertx, Provider<Server> server, SidecarConfiguration configuration)
     {
         this.vertx = vertx;
         this.server = server;
-        this.configuration = configuration;
-        maybeRecordLastModifiedTime();
+        this.configuration = configuration.sslConfiguration();
+    }
+
+    @Override
+    public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
+    {
+        if (configuration != null
+            && configuration.enabled()
+            && configuration.keystore() != null
+            && configuration.keystore().isConfigured()
+            && configuration.keystore().reloadStore())
+        {
+            maybeRecordLastModifiedTime();
+            EventBusUtils.onceLocalConsumer(vertx.eventBus(), ON_SERVER_START.address(), message -> executor.schedule(this));
+        }
     }
 
     /**
@@ -81,7 +99,8 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
                                  "lastModifiedTime={}", keyStorePath, previousLastModifiedTime,
                                  props.lastModifiedTime());
 
-                     server.updateSSLOptions(props.lastModifiedTime())
+                     server.get()
+                           .updateSSLOptions(props.lastModifiedTime())
                            .onSuccess(v -> {
                                lastModifiedTime = props.lastModifiedTime();
                                LOGGER.info("Completed reloading certificates from path={}", keyStorePath);

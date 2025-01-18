@@ -27,20 +27,22 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.codecs.SidecarInstanceCodec;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
+import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
+import org.apache.cassandra.sidecar.utils.EventBusUtils;
 
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_PEER_DOWN;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_PEER_UP;
 
@@ -48,31 +50,36 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
  * Pings other 'peer' Sidecar(s) that are relevant to this Sidecar over HTTP and notifies
  * listeners when other Sidecar(s) goes DOWN or OK.
  */
-@Singleton
 public class SidecarPeerHealthMonitorTask implements PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarPeerHealthMonitorTask.class);
 
-    private final Vertx vertx;
+    private EventBus eventBus;
     private final SidecarPeerHealthConfiguration config;
     private final SidecarPeerProvider sidecarPeerProvider;
     private final SidecarPeerHealthProvider healthProvider;
+    private final SidecarInstanceCodec sidecarInstanceCodec;
 
     private final Map<SidecarInstance, SidecarPeerHealthProvider.Health> status = new ConcurrentHashMap<>();
 
-    @Inject
-    public SidecarPeerHealthMonitorTask(Vertx vertx,
-                                        SidecarConfiguration sidecarConfiguration,
+    public SidecarPeerHealthMonitorTask(SidecarConfiguration sidecarConfiguration,
                                         SidecarPeerProvider sidecarPeerProvider,
                                         SidecarPeerHealthProvider healthProvider,
                                         SidecarInstanceCodec sidecarInstanceCodec)
     {
-        this.vertx = vertx;
         this.config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         this.sidecarPeerProvider = sidecarPeerProvider;
         this.healthProvider = healthProvider;
+        this.sidecarInstanceCodec = sidecarInstanceCodec;
+    }
+
+    @Override
+    public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
+    {
+        this.eventBus = vertx.eventBus();
         // TODO: Find a better place to register this codec
-        vertx.eventBus().registerDefaultCodec(SidecarInstance.class, sidecarInstanceCodec);
+        eventBus.registerDefaultCodec(SidecarInstance.class, sidecarInstanceCodec);
+        EventBusUtils.onceLocalConsumer(eventBus, ON_CASSANDRA_CQL_READY.address(), ignored -> executor.schedule(this));
     }
 
     @Override
@@ -162,7 +169,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         if (compareAndUpdate(instance, SidecarPeerHealthProvider.Health.UP))
         {
             LOGGER.info("Sidecar instance is now OK hostname={} port={}", instance.hostname(), instance.port());
-            vertx.eventBus().publish(ON_SIDECAR_PEER_UP.address(), instance);
+            eventBus.publish(ON_SIDECAR_PEER_UP.address(), instance);
         }
     }
 
@@ -171,7 +178,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         if (compareAndUpdate(instance, SidecarPeerHealthProvider.Health.DOWN))
         {
             LOGGER.warn("Sidecar instance is now DOWN hostname={} port={}", instance.hostname(), instance.port());
-            vertx.eventBus().publish(ON_SIDECAR_PEER_DOWN.address(), instance);
+            eventBus.publish(ON_SIDECAR_PEER_DOWN.address(), instance);
         }
     }
 

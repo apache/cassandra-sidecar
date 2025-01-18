@@ -340,8 +340,8 @@ abstract class SidecarClientTest
         assertThat(entry.fqdn()).isEqualTo("local");
         assertThat(entry.hostId()).isEqualTo("000");
 
-        validateResponseServed(ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE.replaceAll(KEYSPACE_PATH_PARAM,
-                                                                                 "cycling"));
+        validateResponseServed(ApiEndpointsV1.RING_WITH_KEYSPACE_ROUTE.replaceAll(KEYSPACE_PATH_PARAM,
+                                                                                  "cycling"));
     }
 
     @Test

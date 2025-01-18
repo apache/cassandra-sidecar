@@ -45,7 +45,7 @@ import io.vertx.ext.web.handler.LoggerFormatter;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static org.mockito.Mockito.mock;
@@ -68,7 +68,7 @@ public class LoggerHandlerInjectionTest
     void setUp() throws InterruptedException
     {
         loggerHandler = new FakeLoggerHandler(logger);
-        Injector injector = Guice.createInjector(Modules.override(Modules.override(new MainModule())
+        Injector injector = Guice.createInjector(Modules.override(Modules.override(SidecarModules.all())
                                                                          .with(new TestModule()))
                                                         .with(binder -> binder.bind(LoggerHandler.class)
                                                                               .toInstance(loggerHandler)));

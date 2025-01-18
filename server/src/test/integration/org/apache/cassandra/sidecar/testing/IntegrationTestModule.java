@@ -28,6 +28,7 @@ import com.datastax.driver.core.Session;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.ProvidesIntoMap;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -59,6 +60,11 @@ import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.modules.multibindings.ClassKey;
+import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
+import org.apache.cassandra.sidecar.modules.multibindings.MultiBindingTypeResolver;
+import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
+import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.jetbrains.annotations.NotNull;
 
@@ -70,13 +76,13 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_
 public class IntegrationTestModule extends AbstractModule
 {
     public static final String ADMIN_IDENTITY = "spiffe://cassandra/sidecar/admin";
-    private CassandraSidecarTestContext cassandraTestContext;
+    private CassandraSidecarTestContext cassandraSidecarTestContext;
     private Path serverKeystorePath;
     private Path truststorePath;
 
-    public void setCassandraTestContext(CassandraSidecarTestContext cassandraTestContext)
+    public void setCassandraSidecarTestContext(CassandraSidecarTestContext cassandraSidecarTestContext)
     {
-        this.cassandraTestContext = cassandraTestContext;
+        this.cassandraSidecarTestContext = cassandraSidecarTestContext;
     }
 
     public void setServerKeystorePath(Path serverKeystorePath)
@@ -133,17 +139,16 @@ public class IntegrationTestModule extends AbstractModule
                                        .build();
     }
 
-    @Provides
-    @Singleton
-    public ClusterLeaseClaimTask clusterLeaseClaimTask(Vertx vertx,
-                                                       ServiceConfiguration serviceConfiguration,
-                                                       ElectorateMembership electorateMembership,
-                                                       SidecarLeaseDatabaseAccessor accessor,
-                                                       ClusterLease clusterLease,
-                                                       SidecarMetrics metrics)
+    static class TestClusterLeaseClaimTaskKey implements ClassKey {}
+    @ProvidesIntoMap
+    @KeyClassMapKey(TestClusterLeaseClaimTaskKey.class)
+    public PeriodicTask clusterLeaseClaimTask(ServiceConfiguration serviceConfiguration,
+                                              ElectorateMembership electorateMembership,
+                                              SidecarLeaseDatabaseAccessor accessor,
+                                              ClusterLease clusterLease,
+                                              SidecarMetrics metrics)
     {
-        return new ClusterLeaseClaimTask(vertx,
-                                         serviceConfiguration,
+        return new ClusterLeaseClaimTask(serviceConfiguration,
                                          electorateMembership,
                                          accessor,
                                          clusterLease,
@@ -174,6 +179,27 @@ public class IntegrationTestModule extends AbstractModule
         };
     }
 
+    /**
+     * This is the example of replacing a bound objet. In the resolver below, the ClusterLeaseClaimTask from production code is removed and replaced by
+     * the ClusterLeaseClaimTask provided in this module.
+     * See {@link #clusterLeaseClaimTask(ServiceConfiguration, ElectorateMembership, SidecarLeaseDatabaseAccessor, ClusterLease, SidecarMetrics)}
+     */
+    @Provides
+    @Singleton
+    MultiBindingTypeResolver<PeriodicTask> periodicTaskTypeResolver(Map<Class<? extends ClassKey>, PeriodicTask> periodicTaskMap)
+    {
+        return new MultiBindingTypeResolver<>()
+        {
+            @Override
+            public @NotNull Map<Class<? extends ClassKey>, PeriodicTask> resolve()
+            {
+                Map<Class<? extends ClassKey>, PeriodicTask> map = new HashMap<>(periodicTaskMap);
+                map.remove(PeriodicTaskMapKeys.ClusterLeaseClaimTaskKey.class);
+                return map;
+            }
+        };
+    }
+
     @Provides
     @Singleton
     public CoordinationConfiguration clusterLeaseClaimTaskConfiguration()
@@ -193,13 +219,13 @@ public class IntegrationTestModule extends AbstractModule
             @NotNull
             public Session get()
             {
-                return cassandraTestContext.session();
+                return cassandraSidecarTestContext.session();
             }
 
             @Override
             public void close()
             {
-                cassandraTestContext.closeSessionProvider();
+                cassandraSidecarTestContext.closeSessionProvider();
             }
 
             @Override
@@ -247,8 +273,8 @@ public class IntegrationTestModule extends AbstractModule
         @NotNull
         public List<InstanceMetadata> instances()
         {
-            if (cassandraTestContext != null && cassandraTestContext.isClusterBuilt())
-                return cassandraTestContext.instancesMetadata().instances();
+            if (cassandraSidecarTestContext != null && cassandraSidecarTestContext.isClusterBuilt())
+                return cassandraSidecarTestContext.instancesMetadata().instances();
             return Collections.emptyList();
         }
 
@@ -262,7 +288,7 @@ public class IntegrationTestModule extends AbstractModule
         @Override
         public InstanceMetadata instanceFromId(int id) throws NoSuchCassandraInstanceException
         {
-            return cassandraTestContext.instancesMetadata().instanceFromId(id);
+            return cassandraSidecarTestContext.instancesMetadata().instanceFromId(id);
         }
 
         /**
@@ -275,7 +301,7 @@ public class IntegrationTestModule extends AbstractModule
         @Override
         public InstanceMetadata instanceFromHost(String host) throws NoSuchCassandraInstanceException
         {
-            return cassandraTestContext.instancesMetadata().instanceFromHost(host);
+            return cassandraSidecarTestContext.instancesMetadata().instanceFromHost(host);
         }
     }
 }

@@ -37,4 +37,10 @@ public abstract class TableSchema extends AbstractSchema
             return false;
         return ksMetadata.getTable(tableName()) != null;
     }
+
+    @Override
+    public String toString()
+    {
+        return keyspaceName() + '.' + tableName();
+    }
 }

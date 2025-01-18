@@ -42,10 +42,9 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlices
 
     @Inject
     protected RestoreSliceDatabaseAccessor(SidecarSchema sidecarSchema,
-                                           RestoreSlicesSchema restoreSlicesSchema,
                                            CQLSessionProvider cqlSessionProvider)
     {
-        super(restoreSlicesSchema, cqlSessionProvider);
+        super(sidecarSchema.tableSchema(RestoreSlicesSchema.class), cqlSessionProvider);
         this.sidecarSchema = sidecarSchema;
     }
 

@@ -48,9 +48,10 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.handlers.ListOperationalJobsHandler;
 import org.apache.cassandra.sidecar.job.OperationalJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -80,7 +81,7 @@ class ListOperationalJobsHandlerTest
         Injector injector;
         Module testOverride = Modules.override(new TestModule())
                                      .with(new ListOperationalJobsHandlerTest.ListJobsTestModule());
-        injector = Guice.createInjector(Modules.override(new MainModule())
+        injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);

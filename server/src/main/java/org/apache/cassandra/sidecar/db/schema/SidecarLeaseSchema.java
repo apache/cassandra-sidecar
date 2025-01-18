@@ -20,17 +20,13 @@ package org.apache.cassandra.sidecar.db.schema;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
-import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Table schema definition and operations for the {@code Sidecar lease}
  */
-@Singleton
 public class SidecarLeaseSchema extends TableSchema
 {
     private static final String TABLE_NAME = "sidecar_lease_v1";
@@ -40,12 +36,6 @@ public class SidecarLeaseSchema extends TableSchema
     // prepared statements
     private PreparedStatement claimLease;
     private PreparedStatement extendLease;
-
-    @Inject
-    public SidecarLeaseSchema(ServiceConfiguration configuration)
-    {
-        this(configuration.schemaKeyspaceConfiguration());
-    }
 
     public SidecarLeaseSchema(SchemaKeyspaceConfiguration keyspaceConfig)
     {

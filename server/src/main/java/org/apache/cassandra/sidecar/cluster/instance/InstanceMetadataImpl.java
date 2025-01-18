@@ -423,8 +423,8 @@ public class InstanceMetadataImpl implements InstanceMetadata
 
             if (storageDir == null)
             {
-                Objects.requireNonNull(dataDirs, "dataDirs are required when storageDir is not configured");
-                Preconditions.checkArgument(!dataDirs.isEmpty(), "dataDirs are required when storageDir is not configured");
+                Preconditions.checkArgument(dataDirs != null && !dataDirs.isEmpty(),
+                                            "dataDirs are required when storageDir is not configured");
                 Objects.requireNonNull(commitlogDir, "commitlogDir is required when storageDir is not configured");
                 Objects.requireNonNull(hintsDir, "hintsDir is required when storageDir is not configured");
                 Objects.requireNonNull(savedCachesDir, "savedCachesDir is required when storageDir is not configured");

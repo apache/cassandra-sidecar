@@ -54,7 +54,7 @@ import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,7 +78,7 @@ class RestoreJobManagerTest
     @BeforeEach
     void setup()
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(new TestModule()));
         vertx = injector.getInstance(Vertx.class);
         executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
         processor = mock(RestoreProcessor.class);

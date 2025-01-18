@@ -45,7 +45,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.StreamSSTableMetrics;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.assertj.core.data.Offset;
 
@@ -66,7 +66,7 @@ public class ThrottleTest
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(new TestModule()));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 

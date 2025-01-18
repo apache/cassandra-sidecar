@@ -42,7 +42,7 @@ public class RingRequest extends JsonRequest<RingResponse>
      */
     public RingRequest(String keyspace)
     {
-        super(ApiEndpointsV1.RING_ROUTE_PER_KEYSPACE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace));
+        super(ApiEndpointsV1.RING_WITH_KEYSPACE_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace));
     }
 
     /**

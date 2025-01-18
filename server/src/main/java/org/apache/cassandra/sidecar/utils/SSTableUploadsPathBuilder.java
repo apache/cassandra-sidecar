@@ -31,8 +31,8 @@ import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.routes.data.SSTableUploadRequestParam;
-import org.apache.cassandra.sidecar.routes.data.SSTableUploads;
+import org.apache.cassandra.sidecar.handlers.data.SSTableUploadRequestParam;
+import org.apache.cassandra.sidecar.handlers.data.SSTableUploads;
 
 /**
  * This class builds the path to the SSTable uploads staging directory

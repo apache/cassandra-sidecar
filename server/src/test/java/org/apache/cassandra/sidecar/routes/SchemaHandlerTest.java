@@ -53,7 +53,8 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.IOUtils;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.handlers.SchemaHandler;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
@@ -82,7 +83,7 @@ class SchemaHandlerTest
         testKeyspaceSchema = IOUtils.readFully(cl.getResourceAsStream("schema/test_keyspace_schema.cql"));
 
         Injector injector;
-        injector = Guice.createInjector(Modules.override(new MainModule())
+        injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                .with(Modules.override(new TestModule())
                                                             .with(new SchemaHandlerTestModule())));
         vertx = injector.getInstance(Vertx.class);

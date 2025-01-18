@@ -39,7 +39,6 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
@@ -94,7 +93,7 @@ class RestoreJobDiscovererTest
                                         () -> mockManagers,
                                         null,
                                         null,
-                                        mock(ExecutorPools.class),
+                                        executor,
                                         metrics);
     }
 
@@ -120,7 +119,6 @@ class RestoreJobDiscovererTest
                                                         .jobStatus(RestoreJobStatus.CREATED)
                                                         .expireAt(new Date(System.currentTimeMillis() + 10000L))
                                                         .build()));
-        loop.registerPeriodicTaskExecutor(executor);
         executeBlocking();
         assertThat(metrics.server().restore().activeJobs.metric.getValue()).describedAs("active jobs count is updated")
                                                                            .isOne();
@@ -163,7 +161,6 @@ class RestoreJobDiscovererTest
         ArgumentCaptor<RestoreJob> jobCapture = ArgumentCaptor.forClass(RestoreJob.class);
         doNothing().when(mockManagers).removeJobInternal(jobCapture.capture());
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(mockResult);
-        loop.registerPeriodicTaskExecutor(executor);
 
         assertThat(loop.hasInflightJobs())
         .describedAs("No inflight jobs are discovery when loop has not started")
@@ -249,7 +246,6 @@ class RestoreJobDiscovererTest
         ArgumentCaptor<UUID> abortedJobs = ArgumentCaptor.forClass(UUID.class);
         doNothing().when(mockJobAccessor).abort(abortedJobs.capture(), eq("Expired"));
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(mockResult);
-        loop.registerPeriodicTaskExecutor(executor);
         executeBlocking();
 
         List<UUID> expectedAbortedJobs = mockResult.stream().map(s -> s.jobId).collect(Collectors.toList());
@@ -298,7 +294,6 @@ class RestoreJobDiscovererTest
     {
         when(sidecarSchema.isInitialized()).thenReturn(true);
         assertThat(loop.jobDiscoveryRecencyDays()).isEqualTo(5);
-        loop.registerPeriodicTaskExecutor(executor);
 
         executeBlocking();
 

@@ -41,7 +41,7 @@ apply from: "${project.rootDir}/gradle/common/java11Options.gradle"
         systemProperty "cassandra.netty_use_heap_allocator", "true"
         systemProperty "vertxweb.environment", "dev"
         // config logback for in-jvm clusters
-        systemProperty "logback.configurationFile", "src/test/resources/logback-in-jvm-dtest.xml"
+        systemProperty "logback.configurationFile", "${project.rootDir}/server/src/test/resources/logback-in-jvm-dtest.xml"
         // Because tests are forked, we need to explicitly pass the system property from the
         // Gradle JVM down to the children
 

@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.data;
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.routes.data.StreamSSTableComponentRequestParam;
+import org.apache.cassandra.sidecar.handlers.data.StreamSSTableComponentRequestParam;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

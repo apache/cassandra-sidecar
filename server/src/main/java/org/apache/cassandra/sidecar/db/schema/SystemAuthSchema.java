@@ -21,14 +21,12 @@ package org.apache.cassandra.sidecar.db.schema;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Schema for getting information stored in system_auth keyspace.
  */
-@Singleton
 public class SystemAuthSchema extends CassandraSystemTableSchema
 {
     private static final String IDENTITY_TO_ROLE_TABLE = "identity_to_role";
@@ -105,5 +103,11 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
         {
             throw new SchemaUnavailableException(keyspaceName(), IDENTITY_TO_ROLE_TABLE);
         }
+    }
+
+    @Override
+    public String toString()
+    {
+        return keyspaceName();
     }
 }

@@ -37,7 +37,6 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
 /**
  * The group of managers of all instances
@@ -57,18 +56,12 @@ public class RestoreJobManagerGroup
     public RestoreJobManagerGroup(SidecarConfiguration configuration,
                                   InstancesMetadata instancesMetadata,
                                   ExecutorPools executorPools,
-                                  PeriodicTaskExecutor periodicTaskExecutor,
-                                  RestoreProcessor restoreProcessor,
-                                  RestoreJobDiscoverer jobDiscoverer,
-                                  RingTopologyRefresher ringTopologyRefresher)
+                                  RestoreProcessor restoreProcessor)
     {
         this.restoreJobConfig = configuration.restoreJobConfiguration();
         this.restoreProcessor = restoreProcessor;
         this.executorPools = executorPools;
         initializeManagers(instancesMetadata);
-        periodicTaskExecutor.schedule(jobDiscoverer);
-        periodicTaskExecutor.schedule(restoreProcessor);
-        periodicTaskExecutor.schedule(ringTopologyRefresher);
     }
 
     /**

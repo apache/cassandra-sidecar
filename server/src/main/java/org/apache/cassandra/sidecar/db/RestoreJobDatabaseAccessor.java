@@ -60,12 +60,10 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
 
     @Inject
     public RestoreJobDatabaseAccessor(SidecarSchema sidecarSchema,
-                                      RestoreJobsSchema restoreJobsSchema,
                                       CQLSessionProvider cqlSessionProvider)
     {
-        super(restoreJobsSchema, cqlSessionProvider);
+        super(sidecarSchema.tableSchema(RestoreJobsSchema.class), cqlSessionProvider);
         this.sidecarSchema = sidecarSchema;
-
     }
 
     public RestoreJob create(CreateRestoreJobRequestPayload payload, QualifiedTableName qualifiedTableName)

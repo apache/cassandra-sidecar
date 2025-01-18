@@ -32,6 +32,8 @@ import io.vertx.ext.auth.authorization.Authorization;
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactory;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * {@link SidecarPermissionsDatabaseAccessor} is an accessor for role_permissions_v1 table under sidecar_internal
@@ -43,6 +45,14 @@ public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<Sidecar
     private final PermissionFactory permissionFactory;
 
     @Inject
+    public SidecarPermissionsDatabaseAccessor(SidecarSchema sidecarSchema,
+                                              CQLSessionProvider sessionProvider,
+                                              PermissionFactory permissionFactory)
+    {
+        this(sidecarSchema.tableSchema(SidecarRolePermissionsSchema.class), sessionProvider, permissionFactory);
+    }
+
+    @VisibleForTesting
     protected SidecarPermissionsDatabaseAccessor(SidecarRolePermissionsSchema tableSchema,
                                                  CQLSessionProvider sessionProvider,
                                                  PermissionFactory permissionFactory)

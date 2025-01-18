@@ -50,7 +50,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
@@ -82,7 +82,7 @@ public class TableStatsHandlerTest
     {
         Module testOverride = Modules.override(new TestModule())
                                       .with(new TableStatsTestModule());
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(testOverride));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);

@@ -20,8 +20,6 @@ package org.apache.cassandra.sidecar.db.schema;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -30,7 +28,6 @@ import org.jetbrains.annotations.NotNull;
  * sidecar_internal.role_permissions_v1 table holds custom sidecar permissions that are not stored in Cassandra.
  * Permissions are stored against resource.
  */
-@Singleton
 public class SidecarRolePermissionsSchema extends TableSchema
 {
     private static final String ROLE_PERMISSIONS_TABLE = "role_permissions_v1";
@@ -39,7 +36,6 @@ public class SidecarRolePermissionsSchema extends TableSchema
 
     private PreparedStatement allRolesAndPermissions;
 
-    @Inject
     public SidecarRolePermissionsSchema(SidecarConfiguration sidecarConfiguration)
     {
         this.keyspaceConfig = sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration();

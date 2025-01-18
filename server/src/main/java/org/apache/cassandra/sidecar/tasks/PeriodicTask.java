@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.tasks;
 
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 
 /**
@@ -40,16 +41,6 @@ public interface PeriodicTask extends Task<Void>
     }
 
     /**
-     * Register the periodic task executor at the task. By default, it is no-op.
-     * If the reference to the executor is needed, the concrete {@link PeriodicTask} can implement this method
-     *
-     * @param executor the executor that manages the task
-     */
-    default void registerPeriodicTaskExecutor(PeriodicTaskExecutor executor)
-    {
-    }
-
-    /**
      * Specify the schedule decision of the upcoming run.
      * The method is evaluated before calling {@link #execute(Promise)}
      *
@@ -58,6 +49,20 @@ public interface PeriodicTask extends Task<Void>
     default ScheduleDecision scheduleDecision()
     {
         return ScheduleDecision.EXECUTE;
+    }
+
+    /**
+     * Deploy this periodic task to be scheduled on {@link PeriodicTaskExecutor}
+     * <P>Note that this method is called exactly once, iff a periodic task is declared in the guice modules.
+     * {@link org.apache.cassandra.sidecar.modules.SchedulingModule} is responsible for invoking this method in this case.
+     * <p>However, this method is <i>not</i> invoked automatically, if a periodic tasks is not declared in the guice modules,
+     * e.g. it is created dynamically after Sidecar has bootstrapped,
+     * @param vertx vertx
+     * @param executor periodic task executor
+     */
+    default void deploy(Vertx vertx, PeriodicTaskExecutor executor)
+    {
+        executor.schedule(this);
     }
 
     @Override

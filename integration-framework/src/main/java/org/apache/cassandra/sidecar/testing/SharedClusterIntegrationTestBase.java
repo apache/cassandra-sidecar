@@ -56,6 +56,7 @@ import com.datastax.driver.core.SimpleStatement;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
@@ -93,7 +94,6 @@ import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl;
-
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarClientConfigurationImpl;
@@ -105,7 +105,7 @@ import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
@@ -341,6 +341,7 @@ public abstract class SharedClusterIntegrationTestBase
 
     /**
      * Override to provide additional options to configure sidecar
+     * @return function to update {@link SidecarConfigurationImpl.Builder}
      */
     protected Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides()
     {
@@ -383,14 +384,12 @@ public abstract class SharedClusterIntegrationTestBase
         VertxTestContext context = new VertxTestContext();
         AbstractModule testModule = new IntegrationTestModule(instances, classLoaderWrapper, mtlsTestHelper,
                                                               dnsResolver, configurationOverrides());
+        Module module = testModule;
         if (customModule != null)
         {
-            sidecarServerInjector = Guice.createInjector(Modules.override(new MainModule()).with(Modules.override(testModule).with(customModule)));
+            module = Modules.override(testModule).with(customModule);
         }
-        else
-        {
-            sidecarServerInjector = Guice.createInjector(Modules.override(new MainModule()).with(testModule));
-        }
+        sidecarServerInjector = Guice.createInjector(Modules.override(SidecarModules.all()).with(module));
         Vertx vertx = sidecarServerInjector.getInstance(Vertx.class);
         vertx.eventBus()
              .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> {

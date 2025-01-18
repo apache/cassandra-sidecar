@@ -28,10 +28,11 @@ We warmly welcome and appreciate contributions from the community.
   * [Discuss](#discuss)
   * [Create a Ticket](#ticket)
 * [Source Code Best Practices](#best-practices)
+  * [Introducing new APIs](#new-apis)
   * [Asynchronous Programming](#async-programming)
   * [Thread Pool Model](#thread-pools)
   * [One-shot Timers and Periodic Timers](#timers)
-  * [Dependency Injection](#guice)
+  * [Guice in Sidecar](#guice)
   * [Handler Chaining](#chaining-handlers)
   * [Asynchronous Handlers](#async-handlers)
   * [Future Composition](#future-composition)
@@ -60,12 +61,42 @@ When ready create a Jira ticket.
 
 The Apache Cassandra Sidecar project uses the [vertx](https://vertx.io) toolkit. It uses the asynchronous and
 reactive programming paradigm. This allows for Sidecar to scale up as workloads grow, as well as resiliency when
-failures arise.
+failures arise, whereas the traditional one-request-per-thread threading model does not scale well beyond 
+small-to-medium workloads.
 
-<a name="traditional-app-server"></a>
-In a traditional application server, a pool of threads is used to receive request. Each request is handled by a
-distinct thread. This model is well suited for small-medium workloads. As workloads grow, applications need to scale
-horizontally because of hardware limits on the number of threads that can be created.
+To get yourself familiar with the codebase, a good starting point of exploration is the 
+[modules](server/src/main/java/org/apache/cassandra/sidecar/modules). Check out each module and find out what are the relevant 
+components of each feature. 
+
+### <a name="new-apis"></a>Introducing New APIs
+
+An API is a `Route` in Vertx's terminology. To add a new API, we want to define the route.
+
+First, identify in which module does the API belong to.
+All the modules are listed under [modules](server/src/main/java/org/apache/cassandra/sidecar/modules). 
+For example, if the new API is to trigger an operation in Cassandra, it fits in the 
+[CassandraOperationsModule](server/src/main/java/org/apache/cassandra/sidecar/modules/CassandraOperationsModule.java).
+Similarly, a health check API should be located in the 
+[HealthCheckModule](server/src/main/java/org/apache/cassandra/sidecar/modules/HealthCheckModule.java).
+
+Second, declare the route to be injected into `Router`. Take the following code snippet as example,
+
+```java
+@ProvidesIntoMap
+@KeyClassMapKey(VertxRouteMapKeys.SidecarHealthRouteKey.class)
+VertxRoute sidecarHealthRoute(RouteBuilder.Factory factory)
+{
+  return factory.builderForUnprotectedRoute()
+                .handler(context -> context.json(OK_STATUS))
+                .build();
+}
+```
+
+The method builds a `VertxRoute` using `RouteBuilder`. You can see the builder defines the `HttpMethod`,
+the `endpoint` and the request handler. In addition, you may notice the annotations such as `@ProvidesIntoMap`
+and `@KeyClassMapKey`. The annotations work together to inject the binding into `MapBinder`, which is eventually 
+used to build the complete router. To learn more about dependency injection usage in this project, see [Guice in Sidecar](#guice) 
+and [Guice Best Practices in Sidecar](server/src/main/java/org/apache/cassandra/sidecar/modules/guice-best-practice.md).
 
 ### <a name="async-programming"></a>Asynchronous Programming
 
@@ -128,57 +159,94 @@ The `service` worker pool has the name `sidecar-worker-pool`.
 
 The `internal` worker pool has the name `sidecar-internal-worker-pool`.
 
-### <a href="timers"></a>One-shot Timers and Periodic Timers
+### <a name="timers"></a>One-shot Timers and Periodic Timers
 
 Use vertx APIs to set one-shot timers and periodic timers. If you need to execute a one-time operation in the future,
 or if you need to run periodic operations within vertx, an API is available. These timers utilize vertx provisioned
-threads that are managed internal by vertx. For example
+threads that are managed internal by vertx. For example, the below code snippet runs `action()` after `delayMillis`.
 
 ```java
-logger.debug("Retrying streaming after {} millis", millis);
-executorPools.service().setTimer(millis, t -> acquireAndSend(context, filename, fileLength, range, startTime));
+executorPools.service().setTimer(delayMillis, timerId -> action());
 ```
 
-### <a href="guice"></a>Dependency Injection
-
-The Apache Cassandra Sidecar project uses Guice for handling the object interdependency. When a class encapsulates
-some functionality that is then used by a different class in the system, we use Guice for dependency injection.
-
-When a different implementation can be provided in the future, prefer using an interface and a default implementation
-that can be later switched transparently without affecting the classes that depend on it.
-
-Prefer creating concrete classes over utility methods. The concrete classes can be managed as a
-[Singleton](https://en.wikipedia.org/wiki/Singleton_pattern) if they do not have external dependencies that might
-change their behavior based on the configuration.
-
-Here's an example of a class being managed by Guice.
+Similarly, a simple periodic task can be schedule with the following code. The `action()` is scheduled to run after 
+the `initialDelayMillis` and repeat every `delayMillis`.
 
 ```java
-/**
- * Verifies the checksum of a file
- */
-public interface ChecksumVerifier {
-  Future<Boolean> verify(String expectedhash, String filename);
+executorPools.internal().setPeriodic(initialDelayMillis, delayMillis, timerId -> action());
+```
+Note that such periodic task is triggered whenever the scheduled time has arrived, consider the equivalent 
+`ScheduledExecutorService#scheduleAtFixedRate`. It is possible to have concurrent runs, depending on the delay parameters. 
+It might not be the desired scheduling behavior for the use case. If serial execution sequence is wanted, check out the 
+scheduling mechanism described in [Advanced periodic task scheduling](#advanced-periodic-scheduling)
+
+#### <a name="advanced-periodic-scheduling">Advanced periodic task scheduling
+
+`PeriodicTaskExecutor` provides the scheduling behavior that is similar to the hybrid of `ScheduledExecutorService#scheduleAtFixedRate`
+and `ScheduledExecutorService#scheduleAtFixedDelay`. The unit of execution is `PeriodicTask`.
+
+A `PeriodicTask` is guaranteed to be executed in serial by `PeriodicTaskExecutor`, as if such task is executed from 
+a single thread. Memory consistency is ensured, i.e. the effect of write from the last run is visible to the current run.
+The interval between the consecutive runs is adjusted based on the duration taken by the last run. This way, its behavior 
+is similar to providing a "fixed rate". Note that, if the last run takes more time than the interval, the next run starts
+immediately, right _after_ the completion of the prior run. 
+
+You may refer to `org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer` as an example of `PeriodicTask`.
+
+### <a name="guice"></a>Guice in Sidecar
+
+> ℹ️ [Guice Wiki](https://github.com/google/guice/wiki/)
+
+The Apache Cassandra Sidecar project uses Guice for [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection),
+managing the dependency graph, promoting clean and maintainable code.
+
+If you are new to Guice, please refer to [Guice Wiki](https://github.com/google/guice/wiki/) to get familiar with the framework.
+
+#### Dependency Injection
+
+Dependency injection is fundamental in Guice. Below is a short example to demonstrate how it is set up and how it works. Refer to
+[Guice Wiki](https://github.com/google/guice/wiki/), if you want to see more examples.
+
+The Guice Module, `ChecksumVerificationModule`, declares a singleton `ChecksumVerifier` implementation based on MD5. The binding
+can be illustrated as such, `ChecksumVerifier -> MD5ChecksumVerifier`, i.e. whenever `ChecksumVerifier` is wanted, Guice injects 
+the bound implementation, i.e. `MD5ChecksumVerifier`. In this example, `FileReceiver` is instantiated with `MD5ChecksumVerifier`.
+
+```java
+public class ChecksumVerificationModule extends AbstractModule
+{
+    @Provides
+    @Singleton
+    ChecksumVerifier md5ChecksumVerifier()
+    {
+        return new MD5ChecksumVerifier();
+    }
+    
+    @Provides
+    @Singleton
+    FileReceiver fileReceiver(ChecksumVerifier md5Verifier)
+    {
+        return new FileReceiver(md5Verifier);
+    }
+
+    class MD5ChecksumVerifier implements ChecksumVerifier
+    {
+        @Override
+        public Future<Boolean> verify(String expectedHash, String filename)
+        {
+            // calculate the MD5 of the file located by filename and verify with the expectedHash
+        }
+    }
 }
 ```
 
-Let's say we support `MD5` for checksum verification, our implementation can look like this:
+A new implementation of `ChecksumVerifier` that uses a different hashing algorithm can be injected later. In that case, 
+[@Named](https://github.com/google/guice/wiki/BindingAnnotations#named) annotation might be used to differentiate the 
+implementations binding to the same interface. 
 
-```java
-public class MD5ChecksumVerifier implements ChecksumVerifier {
-    public Future<Boolean> verify(String expectedhash, String filename) {
-        return fs.open(filename, new OpenOptions())
-                 .compose(this::calculateMD5)
-                 .compose(computedChecksum -> {
-                     if (!expectedHash.equals(computedChecksum))
-                         return Future.failedFuture();
-                     return Future.succeededFuture(true);
-                 });
-    }
-  }
-```
+#### Guice Best Practices in Sidecar 
 
-A new implementation of `ChecksumVerifier` that uses a different hashing algorithm can be injected later.
+More Guice and its best practices in this project, please see 
+[Guice Best Practice in Sidecar](server/src/main/java/org/apache/cassandra/sidecar/modules/guice-best-practice.md)
 
 ### <a name="chaining-handlers"></a>Handler Chaining
 
@@ -258,7 +326,7 @@ router.get("/blockingHandler")
       .blockingHandler(listSnapshotFiles);
 ```
 
-Asynchronous handlers:
+Asynchronous handlers (Preferred):
 
 ```java
 router.route().method(HttpMethod.GET)
@@ -266,6 +334,9 @@ router.route().method(HttpMethod.GET)
       .handler(streamSSTableComponentHandler)
       .handler(fileStreamHandler);
 ```
+
+The blocking actions as part of `/asyncHandler` can be dispatched to `ExecutorPool` to be async. Therefore,
+unless the blocking handler is very simple, asynchronous handler should be preferred.
 
 ### <a name="future-composition"></a>Future Composition
 

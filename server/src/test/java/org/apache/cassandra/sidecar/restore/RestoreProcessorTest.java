@@ -24,25 +24,36 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.util.Modules;
+import com.codahale.metrics.SharedMetricRegistries;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.TestResourceReaper;
+import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.RestoreJobConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.db.RestoreRange;
+import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceRestoreMetrics;
-import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
+import org.apache.cassandra.sidecar.utils.SSTableImporter;
 
 import static org.apache.cassandra.sidecar.restore.RestoreRangeTask.failOnCancelled;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -57,6 +68,10 @@ import static org.mockito.Mockito.when;
 
 class RestoreProcessorTest
 {
+    private static final Vertx vertx = Vertx.vertx();
+    private static final ExecutorPools executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
+
+    private final InstanceMetrics instanceMetrics = instanceMetrics();
     private RestoreProcessor processor;
     private SidecarSchema sidecarSchema;
     private PeriodicTaskExecutor periodicTaskExecutor;
@@ -64,20 +79,44 @@ class RestoreProcessorTest
     @BeforeEach
     void setup()
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
         sidecarSchema = mock(SidecarSchema.class);
-        RestoreProcessor delegate = injector.getInstance(RestoreProcessor.class);
+        SidecarMetrics sidecarMetrics = mock(SidecarMetrics.class);
+        when(sidecarMetrics.instance(1)).thenReturn(instanceMetrics);
+        SidecarConfiguration sidecarConfig = SidecarConfigurationImpl
+                                             .builder()
+                                             .restoreJobConfiguration(RestoreJobConfigurationImpl
+                                                                      .builder()
+                                                                      .processMaxConcurrency(TestModule.RESTORE_MAX_CONCURRENCY)
+                                                                      .slowTaskThreshold(SecondBoundConfiguration.parse("10s"))
+                                                                      .slowTaskReportDelay(SecondBoundConfiguration.parse("2m"))
+                                                                      .build())
+                                             .build();
+        RestoreProcessor delegate = new RestoreProcessor(executorPools,
+                                                         sidecarConfig,
+                                                         sidecarSchema,
+                                                         mock(StorageClientPool.class),
+                                                         mock(SSTableImporter.class),
+                                                         mock(RestoreRangeDatabaseAccessor.class),
+                                                         mock(RestoreJobUtil.class),
+                                                         mock(LocalTokenRangesProvider.class),
+                                                         sidecarMetrics);
+        periodicTaskExecutor = new PeriodicTaskExecutor(executorPools, new ClusterLease());
         processor = spy(delegate);
         when(processor.delay()).thenReturn(MillisecondBoundConfiguration.parse("100ms"));
         when(processor.sidecarSchema()).thenReturn(sidecarSchema);
-        periodicTaskExecutor = injector.getInstance(PeriodicTaskExecutor.class);
     }
 
     @AfterEach
     void clear()
     {
-        registry().removeMatching((name, metric) -> true);
-        registry(1).removeMatching((name, metric) -> true);
+        SharedMetricRegistries.clear();
+        periodicTaskExecutor.close();
+    }
+
+    @AfterAll
+    static void afterAll()
+    {
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test
@@ -101,7 +140,7 @@ class RestoreProcessorTest
             processor.submit(range);
         }
 
-        InstanceRestoreMetrics instanceRestoreMetrics = instanceMetrics().restore();
+        InstanceRestoreMetrics instanceRestoreMetrics = instanceMetrics.restore();
 
         // assert before any slice can be completed
         loopAssert(3, () -> {
@@ -178,7 +217,7 @@ class RestoreProcessorTest
         currentTime.set(oneMinutesInNanos);
         processor.submit(range);
         loopAssert(3, () -> {
-            long[] slowRestoreTaskTimes = instanceMetrics()
+            long[] slowRestoreTaskTimes = instanceMetrics
                                           .restore()
                                           .slowRestoreTaskTime.metric.getSnapshot().getValues();
             assertThat(slowRestoreTaskTimes)
@@ -301,7 +340,7 @@ class RestoreProcessorTest
     {
         RestoreRange mockRange = RestoreRangeTest.createTestRange();
         RestoreRange range = spy(mockRange);
-        when(range.owner().metrics()).thenReturn(instanceMetrics());
+        when(range.owner().metrics()).thenReturn(instanceMetrics);
         return range;
     }
 }

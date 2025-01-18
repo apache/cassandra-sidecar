@@ -26,8 +26,8 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.routes.AbstractHandler;
-import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
+import org.apache.cassandra.sidecar.handlers.AbstractHandler;
+import org.apache.cassandra.sidecar.handlers.RoutingContextUtils;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -48,6 +48,7 @@ public class AuthorizationParameterValidateHandler extends AbstractHandler<Quali
      * @param metadataFetcher the interface to retrieve instance metadata
      * @param executorPools   the executor pools for blocking executions
      * @param validator       a validator instance to validate Cassandra-specific input
+     * @param snapshotPathBuilder snapshot path builder
      */
     @Inject
     protected AuthorizationParameterValidateHandler(InstanceMetadataFetcher metadataFetcher,

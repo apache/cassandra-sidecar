@@ -341,8 +341,7 @@ class ClusterLeaseClaimTaskIntegrationTest
             SidecarLeaseDatabaseAccessor accessor = buildAccessor(cqlSessionProvider);
 
             ClusterLease clusterLease = new ClusterLease();
-            ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(vertx,
-                                                                   serviceConfiguration,
+            ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration,
                                                                    null,
                                                                    accessor,
                                                                    clusterLease,

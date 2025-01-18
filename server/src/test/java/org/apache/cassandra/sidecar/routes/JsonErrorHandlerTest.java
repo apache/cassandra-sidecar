@@ -42,6 +42,7 @@ import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.TimeoutHandler;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.handlers.JsonErrorHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

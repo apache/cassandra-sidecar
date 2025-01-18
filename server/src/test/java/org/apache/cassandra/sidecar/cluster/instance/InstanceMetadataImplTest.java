@@ -116,26 +116,28 @@ class InstanceMetadataImplTest
     @Test
     void failsWhenDataDirsAreNotConfigured()
     {
-        assertThatNullPointerException().isThrownBy(() -> InstanceMetadataImpl.builder()
-                                                                              .id(ID)
-                                                                              .host(HOST)
-                                                                              .port(PORT)
-                                                                              .metricRegistry(METRIC_REGISTRY)
-                                                                              .build())
-                                        .withMessageContaining("dataDirs are required when storageDir is not configured");
+        assertThatIllegalArgumentException()
+        .isThrownBy(() -> InstanceMetadataImpl.builder()
+                                              .id(ID)
+                                              .host(HOST)
+                                              .port(PORT)
+                                              .metricRegistry(METRIC_REGISTRY)
+                                              .build())
+        .withMessageContaining("dataDirs are required when storageDir is not configured");
     }
 
     @Test
     void failsWhenDataDirsAreEmpty()
     {
-        assertThatIllegalArgumentException().isThrownBy(() -> InstanceMetadataImpl.builder()
-                                                                                  .id(ID)
-                                                                                  .host(HOST)
-                                                                                  .port(PORT)
-                                                                                  .metricRegistry(METRIC_REGISTRY)
-                                                                                  .dataDirs(Collections.emptyList())
-                                                                                  .build())
-                                            .withMessageContaining("dataDirs are required when storageDir is not configured");
+        assertThatIllegalArgumentException()
+        .isThrownBy(() -> InstanceMetadataImpl.builder()
+                                              .id(ID)
+                                              .host(HOST)
+                                              .port(PORT)
+                                              .metricRegistry(METRIC_REGISTRY)
+                                              .dataDirs(Collections.emptyList())
+                                              .build())
+        .withMessageContaining("dataDirs are required when storageDir is not configured");
     }
 
     @Test

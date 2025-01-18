@@ -90,7 +90,7 @@ public final class ApiEndpointsV1
     public static final String NODE_SETTINGS_ROUTE = API_V1 + CASSANDRA + "/settings";
 
     public static final String RING_ROUTE = API_V1 + CASSANDRA + "/ring";
-    public static final String RING_ROUTE_PER_KEYSPACE = RING_ROUTE + PER_KEYSPACE;
+    public static final String RING_WITH_KEYSPACE_ROUTE = RING_ROUTE + PER_KEYSPACE;
 
     public static final String SSTABLE_UPLOAD_ROUTE = API_V1 + PER_UPLOAD + PER_KEYSPACE + PER_TABLE + PER_COMPONENT;
     public static final String SSTABLE_IMPORT_ROUTE = API_V1 + PER_UPLOAD + PER_KEYSPACE + PER_TABLE + "/import";
@@ -133,8 +133,8 @@ public final class ApiEndpointsV1
 
     public static final String CONNECTED_CLIENT_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/connected-clients";
 
-    public static final String OPERATIONAL_JOBS = "/operational-jobs";
-    public static final String PER_OPERATIONAL_JOB = OPERATIONAL_JOBS + '/' + OPERATIONAL_JOB_ID_PATH_PARAM;
+    private static final String OPERATIONAL_JOBS = "/operational-jobs";
+    private static final String PER_OPERATIONAL_JOB = OPERATIONAL_JOBS + '/' + OPERATIONAL_JOB_ID_PATH_PARAM;
     public static final String LIST_OPERATIONAL_JOBS_ROUTE = API_V1 + CASSANDRA + OPERATIONAL_JOBS;
     public static final String OPERATIONAL_JOB_ROUTE = API_V1 + CASSANDRA + PER_OPERATIONAL_JOB;
     public static final String NODE_DECOMMISSION_ROUTE = API_V1 + CASSANDRA + "/operations/decommission";

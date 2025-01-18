@@ -50,7 +50,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
@@ -82,7 +82,7 @@ class StreamSSTableComponentHandlerTest
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(testModule));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testModule));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 

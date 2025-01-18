@@ -21,8 +21,6 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
@@ -32,7 +30,6 @@ import org.jetbrains.annotations.NotNull;
  * {@link ConfigsSchema} holds all prepared statements needed for talking to Cassandra for various actions
  * related to storing and updating CDC and Kafka configs.
  */
-@Singleton
 public class ConfigsSchema extends TableSchema implements ExecuteOnClusterLeaseholderOnly
 {
     private static final String CONFIGS_TABLE_NAME = "configs";
@@ -44,7 +41,6 @@ public class ConfigsSchema extends TableSchema implements ExecuteOnClusterLeaseh
     private PreparedStatement insertConfigIfNotExist;
     private PreparedStatement deleteConfig;
 
-    @Inject
     public ConfigsSchema(ServiceConfiguration configuration)
     {
         this.keyspaceConfig = configuration.schemaKeyspaceConfiguration();

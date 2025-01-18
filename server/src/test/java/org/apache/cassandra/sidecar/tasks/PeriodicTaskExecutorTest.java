@@ -322,7 +322,7 @@ class PeriodicTaskExecutorTest
     void testLeaseholderOnlyTaskOnNonClusterLeaseholder()
     {
         CountDownLatch skipLatch = new CountDownLatch(1);
-        SimulatedTask task = new SimulatedTask(skipLatch, null);
+        SimulatedTask task = new SimulatedTask(taskExecutor, skipLatch, null);
         clusterLease.setOwnershipTesting(ClusterLease.Ownership.LOST);
 
         taskExecutor.schedule(task);
@@ -336,7 +336,7 @@ class PeriodicTaskExecutorTest
     void testLeaseholderOnlyTaskOnClusterLeaseholder()
     {
         CountDownLatch latch = new CountDownLatch(1);
-        SimulatedTask task = new SimulatedTask(latch);
+        SimulatedTask task = new SimulatedTask(taskExecutor, latch);
         clusterLease.setOwnershipTesting(ClusterLease.Ownership.CLAIMED);
 
         taskExecutor.schedule(task);
@@ -349,7 +349,7 @@ class PeriodicTaskExecutorTest
     void testLeaseholderOnlyTaskIsRescheduledWhenIndeterminate()
     {
         CountDownLatch latch = new CountDownLatch(1);
-        SimulatedTask taskThatRunsOnExecutor = new SimulatedTask(latch);
+        SimulatedTask taskThatRunsOnExecutor = new SimulatedTask(taskExecutor, latch);
 
         ClusterLease clusterLease = new TestClusterLease(new ClusterLease());
         PeriodicTaskExecutor taskExecutor = new PeriodicTaskExecutor(executorPools, clusterLease);
@@ -414,22 +414,17 @@ class PeriodicTaskExecutorTest
         final AtomicInteger initialDelayCount = new AtomicInteger(0);
         private final CountDownLatch shouldSkipLatch;
         private final CountDownLatch executeLatch;
-        private PeriodicTaskExecutor executor;
+        private final PeriodicTaskExecutor executor;
 
-        SimulatedTask(CountDownLatch executeLatch)
+        SimulatedTask(PeriodicTaskExecutor executor, CountDownLatch executeLatch)
         {
-            this(new CountDownLatch(1), executeLatch);
+            this(executor, new CountDownLatch(1), executeLatch);
         }
 
-        SimulatedTask(CountDownLatch shouldSkipLatch, CountDownLatch executeLatch)
+        SimulatedTask(PeriodicTaskExecutor executor, CountDownLatch shouldSkipLatch, CountDownLatch executeLatch)
         {
             this.shouldSkipLatch = shouldSkipLatch;
             this.executeLatch = executeLatch;
-        }
-
-        @Override
-        public void registerPeriodicTaskExecutor(PeriodicTaskExecutor executor)
-        {
             this.executor = executor;
         }
 

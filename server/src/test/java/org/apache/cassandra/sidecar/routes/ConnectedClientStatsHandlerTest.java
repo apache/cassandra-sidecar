@@ -53,7 +53,8 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.handlers.ConnectedClientStatsHandler;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -90,7 +91,7 @@ public class ConnectedClientStatsHandlerTest
     {
         Module testOverride = Modules.override(new TestModule())
                                      .with(new ConnectedClientStatsTestModule());
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(testOverride));
 
         server = injector.getInstance(Server.class);

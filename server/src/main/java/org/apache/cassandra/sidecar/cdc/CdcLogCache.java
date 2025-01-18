@@ -32,8 +32,6 @@ import com.google.common.cache.RemovalListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
@@ -50,7 +48,6 @@ import org.apache.cassandra.sidecar.utils.CdcUtil;
  * In the event of deleting the _consumed_ files, 1 supersedes 2, meaning the _consumed_ files and their links
  * are deleted, even though within the cache duration.
  */
-@Singleton
 public class CdcLogCache
 {
     public static final String TEMP_DIR_SUFFIX = "_tmp";
@@ -67,7 +64,6 @@ public class CdcLogCache
     @VisibleForTesting
     final Cache<File, File> hardlinkCache;
 
-    @Inject
     public CdcLogCache(ExecutorPools executorPools,
                        InstancesMetadata instancesMetadata,
                        SidecarConfiguration sidecarConfig)

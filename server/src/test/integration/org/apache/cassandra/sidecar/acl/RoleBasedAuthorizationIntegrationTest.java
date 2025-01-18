@@ -246,7 +246,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         })
         .onSuccess(acceptedStreamResp ->  {
             // stream request goes through with both SNAPSHOT:STREAM and SELECT permissions
-            assertThat(acceptedStreamResp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+            context.verify(() -> assertThat(acceptedStreamResp.statusCode()).isEqualTo(HttpResponseStatus.OK.code()));
             testCompleteLatch.countDown();
         })
         .onFailure(context::failNow);
@@ -371,8 +371,8 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         .onSuccess(listResp -> {
             // CDC permission granted
             // CDC is not turned on for cluster, hence 500 or 503 expected
-            assertThat(listResp.statusCode()).isIn(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
-                                                   HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+            context.verify(() -> assertThat(listResp.statusCode()).isIn(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
+                                                                        HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
             testCompleteLatch.countDown();
         });
     }
@@ -587,7 +587,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
               });
     }
 
-    private  Future<HttpResponse<Buffer>> createReq(WebClient client, HttpMethod method, String route)
+    private Future<HttpResponse<Buffer>> createReq(WebClient client, HttpMethod method, String route)
     {
         return client.request(method, server.actualPort(), "127.0.0.1", route).send();
     }

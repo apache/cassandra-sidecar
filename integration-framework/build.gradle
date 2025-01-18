@@ -54,7 +54,7 @@ dependencies {
     api("org.assertj:assertj-core:${assertjCoreVersion}")
 
     api('com.datastax.cassandra:cassandra-driver-core:3.11.3')
-    implementation('com.google.inject:guice:4.2.2')
+    implementation("com.google.inject:guice:${guiceVersion}")
     // required by in-jvm-dtest class loader, specifically for dtest-4.0.*
     implementation('org.javassist:javassist:3.28.0-GA')
 
@@ -76,11 +76,7 @@ dependencies {
     // Exposed to the test project
     api("io.vertx:vertx-junit5:${project.vertxVersion}")
     // The server itself
-    api(project(path: ":server")) {
-        exclude(group: 'org.apache.logging.log4j')
-        exclude(group: 'org.slf4j')
-        exclude(group: 'ch.qos.logback')
-    }
+    api(project(path: ":server"))
     api(project(path: ":server-common"))
 }
 

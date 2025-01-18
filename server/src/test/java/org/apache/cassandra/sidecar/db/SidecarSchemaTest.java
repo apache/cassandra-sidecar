@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,19 +44,32 @@ import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
+import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
+import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarLeaseSchema;
+import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
+import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
+import org.apache.cassandra.sidecar.db.schema.TableSchema;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
+import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys.SidecarSchemaInitializerTaskKey;
 import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.stubbing.Answer;
 
+import static org.apache.cassandra.sidecar.MultibindingsMapKeyTestUtil.findPeriodicTask;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -79,17 +91,19 @@ public class SidecarSchemaTest
 
     private Vertx vertx;
     private SidecarSchema sidecarSchema;
+    private SidecarSchemaInitializer sidecarSchemaInitializer;
     Server server;
 
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule())
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(Modules.override(new TestModule())
                                                                      .with(new SidecarSchemaTestModule())));
         this.vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
         sidecarSchema = injector.getInstance(SidecarSchema.class);
+        sidecarSchemaInitializer = findPeriodicTask(injector, SidecarSchemaInitializerTaskKey.class);
 
         VertxTestContext context = new VertxTestContext();
         server.start()
@@ -104,7 +118,10 @@ public class SidecarSchemaTest
         interceptedExecStmts.clear();
         interceptedPrepStmts.clear();
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onComplete(result -> closeLatch.countDown());
+        TestResourceReaper.create()
+                          .with(server).with(vertx)
+                          .close()
+                          .onComplete(result -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else
@@ -112,23 +129,10 @@ public class SidecarSchemaTest
     }
 
     @Test
-    void testSchemaInitOnStartup(VertxTestContext context)
+    void testSchemaInitOnStartup()
     {
-        sidecarSchema.maybeStartSidecarSchemaInitializer();
-        context.verify(() -> {
-            int maxWaitTime = 20; // about 10 seconds
-            while (interceptedPrepStmts.size() < 10
-                   || interceptedExecStmts.size() < 3
-                   || !sidecarSchema.isInitialized())
-            {
-                if (maxWaitTime-- <= 0)
-                {
-                    context.failNow("test timeout");
-                    break;
-                }
-                Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
-            }
-
+        sidecarSchemaInitializer.execute(Promise.promise());
+        loopAssert(10, 500, () -> {
             assertThat(interceptedExecStmts.size()).isEqualTo(7);
             assertThat(interceptedExecStmts.get(0)).as("Create keyspace should be executed the first")
                                                    .contains("CREATE KEYSPACE IF NOT EXISTS sidecar_internal");
@@ -206,8 +210,19 @@ public class SidecarSchemaTest
                                             .containsExactlyInAnyOrderElementsOf(expectedPrepStatements);
 
             assertThat(sidecarSchema.isInitialized()).as("Schema is successfully initialized").isTrue();
-            context.completeNow();
+            assertTableSchema(sidecarSchema.tableSchema(RestoreJobsSchema.class), "sidecar_internal.restore_job_v4");
+            assertTableSchema(sidecarSchema.tableSchema(RestoreRangesSchema.class), "sidecar_internal.restore_range_v1");
+            assertTableSchema(sidecarSchema.tableSchema(RestoreSlicesSchema.class), "sidecar_internal.restore_slice_v3");
+            assertTableSchema(sidecarSchema.tableSchema(SidecarLeaseSchema.class), "sidecar_internal.sidecar_lease_v1");
+            assertTableSchema(sidecarSchema.tableSchema(SidecarRolePermissionsSchema.class), "sidecar_internal.role_permissions_v1");
+            assertTableSchema(sidecarSchema.tableSchema(SystemAuthSchema.class), "system_auth");
         });
+    }
+
+    private void assertTableSchema(TableSchema tableSchema, String expectedString)
+    {
+        assertThat(tableSchema).isNotNull();
+        assertThat(tableSchema.toString()).isEqualTo(expectedString);
     }
 
     /**

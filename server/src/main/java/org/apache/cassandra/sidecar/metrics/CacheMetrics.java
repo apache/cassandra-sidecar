@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.metrics;
 
 import com.codahale.metrics.MetricRegistry;
 
-import static org.apache.cassandra.sidecar.routes.snapshots.ListSnapshotHandler.SNAPSHOT_CACHE_NAME;
+import static org.apache.cassandra.sidecar.handlers.snapshots.ListSnapshotHandler.SNAPSHOT_CACHE_NAME;
 
 /**
  * Tracks metrics related to internal caches.

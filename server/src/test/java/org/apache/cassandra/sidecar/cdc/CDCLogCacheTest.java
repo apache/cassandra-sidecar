@@ -39,7 +39,7 @@ import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.server.MainModule;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
 
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,7 +50,7 @@ import static org.mockito.Mockito.when;
 
 class CdcLogCacheTest
 {
-    private final Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
+    private final Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(new TestModule()));
     private final InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
     private final Vertx vertx = injector.getInstance(Vertx.class);
     private final ExecutorPools executorPools = injector.getInstance(ExecutorPools.class);
