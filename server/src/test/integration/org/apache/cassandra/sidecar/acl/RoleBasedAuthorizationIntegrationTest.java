@@ -25,9 +25,6 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
@@ -53,7 +50,6 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 @ExtendWith(VertxExtension.class)
 class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RoleBasedAuthorizationIntegrationTest.class);
     private static final int MIN_VERSION_WITH_MTLS = 5;
 
     private Path nonAdminClientKeystorePath;
@@ -67,7 +63,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // wait for cache refreshes
         Thread.sleep(2000);
 
-        testCompleteLatch = new CountDownLatch(17);
+        testCompleteLatch = new CountDownLatch(16);
 
         // permissions for test cases below are granted during prepareForTest to save cache refresh time. Please
         // refer to grantRequiredPermissions to check permissions granted for a test to understand verifications done in
@@ -79,7 +75,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingForKeyspace(context);
         testGrantingAllTablesExceptKeyspace(context);
         testGrantingAtDataLevel(context);
-        testEndpointWithOrAuthorization(context);
         testGrantingWithWildcardSubparts(context);
         testEndpointRequiringMultipleActions(context);
 
@@ -166,16 +161,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         // SNAPSHOT:DELETE permission not granted for data/test_keyspace/test_table not granted
         verifyAccess(context, testCompleteLatch, HttpMethod.DELETE, createSnapshotRoute, clientKeystorePath, true);
-    }
-
-    void testEndpointWithOrAuthorization(VertxTestContext context)
-    {
-        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "orAuthorization_test_keyspace");
-
-        // schema endpoint for keyspaces accepts CREATE, ALTER, or DROP cassandra permissions or SCHEMA:READ sidecar
-        // permission. cassandra permission for non_admin_test_role on orAuthorization_test_keyspace not granted,
-        // sidecar permission SCHEMA:READ is used to grant access
-        verifyAccess(context, testCompleteLatch, HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, false);
     }
 
     void testGrantingWithWildcardSubparts(VertxTestContext context) throws Exception
@@ -280,14 +265,12 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createKeyspace("grant_table_test_keyspace");
         createKeyspace("grant_keyspace_test_keyspace");
         createKeyspace("grant_tables_except_keyspace_test_keyspace");
-        createKeyspace("orAuthorization_test_keyspace");
         createKeyspace("multiple_permissions_required_test_keyspace");
         createTable("test_keyspace", "test_table");
         createTable("non_admin_test_keyspace", "test_table");
         createTable("grant_table_test_keyspace", "test_table");
         createTable("grant_keyspace_test_keyspace", "test_table");
         createTable("grant_tables_except_keyspace_test_keyspace", "test_table");
-        createTable("orAuthorization_test_keyspace", "test_table");
         createTable("multiple_permissions_required_test_keyspace", "test_table");
     }
 
@@ -312,7 +295,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     private void grantRequiredPermissions()
     {
         // permission for testForNonAdmin
-        grantKeyspacePermission("non_admin_test_keyspace", "non_admin_test_role");
+        grantSidecarPermission("non_admin_test_role", "data/test_keyspace", "SCHEMA:READ");
 
         // permission for testGrantingForTable
         grantSidecarPermission("non_admin_test_role", "data/grant_table_test_keyspace/test_table", "SNAPSHOT:CREATE");
@@ -325,9 +308,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         // permission for testGrantingAtDataLevel
         grantSidecarPermission("grant_data_test_role", "data", "SNAPSHOT:CREATE");
-
-        // permission for testEndpointWithOrAuthorization
-        grantSidecarPermission("non_admin_test_role", "data/orAuthorization_test_keyspace", "SCHEMA:READ");
 
         // permission for testGrantingWithWildcardSubparts
         grantSidecarPermission("wildcard_with_subparts_test_role", "cluster", "GOSSIP,SCHEMA:READ");

@@ -388,6 +388,9 @@ public class MainModule extends AbstractModule
         router.get(ApiEndpointsV1.NODE_SETTINGS_ROUTE)
               .handler(nodeSettingsHandler);
 
+        router.get(ApiEndpointsV1.TIME_SKEW_ROUTE)
+              .handler(timeSkewHandler);
+
         //  NOTE: All routes in Sidecar must be built with AccessProtectedRouteBuilder. AccessProtectedRouteBuilder,
         //  skips adding AuthorizationHandler in handler chain if access control is disabled.
 
@@ -511,11 +514,6 @@ public class MainModule extends AbstractModule
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.GET)
                                     .endpoint(ApiEndpointsV1.GOSSIP_INFO_ROUTE)
                                     .handler(gossipInfoHandler)
-                                    .build();
-
-        protectedRouteBuilderFactory.get().router(router).method(HttpMethod.GET)
-                                    .endpoint(ApiEndpointsV1.TIME_SKEW_ROUTE)
-                                    .handler(timeSkewHandler)
                                     .build();
 
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.POST)

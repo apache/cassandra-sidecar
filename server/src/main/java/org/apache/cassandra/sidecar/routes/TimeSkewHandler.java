@@ -18,22 +18,16 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.util.Collections;
-import java.util.Set;
-
 import com.google.inject.Inject;
 import io.vertx.core.Handler;
-import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.utils.TimeSkewInfo;
 
 /**
  * Provides clients information about the current time on this host
  * and the allowable time skew between this host and the client.
  */
-public class TimeSkewHandler implements Handler<RoutingContext>, AccessProtected
+public class TimeSkewHandler implements Handler<RoutingContext>
 {
     private final TimeSkewInfo timeSkewInfo;
 
@@ -46,13 +40,6 @@ public class TimeSkewHandler implements Handler<RoutingContext>, AccessProtected
     protected TimeSkewHandler(TimeSkewInfo timeSkewInfo)
     {
         this.timeSkewInfo = timeSkewInfo;
-    }
-
-    @Override
-    public Set<Authorization> requiredAuthorizations()
-    {
-        String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(BasicPermissions.READ_TIME_SKEW.toAuthorization(resource));
     }
 
     @Override

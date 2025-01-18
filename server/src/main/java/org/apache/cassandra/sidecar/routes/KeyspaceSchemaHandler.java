@@ -30,10 +30,8 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.auth.authorization.OrAuthorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.server.data.Name;
@@ -69,12 +67,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     public Set<Authorization> requiredAuthorizations()
     {
         List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE.expandedResources();
-        OrAuthorization or = OrAuthorization.create()
-                                            .addAuthorization(CassandraPermissions.CREATE.toAuthorization(eligibleResources))
-                                            .addAuthorization(CassandraPermissions.ALTER.toAuthorization(eligibleResources))
-                                            .addAuthorization(CassandraPermissions.DROP.toAuthorization(eligibleResources))
-                                            .addAuthorization(BasicPermissions.READ_SCHEMA.toAuthorization(eligibleResources));
-        return Collections.singleton(or);
+        return Collections.singleton(BasicPermissions.READ_SCHEMA.toAuthorization(eligibleResources));
     }
 
     /**

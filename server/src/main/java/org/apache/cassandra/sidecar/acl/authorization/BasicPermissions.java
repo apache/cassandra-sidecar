@@ -62,6 +62,5 @@ public class BasicPermissions
     public static final Permission READ_SCHEMA = new DomainAwarePermission("SCHEMA:READ");
     public static final Permission READ_GOSSIP = new DomainAwarePermission("GOSSIP:READ");
     public static final Permission READ_RING = new DomainAwarePermission("RING:READ");
-    public static final Permission READ_TIME_SKEW = new DomainAwarePermission("TIME_SKEW:READ");
     public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ");
 }

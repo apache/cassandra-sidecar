@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -33,6 +35,7 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -86,7 +89,9 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
     public Set<Authorization> requiredAuthorizations()
     {
         List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
-        return Collections.singleton(BasicPermissions.IMPORT_STAGED_SSTABLE.toAuthorization(eligibleResources));
+        Authorization modifyAuthorization = CassandraPermissions.MODIFY.toAuthorization(eligibleResources);
+        Authorization importAuthorization = BasicPermissions.IMPORT_STAGED_SSTABLE.toAuthorization(eligibleResources);
+        return ImmutableSet.of(modifyAuthorization, importAuthorization);
     }
 
     /**
