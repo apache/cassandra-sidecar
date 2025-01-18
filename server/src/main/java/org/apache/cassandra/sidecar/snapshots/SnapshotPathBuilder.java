@@ -203,6 +203,22 @@ public class SnapshotPathBuilder extends BaseFileSystem
     }
 
     /**
+     * Removes the table UUID portion from the table name if present.
+     *
+     * @param tableName the table name with or without the UUID
+     * @return the table name without the UUID
+     */
+    public String maybeRemoveTableId(String tableName)
+    {
+        int dashIndex = tableName.lastIndexOf("-");
+        if (dashIndex > 0)
+        {
+            return tableName.substring(0, dashIndex);
+        }
+        return tableName;
+    }
+
+    /**
      * @param snapshotDir the snapshot directory
      * @return the unique table identifier
      */

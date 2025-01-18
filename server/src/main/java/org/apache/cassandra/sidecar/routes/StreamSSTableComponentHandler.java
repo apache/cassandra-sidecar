@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
+import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -155,7 +156,10 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     @Override
     protected StreamSSTableComponentRequestParam extractParamsOrThrow(RoutingContext context)
     {
-        QualifiedTableName qualifiedTableName = qualifiedTableName(context, true);
+        String tableNameParam = context.pathParam(TABLE_PATH_PARAM);
+        Name tableName = validator.validateTableName(snapshotPathBuilder.maybeRemoveTableId(tableNameParam));
+
+        QualifiedTableName qualifiedTableName = new QualifiedTableName(keyspace(context, true), tableName);
         return StreamSSTableComponentRequestParam.from(qualifiedTableName, context);
     }
 }

@@ -281,25 +281,9 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
         String tableName = context.pathParam(TABLE_PATH_PARAM);
         if (required || tableName != null)
         {
-            return validator.validateTableName(maybeRemoveTableId(tableName));
+            return validator.validateTableName(tableName);
         }
         return null;
-    }
-
-    /**
-     * Removes the table UUID portion from the table name if present.
-     *
-     * @param tableName the table name with or without the UUID
-     * @return the table name without the UUID
-     */
-    public String maybeRemoveTableId(String tableName)
-    {
-        int dashIndex = tableName.lastIndexOf("-");
-        if (dashIndex > 0)
-        {
-            return tableName.substring(0, dashIndex);
-        }
-        return tableName;
     }
 
     /**

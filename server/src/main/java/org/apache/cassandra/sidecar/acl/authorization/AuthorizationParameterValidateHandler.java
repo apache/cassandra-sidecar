@@ -23,10 +23,11 @@ import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
-import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
+import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -37,6 +38,8 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 @Singleton
 public class AuthorizationParameterValidateHandler extends AbstractHandler<QualifiedTableName>
 {
+    private final SnapshotPathBuilder snapshotPathBuilder;
+
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
      *
@@ -47,9 +50,11 @@ public class AuthorizationParameterValidateHandler extends AbstractHandler<Quali
     @Inject
     protected AuthorizationParameterValidateHandler(InstanceMetadataFetcher metadataFetcher,
                                                     ExecutorPools executorPools,
-                                                    CassandraInputValidator validator)
+                                                    CassandraInputValidator validator,
+                                                    SnapshotPathBuilder snapshotPathBuilder)
     {
         super(metadataFetcher, executorPools, validator);
+        this.snapshotPathBuilder = snapshotPathBuilder;
     }
 
     @Override
@@ -59,12 +64,19 @@ public class AuthorizationParameterValidateHandler extends AbstractHandler<Quali
                                   SocketAddress remoteAddress,
                                   QualifiedTableName qualifiedTableName)
     {
-        RoutingContextUtils.put(context, RoutingContextUtils.SC_QUALIFIED_TABLE_NAME, qualifiedTableName);
+        // DO NOTHING
     }
 
     @Override
     protected QualifiedTableName extractParamsOrThrow(RoutingContext context)
     {
-        return qualifiedTableName(context, false);
+        Name tableName = null;
+        String tableNameParam = context.pathParam(TABLE_PATH_PARAM);
+        if (tableNameParam != null)
+        {
+            // Remove the tableId for routes that have the tableId as part of the path parameter
+            tableName = validator.validateTableName(snapshotPathBuilder.maybeRemoveTableId(tableNameParam));
+        }
+        return new QualifiedTableName(keyspace(context, false), tableName);
     }
 }
