@@ -63,7 +63,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // wait for cache refreshes
         Thread.sleep(2000);
 
-        testCompleteLatch = new CountDownLatch(16);
+        testCompleteLatch = new CountDownLatch(17);
 
         // permissions for test cases below are granted during prepareForTest to save cache refresh time. Please
         // refer to grantRequiredPermissions to check permissions granted for a test to understand verifications done in
@@ -144,6 +144,11 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // SNAPSHOT:CREATE permission granted for data/grant_tables_except_keyspace_test_keyspace/test_table
         // with data/grant_tables_except_keyspace_test_keyspace grant
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
+
+        // a different table is granted too
+        String differentTableSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
+                                                           "grant_tables_except_keyspace_test_keyspace", "test_table2");
+        verifyAccess(context, testCompleteLatch, HttpMethod.PUT, differentTableSnapshotRoute, nonAdminClientKeystorePath, false);
 
         // SCHEMA:READ is not granted since it expects permissions at keyspace level
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "grant_tables_except_keyspace_test_keyspace");
@@ -271,6 +276,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createTable("grant_table_test_keyspace", "test_table");
         createTable("grant_keyspace_test_keyspace", "test_table");
         createTable("grant_tables_except_keyspace_test_keyspace", "test_table");
+        createTable("grant_tables_except_keyspace_test_keyspace", "test_table2");
         createTable("multiple_permissions_required_test_keyspace", "test_table");
     }
 
@@ -295,7 +301,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     private void grantRequiredPermissions()
     {
         // permission for testForNonAdmin
-        grantSidecarPermission("non_admin_test_role", "data/test_keyspace", "SCHEMA:READ");
+        grantSidecarPermission("non_admin_test_role", "data/non_admin_test_keyspace", "SCHEMA:READ");
 
         // permission for testGrantingForTable
         grantSidecarPermission("non_admin_test_role", "data/grant_table_test_keyspace/test_table", "SNAPSHOT:CREATE");
@@ -340,12 +346,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         Session session = maybeGetSession();
         session.execute(String.format("CREATE TABLE %s.%s (a int, b text, PRIMARY KEY (a));", keyspace, table));
         session.execute("INSERT INTO " + keyspace + "." + table + " (a, b) VALUES (1, 'text');");
-    }
-
-    private void grantKeyspacePermission(String keyspace, String role)
-    {
-        Session session = maybeGetSession();
-        session.execute("GRANT ALL PERMISSIONS ON KEYSPACE " + keyspace + " TO " + role);
     }
 
     private void grantTablePermission(String keyspace, String table, String role)
