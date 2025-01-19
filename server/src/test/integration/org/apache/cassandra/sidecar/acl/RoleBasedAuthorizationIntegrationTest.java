@@ -25,13 +25,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -193,66 +195,52 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         // SNAPSHOT:CREATE permission granted for data/multiple_permissions_required_test_keyspace/test_table
         WebClient client = createClient(nonAdminClientKeystorePath, truststorePath);
-        client.put(server.actualPort(), "127.0.0.1", createSnapshotRoute)
-              .send()
-              .compose(createResp -> {
-                  assertThat(createResp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
 
-                  // grant sidecar permission for streaming
-                  updateSidecarPermission("non_admin_test_role",
-                                          "data/multiple_permissions_required_test_keyspace/test_table",
-                                          "SNAPSHOT:READ");
+        createReq(client, HttpMethod.PUT, createSnapshotRoute)
+        .compose(createResp -> {
+            // grant sidecar permission for streaming
+            updateSidecarPermission("non_admin_test_role",
+                                    "data/multiple_permissions_required_test_keyspace/test_table",
+                                    "SNAPSHOT:READ");
 
-                  // wait for cache refresh
-                  Uninterruptibles.sleepUninterruptibly(2000, TimeUnit.MILLISECONDS);
+            // wait for cache refresh
+            return waitForCacheRefresh(2000)
+                   .compose(v -> createReq(client, HttpMethod.GET, listSnapshotRoute));
+        })
+        .compose(listSnapshotResp -> {
+            ListSnapshotFilesResponse snapshotFiles = listSnapshotResp.bodyAsJson(ListSnapshotFilesResponse.class);
+            List<ListSnapshotFilesResponse.FileInfo> filesToStream =
+            snapshotFiles.snapshotFilesInfo()
+                         .stream()
+                         .filter(info -> info.fileName.endsWith("-Data.db"))
+                         .sorted(Comparator.comparing(o -> o.fileName))
+                         .collect(Collectors.toList());
 
-                  return client.get(server.actualPort(), "127.0.0.1", listSnapshotRoute).send();
-              })
-              .onSuccess(listResp -> {
-                  ListSnapshotFilesResponse snapshotFiles = listResp.bodyAsJson(ListSnapshotFilesResponse.class);
-                  List<ListSnapshotFilesResponse.FileInfo> filesToStream =
-                  snapshotFiles.snapshotFilesInfo()
-                               .stream()
-                               .filter(info -> info.fileName.endsWith("-Data.db"))
-                               .sorted(Comparator.comparing(o -> o.fileName))
-                               .collect(Collectors.toList());
+            // grant sidecar permission for streaming
+            updateSidecarPermission("non_admin_test_role",
+                                    "data/multiple_permissions_required_test_keyspace/test_table",
+                                    "SNAPSHOT:STREAM");
 
-                  vertx.executeBlocking(() -> {
-                      // grant sidecar permission for streaming
-                      updateSidecarPermission("non_admin_test_role",
-                                              "data/multiple_permissions_required_test_keyspace/test_table",
-                                              "SNAPSHOT:STREAM");
+            return waitForCacheRefresh(2000)
+                   // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
+                   // permission on a table it accesses data.
+                   .compose(v -> createReq(client, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl()))
+                   .compose(deniedStreamResp -> {
+                       // request denied without SELECT permission
+                       assertThat(deniedStreamResp.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
 
-                      // wait for cache refresh
-                      Uninterruptibles.sleepUninterruptibly(2000, TimeUnit.MILLISECONDS);
+                       // grant SELECT permission with cassandra role
+                       grantTablePermission("multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
 
-                      try
-                      {
-                          // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
-                          // permission on a table it accesses data.
-                          CountDownLatch deniedStreamLatch = new CountDownLatch(1);
-                          verifyAccess(context, deniedStreamLatch, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl(), nonAdminClientKeystorePath, true);
-                          assertThat(deniedStreamLatch.await(30, TimeUnit.SECONDS)).isTrue();
-
-                          // grant SELECT permission with cassandra role
-                          grantTablePermission("multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
-
-                          // wait for cache refresh
-                          Uninterruptibles.sleepUninterruptibly(2000, TimeUnit.MILLISECONDS);
-
-                          CountDownLatch acceptedStreamLatch = new CountDownLatch(1);
-                          // request goes through with both permissions granted
-                          verifyAccess(context, acceptedStreamLatch, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl(), nonAdminClientKeystorePath, false);
-                          assertThat(acceptedStreamLatch.await(30, TimeUnit.SECONDS)).isTrue();
-                          return Future.succeededFuture();
-                      }
-                      catch (Exception e)
-                      {
-                          return Future.failedFuture(e);
-                      }
-                  }).onSuccess(v -> testCompleteLatch.countDown()).onFailure(context::failNow);
-              })
-              .onFailure(context::failNow);
+                       return waitForCacheRefresh(2000);
+                   }).compose(v -> createReq(client, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl()));
+        })
+        .onSuccess(acceptedStreamResp ->  {
+            // stream request goes through with both SNAPSHOT:STREAM and SELECT permissions
+            assertThat(acceptedStreamResp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+            testCompleteLatch.countDown();
+        })
+        .onFailure(context::failNow);
     }
 
     private void prepareForTest(CassandraTestContext cassandraContext) throws Exception
@@ -413,5 +401,17 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                   }
                   countDownLatch.countDown();
               });
+    }
+
+    private  Future<HttpResponse<Buffer>> createReq(WebClient client, HttpMethod method, String route)
+    {
+        return client.request(method, server.actualPort(), "127.0.0.1", route).send();
+    }
+
+    // Helper method to wait for cache refresh
+    private Future<Void> waitForCacheRefresh(long durationMillis) {
+        Promise<Void> promise = Promise.promise();
+        vertx.setTimer(durationMillis, id -> promise.complete());
+        return promise.future();
     }
 }
