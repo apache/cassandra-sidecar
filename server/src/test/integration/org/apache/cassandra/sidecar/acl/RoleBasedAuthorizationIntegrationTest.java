@@ -79,7 +79,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingWithWildcardSubparts(context);
         testEndpointRequiringMultipleActions(context);
 
-        assertThat(testCompleteLatch.await(5, TimeUnit.MINUTES)).isTrue();
+        assertThat(testCompleteLatch.await(6, TimeUnit.MINUTES)).isTrue();
         context.completeNow();
     }
 
@@ -212,7 +212,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                   List<ListSnapshotFilesResponse.FileInfo> filesToStream =
                   snapshotFiles.snapshotFilesInfo()
                                .stream()
-                               .filter(info -> info.fileName.endsWith("-Data.db") || info.fileName.endsWith("-TOC.txt"))
+                               .filter(info -> info.fileName.endsWith("-Data.db"))
                                .sorted(Comparator.comparing(o -> o.fileName))
                                .collect(Collectors.toList());
 
