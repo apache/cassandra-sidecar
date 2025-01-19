@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.restore;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -243,8 +242,7 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
     {
         Set<TokenRange> result = new HashSet<>();
         Iterator<TokenRange> sorted = ranges.stream()
-                                            .sorted(Comparator.comparing(TokenRange::start)
-                                                              .thenComparing(TokenRange::end))
+                                            .sorted(TokenRange.NATURAL_ORDER)
                                             .iterator();
         TokenRange last = null;
         while (sorted.hasNext())

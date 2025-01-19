@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -152,15 +153,20 @@ public class RestoreJobConsistencyLevelChecker
                                        RestoreRangeStatus successCriteria,
                                        RestoreJobProgressCollector collector)
     {
-        for (RestoreRange range : ranges)
+        // sort the ranges by their tokens
+        List<RestoreRange> sortedRanges = ranges.stream()
+                                                .filter(RestoreRange::isValidForConsistencyCheck)
+                                                .sorted(RestoreRange.TOKEN_BASED_NATURAL_ORDER)
+                                                .collect(Collectors.toList());
+        if (!normalizeStatus(sortedRanges))
         {
-            if (range.isDiscarded())
-            {
-                LOGGER.debug("RestoreRange is discarded. Ignore the range for consistency check. jobId={} sliceKey={}",
-                             range.jobId(), range.sliceKey());
-                continue;
-            }
+            LOGGER.debug("Marking all ranges as PENDING due to range status normalization failure possibly due to topology change");
+            sortedRanges.forEach(range -> collector.collect(range, ConsistencyVerificationResult.PENDING));
+            return;
+        }
 
+        for (RestoreRange range : sortedRanges)
+        {
             if (!collector.canCollectMore())
             {
                 return;
@@ -172,9 +178,58 @@ public class RestoreJobConsistencyLevelChecker
     }
 
     /**
+     * Iterate through the sorted {@link RestoreRange} list, and merge the {@link RestoreRange#statusByReplica()} from
+     * the enclosing ranges into the ranges they enclose. Because the enclosed portion of data is processed,
+     * e.g. STAGED or SUCCEEDED, on the replicas of the enclosing range. Normalization is necessary because
+     * local token ranges discovery merges the consecutive token ranges, i.e. {@link RingTopologyRefresher#mergeTokenRanges(Set)}
+     * to avoid wasting download bandwidth and storage. Multiple ranges can be backed by the same slice.
+     * <p>The normalization process only updates {@link RestoreRange#statusByReplica()}. All other fields remain the same.
+     *
+     * <p>See {@code org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelCheckerTest} for example.
+     * @param sortedRanges list of {@link RestoreRange} sorted by {@link RestoreRange#TOKEN_BASED_NATURAL_ORDER}
+     * @return true if the normalization process is successful; otherwise false, which is likely caused by recent topology change
+     */
+    @VisibleForTesting
+    static boolean normalizeStatus(List<RestoreRange> sortedRanges)
+    {
+        for (int i = 0; i < sortedRanges.size(); i++)
+        {
+            RestoreRange current = sortedRanges.get(i);
+            for (int j = i + 1; j < sortedRanges.size(); j++)
+            {
+                RestoreRange candidate = sortedRanges.get(j);
+                // candidate.start >= current.end: all restore ranges that can possibly overlap with current have checked
+                if (candidate.startToken().compareTo(current.endToken()) >= 0)
+                {
+                    break; // move forward to the next range
+                }
+                // candidate is fully enclosed by current: copy the status from current to candidate
+                else if (candidate.endToken().compareTo(current.endToken()) <= 0)
+                {
+                    candidate = candidate.unbuild().addReplicaStatus(current.statusByReplica()).build();
+                    sortedRanges.set(j, candidate);
+                }
+                // current is fully enclosed by candidate: copy the status from candidate to current
+                else if (current.endToken().compareTo(candidate.endToken()) <= 0 &&
+                         current.startToken().compareTo(candidate.startToken()) >= 0)
+                {
+                    current = current.unbuild().addReplicaStatus(candidate.statusByReplica()).build();
+                    sortedRanges.set(i, current);
+                }
+                else // range overlaps
+                {
+                    LOGGER.info("Detected overlapping ranges. Maybe topology has just changed. current={} candidate={}", current, candidate);
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
      * Examine a range and all its replica should be in the expected status, i.e. {@param successCriteria}.
      * If enough replicas are in the expected status, the conclusion can be made that the range has satisfied.
-     * If enough replicas are {@link RestoreRangeStatus.FAILED}, it concludes that the range has failed.
+     * If enough replicas are {@link RestoreRangeStatus#FAILED}, it concludes that the range has failed.
      * Otherwise, no conclusion is made and the range is pending.
      *
      * @param topology current cluster topology

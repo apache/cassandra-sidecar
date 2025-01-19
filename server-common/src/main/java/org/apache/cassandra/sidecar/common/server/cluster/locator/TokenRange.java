@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.common.server.cluster.locator;
 
 import java.math.BigInteger;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -33,6 +34,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public class TokenRange
 {
+    public static final Comparator<TokenRange> NATURAL_ORDER = Comparator.comparing(TokenRange::start)
+                                                                         .thenComparing(TokenRange::end);
+
     private final Range<Token> range;
     private volatile Token firstToken = null;
 

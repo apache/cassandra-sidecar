@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.restore;
 
+import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +43,7 @@ import org.apache.cassandra.sidecar.db.RestoreRange;
 
 import static org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelChecker.concludeOneRangeUnsafe;
 import static org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelChecker.concludeRangesUnsafe;
+import static org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelChecker.normalizeStatus;
 import static org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelChecker.replicaSetForRangeUnsafe;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -188,6 +191,50 @@ class RestoreJobConsistencyLevelCheckerTest
         .isEmpty();
     }
 
+    @Test
+    void testNormalizeStatus()
+    {
+        List<RestoreRange> ranges = Arrays.asList(createRangeWithStatus(0, 10, "i1"),
+                                                  createRangeWithStatus(10, 20, "i1", "i2"),
+                                                  createRangeWithStatus(20, 30, "i2"));
+        assertThat(normalizeStatus(ranges))
+        .describedAs("Status normalization should be successful")
+        .isTrue();
+        assertRangeWithStatus(ranges.get(0), 0, 10, "i1");
+        assertRangeWithStatus(ranges.get(1), 10, 20, "i1", "i2");
+        assertRangeWithStatus(ranges.get(2), 20, 30, "i2");
+    }
+
+    @Test
+    void testNormalizeStatusWithFullyEnclosedRanges()
+    {
+        List<RestoreRange> ranges = Arrays.asList(createRangeWithStatus(0, 10, "i1"), // r1 is fully enclosed by r2, r3
+                                                  createRangeWithStatus(0, 20, "i2"), // r2 is fully enclosed by r3
+                                                  createRangeWithStatus(0, 30, "i3"),
+                                                  createRangeWithStatus(10, 20, "i4"), // r4 is fully enclosed by r2 and r3
+                                                  createRangeWithStatus(20, 30, "i5"), // r5 is fully enclosed by r3
+                                                  createRangeWithStatus(40, 50, "i6")); // standalone
+        assertThat(normalizeStatus(ranges))
+        .describedAs("Status normalization should be successful")
+        .isTrue();
+        assertRangeWithStatus(ranges.get(0), 0, 10, "i1", "i2", "i3");
+        assertRangeWithStatus(ranges.get(1), 0, 20, "i2", "i3");
+        assertRangeWithStatus(ranges.get(2), 0, 30, "i3");
+        assertRangeWithStatus(ranges.get(3), 10, 20, "i2", "i3", "i4");
+        assertRangeWithStatus(ranges.get(4), 20, 30, "i3", "i5");
+        assertRangeWithStatus(ranges.get(5), 40, 50, "i6");
+    }
+
+    @Test
+    void testNormalizeStatusFails()
+    {
+        List<RestoreRange> ranges = Arrays.asList(createRangeWithStatus(0, 10, "i1"),
+                                                  createRangeWithStatus(5, 15, "i1", "i2"));
+        assertThat(normalizeStatus(ranges))
+        .describedAs("Ranges (0, 10] and (5, 15] overlaps and normalization cannot proceed")
+        .isFalse();
+    }
+
     private Map<String, List<String>> replicaByDc(int dcCount, int replicasPerDc)
     {
         Map<String, List<String>> result = new HashMap<>(dcCount);
@@ -197,5 +244,30 @@ class RestoreJobConsistencyLevelCheckerTest
             result.put("dc-" + i, replicas);
         }
         return result;
+    }
+
+    private RestoreRange createRangeWithStatus(long start, long end, String... replicas)
+    {
+        return RestoreRangeTest.createTestRange(start, end)
+                               .unbuild()
+                               .replicaStatus(createTestStatusMap(replicas))
+                               .build();
+    }
+
+    private void assertRangeWithStatus(RestoreRange range, long expectedStart, long expectedEnd, String... expectedReplicas)
+    {
+        assertThat(range.startToken()).isEqualTo(BigInteger.valueOf(expectedStart));
+        assertThat(range.endToken()).isEqualTo(BigInteger.valueOf(expectedEnd));
+        assertThat(range.statusByReplica()).isEqualTo(createTestStatusMap(expectedReplicas));
+    }
+
+    private static Map<String, RestoreRangeStatus> createTestStatusMap(String[] replicas)
+    {
+        Map<String, RestoreRangeStatus> status = new HashMap<>(replicas.length);
+        for (String r : replicas)
+        {
+            status.put(r, RestoreRangeStatus.SUCCEEDED);
+        }
+        return status;
     }
 }

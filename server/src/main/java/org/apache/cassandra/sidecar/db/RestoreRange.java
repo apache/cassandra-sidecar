@@ -22,6 +22,7 @@ import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -81,6 +82,9 @@ import org.jetbrains.annotations.VisibleForTesting;
  */
 public class RestoreRange
 {
+    public static final Comparator<RestoreRange> TOKEN_BASED_NATURAL_ORDER = Comparator.comparing(RestoreRange::startToken)
+                                                                                       .thenComparing(RestoreRange::endToken);
+
     // @NotNull fields are persisted
     @NotNull
     private final UUID jobId;
@@ -193,6 +197,21 @@ public class RestoreRange
                && Objects.equals(this.bucketId, that.bucketId)
                && Objects.equals(this.sliceId, that.sliceId);
     }
+
+    @Override
+    public String toString()
+    {
+        return "RestoreRange{" +
+               "jobId=" + jobId +
+               ", sliceId='" + sliceId + '\'' +
+               ", startToken=" + startToken +
+               ", endToken=" + endToken +
+               ", statusByReplica=" + statusByReplica +
+               ", sliceKey='" + sliceKey + '\'' +
+               ", sliceBucket='" + sliceBucket + '\'' +
+               '}';
+    }
+
     // -- INTERNAL FLOW CONTROL METHODS --
 
     /**
@@ -266,6 +285,11 @@ public class RestoreRange
     public boolean isDiscarded()
     {
         return discarded;
+    }
+
+    public boolean isValidForConsistencyCheck()
+    {
+        return !discarded;
     }
 
     /**
@@ -567,7 +591,7 @@ public class RestoreRange
             this.owner = range.owner;
             this.startToken = range.startToken;
             this.endToken = range.endToken;
-            this.statusByReplica = Collections.unmodifiableMap(range.statusByReplica);
+            this.statusByReplica = new HashMap<>(range.statusByReplica);
             this.tracker = range.tracker;
             this.discarded = range.discarded;
         }
@@ -642,6 +666,20 @@ public class RestoreRange
                 }
             }
             return update(b -> b.statusByReplica = new HashMap<>(statusByReplica));
+        }
+
+        public Builder addReplicaStatus(Map<String, RestoreRangeStatus> otherReplicaStatus)
+        {
+            int size = otherReplicaStatus.size();
+            if (size == 0)
+            {
+                return this;
+            }
+
+            Map<String, RestoreRangeStatus> merged = new HashMap<>(this.statusByReplica.size() + size);
+            merged.putAll(this.statusByReplica);
+            merged.putAll(otherReplicaStatus);
+            return replicaStatus(merged);
         }
 
         public Builder replicaStatusText(Map<String, String> statusTextByReplica)
