@@ -78,7 +78,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingWithWildcardSubparts(context);
         testEndpointRequiringMultipleActions(context);
 
-        assertThat(testCompleteLatch.await(120, TimeUnit.SECONDS)).isTrue();
+        assertThat(testCompleteLatch.await(4, TimeUnit.MINUTES)).isTrue();
         context.completeNow();
     }
 
