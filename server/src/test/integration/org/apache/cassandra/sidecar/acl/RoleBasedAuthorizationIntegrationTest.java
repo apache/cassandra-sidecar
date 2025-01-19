@@ -409,7 +409,8 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     }
 
     // Helper method to wait for cache refresh
-    private Future<Void> waitForCacheRefresh(long durationMillis) {
+    private Future<Void> waitForCacheRefresh(long durationMillis)
+    {
         Promise<Void> promise = Promise.promise();
         vertx.setTimer(durationMillis, id -> promise.complete());
         return promise.future();
