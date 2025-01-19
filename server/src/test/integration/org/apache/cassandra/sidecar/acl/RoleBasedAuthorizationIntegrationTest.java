@@ -19,21 +19,22 @@
 package org.apache.cassandra.sidecar.acl;
 
 import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Future;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.AuthMode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
@@ -78,7 +79,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingWithWildcardSubparts(context);
         testEndpointRequiringMultipleActions(context);
 
-        assertThat(testCompleteLatch.await(4, TimeUnit.MINUTES)).isTrue();
+        assertThat(testCompleteLatch.await(5, TimeUnit.MINUTES)).isTrue();
         context.completeNow();
     }
 
@@ -180,14 +181,14 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, testCompleteLatch, HttpMethod.GET, ringRoute, clientKeystorePath, true);
     }
 
-    void testEndpointRequiringMultipleActions(VertxTestContext context) throws Exception
+    void testEndpointRequiringMultipleActions(VertxTestContext context)
     {
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "multiple_permissions_required_test_keyspace", "test_table");
 
-        String streamRoute
-        = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s/components/%s",
-                        "multiple_permissions_required_test_keyspace", "test_table", "my-snapshot", "nc-1-big-Data.db");
+        String listSnapshotRoute
+        = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s",
+                        "multiple_permissions_required_test_keyspace", "test_table", "my-snapshot");
 
         // SNAPSHOT:CREATE permission granted for data/multiple_permissions_required_test_keyspace/test_table
         WebClient client = createClient(nonAdminClientKeystorePath, truststorePath);
@@ -199,39 +200,55 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                   // grant sidecar permission for streaming
                   updateSidecarPermission("non_admin_test_role",
                                           "data/multiple_permissions_required_test_keyspace/test_table",
+                                          "SNAPSHOT:READ");
+
+                  // wait for cache refresh
+                  Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
+
+                  return client.get(server.actualPort(), "127.0.0.1", listSnapshotRoute).send();
+              })
+              .onSuccess(listResp -> {
+                  ListSnapshotFilesResponse snapshotFiles = listResp.bodyAsJson(ListSnapshotFilesResponse.class);
+                  List<ListSnapshotFilesResponse.FileInfo> filesToStream =
+                  snapshotFiles.snapshotFilesInfo()
+                               .stream()
+                               .filter(info -> info.fileName.endsWith("-Data.db") || info.fileName.endsWith("-TOC.txt"))
+                               .sorted(Comparator.comparing(o -> o.fileName))
+                               .collect(Collectors.toList());
+
+                  // grant sidecar permission for streaming
+                  updateSidecarPermission("non_admin_test_role",
+                                          "data/multiple_permissions_required_test_keyspace/test_table",
                                           "SNAPSHOT:STREAM");
 
                   // wait for cache refresh
                   Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
-
-                  // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
-                  // permission on a table it accesses data.
-                  return streamRequest(client, streamRoute);
-              })
-              .compose(deniedStreamResp -> {
-                  // access denied without SELECT permission
-                  assertThat(deniedStreamResp.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
-
-                  // grant SELECT permission with cassandra role
-                  grantTablePermission("multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
-
-                  // wait for cache refresh
-                  Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
-
-                  return streamRequest(client, streamRoute);
-              })
-              .onFailure(context::failNow)
-              .onComplete(acceptedStreamResp -> {
-                  if (acceptedStreamResp.cause() != null)
+                  try
                   {
-                      context.failNow(acceptedStreamResp.cause());
-                      return;
-                  }
+                      // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
+                      // permission on a table it accesses data.
+                      CountDownLatch deniedStreamLatch = new CountDownLatch(1);
+                      verifyAccess(context, deniedStreamLatch, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl(), nonAdminClientKeystorePath, true);
+                      assertThat(deniedStreamLatch.await(30, TimeUnit.SECONDS)).isTrue();
 
-                  // request goes through with both permissions granted
-                  assertThat(acceptedStreamResp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                  testCompleteLatch.countDown();
-              });
+                      // grant SELECT permission with cassandra role
+                      grantTablePermission("multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
+
+                      // wait for cache refresh
+                      Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
+
+                      CountDownLatch acceptedStreamLatch = new CountDownLatch(1);
+                      // request goes through with both permissions granted
+                      verifyAccess(context, acceptedStreamLatch, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl(), nonAdminClientKeystorePath, false);
+                      assertThat(acceptedStreamLatch.await(30, TimeUnit.SECONDS)).isTrue();
+                      testCompleteLatch.countDown();
+                  }
+                  catch (InterruptedException e)
+                  {
+                      context.failNow(e);
+                  }
+              })
+              .onFailure(context::failNow);
     }
 
     private void prepareForTest(CassandraTestContext cassandraContext) throws Exception
@@ -392,10 +409,5 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                   }
                   countDownLatch.countDown();
               });
-    }
-
-    private Future<HttpResponse<Buffer>> streamRequest(WebClient client, String route)
-    {
-        return client.get(server.actualPort(), "127.0.0.1", route).send();
     }
 }
