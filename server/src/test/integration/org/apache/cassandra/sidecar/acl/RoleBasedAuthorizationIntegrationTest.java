@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
@@ -79,7 +80,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingWithWildcardSubparts(context);
         testEndpointRequiringMultipleActions(context);
 
-        assertThat(testCompleteLatch.await(6, TimeUnit.MINUTES)).isTrue();
+        assertThat(testCompleteLatch.await(4, TimeUnit.MINUTES)).isTrue();
         context.completeNow();
     }
 
@@ -203,7 +204,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                                           "SNAPSHOT:READ");
 
                   // wait for cache refresh
-                  Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
+                  Uninterruptibles.sleepUninterruptibly(2000, TimeUnit.MILLISECONDS);
 
                   return client.get(server.actualPort(), "127.0.0.1", listSnapshotRoute).send();
               })
@@ -216,37 +217,40 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
                                .sorted(Comparator.comparing(o -> o.fileName))
                                .collect(Collectors.toList());
 
-                  // grant sidecar permission for streaming
-                  updateSidecarPermission("non_admin_test_role",
-                                          "data/multiple_permissions_required_test_keyspace/test_table",
-                                          "SNAPSHOT:STREAM");
-
-                  // wait for cache refresh
-                  Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
-                  try
-                  {
-                      // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
-                      // permission on a table it accesses data.
-                      CountDownLatch deniedStreamLatch = new CountDownLatch(1);
-                      verifyAccess(context, deniedStreamLatch, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl(), nonAdminClientKeystorePath, true);
-                      assertThat(deniedStreamLatch.await(30, TimeUnit.SECONDS)).isTrue();
-
-                      // grant SELECT permission with cassandra role
-                      grantTablePermission("multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
+                  vertx.executeBlocking(() -> {
+                      // grant sidecar permission for streaming
+                      updateSidecarPermission("non_admin_test_role",
+                                              "data/multiple_permissions_required_test_keyspace/test_table",
+                                              "SNAPSHOT:STREAM");
 
                       // wait for cache refresh
-                      Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.MILLISECONDS);
+                      Uninterruptibles.sleepUninterruptibly(2000, TimeUnit.MILLISECONDS);
 
-                      CountDownLatch acceptedStreamLatch = new CountDownLatch(1);
-                      // request goes through with both permissions granted
-                      verifyAccess(context, acceptedStreamLatch, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl(), nonAdminClientKeystorePath, false);
-                      assertThat(acceptedStreamLatch.await(30, TimeUnit.SECONDS)).isTrue();
-                      testCompleteLatch.countDown();
-                  }
-                  catch (InterruptedException e)
-                  {
-                      context.failNow(e);
-                  }
+                      try
+                      {
+                          // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
+                          // permission on a table it accesses data.
+                          CountDownLatch deniedStreamLatch = new CountDownLatch(1);
+                          verifyAccess(context, deniedStreamLatch, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl(), nonAdminClientKeystorePath, true);
+                          assertThat(deniedStreamLatch.await(30, TimeUnit.SECONDS)).isTrue();
+
+                          // grant SELECT permission with cassandra role
+                          grantTablePermission("multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
+
+                          // wait for cache refresh
+                          Uninterruptibles.sleepUninterruptibly(2000, TimeUnit.MILLISECONDS);
+
+                          CountDownLatch acceptedStreamLatch = new CountDownLatch(1);
+                          // request goes through with both permissions granted
+                          verifyAccess(context, acceptedStreamLatch, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl(), nonAdminClientKeystorePath, false);
+                          assertThat(acceptedStreamLatch.await(30, TimeUnit.SECONDS)).isTrue();
+                          return Future.succeededFuture();
+                      }
+                      catch (Exception e)
+                      {
+                          return Future.failedFuture(e);
+                      }
+                  }).onSuccess(v -> testCompleteLatch.countDown()).onFailure(context::failNow);
               })
               .onFailure(context::failNow);
     }
