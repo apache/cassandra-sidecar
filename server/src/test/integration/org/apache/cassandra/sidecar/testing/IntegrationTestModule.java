@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
+import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -42,6 +43,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.CoordinationConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ParameterizedClassConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.PeriodicTaskConfigurationImpl;
@@ -89,13 +91,14 @@ public class IntegrationTestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarConfiguration configuration()
+    public SidecarConfiguration configuration(CoordinationConfiguration clusterLeaseClaimTaskConfiguration)
     {
         ServiceConfiguration conf
         = TestServiceConfiguration.builder()
                                   .schemaKeyspaceConfiguration(SchemaKeyspaceConfigurationImpl.builder()
                                                                                               .isEnabled(true)
                                                                                               .build())
+                                  .coordinationConfiguration(clusterLeaseClaimTaskConfiguration)
                                   .build();
         PeriodicTaskConfiguration healthCheckConfiguration
         = new PeriodicTaskConfigurationImpl(true,
@@ -120,6 +123,13 @@ public class IntegrationTestModule extends AbstractModule
                                        .serviceConfiguration(conf)
                                        .healthCheckConfiguration(healthCheckConfiguration)
                                        .build();
+    }
+
+    @Provides
+    @Singleton
+    public CoordinationConfiguration clusterLeaseClaimTaskConfiguration()
+    {
+        return new CoordinationConfigurationImpl(new PeriodicTaskConfigurationImpl());
     }
 
     @Provides

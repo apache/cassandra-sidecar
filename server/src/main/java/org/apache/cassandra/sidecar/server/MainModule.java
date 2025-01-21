@@ -153,8 +153,8 @@ import org.apache.cassandra.sidecar.utils.XXHash32Provider;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.API_V1_ALL_ROUTES;
 import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
 /**
  * Provides main binding for more complex Guice dependencies
@@ -853,7 +853,7 @@ public class MainModule extends AbstractModule
                                                      ClusterLeaseClaimTask clusterLeaseClaimTask)
     {
         PeriodicTaskExecutor periodicTaskExecutor = new PeriodicTaskExecutor(executorPools, clusterLease);
-        vertx.eventBus().localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(),
+        vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address(),
                                        ignored -> periodicTaskExecutor.schedule(clusterLeaseClaimTask));
         return periodicTaskExecutor;
     }

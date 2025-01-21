@@ -26,8 +26,8 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.exceptions.CASWriteUnknownException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.datastax.driver.core.exceptions.QueryConsistencyException;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -187,7 +187,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
             LOGGER.debug("Attempting to {} lease for sidecarHostId={}", actionName, sidecarHostId);
             return actionFn.apply(sidecarHostId).currentOwner;
         }
-        catch (CASWriteUnknownException | NoHostAvailableException e)
+        catch (QueryConsistencyException | NoHostAvailableException e)
         {
             LOGGER.debug("Unable to {} lease for sidecarHostId={}", actionName, sidecarHostId, e);
         }
@@ -195,7 +195,6 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         {
             LOGGER.error("Unable to {} lease for sidecarHostId={}", actionName, sidecarHostId, e);
         }
-        LOGGER.debug("Unable to perform lease operation for sidecarHostId={}", sidecarHostId);
         return null; // owner is unknown
     }
 

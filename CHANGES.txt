@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Fix SidecarSchema stuck at initialization due to ClusterLeaseTask scheduling (CASSSIDECAR-189)
  * Add RBAC Authorization support in Sidecar (CASSSIDECAR-161)
  * Standardize configuration for duration units (CASSSIDECAR-186)
  * Adds sidecar endpoint for node decommissioning operation (CASSANDRASC-151)

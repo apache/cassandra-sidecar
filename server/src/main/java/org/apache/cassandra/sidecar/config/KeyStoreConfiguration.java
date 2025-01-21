@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.config;
 
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Encapsulates key or trust store option configurations
@@ -44,10 +45,11 @@ public interface KeyStoreConfiguration
 
     /**
      * Returns the interval in which the key store will be checked for filesystem changes. Setting
-     * this value to 0 or negative will disable reloading the store.
+     * this value to {@link SecondBoundConfiguration#ZERO} will disable reloading the store.
      *
      * @return the interval in which the key store will be checked for changes in the filesystem
      */
+    @NotNull
     SecondBoundConfiguration checkInterval();
 
     /**
@@ -55,7 +57,8 @@ public interface KeyStoreConfiguration
      */
     default boolean reloadStore()
     {
-        return checkInterval().compareTo(SecondBoundConfiguration.ZERO) > 0;
+        SecondBoundConfiguration interval = checkInterval();
+        return interval != SecondBoundConfiguration.ZERO && !interval.equals(SecondBoundConfiguration.ZERO);
     }
 
     /**

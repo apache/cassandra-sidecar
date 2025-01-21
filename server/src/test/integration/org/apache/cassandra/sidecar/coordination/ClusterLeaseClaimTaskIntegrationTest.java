@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.StreamSupport;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -89,8 +90,9 @@ import static org.mockito.Mockito.when;
 @Tag("heavy")
 class ClusterLeaseClaimTaskIntegrationTest
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterLeaseClaimTaskIntegrationTest.class);
     public static final int CONCURRENT_PROCESSES = 12;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterLeaseClaimTaskIntegrationTest.class);
+    private static final int LEASE_SCHEMA_TTL_SECONDS = 10;
     final List<CQLSessionProvider> sessionProviderList = new ArrayList<>();
     final Vertx vertx = Vertx.vertx();
     SchemaKeyspaceConfiguration mockSchemaConfig;
@@ -105,7 +107,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         when(mockSchemaConfig.keyspace()).thenReturn(SchemaKeyspaceConfigurationImpl.DEFAULT_KEYSPACE);
         when(mockSchemaConfig.replicationStrategy()).thenReturn(SchemaKeyspaceConfigurationImpl.DEFAULT_REPLICATION_STRATEGY);
         when(mockSchemaConfig.replicationFactor()).thenReturn(SchemaKeyspaceConfigurationImpl.DEFAULT_REPLICATION_FACTOR);
-        when(mockSchemaConfig.leaseSchemaTTL()).thenReturn(SecondBoundConfiguration.parse("5s"));
+        when(mockSchemaConfig.leaseSchemaTTL()).thenReturn(SecondBoundConfiguration.parse(LEASE_SCHEMA_TTL_SECONDS + "s"));
     }
 
     @ParameterizedTest(name = "{index} => version {0}")
@@ -117,10 +119,9 @@ class ClusterLeaseClaimTaskIntegrationTest
         Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(), Semver.SemverType.LOOSE));
 
         // Spin up a 3-node cluster
-        try (AbstractCluster<?> cluster = UpgradeableCluster.build(0)
+        try (AbstractCluster<?> cluster = UpgradeableCluster.build(3)
                                                             .withDynamicPortAllocation(true) // to allow parallel test runs
                                                             .withVersion(requestedVersion)
-                                                            .withDC("dc0", 3)
                                                             .withConfig(config -> config.with(Feature.NATIVE_PROTOCOL))
                                                             .start())
         {
@@ -146,6 +147,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         AtomicReference<Object[][]> currentLeaseholderQueryResult = new AtomicReference<>();
         AtomicReference<TestInstanceWrapper> currentLeaseholder = new AtomicReference<>();
         loopAssert(3, () -> {
+            cleanupDeltaGaugeMetrics(simulatedInstances);
             runLeaseAcquireProcess(pool, simulatedInstances);
             Object[][] resultSet = queryCurrentLeaseholders(cluster);
             currentLeaseholderQueryResult.set(resultSet);
@@ -246,37 +248,18 @@ class ClusterLeaseClaimTaskIntegrationTest
         // then disable binary
         simulateDisableBinaryOfLeaseholder(simulatedInstances);
 
-        ScheduleDecision scheduleDecision = null;
-        for (int i = 0; i < 20; i++)
-        {
-            leaseholder.clusterLeaseClaimTask.runClaimProcess();
-            scheduleDecision = leaseholder.clusterLease.toScheduleDecision();
+        // Wait for lease to expire in both leaseholder and database
+        Uninterruptibles.sleepUninterruptibly(LEASE_SCHEMA_TTL_SECONDS, TimeUnit.SECONDS);
 
-            if (scheduleDecision != ScheduleDecision.RESCHEDULE)
-            {
-                int ttlSeconds = Math.max(1, maybeDetermineTTL(cluster));
-                LOGGER.info("TTL is {} seconds", ttlSeconds);
-                // wait for the leaseholder to give the lease
-                // query the TTL value and sleep for that amount of time
-                // before attempting again
-                sleepUninterruptibly(ttlSeconds, TimeUnit.SECONDS);
-            }
-            else break;
-        }
-        assertThat(scheduleDecision).as("The leaseholder should give up the lease")
-                                    .isEqualTo(ScheduleDecision.RESCHEDULE);
-        // ensure the data is TTL'd in the database
-        for (int i = 0; i < 20; i++)
-        {
+        loopAssert(3, 1000, () -> {
+            leaseholder.clusterLeaseClaimTask.runClaimProcess();
+            ScheduleDecision scheduleDecision = leaseholder.clusterLease.toScheduleDecision();
+            assertThat(scheduleDecision).as("The leaseholder should give up the lease")
+                                        .isEqualTo(ScheduleDecision.RESCHEDULE);
+            // ensure the data is TTL'd in the database
             long rowCount = rowCountInLeaseTable(cluster);
-            if (rowCount == 0)
-            {
-                // data has been TTL'd
-                return;
-            }
-            sleepUninterruptibly(1, TimeUnit.SECONDS);
-        }
-        fail("Data was not TTL'd in the database");
+            assertThat(rowCount).describedAs("Lease should be TTL'd").isZero();
+        });
     }
 
     private void validateMetrics(List<TestInstanceWrapper> simulatedInstances, int expectedLeaseholderCount)
@@ -289,8 +272,18 @@ class ClusterLeaseClaimTaskIntegrationTest
                                                                       .isEqualTo(expectedLeaseholderCount);
     }
 
+    // similar to validateMetrics but w/o validation. Read the delta gauge values out to reset
+    private void cleanupDeltaGaugeMetrics(List<TestInstanceWrapper> simulatedInstances)
+    {
+        // Validate metrics, metrics instance is shared so we check on any instance
+        CoordinationMetrics coordinationMetrics = simulatedInstances.get(0).metrics.server().coordination();
+        coordinationMetrics.participants.metric.getValue();
+        coordinationMetrics.leaseholders.metric.getValue();
+    }
+
     private void runLeaseAcquireProcess(ExecutorService pool, List<TestInstanceWrapper> simulatedInstances)
     {
+        cleanupDeltaGaugeMetrics(simulatedInstances);
         int electorateSize = simulatedInstances.size();
         CountDownLatch latch = new CountDownLatch(electorateSize);
         CountDownLatch completedLatch = new CountDownLatch(electorateSize);
@@ -438,16 +431,6 @@ class ClusterLeaseClaimTaskIntegrationTest
         return instances;
     }
 
-    static int maybeDetermineTTL(AbstractCluster<?> cluster)
-    {
-        SimpleQueryResult result
-        = cluster.getFirstRunningInstance()
-                 .coordinator()
-                 .executeWithResult("SELECT ttl(owner) FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'cluster_lease_holder'",
-                                    ConsistencyLevel.LOCAL_QUORUM);
-        return result.hasNext() ? result.next().getInteger(0) : 0;
-    }
-
     static long rowCountInLeaseTable(AbstractCluster<?> cluster)
     {
         SimpleQueryResult rows = cluster.getFirstRunningInstance()
@@ -476,7 +459,9 @@ class ClusterLeaseClaimTaskIntegrationTest
         {
             try
             {
-                cluster.getFirstRunningInstance().coordinator().execute("DELETE FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'cluster_lease_holder'",
+                cluster.getFirstRunningInstance().coordinator().execute("DELETE FROM sidecar_internal.sidecar_lease_v1 " +
+                                                                        "WHERE name = 'cluster_lease_holder' " +
+                                                                        "IF EXISTS",
                                                                         ConsistencyLevel.QUORUM);
                 LOGGER.info("Successfully removed current leaseholder from database");
                 return;

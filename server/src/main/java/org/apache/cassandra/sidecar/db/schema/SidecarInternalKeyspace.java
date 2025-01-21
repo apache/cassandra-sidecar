@@ -73,13 +73,14 @@ public class SidecarInternalKeyspace extends AbstractSchema
     {
         super.initializeInternal(session, shouldCreateSchema);
 
+        boolean initialized = true;
         for (AbstractSchema schema : tableSchemas)
         {
-            if (!schema.initialize(session, shouldCreateSchema))
-                return false;
+            // run initialize on all schema. Set the initialized to false if any of the schema initialization fails
+            initialized = schema.initialize(session, shouldCreateSchema) && initialized;
         }
 
-        return true;
+        return initialized;
     }
 
     @Override

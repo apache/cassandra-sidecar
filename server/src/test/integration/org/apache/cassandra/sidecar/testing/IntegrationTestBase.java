@@ -50,6 +50,7 @@ import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
@@ -109,11 +110,14 @@ public abstract class IntegrationTestBase
     protected CassandraSidecarTestContext sidecarTestContext;
     protected Injector injector;
     private final List<Throwable> testExceptions = new ArrayList<>();
+    private Module testSpecificModule;
 
     @BeforeEach
     void setup(AbstractCassandraTestContext cassandraTestContext, TestInfo testInfo) throws Exception
     {
         testExceptions.clear();
+
+        beforeSetup();
 
         ca = cassandraTestContext.ca;
         truststorePath = cassandraTestContext.truststorePath;
@@ -126,7 +130,16 @@ public abstract class IntegrationTestBase
         System.setProperty("cassandra.testtag", testInfo.getTestClass().get().getCanonicalName());
         System.setProperty("suitename", testInfo.getDisplayName() + ": " + cassandraTestContext.version);
         int clusterSize = cassandraTestContext.clusterSize();
-        injector = Guice.createInjector(Modules.override(new MainModule()).with(integrationTestModule));
+        // list of modules that override the priors; hence order matters
+        List<Module> modules = new ArrayList<>();
+        modules.add(new MainModule());
+        modules.add(integrationTestModule);
+        if (testSpecificModule != null)
+        {
+            modules.add(testSpecificModule);
+        }
+        Module mergedModule = modules.stream().reduce((m1, m2) -> Modules.override(m1).with(m2)).get();
+        injector = Guice.createInjector(mergedModule);
         vertx = injector.getInstance(Vertx.class);
 
         SslConfiguration sslConfig = cassandraTestContext.annotation.authMode().equals(AuthMode.MUTUAL_TLS)
@@ -182,6 +195,15 @@ public abstract class IntegrationTestBase
         else
             logger.error("Close event timed out.");
         sidecarTestContext.close();
+    }
+
+    protected void beforeSetup()
+    {
+    }
+
+    protected void installTestSpecificModule(Module testSpecificModule)
+    {
+        this.testSpecificModule = testSpecificModule;
     }
 
     protected void waitForSchemaReady(long timeout, TimeUnit timeUnit)
