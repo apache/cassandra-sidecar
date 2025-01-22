@@ -76,7 +76,8 @@ public class SidecarInternalKeyspace extends AbstractSchema
         boolean initialized = true;
         for (AbstractSchema schema : tableSchemas)
         {
-            // run initialize on all schema. Set the initialized to false if any of the schema initialization fails
+            // Attempts to initialize all schemas.
+            // Sets initialized to false if any of the schema initialization fails
             initialized = schema.initialize(session, shouldCreateSchema) && initialized;
         }
 
