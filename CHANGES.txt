@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add sidecar endpoint to retrieve stream stats (CASSSIDECAR-180)
  * Add sidecar endpoint to retrieve cassandra gossip health (CASSSIDECAR-173)
  * Fix SidecarSchema stuck at initialization due to ClusterLeaseTask scheduling (CASSSIDECAR-189)
  * Add RBAC Authorization support in Sidecar (CASSSIDECAR-161)

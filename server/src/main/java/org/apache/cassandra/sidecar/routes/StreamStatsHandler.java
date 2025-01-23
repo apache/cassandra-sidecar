@@ -18,10 +18,16 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.Collections;
+import java.util.Set;
+
 import com.google.inject.Inject;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
@@ -33,7 +39,7 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 /**
  * Handler for retrieving node streams stats
  */
-public class StreamStatsHandler extends AbstractHandler<Void>
+public class StreamStatsHandler extends AbstractHandler<Void> implements AccessProtected
 {
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -46,6 +52,13 @@ public class StreamStatsHandler extends AbstractHandler<Void>
                                  ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, null);
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        String resource = VariableAwareResource.CLUSTER.resource();
+        return Collections.singleton(BasicPermissions.READ_STATS.toAuthorization(resource));
     }
 
     /**

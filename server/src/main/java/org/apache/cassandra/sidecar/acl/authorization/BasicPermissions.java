@@ -63,4 +63,7 @@ public class BasicPermissions
     public static final Permission READ_GOSSIP = new DomainAwarePermission("GOSSIP:READ");
     public static final Permission READ_RING = new DomainAwarePermission("RING:READ");
     public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ");
+
+    // cassandra stats permissions
+    public static final Permission READ_STATS = new DomainAwarePermission("STATS:READ");
 }
