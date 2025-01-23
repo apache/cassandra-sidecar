@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.common.server;
 
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
-import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
+import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 
 /**
  * An interface that defines interactions with the metrics system in Cassandra.
@@ -37,5 +37,5 @@ public interface MetricsOperations
      * Retrieve the stream progress stats metrics from the cluster
      * @return the requested stream progress stats, in full or summary
      */
-    StreamProgressStats streamProgressStats();
+    StreamsProgressStats streamsProgressStats();
 }

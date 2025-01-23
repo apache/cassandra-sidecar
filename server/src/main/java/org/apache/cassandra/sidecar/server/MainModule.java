@@ -498,11 +498,11 @@ public class MainModule extends AbstractModule
                                     .handler(nodeDecommissionHandler)
                                     .build();
 
-        protectedRouteBuilderFactory.get().router(router).method(HttpMethod.PUT)
+        protectedRouteBuilderFactory.get().router(router).method(HttpMethod.GET)
                                     .endpoint(ApiEndpointsV1.STREAM_STATS_ROUTE)
                                     .handler(streamStatsHandler)
                                     .build();
-        
+
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.PUT)
                                     .endpoint(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE)
                                     .handler(ssTableUploadHandler)

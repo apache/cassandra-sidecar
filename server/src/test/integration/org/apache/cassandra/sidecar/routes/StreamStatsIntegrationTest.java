@@ -45,7 +45,7 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
-import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
+import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.streaming.StreamOperation;
@@ -128,7 +128,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
     {
         StreamStatsResponse streamStatsResponse = response.bodyAsJson(StreamStatsResponse.class);
         assertThat(streamStatsResponse).isNotNull();
-        StreamProgressStats streamProgress = streamStatsResponse.streamProgressStats();
+        StreamsProgressStats streamProgress = streamStatsResponse.streamsProgressStats();
         assertThat(streamProgress).isNotNull();
         if (streamProgress.totalFilesToReceive() > 0)
         {

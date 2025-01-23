@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.common.response;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
+import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 
 /**
  * Class response for the StreamStats API
@@ -30,7 +30,7 @@ import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
 public class StreamStatsResponse
 {
     private final String mode;
-    private final StreamProgressStats stats;
+    private final StreamsProgressStats stats;
 
     /**
      * Constructs a new {@link StreamStatsResponse}.
@@ -40,7 +40,7 @@ public class StreamStatsResponse
      */
     @JsonCreator
     public StreamStatsResponse(@JsonProperty("operationMode") String mode,
-                               @JsonProperty("streamProgressStats") StreamProgressStats stats)
+                               @JsonProperty("streamsProgressStats") StreamsProgressStats stats)
     {
         this.mode = mode;
         this.stats = stats;
@@ -52,8 +52,8 @@ public class StreamStatsResponse
         return mode;
     }
 
-    @JsonProperty("streamProgressStats")
-    public StreamProgressStats streamProgressStats()
+    @JsonProperty("streamsProgressStats")
+    public StreamsProgressStats streamsProgressStats()
     {
         return stats;
     }

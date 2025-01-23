@@ -87,7 +87,7 @@ import org.apache.cassandra.sidecar.common.response.data.CdcSegmentInfo;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
-import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
+import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
@@ -1628,7 +1628,7 @@ abstract class SidecarClientTest
     public void testStreamsStats() throws Exception
     {
         String streamStatsResponseAsString = "{\"operationMode\":\"NORMAL\"," +
-                                             "\"streamProgressStats\":{\"totalFilesToReceive\":7," +
+                                             "\"streamsProgressStats\":{\"totalFilesToReceive\":7," +
                                              "\"totalFilesReceived\":7,\"totalBytesToReceive\":15088," +
                                              "\"totalBytesReceived\":15088,\"totalFilesToSend\":2,\"totalFilesSent\":2," +
                                              "\"totalBytesToSend\":1024,\"totalBytesSent\":1024}}";
@@ -1642,7 +1642,7 @@ abstract class SidecarClientTest
             StreamStatsResponse result = client.streamsStats(sidecarInstance).get(30, TimeUnit.SECONDS);
             assertThat(result).isNotNull();
             assertThat(result.operationMode()).isNotNull().isEqualTo("NORMAL");
-            StreamProgressStats progressStats = result.streamProgressStats();
+            StreamsProgressStats progressStats = result.streamsProgressStats();
             assertThat(progressStats).isNotNull();
             assertThat(progressStats.totalFilesToSend()).isNotNull()
                                                         .isEqualTo(progressStats.totalFilesSent())

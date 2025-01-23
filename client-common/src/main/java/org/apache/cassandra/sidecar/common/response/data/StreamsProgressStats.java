@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * A class representing stats summarizing the progress of streamed bytes and files on the node
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StreamProgressStats
+public class StreamsProgressStats
 {
     private final long totalFilesToReceive;
     private final long totalFilesReceived;
@@ -38,14 +38,14 @@ public class StreamProgressStats
     private final long totalBytesSent;
 
     @JsonCreator
-    public StreamProgressStats(@JsonProperty("totalFilesToReceive") long totalFilesToReceive,
-                               @JsonProperty("totalFilesReceived") long totalFilesReceived,
-                               @JsonProperty("totalBytesToReceive") long totalBytesToReceive,
-                               @JsonProperty("totalBytesReceived") long totalBytesReceived,
-                               @JsonProperty("totalFilesToSend") long totalFilesToSend,
-                               @JsonProperty("totalFilesSent") long totalFilesSent,
-                               @JsonProperty("totalBytesToSend") long totalBytesToSend,
-                               @JsonProperty("totalBytesSent") long totalBytesSent)
+    public StreamsProgressStats(@JsonProperty("totalFilesToReceive") long totalFilesToReceive,
+                                @JsonProperty("totalFilesReceived") long totalFilesReceived,
+                                @JsonProperty("totalBytesToReceive") long totalBytesToReceive,
+                                @JsonProperty("totalBytesReceived") long totalBytesReceived,
+                                @JsonProperty("totalFilesToSend") long totalFilesToSend,
+                                @JsonProperty("totalFilesSent") long totalFilesSent,
+                                @JsonProperty("totalBytesToSend") long totalBytesToSend,
+                                @JsonProperty("totalBytesSent") long totalBytesSent)
     {
         this.totalFilesToReceive = totalFilesToReceive;
         this.totalFilesReceived = totalFilesReceived;

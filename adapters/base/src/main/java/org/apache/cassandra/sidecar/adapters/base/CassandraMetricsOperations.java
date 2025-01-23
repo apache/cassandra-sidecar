@@ -38,7 +38,7 @@ import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsSummary
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
-import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
+import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
@@ -92,7 +92,7 @@ public class CassandraMetricsOperations implements MetricsOperations
      * {@inheritDoc}
      */
     @Override
-    public StreamProgressStats streamProgressStats()
+    public StreamsProgressStats streamsProgressStats()
     {
         Set<CompositeData> streamData = jmxClient.proxy(StreamManagerJmxOperations.class, STREAM_MANAGER_OBJ_NAME)
                                                  .getCurrentStreams();
@@ -101,7 +101,7 @@ public class CassandraMetricsOperations implements MetricsOperations
         return computeStats(streamStates);
     }
 
-    private StreamProgressStats computeStats(List<StreamState> streamStates)
+    private StreamsProgressStats computeStats(List<StreamState> streamStates)
     {
         List<SessionInfo> sessions = streamStates.stream().map(s -> s.sessions()).flatMap(Collection::stream).collect(Collectors.toList());
 
@@ -129,8 +129,8 @@ public class CassandraMetricsOperations implements MetricsOperations
         }
         LOGGER.debug("Progress Stats: totalBytesToReceive:{} totalBytesReceived:{} totalBytesToSend:{} totalBytesSent:{}",
                      totalBytesToReceive, totalBytesReceived, totalBytesToSend, totalBytesSent);
-        return new StreamProgressStats(totalFilesToReceive, totalFilesReceived, totalBytesToReceive, totalBytesReceived,
-                                       totalFilesToSend, totalFilesSent, totalBytesToSend, totalBytesSent);
+        return new StreamsProgressStats(totalFilesToReceive, totalFilesReceived, totalBytesToReceive, totalBytesReceived,
+                                        totalFilesToSend, totalFilesSent, totalBytesToSend, totalBytesSent);
 
     }
 

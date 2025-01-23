@@ -24,7 +24,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
-import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
+import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -67,7 +67,7 @@ public class StreamStatsHandler extends AbstractHandler<Void>
         executorPools.service()
                      .executeBlocking(() -> {
                          String mode = storageOperations.operationMode();
-                         StreamProgressStats stats = metricsOperations.streamProgressStats();
+                         StreamsProgressStats stats = metricsOperations.streamsProgressStats();
                          return new StreamStatsResponse(mode, stats);
                      })
                      .onSuccess(context::json)

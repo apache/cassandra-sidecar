@@ -48,7 +48,7 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
-import org.apache.cassandra.sidecar.common.response.data.StreamProgressStats;
+import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.server.MainModule;
@@ -105,7 +105,7 @@ public class StreamStatsHandlerTest
     {
         streamingStatsSupplier = () -> {
             StreamStatsResponse response = new StreamStatsResponse("NORMAL",
-                                                                   new StreamProgressStats(7, 7, 1024, 1024, 0, 0, 0, 0));
+                                                                   new StreamsProgressStats(7, 7, 1024, 1024, 0, 0, 0, 0));
             return response;
         };
 
@@ -125,7 +125,6 @@ public class StreamStatsHandlerTest
 
     class StreamingStatsTestModule extends AbstractModule
     {
-
         @Provides
         @Singleton
         public InstancesMetadata instancesMetadata()
@@ -142,8 +141,8 @@ public class StreamStatsHandlerTest
             when(ops.operationMode()).thenAnswer((Answer<String>) invocation -> streamingStatsSupplier.get().operationMode());
             when(delegate.storageOperations()).thenReturn(ops);
             MetricsOperations metricsOps = mock(MetricsOperations.class);
-            when(metricsOps.streamProgressStats())
-            .thenAnswer((Answer<StreamProgressStats>) invocation -> streamingStatsSupplier.get().streamProgressStats());
+            when(metricsOps.streamsProgressStats())
+            .thenAnswer((Answer<StreamsProgressStats>) invocation -> streamingStatsSupplier.get().streamsProgressStats());
             when(delegate.metricsOperations()).thenReturn(metricsOps);
 
             when(instanceMetadata.delegate()).thenReturn(delegate);
