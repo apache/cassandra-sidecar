@@ -155,7 +155,6 @@ public class RestoreJobConsistencyLevelChecker
     {
         // sort the ranges by their tokens
         List<RestoreRange> sortedRanges = ranges.stream()
-                                                .filter(RestoreRange::isValidForConsistencyCheck)
                                                 .sorted(RestoreRange.TOKEN_BASED_NATURAL_ORDER)
                                                 .collect(Collectors.toList());
         if (!normalizeStatus(sortedRanges))
@@ -195,9 +194,9 @@ public class RestoreJobConsistencyLevelChecker
         for (int i = 0; i < sortedRanges.size(); i++)
         {
             RestoreRange current = sortedRanges.get(i);
-            for (int j = i + 1; j < sortedRanges.size(); j++)
+            for (int k = i + 1; k < sortedRanges.size(); k++)
             {
-                RestoreRange candidate = sortedRanges.get(j);
+                RestoreRange candidate = sortedRanges.get(k);
                 // candidate.start >= current.end: all restore ranges that can possibly overlap with current have checked
                 if (candidate.startToken().compareTo(current.endToken()) >= 0)
                 {
@@ -207,7 +206,7 @@ public class RestoreJobConsistencyLevelChecker
                 else if (candidate.endToken().compareTo(current.endToken()) <= 0)
                 {
                     candidate = candidate.unbuild().addReplicaStatus(current.statusByReplica()).build();
-                    sortedRanges.set(j, candidate);
+                    sortedRanges.set(k, candidate);
                 }
                 // current is fully enclosed by candidate: copy the status from candidate to current
                 else if (current.endToken().compareTo(candidate.endToken()) <= 0 &&
@@ -318,16 +317,6 @@ public class RestoreJobConsistencyLevelChecker
                                                                 RestoreRange range)
     {
         return concludeOneRange(topology, verifier, successCriteria, range);
-    }
-
-    @VisibleForTesting
-    static void concludeRangesUnsafe(List<RestoreRange> ranges,
-                                     TokenRangeReplicasResponse topology,
-                                     ConsistencyVerifier verifier,
-                                     RestoreRangeStatus successCriteria,
-                                     RestoreJobProgressCollector collector)
-    {
-        concludeRanges(ranges, topology, verifier, successCriteria, collector);
     }
 
     @VisibleForTesting

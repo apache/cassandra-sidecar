@@ -48,7 +48,7 @@ import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 
-import static org.apache.cassandra.sidecar.AssertionUtils.getBlocking;
+import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**

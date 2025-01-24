@@ -44,7 +44,6 @@ import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 
-import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.apache.cassandra.sidecar.restore.RestoreRangeTask.failOnCancelled;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;

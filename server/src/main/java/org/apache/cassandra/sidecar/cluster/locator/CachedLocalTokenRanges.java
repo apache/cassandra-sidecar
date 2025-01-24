@@ -77,6 +77,11 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
         this.localInstancesCache = null;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @param forceRefresh the parameter is ignored. This implementation always serves from cache first and manages reload internally
+     */
     @Override
     public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace, boolean forceRefresh)
     {

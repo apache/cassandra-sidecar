@@ -49,10 +49,10 @@ import org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperLeavingNode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 
-import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.assertRestoreRange;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.createJob;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.disableRestoreProcessor;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase

@@ -21,6 +21,9 @@ package org.apache.cassandra.sidecar.common.server.data;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.ABORTED;
 import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.CREATED;
@@ -46,30 +49,28 @@ class RestoreRangeStatusTest
         assertAdvanceTo(STAGED, SUCCEEDED);
     }
 
-    @Test
-    void testInvalidStatusAdvancing()
+    @ParameterizedTest(name = "{index}: {0} -> {1}")
+    @MethodSource("invalidStatusAdvancingSource")
+    void testInvalidStatusAdvancing(RestoreRangeStatus from, RestoreRangeStatus to)
     {
-        String commonErrorMsg = "status can only advance to one of the follow statuses";
+        String commonErrorMsg = from + " status can only advance to one of the follow statuses";
 
-        Stream
-        .of(new RestoreRangeStatus[][]
-            { // define test cases of invalid status advancing, e.g. it is invalid to advance from EMPTY to STAGED
-              { STAGED, CREATED },
-              { CREATED, SUCCEEDED },
-              { STAGED, STAGED },
-              { SUCCEEDED, FAILED },
-              { FAILED, SUCCEEDED },
-              { FAILED, ABORTED },
-              { DISCARDED, CREATED },
-              { DISCARDED, STAGED },
-              { DISCARDED, SUCCEEDED },
-            })
-        .forEach(testCase -> {
-            assertThatThrownBy(() -> testCase[0].advanceTo(testCase[1]))
-            .isExactlyInstanceOf(IllegalArgumentException.class)
-            .hasNoCause()
-            .hasMessageContaining(commonErrorMsg);
-        });
+        assertThatThrownBy(() -> from.advanceTo(to)).isExactlyInstanceOf(IllegalArgumentException.class)
+                                                    .hasNoCause()
+                                                    .hasMessageContaining(commonErrorMsg);
+    }
+
+    public static Stream<Arguments> invalidStatusAdvancingSource()
+    {
+        return Stream.of(Arguments.of(STAGED, CREATED),
+                         Arguments.of(CREATED, SUCCEEDED),
+                         Arguments.of(STAGED, STAGED),
+                         Arguments.of(SUCCEEDED, FAILED),
+                         Arguments.of(FAILED, SUCCEEDED),
+                         Arguments.of(FAILED, ABORTED),
+                         Arguments.of(DISCARDED, CREATED),
+                         Arguments.of(DISCARDED, STAGED),
+                         Arguments.of(DISCARDED, SUCCEEDED));
     }
 
     private void assertAdvanceTo(RestoreRangeStatus from, RestoreRangeStatus to)

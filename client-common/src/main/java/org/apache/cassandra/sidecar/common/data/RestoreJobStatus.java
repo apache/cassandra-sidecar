@@ -29,7 +29,7 @@ public enum RestoreJobStatus
     CREATED,
     /**
      * The external controller updates the status of the RestoreJob to STAGE_READY.
-     * It indicates that all relevant slices of the RestoreJob have been uploaded and ready to consume.
+     * It indicates that all relevant slices of the RestoreJob have been uploaded and ready to be consumed.
      */
     STAGE_READY,
     /**
@@ -42,7 +42,9 @@ public enum RestoreJobStatus
      * It indicates that all staged data now are ready to be imported into Cassandra.
      */
     IMPORT_READY,
-    @Deprecated // replaced by ABORTED
+    /**
+     * @deprecated replaced by {@link #ABORTED}
+     */
     FAILED,
     /**
      * The external controller aborts the RestoreJob due to some failure, e.g. consistency not satisfied, timeout, etc.

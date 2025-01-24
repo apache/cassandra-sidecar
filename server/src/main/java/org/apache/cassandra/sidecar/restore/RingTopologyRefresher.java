@@ -136,11 +136,8 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
 
     public void addRingTopologyChangeListener(String keyspace, RingTopologyChangeListener listener)
     {
-        listenersByKeyspace.compute(keyspace, (k, v) -> {
-            Set<RingTopologyChangeListener> listeners = v == null ? ConcurrentHashMap.newKeySet() : v;
-            listeners.add(listener);
-            return listeners;
-        });
+        listenersByKeyspace.computeIfAbsent(keyspace, key -> ConcurrentHashMap.newKeySet())
+                           .add(listener);
     }
 
     public void removeRingTopologyChangeListener(String keyspace, RingTopologyChangeListener listener)
@@ -197,7 +194,7 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
             return Collections.emptyMap();
         }
 
-        List<InstanceMetadata> allInstances = metadataFetcher.allInstances();
+        List<InstanceMetadata> allInstances = metadataFetcher.allLocalInstances();
         Map<String, InstanceMetadata> localEndpointsToMetadata = new HashMap<>(allInstances.size());
         for (InstanceMetadata instanceMetadata : allInstances)
         {

@@ -109,7 +109,7 @@ public class RestoreJobProgress
     }
 
     @VisibleForTesting
-    public List<RestoreRange> allRanges()
+    List<RestoreRange> allRanges()
     {
         List<RestoreRange> result = new ArrayList<>();
         Consumer<List<RestoreRange>> addAllIgnoreNull = list -> {

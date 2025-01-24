@@ -113,11 +113,27 @@ public class TokenRange
     }
 
     /**
+     * @return start token as {@link BigInteger}. It is not enclosed in the range.
+     */
+    public BigInteger startAsBigInt()
+    {
+        return range.lowerEndpoint().toBigInteger();
+    }
+
+    /**
      * @return end token. It is the last token enclosed in the range.
      */
     public Token end()
     {
         return range.upperEndpoint();
+    }
+
+    /**
+     * @return end token as {@link BigInteger}. It is the last token enclosed in the range.
+     */
+    public BigInteger endAsBigInt()
+    {
+        return range.upperEndpoint().toBigInteger();
     }
 
     /**
@@ -165,7 +181,7 @@ public class TokenRange
     }
 
     /**
-     * Two ranges are connects with each other when 1) they overlap or 2) their ends are connected.
+     * Two ranges connect with each other when 1) they overlap or 2) their ends are connected.
      * <p>For 1), refer to {@link #overlaps(TokenRange)}
      * <p>For 2), see the following examples. The ranges {@code (0, 3]} and {@code (3, 5]} are connected.
      * The ranges {@code (0, 3]} and {@code (4, 6]} are not connected.

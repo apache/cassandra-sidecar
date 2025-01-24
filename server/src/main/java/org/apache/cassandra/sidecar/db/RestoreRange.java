@@ -97,9 +97,7 @@ public class RestoreRange
     @NotNull
     private final String sliceKey;
     @NotNull
-    private final BigInteger startToken;
-    @NotNull
-    private final BigInteger endToken;
+    private final TokenRange tokenRange;
     @NotNull
     private final Map<String, RestoreRangeStatus> statusByReplica;
 
@@ -148,8 +146,7 @@ public class RestoreRange
     {
         this.jobId = builder.jobId;
         this.bucketId = builder.bucketId;
-        this.startToken = builder.startToken;
-        this.endToken = builder.endToken;
+        this.tokenRange = new TokenRange(builder.startToken, builder.endToken);
         this.source = builder.sourceSlice;
         this.sliceId = builder.sliceId;
         this.sliceKey = builder.sliceKey;
@@ -170,13 +167,13 @@ public class RestoreRange
 
     public RestoreRangeJson toJson()
     {
-        return new RestoreRangeJson(sliceId, bucketId, sliceBucket, sliceKey, startToken, endToken);
+        return new RestoreRangeJson(sliceId, bucketId, sliceBucket, sliceKey, tokenRange.startAsBigInt(), tokenRange.endAsBigInt());
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(startToken, endToken, jobId, bucketId, sliceId);
+        return Objects.hash(tokenRange, jobId, bucketId, sliceId);
     }
 
     @Override
@@ -191,8 +188,7 @@ public class RestoreRange
         RestoreRange that = (RestoreRange) obj;
         // Note: destinationPathInStaging and owner are not included as they are 'transient'.
         // Mutable states are not included, e.g. status_by_replicas.
-        return Objects.equals(this.startToken, that.startToken)
-               && Objects.equals(this.endToken, that.endToken)
+        return Objects.equals(this.tokenRange, that.tokenRange)
                && Objects.equals(this.jobId, that.jobId)
                && Objects.equals(this.bucketId, that.bucketId)
                && Objects.equals(this.sliceId, that.sliceId);
@@ -204,8 +200,7 @@ public class RestoreRange
         return "RestoreRange{" +
                "jobId=" + jobId +
                ", sliceId='" + sliceId + '\'' +
-               ", startToken=" + startToken +
-               ", endToken=" + endToken +
+               ", tokenRange=" + tokenRange +
                ", statusByReplica=" + statusByReplica +
                ", sliceKey='" + sliceKey + '\'' +
                ", sliceBucket='" + sliceBucket + '\'' +
@@ -276,20 +271,19 @@ public class RestoreRange
         isCancelled = true;
     }
 
+    /**
+     * Mark the restore range as discarded for this instance, then cancel it
+     */
     public void discard()
     {
         discarded = true;
+        updateRangeStatusForInstance(owner(), RestoreRangeStatus.DISCARDED);
         cancel();
     }
 
     public boolean isDiscarded()
     {
         return discarded;
-    }
-
-    public boolean isValidForConsistencyCheck()
-    {
-        return !discarded;
     }
 
     /**
@@ -415,17 +409,17 @@ public class RestoreRange
 
     public BigInteger startToken()
     {
-        return this.startToken;
+        return tokenRange.startAsBigInt();
     }
 
     public BigInteger endToken()
     {
-        return this.endToken;
+        return tokenRange.endAsBigInt();
     }
 
     public TokenRange tokenRange()
     {
-        return new TokenRange(startToken, endToken);
+        return tokenRange;
     }
 
     public Map<String, RestoreRangeStatus> statusByReplica()
@@ -589,8 +583,8 @@ public class RestoreRange
             this.stageDirectory = range.stageDirectory;
             this.uploadId = range.uploadId;
             this.owner = range.owner;
-            this.startToken = range.startToken;
-            this.endToken = range.endToken;
+            this.startToken = range.tokenRange.startAsBigInt();
+            this.endToken = range.tokenRange.endAsBigInt();
             this.statusByReplica = new HashMap<>(range.statusByReplica);
             this.tracker = range.tracker;
             this.discarded = range.discarded;
@@ -658,13 +652,6 @@ public class RestoreRange
 
         public Builder replicaStatus(Map<String, RestoreRangeStatus> statusByReplica)
         {
-            for (RestoreRangeStatus status : statusByReplica.values())
-            {
-                if (status == RestoreRangeStatus.DISCARDED)
-                {
-                    return discard();
-                }
-            }
             return update(b -> b.statusByReplica = new HashMap<>(statusByReplica));
         }
 
@@ -687,11 +674,6 @@ public class RestoreRange
             Map<String, RestoreRangeStatus> map = new HashMap<>(statusTextByReplica.size());
             statusTextByReplica.forEach((k, v) -> map.put(k, RestoreRangeStatus.valueOf(v)));
             return replicaStatus(map);
-        }
-
-        public Builder discard()
-        {
-            return update(b -> b.discarded = true);
         }
 
         public Builder restoreJobProgressTracker(RestoreJobProgressTracker tracker)

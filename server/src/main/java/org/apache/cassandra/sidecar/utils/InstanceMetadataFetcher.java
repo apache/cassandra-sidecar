@@ -133,7 +133,10 @@ public class InstanceMetadataFetcher
         return instancesMetadata.instances();
     }
 
-    public List<InstanceMetadata> allInstances()
+    /**
+     * @return all the configured local instances
+     */
+    public List<InstanceMetadata> allLocalInstances()
     {
         ensureInstancesMetadataConfigured();
         return instancesMetadata.instances();
