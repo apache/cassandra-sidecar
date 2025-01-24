@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.adapters.base;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -96,14 +97,12 @@ public class CassandraMetricsOperations implements MetricsOperations
     {
         Set<CompositeData> streamData = jmxClient.proxy(StreamManagerJmxOperations.class, STREAM_MANAGER_OBJ_NAME)
                                                  .getCurrentStreams();
-
-        List<StreamState> streamStates = streamData.stream().map(StreamState::new).collect(Collectors.toList());
-        return computeStats(streamStates);
+        return computeStats(streamData.stream().map(StreamState::new));
     }
 
-    private StreamsProgressStats computeStats(List<StreamState> streamStates)
+    private StreamsProgressStats computeStats(Stream<StreamState> streamStates)
     {
-        List<SessionInfo> sessions = streamStates.stream().map(s -> s.sessions()).flatMap(Collection::stream).collect(Collectors.toList());
+        Iterator<SessionInfo> sessions = streamStates.map(StreamState::sessions).flatMap(Collection::stream).iterator();
 
         long totalFilesToReceive = 0;
         long totalFilesReceived = 0;
@@ -115,18 +114,19 @@ public class CassandraMetricsOperations implements MetricsOperations
         long totalBytesToSend = 0;
         long totalBytesSent = 0;
 
-        for (SessionInfo s : sessions)
+        while (sessions.hasNext())
         {
-            totalBytesToReceive += s.totalSizeToReceive();
-            totalBytesReceived += s.totalSizeReceived();
-            totalFilesToReceive += s.totalFilesToReceive();
-            totalFilesReceived += s.totalFilesReceived();
-            totalBytesToSend += s.totalSizeToSend();
-            totalBytesSent += s.totalSizeSent();
-            totalFilesToSend += s.totalFilesToSend();
-            totalFilesSent += s.totalFilesSent();
-
+            SessionInfo sessionInfo = sessions.next();
+            totalBytesToReceive += sessionInfo.totalSizeToReceive();
+            totalBytesReceived += sessionInfo.totalSizeReceived();
+            totalFilesToReceive += sessionInfo.totalFilesToReceive();
+            totalFilesReceived += sessionInfo.totalFilesReceived();
+            totalBytesToSend += sessionInfo.totalSizeToSend();
+            totalBytesSent += sessionInfo.totalSizeSent();
+            totalFilesToSend += sessionInfo.totalFilesToSend();
+            totalFilesSent += sessionInfo.totalFilesSent();
         }
+
         LOGGER.debug("Progress Stats: totalBytesToReceive:{} totalBytesReceived:{} totalBytesToSend:{} totalBytesSent:{}",
                      totalBytesToReceive, totalBytesReceived, totalBytesToSend, totalBytesSent);
         return new StreamsProgressStats(totalFilesToReceive, totalFilesReceived, totalBytesToReceive, totalBytesReceived,

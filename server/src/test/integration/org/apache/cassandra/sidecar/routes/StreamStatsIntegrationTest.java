@@ -53,6 +53,7 @@ import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
+import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -81,20 +82,14 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         awaitLatchOrThrow(BBHelperDecommissioningNode.transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
 
         // optimal no. of attempts to poll for stats to capture streaming stats during node decommissioning
-        for (int i = 0; i < 20; i++)
-        {
+        loopAssert(10, 200, () -> {
             streamStats(hasStats, dataReceived);
-            if (dataReceived.get())
-            {
-                break;
-            }
-            Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
-        }
+            assertThat(hasStats).isTrue();
+            assertThat(dataReceived).isTrue();
+        });
         ClusterUtils.awaitGossipStatus(node, node, "LEFT");
         BBHelperDecommissioningNode.transientStateEnd.countDown();
 
-        assertThat(hasStats).isTrue();
-        assertThat(dataReceived).isTrue();
         context.completeNow();
         context.awaitCompletion(2, TimeUnit.MINUTES);
     }
@@ -110,13 +105,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
                          .toCompletionStage()
                          .toCompletableFuture()
                          .get();
-            logger.info("Success Status Response code: {}", resp.statusCode());
-            logger.info("Status Response: {}", resp.bodyAsString());
-            if (resp.statusCode() == HttpResponseStatus.OK.code())
-            {
-                assertStreamStatsResponseOK(resp, hasStats, dataReceived);
-            }
-
+            assertStreamStatsResponseOK(resp, hasStats, dataReceived);
         }
         catch (InterruptedException | ExecutionException e)
         {
@@ -126,6 +115,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
     void assertStreamStatsResponseOK(HttpResponse<Buffer> response, AtomicBoolean hasStats, AtomicBoolean dataReceived)
     {
+        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
         StreamStatsResponse streamStatsResponse = response.bodyAsJson(StreamStatsResponse.class);
         assertThat(streamStatsResponse).isNotNull();
         StreamsProgressStats streamProgress = streamStatsResponse.streamsProgressStats();
@@ -182,8 +172,6 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
                                                       .resolve();
                 new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
                                .method(named("connectAllStreamSessions"))
-//                               .method(named("onInitializationComplete"))
-//                               .method(named("start"))
                                .intercept(MethodDelegation.to(BBHelperDecommissioningNode.class))
                                // Defer class loading until all dependencies are loaded
                                .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)

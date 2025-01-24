@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.adapters.base.data;
 
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.List;
 import java.util.stream.Collectors;
 import javax.management.openmbean.CompositeData;
 
@@ -34,13 +34,13 @@ public class SessionInfo
     public final int sessionIndex;
     public final String connecting;
     /** Immutable collection of receiving summaries */
-    public final Collection<StreamSummary> receivingSummaries;
+    public final List<StreamSummary> receivingSummaries;
     /** Immutable collection of sending summaries*/
-    public final Collection<StreamSummary> sendingSummaries;
+    public final List<StreamSummary> sendingSummaries;
     /** Current session state */
     public final String state;
-    public final Collection<ProgressInfo> receivingFiles;
-    public final Collection<ProgressInfo> sendingFiles;
+    public final List<ProgressInfo> receivingFiles;
+    public final List<ProgressInfo> sendingFiles;
 
     public SessionInfo(CompositeData data)
     {
@@ -118,7 +118,7 @@ public class SessionInfo
         return totalFilesCompleted(sendingFiles);
     }
 
-    private long totalSizes(Collection<StreamSummary> summaries)
+    private long totalSizes(List<StreamSummary> summaries)
     {
         long total = 0;
         for (StreamSummary summary : summaries)
@@ -126,13 +126,13 @@ public class SessionInfo
         return total;
     }
 
-    private long totalFilesCompleted(Collection<ProgressInfo> files)
+    private long totalFilesCompleted(List<ProgressInfo> files)
     {
         Iterable<ProgressInfo> completed = Iterables.filter(files, input -> input.isCompleted());
         return Iterables.size(completed);
     }
 
-    private long totalSizeInProgress(Collection<ProgressInfo> streams)
+    private long totalSizeInProgress(List<ProgressInfo> streams)
     {
         long total = 0;
         for (ProgressInfo stream : streams)
@@ -140,17 +140,17 @@ public class SessionInfo
         return total;
     }
 
-    private Collection<StreamSummary> parseSummaries(CompositeData[] summaries)
+    private List<StreamSummary> parseSummaries(CompositeData[] summaries)
     {
         return Arrays.stream(summaries).map(StreamSummary::new).collect(Collectors.toList());
     }
 
-    private Collection<ProgressInfo> parseFiles(CompositeData[] files)
+    private List<ProgressInfo> parseFiles(CompositeData[] files)
     {
         return Arrays.stream(files).map(ProgressInfo::new).collect(Collectors.toList());
     }
 
-    private long totalFiles(Collection<StreamSummary> summaries)
+    private long totalFiles(List<StreamSummary> summaries)
     {
         long total = 0;
         for (StreamSummary summary : summaries)

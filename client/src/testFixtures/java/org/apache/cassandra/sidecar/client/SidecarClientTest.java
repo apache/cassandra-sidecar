@@ -1627,35 +1627,19 @@ abstract class SidecarClientTest
     @Test
     public void testStreamsStats() throws Exception
     {
-        String streamStatsResponseAsString = "{\"operationMode\":\"NORMAL\"," +
-                                             "\"streamsProgressStats\":{\"totalFilesToReceive\":7," +
-                                             "\"totalFilesReceived\":7,\"totalBytesToReceive\":15088," +
-                                             "\"totalBytesReceived\":15088,\"totalFilesToSend\":2,\"totalFilesSent\":2," +
-                                             "\"totalBytesToSend\":1024,\"totalBytesSent\":1024}}";
-
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(streamStatsResponseAsString);
+        StreamsProgressStats stats = new StreamsProgressStats(7, 7, 15088, 15088, 2, 2, 1024, 1024);
+        StreamStatsResponse mockResp = new StreamStatsResponse("NORMAL", stats);
+        ObjectMapper mapper = new ObjectMapper();
+        String expectedResponse = mapper.writeValueAsString(mockResp);
+        MockResponse response = new MockResponse()
+                                .setResponseCode(OK.code())
+                                .setBody(expectedResponse);
         enqueue(response);
-
         for (MockWebServer server : servers)
         {
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
             StreamStatsResponse result = client.streamsStats(sidecarInstance).get(30, TimeUnit.SECONDS);
-            assertThat(result).isNotNull();
-            assertThat(result.operationMode()).isNotNull().isEqualTo("NORMAL");
-            StreamsProgressStats progressStats = result.streamsProgressStats();
-            assertThat(progressStats).isNotNull();
-            assertThat(progressStats.totalFilesToSend()).isNotNull()
-                                                        .isEqualTo(progressStats.totalFilesSent())
-                                                        .isEqualTo(2);
-            assertThat(progressStats.totalBytesToSend()).isNotNull()
-                                                      .isEqualTo(progressStats.totalBytesSent())
-                                                      .isEqualTo(1024);
-            assertThat(progressStats.totalBytesToReceive()).isNotNull()
-                                                           .isEqualTo(progressStats.totalBytesReceived())
-                                                           .isEqualTo(15088);
-            assertThat(progressStats.totalFilesToReceive()).isNotNull()
-                                                           .isEqualTo(progressStats.totalFilesReceived())
-                                                           .isEqualTo(7);
+            assertThat(mapper.writeValueAsString(result)).isEqualTo(expectedResponse);
             validateResponseServed(server, ApiEndpointsV1.STREAM_STATS_ROUTE, req -> { });
         }
     }

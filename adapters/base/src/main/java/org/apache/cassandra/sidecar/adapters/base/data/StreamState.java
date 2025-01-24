@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.adapters.base.data;
 
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.List;
 import java.util.stream.Collectors;
 import javax.management.openmbean.CompositeData;
 
@@ -28,7 +28,7 @@ import javax.management.openmbean.CompositeData;
  */
 public class StreamState
 {
-    Collection<SessionInfo> sessions;
+    private final List<SessionInfo> sessions;
 
     public StreamState(CompositeData data)
     {
@@ -38,12 +38,12 @@ public class StreamState
     /**
      * @return the session info for the sessions in the stream stats data
      */
-    public Collection<SessionInfo> sessions()
+    public List<SessionInfo> sessions()
     {
         return sessions;
     }
 
-    private Collection<SessionInfo> parseSessions(CompositeData[] sessions)
+    private List<SessionInfo> parseSessions(CompositeData[] sessions)
     {
         return Arrays.stream(sessions).map(SessionInfo::new).collect(Collectors.toList());
     }

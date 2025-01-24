@@ -31,8 +31,6 @@ import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
-import org.apache.cassandra.sidecar.common.server.MetricsOperations;
-import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -58,7 +56,7 @@ public class StreamStatsHandler extends AbstractHandler<Void> implements AccessP
     public Set<Authorization> requiredAuthorizations()
     {
         String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(BasicPermissions.READ_STATS.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.STATS.toAuthorization(resource));
     }
 
     /**
@@ -74,13 +72,10 @@ public class StreamStatsHandler extends AbstractHandler<Void> implements AccessP
 
         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
 
-        StorageOperations storageOperations = delegate.storageOperations();
-        MetricsOperations metricsOperations = delegate.metricsOperations();
-
         executorPools.service()
                      .executeBlocking(() -> {
-                         String mode = storageOperations.operationMode();
-                         StreamsProgressStats stats = metricsOperations.streamsProgressStats();
+                         String mode = delegate.storageOperations().operationMode();
+                         StreamsProgressStats stats = delegate.metricsOperations().streamsProgressStats();
                          return new StreamStatsResponse(mode, stats);
                      })
                      .onSuccess(context::json)

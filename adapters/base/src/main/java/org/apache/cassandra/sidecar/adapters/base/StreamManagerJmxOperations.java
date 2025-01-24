@@ -28,5 +28,10 @@ public interface StreamManagerJmxOperations
 {
 
     String STREAM_MANAGER_OBJ_NAME = "org.apache.cassandra.net:type=StreamManager";
+
+    /**
+     * Returns the current snapshot of the progress of all ongoing streams.
+     * @return the current state of streams as a set of JMX {@link CompositeData} instances.
+     */
     Set<CompositeData> getCurrentStreams();
 }

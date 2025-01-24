@@ -34,8 +34,8 @@ public interface MetricsOperations
     ConnectedClientStatsResponse connectedClientStats(boolean summaryOnly);
 
     /**
-     * Retrieve the stream progress stats metrics from the cluster
-     * @return the requested stream progress stats, in full or summary
+     * Retrieve the stream progress stats from the cluster
+     * @return the requested stream progress stats
      */
     StreamsProgressStats streamsProgressStats();
 }

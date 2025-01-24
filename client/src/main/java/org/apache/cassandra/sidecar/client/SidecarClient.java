@@ -681,7 +681,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
 
     /**
      * Executes the streams stats request using the default retry policy and configured selection policy
-     *
+     * @param instance the instance where the request will be executed
      * @return a completable future of the connected client stats
      */
     public CompletableFuture<StreamStatsResponse> streamsStats(SidecarInstance instance)

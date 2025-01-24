@@ -65,5 +65,5 @@ public class BasicPermissions
     public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ");
 
     // cassandra stats permissions
-    public static final Permission READ_STATS = new DomainAwarePermission("STATS:READ");
+    public static final Permission STATS = new StandardPermission("STATS");
 }
