@@ -57,7 +57,7 @@ class RestoreRangeDatabaseAccessorIntTest extends IntegrationTestBase
         Map<String, RestoreRangeStatus> statusByReplica = new HashMap<>(fetchedRange.statusByReplica());
         assertThat(statusByReplica)
         .hasSize(1)
-        .containsEntry("replica1", RestoreRangeStatus.CREATED);
+        .containsEntry("127.0.0.1:12345", RestoreRangeStatus.CREATED);
 
         // find no range from non-existing bucket
         assertThat(accessor.findAll(jobId, (short) 1))
@@ -65,7 +65,7 @@ class RestoreRangeDatabaseAccessorIntTest extends IntegrationTestBase
         .isEmpty();
 
         // update status
-        statusByReplica.put("replica1", RestoreRangeStatus.STAGED);
+        statusByReplica.put("127.0.0.1:12345", RestoreRangeStatus.STAGED);
         accessor.updateStatus(range.unbuild().replicaStatus(statusByReplica).build());
 
         // read the updated range back
@@ -76,7 +76,7 @@ class RestoreRangeDatabaseAccessorIntTest extends IntegrationTestBase
         statusByReplica = new HashMap<>(fetchedRange.statusByReplica());
         assertThat(statusByReplica)
         .hasSize(1)
-        .containsEntry("replica1", RestoreRangeStatus.STAGED);
+        .containsEntry("127.0.0.1:12345", RestoreRangeStatus.STAGED);
 
         // update status with new replica status
         statusByReplica.put("replica2", RestoreRangeStatus.CREATED);
@@ -97,7 +97,7 @@ class RestoreRangeDatabaseAccessorIntTest extends IntegrationTestBase
         .isEqualTo(range);
         assertThat(fetchedRange.statusByReplica())
         .hasSize(2)
-        .containsEntry("replica1", RestoreRangeStatus.STAGED)
+        .containsEntry("127.0.0.1:12345", RestoreRangeStatus.STAGED)
         .containsEntry("replica2", RestoreRangeStatus.CREATED);
     }
 

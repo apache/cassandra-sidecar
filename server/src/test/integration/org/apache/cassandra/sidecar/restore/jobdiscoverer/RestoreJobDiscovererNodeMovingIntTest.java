@@ -54,6 +54,9 @@ import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.disableRe
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Test the scenario that token move is triggered while restore job is in progress
+ */
 class RestoreJobDiscovererNodeMovingIntTest extends IntegrationTestBase
 {
     private static final int MANAGED_CASSANDRA_NODE_NUM = 2;

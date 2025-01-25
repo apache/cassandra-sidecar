@@ -306,6 +306,8 @@ class RestoreJobManagerTest
                              .bucketId((short) 0)
                              .storageKey("storageKey")
                              .storageBucket("storageBucket")
+                             .startToken(BigInteger.ONE)
+                             .endToken(BigInteger.TEN)
                              .build();
         RestoreJobProgressTracker tracker = manager.progressTrackerUnsafe(job);
         return RestoreRange.builderFromSlice(slice)

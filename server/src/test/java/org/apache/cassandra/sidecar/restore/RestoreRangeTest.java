@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.math.BigInteger;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -149,12 +150,14 @@ public class RestoreRangeTest
     }
 
     @Test
-    void testBuildFromDiscarded()
+    void testDiscardRange()
     {
-        RestoreRange range = createTestRange();
+        RestoreRange range = createTestRange(true);
         assertThat(range.isDiscarded()).isFalse();
-        range = range.unbuild().replicaStatus(Collections.singletonMap("any", DISCARDED)).build();
+        range.discard();
         assertThat(range.isDiscarded()).isTrue();
+        assertThat(range.isCancelled()).isTrue();
+        assertThat(range.statusByReplica()).containsEntry("127.0.0.1:12345", DISCARDED).hasSize(1);
     }
 
     private void assertFailedHandler(RestoreRange range, RestoreRangeHandler handler, String containsErrorMessage)
@@ -214,8 +217,9 @@ public class RestoreRangeTest
             job = job.unbuild().consistencyLevel(ConsistencyLevel.QUORUM).build();
         }
         RestoreProcessor mockProcessor = mock(RestoreProcessor.class);
-        InstanceMetadata mockInstance = mock(InstanceMetadata.class);
+        InstanceMetadata mockInstance = mock(InstanceMetadata.class, RETURNS_DEEP_STUBS);
         when(mockInstance.id()).thenReturn(1);
+        when(mockInstance.delegate().localStorageBroadcastAddress()).thenReturn(new InetSocketAddress("127.0.0.1", 12345));
         RestoreJobProgressTracker tracker = new RestoreJobProgressTracker(job, mockProcessor, mockInstance);
         RestoreSlice slice = RestoreSlice.builder()
                                          .jobId(job.jobId).keyspace("keyspace").table("table")
@@ -226,7 +230,7 @@ public class RestoreRangeTest
 
         return RestoreRange.builderFromSlice(slice)
                            .stageDirectory(rootDir, "uploadId")
-                           .replicaStatus(Collections.singletonMap("replica1", RestoreRangeStatus.CREATED))
+                           .replicaStatus(Collections.singletonMap("127.0.0.1:12345", RestoreRangeStatus.CREATED))
                            .restoreJobProgressTracker(tracker)
                            .ownerInstance(mockInstance)
                            .build();
