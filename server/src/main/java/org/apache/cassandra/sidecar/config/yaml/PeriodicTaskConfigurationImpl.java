@@ -36,17 +36,11 @@ import static org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundC
 public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeriodicTaskConfigurationImpl.class);
-    private static final boolean DEFAULT_ENABLED = false;
 
     @JsonProperty("enabled")
     private final boolean enabled;
     private MillisecondBoundConfiguration initialDelay;
     private MillisecondBoundConfiguration executeInterval;
-
-    public PeriodicTaskConfigurationImpl()
-    {
-        this.enabled = DEFAULT_ENABLED;
-    }
 
     public PeriodicTaskConfigurationImpl(boolean enabled,
                                          MillisecondBoundConfiguration initialDelay,

@@ -46,6 +46,7 @@ import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
@@ -121,6 +122,12 @@ public class RestoreJobTestUtils
                     public void execute(Promise<Void> promise)
                     {
                         // disable task processing
+                    }
+
+                    @Override
+                    public ScheduleDecision scheduleDecision()
+                    {
+                        return ScheduleDecision.SKIP;
                     }
                 };
             }

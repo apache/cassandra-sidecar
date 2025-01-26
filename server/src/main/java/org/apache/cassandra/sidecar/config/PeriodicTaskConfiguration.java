@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.config;
 
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Configuration relevant for {@link org.apache.cassandra.sidecar.tasks.PeriodicTask}s
@@ -33,11 +34,13 @@ public interface PeriodicTaskConfiguration
     /**
      * @return the initial delay for the first execution of this task after being scheduled or rescheduled
      */
+    @NotNull
     MillisecondBoundConfiguration initialDelay();
 
     /**
      * @return how often this task will execute after the previous task has completed the {@link io.vertx.core.Promise}
      * of the execution
      */
+    @NotNull
     MillisecondBoundConfiguration executeInterval();
 }

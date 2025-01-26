@@ -23,7 +23,7 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 
 /**
  * A ServiceConfiguration implementation created for test.
- * It binds to "127.0.0.1" and port 0 to find an available port at test runtime
+ * It binds to "0.0.0.0" and port 0 to find an available port at test runtime
  */
 public class TestServiceConfiguration extends ServiceConfigurationImpl
 {
@@ -35,7 +35,8 @@ public class TestServiceConfiguration extends ServiceConfigurationImpl
     public static Builder builder()
     {
         return ServiceConfigurationImpl.builder()
-                                       .host("127.0.0.1")
+                                       // bind to 0.0.0.0 to allow sidecar client to query all cassandra node, rather than only 127.0.0.1
+                                       .host("0.0.0.0")
                                        .port(0); // let the test find an available port
     }
 }

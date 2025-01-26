@@ -18,15 +18,36 @@
 
 package org.apache.cassandra.sidecar.common.server.exceptions;
 
+import com.datastax.driver.core.PreparedStatement;
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Exception thrown when {@link org.apache.cassandra.sidecar.db.schema.TableSchema} does not exist.
  * For instance, the connected Cassandra no longer has such table
  */
 public class SchemaUnavailableException extends RuntimeException
 {
+    /**
+     * Throws {@link SchemaUnavailableException} if {@link PreparedStatement} is null
+     * @param statement prepared statement to check
+     * @param errorMessage error message to use when the prepared statement is null
+     */
+    public static void requirePrepared(@Nullable PreparedStatement statement, String errorMessage)
+    {
+        if (statement == null)
+        {
+            throw new SchemaUnavailableException(errorMessage);
+        }
+    }
+
     public SchemaUnavailableException(String keyspace, String table)
     {
         super(makeErrorMessage(keyspace, table));
+    }
+
+    private SchemaUnavailableException(String message)
+    {
+        super(message);
     }
 
     private static String makeErrorMessage(String keyspace, String table)
