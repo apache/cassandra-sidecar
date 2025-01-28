@@ -18,10 +18,11 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
+import org.apache.cassandra.sidecar.adapters.base.jmx.ClusterMembershipJmxOperations;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 
-import static org.apache.cassandra.sidecar.adapters.base.ClusterMembershipJmxOperations.FAILURE_DETECTOR_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.jmx.ClusterMembershipJmxOperations.FAILURE_DETECTOR_OBJ_NAME;
 
 /**
  * An implementation of the {@link ClusterMembershipOperations} that interfaces with Cassandra 4.0 and later

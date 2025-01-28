@@ -19,7 +19,9 @@
 package org.apache.cassandra.sidecar.common.server;
 
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
+import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 
 /**
  * An interface that defines interactions with the metrics system in Cassandra.
@@ -27,7 +29,7 @@ import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 public interface MetricsOperations
 {
     /**
-     * Retrieve the connected client stats metrics from the cluster
+     * Retrieve the connected client stats from the cluster
      * @param summaryOnly boolean parameter to list connection summary only
      * @return the requested client stats, in full or summary
      */
@@ -38,4 +40,11 @@ public interface MetricsOperations
      * @return the requested stream progress stats
      */
     StreamsProgressStats streamsProgressStats();
+    /**
+     * Retrieve the table stats from the cluster
+     * @param tableName qualified table name
+     * @return the requested table stats
+     */
+    TableStatsResponse tableStats(QualifiedTableName tableName);
+
 }

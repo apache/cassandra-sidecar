@@ -31,6 +31,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeState;
 import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeStatus;
+import org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.GossipDependentStorageJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
@@ -38,8 +41,8 @@ import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.cassandra.sidecar.adapters.base.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
-import static org.apache.cassandra.sidecar.adapters.base.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
 
 /**
  * Aggregates the ring view of cluster

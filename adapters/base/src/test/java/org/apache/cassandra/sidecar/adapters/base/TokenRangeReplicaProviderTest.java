@@ -31,6 +31,9 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.adapters.base.jmx.ClusterMembershipJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;

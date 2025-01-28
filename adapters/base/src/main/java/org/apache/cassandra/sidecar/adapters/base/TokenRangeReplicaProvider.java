@@ -35,6 +35,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeState;
+import org.apache.cassandra.sidecar.adapters.base.jmx.ClusterMembershipJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.GossipDependentStorageJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaInfo;
@@ -49,9 +53,9 @@ import org.apache.cassandra.sidecar.common.server.utils.GossipInfoParser;
 import org.jetbrains.annotations.NotNull;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.cassandra.sidecar.adapters.base.ClusterMembershipJmxOperations.FAILURE_DETECTOR_OBJ_NAME;
-import static org.apache.cassandra.sidecar.adapters.base.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
-import static org.apache.cassandra.sidecar.adapters.base.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.jmx.ClusterMembershipJmxOperations.FAILURE_DETECTOR_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
 import static org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRangeReplicas.generateTokenRangeReplicas;
 
 /**

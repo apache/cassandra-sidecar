@@ -37,15 +37,19 @@ import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStats;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsDatabaseAccessor;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsSummary;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
+import org.apache.cassandra.sidecar.adapters.base.jmx.MetricsJmxOperations;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
+import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.adapters.base.StreamManagerJmxOperations.STREAM_MANAGER_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.jmx.MetricsJmxOperations.METRICS_OBJ_TYPE_KEYSPACE_TABLE_FORMAT;
 
 /**
  * Default implementation that pulls methods from the Cassandra Metrics Proxy
@@ -54,7 +58,6 @@ public class CassandraMetricsOperations implements MetricsOperations
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraMetricsOperations.class);
     private final ConnectedClientStatsDatabaseAccessor dbAccessor;
-
     protected final JmxClient jmxClient;
 
 
@@ -67,6 +70,87 @@ public class CassandraMetricsOperations implements MetricsOperations
         this.dbAccessor = new ConnectedClientStatsDatabaseAccessor(session, new ConnectedClientsSchema());
     }
 
+    /**
+     * Represents the types of metrics that are queried
+     */
+    public enum MetricType
+    {
+        GAUGE,
+        COUNTER
+    }
+
+    /**
+     * Represents the metrics related to table stats that are supported by the Sidecar
+     */
+    public enum TableStatsMetrics
+    {
+        SSTABLE_COUNT("LiveSSTableCount", MetricType.GAUGE),
+        DISKSPACE_USED("LiveDiskSpaceUsed", MetricType.COUNTER),
+        TOTAL_DISKSPACE_USED("TotalDiskSpaceUsed", MetricType.COUNTER),
+        SNAPSHOTS_SIZE("SnapshotsSize", MetricType.GAUGE);
+
+        private final String metricName;
+        private final MetricType type;
+
+        TableStatsMetrics(String metricName, MetricType type)
+        {
+            this.metricName = metricName;
+            this.type = type;
+        }
+
+        String metricName()
+        {
+            return metricName;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public TableStatsResponse tableStats(QualifiedTableName tableName)
+    {
+        long sstableCount = queryMetric(tableName, TableStatsMetrics.SSTABLE_COUNT);
+        long diskSpaceUsed = queryMetric(tableName, TableStatsMetrics.DISKSPACE_USED);
+        long totalDiskSpaceUsed = queryMetric(tableName, TableStatsMetrics.TOTAL_DISKSPACE_USED);
+        long snapshotsSize = queryMetric(tableName, TableStatsMetrics.SNAPSHOTS_SIZE);
+
+        return new TableStatsResponse(tableName.keyspace(), tableName.tableName(), sstableCount, diskSpaceUsed, totalDiskSpaceUsed, snapshotsSize);
+    }
+
+    private long queryMetric(QualifiedTableName tableName, TableStatsMetrics metric)
+    {
+        String metricObjectType = String.format(METRICS_OBJ_TYPE_KEYSPACE_TABLE_FORMAT, tableName.keyspace(), tableName.tableName(), metric.metricName());
+        MetricsJmxOperations queryResult = jmxClient.proxy(MetricsJmxOperations.class, metricObjectType);
+        return extractValue(metric, queryResult);
+    }
+
+    private long extractValue(TableStatsMetrics metric, MetricsJmxOperations queryResult)
+    {
+        switch(metric.type)
+        {
+            case GAUGE: return getValueAsLong(queryResult.getValue());
+            case COUNTER: return queryResult.getCount();
+            default:
+                throw new IllegalArgumentException("Unknown MetricType: " + metric.type);
+        }
+    }
+
+    private long getValueAsLong(Object value)
+    {
+        if (value instanceof Integer)
+        {
+            return ((Integer) value).longValue();
+        }
+        else if (value instanceof Long)
+        {
+            return (Long) value;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Unsupported value type: " + value.getClass());
+        }
+    }
     /**
      * {@inheritDoc}
      */

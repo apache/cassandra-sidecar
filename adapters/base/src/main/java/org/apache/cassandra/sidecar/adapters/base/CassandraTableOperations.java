@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.cassandra.sidecar.adapters.base.jmx.TableJmxOperations;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.jetbrains.annotations.NotNull;
