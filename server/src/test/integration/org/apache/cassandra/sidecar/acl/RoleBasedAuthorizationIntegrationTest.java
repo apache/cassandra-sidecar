@@ -81,6 +81,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingAtDataLevel(context);
         testGrantingWithWildcardSubparts(context);
         testEndpointRequiringMultipleActions(context);
+//        testFeatureAuthorization(context);
 
         assertThat(testCompleteLatch.await(4, TimeUnit.MINUTES)).isTrue();
         context.completeNow();
@@ -241,6 +242,11 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
             testCompleteLatch.countDown();
         })
         .onFailure(context::failNow);
+    }
+
+    void testFeatureAuthorization(VertxTestContext context)
+    {
+
     }
 
     private void prepareForTest(CassandraTestContext cassandraContext) throws Exception

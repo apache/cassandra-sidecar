@@ -59,7 +59,7 @@ public class BasicPermissions
     public static final Permission DECOMMISSION_NODE = new DomainAwarePermission("NODE:DECOMMISSION");
 
     // cassandra cluster related permissions
-    public static final Permission READ_SCHEMA = new DomainAwarePermission("SCHEMA:READ");
+    public static final Permission READ_SCHEMA = new DomainAwarePermission("STATS:READ");
     public static final Permission READ_GOSSIP = new DomainAwarePermission("GOSSIP:READ");
     public static final Permission READ_RING = new DomainAwarePermission("RING:READ");
     public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ");

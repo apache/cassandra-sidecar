@@ -1,0 +1,24 @@
+
+
+
+// grant bulk read on specific keyspace university and specific table student
+insert into sidecar_internal.role_permissions_v1 (role, resource, permissions) values ('user1', 'keyspace=university,table=student', 'BULK_READ_DIRECT')
+// grant bulk write on all tables under university keyspace
+insert into sidecar_internal.role_permissions_v1 (role, resource, permissions) values ('user1', 'keyspace=university,table=*', 'BULK_WRITE_DIRECT')
+
+vs
+
+// grant bulk read on specific keyspace university and specific table student
+insert into sidecar_internal.role_permissions_v1 (role, resource, permissions) values ('user1', 'data/university/student', 'BULK_READ_DIRECT')
+// grant bulk write on all tables under university keyspace
+insert into sidecar_internal.role_permissions_v1 (role, resource, permissions) values ('user1', 'data/university/*', 'BULK_WRITE_DIRECT')
+
+
+in both approaches we dont allow granting bulk read permissions for all keyspaces. Looks like that is not desriable too as per this radar
+rdar://140115482 ([RELAX GRANTS] [Cassandra Documentation] Call out admin needs to explicitly grant users to new keyspaces)
+
+
+
+insert into sidecar_internal.role_permissions_v1 (role, resource, permissions) values ('user1', 'data/university/student', 'ANALYTICS:READ_DIRECT,WRITE_DIRECT')
+insert into sidecar_internal.role_permissions_v1 (role, resource, permissions) values ('user1', 'data/university/student', 'ANALYTICS:WRITE_DIRECT')
+insert into sidecar_internal.role_permissions_v1 (role, resource, permissions) values ('user1', 'data/university/student', 'SNAPSHOT:CREATE')

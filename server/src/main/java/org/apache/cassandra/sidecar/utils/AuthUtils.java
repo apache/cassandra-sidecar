@@ -27,6 +27,7 @@ import java.util.Objects;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
 import org.apache.cassandra.sidecar.acl.authorization.DomainAwarePermission;
+import org.apache.cassandra.sidecar.acl.authorization.FeaturePermission;
 import org.apache.cassandra.sidecar.acl.authorization.Permission;
 import org.apache.cassandra.sidecar.acl.authorization.StandardPermission;
 
@@ -78,6 +79,10 @@ public class AuthUtils
     public static Permission permissionFromName(String name)
     {
         Objects.requireNonNull(name, "name cannot be null");
+        if (FeaturePermission.contains(name))
+        {
+            return FeaturePermission.fromName(name);
+        }
         boolean isDomainAware = name.contains(WILDCARD_PART_DIVIDER_TOKEN);
         return isDomainAware ? new DomainAwarePermission(name) : new StandardPermission(name);
     }
