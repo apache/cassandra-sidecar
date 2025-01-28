@@ -114,15 +114,15 @@ public class RestoreSlicesSchema extends TableSchema implements ExecuteOnCluster
         }
 
         // ALLOW FILTERING within the same partition should have minimum impact on read performance.
-        // To locate all qualified (intersecting) ranges, for Range [T1, T2],
-        // the conditions is `start_token <= T2 AND end_token >= T1`
+        // To locate all qualified (intersecting) ranges, for the bind input range (T1, T2] and
+        // the range (start_token, end_token] to intersect, `start_token < T2 AND end_token > T1`
         static String findAllByTokenRange(SchemaKeyspaceConfiguration config)
         {
             return withTable("SELECT job_id, bucket_id, slice_id, bucket, key, checksum, " +
                              "start_token, end_token, compressed_size, uncompressed_size " +
                              "FROM %s.%s " +
                              "WHERE job_id = ? AND bucket_id = ? AND " +
-                             "end_token >= ? AND start_token <= ? ALLOW FILTERING", config);
+                             "end_token > ? AND start_token < ? ALLOW FILTERING", config);
         }
 
         private static String withTable(String format, SchemaKeyspaceConfiguration config)

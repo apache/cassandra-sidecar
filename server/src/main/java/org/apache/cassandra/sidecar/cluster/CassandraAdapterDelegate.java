@@ -225,7 +225,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
                 notifyJmxConnection();
             }
-            LOGGER.debug("Cassandra version {}", newNodeSettings.releaseVersion());
+            LOGGER.trace("Cassandra version {}", newNodeSettings.releaseVersion());
         }
         catch (RuntimeException e)
         {

@@ -198,19 +198,18 @@ public class RestoreJobConsistencyLevelChecker
             {
                 RestoreRange candidate = sortedRanges.get(k);
                 // candidate.start >= current.end: all restore ranges that can possibly overlap with current have checked
-                if (candidate.startToken().compareTo(current.endToken()) >= 0)
+                if (candidate.tokenRange().largerThan(current.tokenRange()))
                 {
                     break; // move forward to the next range
                 }
                 // candidate is fully enclosed by current: copy the status from current to candidate
-                else if (candidate.endToken().compareTo(current.endToken()) <= 0)
+                else if (current.tokenRange().encloses(candidate.tokenRange()))
                 {
                     candidate = candidate.unbuild().addReplicaStatus(current.statusByReplica()).build();
                     sortedRanges.set(k, candidate);
                 }
                 // current is fully enclosed by candidate: copy the status from candidate to current
-                else if (current.endToken().compareTo(candidate.endToken()) <= 0 &&
-                         current.startToken().compareTo(candidate.startToken()) >= 0)
+                else if (candidate.tokenRange().encloses(candidate.tokenRange()))
                 {
                     current = current.unbuild().addReplicaStatus(candidate.statusByReplica()).build();
                     sortedRanges.set(i, current);

@@ -50,8 +50,8 @@ public class CreateSliceRequestPayload
     private final String bucket;
     private final String key;
     private final String checksum;
-    private final BigInteger startToken;
-    private final BigInteger endToken;
+    private final BigInteger firstToken; // inclusive
+    private final BigInteger endToken; // inclusive
     // -- Optional fields - using Objects
     private final Long uncompressedSize;
     private final Long compressedSize;
@@ -63,7 +63,7 @@ public class CreateSliceRequestPayload
                                      @JsonProperty(SLICE_STORAGE_BUCKET) String bucket,
                                      @JsonProperty(SLICE_STORAGE_KEY) String key,
                                      @JsonProperty(SLICE_CHECKSUM) String checksum,
-                                     @JsonProperty(SLICE_START_TOKEN) BigInteger startToken,
+                                     @JsonProperty(SLICE_START_TOKEN) BigInteger firstToken,
                                      @JsonProperty(SLICE_END_TOKEN) BigInteger endToken,
                                      @JsonProperty(SLICE_UNCOMPRESSED_SIZE) Long uncompressedSize,
                                      @JsonProperty(SLICE_COMPRESSED_SIZE) Long compressedSize)
@@ -72,7 +72,7 @@ public class CreateSliceRequestPayload
                                     && checksum != null
                                     && bucket != null
                                     && key != null
-                                    && startToken != null
+                                    && firstToken != null
                                     && endToken != null,
                                     "Invalid create slice request payload");
         Preconditions.checkArgument(bucketId < Short.MAX_VALUE && bucketId >= 0,
@@ -83,7 +83,7 @@ public class CreateSliceRequestPayload
         this.bucket = bucket;
         this.key = key;
         this.checksum = checksum;
-        this.startToken = startToken;
+        this.firstToken = firstToken;
         this.endToken = endToken;
         this.uncompressedSize = uncompressedSize;
         this.compressedSize = compressedSize;
@@ -131,16 +131,16 @@ public class CreateSliceRequestPayload
     }
 
     /**
-     * @return start token of slice
+     * @return first token of slice; inclusive
      */
     @JsonProperty(SLICE_START_TOKEN)
-    public BigInteger startToken()
+    public BigInteger firstToken()
     {
-        return startToken;
+        return firstToken;
     }
 
     /**
-     * @return end token of slice
+     * @return end token of slice; inclusive
      */
     @JsonProperty(SLICE_END_TOKEN)
     public BigInteger endToken()
@@ -201,7 +201,7 @@ public class CreateSliceRequestPayload
                SLICE_STORAGE_BUCKET + "='" + bucket + "', " +
                SLICE_STORAGE_KEY + "='" + key + "', " +
                SLICE_CHECKSUM + "='" + checksum + "', " +
-               SLICE_START_TOKEN + "='" + startToken + "', " +
+               SLICE_START_TOKEN + "='" + firstToken + "', " +
                SLICE_END_TOKEN + "='" + endToken + "', " +
                SLICE_COMPRESSED_SIZE + "='" + compressedSize + "', " +
                SLICE_UNCOMPRESSED_SIZE + "='" + uncompressedSize + "'}";

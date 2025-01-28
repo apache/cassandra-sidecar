@@ -18,20 +18,52 @@
 
 package org.apache.cassandra.sidecar.restore.jobdiscoverer;
 
+import java.math.BigInteger;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+
 import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
+import org.apache.cassandra.distributed.shared.ClusterUtils;
+import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
+import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
+import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
+import org.apache.cassandra.sidecar.common.server.utils.StringUtils;
+import org.apache.cassandra.sidecar.db.RestoreRange;
+import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
+import org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer;
+import org.apache.cassandra.sidecar.restore.RestoreJobTestUtils;
+import org.apache.cassandra.sidecar.restore.RingTopologyRefresher;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 
+import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.assertRestoreRange;
+import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.createJob;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.disableRestoreProcessor;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the scenario that node has moved token while restore job is in progress
  */
 class RestoreJobDiscovererNodeMovedIntTest extends IntegrationTestBase
 {
+    private static final int NODE_1 = 1;
+    private static final int NODE_2 = 2;
+
     @Override
     protected void beforeSetup()
     {
@@ -50,12 +82,86 @@ class RestoreJobDiscovererNodeMovedIntTest extends IntegrationTestBase
         TokenSupplier tokenSupplier = TestTokenSupplier.staticTokens(0, 1000L, 2000L);
         UpgradeableCluster cluster = startCluster(tokenSupplier, cassandraTestContext);
         long newToken = 1500L;
-        test(cluster, newToken);
+        RestoreJobTestUtils.RestoreJobClient testClient = RestoreJobTestUtils.client(client, "127.0.0.1", server.actualPort());
+        test(testClient, cluster, newToken);
     }
 
-    private void test(UpgradeableCluster cluster, long moveTargetToken)
+    private void test(RestoreJobTestUtils.RestoreJobClient testClient, UpgradeableCluster cluster, long moveTargetToken)
     {
+        // prepare schema
+        waitForSchemaReady(30, TimeUnit.SECONDS);
+        createTestKeyspace(ImmutableMap.of("datacenter1", 2));
+        QualifiedTableName tableName = createTestTable("CREATE TABLE %s (id text PRIMARY KEY, name text);");
 
+        // create job
+        UUID jobId = createJob(testClient, tableName);
+
+        // create slice
+        short bucketId = 0;
+        CreateSliceRequestPayload slicePayload = new CreateSliceRequestPayload("sliceId", bucketId, "bucket", "key",
+                                                                               "checksum", BigInteger.valueOf(1001L), BigInteger.valueOf(1500L),
+                                                                               100L, 100L);
+        testClient.createRestoreSlice(tableName, jobId, slicePayload);
+
+        // STAGE_READY is required in order to discover slices; update the restore job status
+        testClient.updateRestoreJob(tableName, jobId, UpdateRestoreJobRequestPayload.builder().withStatus(RestoreJobStatus.STAGE_READY).build());
+
+        // first discovery run
+        RestoreJobDiscoverer restoreJobDiscoverer = injector.getInstance(RestoreJobDiscoverer.class);
+        restoreJobDiscoverer.tryExecuteDiscovery();
+
+        RingTopologyRefresher ringTopologyRefresher = injector.getInstance(RingTopologyRefresher.class);
+        Map<Integer, Set<TokenRange>> localTokenRanges = ringTopologyRefresher.localTokenRanges(tableName.keyspace(), true);
+        assertThat(localTokenRanges)
+        .hasSize(2)
+        .containsEntry(NODE_1, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
+                                               new TokenRange(1000, Long.MAX_VALUE)))
+        .containsEntry(NODE_2, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 1000),
+                                               new TokenRange(2000, Long.MAX_VALUE)));
+
+        // assert that no restore ranges are create
+        RestoreRangeDatabaseAccessor rangeDatabaseAccessor = injector.getInstance(RestoreRangeDatabaseAccessor.class);
+        List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
+//        assertThat(ranges)
+//        .describedAs("node 1 and only node 1 should create the restore range")
+//        .hasSize(1);
+//        assertThat(ranges.get(0).tokenRange()).isEqualTo(new TokenRange(1001, 1600));
+
+        // start move in the background
+        IUpgradeableInstance movingNode = cluster.get(2);
+        movingNode.nodetoolResult("move", "--", Long.toString(moveTargetToken))
+                  .asserts()
+                  .success();
+        // Wait until nodes have reached expected state
+        ClusterUtils.awaitRingState(cluster.get(1), movingNode, "Normal");
+        ClusterUtils.awaitRingState(cluster.get(3), movingNode, "Normal");
+
+        // Fetch the local token ranges again;
+        // RingTopologyRefresher should detect the topology change and notify RestoreJobDiscover via #onRingTopologyChanged
+        localTokenRanges = ringTopologyRefresher.localTokenRanges(tableName.keyspace(), true);
+        assertThat(localTokenRanges)
+        .hasSize(2)
+        .containsEntry(NODE_1, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
+                                               new TokenRange(1500, Long.MAX_VALUE)))
+        .containsEntry(NODE_2, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 1500),
+                                               new TokenRange(2000, Long.MAX_VALUE)));
+
+        // Using loopAssert because #onRingTopologyChanged runs in another thread. It takes some time to reflect the RestoreRange update
+        loopAssert(50, 500, () -> {
+            List<RestoreRange> restoreRanges = rangeDatabaseAccessor.findAll(jobId, bucketId);
+            assertThat(restoreRanges)
+            .describedAs("A restore range should be created. After the topology change, now the slice is partially owned by the local node")
+            .hasSize(3);
+            Collections.sort(restoreRanges, RestoreRange.TOKEN_BASED_NATURAL_ORDER);
+            assertRestoreRange(restoreRanges.get(0), 1001L, 1500L); // node 1
+            assertRestoreRange(restoreRanges.get(1), 1001L, 1600L, range -> {
+                assertThat(range.statusByReplica())
+                .describedAs("The original restore range from node 1 should be discarded, due to losing the range ownership")
+                .hasSize(1)
+                .containsEntry(StringUtils.cassandraFormattedHostAndPort(cluster.get(1).broadcastAddress()), RestoreRangeStatus.DISCARDED);
+            });
+            assertRestoreRange(restoreRanges.get(2), 1500L, 1600L); // node 2
+        });
     }
 
     private static UpgradeableCluster startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext)

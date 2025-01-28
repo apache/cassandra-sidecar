@@ -72,8 +72,8 @@ public class RestoreRangesSchema extends TableSchema implements ExecuteOnCluster
         return String.format("CREATE TABLE IF NOT EXISTS %s.%s (" +
                              "  job_id timeuuid," +
                              "  bucket_id smallint," + // same bucket_id as in the slice row
-                             "  start_token varint," +
-                             "  end_token varint," +
+                             "  start_token varint," + // exclusive
+                             "  end_token varint," + // inclusive
                              "  slice_id text," +
                              "  slice_bucket text," +
                              "  slice_key text," +

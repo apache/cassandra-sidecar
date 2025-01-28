@@ -259,6 +259,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
             return;
         }
 
+        // TODO YIFAN: lost and gained ranges calculation cannot use the merged
         // Populate the lostRanges and the gainedRanges
         // For each lost range, we want to cancel the RestoreRange that covers it
         // For each gained range, we want to create the RestoreRange

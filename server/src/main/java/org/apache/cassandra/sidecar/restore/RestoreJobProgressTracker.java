@@ -69,13 +69,13 @@ public class RestoreJobProgressTracker
         if (failureRef.get() != null)
             throw failureRef.get();
 
-        Status status = ranges.putIfAbsent(range, Status.PENDING);
+        RestoreRange rangeWithTracker = range.unbuild()
+                                             .restoreJobProgressTracker(this)
+                                             .build();
 
+        Status status = ranges.putIfAbsent(rangeWithTracker, Status.PENDING);
         if (status == null)
         {
-            RestoreRange rangeWithTracker = range.unbuild()
-                                                 .restoreJobProgressTracker(this)
-                                                 .build();
             processor.submit(rangeWithTracker);
             return Status.CREATED;
         }

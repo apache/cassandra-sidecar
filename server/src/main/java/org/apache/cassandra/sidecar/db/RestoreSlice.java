@@ -37,8 +37,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class RestoreSlice
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RestoreSlice.class);
-
     private final UUID jobId;
     private final String keyspace;
     private final String table;
@@ -47,8 +45,8 @@ public class RestoreSlice
     private final String bucket;
     private final String key;
     private final String checksum; // etag
-    private final BigInteger startToken;
-    private final BigInteger endToken;
+    private final BigInteger startToken; // exclusive
+    private final BigInteger endToken; // inclusive
     private final long creationTimeNanos;
     private final long compressedSize;
     private final long uncompressedSize;
@@ -248,8 +246,8 @@ public class RestoreSlice
         private String bucket;
         private String key;
         private String checksum; // etag
-        private BigInteger startToken;
-        private BigInteger endToken;
+        private BigInteger startToken; // exclusive
+        private BigInteger endToken; // inclusive
         private long compressedSize;
         private long uncompressedSize;
 
@@ -353,7 +351,7 @@ public class RestoreSlice
                 b.bucket = payload.bucket();
                 b.key = payload.key();
                 b.checksum = payload.checksum();
-                b.startToken = payload.startToken();
+                b.startToken = payload.firstToken().subtract(BigInteger.ONE);
                 b.endToken = payload.endToken();
                 b.compressedSize = payload.compressedSizeOrZero();
                 b.uncompressedSize = payload.uncompressedSizeOrZero();

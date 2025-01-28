@@ -52,7 +52,7 @@ class CreateSliceRequestPayloadTest
         assertThat(req.checksum()).isEqualTo("12321abc");
         assertThat(req.bucket()).isEqualTo("myBucket");
         assertThat(req.key()).isEqualTo("/path/to/object");
-        assertThat(req.startToken()).isEqualTo(BigInteger.ONE);
+        assertThat(req.firstToken()).isEqualTo(BigInteger.ONE);
         assertThat(req.endToken()).isEqualTo(BigInteger.TEN);
         assertThat(req.compressedSize())
         .describedAs("size is not present in the json")
@@ -85,7 +85,7 @@ class CreateSliceRequestPayloadTest
         assertThat(test.bucket()).isEqualTo("bucket");
         assertThat(test.key()).isEqualTo("key");
         assertThat(test.checksum()).isEqualTo("checksum");
-        assertThat(test.startToken()).isEqualTo(BigInteger.ONE);
+        assertThat(test.firstToken()).isEqualTo(BigInteger.ONE);
         assertThat(test.endToken()).isEqualTo(BigInteger.TEN);
         assertThat(test.uncompressedSize()).isEqualTo(234L);
         assertThat(test.compressedSize()).isEqualTo(123L);

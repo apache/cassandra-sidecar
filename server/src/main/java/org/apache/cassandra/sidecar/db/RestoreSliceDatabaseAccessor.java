@@ -80,13 +80,10 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlices
     public List<RestoreSlice> selectByJobByBucketByTokenRange(RestoreJob restoreJob, short bucketId, TokenRange range)
     {
         sidecarSchema.ensureInitialized();
-        Token firstToken = range.firstToken();
-        Preconditions.checkArgument(firstToken != null, "range cannot be empty");
-
         BoundStatement statement = tableSchema.findAllByTokenRange()
                                               .bind(restoreJob.jobId,
                                                     bucketId,
-                                                    firstToken.toBigInteger(),
+                                                    range.start().toBigInteger(),
                                                     range.end().toBigInteger());
         ResultSet result = execute(statement);
         List<RestoreSlice> slices = new ArrayList<>();
