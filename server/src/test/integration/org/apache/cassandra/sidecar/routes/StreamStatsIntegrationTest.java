@@ -53,7 +53,7 @@ import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
-import static org.apache.cassandra.sidecar.AssertionUtils.loopAssert;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
