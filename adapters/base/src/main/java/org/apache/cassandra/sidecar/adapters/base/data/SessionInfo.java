@@ -128,8 +128,9 @@ public class SessionInfo
 
     private long totalFilesCompleted(List<ProgressInfo> files)
     {
-        Iterable<ProgressInfo> completed = Iterables.filter(files, input -> input.isCompleted());
-        return Iterables.size(completed);
+                return files.stream()
+                    .filter(ProgressInfo::isCompleted)
+                    .count();
     }
 
     private long totalSizeInProgress(List<ProgressInfo> streams)

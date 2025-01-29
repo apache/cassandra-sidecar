@@ -52,7 +52,7 @@ import static org.apache.cassandra.sidecar.adapters.base.StreamManagerJmxOperati
  */
 public class CassandraMetricsOperations implements MetricsOperations
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraStorageOperations.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraMetricsOperations.class);
     private final ConnectedClientStatsDatabaseAccessor dbAccessor;
 
     protected final JmxClient jmxClient;
