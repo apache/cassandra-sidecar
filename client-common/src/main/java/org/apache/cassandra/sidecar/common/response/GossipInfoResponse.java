@@ -188,7 +188,7 @@ public class GossipInfoResponse extends HashMap<String, GossipInfoResponse.Gossi
 
         @Nullable
         public String hostId()
-        {INDEX_STATUS;
+        {
             return read(this, HOST_ID);
         }
 
