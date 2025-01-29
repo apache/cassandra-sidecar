@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.adapters.base.data;
 
-import java.util.NoSuchElementException;
 import javax.management.openmbean.CompositeData;
 
 import static org.apache.cassandra.sidecar.adapters.base.data.CompositeDataUtil.extractValue;
@@ -37,12 +36,12 @@ public class ProgressInfo
 
     public ProgressInfo(CompositeData data)
     {
-        this.peer = extractValue(data,"peer");
-        this.sessionIndex = extractValue(data,"sessionIndex");
-        this.fileName = extractValue(data,"fileName");
-        this.direction = extractValue(data,"direction");
-        this.currentBytes = extractValue(data,"currentBytes");
-        this.totalBytes = extractValue(data,"totalBytes");
+        this.peer = extractValue(data, "peer");
+        this.sessionIndex = extractValue(data, "sessionIndex");
+        this.fileName = extractValue(data, "fileName");
+        this.direction = extractValue(data, "direction");
+        this.currentBytes = extractValue(data, "currentBytes");
+        this.totalBytes = extractValue(data, "totalBytes");
     }
 
     /**
