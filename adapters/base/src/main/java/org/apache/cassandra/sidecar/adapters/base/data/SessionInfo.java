@@ -25,6 +25,8 @@ import javax.management.openmbean.CompositeData;
 
 import com.google.common.collect.Iterables;
 
+import static org.apache.cassandra.sidecar.adapters.base.data.CompositeDataUtil.extractValue;
+
 /**
  * Representation of session info data
  */
@@ -44,14 +46,14 @@ public class SessionInfo
 
     public SessionInfo(CompositeData data)
     {
-        this.peer = (String) data.get("peer");
-        this.sessionIndex = (int) data.get("sessionIndex");
-        this.connecting = (String) data.get("connecting");
-        this.receivingSummaries = parseSummaries((CompositeData[]) data.get("receivingSummaries"));
-        this.sendingSummaries = parseSummaries((CompositeData[]) data.get("sendingSummaries"));
+        this.peer = extractValue(data,"peer");
+        this.sessionIndex = extractValue(data,"sessionIndex");
+        this.connecting = extractValue(data,"connecting");
+        this.receivingSummaries = parseSummaries(extractValue(data,"receivingSummaries"));
+        this.sendingSummaries = parseSummaries(extractValue(data,"sendingSummaries"));
         this.state = (String) data.get("state");
-        this.receivingFiles = parseFiles((CompositeData[]) data.get("receivingFiles"));
-        this.sendingFiles = parseFiles((CompositeData[]) data.get("sendingFiles"));
+        this.receivingFiles = parseFiles(extractValue(data,"receivingFiles"));
+        this.sendingFiles = parseFiles(extractValue(data,"sendingFiles"));
     }
 
     /**

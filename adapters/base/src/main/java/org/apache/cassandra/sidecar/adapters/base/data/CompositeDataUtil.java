@@ -21,35 +21,33 @@ package org.apache.cassandra.sidecar.adapters.base.data;
 import java.util.NoSuchElementException;
 import javax.management.openmbean.CompositeData;
 
-import static org.apache.cassandra.sidecar.adapters.base.data.CompositeDataUtil.extractValue;
-
 /**
- * Representation of the stream progress info
+ * Utility class for operations with {@link CompositeData}
  */
-public class ProgressInfo
+public class CompositeDataUtil
 {
-    public final String peer;
-    public final int sessionIndex;
-    public final String fileName;
-    public final String direction;
-    public final long currentBytes;
-    public final long totalBytes;
-
-    public ProgressInfo(CompositeData data)
-    {
-        this.peer = extractValue(data,"peer");
-        this.sessionIndex = extractValue(data,"sessionIndex");
-        this.fileName = extractValue(data,"fileName");
-        this.direction = extractValue(data,"direction");
-        this.currentBytes = extractValue(data,"currentBytes");
-        this.totalBytes = extractValue(data,"totalBytes");
-    }
 
     /**
-     * @return true if transfer is completed
+     * Generic helper to extract attribute of a specific type from the CompositeData type.
+     * @param data data being parsed
+     * @param key attribute being extracted
+     * @return attribute value
+     * @param <T> return type
      */
-    public boolean isCompleted()
+    public static <T> T extractValue(CompositeData data, String key)
     {
-        return currentBytes >= totalBytes;
+        Object value = data.get(key);
+        if (value == null)
+        {
+            throw new NoSuchElementException("No value is present for key: " + key);
+        }
+        try
+        {
+            return (T) value;
+        }
+        catch (ClassCastException cce)
+        {
+            throw new RuntimeException("Value type mismatched of key: " + key, cce);
+        }
     }
 }

@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
@@ -26,7 +25,6 @@ import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 /**
  * Class response for the StreamsStats API
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class StreamStatsRequest extends JsonRequest<StreamStatsResponse>
 {
     /**
