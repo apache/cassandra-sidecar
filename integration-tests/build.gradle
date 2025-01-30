@@ -20,20 +20,10 @@ plugins {
     id('idea')
     // A Java library
     id('java-library')
-    // which is published
-    id('maven-publish')
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-            groupId project.group
-            artifactId "${archivesBaseName}"
-            version System.getenv("CODE_VERSION") ?: "${version}"
-        }
-    }
-}
+group 'org.apache.cassandra.sidecar'
+version project.version
 
 sourceSets {
     integrationTest {
