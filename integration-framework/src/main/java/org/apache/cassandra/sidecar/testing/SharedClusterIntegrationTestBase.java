@@ -712,6 +712,7 @@ public abstract class SharedClusterIntegrationTestBase
             }
             int port = tryGetIntConfig(config, "native_transport_port", 9042);
             String[] dataDirectories = (String[]) config.get("data_file_directories");
+            String storageDir = Paths.get(dataDirectories[0]).getParent().toAbsolutePath().toString();
             String stagingDir = stagingDir(dataDirectories);
 
             JmxClient jmxClient = new JmxClientProxy(wrapper,
@@ -736,6 +737,7 @@ public abstract class SharedClusterIntegrationTestBase
                                        .host(hostName)
                                        .port(port)
                                        .dataDirs(Arrays.asList(dataDirectories))
+                                       .storageDir(storageDir)
                                        .stagingDir(stagingDir)
                                        .delegate(delegate)
                                        .metricRegistry(metricRegistry)
