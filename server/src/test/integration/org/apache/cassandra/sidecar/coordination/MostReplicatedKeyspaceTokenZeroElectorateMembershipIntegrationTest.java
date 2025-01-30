@@ -20,8 +20,6 @@ package org.apache.cassandra.sidecar.coordination;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -188,8 +186,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
         String hostName = JMXUtil.getJmxHost(config);
         int nativeTransportPort = tryGetIntConfig(config, "native_transport_port", 9042);
         String[] dataDirectories = (String[]) config.get("data_file_directories");
-        Path dataDirParentPath = Paths.get(dataDirectories[0]).getParent();
-        assertThat(dataDirParentPath).isNotNull();
+
 
         JmxClient jmxClient = JmxClient.builder()
                                        .host(hostName)
@@ -219,8 +216,11 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
                                                       .id(config.num())
                                                       .host(config.broadcastAddress().getAddress().getHostAddress())
                                                       .port(nativeTransportPort)
-                                                      .cassandraHomeDir(dataDirParentPath.toString())
                                                       .dataDirs(Arrays.asList(dataDirectories))
+                                                      .cdcDir(config.getString("cdc_raw_directory"))
+                                                      .commitlogDir(config.getString("commitlog_directory"))
+                                                      .hintsDir(config.getString("hints_directory"))
+                                                      .savedCachesDir(config.getString("saved_caches_directory"))
                                                       .delegate(delegate)
                                                       .metricRegistry(instanceSpecificRegistry)
                                                       .build());

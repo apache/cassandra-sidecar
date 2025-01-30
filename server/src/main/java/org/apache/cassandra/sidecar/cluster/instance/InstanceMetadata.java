@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.cluster.instance;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
@@ -48,20 +47,9 @@ public interface InstanceMetadata
     int port();
 
     /**
-     * @return the home directory of Cassandra instance
-     */
-    String cassandraHomeDir();
-
-    /**
-     * A list of data directories of the Cassandra instance. If not set, the default directory is
-     * {@link #cassandraHomeDir()}/data/data.
-     *
      * @return a list of data directories of cassandra instance
      */
-    default List<String> dataDirs()
-    {
-        return Collections.singletonList(cassandraHomeDir() + "/data/data");
-    }
+    @NotNull List<String> dataDirs();
 
     /**
      * @return a staging directory of the cassandra instance
@@ -75,52 +63,28 @@ public interface InstanceMetadata
     @NotNull CassandraAdapterDelegate delegate() throws CassandraUnavailableException;
 
     /**
-     * Returns the CDC directory of the Cassandra instance. If not set, the default directory is
-     * {@link #cassandraHomeDir()}/data/cdc_raw.
-     *
-     * @return CDC directory of the cassandra instance
+     * @return CDC directory of the cassandra instance, it can be null when CDC is not enabled for the Cassandra
+     * instance
      */
-    @NotNull
-    default String cdcDir()
-    {
-        return cassandraHomeDir() + "/data/cdc_raw";
-    }
+    @Nullable String cdcDir();
 
     /**
-     * Returns the commit log directory of the Cassandra instance. If not set, the default directory is
-     * {@link #cassandraHomeDir()}/data/commitlog
-     *
      * @return commitlog directory of the cassandra instance
      */
     @NotNull
-    default String commitlogDir()
-    {
-        return cassandraHomeDir() + "/data/commitlog";
-    }
+    String commitlogDir();
 
     /**
-     * Returns the directory where Cassandra should store hints. If not set, the default directory is
-     * {@link #cassandraHomeDir()}/data/hints.
-     *
      * @return hints directory of the Cassandra instance
      */
     @NotNull
-    default String hintsDir()
-    {
-        return cassandraHomeDir() + "/data/hints";
-    }
+    String hintsDir();
 
     /**
-     * Returns the saved caches directory of the Cassandra instance. If not set, the default directory is
-     * {@link #cassandraHomeDir()}/data/saved_caches.
-     *
      * @return saved caches directory of the Cassandra instance
      */
     @NotNull
-    default String savedCachesDir()
-    {
-        return cassandraHomeDir() + "/data/saved_caches";
-    }
+    String savedCachesDir();
 
     /**
      * @return local system data file directory of the cassandra instance

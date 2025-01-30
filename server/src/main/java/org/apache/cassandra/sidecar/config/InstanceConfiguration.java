@@ -41,9 +41,9 @@ public interface InstanceConfiguration
     int port();
 
     /**
-     * @return Cassandra home directory of Cassandra instance
+     * @return storage directory of Cassandra instance
      */
-    String cassandraHomeDir();
+    String storageDir();
 
     /**
      * @return a list of data directories of cassandra instance

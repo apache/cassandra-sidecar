@@ -35,7 +35,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
     protected final int id;
     protected final String host;
     protected final int port;
-    protected final String cassandraHomeDir;
+    protected final String storageDir;
     protected final List<String> dataDirs;
     protected final String stagingDir;
     protected final String cdcDir;
@@ -53,8 +53,8 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
     public InstanceConfigurationImpl(@JsonProperty("id") int id,
                                      @NotNull @JsonProperty("host") String host,
                                      @JsonProperty("port") int port,
-                                     @NotNull @JsonProperty("cassandra_home_dir") String cassandraHomeDir,
-                                     @NotNull @JsonProperty("data_dirs") List<String> dataDirs,
+                                     @Nullable @JsonProperty("storage_dir") String storageDir,
+                                     @Nullable @JsonProperty("data_dirs") List<String> dataDirs,
                                      @NotNull @JsonProperty("staging_dir") String stagingDir,
                                      @Nullable @JsonProperty("cdc_dir") String cdcDir,
                                      @Nullable @JsonProperty("commitlog_dir") String commitlogDir,
@@ -70,8 +70,8 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
         this.id = id;
         this.host = host;
         this.port = port;
-        this.cassandraHomeDir = cassandraHomeDir;
-        this.dataDirs = Collections.unmodifiableList(dataDirs);
+        this.storageDir = storageDir;
+        this.dataDirs = dataDirs != null ? Collections.unmodifiableList(dataDirs) : null;
         this.stagingDir = stagingDir;
         this.cdcDir = cdcDir;
         this.commitlogDir = commitlogDir;
@@ -116,10 +116,10 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
     }
 
     @Override
-    @JsonProperty("cassandra_home_dir")
-    public String cassandraHomeDir()
+    @JsonProperty("storage_dir")
+    public String storageDir()
     {
-        return cassandraHomeDir;
+        return storageDir;
     }
 
     /**

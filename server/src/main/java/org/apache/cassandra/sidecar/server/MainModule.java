@@ -919,7 +919,7 @@ public class MainModule extends AbstractModule
                                    .id(cassandraInstance.id())
                                    .host(host)
                                    .port(port)
-                                   .cassandraHomeDir(cassandraInstance.cassandraHomeDir())
+                                   .storageDir(cassandraInstance.storageDir())
                                    .dataDirs(cassandraInstance.dataDirs())
                                    .stagingDir(cassandraInstance.stagingDir())
                                    .cdcDir(cassandraInstance.cdcDir())
