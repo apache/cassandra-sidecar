@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
@@ -37,16 +36,24 @@ import static org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundC
 public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(PeriodicTaskConfigurationImpl.class);
+    private static final boolean DEFAULT_ENABLED = false;
 
     @JsonProperty("enabled")
     private final boolean enabled;
     private MillisecondBoundConfiguration initialDelay;
     private MillisecondBoundConfiguration executeInterval;
 
-    @JsonCreator
-    public PeriodicTaskConfigurationImpl(@JsonProperty("enabled") boolean enabled,
-                                         @JsonProperty("initial_delay") MillisecondBoundConfiguration initialDelay,
-                                         @JsonProperty("execute_interval") MillisecondBoundConfiguration executeInterval)
+    /**
+     * Default constructor for jackson deserialization and allows to set the fields, including the aliased ones.
+     */
+    public PeriodicTaskConfigurationImpl()
+    {
+        this.enabled = DEFAULT_ENABLED;
+    }
+
+    public PeriodicTaskConfigurationImpl(boolean enabled,
+                                         MillisecondBoundConfiguration initialDelay,
+                                         MillisecondBoundConfiguration executeInterval)
     {
         this.enabled = enabled;
         this.initialDelay = initialDelay;
@@ -140,7 +147,7 @@ public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
     public void setExecuteIntervalMillis(long executeIntervalMillis)
     {
         LOGGER.warn("'execute_interval_millis', 'poll_freq_millis', and 'poll_interval_millis' are deprecated, " +
-                    "use 'execute_interval' instead. value={}", executeIntervalMillis);
+                    "use 'execute_interval' instead.");
         setExecuteInterval(new MillisecondBoundConfiguration(executeIntervalMillis, TimeUnit.MILLISECONDS));
     }
 }
