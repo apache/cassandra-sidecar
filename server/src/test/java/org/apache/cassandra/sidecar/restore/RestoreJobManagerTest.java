@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -154,12 +155,15 @@ class RestoreJobManagerTest
         assertThat(manager.trySubmit(range, range.job()))
         .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
 
-        assertThat(range.isCancelled()).isFalse();
+        Map<RestoreRange, ?> ranges = manager.progressTrackerUnsafe(range.job()).rangesForTesting();
+        assertThat(ranges.size()).isOne();
+        RestoreRange submittedRange = ranges.keySet().iterator().next();
+        assertThat(submittedRange.isCancelled()).isFalse();
 
-        manager.removeJobInternal(range.jobId()); // it cancels the non-completed ranges
+        manager.removeJobInternal(submittedRange.jobId()); // it cancels the non-completed ranges
 
         // removeJobInternal runs async. Wait for at most 2 seconds for the slice to be cancelled
-        loopAssert(2, () -> assertThat(range.isCancelled()).isTrue());
+        loopAssert(2, () -> assertThat(submittedRange.isCancelled()).isTrue());
     }
 
     @Test

@@ -104,8 +104,8 @@ class TimeUnitBackwardsCompatibilityTest
     {
         String yaml = "healthcheck:\n" +
                       "  initial_delay_millis: 245\n" +
-                      "  poll_freq_millis: 65000\n" +
-                      "  execute_interval_millis: 75000";
+                      "  execute_interval_millis: 75000\n" +
+                      "  poll_freq_millis: 65000\n";
 
         SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.fromYamlString(yaml);
         PeriodicTaskConfiguration config = sidecarConfiguration.healthCheckConfiguration;
