@@ -33,19 +33,22 @@ public class ResourceScopes
      */
     public static final ResourceScope CLUSTER = new ResourceScope()
     {
+        @Override
         public String variableAwareResource()
         {
             return "CLUSTER";
         }
 
+        @Override
         public String resolveWithResource(String resource)
         {
             return "CLUSTER";
         }
 
+        @Override
         public Set<String> expandedResources()
         {
-            return Collections.emptySet();
+            return Collections.singleton(variableAwareResource());
         }
     };
 
@@ -56,34 +59,37 @@ public class ResourceScopes
      */
     public static final ResourceScope OPERATION = new ResourceScope()
     {
+        @Override
         public String variableAwareResource()
         {
             return "OPERATION";
         }
 
+        @Override
         public String resolveWithResource(String resource)
         {
             return "OPERATION";
         }
 
+        @Override
         public Set<String> expandedResources()
         {
-            return Collections.emptySet();
+            return Collections.singleton(variableAwareResource());
         }
     };
 
     /**
      * Signifies Cassandra data scope.
      */
-    public static final ResourceScope DATA = new DataResourceScope();
+    public static final ResourceScope DATA = DataResourceScope.createWithDataScope();
 
     /**
      * Signifies Cassandra data scope at a keyspace level.
      */
-    public static final ResourceScope KEYSPACE = new DataResourceScope(true);
+    public static final ResourceScope KEYSPACE = DataResourceScope.createWithKeyspaceScope();
 
     /**
      * Signifies Cassandra data scope at a table level.
      */
-    public static final ResourceScope TABLE = new DataResourceScope(true, true);
+    public static final ResourceScope TABLE = DataResourceScope.createWithTableScope();
 }

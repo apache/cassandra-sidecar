@@ -18,11 +18,18 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
+import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
 
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.CREATE_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.CREATE_SNAPSHOT;
@@ -40,31 +47,34 @@ import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.RE
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_TOPOLOGY;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.STREAM_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.UPLOAD_STAGED_SSTABLE;
+import static org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions.MODIFY;
 import static org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions.SELECT;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE;
 
 /**
  * Enumerates a list of feature level permissions that Sidecar recognizes and honors.
  */
 public enum FeaturePermission
 {
-    BULK_READ_DIRECT("BULK_READ_DIRECT",
+    BULK_READ_DIRECT("ANALYTICS:READ_DIRECT",
                      READ_RING_KEYSPACE_SCOPED,
                      READ_SCHEMA_KEYSPACE_SCOPED,
                      CREATE_SNAPSHOT,
                      READ_SNAPSHOT,
                      DELETE_SNAPSHOT,
                      STREAM_SNAPSHOT,
-                     SELECT),
+                     new StandardPermission(SELECT.name()).withScope(TABLE)),
 
-    BULK_WRITE_DIRECT("BULK_WRITE_DIRECT",
+    BULK_WRITE_DIRECT("ANALYTICS:WRITE_DIRECT",
                       READ_SCHEMA_KEYSPACE_SCOPED,
                       READ_GOSSIP,
                       READ_TOPOLOGY,
                       UPLOAD_STAGED_SSTABLE,
                       IMPORT_STAGED_SSTABLE,
-                      DELETE_STAGED_SSTABLE),
+                      DELETE_STAGED_SSTABLE,
+                      new StandardPermission(MODIFY.name()).withScope(TABLE)),
 
-    BULK_WRITE_S3_COMPAT("BULK_WRITE_S3_COMPAT",
+    BULK_WRITE_S3_COMPAT("ANALYTICS:WRITE_S3_COMPAT",
                          READ_SCHEMA,
                          READ_TOPOLOGY,
                          CREATE_RESTORE_JOB,
@@ -74,14 +84,19 @@ public enum FeaturePermission
 
     CDC("CDC", BasicPermissions.CDC);
 
-    private static final Map<String, FeaturePermission> NAME_TO_FEATURE_PERMISSION
-    = Arrays.stream(values())
-            .collect(Collectors.collectingAndThen(Collectors.toMap(Enum::name, Function.identity()), Collections::unmodifiableMap));
+    // TODO make forbidden feature permission configurable
+    private static final String FORBIDDEN_FEATURE_PERMISSION = "*:*";
 
+
+    private static final List<FeaturePermission> FEATURE_PERMISSIONS
+    = Arrays.stream(values()).collect(Collectors.toList());
+
+    private final WildcardPermissionBasedAuthorization nameAuthorization;
     private final CompositePermission permission;
 
     FeaturePermission(String name, Permission... permissions)
     {
+        this.nameAuthorization = new WildcardPermissionBasedAuthorizationImpl(name);
         this.permission
         = new CompositePermission(name, Arrays.stream(permissions).collect(Collectors.toList()));
     }
@@ -91,14 +106,29 @@ public enum FeaturePermission
         return permission;
     }
 
-    public static boolean contains(String name)
-    {
-        return NAME_TO_FEATURE_PERMISSION.containsKey(name);
-    }
-
+    /**
+     * Returns a {@link CompositePermission} if a feature level permission match is found for given permission name.
+     * {@link CompositePermission} consists of all basic permissions associated with given feature level permission.
+     *
+     * @param name permission name
+     * @return a {@link CompositePermission} containing the basic permissions that correspond to given feature level
+     *         permission, or {@code null} if no match is found.
+     */
     public static Permission fromName(String name)
     {
-        FeaturePermission featurePermission = NAME_TO_FEATURE_PERMISSION.get(name);
-        return featurePermission != null ? featurePermission.permission() : null;
+        if (name.contains(FORBIDDEN_FEATURE_PERMISSION))
+        {
+            return null;
+        }
+        List<Permission> combinedPermissions = new ArrayList<>();
+        WildcardPermissionBasedAuthorization requestedAuthorization = new WildcardPermissionBasedAuthorizationImpl(name);
+        for (FeaturePermission featurePermission : FEATURE_PERMISSIONS)
+        {
+            if (requestedAuthorization.verify(featurePermission.nameAuthorization))
+            {
+                combinedPermissions.addAll(featurePermission.permission.childPermissions());
+            }
+        }
+        return combinedPermissions.isEmpty() ? null : new CompositePermission(name, combinedPermissions);
     }
 }

@@ -81,7 +81,10 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingAtDataLevel(context);
         testGrantingWithWildcardSubparts(context);
         testEndpointRequiringMultipleActions(context);
-//        testFeatureAuthorization(context);
+        testGrantingBulkReadFeaturePermission(context);
+        testGrantingBulkWriteFeaturePermission(context);
+        testGrantingBothBulkReadAndWriteFeaturePermission(context);
+        testGrantingCdcFeaturePermission(context);
 
         assertThat(testCompleteLatch.await(4, TimeUnit.MINUTES)).isTrue();
         context.completeNow();
@@ -244,7 +247,22 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         .onFailure(context::failNow);
     }
 
-    void testFeatureAuthorization(VertxTestContext context)
+    void testGrantingBulkReadFeaturePermission(VertxTestContext context)
+    {
+
+    }
+
+    void testGrantingBulkWriteFeaturePermission(VertxTestContext context)
+    {
+
+    }
+
+    void testGrantingBothBulkReadAndWriteFeaturePermission(VertxTestContext context)
+    {
+
+    }
+
+    void testGrantingCdcFeaturePermission(VertxTestContext context)
     {
 
     }

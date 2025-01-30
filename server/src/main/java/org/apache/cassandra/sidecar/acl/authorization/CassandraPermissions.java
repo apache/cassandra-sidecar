@@ -23,6 +23,9 @@ package org.apache.cassandra.sidecar.acl.authorization;
  * <a href="https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/auth/Permission.java">
  *     org.apache.cassandra.auth.Permission</a>
  * under the Cassandra codebase.
+ * <p>
+ * Note: CassandraPermissions do not have resource scope set in them, since these permissions can be used to create
+ * Authorization across resource scopes.
  */
 public class CassandraPermissions
 {

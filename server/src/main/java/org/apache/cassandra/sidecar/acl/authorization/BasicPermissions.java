@@ -26,7 +26,7 @@ import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABL
 /**
  * Basic permissions are the building blocks of the permission-ing system in Sidecar. It offers more granular
  * permissions on specific targets which are listed here. The majority of Sidecar permissions are represented in
- * format {@code domain}:{@code action}.
+ * format {@code domain}:{@code action}. They are created for a resource scope.
  * <p>
  * For example, the SNAPSHOT:CREATE permission, CREATE action is allowed for the SNAPSHOT domain. Sample actions are
  * CREATE, READ, EDIT, DELETE, IMPORT, UPLOAD, START etc.

@@ -79,9 +79,10 @@ public class AuthUtils
     public static Permission permissionFromName(String name)
     {
         Objects.requireNonNull(name, "name cannot be null");
-        if (FeaturePermission.contains(name))
+        Permission permission = FeaturePermission.fromName(name);
+        if (permission != null)
         {
-            return FeaturePermission.fromName(name);
+            return permission;
         }
         boolean isDomainAware = name.contains(WILDCARD_PART_DIVIDER_TOKEN);
         return isDomainAware ? new DomainAwarePermission(name) : new StandardPermission(name);

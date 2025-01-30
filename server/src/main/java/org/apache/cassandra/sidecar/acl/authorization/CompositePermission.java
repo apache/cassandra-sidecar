@@ -25,7 +25,10 @@ import io.vertx.ext.auth.authorization.AndAuthorization;
 import io.vertx.ext.auth.authorization.Authorization;
 
 /**
- *
+ * Represents a collection of permissions that can be combined and assigned together. This is mainly used to expand
+ * feature level permissions granted for users. Feature level permissions grant access to a set of related features.
+ * Features may involve accessing multiple handlers each requiring individual permissions. By grouping permissions,
+ * feature level permissions simplify assigning access control for features.
  */
 public class CompositePermission extends StandardPermission
 {
@@ -39,6 +42,14 @@ public class CompositePermission extends StandardPermission
             throw new IllegalArgumentException("CompositePermission can not be created with null or empty permissions");
         }
         this.permissions = Collections.unmodifiableList(permissions);
+    }
+
+    /**
+     * @return {@code List} of child permissions composed within {@link CompositePermission}
+     */
+    public List<Permission> childPermissions()
+    {
+        return permissions;
     }
 
     @Override
