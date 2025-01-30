@@ -21,8 +21,14 @@ package org.apache.cassandra.sidecar.common.server.cluster.locator;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 
+import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -157,6 +163,66 @@ class TokenRangeTest
         assertThat(r3.intersection(r1)).isEqualTo(new TokenRange(4, 5));
         assertThat(r2.intersection(r4)).isEqualTo(new TokenRange(10, 10)); // empty range
         assertThat(r2.intersection(r4)).isNotEqualTo(new TokenRange(5, 5)); // but not any empty range
+    }
+
+    @ParameterizedTest(name = "{index} - {0}: inputLeft={1} inputRight={2} expectedLeft={3} expectedRight={4}")
+    @MethodSource("inputAndExpectedResultAfterDiff")
+    void testDiff(String testTitle, Set<TokenRange> left, Set<TokenRange> right, Set<TokenRange> expectedLeft, Set<TokenRange> expectedRight)
+    {
+        TokenRange.Pair diff = TokenRange.diff(left, right);
+        assertThat(diff.left).isEqualTo(expectedLeft);
+        assertThat(diff.right).isEqualTo(expectedRight);
+
+        // exchange left and right; it is to test the commutative property of diff
+        diff = TokenRange.diff(right, left);
+        assertThat(diff.left).isEqualTo(expectedRight);
+        assertThat(diff.right).isEqualTo(expectedLeft);
+    }
+
+    public static Stream<Arguments> inputAndExpectedResultAfterDiff()
+    {
+        return Stream.of(
+        //  inputLeft, inputRight, expectedLeft, expectedRight
+        args("Diff on identical sets",
+             ImmutableSet.of(r(0, 1000), r(1000, 2000)), // inputLeft
+             ImmutableSet.of(r(0, 2000)), // inputRight
+             ImmutableSet.of(), // expectedLeft
+             ImmutableSet.of()), // expectedRight
+
+        args("Diff on enclosing sets",
+             ImmutableSet.of(r(0, 1000), r(1000, 2000)), // inputLeft
+             ImmutableSet.of(r(1000, 2000)), // inputRight
+             ImmutableSet.of(r(0, 1000)), // expectedLeft
+             ImmutableSet.of()), // expectedRight
+
+        args("Diff on overlapping sets",
+             ImmutableSet.of(r(0, 1000), r(1000, 2000)), // inputLeft
+             ImmutableSet.of(r(500, 1500), r(2000, 2500)), // inputRight
+             ImmutableSet.of(r(0, 500), r(1500, 2000)), // expectedLeft
+             ImmutableSet.of(r(2000, 2500))), // expectedRight
+
+        args("Diff on disjoint ranges",
+             ImmutableSet.of(r(0, 1000)), // inputLeft
+             ImmutableSet.of(r(2000, 2500)), // inputRight
+             ImmutableSet.of(r(0, 1000)), // expectedLeft
+             ImmutableSet.of(r(2000, 2500))), // expectedRight
+
+        args("Diff on overlapping singleton sets",
+             ImmutableSet.of(r(0, 1000)), // inputLeft
+             ImmutableSet.of(r(500, 1500)), // inputRight
+             ImmutableSet.of(r(0, 500)), // expectedLeft
+             ImmutableSet.of(r(1000, 1500))) // expectedRight
+        );
+    }
+
+    private static TokenRange r(long start, long end)
+    {
+        return new TokenRange(start, end);
+    }
+
+    private static Arguments args(Object... args)
+    {
+        return Arguments.arguments(args);
     }
 
     private com.datastax.driver.core.TokenRange mockRange(long start, long end)

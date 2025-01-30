@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.restore.jobdiscoverer;
 
 import java.math.BigInteger;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
@@ -115,10 +115,12 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
 
         RingTopologyRefresher ringTopologyRefresher = injector.getInstance(RingTopologyRefresher.class);
         Map<Integer, Set<TokenRange>> localTokenRanges = ringTopologyRefresher.localTokenRanges(tableName.keyspace(), true);
-        assertThat(localTokenRanges).containsOnlyKeys(MANAGED_CASSANDRA_NODE_NUM);
-        Set<TokenRange> orignalLocalRangesSet = localTokenRanges.get(MANAGED_CASSANDRA_NODE_NUM);
-        assertThat(orignalLocalRangesSet).containsExactlyInAnyOrder(new TokenRange(Long.MIN_VALUE, 1000),
-                                                                    new TokenRange(2000, Long.MAX_VALUE));
+        assertThat(localTokenRanges)
+        .hasSize(1)
+        .containsEntry(MANAGED_CASSANDRA_NODE_NUM,
+                       ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
+                                       new TokenRange(0, 1000),
+                                       new TokenRange(2000, Long.MAX_VALUE)));
 
         // assert that no restore ranges are create
         RestoreRangeDatabaseAccessor rangeDatabaseAccessor = injector.getInstance(RestoreRangeDatabaseAccessor.class);
@@ -142,9 +144,12 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
         // RingTopologyRefresher should detect the topology change and notify RestoreJobDiscover via #onRingTopologyChanged
         localTokenRanges = ringTopologyRefresher.localTokenRanges(tableName.keyspace(), true);
         assertThat(localTokenRanges)
+        .hasSize(1)
         .containsEntry(MANAGED_CASSANDRA_NODE_NUM,
-                       // Owns entire ring after node leaving
-                       Collections.singleton(new TokenRange(Long.MIN_VALUE, Long.MAX_VALUE)));
+                       ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
+                                       new TokenRange(0, 1000),
+                                       new TokenRange(1000, 2000), // gained due to node leaving; now it own the entire ring effectively.
+                                       new TokenRange(2000, Long.MAX_VALUE)));
 
         // Using loopAssert because #onRingTopologyChanged runs in another thread. It takes some time to reflect the RestoreRange update
         loopAssert(10, 500, () -> {
@@ -152,7 +157,7 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
             assertThat(restoreRanges)
             .describedAs("A restore range should be created. After the topology change, now the slice is partially owned by the local node")
             .hasSize(1);
-            assertRestoreRange(restoreRanges.get(0), 1001L, 1600L);
+            assertRestoreRange(restoreRanges.get(0), 1000L, 1600L);
         });
     }
 

@@ -28,6 +28,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
@@ -259,7 +260,6 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
             return;
         }
 
-        // TODO YIFAN: lost and gained ranges calculation cannot use the merged
         // Populate the lostRanges and the gainedRanges
         // For each lost range, we want to cancel the RestoreRange that covers it
         // For each gained range, we want to create the RestoreRange
@@ -281,10 +281,11 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
             }
             else // both new and old ranges exist and they differs
             {
+                TokenRange.Pair diff = TokenRange.diff(rangesFromOld, rangesFromNew);
                 // ranges that are no longer in the new topology are lost
-                lostRanges.put(instanceId, Sets.difference(rangesFromOld, rangesFromNew));
+                lostRanges.put(instanceId, diff.left);
                 // ranges that are new in the new topology are gained
-                gainedRanges.put(instanceId, Sets.difference(rangesFromNew, rangesFromOld));
+                gainedRanges.put(instanceId, diff.right);
             }
         }
 
@@ -300,7 +301,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
             try
             {
                 // First, discard all the restore ranges that cover the lost ranges
-                lostRanges.forEach((instanceId, ranges) -> discardRestoreRangeIf(restoreJob, instanceId, ranges));
+                lostRanges.forEach((instanceId, ranges) -> discardLostRanges(restoreJob, instanceId, ranges));
                 // Next, submit the RestoreRanges from the newly gained ranges
                 gainedRanges.forEach((instanceId, ranges) -> findSlicesOfCassandraNodeAndSubmit(restoreJob, instanceId, ranges));
             }
@@ -433,14 +434,28 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         });
     }
 
-    private void discardRestoreRangeIf(RestoreJob restoreJob, int instanceId, Set<TokenRange> ranges)
+    private void discardLostRanges(RestoreJob restoreJob, int instanceId, Set<TokenRange> otherRanges)
     {
         InstanceMetadata instance = instanceMetadataFetcher.instance(instanceId);
         RestoreJobManagerGroup managerGroup = restoreJobManagerGroupSingleton.get();
-        for (TokenRange range : ranges)
-        {
-            managerGroup.discardRangeIf(instance, restoreJob, restoreRange -> restoreRange.tokenRange().overlaps(range));
-        }
+        Set<RestoreRange> overlappingRanges = managerGroup.discardOverlappingRanges(instance, restoreJob, otherRanges);
+        calculateRemainingRangesAndResubmit(restoreJob, instanceId, otherRanges, overlappingRanges);
+    }
+
+    // There could be still ranges remaining after subtracting the overlapping parts.
+    // The method calculates the ranges that still remain to the Cassandra node (identified by instanceId), and
+    // re-submit the RestoreRange for the remaining ranges.
+    private void calculateRemainingRangesAndResubmit(RestoreJob restoreJob,
+                                                     int instanceId,
+                                                     Set<TokenRange> otherRanges,
+                                                     Set<RestoreRange> overlappingRanges)
+    {
+        Set<TokenRange> existingRanges = overlappingRanges.stream()
+                                                          .map(RestoreRange::tokenRange)
+                                                          .collect(Collectors.toSet());
+        TokenRange.Pair diff = TokenRange.diff(existingRanges, otherRanges);
+        Set<TokenRange> remainedRanges = diff.left;
+        findSlicesOfCassandraNodeAndSubmit(restoreJob, instanceId, remainedRanges);
     }
 
     private RestoreJobProgressTracker.Status submit(InstanceMetadata instance, RestoreJob job, RestoreRange range)

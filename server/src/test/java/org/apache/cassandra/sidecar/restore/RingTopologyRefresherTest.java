@@ -22,20 +22,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Stream;
 
-import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
-import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
 import org.apache.cassandra.sidecar.restore.RingTopologyRefresher.ReplicaByTokenRangePerKeyspace;
@@ -189,42 +182,6 @@ class RingTopologyRefresherTest
         replicaByTokenRangePerKeyspace.load(ks -> mockTopologyEpoch2);
         assertThat(listenerValueCaptor).hasSize(2);
         assertListenerCapturedValues(listenerValueCaptor.get(1), job.keyspaceName, mockTopologyEpoch1, mockTopologyEpoch2);
-    }
-
-    @ParameterizedTest(name = "{index}: input={0} expected={1}")
-    @MethodSource("inputAndExpectedResultAfterMerge")
-    void testMergeTokenRanges(Set<TokenRange> input, Set<TokenRange> expected)
-    {
-        assertThat(RingTopologyRefresher.mergeTokenRanges(input)).isEqualTo(expected);
-    }
-
-    public static Stream<Arguments> inputAndExpectedResultAfterMerge()
-    {
-        return Stream.of(
-        //  Test set; Result set
-        args(ImmutableSet.of(r(1, 10)),
-             ImmutableSet.of(r(1, 10))),
-        args(ImmutableSet.of(r(1, 10), r(11, 20)),
-             ImmutableSet.of(r(1, 10), r(11, 20))),
-        args(ImmutableSet.of(r(1, 10), r(10, 20)),
-             ImmutableSet.of(r(1, 20))),
-        args(ImmutableSet.of(r(1, 10), r(5, 20)),
-             ImmutableSet.of(r(1, 20))),
-        args(ImmutableSet.of(r(1, 10), r(5, 20), r(25, 30)),
-             ImmutableSet.of(r(1, 20), r(25, 30))),
-        args(ImmutableSet.of(r(1, 4), r(5, 20), r(15, 30)),
-             ImmutableSet.of(r(1, 4), r(5, 30)))
-        );
-    }
-
-    private static TokenRange r(long start, long end)
-    {
-        return new TokenRange(start, end);
-    }
-
-    private static Arguments args(Object... args)
-    {
-        return Arguments.arguments(args);
     }
 
     private void assertListenerCapturedValues(List<Object> values,

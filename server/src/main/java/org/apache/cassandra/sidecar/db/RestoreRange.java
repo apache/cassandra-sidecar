@@ -655,20 +655,6 @@ public class RestoreRange
             return update(b -> b.statusByReplica = new HashMap<>(statusByReplica));
         }
 
-        public Builder addReplicaStatus(Map<String, RestoreRangeStatus> otherReplicaStatus)
-        {
-            int size = otherReplicaStatus.size();
-            if (size == 0)
-            {
-                return this;
-            }
-
-            Map<String, RestoreRangeStatus> merged = new HashMap<>(this.statusByReplica.size() + size);
-            merged.putAll(this.statusByReplica);
-            merged.putAll(otherReplicaStatus);
-            return replicaStatus(merged);
-        }
-
         public Builder replicaStatusText(Map<String, String> statusTextByReplica)
         {
             Map<String, RestoreRangeStatus> map = new HashMap<>(statusTextByReplica.size());

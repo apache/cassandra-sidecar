@@ -20,11 +20,16 @@ package org.apache.cassandra.sidecar.common.server.cluster.locator;
 
 import java.math.BigInteger;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 
 import com.datastax.driver.core.DataType;
 import org.jetbrains.annotations.Nullable;
@@ -37,7 +42,7 @@ public class TokenRange
     public static final Comparator<TokenRange> NATURAL_ORDER = Comparator.comparing(TokenRange::start)
                                                                          .thenComparing(TokenRange::end);
 
-    private final Range<Token> range;
+    public final Range<Token> range;
     private volatile Token firstToken = null;
 
     /**
@@ -87,6 +92,29 @@ public class TokenRange
             "Unsupported token type: " + tokenDataType +
             ". Only tokens of Murmur3Partitioner and RandomPartitioner are supported.");
         }
+    }
+
+    /**
+     * Diff the two set of {@link TokenRange}s. The connected token ranges in each set are merged before diffing.
+     * The result {@link Pair#left} contains the token ranges that are only in the input {@code left} token range set, and
+     * the result {@link Pair#right} contains the token ranges that are only in the input {@code right} token range set.
+     * @param left token range set
+     * @param right token range set
+     * @return {@link Pair} where its left contains the token ranges that are only in the input {@code left} token range set, and
+     *         its right contains the token ranges that are only in the input {@code right} token range set.
+     */
+    @SuppressWarnings("UnstableApiUsage")
+    public static Pair diff(Set<TokenRange> left, Set<TokenRange> right)
+    {
+        RangeSet<Token> mergedLeft = TreeRangeSet.create();
+        RangeSet<Token> mergedRight = TreeRangeSet.create();
+        left.forEach(r -> mergedLeft.add(r.range));
+        right.forEach(r -> mergedRight.add(r.range));
+        RangeSet<Token> resultLeft = TreeRangeSet.create(mergedLeft);
+        resultLeft.removeAll(mergedRight);
+        RangeSet<Token> resultRight = TreeRangeSet.create(mergedRight);
+        resultRight.removeAll(mergedLeft);
+        return new Pair(resultLeft.asRanges(), resultRight.asRanges());
     }
 
     public TokenRange(long start, long end)
@@ -244,5 +272,28 @@ public class TokenRange
         return "TokenRange(" +
                range.lowerEndpoint().toBigInteger() + ", " +
                range.upperEndpoint().toBigInteger() + ']';
+    }
+
+    /**
+     * Pair of {@link TokenRange} sets
+     */
+    public static class Pair
+    {
+        public final ImmutableSet<TokenRange> left;
+        public final ImmutableSet<TokenRange> right;
+
+        private Pair(Set<Range<Token>> left, Set<Range<Token>> right)
+        {
+            this.left = toImmutableSet(left);
+            this.right = toImmutableSet(right);
+        }
+
+        private static ImmutableSet<TokenRange> toImmutableSet(Set<Range<Token>> ranges)
+        {
+            Iterator<TokenRange> it = ranges.stream()
+                                            .map(r -> new TokenRange(r.lowerEndpoint(), r.upperEndpoint()))
+                                            .iterator();
+            return ImmutableSet.copyOf(it);
+        }
     }
 }

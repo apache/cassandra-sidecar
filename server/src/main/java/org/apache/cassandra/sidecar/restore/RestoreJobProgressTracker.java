@@ -18,17 +18,22 @@
 
 package org.apache.cassandra.sidecar.restore;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Predicate;
 
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
@@ -84,19 +89,26 @@ public class RestoreJobProgressTracker
     }
 
     /**
-     * Discard the {@link RestoreRange} if it matches the predicate
-     * @param predicate check whether a {@link RestoreRange} should be discarded
+     * Discard all the {@link RestoreRange} that overlap with the {@param otherRanges}
+     * @param otherRanges token ranges to find the overlapping {@link RestoreRange} and discard
+     * @return set of overlapping {@link RestoreRange}
      */
-    void discardRangeIf(Predicate<RestoreRange> predicate)
+    @SuppressWarnings("UnstableApiUsage")
+    Set<RestoreRange> discardOverlappingRanges(Set<TokenRange> otherRanges)
     {
-        ranges.keySet().removeIf(range -> {
-            boolean shouldDiscard = predicate.test(range);
-            if (shouldDiscard)
+        RangeSet<Token> rangeSet = TreeRangeSet.create();
+        otherRanges.forEach(r -> rangeSet.add(r.range));
+        Set<RestoreRange> overlapping = new HashSet<>();
+        ranges.keySet().removeIf(restoreRange -> {
+            if (rangeSet.intersects(restoreRange.tokenRange().range))
             {
-                processor.discardAndRemove(range);
+                overlapping.add(restoreRange);
+                processor.discardAndRemove(restoreRange);
+                return true;
             }
-            return shouldDiscard;
+            return false;
         });
+        return overlapping;
     }
 
     void updateRestoreJob(@NotNull RestoreJob restoreJob)

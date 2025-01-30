@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -251,7 +252,7 @@ class RestoreJobManagerTest
     }
 
     @Test
-    void testDiscardRanges() throws Exception
+    void testDiscardOverlappingRanges() throws Exception
     {
         // set up the mock for discardAndRemove; invoke discard on the input restore range
         doAnswer(invocation -> {
@@ -263,10 +264,12 @@ class RestoreJobManagerTest
         RestoreRange template = getTestRange();
         RestoreJob job = template.job();
         RestoreRange rangeToDiscard = template.unbuild()
+                                              .sliceId("rangeToDiscard")
                                               .startToken(BigInteger.valueOf(0))
                                               .endToken(BigInteger.valueOf(10))
                                               .build();
         RestoreRange rangeToKeep = template.unbuild()
+                                           .sliceId("rangeToKeep")
                                            .startToken(BigInteger.valueOf(100))
                                            .endToken(BigInteger.valueOf(110))
                                            .build();
@@ -282,12 +285,16 @@ class RestoreJobManagerTest
         .describedAs("There are two ranges submitted")
         .hasSize(2);
         // (0, 10] overlaps with (-10, 50]; but (100, 110] does not
-        manager.discardRangeIf(job, range -> range.tokenRange().overlaps(new TokenRange(-10, 50)));
+        Set<RestoreRange> rangesDiscarded = manager.discardOverlappingRanges(job, Collections.singleton(new TokenRange(-10, 50)));
+        assertThat(rangesDiscarded).hasSize(1);
+        RestoreRange rangeDiscarded = rangesDiscarded.iterator().next();
+        assertThat(rangeDiscarded.isDiscarded()).isTrue();
+        assertThat(rangeDiscarded.sliceId()).isEqualTo("rangeToDiscard");
         assertThat(manager.progressTrackerUnsafe(job).rangesForTesting())
         .describedAs("One of the two ranges should be discarded")
         .hasSize(1);
-        assertThat(rangeToDiscard.isDiscarded()).isTrue();
-        assertThat(rangeToKeep.isDiscarded()).isFalse();
+        RestoreRange rangeKept = manager.progressTrackerUnsafe(job).rangesForTesting().keySet().iterator().next();
+        assertThat(rangeKept.sliceId()).isEqualTo("rangeToKeep");
     }
 
     private RestoreRange getTestRange()

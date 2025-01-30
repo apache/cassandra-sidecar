@@ -114,11 +114,14 @@ class RestoreJobDiscovererNodeJoiningIntTest extends IntegrationTestBase
         RestoreJobDiscoverer restoreJobDiscoverer = injector.getInstance(RestoreJobDiscoverer.class);
         restoreJobDiscoverer.tryExecuteDiscovery();
 
-        Set<TokenRange> owningTokenRange = ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 1000),
-                                                           new TokenRange(1500, Long.MAX_VALUE));
         RingTopologyRefresher ringTopologyRefresher = injector.getInstance(RingTopologyRefresher.class);
         Map<Integer, Set<TokenRange>> localTokenRanges = ringTopologyRefresher.localTokenRanges(tableName.keyspace(), true);
-        assertThat(localTokenRanges).containsEntry(MANAGED_CASSANDRA_NODE_NUM, owningTokenRange);
+        assertThat(localTokenRanges)
+        .hasSize(1)
+        .containsEntry(MANAGED_CASSANDRA_NODE_NUM,
+                       ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
+                                       new TokenRange(0, 1000),
+                                       new TokenRange(1500, Long.MAX_VALUE)));
 
         // assert that no restore ranges are create
         RestoreRangeDatabaseAccessor rangeDatabaseAccessor = injector.getInstance(RestoreRangeDatabaseAccessor.class);
@@ -149,15 +152,20 @@ class RestoreJobDiscovererNodeJoiningIntTest extends IntegrationTestBase
         localTokenRanges = ringTopologyRefresher.localTokenRanges(tableName.keyspace(), true);
         assertThat(localTokenRanges)
         .describedAs("There is a new node of 2000 joining. " +
-                     "Node 2 now has range (Long.MIN, 1000], (1500, 2000] and (2000, Long.MAX]. " +
-                     "The ranges merge to (Long.MIN, 1000] and (1500, Long.MAX]")
-        .containsEntry(MANAGED_CASSANDRA_NODE_NUM, owningTokenRange);
+                     "Node 2 now has range (Long.MIN, 0], (0, 1000], (1500, 2000] and (2000, Long.MAX].")
+        .hasSize(1)
+        .containsEntry(MANAGED_CASSANDRA_NODE_NUM,
+                       ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
+                                       new TokenRange(0, 1000),
+                                       // (1500, 2000] remains temporarily while new node is joining; once node joined, the range is no longer owned
+                                       new TokenRange(1500, 2000),
+                                       new TokenRange(2000, Long.MAX_VALUE)));
 
         // Using loopAssert because #onRingTopologyChanged runs in another thread. It takes some time to reflect the RestoreRange update
         loopAssert(10, 500, () -> {
             List<RestoreRange> restoreRanges = rangeDatabaseAccessor.findAll(jobId, bucketId);
             assertThat(restoreRanges)
-            .describedAs("Local token range does not change. Therefore restore ranges do not change")
+            .describedAs("Local token ranges are effectively the same. Therefore restore ranges do not change")
             .hasSize(1);
             assertRestoreRange(ranges.get(0), 1500L, 1600L);
         });

@@ -99,7 +99,7 @@ class RestoreJobDiscovererNodeMovedIntTest extends IntegrationTestBase
         // create slice
         short bucketId = 0;
         CreateSliceRequestPayload slicePayload = new CreateSliceRequestPayload("sliceId", bucketId, "bucket", "key",
-                                                                               "checksum", BigInteger.valueOf(1001L), BigInteger.valueOf(1500L),
+                                                                               "checksum", BigInteger.valueOf(1001L), BigInteger.valueOf(1600L),
                                                                                100L, 100L);
         testClient.createRestoreSlice(tableName, jobId, slicePayload);
 
@@ -115,17 +115,19 @@ class RestoreJobDiscovererNodeMovedIntTest extends IntegrationTestBase
         assertThat(localTokenRanges)
         .hasSize(2)
         .containsEntry(NODE_1, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
-                                               new TokenRange(1000, Long.MAX_VALUE)))
-        .containsEntry(NODE_2, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 1000),
+                                               new TokenRange(1000, 2000),
+                                               new TokenRange(2000, Long.MAX_VALUE)))
+        .containsEntry(NODE_2, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
+                                               new TokenRange(0, 1000),
                                                new TokenRange(2000, Long.MAX_VALUE)));
 
         // assert that no restore ranges are create
         RestoreRangeDatabaseAccessor rangeDatabaseAccessor = injector.getInstance(RestoreRangeDatabaseAccessor.class);
         List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
-//        assertThat(ranges)
-//        .describedAs("node 1 and only node 1 should create the restore range")
-//        .hasSize(1);
-//        assertThat(ranges.get(0).tokenRange()).isEqualTo(new TokenRange(1001, 1600));
+        assertThat(ranges)
+        .describedAs("node 1 and only node 1 should create the restore range")
+        .hasSize(1);
+        assertThat(ranges.get(0).tokenRange()).isEqualTo(new TokenRange(1000, 1600));
 
         // start move in the background
         IUpgradeableInstance movingNode = cluster.get(2);
@@ -142,25 +144,27 @@ class RestoreJobDiscovererNodeMovedIntTest extends IntegrationTestBase
         assertThat(localTokenRanges)
         .hasSize(2)
         .containsEntry(NODE_1, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
-                                               new TokenRange(1500, Long.MAX_VALUE)))
-        .containsEntry(NODE_2, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 1500),
+                                               new TokenRange(1500, 2000),
+                                               new TokenRange(2000, Long.MAX_VALUE)))
+        .containsEntry(NODE_2, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
+                                               new TokenRange(0, 1500),
                                                new TokenRange(2000, Long.MAX_VALUE)));
 
         // Using loopAssert because #onRingTopologyChanged runs in another thread. It takes some time to reflect the RestoreRange update
-        loopAssert(50, 500, () -> {
+        loopAssert(30, 1000, () -> {
             List<RestoreRange> restoreRanges = rangeDatabaseAccessor.findAll(jobId, bucketId);
             assertThat(restoreRanges)
             .describedAs("A restore range should be created. After the topology change, now the slice is partially owned by the local node")
             .hasSize(3);
             Collections.sort(restoreRanges, RestoreRange.TOKEN_BASED_NATURAL_ORDER);
-            assertRestoreRange(restoreRanges.get(0), 1001L, 1500L); // node 1
-            assertRestoreRange(restoreRanges.get(1), 1001L, 1600L, range -> {
+            assertRestoreRange(restoreRanges.get(0), 1000L, 1500L); // in node 2
+            assertRestoreRange(restoreRanges.get(1), 1000L, 1600L, range -> {
                 assertThat(range.statusByReplica())
                 .describedAs("The original restore range from node 1 should be discarded, due to losing the range ownership")
                 .hasSize(1)
                 .containsEntry(StringUtils.cassandraFormattedHostAndPort(cluster.get(1).broadcastAddress()), RestoreRangeStatus.DISCARDED);
             });
-            assertRestoreRange(restoreRanges.get(2), 1500L, 1600L); // node 2
+            assertRestoreRange(restoreRanges.get(2), 1500L, 1600L); // in node 1
         });
     }
 

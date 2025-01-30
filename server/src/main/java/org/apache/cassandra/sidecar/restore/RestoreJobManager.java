@@ -25,10 +25,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
@@ -118,14 +119,15 @@ public class RestoreJobManager
     }
 
     /**
-     * Discard the {@link RestoreRange} of the {@link RestoreJob} if they match the predicate
+     * Discard all the {@link RestoreRange} that overlap with {@param otherRanges} in the {@link RestoreJob}
      * @param restoreJob restore job to find out the restore ranges
-     * @param rangePredicate predicate to check whether restore range should be discarded
+     * @param otherRanges token ranges to find the overlapping {@link RestoreRange} and discard
+     * @return set of overlapping {@link RestoreRange}
      */
-    void discardRangeIf(RestoreJob restoreJob, Predicate<RestoreRange> rangePredicate)
+    Set<RestoreRange> discardOverlappingRanges(RestoreJob restoreJob, Set<TokenRange> otherRanges)
     {
         RestoreJobProgressTracker tracker = progressTracker(restoreJob);
-        tracker.discardRangeIf(rangePredicate);
+        return tracker.discardOverlappingRanges(otherRanges);
     }
 
     /**

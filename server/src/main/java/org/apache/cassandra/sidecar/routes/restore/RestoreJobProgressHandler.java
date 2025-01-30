@@ -32,7 +32,7 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJob;
-import org.apache.cassandra.sidecar.restore.RestoreJobConsistencyLevelChecker;
+import org.apache.cassandra.sidecar.restore.RestoreJobConsistencyChecker;
 import org.apache.cassandra.sidecar.restore.RestoreJobProgress;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.AccessProtected;
@@ -51,7 +51,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgressFetchPolicy> implements AccessProtected
 {
-    private final RestoreJobConsistencyLevelChecker consistencyLevelChecker;
+    private final RestoreJobConsistencyChecker consistencyLevelChecker;
 
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -64,7 +64,7 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     public RestoreJobProgressHandler(InstanceMetadataFetcher metadataFetcher,
                                      ExecutorPools executorPools,
                                      CassandraInputValidator validator,
-                                     RestoreJobConsistencyLevelChecker consistencyLevelChecker)
+                                     RestoreJobConsistencyChecker consistencyLevelChecker)
     {
         super(metadataFetcher, executorPools, validator);
         this.consistencyLevelChecker = consistencyLevelChecker;

@@ -18,9 +18,10 @@
 
 package org.apache.cassandra.sidecar.restore;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -121,12 +123,13 @@ public class RestoreJobManagerGroup
     }
 
     /**
-     * Discard the ranges that are matching the range predicate
-     * @param instanceMetadata the cassandra instance to discard the restore range from
-     * @param restoreJob the restore job instance
-     * @param rangePredicate the predicate to tell whether a range should be discarded
+     * Discard the ranges that overlap with the given {@param otherRanges}
+     * @param instanceMetadata cassandra instance to discard the restore range from
+     * @param restoreJob restore job instance
+     * @param otherRanges set of {@link TokenRange} to find the overlapping {@link RestoreRange} and discard
+     * @return set of overlapping {@link RestoreRange}
      */
-    void discardRangeIf(InstanceMetadata instanceMetadata, RestoreJob restoreJob, Predicate<RestoreRange> rangePredicate)
+    Set<RestoreRange> discardOverlappingRanges(InstanceMetadata instanceMetadata, RestoreJob restoreJob, Set<TokenRange> otherRanges)
     {
         if (restoreJob.status.isFinal())
         {
@@ -136,10 +139,10 @@ public class RestoreJobManagerGroup
         if (manager == null)
         {
             LOGGER.debug("No RestoreJobManager found for Cassandra instance. No ranges to discard. instanceId={}",
-                          instanceMetadata.id());
-            return;
+                         instanceMetadata.id());
+            return Collections.emptySet();
         }
-        manager.discardRangeIf(restoreJob, rangePredicate);
+        return manager.discardOverlappingRanges(restoreJob, otherRanges);
     }
 
     /**

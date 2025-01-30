@@ -22,6 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
@@ -38,6 +41,8 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 @Singleton
 public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRangesSchema>
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RestoreRangeDatabaseAccessor.class);
+
     private final SidecarSchema sidecarSchema;
 
     @Inject
@@ -63,6 +68,7 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
                                                     range.sliceKey(),
                                                     range.statusTextByReplica());
         execute(statement);
+        LOGGER.debug("Created range={}", range);
         return range;
     }
 
@@ -77,6 +83,7 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
                                                     range.startToken(),
                                                     range.endToken());
         execute(statement);
+        LOGGER.debug("Updated range={}", range);
         return range;
     }
 

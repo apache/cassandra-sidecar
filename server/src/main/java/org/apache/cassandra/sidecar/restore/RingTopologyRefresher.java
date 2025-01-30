@@ -22,7 +22,6 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -227,43 +226,7 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
                 }
             }
         }
-        // merge the connected ranges
-        for (Integer instanceId : localTokenRanges.keySet())
-        {
-            localTokenRanges.computeIfPresent(instanceId, (id, ranges) -> mergeTokenRanges(ranges));
-        }
         return localTokenRanges;
-    }
-
-    static Set<TokenRange> mergeTokenRanges(@NotNull Set<TokenRange> ranges)
-    {
-        Set<TokenRange> result = new HashSet<>();
-        Iterator<TokenRange> sorted = ranges.stream()
-                                            .sorted(TokenRange.NATURAL_ORDER)
-                                            .iterator();
-        TokenRange last = null;
-        while (sorted.hasNext())
-        {
-            TokenRange current = sorted.next();
-            if (last == null)
-            {
-                last = current;
-            }
-            else if (last.connectsWith(current))
-            {
-                last = new TokenRange(last.start(), current.end());
-            }
-            else
-            {
-                result.add(last);
-                last = current;
-            }
-        }
-        if (last != null)
-        {
-            result.add(last);
-        }
-        return result;
     }
 
     /**
