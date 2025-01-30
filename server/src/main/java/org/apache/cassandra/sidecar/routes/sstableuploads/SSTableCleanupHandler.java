@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.routes.sstableuploads;
 
 import java.nio.file.NoSuchFileException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 
 import com.google.inject.Inject;
@@ -30,7 +29,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.AccessProtected;
@@ -65,8 +63,7 @@ public class SSTableCleanupHandler extends AbstractHandler<String> implements Ac
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
-        return Collections.singleton(BasicPermissions.DELETE_STAGED_SSTABLE.toAuthorization(eligibleResources));
+        return Collections.singleton(BasicPermissions.DELETE_STAGED_SSTABLE.toAuthorization());
     }
 
     /**

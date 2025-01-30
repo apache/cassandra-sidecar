@@ -29,7 +29,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -75,8 +74,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.OPERATION.resource();
-        return Collections.singleton(BasicPermissions.DECOMMISSION_NODE.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.DECOMMISSION_NODE.toAuthorization());
     }
 
     /**

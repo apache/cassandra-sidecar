@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.routes.restore;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -35,7 +34,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -77,8 +75,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
-        return Collections.singleton(BasicPermissions.EDIT_RESTORE_JOB.toAuthorization(eligibleResources));
+        return Collections.singleton(BasicPermissions.EDIT_RESTORE_JOB.toAuthorization());
     }
 
     @Override

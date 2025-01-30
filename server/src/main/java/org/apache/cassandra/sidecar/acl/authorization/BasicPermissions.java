@@ -18,6 +18,11 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.CLUSTER;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.KEYSPACE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.OPERATION;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE;
+
 /**
  * Basic permissions are the building blocks of the permission-ing system in Sidecar. It offers more granular
  * permissions on specific targets which are listed here. The majority of Sidecar permissions are represented in
@@ -35,35 +40,53 @@ package org.apache.cassandra.sidecar.acl.authorization;
 public class BasicPermissions
 {
     // SSTable staging related permissions
-    public static final Permission UPLOAD_STAGED_SSTABLE = new DomainAwarePermission("STAGED_SSTABLE:UPLOAD");
-    public static final Permission IMPORT_STAGED_SSTABLE = new DomainAwarePermission("STAGED_SSTABLE:IMPORT");
-    public static final Permission DELETE_STAGED_SSTABLE = new DomainAwarePermission("STAGED_SSTABLE:DELETE");
+    public static final Permission UPLOAD_STAGED_SSTABLE = new DomainAwarePermission("STAGED_SSTABLE:UPLOAD")
+                                                           .withScope(TABLE);
+    public static final Permission IMPORT_STAGED_SSTABLE = new DomainAwarePermission("STAGED_SSTABLE:IMPORT")
+                                                           .withScope(TABLE);
+    public static final Permission DELETE_STAGED_SSTABLE = new DomainAwarePermission("STAGED_SSTABLE:DELETE")
+                                                           .withScope(TABLE);
 
     // snapshot related permissions
-    public static final Permission CREATE_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:CREATE");
-    public static final Permission READ_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:READ");
-    public static final Permission DELETE_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:DELETE");
-    public static final Permission STREAM_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:STREAM");
+    public static final Permission CREATE_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:CREATE")
+                                                     .withScope(TABLE);
+    public static final Permission READ_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:READ")
+                                                   .withScope(TABLE);
+    public static final Permission DELETE_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:DELETE")
+                                                     .withScope(TABLE);
+    public static final Permission STREAM_SNAPSHOT = new DomainAwarePermission("SNAPSHOT:STREAM")
+                                                     .withScope(TABLE);
 
     // restore job related permissions
-    public static final Permission CREATE_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:CREATE");
-    public static final Permission READ_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:READ");
-    public static final Permission EDIT_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:EDIT");
-    public static final Permission DELETE_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:DELETE");
+    public static final Permission CREATE_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:CREATE")
+                                                        .withScope(TABLE);
+    public static final Permission READ_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:READ")
+                                                      .withScope(TABLE);
+    public static final Permission EDIT_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:EDIT")
+                                                      .withScope(TABLE);
+    public static final Permission DELETE_RESTORE_JOB = new DomainAwarePermission("RESTORE_JOB:DELETE")
+                                                        .withScope(TABLE);
 
     // cdc related permissions
-    public static final Permission CDC = new StandardPermission("CDC");
+    public static final Permission CDC = new StandardPermission("CDC").withScope(CLUSTER);
 
     // sidecar operation related permissions
-    public static final Permission READ_OPERATIONAL_JOB = new DomainAwarePermission("OPERATIONAL_JOB:READ");
-    public static final Permission DECOMMISSION_NODE = new DomainAwarePermission("NODE:DECOMMISSION");
+    public static final Permission READ_OPERATIONAL_JOB = new DomainAwarePermission("OPERATIONAL_JOB:READ")
+                                                          .withScope(OPERATION);
+    public static final Permission DECOMMISSION_NODE = new DomainAwarePermission("NODE:DECOMMISSION")
+                                                       .withScope(OPERATION);
 
     // cassandra cluster related permissions
-    public static final Permission READ_SCHEMA = new DomainAwarePermission("STATS:READ");
-    public static final Permission READ_GOSSIP = new DomainAwarePermission("GOSSIP:READ");
-    public static final Permission READ_RING = new DomainAwarePermission("RING:READ");
-    public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ");
+    public static final Permission READ_SCHEMA = new DomainAwarePermission("SCHEMA:READ")
+                                                 .withScope(CLUSTER);
+    public static final Permission READ_SCHEMA_KEYSPACE_SCOPED = new DomainAwarePermission("SCHEMA:READ")
+                                                                 .withScope(KEYSPACE);
+    public static final Permission READ_GOSSIP = new DomainAwarePermission("GOSSIP:READ").withScope(CLUSTER);
+    public static final Permission READ_RING = new DomainAwarePermission("RING:READ").withScope(CLUSTER);
+    public static final Permission READ_RING_KEYSPACE_SCOPED = new DomainAwarePermission("RING:READ")
+                                                               .withScope(KEYSPACE);
+    public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ").withScope(KEYSPACE);
 
     // cassandra stats permissions
-    public static final Permission STATS = new StandardPermission("STATS");
+    public static final Permission STATS = new StandardPermission("STATS").withScope(CLUSTER);
 }

@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -32,7 +31,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -62,8 +60,7 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE.expandedResources();
-        return Collections.singleton(BasicPermissions.READ_RING.toAuthorization(eligibleResources));
+        return Collections.singleton(BasicPermissions.READ_RING_KEYSPACE_SCOPED.toAuthorization());
     }
 
     /**

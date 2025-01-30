@@ -24,10 +24,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.tuple.Pair;
-
-import io.vertx.ext.auth.authorization.FeatureAuthorization;
-
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.CREATE_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.CREATE_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DELETE_RESTORE_JOB;
@@ -35,54 +31,48 @@ import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DE
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DELETE_STAGED_SSTABLE;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.EDIT_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.IMPORT_STAGED_SSTABLE;
+import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_GOSSIP;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_RESTORE_JOB;
-import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_RING;
+import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_RING_KEYSPACE_SCOPED;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SCHEMA;
+import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SCHEMA_KEYSPACE_SCOPED;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_TOPOLOGY;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.STREAM_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.UPLOAD_STAGED_SSTABLE;
 import static org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions.SELECT;
-import static org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource.CLUSTER;
-import static org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource.DATA;
-import static org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource.DATA_WITH_KEYSPACE;
-import static org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource.DATA_WITH_KEYSPACE_TABLE;
 
 /**
- * Enumerates a list of feature level permissions that Sidecar recognizes and honors. Feature level permissions
- * uses {@link FeatureAuthorization} to represent authorizations granted/required. {@link FeatureAuthorization}
- * could be composed of multiple authorizations.
+ * Enumerates a list of feature level permissions that Sidecar recognizes and honors.
  */
 public enum FeaturePermission
 {
     BULK_READ_DIRECT("BULK_READ_DIRECT",
-                     Pair.of(READ_RING, DATA.resource()),
-                     Pair.of(READ_RING, DATA_WITH_KEYSPACE.resource()),
-                     Pair.of(READ_SCHEMA, DATA.resource()),
-                     Pair.of(READ_SCHEMA, DATA_WITH_KEYSPACE.resource()),
-                     Pair.of(CREATE_SNAPSHOT, DATA_WITH_KEYSPACE_TABLE.resource()),
-                     Pair.of(READ_SNAPSHOT, DATA_WITH_KEYSPACE_TABLE.resource()),
-                     Pair.of(DELETE_SNAPSHOT, DATA_WITH_KEYSPACE_TABLE.resource()),
-                     Pair.of(STREAM_SNAPSHOT, DATA_WITH_KEYSPACE_TABLE.resource()),
-                     Pair.of(SELECT, DATA_WITH_KEYSPACE_TABLE.resource())),
+                     READ_RING_KEYSPACE_SCOPED,
+                     READ_SCHEMA_KEYSPACE_SCOPED,
+                     CREATE_SNAPSHOT,
+                     READ_SNAPSHOT,
+                     DELETE_SNAPSHOT,
+                     STREAM_SNAPSHOT,
+                     SELECT),
 
     BULK_WRITE_DIRECT("BULK_WRITE_DIRECT",
-                      Pair.of(READ_SCHEMA, DATA_WITH_KEYSPACE.resource()),
-                      Pair.of(READ_TOPOLOGY, DATA_WITH_KEYSPACE.resource()),
-                      Pair.of(UPLOAD_STAGED_SSTABLE, DATA_WITH_KEYSPACE_TABLE.resource()),
-                      Pair.of(IMPORT_STAGED_SSTABLE, DATA_WITH_KEYSPACE_TABLE.resource()),
-                      Pair.of(DELETE_STAGED_SSTABLE, DATA_WITH_KEYSPACE_TABLE.resource())),
+                      READ_SCHEMA_KEYSPACE_SCOPED,
+                      READ_GOSSIP,
+                      READ_TOPOLOGY,
+                      UPLOAD_STAGED_SSTABLE,
+                      IMPORT_STAGED_SSTABLE,
+                      DELETE_STAGED_SSTABLE),
 
     BULK_WRITE_S3_COMPAT("BULK_WRITE_S3_COMPAT",
-                         Pair.of(READ_SCHEMA, DATA_WITH_KEYSPACE.resource()),
-                         Pair.of(READ_TOPOLOGY, DATA_WITH_KEYSPACE.resource()),
-                         Pair.of(CREATE_RESTORE_JOB, DATA_WITH_KEYSPACE_TABLE.resource()),
-                         Pair.of(READ_RESTORE_JOB, DATA_WITH_KEYSPACE_TABLE.resource()),
-                         Pair.of(EDIT_RESTORE_JOB, DATA_WITH_KEYSPACE_TABLE.resource()),
-                         Pair.of(DELETE_RESTORE_JOB, DATA_WITH_KEYSPACE_TABLE.resource())),
+                         READ_SCHEMA,
+                         READ_TOPOLOGY,
+                         CREATE_RESTORE_JOB,
+                         READ_RESTORE_JOB,
+                         EDIT_RESTORE_JOB,
+                         DELETE_RESTORE_JOB),
 
-    CDC("CDC", Pair.of(BasicPermissions.CDC, CLUSTER.resource())),
-    ;
+    CDC("CDC", BasicPermissions.CDC);
 
     private static final Map<String, FeaturePermission> NAME_TO_FEATURE_PERMISSION
     = Arrays.stream(values())
@@ -90,10 +80,10 @@ public enum FeaturePermission
 
     private final CompositePermission permission;
 
-    FeaturePermission(String name, Pair<Permission, String>... permissionResourcePair)
+    FeaturePermission(String name, Permission... permissions)
     {
         this.permission
-        = new CompositePermission(name, Arrays.stream(permissionResourcePair).collect(Collectors.toUnmodifiableList()));
+        = new CompositePermission(name, Arrays.stream(permissions).collect(Collectors.toList()));
     }
 
     public Permission permission()

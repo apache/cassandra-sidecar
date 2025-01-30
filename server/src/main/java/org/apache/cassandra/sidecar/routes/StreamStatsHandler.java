@@ -27,7 +27,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
@@ -56,8 +55,7 @@ public class StreamStatsHandler extends AbstractHandler<Void> implements AccessP
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(BasicPermissions.STATS.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.STATS.toAuthorization());
     }
 
     /**

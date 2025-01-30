@@ -1,47 +1,55 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.lang3.tuple.Pair;
-
+import io.vertx.ext.auth.authorization.AndAuthorization;
 import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.auth.authorization.FeatureAuthorization;
 
-import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
-
+/**
+ *
+ */
 public class CompositePermission extends StandardPermission
 {
-    private final List<Pair<Permission, String>> permissionsWithResource;
+    private final List<Permission> permissions;
 
-    public CompositePermission(String name, List<Pair<Permission, String>> permissionsWithResource)
+    public CompositePermission(String name, List<Permission> permissions)
     {
         super(name);
-        if (permissionsWithResource == null || permissionsWithResource.isEmpty())
+        if (permissions == null || permissions.isEmpty())
         {
             throw new IllegalArgumentException("CompositePermission can not be created with null or empty permissions");
         }
-        this.permissionsWithResource = Collections.unmodifiableList(permissionsWithResource);
+        this.permissions = Collections.unmodifiableList(permissions);
     }
 
     @Override
     public Authorization toAuthorization(String resource)
     {
-        // create childAuthorizations in every toAuthorization call, Authorization objects overrides existing
-        // resource during setResource call. Pre creating Authorization object could lead to resource getting overridden
-        // when a user holds same permission across different resources
-        List<Authorization> authorizations = new ArrayList<>();
-        for (Pair<Permission, String> permissionResourcePair : permissionsWithResource)
+        AndAuthorization authorization = AndAuthorization.create();
+        for (Permission permission : permissions)
         {
-            Permission composedPermission = permissionResourcePair.getKey();
-            String composedResource = permissionResourcePair.getRight();
-            authorizations.add(composedPermission.toAuthorization(composedResource));
-        }
-        FeatureAuthorization authorization = FeatureAuthorization.create(authorizations);
-        if (isNotEmpty(resource))
-        {
-            authorization.setResource(resource);
+            ResourceScope resourceScope = permission.resourceScope();
+            String resolvedResource = resourceScope != null ? resourceScope.resolveWithResource(resource) : resource;
+            authorization.addAuthorization(permission.toAuthorization(resolvedResource));
         }
         return authorization;
     }

@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.routes.restore;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 
 import com.google.inject.Inject;
@@ -31,7 +30,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
@@ -74,8 +72,7 @@ public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobReque
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
-        return Collections.singleton(BasicPermissions.DELETE_RESTORE_JOB.toAuthorization(eligibleResources));
+        return Collections.singleton(BasicPermissions.DELETE_RESTORE_JOB.toAuthorization());
     }
 
     @Override

@@ -27,7 +27,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
 import org.apache.cassandra.sidecar.common.server.utils.GossipInfoParser;
@@ -56,8 +55,7 @@ public class GossipInfoHandler extends AbstractHandler<Void> implements AccessPr
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(BasicPermissions.READ_GOSSIP.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.READ_GOSSIP.toAuthorization());
     }
 
     /**

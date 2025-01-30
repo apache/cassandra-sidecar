@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.routes.restore;
 
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import javax.inject.Inject;
 
@@ -33,7 +32,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -80,8 +78,7 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
-        return Collections.singleton(BasicPermissions.CREATE_RESTORE_JOB.toAuthorization(eligibleResources));
+        return Collections.singleton(BasicPermissions.CREATE_RESTORE_JOB.toAuthorization());
     }
 
     @Override

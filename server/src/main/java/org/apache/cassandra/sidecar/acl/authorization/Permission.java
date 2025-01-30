@@ -18,11 +18,10 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.List;
+import java.util.Set;
 
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.OrAuthorization;
-import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Represents a permission that can be granted to a user
@@ -35,15 +34,9 @@ public interface Permission
     String name();
 
     /**
-     * @return {@link Authorization} created from permission. Most sidecar endpoints require a resource.
-     * This method is currently only used in testing
+     * @return resource scope this permission can act for.
      */
-    @VisibleForTesting
-    default Authorization toAuthorization()
-    {
-        // When resource is empty, it is ignored
-        return toAuthorization("");
-    }
+    ResourceScope resourceScope();
 
     /**
      * User authorization created with resource
@@ -54,19 +47,36 @@ public interface Permission
     Authorization toAuthorization(String resource);
 
     /**
+     * User authorization created with expanded resources of given resource scope.
+     *
+     * @return {@link Authorization} created with expanded resources of associated resource scope, when expanded
+     * resources are empty, {@link Authorization} is created with permission {@link #name} and default
+     * variableAwareResource of set resource scope
+     */
+    default Authorization toAuthorization()
+    {
+        if (resourceScope() == null)
+        {
+            // when resource is empty, it is ignored. Only permission name is used to create Authorization
+            return toAuthorization("");
+        }
+        return toAuthorization(resourceScope().expandedResources());
+    }
+
+    /**
      * User authorization created with eligible resources.
      *
      * @param eligibleResources authorization is created with all the eligible resources, so that if user holds grant
      *                          for <b>any</b> of the eligibleResources, then they are granted access
      * @return {@link Authorization} created with given eligibleResources, when empty list is passed
-     * {@link Authorization} is created with just permission {@link #name}
+     * {@link Authorization} is created with just permission {@link #name} and default
+     * variableAwareResource of permission's resource scope
      */
-    default Authorization toAuthorization(List<String> eligibleResources)
+    default Authorization toAuthorization(Set<String> eligibleResources)
     {
         if (eligibleResources == null || eligibleResources.isEmpty())
         {
-            // When resource is empty, it is ignored
-            return toAuthorization("");
+            return toAuthorization(resourceScope().variableAwareResource());
         }
 
         OrAuthorization orAuthorization = OrAuthorization.create();

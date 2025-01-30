@@ -31,6 +31,7 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpt
 public class StandardPermission implements Permission
 {
     protected final String name;
+    protected ResourceScope resourceScope = null;
 
     public StandardPermission(String name)
     {
@@ -45,6 +46,24 @@ public class StandardPermission implements Permission
     public String name()
     {
         return name;
+    }
+
+    /**
+     * Sets resource scope for given permission.
+     *
+     * @param resourceScope scope of resource this permission checks or grants permission for.
+     * @return a reference to permission
+     */
+    public StandardPermission withScope(ResourceScope resourceScope)
+    {
+        this.resourceScope = resourceScope;
+        return this;
+    }
+
+    @Override
+    public ResourceScope resourceScope()
+    {
+        return resourceScope;
     }
 
     @Override

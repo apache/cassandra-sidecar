@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
 import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
 
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.permissionFromName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -53,7 +54,7 @@ class PermissionTest
     @Test
     void testToAuthorizationWithResource()
     {
-        String expectedResource = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.resource();
+        String expectedResource = TABLE.variableAwareResource();
         PermissionBasedAuthorization authorization
         = (PermissionBasedAuthorization) permissionFromName("CREATESNAPSHOT").toAuthorization(expectedResource);
         assertThat(authorization.getResource()).isEqualTo(expectedResource);

@@ -36,7 +36,6 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
@@ -49,6 +48,7 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -73,8 +73,8 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        List<String> eligibleResources = VariableAwareResource.DATA_WITH_KEYSPACE_TABLE.expandedResources();
-        Authorization stream = BasicPermissions.STREAM_SNAPSHOT.toAuthorization(eligibleResources);
+        Set<String> eligibleResources = TABLE.expandedResources();
+        Authorization stream = BasicPermissions.STREAM_SNAPSHOT.toAuthorization();
         Authorization select = CassandraPermissions.SELECT.toAuthorization(eligibleResources);
         return ImmutableSet.of(stream, select);
     }

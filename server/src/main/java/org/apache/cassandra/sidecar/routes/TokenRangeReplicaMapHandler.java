@@ -31,7 +31,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -68,8 +67,7 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<Name> implement
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.DATA_WITH_KEYSPACE.resource();
-        return Collections.singleton(BasicPermissions.READ_TOPOLOGY.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.READ_TOPOLOGY.toAuthorization());
     }
 
     /**

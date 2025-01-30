@@ -25,7 +25,6 @@ import com.google.inject.Singleton;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -55,8 +54,7 @@ public class SchemaHandler extends KeyspaceSchemaHandler
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        String resource = VariableAwareResource.CLUSTER.resource();
-        return Collections.singleton(BasicPermissions.READ_SCHEMA.toAuthorization(resource));
+        return Collections.singleton(BasicPermissions.READ_SCHEMA.toAuthorization());
     }
 
     /**
