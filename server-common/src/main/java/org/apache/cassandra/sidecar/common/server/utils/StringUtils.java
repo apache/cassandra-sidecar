@@ -42,4 +42,19 @@ public class StringUtils
     {
         return HostAndPort.fromParts(address.getAddress().getHostAddress(), address.getPort()).toString();
     }
+
+    /**
+     * Similar to {@link #cassandraFormattedHostAndPort(InetSocketAddress)}, but use ip and port to
+     * create the address string representing the Cassandra server.
+     * @param ip ip address
+     * @param port port
+     * @return the string representation of the address with the same signature as represented by
+     * the Cassandra server
+     */
+    @SuppressWarnings("UnstableApiUsage")
+    public static String cassandraFormattedHostAndPort(String ip, int port)
+    {
+        return HostAndPort.fromParts(ip, port).toString();
+
+    }
 }

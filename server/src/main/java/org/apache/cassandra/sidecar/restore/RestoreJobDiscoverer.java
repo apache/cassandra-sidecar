@@ -47,6 +47,8 @@ import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -84,6 +86,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     private final JobIdsByDay jobIdsByDay;
     private final RingTopologyRefresher ringTopologyRefresher;
     private final AtomicBoolean isExecuting = new AtomicBoolean(false);
+    private final TaskExecutorPool executorPool;
     private int inflightJobsCount = 0;
     private int jobDiscoveryRecencyDays;
     private PeriodicTaskExecutor periodicTaskExecutor;
@@ -97,6 +100,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
                                 Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
                                 InstanceMetadataFetcher instanceMetadataFetcher,
                                 RingTopologyRefresher ringTopologyRefresher,
+                                ExecutorPools executorPools,
                                 SidecarMetrics metrics)
     {
         this(config.restoreJobConfiguration(),
@@ -107,6 +111,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
              restoreJobManagerGroupProvider,
              instanceMetadataFetcher,
              ringTopologyRefresher,
+             executorPools,
              metrics);
     }
 
@@ -119,6 +124,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
                          Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
                          InstanceMetadataFetcher instanceMetadataFetcher,
                          RingTopologyRefresher ringTopologyRefresher,
+                         ExecutorPools executorPools,
                          SidecarMetrics metrics)
     {
         this.restoreJobConfig = restoreJobConfig;
@@ -133,6 +139,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         this.localTokenRangesProvider = ringTopologyRefresher;
         this.metrics = metrics.server().restore();
         this.jobIdsByDay = new JobIdsByDay();
+        this.executorPool = executorPools.internal();
     }
 
     @Override

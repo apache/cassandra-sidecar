@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.restore;
 
-import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,6 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.slf4j.Logger;
@@ -38,7 +39,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
@@ -54,7 +54,6 @@ import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
-import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -180,7 +179,6 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
             topology = replicaByTokenRangePerKeyspace.topologyOfKeyspace(keyspace);
         }
 
-        // nothing is fetched
         return calculateLocalTokenRanges(metadataFetcher, topology);
     }
 
@@ -193,11 +191,16 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
             return Collections.emptyMap();
         }
 
-        List<InstanceMetadata> allInstances = metadataFetcher.allLocalInstances();
-        Map<String, InstanceMetadata> localEndpointsToMetadata = new HashMap<>(allInstances.size());
-        for (InstanceMetadata instanceMetadata : allInstances)
+        // todo: this assumes one C* node per IP address
+        Map<String, Integer> allNodes = topology.replicaMetadata().values().stream()
+                                                .collect(Collectors.toMap(TokenRangeReplicasResponse.ReplicaMetadata::address,
+                                                                          TokenRangeReplicasResponse.ReplicaMetadata::port));
+
+        List<InstanceMetadata> localNodes = metadataFetcher.allLocalInstances();
+        Map<String, InstanceMetadata> localEndpointsToMetadata = new HashMap<>(localNodes.size());
+        for (InstanceMetadata instanceMetadata : localNodes)
         {
-            populateEndpointToMetadata(instanceMetadata, localEndpointsToMetadata);
+            populateEndpointToMetadata(instanceMetadata, allNodes, localEndpointsToMetadata);
         }
 
         Map<Integer, Set<TokenRange>> localTokenRanges = new HashMap<>(localEndpointsToMetadata.size());
@@ -274,17 +277,36 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
         });
     }
 
-    private static void populateEndpointToMetadata(InstanceMetadata instanceMetadata, Map<String, InstanceMetadata> localEndpointsToMetadata)
+    private static void populateEndpointToMetadata(InstanceMetadata instanceMetadata,
+                                                   Map<String, Integer> allNodes,
+                                                   Map<String, InstanceMetadata> localEndpointsToMetadata)
     {
-        try
+        String ip = ipOf(instanceMetadata);
+        Integer port = allNodes.get(ip);
+        if (port == null)
         {
-            InetSocketAddress endpoint = instanceMetadata.delegate().localStorageBroadcastAddress();
-            localEndpointsToMetadata.put(StringUtils.cassandraFormattedHostAndPort(endpoint), instanceMetadata);
+            // the configured local instance is not in the C* ring yet (not even joining). Exit early for such node
+            return;
         }
-        catch (CassandraUnavailableException cue)
+        String endpointWithPort = StringUtils.cassandraFormattedHostAndPort(ip, port);
+        localEndpointsToMetadata.put(endpointWithPort, instanceMetadata);
+    }
+
+    private static String ipOf(InstanceMetadata instanceMetadata)
+    {
+        String ipAddress = instanceMetadata.ipAddress();
+        if (ipAddress == null)
         {
-            LOGGER.debug("Ignore this instance. Cassandra is unavailable", cue);
+            try
+            {
+                return instanceMetadata.refreshIpAddress();
+            }
+            catch (UnknownHostException uhe)
+            {
+                LOGGER.debug("Failed to resolve IP address. host={}", instanceMetadata.host());
+            }
         }
+        return ipAddress;
     }
 
     /**

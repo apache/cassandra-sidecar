@@ -58,15 +58,15 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = tableSchema.insert()
-                                              .bind(range.jobId(),
-                                                    range.bucketId(),
-                                                    range.startToken(),
-                                                    range.endToken(),
-                                                    range.sliceId(),
+        BoundStatement statement = tableSchema.createRange()
+                                              .bind(range.sliceId(),
                                                     range.sliceBucket(),
                                                     range.sliceKey(),
-                                                    range.statusTextByReplica());
+                                                    range.statusTextByReplica(),
+                                                    range.jobId(),
+                                                    range.bucketId(),
+                                                    range.startToken(),
+                                                    range.endToken());
         execute(statement);
         LOGGER.debug("Created range={}", range);
         return range;

@@ -36,7 +36,7 @@ public class RestoreRangesSchema extends TableSchema implements ExecuteOnCluster
     private final SchemaKeyspaceConfiguration keyspaceConfig;
     private final SecondBoundConfiguration tableTtl;
 
-    private PreparedStatement insert;
+    private PreparedStatement createRange;
     private PreparedStatement findAll;
     private PreparedStatement update;
 
@@ -55,7 +55,7 @@ public class RestoreRangesSchema extends TableSchema implements ExecuteOnCluster
     @Override
     protected void prepareStatements(@NotNull Session session)
     {
-        insert = prepare(insert, session, CqlLiterals.insert(keyspaceConfig));
+        createRange = prepare(createRange, session, CqlLiterals.createRange(keyspaceConfig));
         findAll = prepare(findAll, session, CqlLiterals.findAll(keyspaceConfig));
         update = prepare(update, session, CqlLiterals.update(keyspaceConfig));
     }
@@ -83,9 +83,9 @@ public class RestoreRangesSchema extends TableSchema implements ExecuteOnCluster
                              keyspaceConfig.keyspace(), TABLE_NAME, tableTtl.toSeconds());
     }
 
-    public PreparedStatement insert()
+    public PreparedStatement createRange()
     {
-        return insert;
+        return createRange;
     }
 
     public PreparedStatement findAll()
@@ -100,18 +100,12 @@ public class RestoreRangesSchema extends TableSchema implements ExecuteOnCluster
 
     private static class CqlLiterals
     {
-        static String insert(SchemaKeyspaceConfiguration config)
+        static String createRange(SchemaKeyspaceConfiguration config)
         {
-            return withTable("INSERT INTO %s.%s (" +
-                             "  job_id," +
-                             "  bucket_id," +
-                             "  start_token," +
-                             "  end_token," +
-                             "  slice_id," +
-                             "  slice_bucket," +
-                             "  slice_key," +
-                             "  status_by_replica" +
-                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)", config);
+            // Use update to create range to avoid over-writing status_by_replica map
+            return withTable("UPDATE %s.%s " +
+                             "SET slice_id = ?, slice_bucket = ?, slice_key = ?, status_by_replica = status_by_replica + ? " +
+                             "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?", config);
         }
 
         // ALLOW FILTERING within the same partition should have minimum impact on read performance.
