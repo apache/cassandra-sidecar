@@ -25,7 +25,10 @@ cassandra_instances:
     port: 9042
     # The instance's storage directory as defined per the cassandra.storagedir property
     # which defaults to the $CASSANDRA_HOME/data directory, but can be configured to any
-    # directory.
+    # directory. By default, storage directory is the parent directory of data dirs,
+    # commitlog dir, cdc dir, hints dir and saved caches dir. If data_dirs, commitlog_dir,
+    # cdc_dir, hints_dir and saved_caches_dir are configured explicitly, then they will be used.
+    # Otherwise, default paths based on storage directory will be used.
     storage_dir: ~/.ccm/test/node1
     data_dirs:
       - ~/.ccm/test/node1/data0

@@ -49,7 +49,8 @@ public interface InstanceMetadata
     /**
      * @return a list of data directories of cassandra instance
      */
-    @NotNull List<String> dataDirs();
+    @NotNull
+    List<String> dataDirs();
 
     /**
      * @return a staging directory of the cassandra instance
@@ -60,13 +61,16 @@ public interface InstanceMetadata
      * @return a {@link CassandraAdapterDelegate} specific for the instance, or throws when the delegate is unavailable
      * @throws CassandraUnavailableException when the Cassandra service is unavailable
      */
-    @NotNull CassandraAdapterDelegate delegate() throws CassandraUnavailableException;
+    @NotNull
+    CassandraAdapterDelegate delegate() throws CassandraUnavailableException;
 
     /**
-     * @return CDC directory of the cassandra instance, it can be null when CDC is not enabled for the Cassandra
+     * @return CDC directory of the cassandra instance, it can be configured as null when CDC is not enabled
+     * for the Cassandra.
      * instance
      */
-    @Nullable String cdcDir();
+    @Nullable
+    String cdcDir();
 
     /**
      * @return commitlog directory of the cassandra instance
@@ -89,10 +93,12 @@ public interface InstanceMetadata
     /**
      * @return local system data file directory of the cassandra instance
      */
-    @Nullable String localSystemDataFileDir();
+    @Nullable
+    String localSystemDataFileDir();
 
     /**
      * @return {@link InstanceMetrics} metrics specific for the Cassandra instance
      */
-    @NotNull InstanceMetrics metrics();
+    @NotNull
+    InstanceMetrics metrics();
 }
