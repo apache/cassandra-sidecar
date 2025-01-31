@@ -53,6 +53,7 @@ import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.getIdxFileName;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.getLogFilePrefix;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.isIndexFile;
@@ -93,6 +94,14 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
                                   Void request)
     {
         String cdcDir = metadataFetcher.instance(host).cdcDir();
+        if (isNullOrEmpty(cdcDir))
+        {
+            context.response()
+                   .setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code())
+                   .setStatusMessage("CDC not turned on for cluster")
+                   .end();
+            return;
+        }
         serviceExecutorPool
         .executeBlocking(() -> collectCdcSegmentsFromFileSystem(cdcDir))
         .map(segments -> new ListCdcSegmentsResponse(config.host(), config.port(), segments))
@@ -101,7 +110,7 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
             LOGGER.warn("Error listing the CDC commit log segments", cause);
             context.response()
                    .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
-                   .setStatusMessage(cause.getMessage())
+                   .setStatusMessage(cause != null ? cause.getMessage() : "Error while listing CDC segments")
                    .end();
         });
     }
