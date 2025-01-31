@@ -36,13 +36,13 @@ public class ResourceScopes
         @Override
         public String variableAwareResource()
         {
-            return "CLUSTER";
+            return "cluster";
         }
 
         @Override
         public String resolveWithResource(String resource)
         {
-            return "CLUSTER";
+            return "cluster";
         }
 
         @Override
@@ -62,13 +62,13 @@ public class ResourceScopes
         @Override
         public String variableAwareResource()
         {
-            return "OPERATION";
+            return "operation";
         }
 
         @Override
         public String resolveWithResource(String resource)
         {
-            return "OPERATION";
+            return "operation";
         }
 
         @Override

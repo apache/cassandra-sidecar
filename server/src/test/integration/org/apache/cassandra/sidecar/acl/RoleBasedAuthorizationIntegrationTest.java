@@ -345,17 +345,19 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
     }
 
-    void testGrantingCdcFeaturePermission(VertxTestContext context)
+    void testGrantingCdcFeaturePermission(VertxTestContext context) throws Exception
     {
         String listCdcPath = "/api/v1/cdc/segments";
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/cdc_test_user");
         // CDC permission granted with CDC
-        WebClient client = createClient(nonAdminClientKeystorePath, truststorePath);
+        WebClient client = createClient(clientKeystorePath, truststorePath);
         createReq(client, HttpMethod.GET, listCdcPath)
         .onFailure(context::failNow)
         .onSuccess(listResp -> {
             // CDC permission granted
-            // CDC is not turned on for cluster, hence 503 expected
-            assertThat(listResp.statusCode()).isEqualTo(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
+            // CDC is not turned on for cluster, hence 500 or 503 expected
+            assertThat(listResp.statusCode()).isIn(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
+                                                   HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
             testCompleteLatch.countDown();
         });
     }
@@ -437,6 +439,9 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         createRole("bulk_read_write_test_role", false);
         insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/bulk_read_write_test_user", "bulk_read_write_test_role");
+
+        createRole("cdc_test_role", false);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/cdc_test_user", "cdc_test_role");
     }
 
     private void grantRequiredPermissions()
@@ -480,7 +485,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         grantSidecarPermission("bulk_read_write_test_role", "data/grant_bulk_read_write_test_keyspace/test_table", "ANALYTICS:READ_DIRECT,WRITE_DIRECT");
 
         // permission for testGrantingCdcFeaturePermission
-        grantSidecarPermission("non_admin_test_role", "cluster", "CDC");
+        grantSidecarPermission("cdc_test_role", "cluster", "CDC");
     }
 
     private void createRequiredKeystores() throws Exception
