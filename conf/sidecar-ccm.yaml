@@ -17,11 +17,57 @@
 #
 
 #
-# Cassandra Sidecar configuration file
+# Cassandra Sidecar configuration file for a 3-node CCM cluster with name test
 #
 cassandra_instances:
   - id: 1
     host: localhost1
+    port: 9042
+    # The instance's storage directory as defined per the cassandra.storagedir property
+    # which defaults to the $CASSANDRA_HOME/data directory, but can be configured to any
+    # directory. By default, storage directory is the parent directory of data dirs,
+    # commitlog dir, cdc dir, hints dir and saved caches dir. If data_dirs, commitlog_dir,
+    # cdc_dir, hints_dir and saved_caches_dir are configured explicitly, then they will be used.
+    # Otherwise, default paths based on storage directory will be used.
+    #storage_dir: ~/.ccm/test/node1
+
+    # List of directories where Cassandra stores data on disk. If not set, the default directory
+    # is <storage_dir>/data
+    data_dirs:
+      - ~/.ccm/test/node1/data0
+
+    # A temporary directory used to stage sstables before importing them into Cassandra.
+    staging_dir: ~/.ccm/test/node1/sstable-staging
+
+    # Directory where Cassandra stores mutations. If not set, the default directory is
+    # <storage_dir>/cdc_raw.
+    cdc_dir: ~/.ccm/test/node1/cdc_raw
+
+    # Directory where Cassandra stores the commit logs. If not set, the default directory
+    # is <storage_dir>/commitlog
+    commitlog_dir: ~/.ccm/test/node1/commitlog
+
+    # Directory where Cassandra stores hints. If not set, the default directory is
+    # <storage_dir>/hints.
+    hints_dir: ~/.ccm/test/node1/hints
+
+    # Directory where Cassandra stores the saved caches. If not set, the default directory
+    # is <storage_dir>/saved_caches
+    saved_caches_dir: ~/.ccm/test/node1/saved_caches
+
+    # Directory where Cassandra stores the data of the local system keyspaces.
+    # By default, Cassandra stores the data of the local system keyspaces in the
+    # first of the data directories specified by data_file_directories.
+    # local_system_data_file_directory:
+
+    jmx_host: 127.0.0.1
+    jmx_port: 7100
+    jmx_ssl_enabled: false
+#    jmx_role:
+#    jmx_role_password:
+
+  - id: 2
+    host: localhost2
     port: 9042
 
     # The instance's storage directory as defined per the cassandra.storagedir property
@@ -30,31 +76,31 @@ cassandra_instances:
     # commitlog dir, cdc dir, hints dir and saved caches dir. If data_dirs, commitlog_dir,
     # cdc_dir, hints_dir and saved_caches_dir are configured explicitly, then they will be used.
     # Otherwise, default paths based on storage directory will be used.
-    storage_dir: /var/lib/cassandra
+    #storage_dir: ~/.ccm/test/node2
 
     # List of directories where Cassandra stores data on disk. If not set, the default directory
     # is <storage_dir>/data
-    #data_dirs:
-    #  - /var/lib/cassandra/data
+    data_dirs:
+      - ~/.ccm/test/node2/data0
 
     # A temporary directory used to stage sstables before importing them into Cassandra.
-    staging_dir: /var/lib/cassandra/sstable-staging
+    staging_dir: ~/.ccm/test/node2/sstable-staging
 
     # Directory where Cassandra stores mutations. If not set, the default directory is
     # <storage_dir>/cdc_raw.
-    #cdc_dir: /var/lib/cassandra/cdc_raw
+    cdc_dir: ~/.ccm/test/node2/cdc_raw
 
     # Directory where Cassandra stores the commit logs. If not set, the default directory
     # is <storage_dir>/commitlog
-    #commitlog_dir: /var/lib/cassandra/commitlog
+    commitlog_dir: ~/.ccm/test/node2/commitlog
 
     # Directory where Cassandra stores hints. If not set, the default directory is
     # <storage_dir>/hints.
-    #hints_dir: /var/lib/cassandra/hints
+    hints_dir: ~/.ccm/test/node2/hints
 
     # Directory where Cassandra stores the saved caches. If not set, the default directory
     # is <storage_dir>/saved_caches
-    #saved_caches_dir: /var/lib/cassandra/saved_caches
+    saved_caches_dir: ~/.ccm/test/node2/saved_caches
 
     # Directory where Cassandra stores the data of the local system keyspaces.
     # By default, Cassandra stores the data of the local system keyspaces in the
@@ -62,7 +108,53 @@ cassandra_instances:
     # local_system_data_file_directory:
 
     jmx_host: 127.0.0.1
-    jmx_port: 7199
+    jmx_port: 7200
+    jmx_ssl_enabled: false
+#    jmx_role:
+#    jmx_role_password:
+
+  - id: 3
+    host: localhost3
+    port: 9042
+
+    # The instance's storage directory as defined per the cassandra.storagedir property
+    # which defaults to the $CASSANDRA_HOME/data directory, but can be configured to any
+    # directory. By default, storage directory is the parent directory of data dirs,
+    # commitlog dir, cdc dir, hints dir and saved caches dir. If data_dirs, commitlog_dir,
+    # cdc_dir, hints_dir and saved_caches_dir are configured explicitly, then they will be used.
+    # Otherwise, default paths based on storage directory will be used.
+    #storage_dir: ~/.ccm/test/node3
+
+    # List of directories where Cassandra stores data on disk. If not set, the default directory
+    # is <storage_dir>/data
+    data_dirs:
+      - ~/.ccm/test/node3/data0
+
+    # A temporary directory used to stage sstables before importing them into Cassandra.
+    staging_dir: ~/.ccm/test/node3/sstable-staging
+
+    # Directory where Cassandra stores mutations. If not set, the default directory is
+    # <storage_dir>/cdc_raw.
+    cdc_dir: ~/.ccm/test/node3/cdc_raw
+
+    # Directory where Cassandra stores the commit logs. If not set, the default directory
+    # is <storage_dir>/commitlog
+    commitlog_dir: ~/.ccm/test/node3/commitlog
+
+    # Directory where Cassandra stores hints. If not set, the default directory is
+    # <storage_dir>/hints.
+    hints_dir: ~/.ccm/test/node3/hints
+
+    # Directory where Cassandra stores the saved caches. If not set, the default directory
+    # is <storage_dir>/saved_caches
+    saved_caches_dir: ~/.ccm/test/node3/saved_caches
+
+    # Directory where Cassandra stores the data of the local system keyspaces.
+    # By default, Cassandra stores the data of the local system keyspaces in the
+    # first of the data directories specified by data_file_directories.
+    # local_system_data_file_directory:
+    jmx_host: 127.0.0.1
+    jmx_port: 7300
     jmx_ssl_enabled: false
 #    jmx_role:
 #    jmx_role_password:
@@ -141,14 +233,6 @@ vertx:
     classpath_resolving_enabled: false
     file_caching_enabled: false
 
-schema_reporting:                            # Schema Reporting configuration
-  enabled:          false                    # Disabled by default
-  initial_delay:    6h                       # Maximum delay before the first schema report (actual delay is randomized)
-  execute_interval: 12h                      # Exact interval between two sequential schema reports
-  endpoint:         http://localhost/schema  # Endpoint address for schema reporting
-  method:           PUT                      # HTTP verb to use for schema reporting
-  retries:          3                        # Number of times a failing schema report is retried
-
 #
 # Enable SSL configuration (Disabled by default)
 #
@@ -217,6 +301,7 @@ driver_parameters:
   contact_points:
     - "127.0.0.1:9042"
     - "127.0.0.2:9042"
+    - "127.0.0.3:9042"
   username: cassandra
   password: cassandra
   ssl:

@@ -68,7 +68,13 @@ After you clone the git repo, you can use the gradle wrapper to build and run th
 Apache Cassandra running on the host & port specified in `conf/sidecar.yaml`.
 
     $ ./gradlew run
-  
+
+Alternatively, you can run against a local CCM cluster. Cassandra Sidecar provides a configuration for a 3-node
+CCM cluster named `test`. You can use the gradle wrapper to run the project connected to a 3-node CCM cluster as
+follows:
+
+    $ ./gradlew run -Dsidecar.config=file:///$PWD/conf/sidecar-ccm.yaml
+
 Configuring Cassandra Instance
 ------------------------------
 
