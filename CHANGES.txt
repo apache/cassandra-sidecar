@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add feature level permissions to Sidecar (CASSSIDECAR-193)
  * Sidecar schema initialization can be executed on multiple thread (CASSSIDECAR-200)
  * Make sidecar operations resilient to down Cassandra nodes (CASSSIDECAR-201)
  * Fix Cassandra instance not found error (CASSSIDECAR-192)
