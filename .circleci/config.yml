@@ -275,6 +275,12 @@ jobs:
       - run: ./gradlew --info clean buildDeb
       - run: DEBIAN_FRONTEND=noninteractive sudo apt install -y ./build/distributions/cassandra-sidecar*.deb
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
+      - run: test -f /opt/cassandra-sidecar/agents/jolokia-core-*.jar
+      - run: test -f /opt/cassandra-sidecar/agents/jolokia-jvm-*.jar
+      - run: test -f /opt/cassandra-sidecar/conf/sidecar.yaml
+      - run: test -f /opt/cassandra-sidecar/conf/logback.xml
+      - run: test -f /opt/cassandra-sidecar/LICENSE.txt
+      - run: test -f /opt/cassandra-sidecar/lib/cassandra-sidecar-*.jar
 
   # ensures we can build and install rpm packages
   rpm_build_install:
@@ -286,6 +292,12 @@ jobs:
       - run: ./gradlew -i buildRpm
       - run: sudo dnf install -y ./build/distributions/cassandra-sidecar*.rpm
       - run: test -f /opt/cassandra-sidecar/bin/cassandra-sidecar
+      - run: test -f /opt/cassandra-sidecar/agents/jolokia-core-*.jar
+      - run: test -f /opt/cassandra-sidecar/agents/jolokia-jvm-*.jar
+      - run: test -f /opt/cassandra-sidecar/conf/sidecar.yaml
+      - run: test -f /opt/cassandra-sidecar/conf/logback.xml
+      - run: test -f /opt/cassandra-sidecar/LICENSE.txt
+      - run: test -f /opt/cassandra-sidecar/lib/cassandra-sidecar-*.jar
 
   docker_build:
     docker:
