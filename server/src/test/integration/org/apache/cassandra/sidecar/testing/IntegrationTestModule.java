@@ -52,7 +52,7 @@ import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
-import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
+import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -213,10 +213,10 @@ public class IntegrationTestModule extends AbstractModule
          *
          * @param id instance's id
          * @return instance meta information
-         * @throws NoSuchSidecarInstanceException when the instance with {@code id} does not exist
+         * @throws NoSuchCassandraInstanceException when the instance with {@code id} does not exist
          */
         @Override
-        public InstanceMetadata instanceFromId(int id) throws NoSuchSidecarInstanceException
+        public InstanceMetadata instanceFromId(int id) throws NoSuchCassandraInstanceException
         {
             return cassandraTestContext.instancesMetadata().instanceFromId(id);
         }
@@ -226,10 +226,10 @@ public class IntegrationTestModule extends AbstractModule
          *
          * @param host host address of instance
          * @return instance meta information
-         * @throws NoSuchSidecarInstanceException when the instance for {@code host} does not exist
+         * @throws NoSuchCassandraInstanceException when the instance for {@code host} does not exist
          */
         @Override
-        public InstanceMetadata instanceFromHost(String host) throws NoSuchSidecarInstanceException
+        public InstanceMetadata instanceFromHost(String host) throws NoSuchCassandraInstanceException
         {
             return cassandraTestContext.instancesMetadata().instanceFromHost(host);
         }

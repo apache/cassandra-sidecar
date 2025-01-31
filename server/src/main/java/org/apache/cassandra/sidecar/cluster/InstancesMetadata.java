@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.cluster;
 import java.util.List;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
+import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -43,16 +43,18 @@ public interface InstancesMetadata
      *
      * @param id instance's id
      * @return instance meta information
-     * @throws NoSuchSidecarInstanceException when the instance with {@code id} does not exist
+     * @throws NoSuchCassandraInstanceException when the instance with {@code id} does not exist
      */
-    InstanceMetadata instanceFromId(int id) throws NoSuchSidecarInstanceException;
+    @NotNull
+    InstanceMetadata instanceFromId(int id) throws NoSuchCassandraInstanceException;
 
     /**
      * Lookup instance metadata by host name.
      *
-     * @param host host address of instance
+     * @param hostOrIpAddress hostname or IP address of instance
      * @return instance meta information
-     * @throws NoSuchSidecarInstanceException when the instance for {@code host} does not exist
+     * @throws NoSuchCassandraInstanceException when the instance for {@code host} does not exist
      */
-    InstanceMetadata instanceFromHost(String host) throws NoSuchSidecarInstanceException;
+    @NotNull
+    InstanceMetadata instanceFromHost(String hostOrIpAddress) throws NoSuchCassandraInstanceException;
 }

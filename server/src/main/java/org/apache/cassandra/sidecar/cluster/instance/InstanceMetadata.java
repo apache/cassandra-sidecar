@@ -37,9 +37,14 @@ public interface InstanceMetadata
     int id();
 
     /**
-     * @return the host address of the Cassandra instance
+     * @return the hostname or IP address of the Cassandra instance
      */
     String host();
+
+    /**
+     * @return the IP address of the Cassandra instance
+     */
+    String ipAddress();
 
     /**
      * @return the native transport port number of the Cassandra instance

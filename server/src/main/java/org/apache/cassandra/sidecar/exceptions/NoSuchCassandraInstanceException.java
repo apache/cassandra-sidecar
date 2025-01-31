@@ -21,24 +21,24 @@ package org.apache.cassandra.sidecar.exceptions;
 import java.util.NoSuchElementException;
 
 /**
- * Thrown when the Sidecar instance is not found in the metadata
+ * Thrown when the Cassandra instance is not found in the metadata
  */
-public class NoSuchSidecarInstanceException extends NoSuchElementException
+public class NoSuchCassandraInstanceException extends NoSuchElementException
 {
     /**
-     * Constructs a {@link NoSuchSidecarInstanceException}, saving a reference
+     * Constructs a {@link NoSuchCassandraInstanceException}, saving a reference
      * to the error message string {@code errorMessage} for later retrieval by the
      * {@code getMessage} method.
      *
      * @param errorMessage the detail message.
      */
-    public NoSuchSidecarInstanceException(String errorMessage)
+    public NoSuchCassandraInstanceException(String errorMessage)
     {
         super(errorMessage);
     }
 
     /**
-     * Constructs a {@link NoSuchSidecarInstanceException} with the specified detail
+     * Constructs a {@link NoSuchCassandraInstanceException} with the specified detail
      * message and cause.
      *
      * @param message the detail message (which is saved for later retrieval
@@ -48,7 +48,7 @@ public class NoSuchSidecarInstanceException extends NoSuchElementException
      *                permitted, and indicates that the cause is nonexistent or
      *                unknown.)
      */
-    public NoSuchSidecarInstanceException(String message, Throwable cause)
+    public NoSuchCassandraInstanceException(String message, Throwable cause)
     {
         super(message);
         initCause(cause);

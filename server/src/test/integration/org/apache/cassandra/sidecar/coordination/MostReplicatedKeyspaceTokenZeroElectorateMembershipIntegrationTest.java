@@ -224,7 +224,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
                                                       .delegate(delegate)
                                                       .metricRegistry(instanceSpecificRegistry)
                                                       .build());
-        return new InstancesMetadataImpl(metadata, DnsResolver.DEFAULT);
+        return new InstancesMetadataImpl(metadata);
     }
 
     void initializeSchema(AbstractCluster<?> cluster)

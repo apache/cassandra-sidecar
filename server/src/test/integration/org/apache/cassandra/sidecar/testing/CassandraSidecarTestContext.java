@@ -300,7 +300,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                              .metricRegistry(instanceSpecificRegistry)
                                              .build());
         }
-        return new InstancesMetadataImpl(metadata, dnsResolver);
+        return new InstancesMetadataImpl(metadata);
     }
 
     private static List<InetSocketAddress> buildContactList(List<IInstanceConfig> configs)

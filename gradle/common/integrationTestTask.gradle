@@ -95,4 +95,3 @@ task("integrationTest").dependsOn integrationTestLightWeight, integrationTestHea
 
 compileIntegrationTestJava.onlyIf { "true" != System.getenv("skipIntegrationTest") }
 checkstyleIntegrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }
-spotbugsIntegrationTest.onlyIf { "true" != System.getenv("skipIntegrationTest") }

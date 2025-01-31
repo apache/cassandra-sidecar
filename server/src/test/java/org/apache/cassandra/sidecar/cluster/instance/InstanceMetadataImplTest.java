@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.cluster.instance;
 
+import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,15 +29,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.codahale.metrics.MetricRegistry;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class InstanceMetadataImplTest
 {
     private static final int ID = 123;
-    private static final String HOST = "testhost";
+    private static final String HOST = "localhost";
     private static final int PORT = 12345;
     private static final String DATA_DIR_1 = "test/data/data1";
     private static final String DATA_DIR_2 = "test/data/data2";
@@ -270,7 +274,30 @@ class InstanceMetadataImplTest
         assertThat(metadata.savedCachesDir()).isEqualTo(rootDir + "/saved_caches");
     }
 
-    InstanceMetadataImpl.Builder getInstanceMetadataBuilder(String rootDir)
+    @Test
+    void testResolveIpAddress()
+    {
+        String rootDir = tempDir.toString();
+        InstanceMetadataImpl instance = getInstanceMetadataBuilder(rootDir).host("localhost").build();
+        assertThat(instance.ipAddress()).isEqualTo("127.0.0.1");
+
+        String host = "cassandra.sidecar.org";
+        instance = getInstanceMetadataBuilder(rootDir).host(host, createDnsResolver(host, "127.0.0.1")).build();
+        assertThat(instance.ipAddress()).isEqualTo("127.0.0.1");
+    }
+
+    @Test
+    void testIpAddressResolutionFails()
+    {
+        String rootDir = tempDir.toString();
+        assertThatThrownBy(() -> getInstanceMetadataBuilder(rootDir)
+                                 .host("my_host", createDnsResolver("localhost", "127.0.0.1"))
+                                 .build())
+        .isExactlyInstanceOf(ConfigurationException.class)
+        .hasMessage("Failed to IP address from host: my_host");
+    }
+
+    static InstanceMetadataImpl.Builder getInstanceMetadataBuilder(String rootDir)
     {
         List<String> dataDirs = new ArrayList<>();
         dataDirs.add(rootDir + "/" + DATA_DIR_1);
@@ -288,5 +315,27 @@ class InstanceMetadataImplTest
                                    .savedCachesDir(rootDir + "/" + SAVED_CACHES_DIR)
                                    .localSystemDataFileDir(rootDir + "/" + LOCAL_SYSTEM_DATA_FILE_DIR)
                                    .metricRegistry(METRIC_REGISTRY);
+    }
+
+    private DnsResolver createDnsResolver(String hostName, String ipAddress)
+    {
+        return new DnsResolver()
+        {
+            @Override
+            public String resolve(String hostname) throws UnknownHostException
+            {
+                if (hostname.equalsIgnoreCase(hostName))
+                {
+                    return ipAddress;
+                }
+                throw new UnknownHostException(hostName);
+            }
+
+            @Override
+            public String reverseResolve(String address) throws UnknownHostException
+            {
+                return ""; // won't be examined
+            }
+        };
     }
 }

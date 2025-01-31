@@ -63,7 +63,21 @@ def codeCheckTasks = task("codeCheckTasks")
 allprojects {
     apply plugin: 'jacoco'
     apply plugin: 'checkstyle'
-    apply plugin: "com.github.spotbugs"
+
+    // do not run spot-bug on test-specific sub-projects
+    if (!it.name.startsWith('integration-') && !it.name.startsWith("test-"))
+    {
+        apply plugin: "com.github.spotbugs"
+        spotbugs {
+            toolVersion = '4.2.3'
+            excludeFilter = file("${project.rootDir}/spotbugs-exclude.xml")
+        }
+        codeCheckTasks.dependsOn(tasks.withType(SpotBugsTask))
+        tasks.withType(Test) {
+            // define the order of the tasks, if SpotBugsTask runs
+            shouldRunAfter(tasks.withType(SpotBugsTask))
+        }
+    }
 
     repositories {
         mavenCentral()
@@ -76,20 +90,17 @@ allprojects {
         toolVersion '7.8.1'
         configFile file("${project.rootDir}/checkstyle.xml")
     }
-    spotbugs {
-        toolVersion = '4.2.3'
-        excludeFilter = file("${project.rootDir}/spotbugs-exclude.xml")
-    }
 
+    // must run the dependant tasks in order to run codeCheckTasks
+    codeCheckTasks.dependsOn(tasks.withType(Javadoc))
     codeCheckTasks.dependsOn(tasks.withType(Checkstyle))
     codeCheckTasks.dependsOn(tasks.withType(RatTask))
-    codeCheckTasks.dependsOn(tasks.withType(SpotBugsTask))
 
     tasks.withType(Test) {
+        // define the order of the tasks, if the below tasks runs
         shouldRunAfter(codeCheckTasks)
         shouldRunAfter(tasks.withType(Checkstyle))
         shouldRunAfter(tasks.withType(RatTask))
-        shouldRunAfter(tasks.withType(SpotBugsTask))
     }
 }
 
@@ -315,7 +326,7 @@ rat {
 installDist.dependsOn copyJolokia
 check.dependsOn codeCheckTasks
 if (JavaVersion.current().isJava11Compatible()) {
-    build.dependsOn copyJolokia, copyDocs
+    build.dependsOn codeCheckTasks, copyJolokia, copyDocs
 }
 run.dependsOn build
 

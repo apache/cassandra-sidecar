@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.metrics;
 
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
-import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
+import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -55,7 +55,7 @@ public class SidecarMetricsImpl implements SidecarMetrics
     }
 
     @Override
-    public InstanceMetrics instance(String host) throws NoSuchSidecarInstanceException, CassandraUnavailableException
+    public InstanceMetrics instance(String host) throws NoSuchCassandraInstanceException, CassandraUnavailableException
     {
         return instanceMetadataFetcher.instance(host).metrics();
     }

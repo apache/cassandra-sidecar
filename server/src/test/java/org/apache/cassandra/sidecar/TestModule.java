@@ -40,7 +40,6 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
@@ -155,9 +154,9 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public InstancesMetadata instancesMetadata(DnsResolver dnsResolver)
+    public InstancesMetadata instancesMetadata()
     {
-        return new InstancesMetadataImpl(instancesMetas(), dnsResolver);
+        return new InstancesMetadataImpl(instancesMetas());
     }
 
     @Provides

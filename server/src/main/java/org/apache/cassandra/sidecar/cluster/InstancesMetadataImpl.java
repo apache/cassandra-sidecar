@@ -18,16 +18,13 @@
 
 package org.apache.cassandra.sidecar.cluster;
 
-import java.net.UnknownHostException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
-import org.apache.cassandra.sidecar.exceptions.NoSuchSidecarInstanceException;
+import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -36,25 +33,28 @@ import org.jetbrains.annotations.NotNull;
 public class InstancesMetadataImpl implements InstancesMetadata
 {
     private final Map<Integer, InstanceMetadata> idToInstanceMetadata;
-    private final Map<String, InstanceMetadata> hostToInstanceMetadata;
+    private final Map<String, InstanceMetadata> ipToInstanceMetadata;
+    private final Map<String, InstanceMetadata> hostNameToInstanceMetadata;
     private final List<InstanceMetadata> instanceMetadataList;
-    private final DnsResolver dnsResolver;
 
-    public InstancesMetadataImpl(InstanceMetadata instanceMetadata, DnsResolver dnsResolver)
+    public InstancesMetadataImpl(InstanceMetadata instanceMetadata)
     {
-        this(Collections.singletonList(instanceMetadata), dnsResolver);
+        this(Collections.singletonList(instanceMetadata));
     }
 
-    public InstancesMetadataImpl(List<InstanceMetadata> instanceMetadataList, DnsResolver dnsResolver)
+    public InstancesMetadataImpl(List<InstanceMetadata> instanceMetadataList)
     {
-        this.idToInstanceMetadata = instanceMetadataList.stream()
-                                                        .collect(Collectors.toMap(InstanceMetadata::id,
-                                                                                  Function.identity()));
-        this.hostToInstanceMetadata = instanceMetadataList.stream()
-                                                          .collect(Collectors.toMap(InstanceMetadata::host,
-                                                                                    Function.identity()));
         this.instanceMetadataList = instanceMetadataList;
-        this.dnsResolver = dnsResolver;
+        this.idToInstanceMetadata = new HashMap<>(instanceMetadataList.size());
+        this.ipToInstanceMetadata = new HashMap<>(instanceMetadataList.size());
+        this.hostNameToInstanceMetadata = new HashMap<>(instanceMetadataList.size());
+        for (InstanceMetadata instanceMetadata : instanceMetadataList)
+        {
+            this.idToInstanceMetadata.put(instanceMetadata.id(), instanceMetadata);
+            this.ipToInstanceMetadata.put(instanceMetadata.ipAddress(), instanceMetadata);
+            // 'host' could be IP already, in such case, hostNameToInstanceMetadata map is identical to ipToInstanceMetadata
+            this.hostNameToInstanceMetadata.put(instanceMetadata.host(), instanceMetadata);
+        }
     }
 
     @Override
@@ -64,36 +64,30 @@ public class InstancesMetadataImpl implements InstancesMetadata
     }
 
     @Override
-    public InstanceMetadata instanceFromId(int id) throws NoSuchSidecarInstanceException
+    public InstanceMetadata instanceFromId(int id) throws NoSuchCassandraInstanceException
     {
         InstanceMetadata instanceMetadata = idToInstanceMetadata.get(id);
         if (instanceMetadata == null)
         {
-            throw new NoSuchSidecarInstanceException("Instance id '" + id + "' not found");
+            throw new NoSuchCassandraInstanceException("Instance id '" + id + "' not found");
         }
         return instanceMetadata;
     }
 
     @Override
-    public InstanceMetadata instanceFromHost(String host) throws NoSuchSidecarInstanceException
+    public InstanceMetadata instanceFromHost(String hostOrIpAddress) throws NoSuchCassandraInstanceException
     {
-        InstanceMetadata instanceMetadata = hostToInstanceMetadata.get(host);
+        // if the 'host' string is IP address string
+        InstanceMetadata instanceMetadata = ipToInstanceMetadata.get(hostOrIpAddress);
         if (instanceMetadata == null)
         {
-            try
-            {
-                instanceMetadata = hostToInstanceMetadata.get(dnsResolver.resolve(host));
-            }
-            catch (UnknownHostException cause)
-            {
-                throw new NoSuchSidecarInstanceException("Instance with host address '" + host + "' not found, "
-                                                         + "and an error occurred when attempting to resolve its "
-                                                         + "IP address.", cause);
-            }
-            if (instanceMetadata == null)
-            {
-                throw new NoSuchSidecarInstanceException("Instance with host address '" + host + "' not found");
-            }
+            // if the host string is hostname string, resolve the ip address and loop up again
+            instanceMetadata = hostNameToInstanceMetadata.get(hostOrIpAddress);
+        }
+
+        if (instanceMetadata == null)
+        {
+            throw new NoSuchCassandraInstanceException("Instance with host address '" + hostOrIpAddress + "' not found");
         }
         return instanceMetadata;
     }
