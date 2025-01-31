@@ -18,10 +18,15 @@
 
 package org.apache.cassandra.sidecar.cluster;
 
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
@@ -32,10 +37,14 @@ import org.jetbrains.annotations.NotNull;
  */
 public class InstancesMetadataImpl implements InstancesMetadata
 {
-    private final Map<Integer, InstanceMetadata> idToInstanceMetadata;
-    private final Map<String, InstanceMetadata> ipToInstanceMetadata;
-    private final Map<String, InstanceMetadata> hostNameToInstanceMetadata;
+    private static final Logger LOGGER = LoggerFactory.getLogger(InstancesMetadataImpl.class);
+    private static final long ONE_SECOND = TimeUnit.SECONDS.toMillis(1);
+
     private final List<InstanceMetadata> instanceMetadataList;
+    private final Map<Integer, InstanceMetadata> idToInstanceMetadata;
+    private final Map<String, InstanceMetadata> hostNameToInstanceMetadata;
+    private volatile Map<String, InstanceMetadata> ipToInstanceMetadata;
+    private volatile long lastUpdateTimestamp;
 
     public InstancesMetadataImpl(InstanceMetadata instanceMetadata)
     {
@@ -55,6 +64,7 @@ public class InstancesMetadataImpl implements InstancesMetadata
             // 'host' could be IP already, in such case, hostNameToInstanceMetadata map is identical to ipToInstanceMetadata
             this.hostNameToInstanceMetadata.put(instanceMetadata.host(), instanceMetadata);
         }
+        this.lastUpdateTimestamp = System.currentTimeMillis();
     }
 
     @Override
@@ -77,12 +87,20 @@ public class InstancesMetadataImpl implements InstancesMetadata
     @Override
     public InstanceMetadata instanceFromHost(String hostOrIpAddress) throws NoSuchCassandraInstanceException
     {
-        // if the 'host' string is IP address string
-        InstanceMetadata instanceMetadata = ipToInstanceMetadata.get(hostOrIpAddress);
+        // if the host string is hostname string, resolve the ip address and loop up again
+        InstanceMetadata instanceMetadata = hostNameToInstanceMetadata.get(hostOrIpAddress);
         if (instanceMetadata == null)
         {
-            // if the host string is hostname string, resolve the ip address and loop up again
-            instanceMetadata = hostNameToInstanceMetadata.get(hostOrIpAddress);
+            // if the 'host' string is IP address string
+            instanceMetadata = ipToInstanceMetadata.get(hostOrIpAddress);
+        }
+
+        // maybe the IP of the hostname has been updated in the DNS, and client is using the updated IP
+        // update the ipToInstanceMetadata and look up with the IP address again
+        if (instanceMetadata == null)
+        {
+            updateIpToInstanceMetadata();
+            instanceMetadata = ipToInstanceMetadata.get(hostOrIpAddress);
         }
 
         if (instanceMetadata == null)
@@ -90,5 +108,36 @@ public class InstancesMetadataImpl implements InstancesMetadata
             throw new NoSuchCassandraInstanceException("Instance with host address '" + hostOrIpAddress + "' not found");
         }
         return instanceMetadata;
+    }
+
+    private void updateIpToInstanceMetadata()
+    {
+        long now = System.currentTimeMillis();
+        if (now - lastUpdateTimestamp > ONE_SECOND)
+        {
+            lastUpdateTimestamp = now;
+        }
+        else
+        {
+            // update at most once a second
+            return;
+        }
+        Map<String, InstanceMetadata> updated = new HashMap<>(instanceMetadataList.size());
+        for (InstanceMetadata instanceMetadata : instanceMetadataList)
+        {
+            String ipAddress = instanceMetadata.ipAddress(); // existing ip
+            try
+            {
+                ipAddress = instanceMetadata.refreshIpAddress(); // updated ip
+            }
+            catch (UnknownHostException uhe)
+            {
+                // log a warning and continue; Do not update the ipAddress for this instance
+                LOGGER.warn("Failed to resolve IP address from host. Going to use the existing IP address. host={}",
+                            instanceMetadata.host(), uhe);
+            }
+            updated.put(ipAddress, instanceMetadata);
+        }
+        this.ipToInstanceMetadata = updated;
     }
 }

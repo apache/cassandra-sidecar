@@ -53,7 +53,6 @@ public class InstanceMetadataImpl implements InstanceMetadata
 
     private final int id;
     private final String host;
-    private final String ipAddress;
     private final int port;
     private final List<String> dataDirs;
     private final String stagingDir;
@@ -66,11 +65,14 @@ public class InstanceMetadataImpl implements InstanceMetadata
     @Nullable
     private final CassandraAdapterDelegate delegate;
     private final InstanceMetrics metrics;
+    private final DnsResolver dnsResolver;
+    private volatile String ipAddress;
 
     protected InstanceMetadataImpl(Builder builder)
     {
         id = builder.id;
         host = builder.host;
+        dnsResolver = builder.dnsResolver;
         ipAddress = builder.ipAddress;
         port = builder.port;
         delegate = builder.delegate;
@@ -103,6 +105,13 @@ public class InstanceMetadataImpl implements InstanceMetadata
     @Override
     public String ipAddress()
     {
+        return ipAddress;
+    }
+
+    @Override
+    public String refreshIpAddress() throws UnknownHostException
+    {
+        this.ipAddress = dnsResolver.resolve(host);
         return ipAddress;
     }
 
@@ -197,6 +206,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
      */
     public static class Builder implements DataObjectBuilder<Builder, InstanceMetadataImpl>
     {
+        protected DnsResolver dnsResolver;
         protected Integer id;
         protected String host;
         protected String ipAddress;
@@ -283,6 +293,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
             }
             return update(b -> {
                 b.host = host;
+                b.dnsResolver = dnsResolver;
                 b.ipAddress = ipAddress;
             });
         }

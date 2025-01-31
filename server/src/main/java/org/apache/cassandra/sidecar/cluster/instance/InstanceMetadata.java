@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.cluster.instance;
 
+import java.net.UnknownHostException;
 import java.util.List;
 
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
@@ -45,6 +46,16 @@ public interface InstanceMetadata
      * @return the IP address of the Cassandra instance
      */
     String ipAddress();
+
+    /**
+     * Resolve the ipAddress and update.
+     * @return the IP address resolved
+     * @throws UnknownHostException when hostname cannot be resolved to IP address
+     */
+    default String refreshIpAddress() throws UnknownHostException
+    {
+        return ipAddress();
+    }
 
     /**
      * @return the native transport port number of the Cassandra instance
