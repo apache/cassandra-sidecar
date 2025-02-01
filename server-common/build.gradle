@@ -30,11 +30,7 @@ plugins {
     id 'java-test-fixtures'
 }
 
-group 'org.apache.cassandra.sidecar'
-
-version project.version
-
-sourceCompatibility = 1.8
+sourceCompatibility = JavaVersion.VERSION_11
 
 test {
     useJUnitPlatform()
@@ -83,6 +79,15 @@ publishing {
             version System.getenv("CODE_VERSION") ?: "${version}"
         }
     }
+}
+
+compileTestJava {
+    // Required for the JmxClientTest which imports sun.rmi.server.UnicastRef
+    // and sun.rmi.transport.LiveRef
+    options.compilerArgs = [
+            '--add-exports', 'java.rmi/sun.rmi.server=ALL-UNNAMED',
+            '--add-exports', 'java.rmi/sun.rmi.transport=ALL-UNNAMED'
+    ]
 }
 
 check.dependsOn(checkstyleMain, checkstyleTest, jacocoTestReport)

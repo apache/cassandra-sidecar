@@ -50,6 +50,7 @@ commands:
 
 jobs:
   # Runs java 8 tests on a docker image
+  # We only produce client artifacts for java 8 builds
   unit_java8:
     docker:
       - image: cimg/openjdk:8.0
@@ -59,127 +60,7 @@ jobs:
       - install_common
       - setup_remote_docker
       - checkout
-      - run: ./gradlew build -x integrationTest --stacktrace
-
-      - store_artifacts:
-          path: build/reports
-          destination: test-reports
-
-      - store_artifacts:
-          path: build/test-results/
-          destination: test-results
-
-      - store_test_results:
-          path: build/test-results/
-
-  build-dtest-jdk8:
-    docker:
-      - image: cimg/openjdk:8.0
-    resource_class: large
-    steps:
-      - install_common
-      - checkout
-      - run:
-          name: Build jvm dtest jars with jdk8
-          command: |
-            CASSANDRA_USE_JDK11=false BRANCHES="cassandra-4.0 cassandra-4.1" scripts/build-dtest-jars.sh
-      - persist_to_workspace:
-          root: dtest-jars
-          paths:
-            - "*.jar"
-
-  integration_cassandra_40_java8:
-    docker:
-      - image: cimg/openjdk:8.0
-    environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 3
-      INTEGRATION_MAX_HEAP_SIZE: "2500M"
-    resource_class: large
-    steps:
-      - install_common
-      - checkout
-      - attach_workspace:
-          at: dtest-jars
-      - run: ./scripts/install-shaded-dtest-jar-local.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=4.1.8 -Dcassandra.sidecar.versions_to_test="4.0" checkstyleIntegrationTest spotbugsIntegrationTest integrationTestLightWeight --stacktrace
-
-      - store_artifacts:
-          path: build/reports
-          destination: test-reports
-
-      - store_artifacts:
-          path: build/test-results/
-          destination: test-results
-
-      - store_test_results:
-          path: build/test-results/
-
-  integration_heavy_cassandra_40_java8:
-    docker:
-      - image: cimg/openjdk:8.0
-    environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 1
-      INTEGRATION_MAX_HEAP_SIZE: "7000M"
-    resource_class: large
-    steps:
-      - install_common
-      - checkout
-      - attach_workspace:
-          at: dtest-jars
-      - run: ./scripts/install-shaded-dtest-jar-local.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=4.1.8 -Dcassandra.sidecar.versions_to_test="4.0" integrationTestHeavyWeight --stacktrace
-
-      - store_artifacts:
-          path: build/reports
-          destination: test-reports
-
-      - store_artifacts:
-          path: build/test-results/
-          destination: test-results
-
-      - store_test_results:
-          path: build/test-results/
-
-  integration_cassandra_41_java8:
-    docker:
-      - image: cimg/openjdk:8.0
-    environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 3
-      INTEGRATION_MAX_HEAP_SIZE: "2500M"
-    resource_class: large
-    steps:
-      - install_common
-      - checkout
-      - attach_workspace:
-          at: dtest-jars
-      - run: ./scripts/install-shaded-dtest-jar-local.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=4.1.8 -Dcassandra.sidecar.versions_to_test="4.1" checkstyleIntegrationTest spotbugsIntegrationTest integrationTestLightWeight --stacktrace
-
-      - store_artifacts:
-          path: build/reports
-          destination: test-reports
-
-      - store_artifacts:
-          path: build/test-results/
-          destination: test-results
-
-      - store_test_results:
-          path: build/test-results/
-
-  integration_heavy_cassandra_41_java8:
-    docker:
-      - image: cimg/openjdk:8.0
-    environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 1
-      INTEGRATION_MAX_HEAP_SIZE: "7000M"
-    resource_class: large
-    steps:
-      - install_common
-      - checkout
-      - attach_workspace:
-          at: dtest-jars
-      - run: ./scripts/install-shaded-dtest-jar-local.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=4.1.8 -Dcassandra.sidecar.versions_to_test="4.1" integrationTestHeavyWeight --stacktrace
+      - run: ./gradlew build --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -429,23 +310,6 @@ workflows:
   build-and-test:
     jobs:
       - unit_java8
-      - build-dtest-jdk8
-      - integration_cassandra_40_java8:
-          requires:
-            - unit_java8
-            - build-dtest-jdk8
-      - integration_cassandra_41_java8:
-          requires:
-            - unit_java8
-            - build-dtest-jdk8
-      - integration_heavy_cassandra_40_java8:
-          requires:
-            - unit_java8
-            - build-dtest-jdk8
-      - integration_heavy_cassandra_41_java8:
-          requires:
-            - unit_java8
-            - build-dtest-jdk8
       - unit_java11
       - build-dtest-jdk11
       - integration_cassandra_40_java11:
@@ -475,10 +339,6 @@ workflows:
       - docs_build:
           requires:
             - unit_java8
-            - integration_cassandra_40_java8
-            - integration_heavy_cassandra_40_java8
-            - integration_cassandra_41_java8
-            - integration_heavy_cassandra_41_java8
             - unit_java11
             - integration_cassandra_40_java11
             - integration_heavy_cassandra_40_java11
@@ -489,10 +349,6 @@ workflows:
       - docker_build:
           requires:
             - unit_java8
-            - integration_cassandra_40_java8
-            - integration_heavy_cassandra_40_java8
-            - integration_cassandra_41_java8
-            - integration_heavy_cassandra_41_java8
             - unit_java11
             - integration_cassandra_40_java11
             - integration_heavy_cassandra_40_java11
@@ -503,10 +359,6 @@ workflows:
       - rpm_build_install:
           requires:
             - unit_java8
-            - integration_cassandra_40_java8
-            - integration_heavy_cassandra_40_java8
-            - integration_cassandra_41_java8
-            - integration_heavy_cassandra_41_java8
             - unit_java11
             - integration_cassandra_40_java11
             - integration_heavy_cassandra_40_java11
@@ -517,10 +369,6 @@ workflows:
       - deb_build_install:
           requires:
             - unit_java8
-            - integration_cassandra_40_java8
-            - integration_heavy_cassandra_40_java8
-            - integration_cassandra_41_java8
-            - integration_heavy_cassandra_41_java8
             - unit_java11
             - integration_cassandra_40_java11
             - integration_heavy_cassandra_40_java11
@@ -531,10 +379,6 @@ workflows:
       - docker_build:
           requires:
             - unit_java8
-            - integration_cassandra_40_java8
-            - integration_heavy_cassandra_40_java8
-            - integration_cassandra_41_java8
-            - integration_heavy_cassandra_41_java8
             - unit_java11
             - integration_cassandra_40_java11
             - integration_heavy_cassandra_40_java11

@@ -22,8 +22,7 @@ plugins {
     id('java-library')
 }
 
-group 'org.apache.cassandra.sidecar'
-version project.version
+sourceCompatibility = 11
 
 sourceSets {
     integrationTest {

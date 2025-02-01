@@ -19,16 +19,21 @@
 
 rootProject.name = "cassandra-sidecar"
 
-include "adapters:base"
-include "adapters:cassandra41"
+// The client code supports Java 8+
 include "client"
 include "client-common"
-include "docs"
-include "server"
-include "server-common"
 include "vertx-client"
 include "vertx-client-shaded"
-include "vertx-auth-mtls"
-include "integration-framework"
-include 'integration-tests'
-include 'test-common'
+
+// The server code supports Java 11, but it doesn't support Java 8
+if (JavaVersion.current().isJava11Compatible()) {
+    include "adapters:base"
+    include "adapters:cassandra41"
+    include "docs"
+    include "server"
+    include "server-common"
+    include "vertx-auth-mtls"
+    include "integration-framework"
+    include 'integration-tests'
+    include 'test-common'
+}

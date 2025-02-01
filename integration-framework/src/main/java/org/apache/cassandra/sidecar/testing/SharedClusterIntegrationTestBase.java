@@ -26,7 +26,6 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -712,7 +711,6 @@ public abstract class SharedClusterIntegrationTestBase
             }
             int port = tryGetIntConfig(config, "native_transport_port", 9042);
             String[] dataDirectories = (String[]) config.get("data_file_directories");
-            String storageDir = Paths.get(dataDirectories[0]).getParent().toAbsolutePath().toString();
             String stagingDir = stagingDir(dataDirectories);
 
             JmxClient jmxClient = new JmxClientProxy(wrapper,
@@ -736,8 +734,11 @@ public abstract class SharedClusterIntegrationTestBase
                                        .id(config.num())
                                        .host(hostName)
                                        .port(port)
-                                       .dataDirs(Arrays.asList(dataDirectories))
-                                       .storageDir(storageDir)
+                                       .dataDirs(List.of(dataDirectories))
+                                       .cdcDir(config.getString("cdc_raw_directory"))
+                                       .commitlogDir(config.getString("commitlog_directory"))
+                                       .hintsDir(config.getString("hints_directory"))
+                                       .savedCachesDir(config.getString("saved_caches_directory"))
                                        .stagingDir(stagingDir)
                                        .delegate(delegate)
                                        .metricRegistry(metricRegistry)

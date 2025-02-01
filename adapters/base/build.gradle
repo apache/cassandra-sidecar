@@ -30,11 +30,7 @@ plugins {
     id "com.github.spotbugs"
 }
 
-group 'org.apache.cassandra.sidecar'
-
-version project.version
-
-sourceCompatibility = 1.8
+sourceCompatibility = 11
 
 repositories {
     mavenCentral()

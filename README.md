@@ -18,7 +18,7 @@
 #
 -->
 
-# Apache Cassandra Sidecar [WIP]
+# Apache Cassandra Sidecar
 
 This is a Sidecar for the highly scalable Apache Cassandra database.
 For more information, see [the Apache Cassandra web site](http://cassandra.apache.org/) and [CIP-1](https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=95652224).
@@ -27,7 +27,7 @@ For more information, see [the Apache Cassandra web site](http://cassandra.apach
 
 Requirements
 ------------
-  1. Java >= 1.8 (OpenJDK or Oracle), or Java 11
+  1. Java >= 11<sup>1</sup> (OpenJDK or Oracle)
   2. Apache Cassandra 4.0.  We depend on virtual tables which is a 4.0 only feature.
   3. [Docker](https://www.docker.com/products/docker-desktop/) for running integration tests.
 
@@ -101,3 +101,8 @@ Wondering where to go from here?
   * Visit the [community section](http://cassandra.apache.org/community/) of the Cassandra website for more information on getting involved.
   * Visit the [development section](http://cassandra.apache.org/doc/latest/development/index.html) of the Cassandra website for more information on how to contribute.
   * File issues with our [Sidecar JIRA](https://issues.apache.org/jira/projects/CASSANDRASC/issues/)
+
+Notes
+-----
+
+<sup>1</sup> The Sidecar Client offers Java 1.8 compatibility, and produces artifacts for both Java 1.8 and Java 11.

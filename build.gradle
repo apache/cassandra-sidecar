@@ -93,10 +93,8 @@ allprojects {
     }
 }
 
-group 'org.apache.cassandra'
+group 'org.apache.cassandra.sidecar'
 version project.version
-
-sourceCompatibility = 1.8
 
 application {
     // Take the application out once we're running via Cassandra
@@ -173,9 +171,11 @@ configurations {
     runtime.exclude(group: 'com.github.jnr', module: 'jnr-posix')
 }
 
-dependencies {
-    runtimeOnly(project(':server'))
-    jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
+if (JavaVersion.current().isJava11Compatible()) {
+    dependencies {
+        runtimeOnly(project(':server'))
+        jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
+    }
 }
 
 jar {
@@ -314,7 +314,9 @@ rat {
 
 installDist.dependsOn copyJolokia
 check.dependsOn codeCheckTasks
-build.dependsOn copyJolokia, copyDocs
+if (JavaVersion.current().isJava11Compatible()) {
+    build.dependsOn copyJolokia, copyDocs
+}
 run.dependsOn build
 
 tasks.named('rat').configure {

@@ -31,9 +31,6 @@ plugins {
     id('maven-publish')
 }
 
-group 'org.apache.cassandra.sidecar'
-version project.version
-
 sourceCompatibility = 1.8
 
 repositories {
