@@ -25,6 +25,9 @@ plugins {
     id('java-test-fixtures')
 }
 
+group 'org.apache.cassandra.sidecar'
+version project.version
+
 sourceCompatibility = JavaVersion.VERSION_11
 
 test {

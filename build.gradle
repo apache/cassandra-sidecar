@@ -93,7 +93,7 @@ allprojects {
     }
 }
 
-group 'org.apache.cassandra.sidecar'
+group 'org.apache.cassandra'
 version project.version
 
 application {
