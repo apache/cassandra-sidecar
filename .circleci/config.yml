@@ -309,7 +309,7 @@ workflows:
   version: 2
   build-and-test:
     jobs:
-      - unit_java8
+      - client_only_unit_java8
       - unit_java11
       - build-dtest-jdk11
       - integration_cassandra_40_java11:
@@ -338,7 +338,7 @@ workflows:
             - build-dtest-jdk11
       - docs_build:
           requires:
-            - unit_java8
+            - client_only_unit_java8
             - unit_java11
             - integration_cassandra_40_java11
             - integration_heavy_cassandra_40_java11
@@ -348,7 +348,7 @@ workflows:
             - integration_heavy_cassandra_trunk_java11
       - docker_build:
           requires:
-            - unit_java8
+            - client_only_unit_java8
             - unit_java11
             - integration_cassandra_40_java11
             - integration_heavy_cassandra_40_java11
@@ -358,7 +358,7 @@ workflows:
             - integration_heavy_cassandra_trunk_java11
       - rpm_build_install:
           requires:
-            - unit_java8
+            - client_only_unit_java8
             - unit_java11
             - integration_cassandra_40_java11
             - integration_heavy_cassandra_40_java11
@@ -368,7 +368,7 @@ workflows:
             - integration_heavy_cassandra_trunk_java11
       - deb_build_install:
           requires:
-            - unit_java8
+            - client_only_unit_java8
             - unit_java11
             - integration_cassandra_40_java11
             - integration_heavy_cassandra_40_java11
@@ -378,7 +378,7 @@ workflows:
             - integration_heavy_cassandra_trunk_java11
       - docker_build:
           requires:
-            - unit_java8
+            - client_only_unit_java8
             - unit_java11
             - integration_cassandra_40_java11
             - integration_heavy_cassandra_40_java11
