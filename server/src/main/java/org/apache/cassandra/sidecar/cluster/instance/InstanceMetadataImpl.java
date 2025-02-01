@@ -102,6 +102,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         return host;
     }
 
+    @Nullable
     @Override
     public String ipAddress()
     {
@@ -282,19 +283,9 @@ public class InstanceMetadataImpl implements InstanceMetadata
          */
         public Builder host(String host, DnsResolver dnsResolver)
         {
-            String ipAddress;
-            try
-            {
-                ipAddress = dnsResolver.resolve(host);
-            }
-            catch (UnknownHostException e)
-            {
-                throw new ConfigurationException("Failed to resolve IP address from host: " + host, e);
-            }
             return update(b -> {
                 b.host = host;
                 b.dnsResolver = dnsResolver;
-                b.ipAddress = ipAddress;
             });
         }
 

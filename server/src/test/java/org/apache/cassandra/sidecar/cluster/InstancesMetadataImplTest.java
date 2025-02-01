@@ -20,8 +20,8 @@ package org.apache.cassandra.sidecar.cluster;
 
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -32,13 +32,17 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.fail;
 
 class InstancesMetadataImplTest
 {
     static final MetricRegistry METRIC_REGISTRY = new MetricRegistry();
-    static final DnsResolver LOCALHOST_RESOLVER = new DnsResolver()
+
+    final AtomicReference<String> localhost1NewIp = new AtomicReference<>(null);
+    final DnsResolver localhostResolver = new DnsResolver()
     {
         @Override
         public String resolve(String hostname)
@@ -56,6 +60,10 @@ class InstancesMetadataImplTest
                 return ipPrefix + '1';
             }
             int digit = Integer.parseInt(trimmed);
+            if (digit == 1 && localhost1NewIp.get() != null)
+            {
+                return localhost1NewIp.get();
+            }
             return ipPrefix + digit;
         }
 
@@ -75,11 +83,14 @@ class InstancesMetadataImplTest
         List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1"),
                                                          instance(2, "127.0.0.2"),
                                                          instance(3, "127.0.0.3"));
-        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances);
+        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, localhostResolver);
         assertThat(instancesMetadata.instanceFromHost("localhost").id()).isEqualTo(1);
         assertThat(instancesMetadata.instanceFromHost("localhost1").id()).isEqualTo(1);
         assertThat(instancesMetadata.instanceFromHost("localhost2").id()).isEqualTo(2);
         assertThat(instancesMetadata.instanceFromHost("localhost3").id()).isEqualTo(3);
+        assertThat(instancesMetadata.instanceFromHost("127.0.0.1").id()).isEqualTo(1);
+        assertThat(instancesMetadata.instanceFromHost("127.0.0.2").id()).isEqualTo(2);
+        assertThat(instancesMetadata.instanceFromHost("127.0.0.3").id()).isEqualTo(3);
 
         assertThatThrownBy(() -> instancesMetadata.instanceFromHost("localhost999"))
         .isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
@@ -92,14 +103,32 @@ class InstancesMetadataImplTest
         List<InstanceMetadata> instances = Arrays.asList(instance(1, "localhost1"),
                                                          instance(2, "localhost2"),
                                                          instance(3, "localhost3"));
-        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances);
+        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, localhostResolver);
+        assertThat(instancesMetadata.instanceFromHost("localhost1").id()).isEqualTo(1);
+        assertThat(instancesMetadata.instanceFromHost("localhost2").id()).isEqualTo(2);
+        assertThat(instancesMetadata.instanceFromHost("localhost3").id()).isEqualTo(3);
         assertThat(instancesMetadata.instanceFromHost("127.0.0.1").id()).isEqualTo(1);
         assertThat(instancesMetadata.instanceFromHost("127.0.0.2").id()).isEqualTo(2);
         assertThat(instancesMetadata.instanceFromHost("127.0.0.3").id()).isEqualTo(3);
 
-        assertThatThrownBy(() -> instancesMetadata.instanceFromHost("127.1.2.3"))
+        String newIp = "127.1.2.3";
+        assertThatThrownBy(() -> instancesMetadata.instanceFromHost(newIp))
         .isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
         .hasMessage("Instance with host address '127.1.2.3' not found");
+
+        localhost1NewIp.set(newIp);
+        loopAssert(2, 100, () -> {
+            // wait for the cache to be updated
+            try
+            {
+                assertThat(instancesMetadata.instanceFromHost(newIp).id()).isEqualTo(1);
+            }
+            catch (NoSuchCassandraInstanceException e)
+            {
+                fail(e.getMessage());
+                // continue
+            }
+        });
     }
 
     @Test
@@ -108,10 +137,10 @@ class InstancesMetadataImplTest
         List<InstanceMetadata> instances = Arrays.asList(instance(1, "localhost1"),
                                                          instance(2, "localhost2"),
                                                          instance(3, "localhost3"));
-        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances);
-        assertThat(instancesMetadata.instanceFromId(1).ipAddress()).isEqualTo("127.0.0.1");
-        assertThat(instancesMetadata.instanceFromId(2).ipAddress()).isEqualTo("127.0.0.2");
-        assertThat(instancesMetadata.instanceFromId(3).ipAddress()).isEqualTo("127.0.0.3");
+        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, localhostResolver);
+        assertThat(instancesMetadata.instanceFromId(1).host()).isEqualTo("localhost1");
+        assertThat(instancesMetadata.instanceFromId(2).host()).isEqualTo("localhost2");
+        assertThat(instancesMetadata.instanceFromId(3).host()).isEqualTo("localhost3");
 
         assertThatThrownBy(() -> instancesMetadata.instanceFromId(123))
         .isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
@@ -123,14 +152,10 @@ class InstancesMetadataImplTest
         String root = tempDir.toString();
         return InstanceMetadataImpl.builder()
                                    .id(id)
-                                   .host(hostNameOrIp, LOCALHOST_RESOLVER)
+                                   .host(hostNameOrIp, localhostResolver)
                                    .port(9042)
-                                   .dataDirs(Collections.singletonList(root + "/data"))
-                                   .cdcDir(root + "/cdc")
-                                   .stagingDir(root + "/staging")
+                                   .storageDir(root)
                                    .metricRegistry(METRIC_REGISTRY)
                                    .build();
     }
-
-
 }

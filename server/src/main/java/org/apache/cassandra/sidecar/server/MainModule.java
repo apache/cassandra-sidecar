@@ -670,7 +670,7 @@ public class MainModule extends AbstractModule
                      })
                      .collect(Collectors.toList());
 
-        return new InstancesMetadataImpl(instanceMetadataList);
+        return new InstancesMetadataImpl(instanceMetadataList, dnsResolver);
     }
 
     @Provides

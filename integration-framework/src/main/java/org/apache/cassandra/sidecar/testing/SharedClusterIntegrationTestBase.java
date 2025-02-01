@@ -574,7 +574,7 @@ public abstract class SharedClusterIntegrationTestBase
                                                                 dnsResolver,
                                                                 wrapper))
                          .collect(Collectors.toList());
-            return new InstancesMetadataImpl(instanceMetadataList);
+            return new InstancesMetadataImpl(instanceMetadataList, dnsResolver);
         }
 
         @Provides

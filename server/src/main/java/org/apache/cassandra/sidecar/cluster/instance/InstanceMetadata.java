@@ -43,8 +43,9 @@ public interface InstanceMetadata
     String host();
 
     /**
-     * @return the IP address of the Cassandra instance
+     * @return the IP address of the Cassandra instance. When no IP address is resolved, it returns null
      */
+    @Nullable
     String ipAddress();
 
     /**
