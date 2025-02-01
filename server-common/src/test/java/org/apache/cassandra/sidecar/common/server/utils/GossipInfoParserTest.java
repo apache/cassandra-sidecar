@@ -35,7 +35,7 @@ class GossipInfoParserTest
         assertThat(result).containsKey("/127.0.0.1")
                           .containsKey("localhost2/127.0.0.2")
                           .containsKey("/127.0.0.3");
-        assertThat(result.get("/127.0.0.1")).hasSize(6);
+        assertThat(result.get("/127.0.0.1")).hasSize(7);
         assertThat(result.get("localhost2/127.0.0.2")).hasSize(6);
         assertThat(result.get("/127.0.0.3")).hasSize(6);
         GossipInfoResponse.GossipInfo gossipInfo = result.get("/127.0.0.1");
@@ -45,6 +45,7 @@ class GossipInfoParserTest
         assertThat(gossipInfo.statusWithPort()).isEqualTo("NORMAL,-9223372036854775808");
         assertThat(gossipInfo.sstableVersions()).isEqualTo(Collections.singletonList("big-nb"));
         assertThat(gossipInfo.tokens()).isEqualTo("<hidden>");
+        assertThat(gossipInfo.indexStatus()).isEqualTo("{\"ks.tbl_idx\":\"BUILD_SUCCEEDED\"}");
     }
 
     @Test
@@ -82,5 +83,6 @@ class GossipInfoParserTest
         "  LOAD:211:88971.0\n" +
         "  STATUS_WITH_PORT:19:NORMAL,-9223372036854775808\n" +
         "  SSTABLE_VERSIONS:6:big-nb\n" +
-        "  TOKENS:18:<hidden>";
+        "  TOKENS:18:<hidden>\n" +
+        "  INDEX_STATUS:2198:{\"ks.tbl_idx\":\"BUILD_SUCCEEDED\"}";
 }
