@@ -30,7 +30,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
-import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -275,14 +274,16 @@ class InstanceMetadataImplTest
     }
 
     @Test
-    void testResolveIpAddress()
+    void testResolveIpAddress() throws Exception
     {
         String rootDir = tempDir.toString();
         InstanceMetadataImpl instance = getInstanceMetadataBuilder(rootDir).host("localhost").build();
+        instance.refreshIpAddress();
         assertThat(instance.ipAddress()).isEqualTo("127.0.0.1");
 
         String host = "cassandra.sidecar.org";
         instance = getInstanceMetadataBuilder(rootDir).host(host, createDnsResolver(host, "127.0.0.1")).build();
+        instance.refreshIpAddress();
         assertThat(instance.ipAddress()).isEqualTo("127.0.0.1");
     }
 
@@ -290,11 +291,12 @@ class InstanceMetadataImplTest
     void testIpAddressResolutionFails()
     {
         String rootDir = tempDir.toString();
-        assertThatThrownBy(() -> getInstanceMetadataBuilder(rootDir)
-                                 .host("my_host", createDnsResolver("localhost", "127.0.0.1"))
-                                 .build())
-        .isExactlyInstanceOf(ConfigurationException.class)
-        .hasMessage("Failed to IP address from host: my_host");
+        InstanceMetadataImpl instanceMetadata = getInstanceMetadataBuilder(rootDir)
+                                                .host("my_host", createDnsResolver("localhost", "127.0.0.1"))
+                                                .build();
+        assertThatThrownBy(instanceMetadata::refreshIpAddress)
+        .isExactlyInstanceOf(UnknownHostException.class)
+        .hasMessage("my_host");
     }
 
     static InstanceMetadataImpl.Builder getInstanceMetadataBuilder(String rootDir)
@@ -322,13 +324,13 @@ class InstanceMetadataImplTest
         return new DnsResolver()
         {
             @Override
-            public String resolve(String hostname) throws UnknownHostException
+            public String resolve(String toResolve) throws UnknownHostException
             {
-                if (hostname.equalsIgnoreCase(hostName))
+                if (toResolve.equalsIgnoreCase(hostName))
                 {
                     return ipAddress;
                 }
-                throw new UnknownHostException(hostName);
+                throw new UnknownHostException(toResolve);
             }
 
             @Override
