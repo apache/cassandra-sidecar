@@ -58,9 +58,7 @@ public class CompositePermission extends StandardPermission
         AndAuthorization authorization = AndAuthorization.create();
         for (Permission permission : permissions)
         {
-            ResourceScope resourceScope = permission.resourceScope();
-            String resolvedResource = resourceScope != null ? resourceScope.resolveWithResource(resource) : resource;
-            authorization.addAuthorization(permission.toAuthorization(resolvedResource));
+            authorization.addAuthorization(permission.toAuthorization(resource));
         }
         return authorization;
     }

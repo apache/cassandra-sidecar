@@ -87,7 +87,7 @@ class CompositePermissionTest
         CompositePermission combinedPermission = new CompositePermission("permission5", combinedPermissions);
 
         assertThat(combinedPermission.childPermissions().size()).isEqualTo(2);
-        Authorization combinedAuthorization = compositePermission.toAuthorization("data/university/student");
+        Authorization combinedAuthorization = combinedPermission.toAuthorization("data/university/student");
         assertThat(combinedAuthorization.verify(new PermissionBasedAuthorizationImpl("permission1").setResource("cluster"))).isTrue();
         assertThat(combinedAuthorization.verify(new PermissionBasedAuthorizationImpl("permission2").setResource("data/university"))).isTrue();
         assertThat(combinedAuthorization.verify(new PermissionBasedAuthorizationImpl("permission4").setResource("data/university/student"))).isTrue();

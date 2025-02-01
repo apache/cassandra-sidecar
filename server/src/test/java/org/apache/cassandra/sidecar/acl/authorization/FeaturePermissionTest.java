@@ -35,7 +35,6 @@ import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DE
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.IMPORT_STAGED_SSTABLE;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_RING;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_RING_KEYSPACE_SCOPED;
-import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SCHEMA;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SCHEMA_KEYSPACE_SCOPED;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_TOPOLOGY;
@@ -101,7 +100,7 @@ class FeaturePermissionTest
 
         Authorization bulkWriteAuthorization = BULK_WRITE_DIRECT.permission().toAuthorization("data/university/*");
 
-        assertThat(bulkWriteAuthorization.verify(READ_SCHEMA.toAuthorization("data/university"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED.toAuthorization("data/university"))).isTrue();
         assertThat(bulkWriteAuthorization.verify(READ_TOPOLOGY.toAuthorization("data/university"))).isTrue();
         assertThat(bulkWriteAuthorization.verify(UPLOAD_STAGED_SSTABLE.toAuthorization("data/university/*"))).isTrue();
         assertThat(bulkWriteAuthorization.verify(IMPORT_STAGED_SSTABLE.toAuthorization("data/university/*"))).isTrue();

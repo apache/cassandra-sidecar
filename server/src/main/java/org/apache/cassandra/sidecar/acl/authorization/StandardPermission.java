@@ -72,7 +72,9 @@ public class StandardPermission implements Permission
         PermissionBasedAuthorization authorization = PermissionBasedAuthorization.create(name);
         if (isNotEmpty(resource))
         {
-            authorization.setResource(resource);
+            ResourceScope resourceScope = resourceScope();
+            String resolvedResource = resourceScope != null ? resourceScope.resolveWithResource(resource) : resource;
+            authorization.setResource(resolvedResource);
         }
         return authorization;
     }
