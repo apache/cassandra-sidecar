@@ -51,7 +51,7 @@ commands:
 jobs:
   # Runs java 8 tests on a docker image
   # We only produce client artifacts for java 8 builds
-  unit_java8:
+  client_only_unit_java8:
     docker:
       - image: cimg/openjdk:8.0
     environment:
