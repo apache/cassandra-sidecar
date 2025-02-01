@@ -26,7 +26,7 @@ def dtestJarFullPath = "${dependencyLocation}${ext.dtestJar}"
 File dtestJarFile = new File(dtestJarFullPath)
 println("Using DTest jar: " + dtestJarFullPath + "; present? " + dtestJarFile.exists())
 
-sourceCompatibility = 11
+sourceCompatibility = JavaVersion.VERSION_11
 
 test {
     useJUnitPlatform()

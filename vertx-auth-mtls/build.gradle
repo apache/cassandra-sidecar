@@ -25,7 +25,7 @@ plugins {
     id('java-test-fixtures')
 }
 
-sourceCompatibility = 11
+sourceCompatibility = JavaVersion.VERSION_11
 
 test {
     useJUnitPlatform()

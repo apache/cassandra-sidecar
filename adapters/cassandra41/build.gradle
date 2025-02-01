@@ -29,7 +29,7 @@ plugins {
     id "com.github.spotbugs"
 }
 
-sourceCompatibility = 11
+sourceCompatibility = JavaVersion.VERSION_11
 
 test {
     useJUnitPlatform()
