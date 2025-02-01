@@ -19,11 +19,15 @@
 package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import io.vertx.ext.auth.authorization.AndAuthorization;
 import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.impl.PermissionBasedAuthorizationImpl;
+import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
 
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.CREATE_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DELETE_SNAPSHOT;
@@ -141,6 +145,47 @@ class FeaturePermissionTest
     }
 
     @Test
+    void testForbiddenFeaturePermission()
+    {
+        // *:* is forbidden in feature permission
+        Permission featurePermission = FeaturePermission.fromName("*:*");
+        assertThat(featurePermission).isNull();
+    }
+
+    @Test
+    void testFeaturePermissionSize()
+    {
+        CompositePermission cdcPermission = (CompositePermission) FeaturePermission.fromName("CDC");
+        assertThat(cdcPermission).isNotNull();
+        assertThat(cdcPermission.childPermissions().size()).isOne();
+        CompositePermission bulkReadPermission = (CompositePermission) FeaturePermission.fromName("ANALYTICS:READ_DIRECT");
+        assertThat(bulkReadPermission).isNotNull();
+        assertThat(bulkReadPermission.childPermissions().size()).isEqualTo(7);
+        CompositePermission bulkWritePermission = (CompositePermission) FeaturePermission.fromName("ANALYTICS:WRITE_DIRECT");
+        assertThat(bulkWritePermission).isNotNull();
+        assertThat(bulkWritePermission.childPermissions().size()).isEqualTo(7);
+        CompositePermission bulkWriteS3Permission = (CompositePermission) FeaturePermission.fromName("ANALYTICS:WRITE_S3_COMPAT");
+        assertThat(bulkWriteS3Permission).isNotNull();
+        assertThat(bulkWriteS3Permission.childPermissions().size()).isEqualTo(6);
+    }
+
+    @Test
+    void testResourceResolvedForAllChildPermissions()
+    {
+        CompositePermission bulkReadPermission = (CompositePermission) FeaturePermission.fromName("ANALYTICS:READ_DIRECT");
+        AndAuthorization bulkReadAuthorization = (AndAuthorization) bulkReadPermission.toAuthorization("data/university/student");
+        Set<Authorization> resolvedAuthorizations = new HashSet<>(bulkReadAuthorization.getAuthorizations());
+        assertThat(resolvedAuthorizations.size()).isEqualTo(7);
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:CREATE").setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:DELETE").setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:READ").setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:STREAM").setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SCHEMA:READ").setResource("data/university"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("RING:READ").setResource("data/university"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new PermissionBasedAuthorizationImpl("SELECT").setResource("data/university/student"))).isTrue();
+    }
+
+    @Test
     void testMatchedBasicPermissionsRetrieved()
     {
         Permission readPermission = FeaturePermission.fromName("ANALYTICS:READ_DIRECT");
@@ -154,5 +199,12 @@ class FeaturePermissionTest
         assertThat(readWriteCompositePermission).isNotNull();
         // has basic permissions for both bulk read and bulk write feature
         assertThat(readWriteCompositePermission.childPermissions().size()).isEqualTo(14);
+    }
+
+    @Test
+    void testFetchingUnrecognizedFeaturePermission()
+    {
+        Permission unrecognizedPermission = FeaturePermission.fromName("UNRECOGNIZED");
+        assertThat(unrecognizedPermission).isNull();
     }
 }

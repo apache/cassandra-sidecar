@@ -91,7 +91,12 @@ public class DataResourceScope implements ResourceScope
     @Override
     public String resolveWithResource(String resource)
     {
-        if (isNullOrEmpty(resource) || !resource.startsWith("data"))
+        if (isNullOrEmpty(resource))
+        {
+            throw new IllegalArgumentException("Resource expected for resolving");
+        }
+
+        if (!resource.startsWith("data"))
         {
             return variableAwareResource();
         }

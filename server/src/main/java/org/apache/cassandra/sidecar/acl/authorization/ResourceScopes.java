@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.acl.authorization;
 import java.util.Collections;
 import java.util.Set;
 
+import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
+
 /**
  * Possible resource scopes of sidecar permissions. This list is not exhaustive.
  */
@@ -42,6 +44,7 @@ public class ResourceScopes
         @Override
         public String resolveWithResource(String resource)
         {
+            validate(resource);
             return "cluster";
         }
 
@@ -68,6 +71,7 @@ public class ResourceScopes
         @Override
         public String resolveWithResource(String resource)
         {
+            validate(resource);
             return "operation";
         }
 
@@ -92,4 +96,12 @@ public class ResourceScopes
      * Signifies Cassandra data scope at a table level.
      */
     public static final ResourceScope TABLE = DataResourceScope.createWithTableScope();
+
+    private static void validate(String resource)
+    {
+        if (isNullOrEmpty(resource))
+        {
+            throw new IllegalArgumentException("Resource expected for resolving");
+        }
+    }
 }
