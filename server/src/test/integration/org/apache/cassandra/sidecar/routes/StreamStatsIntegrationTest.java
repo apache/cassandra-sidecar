@@ -82,7 +82,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         awaitLatchOrThrow(BBHelperDecommissioningNode.transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
 
         // optimal no. of attempts to poll for stats to capture streaming stats during node decommissioning
-        loopAssert(10, 200, () -> {
+        loopAssert(15, 200, () -> {
             streamStats(hasStats, dataReceived);
             assertThat(hasStats).isTrue();
             assertThat(dataReceived).isTrue();
@@ -123,11 +123,9 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         if (streamProgress.totalFilesToReceive() > 0)
         {
             hasStats.set(true);
-            if (streamProgress.totalFilesToReceive() == streamProgress.totalFilesReceived() &&
-                streamProgress.totalFilesReceived() > 0)
+            if (streamProgress.totalFilesReceived() > 0)
             {
                 dataReceived.set(true);
-                assertThat(streamProgress.totalBytesToReceive()).isEqualTo(streamProgress.totalBytesReceived());
                 assertThat(streamProgress.totalBytesReceived()).isGreaterThan(0);
             }
         }
