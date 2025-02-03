@@ -69,7 +69,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // wait for cache refreshes
         Thread.sleep(3000);
 
-        testCompleteLatch = new CountDownLatch(30);
+        testCompleteLatch = new CountDownLatch(32);
 
         // permissions for test cases below are granted during prepareForTest to save cache refresh time. Please
         // refer to grantRequiredPermissions to check permissions granted for a test to understand verifications done in
@@ -88,6 +88,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         testGrantingBulkReadFeaturePermissionAcrossData(context);
         testGrantingBulkWriteFeaturePermission(context);
         testGrantingBothBulkReadAndWriteFeaturePermission(context);
+        testGrantingAllAnalyticsRelatedPermissions(context);
         testGrantingCdcFeaturePermission(context);
 
         assertThat(testCompleteLatch.await(4, TimeUnit.MINUTES)).isTrue();
@@ -345,6 +346,20 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
     }
 
+    void testGrantingAllAnalyticsRelatedPermissions(VertxTestContext context) throws Exception
+    {
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/all_analytics_permission_test_user");
+
+        String gossipRoute = "/api/v1/cassandra/gossip";
+        // GOSSIP:READ permission under ANALYTICS:WRITE_DIRECT granted with ANALYTICS:*
+        verifyAccess(context, testCompleteLatch, HttpMethod.GET, gossipRoute, clientKeystorePath, false);
+
+        String keyspaceRingRoute = String.format("/api/v1/cassandra/ring/keyspaces/%s", "all_analytics_permission_test_keyspace");
+
+        // RING:READ permission under ANALYTICS:READ_DIRECT granted with ANALYTICS:*
+        verifyAccess(context, testCompleteLatch, HttpMethod.GET, keyspaceRingRoute, clientKeystorePath, false);
+    }
+
     void testGrantingCdcFeaturePermission(VertxTestContext context) throws Exception
     {
         String listCdcPath = "/api/v1/cdc/segments";
@@ -398,6 +413,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createKeyspace("grant_bulk_read_across_tables_test_keyspace");
         createKeyspace("grant_bulk_write_test_keyspace");
         createKeyspace("grant_bulk_read_write_test_keyspace");
+        createKeyspace("all_analytics_permission_test_keyspace");
         createTable("test_keyspace", "test_table");
         createTable("non_admin_test_keyspace", "test_table");
         createTable("grant_table_test_keyspace", "test_table");
@@ -409,6 +425,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createTable("grant_bulk_read_across_tables_test_keyspace", "test_table2");
         createTable("grant_bulk_write_test_keyspace", "test_table");
         createTable("grant_bulk_read_write_test_keyspace", "test_table");
+        createTable("all_analytics_permission_test_keyspace", "test_table");
     }
 
     private void createRequiredRoles(CassandraTestContext cassandraContext)
@@ -439,6 +456,9 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         createRole("bulk_read_write_test_role", false);
         insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/bulk_read_write_test_user", "bulk_read_write_test_role");
+
+        createRole("all_analytics_permission_test_role", false);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/all_analytics_permission_test_user", "all_analytics_permission_test_role");
 
         createRole("cdc_test_role", false);
         insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/cdc_test_user", "cdc_test_role");
@@ -483,6 +503,9 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         // permission for testGrantingBothBulkReadAndWriteFeaturePermission
         grantSidecarPermission("bulk_read_write_test_role", "data/grant_bulk_read_write_test_keyspace/test_table", "ANALYTICS:READ_DIRECT,WRITE_DIRECT");
+
+        // permission for testGrantingAllAnalyticsRelatedPermissions
+        grantSidecarPermission("all_analytics_permission_test_role", "data/all_analytics_permission_test_keyspace/test_table", "ANALYTICS:*");
 
         // permission for testGrantingCdcFeaturePermission
         grantSidecarPermission("cdc_test_role", "cluster", "CDC");

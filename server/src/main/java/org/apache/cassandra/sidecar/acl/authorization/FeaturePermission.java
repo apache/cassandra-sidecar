@@ -20,7 +20,9 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
@@ -80,8 +82,7 @@ public enum FeaturePermission
     CDC("CDC", BasicPermissions.CDC);
 
     // TODO make forbidden feature permission configurable
-    private static final String FORBIDDEN_FEATURE_PERMISSION = "*:*";
-
+    private static final Set<String> FORBIDDEN_FEATURE_PERMISSION = Collections.singleton("*:*");
 
     private static final List<FeaturePermission> FEATURE_PERMISSIONS
     = Arrays.stream(values()).collect(Collectors.toList());
@@ -111,7 +112,7 @@ public enum FeaturePermission
      */
     public static Permission fromName(String name)
     {
-        if (name.contains(FORBIDDEN_FEATURE_PERMISSION))
+        if (FORBIDDEN_FEATURE_PERMISSION.contains(name))
         {
             return null;
         }
