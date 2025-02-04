@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.metrics;
 
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Tracks both server metrics and Cassandra instance specific metrics that Sidecar maintains.
@@ -46,5 +47,5 @@ public interface SidecarMetrics
      * @param host Cassandra instance host name
      * @return {@link InstanceMetrics} maintained for provided Cassandra instance
      */
-    InstanceMetrics instance(String host);
+    InstanceMetrics instance(@NotNull String host);
 }

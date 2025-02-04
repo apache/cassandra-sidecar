@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
 import com.google.common.util.concurrent.SidecarRateLimiter;
 import org.apache.commons.lang3.concurrent.LazyInitializer;
 import org.slf4j.Logger;
@@ -842,11 +843,11 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public ElectorateMembership electorateMembership(InstancesMetadata instancesMetadata,
+    public ElectorateMembership electorateMembership(InstanceMetadataFetcher instanceMetadataFetcher,
                                                      CQLSessionProvider cqlSessionProvider,
                                                      SidecarConfiguration configuration)
     {
-        return new MostReplicatedKeyspaceTokenZeroElectorateMembership(instancesMetadata, cqlSessionProvider, configuration);
+        return new MostReplicatedKeyspaceTokenZeroElectorateMembership(instanceMetadataFetcher, cqlSessionProvider, configuration);
     }
 
     @Provides
@@ -886,13 +887,13 @@ public class MainModule extends AbstractModule
     @Singleton
     public IdentifiersProvider identifiersProvider(@NotNull InstanceMetadataFetcher fetcher)
     {
-        LazyInitializer<String> cluster = new LazyInitializer<String>()
+        LazyInitializer<String> cluster = new LazyInitializer<>()
         {
             @Override
             @NotNull
             protected String initialize()
             {
-                return fetcher.anyInstance().delegate().storageOperations().clusterName();
+                return fetcher.callOnFirstAvailableInstance(delegate -> delegate.storageOperations().clusterName());
             }
         };
 

@@ -43,6 +43,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -122,7 +123,7 @@ class AbstractHandlerTest
         @Override
         protected void handleInternal(RoutingContext context,
                                       HttpServerRequest httpRequest,
-                                      String host,
+                                      @NotNull String host,
                                       SocketAddress remoteAddress,
                                       Object request)
         {

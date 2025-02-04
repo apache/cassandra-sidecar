@@ -40,6 +40,7 @@ import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -96,7 +97,7 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
     @Override
     protected void handleInternal(RoutingContext context,
                                   HttpServerRequest httpRequest,
-                                  String host,
+                                  @NotNull String host,
                                   SocketAddress remoteAddress,
                                   RestoreJobProgressFetchPolicy fetchPolicy)
     {

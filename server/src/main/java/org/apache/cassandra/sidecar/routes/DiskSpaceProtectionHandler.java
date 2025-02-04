@@ -30,6 +30,7 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.exceptions.InsufficientStorageException;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.AsyncFileSystemUtils.ensureSufficientStorage;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -63,7 +64,7 @@ public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
     @Override
     protected void handleInternal(RoutingContext context,
                                   HttpServerRequest httpRequest,
-                                  String host,
+                                  @NotNull String host,
                                   SocketAddress remoteAddress,
                                   Void request)
     {

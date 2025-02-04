@@ -18,54 +18,61 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import org.junit.jupiter.api.Test;
+import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import io.vertx.core.http.HttpServerRequest;
+import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link AbstractHandler#extractHostAddressWithoutPort} functionality
  */
 class ExtractHostAddressWithoutPortTest
 {
-    @Test
-    void testAddressWithIPv4Host()
+    @ParameterizedTest(name = "{index} => input={0}, expected={1}")
+    @MethodSource(value = { "inputs" })
+    void testHostExtraction(String input, String expectedValue)
     {
-        final String host = AbstractHandler.extractHostAddressWithoutPort("127.0.0.1");
-        assertEquals("127.0.0.1", host);
+        String host = AbstractHandler.extractHostAddressWithoutPort(mockRequest(input));
+        assertThat(host).isEqualTo(expectedValue);
     }
 
     @Test
-    void testAddressIPv4HostAndPort()
+    void testExtractNullInput()
     {
-        final String host = AbstractHandler.extractHostAddressWithoutPort("127.0.0.1:9043");
-        assertEquals("127.0.0.1", host);
+        assertThatThrownBy(() -> AbstractHandler.extractHostAddressWithoutPort(mockRequest(null)))
+        .isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
+        .hasMessage("No such Cassandra instance when Host header is absent");
     }
 
-    @Test
-    void testAddressWithIPv6Host()
+    static Stream<Arguments> inputs()
     {
-        final String host = AbstractHandler.extractHostAddressWithoutPort("2001:db8:0:0:0:ff00:42:8329");
-        assertEquals("2001:db8:0:0:0:ff00:42:8329", host);
+        return Stream.of(
+        arguments("127.0.0.1", "127.0.0.1"),
+        arguments("127.0.0.1:9043", "127.0.0.1"),
+        arguments("2001:db8:0:0:0:ff00:42:8329", "2001:db8:0:0:0:ff00:42:8329"),
+        arguments("[2001:db8:0:0:0:ff00:42:8329]:9043", "2001:db8:0:0:0:ff00:42:8329"),
+        arguments("::1", "::1"),
+        arguments("[::1]:9043", "::1"),
+        arguments("www.apache.cassandra.sidecar.com", "www.apache.cassandra.sidecar.com"),
+        arguments("www.apache.cassandra.sidecar.com:9043", "www.apache.cassandra.sidecar.com")
+        );
     }
 
-    @Test
-    void testAddressWithIPv6HostAndPort()
+    private HttpServerRequest mockRequest(String host)
     {
-        final String host = AbstractHandler.extractHostAddressWithoutPort("[2001:db8:0:0:0:ff00:42:8329]:9043");
-        assertEquals("2001:db8:0:0:0:ff00:42:8329", host);
-    }
-
-    @Test
-    void testAddressWithIPv6HostShortcut()
-    {
-        final String host = AbstractHandler.extractHostAddressWithoutPort("::1");
-        assertEquals("::1", host);
-    }
-
-    @Test
-    void testAddressWithIPv6HostShortcutWithPort()
-    {
-        final String host = AbstractHandler.extractHostAddressWithoutPort("[::1]:9043");
-        assertEquals("::1", host);
+        HttpServerRequest req = mock(HttpServerRequest.class);
+        when(req.host()).thenReturn(host);
+        return req;
     }
 }

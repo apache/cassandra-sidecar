@@ -33,8 +33,10 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.JMX;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -47,11 +49,17 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipTest
     private static final SidecarConfigurationImpl CONFIG = new SidecarConfigurationImpl();
 
     @Test
-    void testEmptyInstancesMetadata()
+    void testNoAvailableLocalInstances()
     {
         InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
-        when(mockInstancesMetadata.instances()).thenReturn(Collections.emptyList());
-        ElectorateMembership membership = new MostReplicatedKeyspaceTokenZeroElectorateMembership(mockInstancesMetadata, null, CONFIG);
+        InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
+        CassandraAdapterDelegate mockCassandraAdapterDelegate = mock(CassandraAdapterDelegate.class);
+        when(mockCassandraAdapterDelegate.localStorageBroadcastAddress())
+        .thenThrow(new CassandraUnavailableException(CQL, "Cannot retrieve storageBroadcastAddress"));
+        when(instanceMetadata.delegate()).thenReturn(mockCassandraAdapterDelegate);
+        when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
+        InstanceMetadataFetcher instanceMetadataFetcher = new InstanceMetadataFetcher(mockInstancesMetadata);
+        ElectorateMembership membership = new MostReplicatedKeyspaceTokenZeroElectorateMembership(instanceMetadataFetcher, null, CONFIG);
         assertThat(membership.isMember()).as("When no local instances are managed by Sidecar, we can't determine participation")
                                          .isFalse();
     }
@@ -67,10 +75,11 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipTest
         when(mockCassandraAdapterDelegate.nodeSettings()).thenReturn(mock(NodeSettings.class));
         when(instanceMetadata.delegate()).thenReturn(mockCassandraAdapterDelegate);
         when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
+        InstanceMetadataFetcher instanceMetadataFetcher = new InstanceMetadataFetcher(mockInstancesMetadata);
         CQLSessionProvider mockCQLSessionProvider = mock(CQLSessionProvider.class);
         // the session is not available so we return null
         when(mockCQLSessionProvider.get()).thenThrow(new CassandraUnavailableException(CQL, new RuntimeException("connection failed")));
-        ElectorateMembership membership = new MostReplicatedKeyspaceTokenZeroElectorateMembership(mockInstancesMetadata, mockCQLSessionProvider, CONFIG);
+        ElectorateMembership membership = new MostReplicatedKeyspaceTokenZeroElectorateMembership(instanceMetadataFetcher, mockCQLSessionProvider, CONFIG);
         assertThat(membership.isMember()).as("When the CQL connection is unavailable, we can't determine participation")
                                          .isFalse();
     }

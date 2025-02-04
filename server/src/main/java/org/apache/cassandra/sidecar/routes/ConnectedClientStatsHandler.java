@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.acl.authorization.VariableAwareResource;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
@@ -72,11 +73,11 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Boolean> implem
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                Boolean summaryOnly)
     {
-        MetricsOperations operations = metadataFetcher.delegate(host).metricsOperations();
+        MetricsOperations operations = metadataFetcher.instance(host).delegate().metricsOperations();
         executorPools.service()
                      .executeBlocking(() -> operations.connectedClientStats(summaryOnly))
                      .onSuccess(context::json)

@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Handler for retrieving node streams stats
@@ -65,12 +66,12 @@ public class StreamStatsHandler extends AbstractHandler<Void> implements AccessP
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                Void request)
     {
 
-        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+        CassandraAdapterDelegate delegate = metadataFetcher.instance(host).delegate();
 
         executorPools.service()
                      .executeBlocking(() -> {

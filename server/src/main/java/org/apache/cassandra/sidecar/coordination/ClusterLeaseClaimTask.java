@@ -107,7 +107,15 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         {
             // Do expensive call when the feature is enabled to determine if this Sidecar is member
             // of the electorate
-            isMember = electorateMembership.isMember();
+            try
+            {
+                isMember = electorateMembership.isMember();
+            }
+            catch (Throwable t)
+            {
+                LOGGER.debug("Membership determination fails due to unexpected exception", t);
+                // isMember remains false
+            }
             LOGGER.debug("Sidecar instance part of electorate isMember={}", isMember);
         }
         if (!isEnabled || !isMember)

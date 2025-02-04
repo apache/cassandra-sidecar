@@ -26,6 +26,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Provides REST endpoint to get the configured settings of a cassandra node.
@@ -54,11 +55,11 @@ public class NodeSettingsHandler extends AbstractHandler<Void>
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                Void request)
     {
-        context.json(metadataFetcher.delegate(host).nodeSettings());
+        context.json(metadataFetcher.instance(host).delegate().nodeSettings());
     }
 
     /**

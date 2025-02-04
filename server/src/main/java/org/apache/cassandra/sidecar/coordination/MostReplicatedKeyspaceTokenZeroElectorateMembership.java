@@ -24,15 +24,12 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Session;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
@@ -42,6 +39,7 @@ import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.utils.StringUtils;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
  * An implementation of {@link ElectorateMembership} where the current Sidecar will
@@ -55,15 +53,15 @@ import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements ElectorateMembership
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(MostReplicatedKeyspaceTokenZeroElectorateMembership.class);
-    private final InstancesMetadata instancesMetadata;
+    private final InstanceMetadataFetcher instanceMetadataFetcher;
     private final CQLSessionProvider cqlSessionProvider;
     private final SidecarConfiguration configuration;
 
-    public MostReplicatedKeyspaceTokenZeroElectorateMembership(InstancesMetadata instancesMetadata,
+    public MostReplicatedKeyspaceTokenZeroElectorateMembership(InstanceMetadataFetcher instanceMetadataFetcher,
                                                                CQLSessionProvider cqlSessionProvider,
                                                                SidecarConfiguration sidecarConfiguration)
     {
-        this.instancesMetadata = instancesMetadata;
+        this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.cqlSessionProvider = cqlSessionProvider;
         this.configuration = sidecarConfiguration;
     }
@@ -81,15 +79,6 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
             return false;
         }
 
-        StorageOperations operations = firstAvailableOperationFromDelegate(CassandraAdapterDelegate::storageOperations);
-        NodeSettings nodeSettings = firstAvailableOperationFromDelegate(CassandraAdapterDelegate::nodeSettings);
-
-        if (operations == null || nodeSettings == null)
-        {
-            // not expected, but for completeness
-            return false;
-        }
-
         String userKeyspace = highestReplicationFactorKeyspace();
         if (userKeyspace == null)
         {
@@ -97,14 +86,19 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
             return false;
         }
 
-        TokenRangeReplicasResponse tokenRangeReplicas = operations.tokenRangeReplicas(new Name(userKeyspace), nodeSettings.partitioner());
+        TokenRangeReplicasResponse tokenRangeReplicas = instanceMetadataFetcher.callOnFirstAvailableInstance(delegate -> {
+            StorageOperations operations = delegate.storageOperations();
+            NodeSettings nodeSettings = delegate.nodeSettings();
+            return operations.tokenRangeReplicas(new Name(userKeyspace), nodeSettings.partitioner());
+        });
+
         return anyInstanceOwnsTokenZero(tokenRangeReplicas, localInstancesHostsAndPorts);
     }
 
     Set<String> collectLocalInstancesHostsAndPorts()
     {
         Set<String> result = new HashSet<>();
-        for (InstanceMetadata instance : instancesMetadata.instances())
+        for (InstanceMetadata instance : instanceMetadataFetcher.allLocalInstances())
         {
             try
             {
@@ -120,24 +114,6 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
         return result;
     }
 
-    <O> O firstAvailableOperationFromDelegate(Function<CassandraAdapterDelegate, O> mapper)
-    {
-        for (InstanceMetadata instance : instancesMetadata.instances())
-        {
-            try
-            {
-                CassandraAdapterDelegate delegate = instance.delegate();
-                return mapper.apply(delegate);
-            }
-            catch (CassandraUnavailableException exception)
-            {
-                // no-op; try the next instance
-                LOGGER.debug("CassandraAdapterDelegate is not available for instance. instance={}", instance, exception);
-            }
-        }
-        return null;
-    }
-
     /**
      * Performs pre-checks ensuring local instances are configured; an active session to the database is present;
      * and returns the keyspace with the highest replication factor. If multiple keyspaces have the highest
@@ -148,7 +124,7 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
      */
     String highestReplicationFactorKeyspace()
     {
-        if (instancesMetadata.instances().isEmpty())
+        if (instanceMetadataFetcher.allLocalInstances().isEmpty())
         {
             LOGGER.warn("There are no local Cassandra instances managed by this Sidecar");
             return null;

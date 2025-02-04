@@ -19,17 +19,22 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 
 /**
  * Helper class to retrieve instance information from an instanceId or hostname.
@@ -37,6 +42,8 @@ import org.jetbrains.annotations.Nullable;
 @Singleton
 public class InstanceMetadataFetcher
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(InstanceMetadataFetcher.class);
+
     private final InstancesMetadata instancesMetadata;
 
     @Inject
@@ -46,19 +53,15 @@ public class InstanceMetadataFetcher
     }
 
     /**
-     * Returns the {@link InstanceMetadata} for the given {@code host}. When the {@code host} is {@code null},
-     * returns the first instance from the list of configured instances.
+     * Returns the {@link InstanceMetadata} for the given {@code host}.
      *
      * @param host the Cassandra instance hostname or IP address
-     * @return the {@link InstanceMetadata} for the given {@code host}, or the first instance when {@code host} is
-     * {@code null}
+     * @return the {@link InstanceMetadata} for the given {@code host}
      */
     @NotNull
-    public InstanceMetadata instance(@Nullable String host) throws NoSuchCassandraInstanceException
+    public InstanceMetadata instance(@NotNull String host) throws NoSuchCassandraInstanceException
     {
-        return host == null
-               ? firstInstance()
-               : instancesMetadata.instanceFromHost(host);
+        return instancesMetadata.instanceFromHost(host);
     }
 
     /**
@@ -77,60 +80,40 @@ public class InstanceMetadataFetcher
     }
 
     /**
-     * Returns the {@link CassandraAdapterDelegate} for the given {@code host}. When the {@code host} is {@code null},
-     * returns the delegate for the first instance from the list of configured instances.
+     * Iterate through the local instances and call the function on the first available instance
      *
-     * @param host the Cassandra instance hostname or IP address
-     * @return the {@link CassandraAdapterDelegate} for the given {@code host}, or the first instance when {@code host}
-     * is {@code null}
-     * @throws NoSuchCassandraInstanceException when the Cassandra instance with {@code host} does not exist
-     * @throws CassandraUnavailableException  when Cassandra is not yet connected
+     * @param function function applies to {@link CassandraAdapterDelegate}
+     * @return function eval result. Null can be returned when all local instances are exhausted
+     * @param <T> type of the result
+     * @throws CassandraUnavailableException when all local instances are exhausted.
      */
     @NotNull
-    public CassandraAdapterDelegate delegate(@Nullable String host) throws NoSuchCassandraInstanceException, CassandraUnavailableException
+    public <T> T callOnFirstAvailableInstance(Function<CassandraAdapterDelegate, T> function) throws CassandraUnavailableException
     {
-        return instance(host).delegate();
-    }
-
-    /**
-     * Returns the {@link CassandraAdapterDelegate} for the given {@code instanceId}
-     *
-     * @param instanceId the identifier for the Cassandra instance
-     * @return the {@link CassandraAdapterDelegate} for the given {@code instanceId}
-     * @throws NoSuchCassandraInstanceException when the Cassandra instance with {@code instanceId} does not exist
-     * @throws CassandraUnavailableException  when Cassandra is not yet connected
-     */
-    @NotNull
-    public CassandraAdapterDelegate delegate(int instanceId) throws NoSuchCassandraInstanceException, CassandraUnavailableException
-    {
-        return instance(instanceId).delegate();
-    }
-
-    /**
-     * @return the first instance from the list of configured instances
-     * @throws IllegalStateException when there are no configured instances
-     */
-    public InstanceMetadata firstInstance()
-    {
-        ensureInstancesMetadataConfigured();
-        return instancesMetadata.instances().get(0);
-    }
-
-    /**
-     * @return any instance from the list of configured instances
-     * @throws IllegalStateException when there are no configured instances
-     */
-    public InstanceMetadata anyInstance()
-    {
-        ensureInstancesMetadataConfigured();
-        List<InstanceMetadata> instances = instancesMetadata.instances();
-        if (instances.size() == 1)
+        for (InstanceMetadata instance : allLocalInstances())
         {
-            return instances.get(0);
+            try
+            {
+                CassandraAdapterDelegate delegate = instance.delegate();
+                return function.apply(delegate);
+            }
+            catch (CassandraUnavailableException | OperationUnavailableException exception)
+            {
+                // no-op; try the next instance
+                LOGGER.debug("CassandraAdapterDelegate is not available for instance. instance={}", instance, exception);
+            }
         }
 
-        int randomPick = ThreadLocalRandom.current().nextInt(instances.size());
-        return instances.get(randomPick);
+        throw new CassandraUnavailableException(CQL_AND_JMX, "All local Cassandra nodes are exhausted. But none is available");
+    }
+
+    /**
+     * @return all the configured local instances
+     */
+    public List<InstanceMetadata> allLocalInstances()
+    {
+        ensureInstancesMetadataConfigured();
+        return instancesMetadata.instances();
     }
 
     private void ensureInstancesMetadataConfigured()

@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.MetadataUtils;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -76,7 +77,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
@@ -128,7 +129,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     {
         return executorPools.service().executeBlocking(() -> {
             // metadata can block so we need to run in a blocking thread
-            return metadataFetcher.delegate(host).metadata();
+            return metadataFetcher.instance(host).delegate().metadata();
         });
     }
 

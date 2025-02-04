@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.routes.data.SnapshotRequestParam;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -83,11 +84,11 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                SnapshotRequestParam requestParams)
     {
-        StorageOperations storageOperations = metadataFetcher.delegate(host).storageOperations();
+        StorageOperations storageOperations = metadataFetcher.instance(host).delegate().storageOperations();
         executorPools.service().runBlocking(() -> {
                          logger.debug("Creating snapshot request={}, remoteAddress={}, instance={}",
                                       requestParams, remoteAddress, host);

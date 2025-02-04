@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Manages cleaning up uploaded SSTables
@@ -76,7 +77,7 @@ public class SSTableCleanupHandler extends AbstractHandler<String> implements Ac
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                String uploadId)
     {

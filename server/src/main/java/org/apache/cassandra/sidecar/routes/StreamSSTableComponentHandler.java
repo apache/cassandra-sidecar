@@ -47,6 +47,7 @@ import org.apache.cassandra.sidecar.routes.data.StreamSSTableComponentRequestPar
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -81,7 +82,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                StreamSSTableComponentRequestParam request)
     {
@@ -98,7 +99,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
             int dataDirIndex = request.dataDirectoryIndex();
             if (request.tableId() != null)
             {
-                StorageOperations storageOperations = metadataFetcher.delegate(host).storageOperations();
+                StorageOperations storageOperations = metadataFetcher.instance(host).delegate().storageOperations();
                 List<String> dataDirList = storageOperations.dataFileLocations();
                 if (dataDirIndex < 0 || dataDirIndex >= dataDirList.size())
                 {
@@ -109,7 +110,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
             else
             {
                 logger.debug("Streaming SSTable component without a table Id. request={}, instance={}", request, host);
-                TableOperations tableOperations = metadataFetcher.delegate(host).tableOperations();
+                TableOperations tableOperations = metadataFetcher.instance(host).delegate().tableOperations();
                 // asking jmx to give us the path for keyspace/table - tableId
                 // as opposed to storageOperations.dataFileLocations, the table directory can change
                 // when someone drops a table and recreates it with the same name, the table id will change

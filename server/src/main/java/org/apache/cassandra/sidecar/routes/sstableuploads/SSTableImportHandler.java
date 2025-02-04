@@ -47,6 +47,7 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -101,7 +102,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                SSTableImportRequestParam request)
     {
@@ -184,7 +185,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
         {
             // ensure that table operations are available from the delegate before doing the import
             // otherwise fail fast propagating the HttpException
-            metadataFetcher.delegate(importOptions.host()).tableOperations();
+            metadataFetcher.instance(importOptions.host()).delegate().tableOperations();
             return uploadPathBuilder.isValidDirectory(importOptions.directory())
                                     .compose(validDirectory -> importer.scheduleImport(importOptions));
         }

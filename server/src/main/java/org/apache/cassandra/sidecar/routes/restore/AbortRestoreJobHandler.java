@@ -81,7 +81,7 @@ public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobReque
     @Override
     protected void handleInternal(RoutingContext context,
                                   HttpServerRequest httpRequest,
-                                  String host,
+                                  @NotNull String host,
                                   SocketAddress remoteAddress,
                                   AbortRestoreJobRequestPayload payload)
     {

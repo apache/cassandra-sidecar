@@ -52,6 +52,7 @@ import org.apache.cassandra.sidecar.routes.AccessProtected;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.CdcUtil.getIdxFileName;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.getLogFilePrefix;
@@ -89,7 +90,7 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
     @Override
     protected void handleInternal(RoutingContext context,
                                   HttpServerRequest httpRequest,
-                                  String host,
+                                  @NotNull String host,
                                   SocketAddress remoteAddress,
                                   Void request)
     {

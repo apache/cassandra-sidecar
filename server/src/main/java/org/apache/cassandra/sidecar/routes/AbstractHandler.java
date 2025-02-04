@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.util.NoSuchElementException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +29,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
@@ -39,6 +36,8 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -117,7 +116,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
      */
     protected abstract void handleInternal(RoutingContext context,
                                            HttpServerRequest httpRequest,
-                                           String host,
+                                           @NotNull String host,
                                            SocketAddress remoteAddress,
                                            T request);
 
@@ -129,6 +128,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
      * @return the host for the routing context
      * @throws HttpException when the {@code /instance/} path parameter is {@code null}
      */
+    @NotNull
     public String host(RoutingContext context)
     {
         if (context.request().params().contains(INSTANCE_ID))
@@ -140,27 +140,31 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
                                         "InstanceId query parameter must be provided");
             }
 
-            InstanceMetadata instance;
             try
             {
                 int instanceId = Integer.parseInt(instanceIdParam);
-                instance = metadataFetcher.instance(instanceId);
+                return  metadataFetcher.instance(instanceId).host();
             }
             catch (NumberFormatException ex)
             {
                 throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(),
                                         "InstanceId query parameter must be a valid integer");
             }
-            catch (NoSuchElementException | IllegalStateException ex)
+            catch (NoSuchCassandraInstanceException | IllegalStateException ex)
             {
                 throw new HttpException(HttpResponseStatus.NOT_FOUND.code(), ex.getMessage());
             }
-
-            return instance.host();
         }
         else
         {
-            return extractHostAddressWithoutPort(context.request().host());
+            try
+            {
+                return extractHostAddressWithoutPort(context.request());
+            }
+            catch (NoSuchCassandraInstanceException ex)
+            {
+                throw new HttpException(HttpResponseStatus.NOT_FOUND.code(), ex.getMessage());
+            }
         }
     }
 
@@ -292,20 +296,29 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
      *
      * @param address ip address
      * @return host address without port information
+     * @throws NoSuchCassandraInstanceException thrown when input address is null
      */
-    public static String extractHostAddressWithoutPort(String address)
+    @NotNull
+    public static String extractHostAddressWithoutPort(HttpServerRequest request) throws NoSuchCassandraInstanceException
     {
-        if (address.contains(":"))
+        String host = request.host();
+        if (host == null)
+        {
+            throw new NoSuchCassandraInstanceException("No such Cassandra instance when Host header is absent");
+        }
+
+        if (host.contains(":"))
         {
             // just ipv6 host name present without port information
-            if (address.split(":").length > 2 && !address.startsWith("["))
+            if (host.split(":").length > 2 && !host.startsWith("["))
             {
-                return address;
+                return host;
             }
-            String host = address.substring(0, address.lastIndexOf(':'));
-            // remove brackets from ipv6 addresses
-            return host.startsWith("[") ? host.substring(1, host.length() - 1) : host;
+            String hostWithoutPort = host.substring(0, host.lastIndexOf(':'));
+            return hostWithoutPort.startsWith("[")
+                   ? hostWithoutPort.substring(1, hostWithoutPort.length() - 1) // remove brackets from ipv6 addresses
+                   : hostWithoutPort; // return ipv4 directly
         }
-        return address;
+        return host;
     }
 }

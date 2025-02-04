@@ -23,6 +23,7 @@ import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Tracks both server metrics and Cassandra instance specific metrics that Sidecar maintains.
@@ -55,7 +56,7 @@ public class SidecarMetricsImpl implements SidecarMetrics
     }
 
     @Override
-    public InstanceMetrics instance(String host) throws NoSuchCassandraInstanceException, CassandraUnavailableException
+    public InstanceMetrics instance(@NotNull String host) throws NoSuchCassandraInstanceException, CassandraUnavailableException
     {
         return instanceMetadataFetcher.instance(host).metrics();
     }

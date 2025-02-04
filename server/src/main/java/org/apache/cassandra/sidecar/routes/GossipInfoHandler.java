@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
 import org.apache.cassandra.sidecar.common.server.utils.GossipInfoParser;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 
 /**
@@ -67,16 +68,14 @@ public class GossipInfoHandler extends AbstractHandler<Void> implements AccessPr
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                Void request)
     {
         executorPools.service()
                      .executeBlocking(() -> {
-                         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
+                         CassandraAdapterDelegate delegate = metadataFetcher.instance(host).delegate();
                          ClusterMembershipOperations operations = delegate.clusterMembershipOperations();
-                         Preconditions.checkState(operations != null,
-                                                  "Unable to connect to Cassandra");
                          String rawGossipInfo = operations.gossipInfo();
                          return GossipInfoParser.parse(rawGossipInfo);
                      })

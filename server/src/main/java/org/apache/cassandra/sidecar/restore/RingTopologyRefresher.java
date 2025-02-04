@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -32,7 +33,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -41,7 +41,6 @@ import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
-import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -84,7 +83,7 @@ public class RingTopologyRefresher implements PeriodicTask
     @Override
     public void execute(Promise<Void> promise)
     {
-        executeBlocking();
+        prepareAndFetch(this::loadAll);
         promise.tryComplete();
     }
 
@@ -122,24 +121,20 @@ public class RingTopologyRefresher implements PeriodicTask
         return replicaByTokenRangePerKeyspace.futureOf(restoreJob);
     }
 
-    private void executeBlocking()
+    // Declaring the Void return type to be compliant with the BiFunction parameter
+    private Void loadAll(StorageOperations storageOperations, NodeSettings nodeSettings)
     {
-        CassandraAdapterDelegate delegate;
-        StorageOperations storageOperations;
-        NodeSettings nodeSettings;
-        try
-        {
-            delegate = metadataFetcher.anyInstance().delegate();
-            storageOperations = delegate.storageOperations();
-            nodeSettings = delegate.nodeSettings();
-        }
-        catch (CassandraUnavailableException ignored)
-        {
-            LOGGER.debug("Not yet connect to Cassandra");
-            return;
-        }
-        String partitioner = nodeSettings.partitioner();
-        replicaByTokenRangePerKeyspace.load(keyspace -> storageOperations.tokenRangeReplicas(new Name(keyspace), partitioner));
+        replicaByTokenRangePerKeyspace.load(keyspace -> storageOperations.tokenRangeReplicas(new Name(keyspace), nodeSettings.partitioner()));
+        return null;
+    }
+
+    private <T> T prepareAndFetch(BiFunction<StorageOperations, NodeSettings, T> fetcher)
+    {
+        return metadataFetcher.callOnFirstAvailableInstance(delegate -> {
+            StorageOperations storageOperations = delegate.storageOperations();
+            NodeSettings nodeSettings = delegate.nodeSettings();
+            return fetcher.apply(storageOperations, nodeSettings);
+        });
     }
 
     /**

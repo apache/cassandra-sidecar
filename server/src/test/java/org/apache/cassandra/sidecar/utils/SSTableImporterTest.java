@@ -95,9 +95,6 @@ class SSTableImporterTest
         when(mockMetadataFetcher.instance("localhost")).thenReturn(mockInstanceMetadata1);
         when(mockMetadataFetcher.instance("127.0.0.2")).thenReturn(mockInstanceMetadata2);
         when(mockMetadataFetcher.instance("127.0.0.3")).thenReturn(mockInstanceMetadata3);
-        when(mockMetadataFetcher.delegate("localhost")).thenReturn(mockCassandraAdapterDelegate1);
-        when(mockMetadataFetcher.delegate("127.0.0.2")).thenReturn(mockCassandraAdapterDelegate2);
-        when(mockMetadataFetcher.delegate("127.0.0.3")).thenReturn(mockCassandraAdapterDelegate3);
         when(mockCassandraAdapterDelegate1.tableOperations()).thenReturn(mockTableOperations1);
         when(mockTableOperations1.importNewSSTables("ks", "tbl", "/dir", true, true,
                                                     true, true, true, true, false))

@@ -50,6 +50,7 @@ import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.RequestUtils;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -123,7 +124,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                SnapshotRequestParam request)
     {
@@ -202,7 +203,8 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
 
     protected Future<List<String>> dataPaths(String host, String keyspace, String table)
     {
-        return executorPools.service().executeBlocking(() -> metadataFetcher.delegate(host)
+        return executorPools.service().executeBlocking(() -> metadataFetcher.instance(host)
+                                                                            .delegate()
                                                                             .tableOperations()
                                                                             .getDataPaths(keyspace, table));
     }

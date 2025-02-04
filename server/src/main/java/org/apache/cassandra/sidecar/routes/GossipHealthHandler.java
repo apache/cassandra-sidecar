@@ -25,6 +25,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.server.MainModule.NOT_OK_STATUS;
 import static org.apache.cassandra.sidecar.server.MainModule.OK_STATUS;
@@ -52,11 +53,11 @@ public class GossipHealthHandler extends AbstractHandler<Void>
     @Override
     public void handleInternal(RoutingContext context,
                                HttpServerRequest httpRequest,
-                               String host,
+                               @NotNull String host,
                                SocketAddress remoteAddress,
                                Void request)
     {
-        StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
+        StorageOperations operations = metadataFetcher.instance(host).delegate().storageOperations();
         executorPools.service()
                      .executeBlocking(operations::isGossipRunning)
                      .onSuccess(isGossipRunning -> context.json(isGossipRunning ? OK_STATUS : NOT_OK_STATUS))

@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.routes.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -64,7 +65,7 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
     @Override
     protected void handleInternal(RoutingContext context,
                                   HttpServerRequest httpRequest,
-                                  String host,
+                                  @NotNull String host,
                                   SocketAddress remoteAddress,
                                   QualifiedTableName input)
     {
@@ -111,6 +112,9 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
 
     private Future<KeyspaceMetadata> getKeyspaceMetadata(String host, String keyspace)
     {
-        return executorPools.service().executeBlocking(() -> metadataFetcher.delegate(host).metadata().getKeyspace(keyspace));
+        return executorPools.service().executeBlocking(() -> metadataFetcher.instance(host)
+                                                                            .delegate()
+                                                                            .metadata()
+                                                                            .getKeyspace(keyspace));
     }
 }

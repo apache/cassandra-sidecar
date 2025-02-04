@@ -31,6 +31,7 @@ import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.snapshots.SnapshotPathBuilder;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Simple handler that extracts authorization parameters keyspace/table parameters from the path, validates them,
@@ -61,7 +62,7 @@ public class AuthorizationParameterValidateHandler extends AbstractHandler<Quali
     @Override
     protected void handleInternal(RoutingContext context,
                                   HttpServerRequest httpRequest,
-                                  String host,
+                                  @NotNull String host,
                                   SocketAddress remoteAddress,
                                   QualifiedTableName qualifiedTableName)
     {
