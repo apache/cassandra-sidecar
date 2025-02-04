@@ -114,6 +114,7 @@ class RestoreRangeTaskTest
         when(mockInstanceMetadataFetcher.instance(1)).thenReturn(instanceMetadata);
         RestoreSlice slice = RestoreSlice.builder()
                                          .sliceId("testing-slice").storageKey("storage-key").keyspace("test_ks").table("test_tbl")
+                                         .startToken(BigInteger.ONE).endToken(BigInteger.TEN)
                                          .build();
         RestoreRange range = RestoreRange.builderFromSlice(slice)
                                          .stageDirectory(Paths.get("."), "upload-id")
@@ -335,8 +336,9 @@ class RestoreRangeTaskTest
         task.handle(promise);
 
         assertThatThrownBy(() -> getBlocking(promise.future()))
-        .isInstanceOf(RuntimeException.class)
-        .hasMessageContaining("Random exception");
+        .satisfies(throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class))
+                                .hasCauseInstanceOf(RuntimeException.class)
+                                .hasMessage("Random exception"));
     }
 
     @Test
@@ -358,8 +360,9 @@ class RestoreRangeTaskTest
         task.handle(promise);
 
         assertThatThrownBy(() -> getBlocking(promise.future()))
-        .isInstanceOf(RuntimeException.class)
-        .hasMessageContaining("Random exception");
+        .satisfies(throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class))
+                                .hasCauseInstanceOf(RuntimeException.class)
+                                .hasMessage("Random exception"));
     }
 
     @Test
@@ -374,8 +377,9 @@ class RestoreRangeTaskTest
         task.handle(promise);
 
         assertThatThrownBy(() -> getBlocking(promise.future()))
-        .isInstanceOf(RuntimeException.class)
-        .hasMessageContaining("Random exception");
+        .satisfies(throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class))
+                                .hasCauseInstanceOf(RuntimeException.class)
+                                .hasMessage("Random exception"));
     }
 
     @Test
@@ -397,8 +401,9 @@ class RestoreRangeTaskTest
         task.handle(promise);
 
         assertThatThrownBy(() -> getBlocking(promise.future()))
-        .isInstanceOf(RuntimeException.class)
-        .hasMessageContaining("Random exception");
+        .satisfies(throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class))
+                                .hasCauseInstanceOf(RuntimeException.class)
+                                .hasMessage("Random exception"));
     }
 
     @Test

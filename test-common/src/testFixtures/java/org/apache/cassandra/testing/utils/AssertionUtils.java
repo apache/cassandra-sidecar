@@ -19,6 +19,7 @@
 package org.apache.cassandra.testing.utils;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 
@@ -88,9 +89,25 @@ public class AssertionUtils
         {
             return fut.toCompletionStage().toCompletableFuture().get();
         }
-        catch (Exception e)
+        catch (Exception exception)
         {
-            throw new RuntimeException(e);
+            throw new AssertionError(exception);
+        }
+    }
+
+    public static <T> T getBlocking(Future<T> future, long timeout, TimeUnit timeUnit, String hint)
+    {
+        try
+        {
+            return future.toCompletionStage().toCompletableFuture().get(timeout, timeUnit);
+        }
+        catch (TimeoutException te)
+        {
+            throw new AssertionError('(' + hint + ") timed out after " + timeout + ' ' + timeUnit);
+        }
+        catch (Exception exception)
+        {
+            throw new AssertionError('(' + hint + ") failed", exception);
         }
     }
 }

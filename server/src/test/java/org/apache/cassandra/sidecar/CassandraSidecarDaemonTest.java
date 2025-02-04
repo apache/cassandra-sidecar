@@ -39,6 +39,8 @@ import io.vertx.ext.web.codec.BodyCodec;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
@@ -76,7 +78,7 @@ class CassandraSidecarDaemonTest
     }
 
     @Test
-    void testSuccessfulStartup() throws Exception
+    void testSuccessfulStartup()
     {
         Path path = Paths.get("../conf/sidecar.yaml");
         assertThat(path).exists();
@@ -87,14 +89,15 @@ class CassandraSidecarDaemonTest
             CassandraSidecarDaemon.main(NO_ARGS);
 
             WebClient client = WebClient.create(Vertx.vertx());
-            HttpResponse<String> response = client.get(9043, "localhost", "/api/v1/__health")
-                                                  .as(BodyCodec.string())
-                                                  .send()
-                                                  .toCompletionStage()
-                                                  .toCompletableFuture()
-                                                  .get(10, TimeUnit.SECONDS);
-            assertThat(response.statusCode()).isEqualTo(OK.code());
-            assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+            loopAssert(10, () -> {
+                HttpResponse<String> response = getBlocking(client.get(9043, "localhost", "/api/v1/__health")
+                                                                  .as(BodyCodec.string())
+                                                                  .send(),
+                                                            2, TimeUnit.SECONDS,
+                                                            "Query for sidecar health");
+                assertThat(response.statusCode()).isEqualTo(OK.code());
+                assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+            });
         }
         finally
         {
@@ -124,14 +127,15 @@ class CassandraSidecarDaemonTest
             CassandraSidecarDaemon.main(NO_ARGS);
 
             WebClient client = WebClient.create(Vertx.vertx());
-            HttpResponse<String> response = client.get(9043, "localhost", "/api/v1/__health")
-                                                  .as(BodyCodec.string())
-                                                  .send()
-                                                  .toCompletionStage()
-                                                  .toCompletableFuture()
-                                                  .get(10, TimeUnit.SECONDS);
-            assertThat(response.statusCode()).isEqualTo(OK.code());
-            assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+            loopAssert(10, () -> {
+                HttpResponse<String> response = getBlocking(client.get(9043, "localhost", "/api/v1/__health")
+                                                                  .as(BodyCodec.string())
+                                                                  .send(),
+                                                            2, TimeUnit.SECONDS,
+                                                            "Query for sidecar health");
+                assertThat(response.statusCode()).isEqualTo(OK.code());
+                assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+            });
         }
         finally
         {
