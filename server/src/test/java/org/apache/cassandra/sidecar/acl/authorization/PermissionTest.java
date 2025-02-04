@@ -112,15 +112,22 @@ class PermissionTest
         DataResourceScope keyspaceScoped = DataResourceScope.createWithKeyspaceScope();
         StandardPermission permissionWithScope = new StandardPermission("permission1").withScope(keyspaceScoped);
         Authorization permissionWithScopeAuthorization = permissionWithScope.toAuthorization("data/university");
-        assertThat(permissionWithScopeAuthorization.verify(new PermissionBasedAuthorizationImpl("permission1").setResource("cluster"))).isFalse();
-        assertThat(permissionWithScopeAuthorization.verify(new WildcardPermissionBasedAuthorizationImpl("permission1").setResource("data/{keyspace}"))).isFalse();
-        assertThat(permissionWithScopeAuthorization.verify(new WildcardPermissionBasedAuthorizationImpl("permission1").setResource("data/university"))).isTrue();
+        assertThat(permissionWithScopeAuthorization.verify(new PermissionBasedAuthorizationImpl("permission1")
+                                                           .setResource("cluster"))).isFalse();
+        assertThat(permissionWithScopeAuthorization.verify(new WildcardPermissionBasedAuthorizationImpl("permission1")
+                                                           .setResource("data/{keyspace}"))).isFalse();
+        assertThat(permissionWithScopeAuthorization.verify(new WildcardPermissionBasedAuthorizationImpl("permission1")
+                                                           .setResource("data/university"))).isTrue();
 
         StandardPermission permissionWithoutScope = new StandardPermission("permission1");
-        Authorization permissionWithoutScopeAuthorization = permissionWithoutScope.toAuthorization("data/university");
-        assertThat(permissionWithoutScopeAuthorization.verify(new PermissionBasedAuthorizationImpl("permission1").setResource("cluster"))).isFalse();
-        assertThat(permissionWithoutScopeAuthorization.verify(new WildcardPermissionBasedAuthorizationImpl("permission1").setResource("data/{keyspace}"))).isFalse();
-        assertThat(permissionWithoutScopeAuthorization.verify(new WildcardPermissionBasedAuthorizationImpl("permission1").setResource("data/university"))).isTrue();
+        Authorization permissionWithoutScopeAuthorization
+        = permissionWithoutScope.toAuthorization("data/university");
+        assertThat(permissionWithoutScopeAuthorization.verify(new PermissionBasedAuthorizationImpl("permission1")
+                                                              .setResource("cluster"))).isFalse();
+        assertThat(permissionWithoutScopeAuthorization.verify(new WildcardPermissionBasedAuthorizationImpl("permission1")
+                                                              .setResource("data/{keyspace}"))).isFalse();
+        assertThat(permissionWithoutScopeAuthorization.verify(new WildcardPermissionBasedAuthorizationImpl("permission1")
+                                                              .setResource("data/university"))).isTrue();
 
         // permission with scope and without resource scope behave similarly when resource used to retrieve
         // Authorization is same
