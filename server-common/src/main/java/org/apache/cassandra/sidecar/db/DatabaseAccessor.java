@@ -53,6 +53,14 @@ public abstract class DatabaseAccessor<T extends TableSchema>
         return cqlSessionProvider.get();
     }
 
+    /**
+     * @return whether DatabaseAccessor is available to access database
+     */
+    public boolean isAvailable()
+    {
+        return tableSchema.isInitialized();
+    }
+
     protected ResultSet execute(Statement statement)
     {
         return session().execute(statement);

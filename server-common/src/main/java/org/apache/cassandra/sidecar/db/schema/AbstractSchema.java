@@ -37,11 +37,19 @@ import org.jetbrains.annotations.NotNull;
 public abstract class AbstractSchema
 {
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
-    private boolean initialized = false;
+    private volatile boolean initialized = false;
 
     public synchronized boolean initialize(@NotNull Session session, @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
         initialized = initialized || initializeInternal(session, shouldCreateSchema);
+        return initialized;
+    }
+
+    /**
+     * @return whether schema is initialized
+     */
+    public boolean isInitialized()
+    {
         return initialized;
     }
 

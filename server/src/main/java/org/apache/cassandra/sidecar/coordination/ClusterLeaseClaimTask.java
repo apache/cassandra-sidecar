@@ -123,7 +123,10 @@ public class ClusterLeaseClaimTask implements PeriodicTask
             clusterLease.setOwnership(ClusterLease.Ownership.LOST);
             return ScheduleDecision.SKIP;
         }
-        return ScheduleDecision.EXECUTE;
+
+        // When accessor is available, it permits execution (where accessor is used)
+        // Otherwise, it reschedules to skip the run and retry sooner, assuming initial delay is less than delay
+        return accessor.isAvailable() ? ScheduleDecision.EXECUTE : ScheduleDecision.RESCHEDULE;
     }
 
     /**

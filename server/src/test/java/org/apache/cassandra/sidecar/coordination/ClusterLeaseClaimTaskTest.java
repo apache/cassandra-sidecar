@@ -93,6 +93,22 @@ class ClusterLeaseClaimTaskTest
         verify(mockElectorateMembership, times(1)).isMember();
     }
 
+    @Test
+    void testShouldRescheduleWhenDatabaseAccessorIsUnavailable()
+    {
+        ServiceConfiguration serviceConfiguration = mockConfiguration(true, true);
+        ElectorateMembership mockElectorateMembership = mock(ElectorateMembership.class);
+        when(mockElectorateMembership.isMember()).thenReturn(true);
+        SidecarLeaseDatabaseAccessor databaseAccessor = mock(SidecarLeaseDatabaseAccessor.class);
+        when(databaseAccessor.isAvailable()).thenReturn(false);
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), serviceConfiguration, mockElectorateMembership,
+                                                               databaseAccessor, new ClusterLease(),
+                                                               mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
+
+        assertThat(task.scheduleDecision()).isEqualTo(ScheduleDecision.RESCHEDULE);
+        verify(mockElectorateMembership, times(1)).isMember();
+    }
+
     @ParameterizedTest(name = "{index} => configuredInitialDelay {0} millis")
     @ValueSource(longs = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 })
     void testInitialDelayFromConfiguration(long configuredDelayMillis)
