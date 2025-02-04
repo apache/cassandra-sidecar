@@ -36,7 +36,6 @@ import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
-import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.JMX;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

@@ -21,8 +21,6 @@ package org.apache.cassandra.sidecar.routes;
 import java.util.Collections;
 import java.util.Set;
 
-import com.google.common.base.Preconditions;
-
 import com.google.inject.Inject;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;

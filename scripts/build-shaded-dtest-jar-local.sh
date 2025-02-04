@@ -32,6 +32,9 @@ echo "${GIT_HASH}"
 echo "${DTEST_ARTIFACT_ID}"
 echo "${JAVA_HOME}"
 
+# The container that runs the script has jdk11 installed only.
+# Setting the env var to build with jdk11.
+export CASSANDRA_USE_JDK11=true
 ant realclean
 ant dtest-jar -Dno-checkstyle=true
 

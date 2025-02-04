@@ -37,10 +37,8 @@ import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
-
 
 /**
  * An abstract {@link Handler Handler&lt;RoutingContext&gt;} that provides common functionality for handler
@@ -294,7 +292,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
      * Given a combined host address like 127.0.0.1:9042 or [2001:db8:0:0:0:ff00:42:8329]:9042, this method
      * removes port information and returns 127.0.0.1 or 2001:db8:0:0:0:ff00:42:8329.
      *
-     * @param address ip address
+     * @param request http server request
      * @return host address without port information
      * @throws NoSuchCassandraInstanceException thrown when input address is null
      */
