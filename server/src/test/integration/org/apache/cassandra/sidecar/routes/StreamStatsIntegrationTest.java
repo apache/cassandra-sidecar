@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -53,6 +52,7 @@ import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
+import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -83,9 +83,12 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
         // optimal no. of attempts to poll for stats to capture streaming stats during node decommissioning
         loopAssert(15, 200, () -> {
-            streamStats(hasStats, dataReceived);
+            StreamsProgressStats progressStats = streamStats(hasStats, dataReceived);
             assertThat(hasStats).isTrue();
-            assertThat(dataReceived).isTrue();
+            assertThat(dataReceived)
+            .describedAs("Stream Progress Stats - totalFilesReceived:" + progressStats.totalFilesReceived() +
+                         " totalBytesReceived:" + progressStats.totalBytesReceived())
+            .isTrue();
         });
         ClusterUtils.awaitGossipStatus(node, node, "LEFT");
         BBHelperDecommissioningNode.transientStateEnd.countDown();
@@ -94,26 +97,16 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         context.awaitCompletion(2, TimeUnit.MINUTES);
     }
 
-    private void streamStats(AtomicBoolean hasStats, AtomicBoolean dataReceived)
+    private StreamsProgressStats streamStats(AtomicBoolean hasStats, AtomicBoolean dataReceived)
     {
         String testRoute = "/api/v1/cassandra/stats/streams";
         HttpResponse<Buffer> resp;
-        try
-        {
-            resp = client.get(server.actualPort(), "127.0.0.1", testRoute)
-                         .send()
-                         .toCompletionStage()
-                         .toCompletableFuture()
-                         .get();
-            assertStreamStatsResponseOK(resp, hasStats, dataReceived);
-        }
-        catch (InterruptedException | ExecutionException e)
-        {
-            throw new RuntimeException(e);
-        }
+        resp = getBlocking(client.get(server.actualPort(), "127.0.0.1", testRoute)
+                                 .send());
+        return assertStreamStatsResponseOK(resp, hasStats, dataReceived);
     }
 
-    void assertStreamStatsResponseOK(HttpResponse<Buffer> response, AtomicBoolean hasStats, AtomicBoolean dataReceived)
+    StreamsProgressStats assertStreamStatsResponseOK(HttpResponse<Buffer> response, AtomicBoolean hasStats, AtomicBoolean dataReceived)
     {
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
         StreamStatsResponse streamStatsResponse = response.bodyAsJson(StreamStatsResponse.class);
@@ -129,6 +122,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
                 assertThat(streamProgress.totalBytesReceived()).isGreaterThan(0);
             }
         }
+        return streamProgress;
     }
 
     QualifiedTableName createTestTableAndPopulate()
