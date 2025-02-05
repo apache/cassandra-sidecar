@@ -34,6 +34,12 @@ public class CompositePermission extends StandardPermission
 {
     private final List<Permission> permissions;
 
+    /**
+     * Creates a {@link CompositePermission} with given permission name and list of child permissions.
+     *
+     * @param name          permission name
+     * @param permissions   list of child permissions
+     */
     public CompositePermission(String name, List<Permission> permissions)
     {
         super(name);

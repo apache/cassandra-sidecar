@@ -41,8 +41,8 @@ import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.RE
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.STREAM_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.UPLOAD_STAGED_SSTABLE;
 import static org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions.SELECT;
-import static org.apache.cassandra.sidecar.acl.authorization.FeaturePermission.BULK_READ_DIRECT;
-import static org.apache.cassandra.sidecar.acl.authorization.FeaturePermission.BULK_WRITE_DIRECT;
+import static org.apache.cassandra.sidecar.acl.authorization.FeaturePermission.ANALYTICS_READ_DIRECT;
+import static org.apache.cassandra.sidecar.acl.authorization.FeaturePermission.ANALYTICS_WRITE_DIRECT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -54,7 +54,7 @@ class FeaturePermissionTest
     void testFeaturePermissionAuthorizesAllChildPermissions()
     {
         Authorization bulkReadAuthorization
-        = BULK_READ_DIRECT.permission().toAuthorization("data/university/student");
+        = ANALYTICS_READ_DIRECT.permission().toAuthorization("data/university/student");
 
         assertThat(bulkReadAuthorization.verify(READ_RING_KEYSPACE_SCOPED
                                                 .toAuthorization("data/university"))).isTrue();
@@ -78,7 +78,7 @@ class FeaturePermissionTest
                                                 .toAuthorization("data/university/student"))).isFalse();
 
         Authorization bulkWriteAuthorization
-        = BULK_WRITE_DIRECT.permission().toAuthorization("data/university/student");
+        = ANALYTICS_WRITE_DIRECT.permission().toAuthorization("data/university/student");
 
         assertThat(bulkWriteAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED
                                                  .toAuthorization("data/university"))).isTrue();
@@ -103,7 +103,7 @@ class FeaturePermissionTest
     void testFeaturePermissionAcrossTables()
     {
         Authorization bulkReadAuthorization
-        = BULK_READ_DIRECT.permission().toAuthorization("data/university/*");
+        = ANALYTICS_READ_DIRECT.permission().toAuthorization("data/university/*");
 
         assertThat(bulkReadAuthorization.verify(READ_RING_KEYSPACE_SCOPED
                                                 .toAuthorization("data/university"))).isTrue();
@@ -127,7 +127,7 @@ class FeaturePermissionTest
                                                 .toAuthorization("data/university/*"))).isFalse();
 
         Authorization bulkWriteAuthorization
-        = BULK_WRITE_DIRECT.permission().toAuthorization("data/university/*");
+        = ANALYTICS_WRITE_DIRECT.permission().toAuthorization("data/university/*");
 
         assertThat(bulkWriteAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED
                                                  .toAuthorization("data/university"))).isTrue();
@@ -168,7 +168,7 @@ class FeaturePermissionTest
                 return Collections.emptySet();
             }
         };
-        Permission repairPermission = new StandardPermission("REPAIR").withScope(dcScope);
+        Permission repairPermission = new StandardPermission("REPAIR", dcScope);
 
         CompositePermission compositePermission
         = new CompositePermission("featureX", Collections.singletonList(repairPermission));

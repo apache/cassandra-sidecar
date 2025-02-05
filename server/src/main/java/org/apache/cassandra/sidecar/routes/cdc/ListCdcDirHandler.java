@@ -98,7 +98,7 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
         {
             context.response()
                    .setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code())
-                   .setStatusMessage("CDC not turned on for cluster")
+                   .setStatusMessage("CDC directory is not configured in Sidecar")
                    .end();
             return;
         }
@@ -110,7 +110,7 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
             LOGGER.warn("Error listing the CDC commit log segments", cause);
             context.response()
                    .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
-                   .setStatusMessage(cause != null ? cause.getMessage() : "Error while listing CDC segments")
+                   .setStatusMessage(cause.getMessage() == null ? "Error while listing CDC segments" : cause.getMessage())
                    .end();
         });
     }

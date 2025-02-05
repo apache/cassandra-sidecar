@@ -34,7 +34,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.DATA;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.DATA_SCOPE;
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
 /**
@@ -58,7 +58,7 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Boolean> implem
     public Set<Authorization> requiredAuthorizations()
     {
         Set<String> eligibleResources
-        = new HashSet<>(Arrays.asList(DATA.variableAwareResource(),
+        = new HashSet<>(Arrays.asList(DATA_SCOPE.variableAwareResource(),
                                       // Keyspace access to system_views
                                       "data/system_views",
                                       // Access to all tables in keyspace system_views

@@ -33,7 +33,7 @@ public class ResourceScopes
      * retrieve basic Cassandra ring, gossip, or other Cassandra-related information. Currently cluster scope
      * does not contain any resource variables.
      */
-    public static final ResourceScope CLUSTER = new ResourceScope()
+    public static final ResourceScope CLUSTER_SCOPE = new ResourceScope()
     {
         @Override
         public String variableAwareResource()
@@ -60,7 +60,7 @@ public class ResourceScopes
      * run operations against both Cassandra Sidecar and Cassandra clusters that Sidecar is managing. Currently
      * operation scope does not contain any resource variables.
      */
-    public static final ResourceScope OPERATION = new ResourceScope()
+    public static final ResourceScope OPERATION_SCOPE = new ResourceScope()
     {
         @Override
         public String variableAwareResource()
@@ -85,17 +85,17 @@ public class ResourceScopes
     /**
      * Signifies Cassandra data scope.
      */
-    public static final ResourceScope DATA = DataResourceScope.createWithDataScope();
+    public static final ResourceScope DATA_SCOPE = DataResourceScope.createWithDataScope();
 
     /**
      * Signifies Cassandra data scope at a keyspace level.
      */
-    public static final ResourceScope KEYSPACE = DataResourceScope.createWithKeyspaceScope();
+    public static final ResourceScope KEYSPACE_SCOPE = DataResourceScope.createWithKeyspaceScope();
 
     /**
      * Signifies Cassandra data scope at a table level.
      */
-    public static final ResourceScope TABLE = DataResourceScope.createWithTableScope();
+    public static final ResourceScope TABLE_SCOPE = DataResourceScope.createWithTableScope();
 
     private static void validate(String resource)
     {

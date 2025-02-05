@@ -20,9 +20,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
@@ -46,43 +44,42 @@ import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.ST
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.UPLOAD_STAGED_SSTABLE;
 import static org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions.MODIFY;
 import static org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions.SELECT;
-import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE_SCOPE;
 
 /**
  * Enumerates a list of feature level permissions that Sidecar recognizes and honors.
  */
 public enum FeaturePermission
 {
-    BULK_READ_DIRECT("ANALYTICS:READ_DIRECT",
-                     READ_RING_KEYSPACE_SCOPED,
-                     READ_SCHEMA_KEYSPACE_SCOPED,
-                     CREATE_SNAPSHOT,
-                     READ_SNAPSHOT,
-                     DELETE_SNAPSHOT,
-                     STREAM_SNAPSHOT,
-                     new StandardPermission(SELECT.name()).withScope(TABLE)),
+    ANALYTICS_READ_DIRECT("ANALYTICS:READ_DIRECT",
+                          READ_RING_KEYSPACE_SCOPED,
+                          READ_SCHEMA_KEYSPACE_SCOPED,
+                          CREATE_SNAPSHOT,
+                          READ_SNAPSHOT,
+                          DELETE_SNAPSHOT,
+                          STREAM_SNAPSHOT,
+                          new StandardPermission(SELECT.name(), TABLE_SCOPE)),
 
-    BULK_WRITE_DIRECT("ANALYTICS:WRITE_DIRECT",
-                      READ_SCHEMA_KEYSPACE_SCOPED,
-                      READ_GOSSIP,
-                      READ_TOPOLOGY,
-                      UPLOAD_STAGED_SSTABLE,
-                      IMPORT_STAGED_SSTABLE,
-                      DELETE_STAGED_SSTABLE,
-                      new StandardPermission(MODIFY.name()).withScope(TABLE)),
+    ANALYTICS_WRITE_DIRECT("ANALYTICS:WRITE_DIRECT",
+                           READ_SCHEMA_KEYSPACE_SCOPED,
+                           READ_GOSSIP,
+                           READ_TOPOLOGY,
+                           UPLOAD_STAGED_SSTABLE,
+                           IMPORT_STAGED_SSTABLE,
+                           DELETE_STAGED_SSTABLE,
+                           new StandardPermission(MODIFY.name(), TABLE_SCOPE)),
 
-    BULK_WRITE_S3_COMPAT("ANALYTICS:WRITE_S3_COMPAT",
-                         READ_SCHEMA,
-                         READ_TOPOLOGY,
-                         CREATE_RESTORE_JOB,
-                         READ_RESTORE_JOB,
-                         EDIT_RESTORE_JOB,
-                         DELETE_RESTORE_JOB),
+    ANALYTICS_WRITE_S3_COMPAT("ANALYTICS:WRITE_S3_COMPAT",
+                              READ_SCHEMA,
+                              READ_TOPOLOGY,
+                              CREATE_RESTORE_JOB,
+                              READ_RESTORE_JOB,
+                              EDIT_RESTORE_JOB,
+                              DELETE_RESTORE_JOB),
 
     CDC("CDC", BasicPermissions.CDC);
 
-    // TODO make forbidden feature permission configurable
-    private static final Set<String> FORBIDDEN_FEATURE_PERMISSION = Collections.singleton("*:*");
+    private static final String FORBIDDEN_FEATURE_PERMISSION_PREFIX = "*:";
 
     private static final List<FeaturePermission> FEATURE_PERMISSIONS
     = Arrays.stream(values()).collect(Collectors.toList());
@@ -112,7 +109,7 @@ public enum FeaturePermission
      */
     public static Permission fromName(String name)
     {
-        if (FORBIDDEN_FEATURE_PERMISSION.contains(name))
+        if (name.startsWith(FORBIDDEN_FEATURE_PERMISSION_PREFIX))
         {
             return null;
         }

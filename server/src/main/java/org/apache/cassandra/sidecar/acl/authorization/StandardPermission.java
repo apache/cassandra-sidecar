@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
@@ -31,15 +32,28 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpt
 public class StandardPermission implements Permission
 {
     protected final String name;
-    protected ResourceScope resourceScope = null;
+    @Nullable
+    protected final ResourceScope resourceScope;
 
     public StandardPermission(String name)
+    {
+        this(name, null);
+    }
+
+    /**
+     * Creates an instance of {@link StandardPermission} with given permission name and resource scope.
+     *
+     * @param name      permission name
+     * @param scope     resource scope for permission
+     */
+    public StandardPermission(String name, ResourceScope scope)
     {
         if (isNullOrEmpty(name))
         {
             throw new IllegalArgumentException("Permission name can not be null or empty");
         }
         this.name = name;
+        this.resourceScope = scope;
     }
 
     @Override
@@ -48,18 +62,7 @@ public class StandardPermission implements Permission
         return name;
     }
 
-    /**
-     * Sets resource scope for given permission.
-     *
-     * @param resourceScope scope of resource this permission checks or grants permission for.
-     * @return a reference to permission
-     */
-    public StandardPermission withScope(ResourceScope resourceScope)
-    {
-        this.resourceScope = resourceScope;
-        return this;
-    }
-
+    @Nullable
     @Override
     public ResourceScope resourceScope()
     {

@@ -47,11 +47,12 @@ public interface Permission
     Authorization toAuthorization(String resource);
 
     /**
-     * User authorization created with expanded resources of given resource scope.
+     * User authorization created with expanded resources of given resource scope. When no resource scope is set,
+     * {@link Authorization} is created with just permission {@link #name}
      *
      * @return {@link Authorization} created with expanded resources of associated resource scope, when expanded
      * resources are empty, {@link Authorization} is created with permission {@link #name} and default
-     * variableAwareResource of set resource scope
+     * variableAwareResource of set resource scope.
      */
     default Authorization toAuthorization()
     {
@@ -76,7 +77,7 @@ public interface Permission
     {
         if (eligibleResources == null || eligibleResources.isEmpty())
         {
-            return toAuthorization(resourceScope().variableAwareResource());
+            return toAuthorization();
         }
 
         OrAuthorization orAuthorization = OrAuthorization.create();

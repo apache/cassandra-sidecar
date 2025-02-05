@@ -45,7 +45,18 @@ public class DomainAwarePermission extends StandardPermission
 
     public DomainAwarePermission(String name)
     {
-        super(name);
+        this(name, null);
+    }
+
+    /**
+     * Creates an instance of {@link DomainAwarePermission} with given permission name and resource scope.
+     *
+     * @param name      permission name
+     * @param scope     resource scope for permission
+     */
+    public DomainAwarePermission(String name, ResourceScope scope)
+    {
+        super(name, scope);
         validate(name);
     }
 

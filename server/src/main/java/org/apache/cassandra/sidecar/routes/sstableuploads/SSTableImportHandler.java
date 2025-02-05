@@ -47,7 +47,7 @@ import org.apache.cassandra.sidecar.utils.SSTableImporter;
 import org.apache.cassandra.sidecar.utils.SSTableUploadsPathBuilder;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE_SCOPE;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -87,7 +87,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        Set<String> eligibleResources = TABLE.expandedResources();
+        Set<String> eligibleResources = TABLE_SCOPE.expandedResources();
         Authorization modifyAuthorization = CassandraPermissions.MODIFY.toAuthorization(eligibleResources);
         Authorization importAuthorization = BasicPermissions.IMPORT_STAGED_SSTABLE.toAuthorization();
         return ImmutableSet.of(modifyAuthorization, importAuthorization);

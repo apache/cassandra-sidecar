@@ -20,8 +20,11 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import org.junit.jupiter.api.Test;
 
-import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.CLUSTER;
-import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.OPERATION;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.CLUSTER_SCOPE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.DATA_SCOPE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.KEYSPACE_SCOPE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.OPERATION_SCOPE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE_SCOPE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -33,66 +36,62 @@ class ResourceScopeTest
     @Test
     void testClusterScope()
     {
-        assertThat(CLUSTER.variableAwareResource()).isEqualTo("cluster");
-        assertThat(CLUSTER.resolveWithResource("any")).isEqualTo("cluster");
-        assertThat(CLUSTER.expandedResources().size()).isOne();
-        assertThat(CLUSTER.expandedResources().contains("cluster")).isTrue();
+        assertThat(CLUSTER_SCOPE.variableAwareResource()).isEqualTo("cluster");
+        assertThat(CLUSTER_SCOPE.resolveWithResource("any")).isEqualTo("cluster");
+        assertThat(CLUSTER_SCOPE.expandedResources().size()).isOne();
+        assertThat(CLUSTER_SCOPE.expandedResources().contains("cluster")).isTrue();
     }
 
     @Test
     void testOperationScope()
     {
-        assertThat(OPERATION.variableAwareResource()).isEqualTo("operation");
-        assertThat(OPERATION.resolveWithResource("any")).isEqualTo("operation");
-        assertThat(OPERATION.expandedResources().size()).isOne();
-        assertThat(OPERATION.expandedResources().contains("operation")).isTrue();
+        assertThat(OPERATION_SCOPE.variableAwareResource()).isEqualTo("operation");
+        assertThat(OPERATION_SCOPE.resolveWithResource("any")).isEqualTo("operation");
+        assertThat(OPERATION_SCOPE.expandedResources().size()).isOne();
+        assertThat(OPERATION_SCOPE.expandedResources().contains("operation")).isTrue();
     }
 
     @Test
     void testDataScope()
     {
-        DataResourceScope dataScope = DataResourceScope.createWithDataScope();
-        assertThat(dataScope.variableAwareResource()).isEqualTo("data");
-        assertThat(dataScope.resolveWithResource("any")).isEqualTo("data");
-        assertThat(dataScope.expandedResources().size()).isOne();
-        assertThat(dataScope.expandedResources().contains("data")).isTrue();
+        assertThat(DATA_SCOPE.variableAwareResource()).isEqualTo("data");
+        assertThat(DATA_SCOPE.resolveWithResource("any")).isEqualTo("data");
+        assertThat(DATA_SCOPE.expandedResources().size()).isOne();
+        assertThat(DATA_SCOPE.expandedResources().contains("data")).isTrue();
     }
 
     @Test
     void testKeyspaceScope()
     {
-        DataResourceScope keyspaceScope = DataResourceScope.createWithKeyspaceScope();
-        assertThat(keyspaceScope.variableAwareResource()).isEqualTo("data/{keyspace}");
+        assertThat(KEYSPACE_SCOPE.variableAwareResource()).isEqualTo("data/{keyspace}");
         // random resource is passed, resolved to variableAwareResource
-        assertThat(keyspaceScope.resolveWithResource("any")).isEqualTo("data/{keyspace}");
-        assertThat(keyspaceScope.resolveWithResource("data")).isEqualTo("data");
-        assertThat(keyspaceScope.resolveWithResource("data/university/student")).isEqualTo("data/university");
-        assertThat(keyspaceScope.expandedResources().size()).isEqualTo(2);
-        assertThat(keyspaceScope.expandedResources().contains("data")).isTrue();
-        assertThat(keyspaceScope.expandedResources().contains("data/{keyspace}")).isTrue();
+        assertThat(KEYSPACE_SCOPE.resolveWithResource("any")).isEqualTo("data/{keyspace}");
+        assertThat(KEYSPACE_SCOPE.resolveWithResource("data")).isEqualTo("data");
+        assertThat(KEYSPACE_SCOPE.resolveWithResource("data/university/student")).isEqualTo("data/university");
+        assertThat(KEYSPACE_SCOPE.expandedResources().size()).isEqualTo(2);
+        assertThat(KEYSPACE_SCOPE.expandedResources().contains("data")).isTrue();
+        assertThat(KEYSPACE_SCOPE.expandedResources().contains("data/{keyspace}")).isTrue();
     }
 
     @Test
     void testTableScope()
     {
-        DataResourceScope tableScope = DataResourceScope.createWithTableScope();
-        assertThat(tableScope.variableAwareResource()).isEqualTo("data/{keyspace}/{table}");
-        assertThat(tableScope.resolveWithResource("any")).isEqualTo("data/{keyspace}/{table}");
-        assertThat(tableScope.resolveWithResource("data")).isEqualTo("data");
-        assertThat(tableScope.resolveWithResource("data/university")).isEqualTo("data/university");
-        assertThat(tableScope.resolveWithResource("data/university/student")).isEqualTo("data/university/student");
-        assertThat(tableScope.expandedResources().size()).isEqualTo(4);
-        assertThat(tableScope.expandedResources().contains("data")).isTrue();
-        assertThat(tableScope.expandedResources().contains("data/{keyspace}")).isTrue();
-        assertThat(tableScope.expandedResources().contains("data/{keyspace}/{TABLE_WILDCARD}")).isTrue();
-        assertThat(tableScope.expandedResources().contains("data/{keyspace}/{table}")).isTrue();
+        assertThat(TABLE_SCOPE.variableAwareResource()).isEqualTo("data/{keyspace}/{table}");
+        assertThat(TABLE_SCOPE.resolveWithResource("any")).isEqualTo("data/{keyspace}/{table}");
+        assertThat(TABLE_SCOPE.resolveWithResource("data")).isEqualTo("data");
+        assertThat(TABLE_SCOPE.resolveWithResource("data/university")).isEqualTo("data/university");
+        assertThat(TABLE_SCOPE.resolveWithResource("data/university/student")).isEqualTo("data/university/student");
+        assertThat(TABLE_SCOPE.expandedResources().size()).isEqualTo(4);
+        assertThat(TABLE_SCOPE.expandedResources().contains("data")).isTrue();
+        assertThat(TABLE_SCOPE.expandedResources().contains("data/{keyspace}")).isTrue();
+        assertThat(TABLE_SCOPE.expandedResources().contains("data/{keyspace}/{TABLE_WILDCARD}")).isTrue();
+        assertThat(TABLE_SCOPE.expandedResources().contains("data/{keyspace}/{table}")).isTrue();
     }
 
     @Test
     void testResolvingResourceScopeWithEmptyValue()
     {
-        DataResourceScope dataScope = DataResourceScope.createWithDataScope();
-        assertThatThrownBy(() -> dataScope.resolveWithResource(null)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> dataScope.resolveWithResource("")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource(null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("")).isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -31,8 +31,11 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.impl.PermissionBasedAuthorizationImpl;
 import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
 
-import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.CLUSTER;
-import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.OPERATION;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.CLUSTER_SCOPE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.DATA_SCOPE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.KEYSPACE_SCOPE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.OPERATION_SCOPE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE_SCOPE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -52,17 +55,12 @@ class CompositePermissionTest
     void testResourceResolvedForChildPermissions()
     {
         List<Permission> permissions = new ArrayList<>();
-        permissions.add(new StandardPermission("permission1").withScope(CLUSTER));
-        permissions.add(new DomainAwarePermission("domain1:action1")
-                        .withScope(CLUSTER));
-        permissions.add(new DomainAwarePermission("domain2:action2")
-                        .withScope(OPERATION));
-        permissions.add(new DomainAwarePermission("domain3:action3")
-                        .withScope(DataResourceScope.createWithDataScope()));
-        permissions.add(new DomainAwarePermission("domain4:action4")
-                        .withScope(DataResourceScope.createWithKeyspaceScope()));
-        permissions.add(new DomainAwarePermission("domain5:action5")
-                        .withScope(DataResourceScope.createWithTableScope()));
+        permissions.add(new StandardPermission("permission1", CLUSTER_SCOPE));
+        permissions.add(new DomainAwarePermission("domain1:action1", CLUSTER_SCOPE));
+        permissions.add(new DomainAwarePermission("domain2:action2", OPERATION_SCOPE));
+        permissions.add(new DomainAwarePermission("domain3:action3", DATA_SCOPE));
+        permissions.add(new DomainAwarePermission("domain4:action4", KEYSPACE_SCOPE));
+        permissions.add(new DomainAwarePermission("domain5:action5", TABLE_SCOPE));
 
         CompositePermission compositePermission = new CompositePermission("composite", permissions);
         assertThat(compositePermission.childPermissions().size()).isEqualTo(6);
@@ -87,15 +85,13 @@ class CompositePermissionTest
     void testCompositePermissionWithinCompositePermission()
     {
         List<Permission> permissions = new ArrayList<>();
-        permissions.add(new StandardPermission("permission1").withScope(CLUSTER));
-        permissions.add(new StandardPermission("permission2")
-                        .withScope(DataResourceScope.createWithKeyspaceScope()));
+        permissions.add(new StandardPermission("permission1", CLUSTER_SCOPE));
+        permissions.add(new StandardPermission("permission2", KEYSPACE_SCOPE));
 
         CompositePermission compositePermission = new CompositePermission("permission3", permissions);
 
         List<Permission> combinedPermissions = new ArrayList<>();
-        combinedPermissions.add(new StandardPermission("permission4")
-                                .withScope(DataResourceScope.createWithTableScope()));
+        combinedPermissions.add(new StandardPermission("permission4", TABLE_SCOPE));
         combinedPermissions.add(compositePermission);
 
         CompositePermission combinedPermission = new CompositePermission("permission5", combinedPermissions);

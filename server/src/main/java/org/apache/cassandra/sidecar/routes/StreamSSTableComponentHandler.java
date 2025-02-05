@@ -48,7 +48,7 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE_SCOPE;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -73,7 +73,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        Set<String> eligibleResources = TABLE.expandedResources();
+        Set<String> eligibleResources = TABLE_SCOPE.expandedResources();
         Authorization stream = BasicPermissions.STREAM_SNAPSHOT.toAuthorization();
         Authorization select = CassandraPermissions.SELECT.toAuthorization(eligibleResources);
         return ImmutableSet.of(stream, select);
