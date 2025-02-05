@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Make sidecar operations resilient to down Cassandra nodes (CASSSIDECAR-201)
  * Fix Cassandra instance not found error (CASSSIDECAR-192)
  * Implemented Schema Reporter for Integration with DataHub (CASSSIDECAR-191)
  * Add sidecar endpoint to retrieve stream stats (CASSSIDECAR-180)

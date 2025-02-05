@@ -85,8 +85,10 @@ class ClusterLeaseClaimTaskTest
         ServiceConfiguration serviceConfiguration = mockConfiguration(true, true);
         ElectorateMembership mockElectorateMembership = mock(ElectorateMembership.class);
         when(mockElectorateMembership.isMember()).thenReturn(true);
+        SidecarLeaseDatabaseAccessor accessor = mock(SidecarLeaseDatabaseAccessor.class);
+        when(accessor.isAvailable()).thenReturn(true);
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mock(Vertx.class), serviceConfiguration, mockElectorateMembership,
-                                                               mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
+                                                               accessor, new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
         assertThat(task.scheduleDecision()).isEqualTo(ScheduleDecision.EXECUTE);
