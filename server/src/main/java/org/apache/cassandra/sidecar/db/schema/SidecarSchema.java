@@ -40,6 +40,7 @@ import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationExceptio
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
@@ -151,6 +152,17 @@ public class SidecarSchema
     private class SidecarSchemaInitializer implements PeriodicTask
     {
         @Override
+        public ScheduleDecision scheduleDecision()
+        {
+            if (cqlSessionProvider.getIfConnected() == null)
+            {
+                LOGGER.debug("CQL connection is not yet established. Skip this run of initialization.");
+                return ScheduleDecision.SKIP;
+            }
+            return ScheduleDecision.EXECUTE;
+        }
+
+        @Override
         public DurationSpec delay()
         {
             return INITIALIZATION_LOOP_DELAY;
@@ -176,7 +188,6 @@ public class SidecarSchema
                 LOGGER.warn("Failed to initialize schema. Retry in {}", delay(), ex);
                 if (ex instanceof CassandraUnavailableException)
                 {
-                    LOGGER.debug("Cql session is not yet available. Skip initializing...");
                     return; // do not count Cassandra unavailable as failure
                 }
                 else if (ex instanceof SidecarSchemaModificationException)
