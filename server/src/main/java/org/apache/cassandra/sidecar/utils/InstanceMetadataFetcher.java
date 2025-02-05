@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
@@ -80,22 +79,22 @@ public class InstanceMetadataFetcher
     }
 
     /**
-     * Iterate through the local instances and call the function on the first available instance
+     * Iterate through the local instances and call the function on the first available instance, i.e. no CassandraUnavailableException
+     * or OperationUnavailableException is thrown for the operations
      *
-     * @param function function applies to {@link CassandraAdapterDelegate}
+     * @param function function applies to {@link InstanceMetadata}
      * @return function eval result. Null can be returned when all local instances are exhausted
      * @param <T> type of the result
      * @throws CassandraUnavailableException when all local instances are exhausted.
      */
     @NotNull
-    public <T> T callOnFirstAvailableInstance(Function<CassandraAdapterDelegate, T> function) throws CassandraUnavailableException
+    public <T> T callOnFirstAvailableInstance(Function<InstanceMetadata, T> function) throws CassandraUnavailableException
     {
         for (InstanceMetadata instance : allLocalInstances())
         {
             try
             {
-                CassandraAdapterDelegate delegate = instance.delegate();
-                return function.apply(delegate);
+                return function.apply(instance);
             }
             catch (CassandraUnavailableException | OperationUnavailableException exception)
             {

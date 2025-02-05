@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Session;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
@@ -86,7 +87,8 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
             return false;
         }
 
-        TokenRangeReplicasResponse tokenRangeReplicas = instanceMetadataFetcher.callOnFirstAvailableInstance(delegate -> {
+        TokenRangeReplicasResponse tokenRangeReplicas = instanceMetadataFetcher.callOnFirstAvailableInstance(instance -> {
+            CassandraAdapterDelegate delegate = instance.delegate();
             StorageOperations operations = delegate.storageOperations();
             NodeSettings nodeSettings = delegate.nodeSettings();
             return operations.tokenRangeReplicas(new Name(userKeyspace), nodeSettings.partitioner());

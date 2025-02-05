@@ -33,6 +33,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -130,7 +131,8 @@ public class RingTopologyRefresher implements PeriodicTask
 
     private <T> T prepareAndFetch(BiFunction<StorageOperations, NodeSettings, T> fetcher)
     {
-        return metadataFetcher.callOnFirstAvailableInstance(delegate -> {
+        return metadataFetcher.callOnFirstAvailableInstance(instance -> {
+            CassandraAdapterDelegate delegate = instance.delegate();
             StorageOperations storageOperations = delegate.storageOperations();
             NodeSettings nodeSettings = delegate.nodeSettings();
             return fetcher.apply(storageOperations, nodeSettings);

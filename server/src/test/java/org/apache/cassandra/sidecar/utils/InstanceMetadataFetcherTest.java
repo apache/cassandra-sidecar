@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.utils;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -51,7 +50,7 @@ class InstanceMetadataFetcherTest
                                                          instance(3, "127.0.0.3", true));
         InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolver.DEFAULT);
         InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
-        CassandraAdapterDelegate delegate = fetcher.callOnFirstAvailableInstance(Function.identity());
+        CassandraAdapterDelegate delegate = fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate);
         assertThat(delegate)
         .describedAs("The delegate of instance 2 should be returned")
         .isNotNull()
@@ -65,7 +64,7 @@ class InstanceMetadataFetcherTest
                                                          instance(2, "127.0.0.2", false));
         InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolver.DEFAULT);
         InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
-        assertThatThrownBy(() -> fetcher.callOnFirstAvailableInstance(Function.identity()))
+        assertThatThrownBy(() -> fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate))
         .isExactlyInstanceOf(CassandraUnavailableException.class)
         .hasMessageContaining("All local Cassandra nodes are exhausted. But none is available");
     }

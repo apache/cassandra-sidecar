@@ -893,7 +893,7 @@ public class MainModule extends AbstractModule
             @NotNull
             protected String initialize()
             {
-                return fetcher.callOnFirstAvailableInstance(delegate -> delegate.storageOperations().clusterName());
+                return fetcher.callOnFirstAvailableInstance(i -> i.delegate().storageOperations().clusterName());
             }
         };
 
