@@ -258,6 +258,7 @@ public class SidecarSchemaTest
                 return ps;
             });
             when(cqlSession.get()).thenReturn(session);
+            when(cqlSession.getIfConnected()).thenReturn(session);
             return cqlSession;
         }
 

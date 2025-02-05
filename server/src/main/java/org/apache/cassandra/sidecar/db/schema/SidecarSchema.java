@@ -57,7 +57,6 @@ public class SidecarSchema
     private final PeriodicTaskExecutor periodicTaskExecutor;
     private final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
     private final SidecarInternalKeyspace sidecarInternalKeyspace;
-    private final AtomicBoolean initializerStarted = new AtomicBoolean(false);
     private final CQLSessionProvider cqlSessionProvider;
     private final SchemaMetrics metrics;
     private final ClusterLease clusterLease;
@@ -103,11 +102,8 @@ public class SidecarSchema
             return;
         }
 
-        // schedule one initializer exactly
-        if (initializerStarted.compareAndSet(false, true))
-        {
-            periodicTaskExecutor.schedule(new SidecarSchemaInitializer());
-        }
+        // periodicTaskExecutor guarantees there is one initializer scheduled exactly
+        periodicTaskExecutor.schedule(new SidecarSchemaInitializer());
     }
 
     public boolean isInitialized()
@@ -186,7 +182,7 @@ public class SidecarSchema
             catch (Exception ex)
             {
                 LOGGER.warn("Failed to initialize schema. Retry in {}", delay(), ex);
-                if (ex instanceof CassandraUnavailableException)
+                if (ex instanceof CassandraUnavailableException) // not quite expected here according to the schedule decision, but still check for it
                 {
                     return; // do not count Cassandra unavailable as failure
                 }

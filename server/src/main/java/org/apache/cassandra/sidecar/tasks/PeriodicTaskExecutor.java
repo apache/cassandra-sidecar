@@ -67,6 +67,8 @@ public class PeriodicTaskExecutor implements Closeable
 
     /**
      * Schedules the {@code task} iff it has not been scheduled yet.
+     * <p>A task is identified by the combination of its class name and the {@link PeriodicTask#name()}, see {@link PeriodicTaskKey}.
+     * There is one and exactly one task of the same identity can be scheduled.
      *
      * @param task the task to execute
      */

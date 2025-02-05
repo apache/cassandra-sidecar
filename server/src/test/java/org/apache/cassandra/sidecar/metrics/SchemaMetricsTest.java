@@ -118,6 +118,7 @@ class SchemaMetricsTest
             CQLSessionProvider cqlSession = mock(CQLSessionProvider.class);
             Session session = mock(Session.class);
             when(cqlSession.get()).thenReturn(session);
+            when(cqlSession.getIfConnected()).thenReturn(session);
             return cqlSession;
         }
 
