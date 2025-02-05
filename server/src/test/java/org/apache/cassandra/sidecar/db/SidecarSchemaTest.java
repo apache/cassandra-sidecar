@@ -114,7 +114,7 @@ public class SidecarSchemaTest
     @Test
     void testSchemaInitOnStartup(VertxTestContext context)
     {
-        sidecarSchema.startSidecarSchemaInitializerMaybe();
+        sidecarSchema.maybeStartSidecarSchemaInitializer();
         context.verify(() -> {
             int maxWaitTime = 20; // about 10 seconds
             while (interceptedPrepStmts.size() < 10

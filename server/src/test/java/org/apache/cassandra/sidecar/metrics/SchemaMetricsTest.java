@@ -38,7 +38,6 @@ import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.db.SidecarSchemaTest;
@@ -100,7 +99,7 @@ class SchemaMetricsTest
     @Test
     void testSchemaModificationFailure()
     {
-        sidecarSchema.startSidecarSchemaInitializerMaybe();
+        sidecarSchema.maybeStartSidecarSchemaInitializer();
         loopAssert(3, () -> {
             assertThat(metrics.server().schema().failedInitializations.metric.getValue())
             .isGreaterThanOrEqualTo(1);

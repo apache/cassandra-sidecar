@@ -97,14 +97,14 @@ public class SidecarSchema
     private void configureSidecarServerEventListeners()
     {
         EventBus eventBus = vertx.eventBus();
-        eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), message -> startSidecarSchemaInitializerMaybe());
+        eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), message -> maybeStartSidecarSchemaInitializer());
         eventBus.localConsumer(ON_SERVER_STOP.address(), message -> periodicTaskExecutor.unschedule(sidecarSchemaInitializer));
     }
 
     @VisibleForTesting
-    public void startSidecarSchemaInitializerMaybe()
+    public void maybeStartSidecarSchemaInitializer()
     {
-        if (!schemaKeyspaceConfiguration.isEnabled() || sidecarInternalKeyspace == null)
+        if (!schemaKeyspaceConfiguration.isEnabled() || sidecarSchemaInitializer == null)
         {
             return;
         }
@@ -153,7 +153,7 @@ public class SidecarSchema
     }
 
     /**
-     * Initializer that retries until sidecar schema is initialized. Until then, it un-schedules itself.
+     * Initializer that retries until sidecar schema is initialized. Once initialized, it un-schedules itself.
      */
     private class SidecarSchemaInitializer implements PeriodicTask
     {
@@ -170,13 +170,6 @@ public class SidecarSchema
             {
                 Session session = cqlSessionProvider.get();
                 isInitialized = sidecarInternalKeyspace.initialize(session, SidecarSchema.this::shouldCreateSchema);
-
-                if (isInitialized())
-                {
-                    LOGGER.info("Sidecar schema is initialized");
-                    periodicTaskExecutor.unschedule(this);
-                    reportSidecarSchemaInitialized();
-                }
             }
             catch (CassandraUnavailableException ignored)
             {
@@ -191,6 +184,17 @@ public class SidecarSchema
                     metrics.failedModifications.metric.update(1);
                 }
                 metrics.failedInitializations.metric.update(1);
+            }
+
+            if (isInitialized())
+            {
+                LOGGER.info("Sidecar schema is initialized. Stopping SchemaSidecarInitializer");
+                periodicTaskExecutor.unschedule(this);
+                reportSidecarSchemaInitialized();
+            }
+            else
+            {
+                LOGGER.debug("Sidecar schema is not initialized. Retry in {}", delay());
             }
             promise.tryComplete();
         }
