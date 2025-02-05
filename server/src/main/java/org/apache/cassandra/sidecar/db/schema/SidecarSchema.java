@@ -40,10 +40,8 @@ import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationExceptio
 import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
 /**
@@ -62,8 +60,6 @@ public class SidecarSchema
     private final CQLSessionProvider cqlSessionProvider;
     private final SchemaMetrics metrics;
     private final ClusterLease clusterLease;
-    @Nullable
-    private final SidecarSchemaInitializer sidecarSchemaInitializer;
 
     private boolean isInitialized = false;
 
@@ -84,12 +80,10 @@ public class SidecarSchema
         this.clusterLease = clusterLease;
         if (this.schemaKeyspaceConfiguration.isEnabled())
         {
-            this.sidecarSchemaInitializer = new SidecarSchemaInitializer();
             configureSidecarServerEventListeners();
         }
         else
         {
-            this.sidecarSchemaInitializer = null;
             LOGGER.info("Sidecar schema is disabled!");
         }
     }
@@ -98,13 +92,12 @@ public class SidecarSchema
     {
         EventBus eventBus = vertx.eventBus();
         eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), message -> maybeStartSidecarSchemaInitializer());
-        eventBus.localConsumer(ON_SERVER_STOP.address(), message -> periodicTaskExecutor.unschedule(sidecarSchemaInitializer));
     }
 
     @VisibleForTesting
     public void maybeStartSidecarSchemaInitializer()
     {
-        if (!schemaKeyspaceConfiguration.isEnabled() || sidecarSchemaInitializer == null)
+        if (!schemaKeyspaceConfiguration.isEnabled())
         {
             return;
         }
@@ -112,7 +105,7 @@ public class SidecarSchema
         // schedule one initializer exactly
         if (initializerStarted.compareAndSet(false, true))
         {
-            periodicTaskExecutor.schedule(sidecarSchemaInitializer);
+            periodicTaskExecutor.schedule(new SidecarSchemaInitializer());
         }
     }
 
@@ -170,31 +163,28 @@ public class SidecarSchema
             {
                 Session session = cqlSessionProvider.get();
                 isInitialized = sidecarInternalKeyspace.initialize(session, SidecarSchema.this::shouldCreateSchema);
-            }
-            catch (CassandraUnavailableException ignored)
-            {
-                LOGGER.debug("Cql session is not yet available. Skip initializing...");
+
+                if (isInitialized)
+                {
+                    LOGGER.info("Sidecar schema is initialized. Stopping SchemaSidecarInitializer");
+                    periodicTaskExecutor.unschedule(this);
+                    reportSidecarSchemaInitialized();
+                }
             }
             catch (Exception ex)
             {
-                LOGGER.warn("Failed to initialize schema", ex);
-                if (ex instanceof SidecarSchemaModificationException)
+                LOGGER.warn("Failed to initialize schema. Retry in {}", delay(), ex);
+                if (ex instanceof CassandraUnavailableException)
+                {
+                    LOGGER.debug("Cql session is not yet available. Skip initializing...");
+                    return; // do not count Cassandra unavailable as failure
+                }
+                else if (ex instanceof SidecarSchemaModificationException)
                 {
                     LOGGER.warn("Failed to modify schema", ex);
                     metrics.failedModifications.metric.update(1);
                 }
                 metrics.failedInitializations.metric.update(1);
-            }
-
-            if (isInitialized())
-            {
-                LOGGER.info("Sidecar schema is initialized. Stopping SchemaSidecarInitializer");
-                periodicTaskExecutor.unschedule(this);
-                reportSidecarSchemaInitialized();
-            }
-            else
-            {
-                LOGGER.debug("Sidecar schema is not initialized. Retry in {}", delay());
             }
             promise.tryComplete();
         }
