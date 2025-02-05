@@ -82,7 +82,7 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<Name> implement
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
-        CassandraAdapterDelegate delegate = metadataFetcher.instance(host).delegate();
+        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
         NodeSettings nodeSettings = delegate.nodeSettings();
         StorageOperations operations = delegate.storageOperations();
         executorPools.service()

@@ -76,7 +76,7 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
-        StorageOperations operations = metadataFetcher.instance(host).delegate().storageOperations();
+        StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
         executorPools.service()
                      .executeBlocking(() -> operations.ring(keyspace))
                      .onSuccess(context::json)

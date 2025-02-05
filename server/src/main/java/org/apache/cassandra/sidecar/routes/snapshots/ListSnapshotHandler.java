@@ -203,8 +203,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
 
     protected Future<List<String>> dataPaths(String host, String keyspace, String table)
     {
-        return executorPools.service().executeBlocking(() -> metadataFetcher.instance(host)
-                                                                            .delegate()
+        return executorPools.service().executeBlocking(() -> metadataFetcher.delegate(host)
                                                                             .tableOperations()
                                                                             .getDataPaths(keyspace, table));
     }

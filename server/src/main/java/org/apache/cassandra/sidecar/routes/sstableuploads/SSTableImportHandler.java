@@ -185,7 +185,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
         {
             // ensure that table operations are available from the delegate before doing the import
             // otherwise fail fast propagating the HttpException
-            metadataFetcher.instance(importOptions.host()).delegate().tableOperations();
+            metadataFetcher.delegate(importOptions.host()).tableOperations();
             return uploadPathBuilder.isValidDirectory(importOptions.directory())
                                     .compose(validDirectory -> importer.scheduleImport(importOptions));
         }

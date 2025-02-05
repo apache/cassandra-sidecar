@@ -203,7 +203,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
                                                                        SSTableUploadRequestParam request)
     {
         TaskExecutorPool pool = executorPools.service();
-        return pool.executeBlocking(() -> metadataFetcher.instance(host).delegate().metadata())
+        return pool.executeBlocking(() -> metadataFetcher.delegate(host).metadata())
                    .compose(metadata -> {
                        KeyspaceMetadata keyspaceMetadata = MetadataUtils.keyspace(metadata, request.keyspace());
                        if (keyspaceMetadata == null)

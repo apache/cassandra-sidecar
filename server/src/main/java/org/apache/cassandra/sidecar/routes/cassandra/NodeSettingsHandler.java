@@ -59,7 +59,7 @@ public class NodeSettingsHandler extends AbstractHandler<Void>
                                SocketAddress remoteAddress,
                                Void request)
     {
-        context.json(metadataFetcher.instance(host).delegate().nodeSettings());
+        context.json(metadataFetcher.delegate(host).nodeSettings());
     }
 
     /**

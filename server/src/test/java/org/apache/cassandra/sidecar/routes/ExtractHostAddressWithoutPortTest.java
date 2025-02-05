@@ -27,7 +27,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import io.vertx.core.http.HttpServerRequest;
-import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -51,8 +50,8 @@ class ExtractHostAddressWithoutPortTest
     void testExtractNullInput()
     {
         assertThatThrownBy(() -> AbstractHandler.extractHostAddressWithoutPort(mockRequest(null)))
-        .isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
-        .hasMessage("No such Cassandra instance when Host header is absent");
+        .isExactlyInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Missing 'host' header in the request");
     }
 
     static Stream<Arguments> inputs()

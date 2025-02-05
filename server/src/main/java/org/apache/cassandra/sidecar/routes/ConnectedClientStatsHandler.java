@@ -77,7 +77,7 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Boolean> implem
                                SocketAddress remoteAddress,
                                Boolean summaryOnly)
     {
-        MetricsOperations operations = metadataFetcher.instance(host).delegate().metricsOperations();
+        MetricsOperations operations = metadataFetcher.delegate(host).metricsOperations();
         executorPools.service()
                      .executeBlocking(() -> operations.connectedClientStats(summaryOnly))
                      .onSuccess(context::json)

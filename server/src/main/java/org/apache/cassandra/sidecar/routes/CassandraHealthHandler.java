@@ -73,7 +73,7 @@ public class CassandraHealthHandler extends AbstractHandler<Void>
                                   SocketAddress remoteAddress,
                                   Void request)
     {
-        CassandraAdapterDelegate delegate = metadataFetcher.instance(host).delegate();
+        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
 
         boolean isServiceUp = context.request().path().contains(JMX)
                               ? delegate.isJmxUp()

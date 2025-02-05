@@ -82,7 +82,7 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequestParam> 
                                SocketAddress remoteAddress,
                                SnapshotRequestParam requestParams)
     {
-        StorageOperations storageOperations = metadataFetcher.instance(host).delegate().storageOperations();
+        StorageOperations storageOperations = metadataFetcher.delegate(host).storageOperations();
         executorPools.service().runBlocking(() -> {
             logger.debug("Clearing snapshot request={}, remoteAddress={}, instance={}",
                          requestParams, remoteAddress, host);

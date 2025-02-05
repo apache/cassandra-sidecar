@@ -72,7 +72,7 @@ public class GossipInfoHandler extends AbstractHandler<Void> implements AccessPr
     {
         executorPools.service()
                      .executeBlocking(() -> {
-                         CassandraAdapterDelegate delegate = metadataFetcher.instance(host).delegate();
+                         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
                          ClusterMembershipOperations operations = delegate.clusterMembershipOperations();
                          String rawGossipInfo = operations.gossipInfo();
                          return GossipInfoParser.parse(rawGossipInfo);

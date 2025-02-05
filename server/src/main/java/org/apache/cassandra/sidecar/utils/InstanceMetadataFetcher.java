@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
@@ -76,6 +77,23 @@ public class InstanceMetadataFetcher
     public InstanceMetadata instance(int instanceId) throws NoSuchCassandraInstanceException
     {
         return instancesMetadata.instanceFromId(instanceId);
+    }
+
+    /**
+     * Returns the {@link CassandraAdapterDelegate} for the given {@code host}
+     *
+     * <p><b>Note</b>: the method to retrieve delegate should not be the responsibility of this class. However, for historic reasons, it is kept.
+     * That said, it does <i>not</i> warrant adding any more convenient methods to return members of {@link InstanceMetadata}.
+     *
+     * @param host the Cassandra instance hostname or IP address
+     * @return the {@link CassandraAdapterDelegate} for the given {@code host}
+     * @throws NoSuchCassandraInstanceException when the Cassandra instance with {@code host} does not exist
+     * @throws CassandraUnavailableException when Cassandra is not yet connected
+     */
+    @NotNull
+    public CassandraAdapterDelegate delegate(@NotNull String host) throws NoSuchCassandraInstanceException, CassandraUnavailableException
+    {
+        return instance(host).delegate();
     }
 
     /**

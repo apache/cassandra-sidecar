@@ -129,7 +129,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     {
         return executorPools.service().executeBlocking(() -> {
             // metadata can block so we need to run in a blocking thread
-            return metadataFetcher.instance(host).delegate().metadata();
+            return metadataFetcher.delegate(host).metadata();
         });
     }
 

@@ -71,7 +71,7 @@ public class StreamStatsHandler extends AbstractHandler<Void> implements AccessP
                                Void request)
     {
 
-        CassandraAdapterDelegate delegate = metadataFetcher.instance(host).delegate();
+        CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
 
         executorPools.service()
                      .executeBlocking(() -> {

@@ -89,7 +89,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
                                SocketAddress remoteAddress,
                                Boolean isForce)
     {
-        StorageOperations operations = metadataFetcher.instance(host).delegate().storageOperations();
+        StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
         NodeDecommissionJob job = new NodeDecommissionJob(UUIDs.timeBased(), operations, isForce);
         try
         {

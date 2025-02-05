@@ -88,7 +88,7 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
                                SocketAddress remoteAddress,
                                SnapshotRequestParam requestParams)
     {
-        StorageOperations storageOperations = metadataFetcher.instance(host).delegate().storageOperations();
+        StorageOperations storageOperations = metadataFetcher.delegate(host).storageOperations();
         executorPools.service().runBlocking(() -> {
                          logger.debug("Creating snapshot request={}, remoteAddress={}, instance={}",
                                       requestParams, remoteAddress, host);

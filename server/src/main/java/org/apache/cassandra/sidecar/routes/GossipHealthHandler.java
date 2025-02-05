@@ -57,7 +57,7 @@ public class GossipHealthHandler extends AbstractHandler<Void>
                                SocketAddress remoteAddress,
                                Void request)
     {
-        StorageOperations operations = metadataFetcher.instance(host).delegate().storageOperations();
+        StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
         executorPools.service()
                      .executeBlocking(operations::isGossipRunning)
                      .onSuccess(isGossipRunning -> context.json(isGossipRunning ? OK_STATUS : NOT_OK_STATUS))

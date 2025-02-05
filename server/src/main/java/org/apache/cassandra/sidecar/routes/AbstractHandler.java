@@ -32,6 +32,7 @@ import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailable
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -141,7 +142,7 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
             try
             {
                 int instanceId = Integer.parseInt(instanceIdParam);
-                return  metadataFetcher.instance(instanceId).host();
+                return metadataFetcher.instance(instanceId).host();
             }
             catch (NumberFormatException ex)
             {
@@ -159,9 +160,9 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
             {
                 return extractHostAddressWithoutPort(context.request());
             }
-            catch (NoSuchCassandraInstanceException ex)
+            catch (IllegalArgumentException ex)
             {
-                throw new HttpException(HttpResponseStatus.NOT_FOUND.code(), ex.getMessage());
+                throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(), ex.getMessage());
             }
         }
     }
@@ -294,16 +295,13 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
      *
      * @param request http server request
      * @return host address without port information
-     * @throws NoSuchCassandraInstanceException thrown when input address is null
+     * @throws IllegalArgumentException thrown when host header is missing in the request
      */
     @NotNull
-    public static String extractHostAddressWithoutPort(HttpServerRequest request) throws NoSuchCassandraInstanceException
+    public static String extractHostAddressWithoutPort(HttpServerRequest request) throws IllegalArgumentException
     {
         String host = request.host();
-        if (host == null)
-        {
-            throw new NoSuchCassandraInstanceException("No such Cassandra instance when Host header is absent");
-        }
+        Preconditions.checkArgument(host != null, "Missing 'host' header in the request");
 
         if (host.contains(":"))
         {
