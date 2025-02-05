@@ -47,6 +47,7 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
+import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
@@ -99,7 +100,7 @@ class SchemaMetricsTest
     @Test
     void testSchemaModificationFailure()
     {
-        sidecarSchema.startSidecarSchemaInitializer();
+        sidecarSchema.startSidecarSchemaInitializerMaybe();
         loopAssert(3, () -> {
             assertThat(metrics.server().schema().failedInitializations.metric.getValue())
             .isGreaterThanOrEqualTo(1);
@@ -124,7 +125,7 @@ class SchemaMetricsTest
         @Provides
         @Singleton
         public SidecarSchema sidecarSchema(Vertx vertx,
-                                           ExecutorPools executorPools,
+                                           PeriodicTaskExecutor periodicTaskExecutor,
                                            SidecarConfiguration configuration,
                                            CQLSessionProvider cqlSessionProvider,
                                            SidecarMetrics metrics)
@@ -134,7 +135,7 @@ class SchemaMetricsTest
             .thenThrow(new SidecarSchemaModificationException("Simulated failure",
                                                               new RuntimeException("Simulated exception")));
             SchemaMetrics schemaMetrics = metrics.server().schema();
-            return new SidecarSchema(vertx, executorPools, configuration,
+            return new SidecarSchema(vertx, periodicTaskExecutor, configuration,
                                      sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics, null);
         }
 

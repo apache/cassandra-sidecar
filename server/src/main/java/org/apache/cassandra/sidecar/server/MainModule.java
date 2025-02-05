@@ -783,7 +783,7 @@ public class MainModule extends AbstractModule
     @Provides
     @Singleton
     public SidecarSchema sidecarSchema(Vertx vertx,
-                                       ExecutorPools executorPools,
+                                       PeriodicTaskExecutor periodicTaskExecutor,
                                        SidecarInternalKeyspace sidecarInternalKeyspace,
                                        SidecarConfiguration configuration,
                                        CQLSessionProvider cqlSessionProvider,
@@ -804,7 +804,7 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(systemAuthSchema);
         sidecarInternalKeyspace.registerTableSchema(sidecarLeaseSchema);
         SchemaMetrics schemaMetrics = metrics.server().schema();
-        return new SidecarSchema(vertx, executorPools, configuration,
+        return new SidecarSchema(vertx, periodicTaskExecutor, configuration,
                                  sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics, clusterLease);
     }
 
