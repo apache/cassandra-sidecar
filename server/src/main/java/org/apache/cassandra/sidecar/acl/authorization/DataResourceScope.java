@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.Collections;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE;
@@ -32,7 +33,7 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpt
  */
 public class DataResourceScope implements ResourceScope
 {
-    public static final Pattern pattern = Pattern.compile("data(/[^/]+(/[^/]+)?)?");
+    public static final Pattern DATA_RESOURCE_PATTERN = Pattern.compile("^data(?:/([^/]+))?(?:/([^/]+))?$");
 
     public static final String DATA = "data";
 
@@ -117,17 +118,17 @@ public class DataResourceScope implements ResourceScope
     @Override
     public String resolveWithResource(String resource)
     {
-        validate(resource);
+        Matcher matcher = validate(resource);
         if (tableScoped)
         {
             return resource;
         }
         else if (keyspaceScoped)
         {
-            String[] parts = resource.split("/");
-            return parts.length == 3 ? "data/" + parts[1] : resource;
+            // if table is present, we create resource with just keyspace
+            return matcher.group(2) != null ? DATA + "/" + matcher.group(1) : resource;
         }
-        return "data";
+        return DATA;
     }
 
     @Override
@@ -136,18 +137,26 @@ public class DataResourceScope implements ResourceScope
         return expandedResources;
     }
 
-    private void validate(String resource)
+    /**
+     * Verifies resource is valid and returns a matcher if resource is valid.
+     *
+     * @param resource resource
+     * @return matcher matching {@link #DATA_RESOURCE_PATTERN}
+     */
+    private Matcher validate(String resource)
     {
         if (isNullOrEmpty(resource))
         {
             throw new IllegalArgumentException("Resource expected for resolving");
         }
 
-        if (!pattern.matcher(resource).matches())
+        Matcher matcher = DATA_RESOURCE_PATTERN.matcher(resource);
+        if (!matcher.matches())
         {
             String errMsg = String.format("Resource %s does not match expected data resource scope format %s",
-                                          resource, pattern.pattern());
+                                          resource, DATA_RESOURCE_PATTERN.pattern());
             throw new IllegalArgumentException(errMsg);
         }
+        return matcher;
     }
 }

@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
 
-import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.SCOPE_LESS;
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.NO_SCOPE;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 
@@ -36,7 +36,7 @@ public class StandardPermission implements Permission
 
     public StandardPermission(String name)
     {
-        this(name, SCOPE_LESS);
+        this(name, NO_SCOPE);
     }
 
     /**

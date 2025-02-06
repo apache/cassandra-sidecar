@@ -31,7 +31,7 @@ public class ResourceScopes
     /**
      * Default scope used when resource scope is not defined for {@link Permission}.
      */
-    public static final ResourceScope SCOPE_LESS = new ResourceScope()
+    public static final ResourceScope NO_SCOPE = new ResourceScope()
     {
         public String variableAwareResource()
         {
