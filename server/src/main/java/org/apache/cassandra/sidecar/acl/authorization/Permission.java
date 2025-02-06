@@ -22,6 +22,7 @@ import java.util.Set;
 
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.OrAuthorization;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a permission that can be granted to a user
@@ -36,6 +37,7 @@ public interface Permission
     /**
      * @return resource scope this permission can act for.
      */
+    @NotNull
     ResourceScope resourceScope();
 
     /**
@@ -51,16 +53,10 @@ public interface Permission
      * {@link Authorization} is created with just permission {@link #name}
      *
      * @return {@link Authorization} created with expanded resources of associated resource scope, when expanded
-     * resources are empty, {@link Authorization} is created with permission {@link #name} and default
-     * variableAwareResource of set resource scope.
+     * resources are empty, {@link Authorization} is created with permission {@link #name}
      */
     default Authorization toAuthorization()
     {
-        if (resourceScope() == null)
-        {
-            // when resource is empty, it is ignored. Only permission name is used to create Authorization
-            return toAuthorization("");
-        }
         return toAuthorization(resourceScope().expandedResources());
     }
 
@@ -70,14 +66,13 @@ public interface Permission
      * @param eligibleResources authorization is created with all the eligible resources, so that if user holds grant
      *                          for <b>any</b> of the eligibleResources, then they are granted access
      * @return {@link Authorization} created with given eligibleResources, when empty list is passed
-     * {@link Authorization} is created with just permission {@link #name} and default
-     * variableAwareResource of permission's resource scope
+     * {@link Authorization} is created with just permission {@link #name}.
      */
     default Authorization toAuthorization(Set<String> eligibleResources)
     {
         if (eligibleResources == null || eligibleResources.isEmpty())
         {
-            return toAuthorization();
+            return toAuthorization((String) null);
         }
 
         OrAuthorization orAuthorization = OrAuthorization.create();

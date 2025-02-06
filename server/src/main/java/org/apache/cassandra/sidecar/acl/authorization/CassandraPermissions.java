@@ -24,7 +24,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
  *     org.apache.cassandra.auth.Permission</a>
  * under the Cassandra codebase.
  * <p>
- * Note: CassandraPermissions do not have resource scope set in them, since these permissions can be used to create
+ * Note: CassandraPermissions have default SCOPE_LESS set in them, since these permissions can be used to create
  * Authorization across resource scopes.
  */
 public class CassandraPermissions

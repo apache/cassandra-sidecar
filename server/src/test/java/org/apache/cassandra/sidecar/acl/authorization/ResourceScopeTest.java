@@ -55,7 +55,6 @@ class ResourceScopeTest
     void testDataScope()
     {
         assertThat(DATA_SCOPE.variableAwareResource()).isEqualTo("data");
-        assertThat(DATA_SCOPE.resolveWithResource("any")).isEqualTo("data");
         assertThat(DATA_SCOPE.expandedResources().size()).isOne();
         assertThat(DATA_SCOPE.expandedResources().contains("data")).isTrue();
     }
@@ -65,7 +64,6 @@ class ResourceScopeTest
     {
         assertThat(KEYSPACE_SCOPE.variableAwareResource()).isEqualTo("data/{keyspace}");
         // random resource is passed, resolved to variableAwareResource
-        assertThat(KEYSPACE_SCOPE.resolveWithResource("any")).isEqualTo("data/{keyspace}");
         assertThat(KEYSPACE_SCOPE.resolveWithResource("data")).isEqualTo("data");
         assertThat(KEYSPACE_SCOPE.resolveWithResource("data/university/student")).isEqualTo("data/university");
         assertThat(KEYSPACE_SCOPE.expandedResources().size()).isEqualTo(2);
@@ -77,7 +75,6 @@ class ResourceScopeTest
     void testTableScope()
     {
         assertThat(TABLE_SCOPE.variableAwareResource()).isEqualTo("data/{keyspace}/{table}");
-        assertThat(TABLE_SCOPE.resolveWithResource("any")).isEqualTo("data/{keyspace}/{table}");
         assertThat(TABLE_SCOPE.resolveWithResource("data")).isEqualTo("data");
         assertThat(TABLE_SCOPE.resolveWithResource("data/university")).isEqualTo("data/university");
         assertThat(TABLE_SCOPE.resolveWithResource("data/university/student")).isEqualTo("data/university/student");
@@ -93,5 +90,31 @@ class ResourceScopeTest
     {
         assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource(null)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void testInvalidDataResourceScopes()
+    {
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Resource data/ does not match expected data resource scope format " + DataResourceScope.pattern.pattern());
+
+        assertThatThrownBy(() -> KEYSPACE_SCOPE.resolveWithResource("data//"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Resource data// does not match expected data resource scope format " + DataResourceScope.pattern.pattern());
+
+        assertThatThrownBy(() -> TABLE_SCOPE.resolveWithResource("data//tbl"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Resource data//tbl does not match expected data resource scope format " + DataResourceScope.pattern.pattern());
+
+
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/ks/tbl/extra"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Resource data/ks/tbl/extra does not match expected data resource scope format " + DataResourceScope.pattern.pattern());
+
+
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("/"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Resource / does not match expected data resource scope format " + DataResourceScope.pattern.pattern());
     }
 }

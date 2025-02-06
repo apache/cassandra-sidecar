@@ -29,6 +29,27 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpt
 public class ResourceScopes
 {
     /**
+     * Default scope used when resource scope is not defined for {@link Permission}.
+     */
+    public static final ResourceScope SCOPE_LESS = new ResourceScope()
+    {
+        public String variableAwareResource()
+        {
+            return null;
+        }
+
+        public String resolveWithResource(String resource)
+        {
+            return resource;
+        }
+
+        public Set<String> expandedResources()
+        {
+            return Collections.emptySet();
+        }
+    };
+
+    /**
      * Signifies the Cassandra cluster scope. For example, to determine whether you have access to
      * retrieve basic Cassandra ring, gossip, or other Cassandra-related information. Currently cluster scope
      * does not contain any resource variables.

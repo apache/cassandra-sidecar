@@ -20,8 +20,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.Collections;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
+import java.util.regex.Pattern;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE;
@@ -33,14 +32,9 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpt
  */
 public class DataResourceScope implements ResourceScope
 {
-    // scoped at data level including all keyspaces and tables
-    public static final DataResourceScope DATA_SCOPE = new DataResourceScope(false, false);
-    // scoped at keyspace level within data
-    public static final DataResourceScope KEYSPACE_SCOPE = new DataResourceScope(true, false);
-    // scoped at table level within a keyspace
-    public static final DataResourceScope TABLE_SCOPE = new DataResourceScope(true, true);
+    public static final Pattern pattern = Pattern.compile("data(/[^/]+(/[^/]+)?)?");
 
-    private static final String DATA = "data";
+    public static final String DATA = "data";
 
     /**
      * Cassandra stores data resource in the format data, data/keyspace or data/keyspace_name/table_name within
@@ -60,7 +54,7 @@ public class DataResourceScope implements ResourceScope
      * User permissions are then extracted from both Cassandra and sidecar role permissions tables for
      * the resolved resource and are matched against the expected permissions set defined in the endpoint's handler.
      */
-    private static final String DATA_WITH_KEYSPACE = String.format("data/{%s}", KEYSPACE);
+    public static final String DATA_WITH_KEYSPACE = String.format("data/{%s}", KEYSPACE);
 
     // TODO remove this hack once VariableAwareExpression bug is fixed
     // VariableAwareExpression in vertx-auth-common package has a bug during String.substring() call, hence
@@ -69,9 +63,16 @@ public class DataResourceScope implements ResourceScope
     // TABLE_WILDCARD as a variable. This hack allows to read resource level permissions that could be set for all
     // tables through data/<keyspace_name>/*. Bug should be fixed in 4.5.12
     // Note: DATA_WITH_KEYSPACE_ALL_TABLES authorizes for all tables under the keyspace excluding the keyspace itself
-    private static final String DATA_WITH_KEYSPACE_ALL_TABLES = String.format("data/{%s}/{TABLE_WILDCARD}", KEYSPACE);
+    public static final String DATA_WITH_KEYSPACE_ALL_TABLES = String.format("data/{%s}/{TABLE_WILDCARD}", KEYSPACE);
 
-    private static final String DATA_WITH_KEYSPACE_TABLE = String.format("data/{%s}/{%s}", KEYSPACE, TABLE);
+    public static final String DATA_WITH_KEYSPACE_TABLE = String.format("data/{%s}/{%s}", KEYSPACE, TABLE);
+
+    // scoped at data level including all keyspaces and tables
+    public static final DataResourceScope DATA_SCOPE = new DataResourceScope(false, false);
+    // scoped at keyspace level within data
+    public static final DataResourceScope KEYSPACE_SCOPE = new DataResourceScope(true, false);
+    // scoped at table level within a keyspace
+    public static final DataResourceScope TABLE_SCOPE = new DataResourceScope(true, true);
 
     private final boolean keyspaceScoped;
     private final boolean tableScoped;
@@ -89,12 +90,12 @@ public class DataResourceScope implements ResourceScope
         if (tableScoped)
         {
             // can expand to DATA, DATA_WITH_KEYSPACE and DATA_WITH_KEYSPACE_ALL_TABLES
-            return ImmutableSet.of(DATA, DATA_WITH_KEYSPACE, DATA_WITH_KEYSPACE_ALL_TABLES, DATA_WITH_KEYSPACE_TABLE);
+            return Set.of(DATA, DATA_WITH_KEYSPACE, DATA_WITH_KEYSPACE_ALL_TABLES, DATA_WITH_KEYSPACE_TABLE);
         }
         if (keyspaceScoped)
         {
             // can expand to DATA
-            return ImmutableSet.of(DATA, DATA_WITH_KEYSPACE);
+            return Set.of(DATA, DATA_WITH_KEYSPACE);
         }
         return Collections.singleton(DATA);
     }
@@ -116,23 +117,14 @@ public class DataResourceScope implements ResourceScope
     @Override
     public String resolveWithResource(String resource)
     {
-        if (isNullOrEmpty(resource))
-        {
-            throw new IllegalArgumentException("Resource expected for resolving");
-        }
-
-        if (!resource.startsWith("data"))
-        {
-            return variableAwareResource();
-        }
-
-        String[] parts = resource.split("/");
+        validate(resource);
         if (tableScoped)
         {
             return resource;
         }
         else if (keyspaceScoped)
         {
+            String[] parts = resource.split("/");
             return parts.length == 3 ? "data/" + parts[1] : resource;
         }
         return "data";
@@ -142,5 +134,20 @@ public class DataResourceScope implements ResourceScope
     public Set<String> expandedResources()
     {
         return expandedResources;
+    }
+
+    private void validate(String resource)
+    {
+        if (isNullOrEmpty(resource))
+        {
+            throw new IllegalArgumentException("Resource expected for resolving");
+        }
+
+        if (!pattern.matcher(resource).matches())
+        {
+            String errMsg = String.format("Resource %s does not match expected data resource scope format %s",
+                                          resource, pattern.pattern());
+            throw new IllegalArgumentException(errMsg);
+        }
     }
 }

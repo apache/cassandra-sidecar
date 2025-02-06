@@ -24,6 +24,7 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
 import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
 
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.SCOPE_LESS;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 
 /**
@@ -45,7 +46,7 @@ public class DomainAwarePermission extends StandardPermission
 
     public DomainAwarePermission(String name)
     {
-        this(name, null);
+        this(name, SCOPE_LESS);
     }
 
     /**
@@ -86,9 +87,7 @@ public class DomainAwarePermission extends StandardPermission
         WildcardPermissionBasedAuthorization authorization = new WildcardPermissionBasedAuthorizationImpl(name);
         if (isNotEmpty(resource))
         {
-            ResourceScope resourceScope = resourceScope();
-            String resolvedResource = resourceScope != null ? resourceScope.resolveWithResource(resource) : resource;
-            authorization.setResource(resolvedResource);
+            authorization.setResource(resourceScope.resolveWithResource(resource));
         }
         return authorization;
     }

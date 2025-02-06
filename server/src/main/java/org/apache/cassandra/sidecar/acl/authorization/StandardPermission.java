@@ -20,8 +20,8 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
-import org.jetbrains.annotations.Nullable;
 
+import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.SCOPE_LESS;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 
@@ -32,12 +32,11 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpt
 public class StandardPermission implements Permission
 {
     protected final String name;
-    @Nullable
     protected final ResourceScope resourceScope;
 
     public StandardPermission(String name)
     {
-        this(name, null);
+        this(name, SCOPE_LESS);
     }
 
     /**
@@ -62,7 +61,6 @@ public class StandardPermission implements Permission
         return name;
     }
 
-    @Nullable
     @Override
     public ResourceScope resourceScope()
     {
@@ -75,9 +73,7 @@ public class StandardPermission implements Permission
         PermissionBasedAuthorization authorization = PermissionBasedAuthorization.create(name);
         if (isNotEmpty(resource))
         {
-            ResourceScope resourceScope = resourceScope();
-            String resolvedResource = resourceScope != null ? resourceScope.resolveWithResource(resource) : resource;
-            authorization.setResource(resolvedResource);
+            authorization.setResource(resourceScope.resolveWithResource(resource));
         }
         return authorization;
     }

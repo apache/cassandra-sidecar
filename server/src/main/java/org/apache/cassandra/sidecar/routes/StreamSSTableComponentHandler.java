@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Set;
 import javax.management.InstanceNotFoundException;
 
-import com.google.common.collect.ImmutableSet;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -76,7 +74,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
         Set<String> eligibleResources = TABLE_SCOPE.expandedResources();
         Authorization stream = BasicPermissions.STREAM_SNAPSHOT.toAuthorization();
         Authorization select = CassandraPermissions.SELECT.toAuthorization(eligibleResources);
-        return ImmutableSet.of(stream, select);
+        return Set.of(stream, select);
     }
 
     @Override
