@@ -88,6 +88,9 @@ public class ConnectedClientStatsHandlerIntegrationTest extends IntegrationTestB
         createTestKeyspace();
         Session session = maybeGetSession();
         session.execute("USE " + TEST_KEYSPACE);
+        // create an additional pair of connections
+        sidecarTestContext.buildNewCqlSessionProvider()
+                          .get();
 
         Map<String, Boolean> expectedParams = Collections.singletonMap("summary", false);
         String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
@@ -105,8 +108,9 @@ public class ConnectedClientStatsHandlerIntegrationTest extends IntegrationTestB
     void retrieveClientStatsMultipleConnections(VertxTestContext context)
     throws Exception
     {
-        // Creates an additional connection pair
-        createTestKeyspace();
+        // create an additional pair of connections
+        sidecarTestContext.buildNewCqlSessionProvider()
+                          .get();
         Map<String, Boolean> expectedParams = Collections.singletonMap("summary", false);
         String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
         testWithClient(context, client -> {

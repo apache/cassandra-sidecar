@@ -32,6 +32,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
@@ -47,12 +48,18 @@ import org.apache.cassandra.sidecar.config.yaml.CoordinationConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ParameterizedClassConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.PeriodicTaskConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SSTableUploadConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTask;
+import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
+import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -99,6 +106,7 @@ public class IntegrationTestModule extends AbstractModule
                                                                                               .isEnabled(true)
                                                                                               .build())
                                   .coordinationConfiguration(clusterLeaseClaimTaskConfiguration)
+                                  .sstableUploadConfiguration(new SSTableUploadConfigurationImpl(0F))
                                   .build();
         PeriodicTaskConfiguration healthCheckConfiguration
         = new PeriodicTaskConfigurationImpl(true,
@@ -127,9 +135,52 @@ public class IntegrationTestModule extends AbstractModule
 
     @Provides
     @Singleton
+    public ClusterLeaseClaimTask clusterLeaseClaimTask(Vertx vertx,
+                                                       ServiceConfiguration serviceConfiguration,
+                                                       ElectorateMembership electorateMembership,
+                                                       SidecarLeaseDatabaseAccessor accessor,
+                                                       ClusterLease clusterLease,
+                                                       SidecarMetrics metrics)
+    {
+        return new ClusterLeaseClaimTask(vertx,
+                                         serviceConfiguration,
+                                         electorateMembership,
+                                         accessor,
+                                         clusterLease,
+                                         metrics)
+        {
+            @Override
+            public DurationSpec delay()
+            {
+                return serviceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().executeInterval();
+            }
+
+            @Override
+            public DurationSpec initialDelay()
+            {
+                return serviceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay();
+            }
+
+            @Override
+            public ScheduleDecision scheduleDecision()
+            {
+                // stop further executions if cluster lease is already claimed; otherwise, run it, regardless of ElectorateMembership
+                if (clusterLease.isClaimedByLocalSidecar())
+                {
+                    return ScheduleDecision.SKIP;
+                }
+                return ScheduleDecision.EXECUTE;
+            }
+        };
+    }
+
+    @Provides
+    @Singleton
     public CoordinationConfiguration clusterLeaseClaimTaskConfiguration()
     {
-        return new CoordinationConfigurationImpl(new PeriodicTaskConfigurationImpl());
+        return new CoordinationConfigurationImpl(new PeriodicTaskConfigurationImpl(true,
+                                                                                   MillisecondBoundConfiguration.parse("1s"),
+                                                                                   MillisecondBoundConfiguration.parse("1s")));
     }
 
     @Provides
@@ -159,13 +210,6 @@ public class IntegrationTestModule extends AbstractModule
         };
         vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
         return cqlSessionProvider;
-    }
-
-    @Provides
-    @Singleton
-    public ClusterLease clusterLease()
-    {
-        return new ClusterLease(ClusterLease.Ownership.CLAIMED);
     }
 
     private AccessControlConfiguration accessControlConfiguration()

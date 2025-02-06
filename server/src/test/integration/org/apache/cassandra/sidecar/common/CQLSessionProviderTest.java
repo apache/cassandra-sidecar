@@ -50,9 +50,9 @@ public class CQLSessionProviderTest extends IntegrationTestBase
     public static final String KEYSPACE_FAILED_RESPONSE_START = "{\"status\":\"Service Unavailable\",";
 
     @Override
-    protected int getNumInstancesToManage(int clusterSize)
+    protected int[] getInstancesToManage(int clusterSize)
     {
-        return 2;
+        return new int[] {1, 2};
     }
 
     @CassandraIntegrationTest(nodesPerDc = 2, startCluster = false)

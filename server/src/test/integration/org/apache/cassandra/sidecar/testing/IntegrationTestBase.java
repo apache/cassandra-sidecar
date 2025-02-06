@@ -45,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -113,6 +114,7 @@ public abstract class IntegrationTestBase
     protected Injector injector;
     private final List<Throwable> testExceptions = new ArrayList<>();
     private Module testSpecificModule;
+    private CountDownLatch schemaInitialized = new CountDownLatch(1);;
 
     @BeforeEach
     void setup(AbstractCassandraTestContext cassandraTestContext, TestInfo testInfo) throws Exception
@@ -143,7 +145,9 @@ public abstract class IntegrationTestBase
         Module mergedModule = modules.stream().reduce((m1, m2) -> Modules.override(m1).with(m2)).get();
         injector = Guice.createInjector(mergedModule);
         vertx = injector.getInstance(Vertx.class);
-
+        // register the handler for ON_SIDECAR_SCHEMA_INITIALIZED the earliest
+        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(),
+                                       msg -> schemaInitialized.countDown());
         SslConfiguration sslConfig = cassandraTestContext.annotation.authMode().equals(AuthMode.MUTUAL_TLS)
                                      ? sslConfigWithClientKeystoreTruststore() : null;
 
@@ -155,13 +159,14 @@ public abstract class IntegrationTestBase
             sslConfig = sslConfigWithTruststore();
         }
         sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
-                                                              getNumInstancesToManage(clusterSize), sslConfig);
+                                                              getInstancesToManage(clusterSize), sslConfig);
         integrationTestModule.setCassandraTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);
         VertxTestContext context = new VertxTestContext();
 
-        if (sidecarTestContext.isClusterBuilt())
+        boolean isClusterBuilt = sidecarTestContext.isClusterBuilt();
+        if (isClusterBuilt)
         {
             MessageConsumer<JsonObject> cqlReadyConsumer = vertx.eventBus()
                                                                 .localConsumer(ON_CASSANDRA_CQL_READY.address());
@@ -172,10 +177,11 @@ public abstract class IntegrationTestBase
         }
 
         client = mTLSClient();
+        beforeServerStart();
         server.start()
               .onSuccess(s -> {
                   sidecarTestContext.registerInstanceConfigListener(this::healthCheck);
-                  if (!sidecarTestContext.isClusterBuilt())
+                  if (!isClusterBuilt)
                   {
                       // Give everything a moment to get started and connected
                       vertx.setTimer(TimeUnit.SECONDS.toMillis(1), id1 -> context.completeNow());
@@ -184,6 +190,12 @@ public abstract class IntegrationTestBase
               .onFailure(context::failNow);
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
+
+        // add a listener to refresh instance metadata when cluster is not built when starting server
+        if (!isClusterBuilt)
+        {
+            cassandraTestContext.setClusterBuiltListener(cluster -> sidecarTestContext.refreshInstancesMetadata());
+        }
     }
 
     @AfterEach
@@ -203,6 +215,10 @@ public abstract class IntegrationTestBase
     {
     }
 
+    protected void beforeServerStart()
+    {
+    }
+
     protected void installTestSpecificModule(Module testSpecificModule)
     {
         this.testSpecificModule = testSpecificModule;
@@ -210,11 +226,7 @@ public abstract class IntegrationTestBase
 
     protected void waitForSchemaReady(long timeout, TimeUnit timeUnit)
     {
-        CountDownLatch latch = new CountDownLatch(1);
-        vertx.eventBus()
-             .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> latch.countDown());
-        awaitLatchOrTimeout(latch, timeout, timeUnit);
-        assertThat(latch.getCount()).describedAs("Sidecar schema not initialized").isZero();
+        awaitLatchOrTimeout(schemaInitialized, timeout, timeUnit, "Wait for schema initialization");
     }
 
     /**
@@ -224,11 +236,11 @@ public abstract class IntegrationTestBase
      * Defaults to the entire cluster.
      *
      * @param clusterSize the size of the cluster as defined by the integration test
-     * @return the number of instances to manage; or -1 to let test framework to determine the cluster size at the runtime
+     * @return the instances to manage; or null to let test framework to determine the cluster size at the runtime
      */
-    protected int getNumInstancesToManage(int clusterSize)
+    protected int[] getInstancesToManage(int clusterSize)
     {
-        return -1;
+        return null;
     }
 
     protected void testWithClient(Consumer<WebClient> tester)
@@ -274,30 +286,6 @@ public abstract class IntegrationTestBase
         }
     }
 
-    protected void testWithClientBlocking(boolean waitForCluster,
-                                     Consumer<WebClient> tester)
-    {
-        CassandraAdapterDelegate delegate = sidecarTestContext.instancesMetadata()
-                                                              .instanceFromId(1)
-                                                              .delegate();
-
-        assertThat(delegate).isNotNull();
-        if (delegate.isNativeUp() || !waitForCluster)
-        {
-            tester.accept(client);
-        }
-        else
-        {
-            vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
-                if (message.body().getInteger("cassandraInstanceId") == 1)
-                {
-                    tester.accept(client);
-                }
-            });
-        }
-
-    }
-
     protected void createTestKeyspace()
     {
         createTestKeyspace(ImmutableMap.of(DATA_CENTER_PREFIX + 1, 1));
@@ -305,18 +293,24 @@ public abstract class IntegrationTestBase
 
     protected void createTestKeyspace(Map<String, Integer> rf)
     {
+        createKeyspace(TEST_KEYSPACE, rf);
+    }
+
+    protected void createKeyspace(String keyspaceName, Map<String, Integer> rf)
+    {
         int attempts = 1;
         ArrayList<Throwable> thrown = new ArrayList<>(5);
         while (attempts <= 5)
         {
             try
             {
-                sidecarTestContext.refreshInstancesMetadata();
-
                 Session session = maybeGetSession();
 
-                session.execute("CREATE KEYSPACE " + IF_NOT_EXISTS + " " + TEST_KEYSPACE
-                              + " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " + generateRfString(rf) + " };");
+                ResultSet rs = session.execute("CREATE KEYSPACE " + IF_NOT_EXISTS + " " + keyspaceName
+                                               + " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " + generateRfString(rf) + " };");
+                assertThat(rs.getExecutionInfo().isSchemaInAgreement())
+                .describedAs("Schema agreement is not reached")
+                .isTrue();
                 return;
             }
             catch (Throwable t)
@@ -396,7 +390,7 @@ public abstract class IntegrationTestBase
     }
 
     // similar to awaitLatchOrTimeout, it throws either test exceptions (due to startAsync failures) or timeout exception
-    protected void awaitLatchOrThrow(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
+    public void awaitLatchOrThrow(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
     {
         String hint = latchName == null ? "" : '(' + latchName + ')';
         boolean completed = Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit);
@@ -409,7 +403,7 @@ public abstract class IntegrationTestBase
         throw new AssertionError("Latch " + hint + " times out after " + duration + ' ' + timeUnit.name());
     }
 
-    protected static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
+    public static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
     {
         String hint = latchName == null ? "" : '(' + latchName + ')';
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit))
@@ -417,7 +411,7 @@ public abstract class IntegrationTestBase
         .isTrue();
     }
 
-    protected static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit)
+    public static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit)
     {
         awaitLatchOrTimeout(latch, duration, timeUnit, null);
     }
@@ -467,7 +461,6 @@ public abstract class IntegrationTestBase
         throwIfHasTestExceptions();
         context.completeNow();
     }
-
 
     private static QualifiedTableName uniqueTestTableFullName(String tablePrefix)
     {
@@ -520,7 +513,7 @@ public abstract class IntegrationTestBase
         CertificateBuilder builder = new CertificateBuilder()
                             .subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
                             .addSanDnsName("localhost")
-                            .addSanIpAddress("127.0.0.1")
+                            .addSanIpAddress(subjectAlternativeNameIpAddress())
                             .addSanUriName(identity);
         if (expired)
         {
@@ -546,6 +539,11 @@ public abstract class IntegrationTestBase
                                    .enabled(true)
                                    .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
                                    .build();
+    }
+
+    protected String subjectAlternativeNameIpAddress()
+    {
+        return "127.0.0.1";
     }
 
     protected WebClient createClient(Path clientKeystorePath, Path truststorePath)

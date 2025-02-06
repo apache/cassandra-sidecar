@@ -436,7 +436,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         SimpleQueryResult rows = cluster.getFirstRunningInstance()
                                         .coordinator()
                                         .executeWithResult("SELECT * FROM sidecar_internal.sidecar_lease_v1 ALLOW FILTERING",
-                                                           ConsistencyLevel.LOCAL_QUORUM);
+                                                           ConsistencyLevel.SERIAL);
         return StreamSupport.stream(rows.spliterator(), false).count();
     }
 
@@ -446,7 +446,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         cluster.getFirstRunningInstance()
                .coordinator()
                .execute("SELECT writetime(owner), owner FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'cluster_lease_holder'",
-                        ConsistencyLevel.LOCAL_QUORUM);
+                        ConsistencyLevel.SERIAL);
         assertThat(result).isNotNull();
         assertThat(result).hasDimensions(1, 2);
         return result;

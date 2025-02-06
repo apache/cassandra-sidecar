@@ -183,7 +183,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
                 Path tempDirPath = Files.createTempDirectory("certs");
                 CertificateBundle ca = ca();
-                Path serverKeystorePath = serverKeystorePath(ca, tempDirPath);
+                Path serverKeystorePath = serverKeystorePath(ca, tempDirPath, finalNodeCount);
                 Path truststorePath = truststorePath(ca, tempDirPath);
 
                 switch (annotation.authMode())
@@ -382,13 +382,16 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         return ca.toTempKeyStorePath(path, truststorePassword.toCharArray(), truststorePassword.toCharArray());
     }
 
-    private Path serverKeystorePath(CertificateBundle ca, Path path) throws Exception
+    private Path serverKeystorePath(CertificateBundle ca, Path path, int totalNodes) throws Exception
     {
-        CertificateBundle keystore = new CertificateBuilder()
-                                     .subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                     .addSanDnsName("localhost")
-                                     .addSanIpAddress("127.0.0.1")
-                                     .buildIssuedBy(ca);
+        CertificateBuilder builder = new CertificateBuilder();
+        builder.subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+               .addSanDnsName("localhost");
+        for (int i = 1; i <= totalNodes; i++)
+        {
+            builder.addSanIpAddress("127.0.0." + i);
+        }
+        CertificateBundle keystore = builder.buildIssuedBy(ca);
         return keystore.toTempKeyStorePath(path, serverKeystorePassword.toCharArray(), serverKeystorePassword.toCharArray());
     }
 
@@ -427,8 +430,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
     static
     {
-        // Settings to reduce the test setup delay incurred if gossip is enabled
-        System.setProperty("cassandra.ring_delay_ms", "5000"); // down from 30s default
+        System.setProperty("cassandra.ring_delay_ms", "5000"); // down from 30s default; this change has no effect if GOSSIP feature is enabled
         System.setProperty("cassandra.consistent.rangemovement", "false");
         System.setProperty("cassandra.consistent.simultaneousmoves.allow", "true");
         // End gossip delay settings

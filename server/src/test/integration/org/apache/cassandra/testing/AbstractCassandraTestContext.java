@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,8 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
 
     public final SimpleCassandraVersion version;
     private final Map<String, String> initialProperties;
-    protected UpgradeableCluster cluster;
+    private UpgradeableCluster cluster;
+    private Consumer<UpgradeableCluster> onClusterBuilt;
 
     // certificates created when cluster is started with auth
     public final CertificateBundle ca;
@@ -76,6 +78,24 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
     public UpgradeableCluster cluster()
     {
         return cluster;
+    }
+
+    public void setClusterBuiltListener(Consumer<UpgradeableCluster> listener)
+    {
+        this.onClusterBuilt = listener;
+        if (cluster != null)
+        {
+            onClusterBuilt.accept(cluster);
+        }
+    }
+
+    protected void setCluster(UpgradeableCluster cluster)
+    {
+        this.cluster = cluster;
+        if (onClusterBuilt != null)
+        {
+            onClusterBuilt.accept(cluster);
+        }
     }
 
     @Override

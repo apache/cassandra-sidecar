@@ -156,6 +156,7 @@ public abstract class SharedClusterIntegrationTestBase
     protected Server server;
     protected TestVersion testVersion;
     protected MtlsTestHelper mtlsTestHelper;
+    private final CountDownLatch sidecarSchemaReadyLatch = new CountDownLatch(1);
     private IsolatedDTestClassLoaderWrapper classLoaderWrapper;
     private Injector sidecarServerInjector;
 
@@ -350,6 +351,9 @@ public abstract class SharedClusterIntegrationTestBase
         AbstractModule testModule = new IntegrationTestModule(instances, classLoaderWrapper, mtlsTestHelper,
                                                               dnsResolver, configurationOverrides());
         sidecarServerInjector = Guice.createInjector(Modules.override(new MainModule()).with(testModule));
+        Vertx vertx = sidecarServerInjector.getInstance(Vertx.class);
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> sidecarSchemaReadyLatch.countDown());
         Server sidecarServer = sidecarServerInjector.getInstance(Server.class);
         sidecarServer.start()
                      .onSuccess(s -> context.completeNow())
@@ -362,15 +366,10 @@ public abstract class SharedClusterIntegrationTestBase
     protected void waitForSchemaReady(long timeout, TimeUnit timeUnit)
     {
         assertThat(sidecarServerInjector)
-        .describedAs("Sidecar is started")
+        .describedAs("Sidecar should be started")
         .isNotNull();
 
-        CountDownLatch latch = new CountDownLatch(1);
-        Vertx vertx = sidecarServerInjector.getInstance(Vertx.class);
-        vertx.eventBus()
-             .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> latch.countDown());
-
-        assertThat(Uninterruptibles.awaitUninterruptibly(latch, timeout, timeUnit))
+        assertThat(Uninterruptibles.awaitUninterruptibly(sidecarSchemaReadyLatch, timeout, timeUnit))
         .describedAs("Sidecar schema is not initialized after " + timeout + ' ' + timeUnit)
         .isTrue();
     }

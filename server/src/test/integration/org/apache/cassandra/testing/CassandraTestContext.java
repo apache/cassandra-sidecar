@@ -30,7 +30,6 @@ import org.apache.cassandra.testing.utils.tls.CertificateBundle;
  */
 public class CassandraTestContext extends AbstractCassandraTestContext
 {
-
     public CassandraTestContext(SimpleCassandraVersion version,
                                 UpgradeableCluster cluster,
                                 CertificateBundle ca,
@@ -46,7 +45,7 @@ public class CassandraTestContext extends AbstractCassandraTestContext
     {
         return "CassandraTestContext{"
                + "version=" + version
-               + ", cluster=" + cluster
+               + ", cluster=" + cluster()
                + '}';
     }
 }

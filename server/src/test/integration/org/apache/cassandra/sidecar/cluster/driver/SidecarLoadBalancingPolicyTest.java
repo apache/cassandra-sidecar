@@ -55,9 +55,9 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
     }
 
     @Override
-    protected int getNumInstancesToManage(int clusterSize)
+    protected int[] getInstancesToManage(int clusterSize)
     {
-        return SIDECAR_MANAGED_INSTANCES; // we only want to manage the first 2 instances in the "cluster"
+        return new int[] {1, 2}; // we only want to manage the first 2 instances in the "cluster"
     }
 
     @CassandraIntegrationTest(nodesPerDc = 6)

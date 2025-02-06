@@ -75,9 +75,8 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         // Truncate the table, insert more data.
         // Test the import SSTable endpoint by importing data that was originally truncated.
         // Verify by querying the table contains all the results before truncation and after truncation.
-
-        Session session = maybeGetSession();
         createTestKeyspace();
+        Session session = maybeGetSession();
         QualifiedTableName tableName = createTestTableAndPopulate(sidecarTestContext, Arrays.asList("a", "b"));
 
         // create a snapshot called <tableName>-snapshot for tbl1

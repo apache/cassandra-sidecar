@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -73,7 +74,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
     private final AbstractCassandraTestContext abstractCassandraTestContext;
     private final Vertx vertx;
     private final List<InstancesMetadataListener> instancesMetadataListeners;
-    private int numInstancesToManage;
+    // array of nodeNums that are 1-based
+    private int[] instancesToManage = null;
     public InstancesMetadata instancesMetadata;
     private List<JmxClient> jmxClients;
     private CQLSessionProvider sessionProvider;
@@ -86,11 +88,11 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                         SimpleCassandraVersion version,
                                         CassandraVersionProvider versionProvider,
                                         DnsResolver dnsResolver,
-                                        int numInstancesToManage,
+                                        int[] instancesToManage,
                                         SslConfiguration sslConfiguration)
     {
         this.vertx = vertx;
-        this.numInstancesToManage = numInstancesToManage;
+        this.instancesToManage = instancesToManage;
         this.instancesMetadataListeners = new ArrayList<>();
         this.abstractCassandraTestContext = abstractCassandraTestContext;
         this.version = version;
@@ -102,7 +104,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
     public static CassandraSidecarTestContext from(Vertx vertx,
                                                    AbstractCassandraTestContext cassandraTestContext,
                                                    DnsResolver dnsResolver,
-                                                   int numInstancesToManage,
+                                                   int[] instancesToManage,
                                                    SslConfiguration sslConfiguration)
     {
         org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
@@ -115,7 +117,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                                versionParsed,
                                                versionProvider,
                                                dnsResolver,
-                                               numInstancesToManage,
+                                               instancesToManage,
                                                sslConfiguration);
     }
 
@@ -165,9 +167,9 @@ public class CassandraSidecarTestContext implements AutoCloseable
         return cluster;
     }
 
-    public void setNumInstancesToManage(int numInstancesToManage)
+    public void setInstancesToManage(int... instancesToManage)
     {
-        this.numInstancesToManage = numInstancesToManage;
+        this.instancesToManage = instancesToManage;
         refreshInstancesMetadata();
     }
 
@@ -182,7 +184,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
     {
         if (instancesMetadata == null)
         {
-            refreshInstancesMetadata();
+            return refreshInstancesMetadata();
         }
         return this.instancesMetadata;
     }
@@ -226,6 +228,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
         {
             instancesMetadata.instances().forEach(instance -> instance.delegate().close());
         }
+
+        closeSessionProvider();
     }
 
     private void setInstancesMetadata()
@@ -235,6 +239,16 @@ public class CassandraSidecarTestContext implements AutoCloseable
         {
             listener.onInstancesMetadataChange(this.instancesMetadata);
         }
+    }
+
+    public CQLSessionProviderImpl buildNewCqlSessionProvider()
+    {
+        UpgradeableCluster cluster = cluster();
+        List<IInstanceConfig> configs = buildInstanceConfigs(cluster);
+        List<InetSocketAddress> addresses = buildContactList(configs);
+        return new CQLSessionProviderImpl(addresses, addresses, 500, null,
+                                          0, username, password,
+                                          sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
     }
 
     private InstancesMetadata buildInstancesMetadata(CassandraVersionProvider versionProvider,
@@ -317,25 +331,42 @@ public class CassandraSidecarTestContext implements AutoCloseable
     @NotNull
     private List<IInstanceConfig> buildInstanceConfigs(UpgradeableCluster cluster)
     {
-        int nodes = numInstancesToManage == -1 ? cluster.size() : numInstancesToManage;
-        return IntStream.range(1, nodes + 1)
+        Set<Integer> testManagedInstances;
+        int maxNodeNum;
+        if (instancesToManage == null)
+        {
+            testManagedInstances = null;
+            maxNodeNum = cluster.size();
+        }
+        else
+        {
+            testManagedInstances = Arrays.stream(instancesToManage).boxed().collect(Collectors.toSet());
+            // throws if test sets an empty array, it is a test configuration error
+            maxNodeNum = Arrays.stream(instancesToManage).max().getAsInt();
+        }
+        return IntStream.range(1, maxNodeNum + 1)
                         .mapToObj(nodeNum -> {
                             // check whether the instances are managed by the test framework first. Because the nodeNum might be greater than the cluster size
                             if (manageInstanceByTestFramework() && cluster.get(nodeNum).isShutdown())
                             {
                                 return null;
                             }
-                            else
+
+                            // Test supplies instances to manage. However, the set does not contain this nodeNum
+                            if (testManagedInstances != null && !testManagedInstances.contains(nodeNum))
                             {
-                                return AbstractClusterUtils.createInstanceConfig(cluster, nodeNum);
+                                return null;
                             }
+
+                            // The node should be managed by sidecar
+                            return AbstractClusterUtils.createInstanceConfig(cluster, nodeNum);
                         })
                         .collect(Collectors.toList());
     }
 
     private boolean manageInstanceByTestFramework()
     {
-        return numInstancesToManage == -1;
+        return instancesToManage == null;
     }
 
     /**

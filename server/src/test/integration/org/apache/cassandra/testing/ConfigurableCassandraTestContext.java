@@ -46,7 +46,8 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
     public UpgradeableCluster configureAndStartCluster(Consumer<UpgradeableCluster.Builder> configurator)
     {
         configurator.accept(builder);
-        cluster = CassandraTestTemplate.retriableStartCluster(builder, 3);
+        UpgradeableCluster cluster = CassandraTestTemplate.retriableStartCluster(builder, 3);
+        setCluster(cluster);
         return cluster;
     }
 
@@ -55,6 +56,7 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
     {
         return "ConfigurableCassandraTestContext{"
                + ", version=" + version
+               + ", cluster=" + cluster()
                + ", builder=" + builder
                + '}';
     }
