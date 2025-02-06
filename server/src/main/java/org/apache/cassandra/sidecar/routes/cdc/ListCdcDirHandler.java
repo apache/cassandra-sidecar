@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -110,7 +111,7 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
             LOGGER.warn("Error listing the CDC commit log segments", cause);
             context.response()
                    .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
-                   .setStatusMessage(cause.getMessage() == null ? "Error while listing CDC segments" : cause.getMessage())
+                   .setStatusMessage(Objects.requireNonNullElse(cause.getMessage(), "Error while listing CDC segments"))
                    .end();
         });
     }

@@ -85,17 +85,17 @@ public class ResourceScopes
     /**
      * Signifies Cassandra data scope.
      */
-    public static final ResourceScope DATA_SCOPE = DataResourceScope.createWithDataScope();
+    public static final ResourceScope DATA_SCOPE = DataResourceScope.DATA_SCOPE;
 
     /**
      * Signifies Cassandra data scope at a keyspace level.
      */
-    public static final ResourceScope KEYSPACE_SCOPE = DataResourceScope.createWithKeyspaceScope();
+    public static final ResourceScope KEYSPACE_SCOPE = DataResourceScope.KEYSPACE_SCOPE;
 
     /**
      * Signifies Cassandra data scope at a table level.
      */
-    public static final ResourceScope TABLE_SCOPE = DataResourceScope.createWithTableScope();
+    public static final ResourceScope TABLE_SCOPE = DataResourceScope.TABLE_SCOPE;
 
     private static void validate(String resource)
     {

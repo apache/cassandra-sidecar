@@ -33,6 +33,13 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpt
  */
 public class DataResourceScope implements ResourceScope
 {
+    // scoped at data level including all keyspaces and tables
+    public static final DataResourceScope DATA_SCOPE = new DataResourceScope(false, false);
+    // scoped at keyspace level within data
+    public static final DataResourceScope KEYSPACE_SCOPE = new DataResourceScope(true, false);
+    // scoped at table level within a keyspace
+    public static final DataResourceScope TABLE_SCOPE = new DataResourceScope(true, true);
+
     private static final String DATA = "data";
 
     /**
@@ -135,29 +142,5 @@ public class DataResourceScope implements ResourceScope
     public Set<String> expandedResources()
     {
         return expandedResources;
-    }
-
-    /**
-     * @return {@link DataResourceScope} scoped at data level including all keyspaces and tables
-     */
-    public static DataResourceScope createWithDataScope()
-    {
-        return new DataResourceScope(false, false);
-    }
-
-    /**
-     * @return {@link DataResourceScope} scoped at keyspace level within data
-     */
-    public static DataResourceScope createWithKeyspaceScope()
-    {
-        return new DataResourceScope(true, false);
-    }
-
-    /**
-     * @return {@link DataResourceScope} scoped at table level within a keyspace
-     */
-    public static DataResourceScope createWithTableScope()
-    {
-        return new DataResourceScope(true, true);
     }
 }
