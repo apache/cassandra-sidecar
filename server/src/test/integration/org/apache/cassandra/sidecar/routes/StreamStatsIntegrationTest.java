@@ -63,10 +63,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(numDataDirsPerInstance = 4, nodesPerDc = 2, network = true)
     void streamStatsTest(CassandraTestContext cassandraTestContext)
     {
-//        BBHelperDecommissioningNode.reset();
         UpgradeableCluster cluster = cassandraTestContext.cluster();
-//        cassandraTestContext.configureAndStartCluster(
-//        builder -> builder.withInstanceInitializer(BBHelperDecommissioningNode::install));
 
         createTestKeyspace(Map.of("datacenter1", 2));
         QualifiedTableName tableName = createTestTable(
