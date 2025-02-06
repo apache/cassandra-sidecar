@@ -125,18 +125,18 @@ class ResourceScopeTest
     {
         Matcher matcher1 = DataResourceScope.DATA_RESOURCE_PATTERN.matcher("data/university/student");
         assertThat(matcher1.matches()).isTrue();
-        assertThat(matcher1.group(2)).isEqualTo("student");
-        assertThat(matcher1.group(1)).isEqualTo("university");
+        assertThat(matcher1.group("table")).isEqualTo("student");
+        assertThat(matcher1.group("keyspace")).isEqualTo("university");
         assertThat(matcher1.group(0)).isEqualTo("data/university/student");
         Matcher matcher2 = DataResourceScope.DATA_RESOURCE_PATTERN.matcher("data/university");
         assertThat(matcher2.matches()).isTrue();
-        assertThat(matcher2.group(2)).isNull();
-        assertThat(matcher2.group(1)).isEqualTo("university");
+        assertThat(matcher2.group("table")).isNull();
+        assertThat(matcher2.group("keyspace")).isEqualTo("university");
         assertThat(matcher2.group(0)).isEqualTo("data/university");
         Matcher matcher3 = DataResourceScope.DATA_RESOURCE_PATTERN.matcher("data");
         assertThat(matcher3.matches()).isTrue();
-        assertThat(matcher3.group(2)).isNull();
-        assertThat(matcher3.group(1)).isNull();
+        assertThat(matcher3.group("table")).isNull();
+        assertThat(matcher3.group("keyspace")).isNull();
         assertThat(matcher3.group(0)).isEqualTo("data");
     }
 }

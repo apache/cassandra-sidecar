@@ -33,7 +33,8 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpt
  */
 public class DataResourceScope implements ResourceScope
 {
-    public static final Pattern DATA_RESOURCE_PATTERN = Pattern.compile("^data(?:/([^/]+))?(?:/([^/]+))?$");
+    public static final Pattern DATA_RESOURCE_PATTERN
+    = Pattern.compile("^data(?:/(?<keyspace>[^/]+))?(?:/(?<table>[^/]+))?$");
 
     public static final String DATA = "data";
 
@@ -126,7 +127,7 @@ public class DataResourceScope implements ResourceScope
         else if (keyspaceScoped)
         {
             // if table is present, we create resource with just keyspace
-            return matcher.group(2) != null ? DATA + "/" + matcher.group(1) : resource;
+            return matcher.group("table") != null ? DATA + "/" + matcher.group("keyspace") : resource;
         }
         return DATA;
     }
