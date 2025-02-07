@@ -165,7 +165,7 @@ public class IntegrationTestModule extends AbstractModule
             public ScheduleDecision scheduleDecision()
             {
                 // stop further executions if cluster lease is already claimed; otherwise, run it, regardless of ElectorateMembership
-                if (clusterLease.isClaimedByLocalSidecar())
+                if (!accessor.isAvailable() || clusterLease.isClaimedByLocalSidecar())
                 {
                     return ScheduleDecision.SKIP;
                 }

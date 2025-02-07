@@ -32,7 +32,7 @@
   </root>
 
   <logger name="org.apache.cassandra.sidecar" level="DEBUG" />
-  <logger name="org.apache.cassandra" level="WARN" />
+  <logger name="org.apache.cassandra" level="INFO" />
   <logger name="io.netty" level="WARN" />
   <logger name="shaded.io.netty" level="WARN" />
   <logger name="shaded.com.datastax.shaded.netty" level="WARN" />

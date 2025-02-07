@@ -24,16 +24,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
@@ -68,18 +65,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         CountDownLatch testStart = new CountDownLatch(1);
         IUpgradeableInstance node = cluster.get(1);
         AtomicReference<RuntimeException> nodetoolError = new AtomicReference<>();
-        startAsync("Repairing node" + node.config().num(),
-                   () -> {
-                       Uninterruptibles.awaitUninterruptibly(testStart);
-                       try
-                       {
-                           node.nodetoolResult("repair", tableName.keyspace(), tableName.tableName(), "--full").asserts().success();
-                       }
-                       catch (Throwable cause)
-                       {
-                           nodetoolError.set(new RuntimeException("Nodetool failed", cause));
-                       }
-                   });
+        startRepairAsync(node, testStart, tableName, nodetoolError);
 
         TestState testState = new TestState();
         testStart.countDown();
@@ -93,19 +79,29 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         });
     }
 
+    private void startRepairAsync(IUpgradeableInstance node, CountDownLatch testStart, QualifiedTableName tableName, AtomicReference<RuntimeException> nodetoolError)
+    {
+        startAsync("Repairing node" + node.config().num(),
+                   () -> {
+                       Uninterruptibles.awaitUninterruptibly(testStart);
+                       try
+                       {
+                           node.nodetoolResult("repair", tableName.keyspace(), tableName.tableName(), "--full").asserts().success();
+                       }
+                       catch (Throwable cause)
+                       {
+                           nodetoolError.set(new RuntimeException("Nodetool failed", cause));
+                       }
+                   });
+    }
+
     private void streamStats(TestState testState)
     {
         String testRoute = "/api/v1/cassandra/stats/streams";
-        HttpResponse<Buffer> resp;
-        resp = getBlocking(client.get(server.actualPort(), "127.0.0.1", testRoute)
-                                 .send());
-        assertStreamStats(resp, testState);
-    }
-
-    void assertStreamStats(HttpResponse<Buffer> response, TestState testState)
-    {
-        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-        StreamStatsResponse streamStatsResponse = response.bodyAsJson(StreamStatsResponse.class);
+        StreamStatsResponse streamStatsResponse = getBlocking(client.get(server.actualPort(), "127.0.0.1", testRoute)
+                                                                    .expect(ResponsePredicate.SC_OK)
+                                                                    .send())
+                                                  .bodyAsJson(StreamStatsResponse.class);
         assertThat(streamStatsResponse).isNotNull();
         StreamsProgressStats streamProgress = streamStatsResponse.streamsProgressStats();
         assertThat(streamProgress).isNotNull();
@@ -114,7 +110,6 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
     static class TestState
     {
-        ObjectMapper mapper = new ObjectMapper();
         StreamsProgressStats lastStats;
         boolean streamStarted = false, streamCompleted = false;
 
@@ -125,7 +120,8 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
             {
                 streamStarted = true;
             }
-            if (streamProgress.totalFilesReceived() == streamProgress.totalFilesToReceive())
+
+            if (streamStarted && streamProgress.totalFilesReceived() == streamProgress.totalFilesToReceive())
             {
                 streamCompleted = true;
             }
@@ -133,23 +129,25 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
         void assertCompletion()
         {
-            String json = ThrowableUtils.propagate(() -> mapper.writeValueAsString(lastStats));
             assertThat(streamStarted)
-            .describedAs("Expecting to have non-empty stream stats. last stats: " + json)
+            .describedAs("Expecting to have non-empty stream stats. last stats: " + lastStats)
             .isTrue();
             assertThat(streamCompleted)
-            .describedAs("Expecting to complete. last stats: " + json)
+            .describedAs("Expecting to complete. last stats: " + lastStats)
             .isTrue();
         }
     }
 
     void populateDataAtNode2Only(UpgradeableCluster cluster, QualifiedTableName tableName)
     {
-        for (int i = 1; i <= 50; i++)
+        IInstance node = cluster.get(2);
+        // disable compaction for the table to have more file to stream
+        node.nodetoolResult("disableautocompaction", tableName.keyspace(), tableName.tableName()).asserts().success();
+        for (int i = 1; i <= 20; i++)
         {
-            cluster.get(2).executeInternal("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
-                                           "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');");
-            cluster.get(2).flush(TEST_KEYSPACE);
+            node.executeInternal("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
+                                 "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');");
+            node.flush(TEST_KEYSPACE);
         }
     }
 }
