@@ -20,18 +20,23 @@
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-      <level>INFO</level>
+      <level>DEBUG</level>
     </filter>
     <encoder>
       <pattern>%-5level [%thread] %date{ISO8601} %F:%L - %msg%n</pattern>
     </encoder>
   </appender>
 
-  <root level="INFO">
+  <root level="DEBUG">
     <appender-ref ref="STDOUT" />
   </root>
 
-
+  <logger name="org.apache.cassandra.sidecar" level="DEBUG" />
+  <logger name="org.apache.cassandra" level="WARN" />
+  <logger name="io.netty" level="WARN" />
+  <logger name="shaded.io.netty" level="WARN" />
+  <logger name="shaded.com.datastax.shaded.netty" level="WARN" />
+  <logger name="o.a.c.sidecar.client.shaded.io.netty" level="WARN" />
   <logger name="com.datastax.driver.core" level="ERROR" />
   <logger name="com.datastax.driver.core.ControlConnection" level="OFF" />
 </configuration>

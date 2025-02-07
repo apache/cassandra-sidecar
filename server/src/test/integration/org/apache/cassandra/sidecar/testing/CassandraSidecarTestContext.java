@@ -180,7 +180,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
         refreshInstancesMetadata();
     }
 
-    public InstancesMetadata instancesMetadata()
+    public synchronized InstancesMetadata instancesMetadata()
     {
         if (instancesMetadata == null)
         {
@@ -189,7 +189,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
         return this.instancesMetadata;
     }
 
-    public InstancesMetadata refreshInstancesMetadata()
+    public synchronized InstancesMetadata refreshInstancesMetadata()
     {
         // clean-up any open sessions or client resources
         close();
@@ -251,8 +251,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                           sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
     }
 
-    private InstancesMetadata buildInstancesMetadata(CassandraVersionProvider versionProvider,
-                                                     DnsResolver dnsResolver)
+    private synchronized InstancesMetadata buildInstancesMetadata(CassandraVersionProvider versionProvider,
+                                                                  DnsResolver dnsResolver)
     {
         UpgradeableCluster cluster = cluster();
         List<InstanceMetadata> metadata = new ArrayList<>();

@@ -19,9 +19,7 @@
 package org.apache.cassandra.sidecar.routes;
 
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -30,14 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
-import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.dynamic.ClassFileLocator;
-import net.bytebuddy.dynamic.TypeResolutionStrategy;
-import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
-import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import net.bytebuddy.pool.TypePool;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
@@ -45,22 +35,19 @@ import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
-import org.apache.cassandra.streaming.StreamOperation;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
 
-import static net.bytebuddy.matcher.ElementMatchers.named;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
 
 /**
  * Tests the stream stats endpoint with cassandra container.
  */
 public class StreamStatsIntegrationTest extends IntegrationTestBase
 {
-    @CassandraIntegrationTest(numDataDirsPerInstance = 4, nodesPerDc = 2, network = true)
+    @CassandraIntegrationTest(nodesPerDc = 2, network = true)
     void streamStatsTest(CassandraTestContext cassandraTestContext)
     {
         UpgradeableCluster cluster = cassandraTestContext.cluster();
@@ -80,7 +67,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         // Poll stream stats while repair is running in the background.
         CountDownLatch testStart = new CountDownLatch(1);
         IUpgradeableInstance node = cluster.get(1);
-        AtomicReference<Throwable> nodetoolError = new AtomicReference<>();
+        AtomicReference<RuntimeException> nodetoolError = new AtomicReference<>();
         startAsync("Repairing node" + node.config().num(),
                    () -> {
                        Uninterruptibles.awaitUninterruptibly(testStart);
@@ -90,7 +77,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
                        }
                        catch (Throwable cause)
                        {
-                           nodetoolError.set(cause);
+                           nodetoolError.set(new RuntimeException("Nodetool failed", cause));
                        }
                    });
 
@@ -99,7 +86,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         loopAssert(5, 100, () -> {
             if (nodetoolError.get() != null)
             {
-                fail("Nodetool command failed", nodetoolError.get());
+                throw nodetoolError.get();
             }
             streamStats(testState);
             testState.assertCompletion();
@@ -163,45 +150,6 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
             cluster.get(2).executeInternal("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
                                            "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');");
             cluster.get(2).flush(TEST_KEYSPACE);
-        }
-    }
-
-    /**
-     * ByteBuddy Helper for decommissioning node
-     */
-    public static class BBHelperDecommissioningNode
-    {
-        static CountDownLatch transientStateStart = new CountDownLatch(1);
-        static CountDownLatch transientStateEnd = new CountDownLatch(1);
-
-        public static void install(ClassLoader cl, Integer nodeNumber)
-        {
-            if (nodeNumber == 2)
-            {
-                TypePool typePool = TypePool.Default.of(cl);
-                TypeDescription description = typePool.describe("org.apache.cassandra.streaming.StreamCoordinator")
-                                                      .resolve();
-                new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                               .method(named("connectAllStreamSessions"))
-                               .intercept(MethodDelegation.to(BBHelperDecommissioningNode.class))
-                               // Defer class loading until all dependencies are loaded
-                               .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
-                               .load(cl, ClassLoadingStrategy.Default.INJECTION);
-            }
-        }
-
-        @SuppressWarnings("unused")
-        public static void connectAllStreamSessions(@SuperCall Callable<StreamOperation> orig) throws Exception
-        {
-            transientStateStart.countDown();
-            Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
-            orig.call();
-        }
-
-        public static void reset()
-        {
-            transientStateStart = new CountDownLatch(1);
-            transientStateEnd = new CountDownLatch(1);
         }
     }
 }

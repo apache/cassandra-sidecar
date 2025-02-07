@@ -191,7 +191,7 @@ public abstract class IntegrationTestBase
 
         context.awaitCompletion(5, TimeUnit.SECONDS);
 
-        // add a listener to refresh instance metadata when cluster is not built when starting server
+        // add a listener to refresh instance metadata when cluster is not yet built when starting server
         if (!isClusterBuilt)
         {
             cassandraTestContext.setClusterBuiltListener(cluster -> sidecarTestContext.refreshInstancesMetadata());
