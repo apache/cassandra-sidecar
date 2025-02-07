@@ -24,6 +24,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstance;
@@ -44,6 +47,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class StreamStatsIntegrationTest extends IntegrationTestBase
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StreamStatsIntegrationTest.class);
+
     @CassandraIntegrationTest(nodesPerDc = 2, network = true)
     void streamStatsTest(CassandraTestContext cassandraTestContext)
     {
@@ -69,7 +74,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
         TestState testState = new TestState();
         testStart.countDown();
-        loopAssert(5, 100, () -> {
+        loopAssert(10, 500, () -> {
             if (nodetoolError.get() != null)
             {
                 throw nodetoolError.get();
@@ -105,6 +110,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         assertThat(streamStatsResponse).isNotNull();
         StreamsProgressStats streamProgress = streamStatsResponse.streamsProgressStats();
         assertThat(streamProgress).isNotNull();
+        LOGGER.info("Fetched {}", streamProgress);
         testState.update(streamProgress);
     }
 
@@ -143,7 +149,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         IInstance node = cluster.get(2);
         // disable compaction for the table to have more file to stream
         node.nodetoolResult("disableautocompaction", tableName.keyspace(), tableName.tableName()).asserts().success();
-        for (int i = 1; i <= 20; i++)
+        for (int i = 1; i <= 100; i++)
         {
             node.executeInternal("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
                                  "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');");
