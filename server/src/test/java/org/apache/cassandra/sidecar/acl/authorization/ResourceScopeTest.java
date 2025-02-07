@@ -41,7 +41,7 @@ class ResourceScopeTest
         assertThat(CLUSTER_SCOPE.variableAwareResource()).isEqualTo("cluster");
         assertThat(CLUSTER_SCOPE.resolveWithResource("any")).isEqualTo("cluster");
         assertThat(CLUSTER_SCOPE.expandedResources().size()).isOne();
-        assertThat(CLUSTER_SCOPE.expandedResources().contains("cluster")).isTrue();
+        assertThat(CLUSTER_SCOPE.expandedResources()).contains("cluster");
     }
 
     @Test
@@ -50,7 +50,7 @@ class ResourceScopeTest
         assertThat(OPERATION_SCOPE.variableAwareResource()).isEqualTo("operation");
         assertThat(OPERATION_SCOPE.resolveWithResource("any")).isEqualTo("operation");
         assertThat(OPERATION_SCOPE.expandedResources().size()).isOne();
-        assertThat(OPERATION_SCOPE.expandedResources().contains("operation")).isTrue();
+        assertThat(OPERATION_SCOPE.expandedResources()).contains("operation");
     }
 
     @Test
@@ -58,7 +58,7 @@ class ResourceScopeTest
     {
         assertThat(DATA_SCOPE.variableAwareResource()).isEqualTo("data");
         assertThat(DATA_SCOPE.expandedResources().size()).isOne();
-        assertThat(DATA_SCOPE.expandedResources().contains("data")).isTrue();
+        assertThat(DATA_SCOPE.expandedResources()).contains("data");
     }
 
     @Test
@@ -68,9 +68,8 @@ class ResourceScopeTest
         // random resource is passed, resolved to variableAwareResource
         assertThat(KEYSPACE_SCOPE.resolveWithResource("data")).isEqualTo("data");
         assertThat(KEYSPACE_SCOPE.resolveWithResource("data/university/student")).isEqualTo("data/university");
-        assertThat(KEYSPACE_SCOPE.expandedResources().size()).isEqualTo(2);
-        assertThat(KEYSPACE_SCOPE.expandedResources().contains("data")).isTrue();
-        assertThat(KEYSPACE_SCOPE.expandedResources().contains("data/{keyspace}")).isTrue();
+        assertThat(KEYSPACE_SCOPE.expandedResources()).hasSize(2)
+                                                      .contains("data", "data/{keyspace}");
     }
 
     @Test
@@ -80,11 +79,11 @@ class ResourceScopeTest
         assertThat(TABLE_SCOPE.resolveWithResource("data")).isEqualTo("data");
         assertThat(TABLE_SCOPE.resolveWithResource("data/university")).isEqualTo("data/university");
         assertThat(TABLE_SCOPE.resolveWithResource("data/university/student")).isEqualTo("data/university/student");
-        assertThat(TABLE_SCOPE.expandedResources().size()).isEqualTo(4);
-        assertThat(TABLE_SCOPE.expandedResources().contains("data")).isTrue();
-        assertThat(TABLE_SCOPE.expandedResources().contains("data/{keyspace}")).isTrue();
-        assertThat(TABLE_SCOPE.expandedResources().contains("data/{keyspace}/{TABLE_WILDCARD}")).isTrue();
-        assertThat(TABLE_SCOPE.expandedResources().contains("data/{keyspace}/{table}")).isTrue();
+        assertThat(TABLE_SCOPE.expandedResources()).hasSize(4)
+                                                   .contains("data",
+                                                             "data/{keyspace}",
+                                                             "data/{keyspace}/{TABLE_WILDCARD}",
+                                                             "data/{keyspace}/{table}");
     }
 
     @Test

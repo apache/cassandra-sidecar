@@ -59,6 +59,7 @@ import static org.apache.cassandra.sidecar.utils.CdcUtil.getIdxFileName;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.getLogFilePrefix;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.isIndexFile;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.parseIndexFile;
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * Provides REST endpoint for listing commit logs in CDC directory.
@@ -97,11 +98,8 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
         String cdcDir = metadataFetcher.instance(host).cdcDir();
         if (isNullOrEmpty(cdcDir))
         {
-            context.response()
-                   .setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code())
-                   .setStatusMessage("CDC directory is not configured in Sidecar")
-                   .end();
-            return;
+            throw wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE,
+                                    "CDC directory is not configured in Sidecar");
         }
         serviceExecutorPool
         .executeBlocking(() -> collectCdcSegmentsFromFileSystem(cdcDir))

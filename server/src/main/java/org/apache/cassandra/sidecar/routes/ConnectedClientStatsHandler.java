@@ -18,9 +18,7 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 
 import com.google.inject.Inject;
@@ -57,14 +55,13 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Boolean> implem
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        Set<String> eligibleResources
-        = new HashSet<>(Arrays.asList(DATA_SCOPE.variableAwareResource(),
-                                      // Keyspace access to system_views
-                                      "data/system_views",
-                                      // Access to all tables in keyspace system_views
-                                      "data/system_views/*",
-                                      // Access to the clients table in the system_views keyspace
-                                      "data/system_views/clients"));
+        Set<String> eligibleResources = Set.of(DATA_SCOPE.variableAwareResource(),
+                                               // Keyspace access to system_views
+                                               "data/system_views",
+                                               // Access to all tables in keyspace system_views
+                                               "data/system_views/*",
+                                               // Access to the clients table in the system_views keyspace
+                                               "data/system_views/clients");
         return Collections.singleton(CassandraPermissions.SELECT.toAuthorization(eligibleResources));
     }
 

@@ -33,7 +33,7 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpt
  */
 public class DataResourceScope implements ResourceScope
 {
-    public static final Pattern DATA_RESOURCE_PATTERN
+    static final Pattern DATA_RESOURCE_PATTERN
     = Pattern.compile("^data(?:/(?<keyspace>[^/]+))?(?:/(?<table>[^/]+))?$");
 
     public static final String DATA = "data";

@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.Collections;
 import java.util.Set;
 
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
@@ -33,25 +32,28 @@ public class ResourceScopes
      */
     public static final ResourceScope NO_SCOPE = new ResourceScope()
     {
+        @Override
         public String variableAwareResource()
         {
             return null;
         }
 
+        @Override
         public String resolveWithResource(String resource)
         {
             return resource;
         }
 
+        @Override
         public Set<String> expandedResources()
         {
-            return Collections.emptySet();
+            return Set.of();
         }
     };
 
     /**
      * Signifies the Cassandra cluster scope. For example, to determine whether you have access to
-     * retrieve basic Cassandra ring, gossip, or other Cassandra-related information. Currently cluster scope
+     * retrieve basic Cassandra ring, gossip, or other Cassandra-related information. Currently, cluster scope
      * does not contain any resource variables.
      */
     public static final ResourceScope CLUSTER_SCOPE = new ResourceScope()
@@ -72,7 +74,7 @@ public class ResourceScopes
         @Override
         public Set<String> expandedResources()
         {
-            return Collections.singleton(variableAwareResource());
+            return Set.of(variableAwareResource());
         }
     };
 
@@ -99,7 +101,7 @@ public class ResourceScopes
         @Override
         public Set<String> expandedResources()
         {
-            return Collections.singleton(variableAwareResource());
+            return Set.of(variableAwareResource());
         }
     };
 
