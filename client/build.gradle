@@ -55,6 +55,7 @@ test {
         println("Destination directory for client tests: ${destDir}")
         junitXml.getOutputLocation().set(destDir)
         html.setRequired(true)
+        html.getOutputLocation().set(destDir)
     }
 }
 

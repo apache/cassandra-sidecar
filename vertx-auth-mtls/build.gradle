@@ -39,6 +39,7 @@ test {
         println("Destination directory for vertx-auth-mtls tests: ${destDir}")
         junitXml.getOutputLocation().set(destDir)
         html.setRequired(true)
+        html.getOutputLocation().set(destDir)
     }
 }
 

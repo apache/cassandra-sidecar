@@ -47,6 +47,7 @@ test {
         println("Destination directory for adapters-cassandra41 tests: ${destDir}")
         junitXml.getOutputLocation().set(destDir)
         html.setRequired(true)
+        html.getOutputLocation().set(destDir)
     }
 }
 

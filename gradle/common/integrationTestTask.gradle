@@ -66,6 +66,7 @@ apply from: "${project.rootDir}/gradle/common/java11Options.gradle"
             println("Destination directory for integration tests: ${destDir}")
             junitXml.getOutputLocation().set(destDir)
             html.setRequired(true)
+            html.getOutputLocation().set(destDir)
         }
         testLogging {
             events "started", "passed", "skipped", "failed"
