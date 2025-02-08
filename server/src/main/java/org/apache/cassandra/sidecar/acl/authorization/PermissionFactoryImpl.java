@@ -43,6 +43,16 @@ public class PermissionFactoryImpl implements PermissionFactory
     }
 
     /**
+     * Creates a {@link PermissionFactoryImpl} given a list of supported feature permissions.
+     *
+     * @param supportedFeaturePermissions list of feature permissions sidecar recognizes and honors
+     */
+    public PermissionFactoryImpl(List<CompositePermission> supportedFeaturePermissions)
+    {
+        this.supportedFeaturePermissions = supportedFeaturePermissions;
+    }
+
+    /**
      * @return list of supported feature permissions.
      */
     public List<CompositePermission> supportedFeaturePermissions()

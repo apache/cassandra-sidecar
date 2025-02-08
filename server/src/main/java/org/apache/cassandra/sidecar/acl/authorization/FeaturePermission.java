@@ -31,7 +31,6 @@ import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.ED
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.IMPORT_STAGED_SSTABLE;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_RING_KEYSPACE_SCOPED;
-import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SCHEMA;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SCHEMA_KEYSPACE_SCOPED;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_TOPOLOGY;
@@ -64,7 +63,7 @@ public enum FeaturePermission
                            new StandardPermission(MODIFY.name(), TABLE_SCOPE)),
 
     ANALYTICS_WRITE_S3_COMPAT("ANALYTICS:WRITE_S3_COMPAT",
-                              READ_SCHEMA,
+                              READ_SCHEMA_KEYSPACE_SCOPED,
                               READ_TOPOLOGY,
                               CREATE_RESTORE_JOB,
                               READ_RESTORE_JOB,
