@@ -50,6 +50,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class FeaturePermissionTest
 {
+    PermissionFactory permissionFactory = new PermissionFactoryImpl();
+
     @Test
     void testFeaturePermissionAuthorizesAllChildPermissions()
     {
@@ -183,23 +185,23 @@ class FeaturePermissionTest
     void testForbiddenFeaturePermission()
     {
         // *:* is forbidden in feature permission
-        Permission featurePermission = FeaturePermission.fromName("*:*");
+        CompositePermission featurePermission  = permissionFactory.createFeaturePermission("*:*");
         assertThat(featurePermission).isNull();
     }
 
     @Test
     void testFeaturePermissionSize()
     {
-        CompositePermission cdcPermission = (CompositePermission) FeaturePermission.fromName("CDC");
+        CompositePermission cdcPermission = permissionFactory.createFeaturePermission("CDC");
         assertThat(cdcPermission).isNotNull();
         assertThat(cdcPermission.childPermissions().size()).isOne();
-        CompositePermission bulkReadPermission = (CompositePermission) FeaturePermission.fromName("ANALYTICS:READ_DIRECT");
+        CompositePermission bulkReadPermission = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT");
         assertThat(bulkReadPermission).isNotNull();
         assertThat(bulkReadPermission.childPermissions().size()).isEqualTo(7);
-        CompositePermission bulkWritePermission = (CompositePermission) FeaturePermission.fromName("ANALYTICS:WRITE_DIRECT");
+        CompositePermission bulkWritePermission = permissionFactory.createFeaturePermission("ANALYTICS:WRITE_DIRECT");
         assertThat(bulkWritePermission).isNotNull();
-        assertThat(bulkWritePermission.childPermissions().size()).isEqualTo(7);
-        CompositePermission bulkWriteS3Permission = (CompositePermission) FeaturePermission.fromName("ANALYTICS:WRITE_S3_COMPAT");
+        assertThat(bulkWritePermission.childPermissions().size()).isEqualTo(6);
+        CompositePermission bulkWriteS3Permission = permissionFactory.createFeaturePermission("ANALYTICS:WRITE_S3_COMPAT");
         assertThat(bulkWriteS3Permission).isNotNull();
         assertThat(bulkWriteS3Permission.childPermissions().size()).isEqualTo(6);
     }
@@ -208,7 +210,7 @@ class FeaturePermissionTest
     void testResourceResolvedForAllChildPermissions()
     {
         CompositePermission bulkReadPermission
-        = (CompositePermission) FeaturePermission.fromName("ANALYTICS:READ_DIRECT");
+        = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT");
         AndAuthorization bulkReadAuthorization
         = (AndAuthorization) bulkReadPermission.toAuthorization("data/university/student");
         Set<Authorization> resolvedAuthorizations = new HashSet<>(bulkReadAuthorization.getAuthorizations());
@@ -232,23 +234,21 @@ class FeaturePermissionTest
     @Test
     void testMatchedBasicPermissionsRetrieved()
     {
-        Permission readPermission = FeaturePermission.fromName("ANALYTICS:READ_DIRECT");
-        CompositePermission readCompositePermission = (CompositePermission) readPermission;
-        assertThat(readCompositePermission).isNotNull();
+        CompositePermission readPermission = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT");
+        assertThat(readPermission).isNotNull();
         // has basic permissions for bulk read feature
-        assertThat(readCompositePermission.childPermissions().size()).isEqualTo(7);
+        assertThat(readPermission.childPermissions().size()).isEqualTo(7);
 
-        Permission readWritePermission = FeaturePermission.fromName("ANALYTICS:READ_DIRECT,WRITE_DIRECT");
-        CompositePermission readWriteCompositePermission = (CompositePermission) readWritePermission;
-        assertThat(readWriteCompositePermission).isNotNull();
+        CompositePermission readWritePermission = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT,WRITE_DIRECT");
+        assertThat(readWritePermission).isNotNull();
         // has basic permissions for both bulk read and bulk write feature
-        assertThat(readWriteCompositePermission.childPermissions().size()).isEqualTo(14);
+        assertThat(readWritePermission.childPermissions().size()).isEqualTo(13);
     }
 
     @Test
     void testFetchingUnrecognizedFeaturePermission()
     {
-        Permission unrecognizedPermission = FeaturePermission.fromName("UNRECOGNIZED");
+        Permission unrecognizedPermission = permissionFactory.createFeaturePermission("UNRECOGNIZED");
         assertThat(unrecognizedPermission).isNull();
     }
 }

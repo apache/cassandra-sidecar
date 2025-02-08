@@ -20,8 +20,6 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.Collections;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE;
@@ -33,9 +31,6 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpt
  */
 public class DataResourceScope implements ResourceScope
 {
-    static final Pattern DATA_RESOURCE_PATTERN
-    = Pattern.compile("^data(?:/(?<keyspace>[^/]+))?(?:/(?<table>[^/]+))?$");
-
     public static final String DATA = "data";
 
     /**
@@ -75,6 +70,8 @@ public class DataResourceScope implements ResourceScope
     public static final DataResourceScope KEYSPACE_SCOPE = new DataResourceScope(true, false);
     // scoped at table level within a keyspace
     public static final DataResourceScope TABLE_SCOPE = new DataResourceScope(true, true);
+
+    private static final String RESOURCE_PART_SPLITTER = "/";
 
     private final boolean keyspaceScoped;
     private final boolean tableScoped;
@@ -119,7 +116,7 @@ public class DataResourceScope implements ResourceScope
     @Override
     public String resolveWithResource(String resource)
     {
-        Matcher matcher = validate(resource);
+        String[] parts = validate(resource);
         if (tableScoped)
         {
             return resource;
@@ -127,7 +124,7 @@ public class DataResourceScope implements ResourceScope
         else if (keyspaceScoped)
         {
             // if table is present, we create resource with just keyspace
-            return matcher.group("table") != null ? DATA + "/" + matcher.group("keyspace") : resource;
+            return parts.length == 3 ? DATA + RESOURCE_PART_SPLITTER + parts[1].trim() : resource;
         }
         return DATA;
     }
@@ -139,25 +136,33 @@ public class DataResourceScope implements ResourceScope
     }
 
     /**
-     * Verifies resource is valid and returns a matcher if resource is valid.
-     *
-     * @param resource resource
-     * @return matcher matching {@link #DATA_RESOURCE_PATTERN}
+     * Verifies resource is valid and returns split resource parts.
      */
-    private Matcher validate(String resource)
+    private String[] validate(String resource)
     {
         if (isNullOrEmpty(resource))
         {
             throw new IllegalArgumentException("Resource expected for resolving");
         }
 
-        Matcher matcher = DATA_RESOURCE_PATTERN.matcher(resource);
-        if (!matcher.matches())
+        if (!resource.startsWith(DATA) || resource.endsWith(RESOURCE_PART_SPLITTER))
         {
-            String errMsg = String.format("Resource %s does not match expected data resource scope format %s",
-                                          resource, DATA_RESOURCE_PATTERN.pattern());
-            throw new IllegalArgumentException(errMsg);
+            throw new IllegalArgumentException(String.format("%s is not a valid data resource, expected format is data/<keyspace>/<table>", resource));
         }
-        return matcher;
+
+        String[] parts = resource.split(RESOURCE_PART_SPLITTER);
+        if (parts.length > 3)
+        {
+            throw new IllegalArgumentException(String.format("%s is not a valid data resource, expected format is data/<keyspace>/<table>", resource));
+        }
+
+        for (String part : parts)
+        {
+            if (part.trim().isEmpty())
+            {
+                throw new IllegalArgumentException("Keyspace or table can not be empty in data resource");
+            }
+        }
+        return parts;
     }
 }

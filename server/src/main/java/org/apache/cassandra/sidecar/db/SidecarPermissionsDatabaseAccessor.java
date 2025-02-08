@@ -29,10 +29,9 @@ import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.ext.auth.authorization.Authorization;
+import org.apache.cassandra.sidecar.acl.authorization.PermissionFactory;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
-
-import static org.apache.cassandra.sidecar.utils.AuthUtils.permissionFromName;
 
 /**
  * {@link SidecarPermissionsDatabaseAccessor} is an accessor for role_permissions_v1 table under sidecar_internal
@@ -41,11 +40,15 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.permissionFromName;
 @Singleton
 public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<SidecarRolePermissionsSchema>
 {
+    private final PermissionFactory permissionFactory;
+
     @Inject
     protected SidecarPermissionsDatabaseAccessor(SidecarRolePermissionsSchema tableSchema,
-                                                 CQLSessionProvider sessionProvider)
+                                                 CQLSessionProvider sessionProvider,
+                                                 PermissionFactory permissionFactory)
     {
         super(tableSchema, sessionProvider);
+        this.permissionFactory = permissionFactory;
     }
 
     /**
@@ -69,7 +72,7 @@ public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<Sidecar
             {
                 try
                 {
-                    authorizations.add(permissionFromName(permission).toAuthorization(resource));
+                    authorizations.add(permissionFactory.createPermission(permission).toAuthorization(resource));
                 }
                 catch (Exception e)
                 {

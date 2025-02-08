@@ -267,9 +267,9 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // SCHEMA:READ permission granted for data/grant_bulk_read_test_keyspace/test_table with ANALYTICS:READ_DIRECT
         verifyAccess(context, testCompleteLatch, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, false);
 
-        String gossipRoute = "/api/v1/cassandra/gossip";
-        // GOSSIP:READ permission not granted with ANALYTICS:READ_DIRECT
-        verifyAccess(context, testCompleteLatch, HttpMethod.GET, gossipRoute, clientKeystorePath, true);
+        String topologyRoute = String.format("/api/v1/keyspaces/%s/token-range-replicas", "grant_bulk_read_test_keyspace");
+        // TOPOLOGY:READ permission not granted with ANALYTICS:READ_DIRECT
+        verifyAccess(context, testCompleteLatch, HttpMethod.GET, topologyRoute, clientKeystorePath, true);
     }
 
     void testGrantingBulkReadFeaturePermissionAcrossTables(VertxTestContext context) throws Exception
@@ -316,9 +316,9 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     {
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/bulk_write_test_user");
 
-        String gossipRoute = "/api/v1/cassandra/gossip";
-        // GOSSIP:READ permission granted with ANALYTICS:WRITE_DIRECT
-        verifyAccess(context, testCompleteLatch, HttpMethod.GET, gossipRoute, clientKeystorePath, false);
+        String topologyRoute = String.format("/api/v1/keyspaces/%s/token-range-replicas", "grant_bulk_write_test_keyspace");
+        // TOPOLOGY:READ permission granted with ANALYTICS:WRITE_DIRECT
+        verifyAccess(context, testCompleteLatch, HttpMethod.GET, topologyRoute, clientKeystorePath, false);
 
         String keyspaceRingRoute = String.format("/api/v1/cassandra/ring/keyspaces/%s", "grant_bulk_write_test_keyspace");
 
@@ -330,9 +330,9 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     {
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/bulk_read_write_test_user");
 
-        String gossipRoute = "/api/v1/cassandra/gossip";
-        // GOSSIP:READ permission granted with ANALYTICS:READ_DIRECT,WRITE_DIRECT
-        verifyAccess(context, testCompleteLatch, HttpMethod.GET, gossipRoute, clientKeystorePath, false);
+        String topologyRoute = String.format("/api/v1/keyspaces/%s/token-range-replicas", "grant_bulk_read_write_test_keyspace");
+        // TOPOLOGY:READ permission granted with ANALYTICS:READ_DIRECT,WRITE_DIRECT
+        verifyAccess(context, testCompleteLatch, HttpMethod.GET, topologyRoute, clientKeystorePath, false);
 
         String keyspaceRingRoute = String.format("/api/v1/cassandra/ring/keyspaces/%s", "grant_bulk_read_write_test_keyspace");
 
@@ -350,9 +350,9 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     {
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/all_analytics_permission_test_user");
 
-        String gossipRoute = "/api/v1/cassandra/gossip";
-        // GOSSIP:READ permission under ANALYTICS:WRITE_DIRECT granted with ANALYTICS:*
-        verifyAccess(context, testCompleteLatch, HttpMethod.GET, gossipRoute, clientKeystorePath, false);
+        String topologyRoute = String.format("/api/v1/keyspaces/%s/token-range-replicas", "all_analytics_permission_test_keyspace");
+        // TOPOLOGY:READ permission under ANALYTICS:WRITE_DIRECT granted with ANALYTICS:*
+        verifyAccess(context, testCompleteLatch, HttpMethod.GET, topologyRoute, clientKeystorePath, false);
 
         String keyspaceRingRoute = String.format("/api/v1/cassandra/ring/keyspaces/%s", "all_analytics_permission_test_keyspace");
 

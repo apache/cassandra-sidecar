@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -168,7 +169,9 @@ class IdentityToRoleCacheTest
     {
         SystemAuthSchema systemAuthSchema = new SystemAuthSchema();
         CQLSessionProvider mockCqlSessionProvider = mock(CQLSessionProvider.class);
-        SystemAuthDatabaseAccessor systemAuthDatabaseAccessor = new SystemAuthDatabaseAccessor(systemAuthSchema, mockCqlSessionProvider);
+        SystemAuthDatabaseAccessor systemAuthDatabaseAccessor = new SystemAuthDatabaseAccessor(systemAuthSchema,
+                                                                                               mockCqlSessionProvider,
+                                                                                               new PermissionFactoryImpl());
 
         SidecarConfiguration mockConfig = mockConfig();
 

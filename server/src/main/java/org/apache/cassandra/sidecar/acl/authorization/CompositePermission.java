@@ -23,6 +23,8 @@ import java.util.List;
 
 import io.vertx.ext.auth.authorization.AndAuthorization;
 import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
+import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
 
 /**
  * Represents a collection of permissions that can be combined and assigned together. This is mainly used to expand
@@ -32,6 +34,7 @@ import io.vertx.ext.auth.authorization.Authorization;
  */
 public class CompositePermission extends StandardPermission
 {
+    private final WildcardPermissionBasedAuthorization nameAuthorization;
     private final List<Permission> permissions;
 
     /**
@@ -47,7 +50,17 @@ public class CompositePermission extends StandardPermission
         {
             throw new IllegalArgumentException("CompositePermission can not be created with null or empty permissions");
         }
+        this.nameAuthorization = new WildcardPermissionBasedAuthorizationImpl(name);
         this.permissions = Collections.unmodifiableList(permissions);
+    }
+
+    /**
+     * @return {@link WildcardPermissionBasedAuthorization} created from permission name. {@link #nameAuthorization}
+     * can be used for finding match between {@link CompositePermission}
+     */
+    public WildcardPermissionBasedAuthorization nameAuthorization()
+    {
+        return nameAuthorization;
     }
 
     /**

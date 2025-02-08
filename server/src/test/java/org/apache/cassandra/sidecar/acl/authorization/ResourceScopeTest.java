@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.regex.Matcher;
-
 import org.junit.jupiter.api.Test;
 
 import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.CLUSTER_SCOPE;
@@ -98,44 +96,26 @@ class ResourceScopeTest
     {
         assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Resource data/ does not match expected data resource scope format " + DataResourceScope.DATA_RESOURCE_PATTERN.pattern());
+        .hasMessage("data/ is not a valid data resource, expected format is data/<keyspace>/<table>");
+
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/ /tbl"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Keyspace or table can not be empty in data resource");
 
         assertThatThrownBy(() -> KEYSPACE_SCOPE.resolveWithResource("data//"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Resource data// does not match expected data resource scope format " + DataResourceScope.DATA_RESOURCE_PATTERN.pattern());
+        .hasMessage("data// is not a valid data resource, expected format is data/<keyspace>/<table>");
 
         assertThatThrownBy(() -> TABLE_SCOPE.resolveWithResource("data//tbl"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Resource data//tbl does not match expected data resource scope format " + DataResourceScope.DATA_RESOURCE_PATTERN.pattern());
-
+        .hasMessage("Keyspace or table can not be empty in data resource");
 
         assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/ks/tbl/extra"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Resource data/ks/tbl/extra does not match expected data resource scope format " + DataResourceScope.DATA_RESOURCE_PATTERN.pattern());
-
+        .hasMessage("data/ks/tbl/extra is not a valid data resource, expected format is data/<keyspace>/<table>");
 
         assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("/"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Resource / does not match expected data resource scope format " + DataResourceScope.DATA_RESOURCE_PATTERN.pattern());
-    }
-
-    @Test
-    void testExtractingGroupsFromDataResourcePattern()
-    {
-        Matcher matcher1 = DataResourceScope.DATA_RESOURCE_PATTERN.matcher("data/university/student");
-        assertThat(matcher1.matches()).isTrue();
-        assertThat(matcher1.group("table")).isEqualTo("student");
-        assertThat(matcher1.group("keyspace")).isEqualTo("university");
-        assertThat(matcher1.group(0)).isEqualTo("data/university/student");
-        Matcher matcher2 = DataResourceScope.DATA_RESOURCE_PATTERN.matcher("data/university");
-        assertThat(matcher2.matches()).isTrue();
-        assertThat(matcher2.group("table")).isNull();
-        assertThat(matcher2.group("keyspace")).isEqualTo("university");
-        assertThat(matcher2.group(0)).isEqualTo("data/university");
-        Matcher matcher3 = DataResourceScope.DATA_RESOURCE_PATTERN.matcher("data");
-        assertThat(matcher3.matches()).isTrue();
-        assertThat(matcher3.group("table")).isNull();
-        assertThat(matcher3.group("keyspace")).isNull();
-        assertThat(matcher3.group(0)).isEqualTo("data");
+        .hasMessage("/ is not a valid data resource, expected format is data/<keyspace>/<table>");
     }
 }

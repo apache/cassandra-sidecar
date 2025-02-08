@@ -61,6 +61,8 @@ import org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHa
 import org.apache.cassandra.sidecar.acl.authorization.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
+import org.apache.cassandra.sidecar.acl.authorization.PermissionFactory;
+import org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl;
 import org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache;
 import org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
@@ -839,6 +841,13 @@ public class MainModule extends AbstractModule
     public LocalTokenRangesProvider localTokenRangesProvider(InstancesMetadata instancesMetadata, DnsResolver dnsResolver)
     {
         return new CachedLocalTokenRanges(instancesMetadata, dnsResolver);
+    }
+
+    @Provides
+    @Singleton
+    public PermissionFactory permissionFactory()
+    {
+        return new PermissionFactoryImpl();
     }
 
     @Provides

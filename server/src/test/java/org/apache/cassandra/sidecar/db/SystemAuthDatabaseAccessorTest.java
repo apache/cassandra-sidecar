@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.db;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
@@ -38,7 +39,8 @@ class SystemAuthDatabaseAccessorTest
         SystemAuthSchema systemAuthSchema = new SystemAuthSchema();
         CQLSessionProvider mockCqlSessionProvider = mock(CQLSessionProvider.class);
         SystemAuthDatabaseAccessor systemAuthDatabaseAccessor = new SystemAuthDatabaseAccessor(systemAuthSchema,
-                                                                                               mockCqlSessionProvider);
+                                                                                               mockCqlSessionProvider,
+                                                                                               new PermissionFactoryImpl());
         assertThatThrownBy(()  -> systemAuthDatabaseAccessor.findRoleFromIdentity("spiffe://cassandra/sidecar/test"))
         .isInstanceOf(SchemaUnavailableException.class)
         .hasMessage("Table system_auth.identity_to_role does not exist");

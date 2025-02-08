@@ -35,7 +35,6 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 import static com.datastax.driver.core.Assertions.assertThat;
-import static org.apache.cassandra.sidecar.utils.AuthUtils.permissionFromName;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,6 +45,7 @@ import static org.mockito.Mockito.when;
 class RoleBasedAuthorizationProviderTest
 {
     RoleAuthorizationsCache mockRolePermissionsCache;
+    PermissionFactory permissionFactory = new PermissionFactoryImpl();
 
     @BeforeEach
     void setup()
@@ -81,7 +81,8 @@ class RoleBasedAuthorizationProviderTest
         assertThat(user.authorizations().get("RoleBasedAccessControl")).isEmpty();
 
         when(mockIdentityToRoleCache.get("spiffe://cassandra/sidecar/test_user")).thenReturn("test_role");
-        when(mockRolePermissionsCache.getAuthorizations("test_role")).thenReturn(Collections.singleton(permissionFromName("RANDOM").toAuthorization()));
+        when(mockRolePermissionsCache.getAuthorizations("test_role"))
+        .thenReturn(Collections.singleton(permissionFactory.createPermission("RANDOM").toAuthorization()));
 
         CountDownLatch waitForAuthorizations = new CountDownLatch(1);
         authorizationProvider.getAuthorizations(user).onComplete(v -> waitForAuthorizations.countDown());

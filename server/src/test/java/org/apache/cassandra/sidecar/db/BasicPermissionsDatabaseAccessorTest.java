@@ -27,6 +27,7 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Statement;
+import org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
 
@@ -61,7 +62,7 @@ class BasicPermissionsDatabaseAccessorTest
         protected TestSidecarPermissionsDatabaseAccessor(SidecarRolePermissionsSchema tableSchema,
                                                          CQLSessionProvider sessionProvider)
         {
-            super(tableSchema, sessionProvider);
+            super(tableSchema, sessionProvider, new PermissionFactoryImpl());
         }
 
         @Override

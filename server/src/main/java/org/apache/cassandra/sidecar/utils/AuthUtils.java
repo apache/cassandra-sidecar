@@ -22,16 +22,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
-import org.apache.cassandra.sidecar.acl.authorization.DomainAwarePermission;
-import org.apache.cassandra.sidecar.acl.authorization.FeaturePermission;
-import org.apache.cassandra.sidecar.acl.authorization.Permission;
-import org.apache.cassandra.sidecar.acl.authorization.StandardPermission;
-
-import static org.apache.cassandra.sidecar.acl.authorization.DomainAwarePermission.WILDCARD_PART_DIVIDER_TOKEN;
 
 /**
  * Class with utility methods for Authentication and Authorization.
@@ -68,23 +61,5 @@ public class AuthUtils
             identities.addAll(Arrays.asList(parts));
         }
         return Collections.unmodifiableList(identities);
-    }
-
-    /**
-     * Construct {@link Permission} given the permission name.
-     *
-     * @param name name of permission
-     * @return an instance of {@link Permission} given the name
-     */
-    public static Permission permissionFromName(String name)
-    {
-        Objects.requireNonNull(name, "name cannot be null");
-        Permission permission = FeaturePermission.fromName(name);
-        if (permission != null)
-        {
-            return permission;
-        }
-        boolean isDomainAware = name.contains(WILDCARD_PART_DIVIDER_TOKEN);
-        return isDomainAware ? new DomainAwarePermission(name) : new StandardPermission(name);
     }
 }
