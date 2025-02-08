@@ -60,6 +60,7 @@ public class PermissionFactoryTest
         assertThat(permissionFactory.createFeaturePermission("random")).isNull();
         assertThatThrownBy(() -> permissionFactory.createPermission("*:*")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> permissionFactory.createPermission("")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> permissionFactory.createPermission(" ")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> permissionFactory.createPermission(":*")).isInstanceOf(IllegalArgumentException.class);
     }
 }

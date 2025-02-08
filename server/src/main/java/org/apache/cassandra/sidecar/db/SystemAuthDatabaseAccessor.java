@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
@@ -97,11 +96,20 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
         {
             String role = row.getString("role");
             String resource = row.getString("resource");
-            Set<Authorization> authorizations = row.getSet("permissions", String.class)
-                                                   .stream()
-                                                   .map(permission -> permissionFactory.createPermission(permission)
-                                                                                       .toAuthorization(resource))
-                                                   .collect(Collectors.toSet());
+            Set<String> permissions = row.getSet("permissions", String.class);
+            Set<Authorization> authorizations = new HashSet<>();
+            for (String permission : permissions)
+            {
+                try
+                {
+                    authorizations.add(permissionFactory.createPermission(permission).toAuthorization(resource));
+                }
+                catch (Exception e)
+                {
+                    logger.error("Error parsing Cassandra permission={} resource={} role={}",
+                                 permission, resource, role, e);
+                }
+            }
             roleAuthorizations.computeIfAbsent(role, k -> new HashSet<>()).addAll(authorizations);
         }
         return roleAuthorizations;

@@ -39,7 +39,7 @@ public class PermissionFactoryImpl implements PermissionFactory
 
     public PermissionFactoryImpl()
     {
-        this.supportedFeaturePermissions = Collections.unmodifiableList(ALL_FEATURE_PERMISSIONS);
+        this(Collections.unmodifiableList(ALL_FEATURE_PERMISSIONS));
     }
 
     /**
