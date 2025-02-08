@@ -146,7 +146,7 @@ public class DataResourceScope implements ResourceScope
         }
 
         String[] parts = resource.split(RESOURCE_PART_SPLITTER);
-        if (!parts[0].equals(DATA) || resource.endsWith(RESOURCE_PART_SPLITTER) || parts.length > 3)
+        if (parts.length == 0 || !parts[0].equals(DATA) || resource.endsWith(RESOURCE_PART_SPLITTER) || parts.length > 3)
         {
             throw new IllegalArgumentException(String.format("%s is not a valid data resource, expected format is data/<keyspace>/<table>", resource));
         }
