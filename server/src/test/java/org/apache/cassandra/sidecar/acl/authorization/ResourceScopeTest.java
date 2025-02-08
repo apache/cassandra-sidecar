@@ -98,6 +98,10 @@ class ResourceScopeTest
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("data/ is not a valid data resource, expected format is data/<keyspace>/<table>");
 
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("dataOMG/ks/tbl"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("dataOMG/ks/tbl is not a valid data resource, expected format is data/<keyspace>/<table>");
+
         assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/ /tbl"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Keyspace or table can not be empty in data resource");
