@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import org.junit.jupiter.api.Test;
 
+import static org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl.FORBIDDEN_PREFIX_ERR_MSG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -58,7 +59,12 @@ public class PermissionFactoryTest
     void testInvalidPermission()
     {
         assertThat(permissionFactory.createFeaturePermission("random")).isNull();
-        assertThatThrownBy(() -> permissionFactory.createPermission("*:*")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> permissionFactory.createPermission("*:CREATE"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(FORBIDDEN_PREFIX_ERR_MSG);
+        assertThatThrownBy(() -> permissionFactory.createPermission("*:*"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(FORBIDDEN_PREFIX_ERR_MSG);
         assertThatThrownBy(() -> permissionFactory.createPermission("")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> permissionFactory.createPermission(" ")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> permissionFactory.createPermission(":*")).isInstanceOf(IllegalArgumentException.class);
