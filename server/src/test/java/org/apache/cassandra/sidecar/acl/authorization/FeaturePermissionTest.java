@@ -43,7 +43,9 @@ import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.UP
 import static org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions.SELECT;
 import static org.apache.cassandra.sidecar.acl.authorization.FeaturePermission.ANALYTICS_READ_DIRECT;
 import static org.apache.cassandra.sidecar.acl.authorization.FeaturePermission.ANALYTICS_WRITE_DIRECT;
+import static org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl.FORBIDDEN_PREFIX_ERR_MSG;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Test for {@link FeaturePermission}
@@ -184,9 +186,13 @@ class FeaturePermissionTest
     @Test
     void testForbiddenFeaturePermission()
     {
-        // *:* is forbidden in feature permission
-        CompositePermission featurePermission  = permissionFactory.createFeaturePermission("*:*");
-        assertThat(featurePermission).isNull();
+        // *: prefix is forbidden in feature permission
+        assertThatThrownBy(() -> permissionFactory.createFeaturePermission("*:*"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(FORBIDDEN_PREFIX_ERR_MSG);
+        assertThatThrownBy(() -> permissionFactory.createPermission("*:"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(FORBIDDEN_PREFIX_ERR_MSG);
     }
 
     @Test

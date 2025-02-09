@@ -35,6 +35,8 @@ import static org.apache.cassandra.sidecar.acl.authorization.FeaturePermission.A
 public class PermissionFactoryImpl implements PermissionFactory
 {
     private static final String FORBIDDEN_FEATURE_PERMISSION_PREFIX = "*:";
+    static final String FORBIDDEN_PREFIX_ERR_MSG
+    = String.format("Permission with prefix %s are forbidden", FORBIDDEN_FEATURE_PERMISSION_PREFIX);
     private final List<CompositePermission> supportedFeaturePermissions;
 
     public PermissionFactoryImpl()
@@ -84,7 +86,7 @@ public class PermissionFactoryImpl implements PermissionFactory
     {
         if (name.startsWith(FORBIDDEN_FEATURE_PERMISSION_PREFIX))
         {
-            return null;
+            throw new IllegalArgumentException(FORBIDDEN_PREFIX_ERR_MSG);
         }
         List<Permission> combinedPermissions = new ArrayList<>();
         WildcardPermissionBasedAuthorization requestedAuthorization = new WildcardPermissionBasedAuthorizationImpl(name);
