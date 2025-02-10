@@ -26,6 +26,7 @@ import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -65,7 +66,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipTest
     @Test
     void testCqlSessionIsNotActive() throws UnknownHostException
     {
-        InstanceMetadataFetcher mockInstancesMetadata = mock(InstanceMetadataFetcher.class);
+        InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
         InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
         CassandraAdapterDelegate mockCassandraAdapterDelegate = mock(CassandraAdapterDelegate.class);
         when(mockCassandraAdapterDelegate.localStorageBroadcastAddress()).thenReturn(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 8888));

@@ -22,7 +22,6 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -106,20 +105,11 @@ public class SidecarLeaseSchema extends TableSchema
 
     public PreparedStatement claimLeaseStatement()
     {
-        ensureSchemaAvailable();
         return claimLease;
     }
 
     public PreparedStatement extendLeaseStatement()
     {
-        ensureSchemaAvailable();
         return extendLease;
-    }
-
-    @Override
-    protected void ensureSchemaAvailable() throws SchemaUnavailableException
-    {
-        SchemaUnavailableException.requirePrepared(claimLease, "claimLease statement is not prepared");
-        SchemaUnavailableException.requirePrepared(extendLease, "extendLease statement is not prepared");
     }
 }

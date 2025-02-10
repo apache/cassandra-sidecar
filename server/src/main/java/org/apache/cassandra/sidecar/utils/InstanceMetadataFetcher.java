@@ -36,8 +36,6 @@ import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 
-import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
-
 /**
  * Helper class to retrieve instance information from an instanceId or hostname.
  */
@@ -124,43 +122,6 @@ public class InstanceMetadataFetcher
         }
 
         throw new CassandraUnavailableException(CQL_AND_JMX, "All local Cassandra nodes are exhausted. But none is available");
-    }
-
-    /**
-     * @return all the configured local instances
-     */
-    public List<InstanceMetadata> allLocalInstances()
-    {
-        ensureInstancesMetadataConfigured();
-        return instancesMetadata.instances();
-    }
-
-    /**
-     * Iterate through the local instances and call the function on the first available instance
-     *
-     * @param function function applies to {@link CassandraAdapterDelegate}
-     * @return function eval result. Null can be returned when all local instances are exhausted
-     * @param <T> type of the result
-     * @throws CassandraUnavailableException when all local instances are exhausted.
-     */
-    @NotNull
-    public <T> T callOnFirstAvailableInstance(Function<CassandraAdapterDelegate, T> function) throws CassandraUnavailableException
-    {
-        for (InstanceMetadata instance : allLocalInstances())
-        {
-            try
-            {
-                CassandraAdapterDelegate delegate = instance.delegate();
-                return function.apply(delegate);
-            }
-            catch (CassandraUnavailableException | OperationUnavailableException exception)
-            {
-                // no-op; try the next instance
-                LOGGER.debug("CassandraAdapterDelegate is not available for instance. instance={}", instance, exception);
-            }
-        }
-
-        throw new CassandraUnavailableException(CQL_AND_JMX, "All local Cassandra nodes are exhausted");
     }
 
     /**
