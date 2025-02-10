@@ -283,7 +283,8 @@ public class GossipInfoResponse extends HashMap<String, GossipInfoResponse.Gossi
          **/
         SSTABLE_VERSIONS,
         DISK_USAGE,
-        INDEX_STATUS;
+        INDEX_STATUS, // Introduced in Cassandra 5.0 for SAI 
+        ;
 
         static String read(GossipInfo gossipInfo, GossipField field)
         {
